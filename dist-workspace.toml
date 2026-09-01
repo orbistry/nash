@@ -28,6 +28,9 @@ npm-package = "cli"
 install-path = ["$XDG_BIN_HOME/", "~/.local/bin/"]
 # Publish jobs to run in CI
 publish-jobs = ["homebrew", "npm"]
+# After the GitHub Release is announced, replace its notes with an
+# aggregate of every co-released crate's changelog section
+post-announce-jobs = ["./aggregate-release-notes"]
 # Whether to install an updater program
 install-updater = false
 # Only trigger binary builds for nash-cli tags (ignore library crate tags)
