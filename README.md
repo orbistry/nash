@@ -1,26 +1,57 @@
 # nash
 
+A purely functional language with Elm/Haskell syntax that compiles to
+Untyped Plutus Core. Successor to Aiken: type classes, higher-kinded types,
+explicit Big (`Data`) vs little (native UPLC) representation types, macros,
+compile-time evaluation, property-based tests.
+
+- Design: [`docs/overview.md`](docs/overview.md) and [`docs/`](docs/)
+- Plans: [`plans/`](plans/)
+- Status: [`SPEC.md`](SPEC.md)
+
+## Taste
+
+```elm
+validator module Vesting exposing (main)
+
+type Datum = Datum { owner : Bytes, deadline : Int }
+
+@derive(Eq, Show, ToData, FromData)
+type Redeemer = Claim | Cancel
+
+main : Datum -> Redeemer -> Data -> unit
+main datum redeemer ctx =
+    case redeemer of
+        Claim -> assert (lower datum.deadline < currentSlot ctx)
+        Cancel -> assert (signedBy ctx datum.owner)
+
+tests
+    import Fuzz exposing (int)
+
+    prop "deadline is never negative" =
+        let d via int in
+        do
+            assert (lift d >= lift 0)
+```
+
 ## Development
-
-### Validation
-
-Before pushing, run:
 
 ```sh
 cargo fmt --all
 cargo clippy --all-targets --all-features -- -D warnings
-cargo test
+cargo insta test
 ```
 
 ### Changesets
 
-We use [sampo](https://github.com/bruits/sampo) for versioning and releases. When you make a notable change, add a changeset:
+We use [sampo](https://github.com/bruits/sampo) for versioning and releases.
+When you make a notable change, add a changeset:
 
 ```sh
 sampo add
 ```
 
-Only list crates you actually changed -- sampo automatically bumps dependents.
+Only list crates you actually changed; sampo bumps dependents.
 
 ### Release flow
 
@@ -32,63 +63,3 @@ Only list crates you actually changed -- sampo automatically bumps dependents.
    - GitHub Releases with platform binaries
    - Homebrew formula (`brew install orbistry/tap/nash`)
    - npm package (`npx @nash-script/cli`)
-
-## Docs
-
-### Imports
-
-```
-import { someFunc } from @microproofs/mpf
-import tree from @microproofs/mpf/tree
-
-import (
-    { someFunc } from @microproofs/mpf
-    thing from @microproofs/mpf/tree
-)
-
-// Without from
-import @microproofs/mpf.{someFunc}
-import @microproofs/mpf/tree
-
-import (
-    @microproofs/mpf.{someFunc}
-    @microproofs/mpf/tree as thing
-)
-```
-
-modules defined with `~` at the start of the name behave like `index.ts` in typescript modules
-
-```
-export {someFunc} from ~/leaf
-
-export {someFunc} from @/tree
-```
-
-### Defining types
-
-```
-interface Thing {
-  cmp(a, a) Ordering
-}
-
-type Wow = {
-  thing: Int,
-  next: Int,
-  fiilll: Int,
-}
-
-type Something {
-  Thing Wow
-  Who (Wow)
-  Me { thing: Int, next: Int }
-}
-
-when something is {
-  Thing wow -> {
-    wow.thing
-  }
-  Anal wow -> {
-    wow.0.thing
-  }
-}
-```

@@ -87,21 +87,22 @@ The test macros use `indoc!` which strips leading indentation, so:
 - No need to slam strings to the left - `indoc` handles it
 - Only use multiline raw strings when testing actual multiline syntax
 
-## Progress Tracking
+## Design Docs, Plans, Progress
 
-**SPEC.md** at the repo root tracks:
-- Implementation progress with checkboxes
-- Grammar definitions in EBNF notation
+- `docs/overview.md` — authoritative design decisions; `docs/<component>.md` — component specs
+- `docs/syntax.md` — the grammar (EBNF)
+- `plans/NN-<component>.md` — chunked implementation plans, in execution order
+- `SPEC.md` — progress checklist only
 
-Update SPEC.md as features are implemented.
+Update the relevant doc when a decision changes; tick SPEC.md as plan chunks land.
 
 ## Development Workflow
 
-1. Add grammar rule to SPEC.md
+1. Pick the next chunk in the current `plans/NN-*.md`
 2. Write snapshot test(s) first
-3. Implement parser code
+3. Implement
 4. Run `cargo insta test`, review snapshots
-5. Mark complete in SPEC.md
+5. Mark the chunk done in the plan; tick SPEC.md when the plan completes
 
 ## Validation
 
