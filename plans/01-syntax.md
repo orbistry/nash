@@ -6,8 +6,9 @@ Extend `nash-source` and `nash-parse` to the full surface syntax in
 [docs/syntax.md](../docs/syntax.md): `'a` type variables and little type
 names, kind-annotated binders, constraints, bytes literals, keyword
 expressions, `do` blocks, macro calls, attributes, `trait`/`impl`,
-`validator module`, and the `tests` block. Remove Elm leftovers (`Char`,
-`Float`, ports, effects, shaders, record extension types).
+partial operator sections, `validator module`, and the `tests` block. Remove
+Elm leftovers (`Char`, `Float`, ports, effects, shaders, record extension
+types).
 
 ## Prerequisites
 
@@ -1383,6 +1384,85 @@ errors: `"m!("`, `"m!(1,)"`, `"m!(1 2)"`.
 
 ---
 
+## Chunk 6a — Partial operator sections
+
+### Files
+
+- `crates/nash-source/src/lib.rs`
+- `crates/nash-parse/src/expression/tuple.rs`
+- `crates/nash-parse/src/error.rs`
+- `crates/nash-can/src/expression.rs`
+- parser and canonicalization snapshots
+
+### Change
+
+Extend the existing whole-operator form `(+)` with Haskell-style partial
+sections:
+
+```elm
+(> 5)    -- \x -> x > 5
+(5 >)    -- \x -> 5 > x
+```
+
+Keep the section explicit in the surface AST so parsing does not invent a
+source-level binder:
+
+```rust
+// nash-source
+LeftSection {
+    left: &'a Located<Expr<'a>>,
+    operator: &'a str,
+},
+RightSection {
+    operator: &'a str,
+    right: &'a Located<Expr<'a>>,
+},
+```
+
+Here "left" and "right" name the supplied side of the operator. During
+canonicalization, resolve the operator exactly as for `BinOps` and lower the
+section to an ordinary one-argument `nash_ast::Expr::Lambda` whose body is a
+`Binop`. The missing operand uses a compiler-generated local that cannot
+collide with source text. No section variant survives into `nash-ast`, the
+solver, macro reification, or codegen.
+
+`tuple_body` currently recognizes only an operator immediately followed by
+`)`. Extend it to distinguish:
+
+- `(op)` — the existing `Expr::Op`;
+- `(op expression)` — a right section;
+- `(expression op)` — a left section;
+- `(expression)` and `(expression, ...)` — the existing parenthesized and
+  tuple forms.
+
+Preserve the existing minus rule: `(-x)` and `(- x)` are negation, not a
+right section, while `(-)` remains the subtraction function and `(x -)` is a
+left section. Reserved operators remain errors in section position.
+
+### Elm/Haskell reference
+
+Elm's parser supplies the surrounding tuple/parentheses machinery but only
+supports an operator as a function. Haskell 2010 Report section 3.5 defines
+the partial-section meanings; retain Nash's existing Elm-style error
+hierarchy and indentation checks.
+
+### Tests
+
+- Parser success snapshots: `(> 5)`, `(5 >)`, `(f x |> )`, `((+) 1)`,
+  `(-)`, `(-1)`, and `(1 -)`.
+- Parser error snapshots: a missing operand or close parenthesis and a
+  reserved operator in section position.
+- Canonicalization snapshots show `(> 5)` and `(5 >)` as lambdas with the
+  resolved `>` function and opposite operand order.
+- An application snapshot for `(> 5) 10` confirms a section remains a term.
+
+### Done when
+
+Both partial forms parse, canonicalize to capture-free ordinary lambdas, and
+need no changes in constrain, solve, or codegen.
+
+---
+
 ## Chunk 7 — Attributes
 
 ### Files
@@ -2360,8 +2440,8 @@ Type variables are written `'a`; bare lowercase names in type position are littl
 ```
 
 Chunk 0 is `nash-parse: minor` alone (reserved words change is breaking for
-users of `port`). Chunks 2–11 each bump `nash-source` and `nash-parse`
-`minor` and `nash-can` `patch`.
+users of `port`). Chunks 2–11, including 6a, each bump `nash-source` and
+`nash-parse` `minor` and `nash-can` `patch`.
 
 ### Done when
 
@@ -2382,6 +2462,7 @@ changeset per chunk.
 | 4 | keyword expressions | yes | 0 |
 | 5 | `do` blocks | yes | 0 |
 | 6 | macro calls | yes | 0 |
+| 6a | partial operator sections | yes | 0 |
 | 7 | attributes | yes | 6 (arg list shape) |
 | 8 | traits | yes | 1, 2, 7 |
 | 9 | impls | yes | 2, 7, 8 (`keyword_where`) |
@@ -2389,7 +2470,7 @@ changeset per chunk.
 | 11 | tests block | yes | 4, 5 (`do_body`), 10 |
 | 12 | SPEC, changesets, snapshots | yes | all |
 
-Chunks 3–6 and 10 are independent of one another and can land in any order
+Chunks 3–6a and 10 are independent of one another and can land in any order
 after chunk 0.
 
 ## Open questions

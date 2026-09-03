@@ -124,6 +124,100 @@ macro_call       = ( lower_var | qualified_var ) '!' '(' [ expression { ',' expr
 term             = ... | macro_call | comptime_expr | quote_expr | splice ;
 ```
 
+Expression macro arguments are typed syntax trees, not evaluated values. A
+macro can inspect an integer or list literal, but a variable such as `n` or
+`xs` does not reveal its runtime value. This makes literal-driven unrolling
+possible without adding a runtime loop.
+
+For example, `tail` requires an integer literal followed by an expression and
+constructs that many calls to the primitive `Builtin.tailList`:
+
+```elm
+module TailMacro exposing (tail)
+
+import Ast
+import Builtin
+
+macro tail : List Ast.Expr -> Ast.Expr
+tail arguments =
+    case lower arguments of
+        [ Ast.Expr _ (Ast.Int count), value ] ->
+            repeatTail (lower count) value
+
+        _ ->
+            fail "tail: expected an integer literal and an expression"
+
+repeatTail count value =
+    if count < 0 then
+        fail "tail: count cannot be negative"
+    else if count == 0 then
+        value
+    else
+        repeatTail (count - 1) (quote (~value |> Builtin.tailList))
+```
+
+From another module, `tail!(3, xs)` expands to:
+
+```elm
+xs |> Builtin.tailList |> Builtin.tailList |> Builtin.tailList
+```
+
+`tail!(0, xs)` expands to `xs`, while `tail!(n, xs)` is rejected because the
+value of `n` is not available during expansion. `Builtin.tailList` is partial,
+so the generated program fails at runtime if the list has fewer than `count`
+elements. The safe `List.tail` returns an `option` and therefore cannot be
+piped directly into another `List.tail`.
+
+A macro can likewise unroll a predicate over a list literal:
+
+```elm
+module PredicateMacros exposing (predicateAll)
+
+import Ast
+import List
+
+macro predicateAll : List Ast.Expr -> Ast.Expr
+predicateAll arguments =
+    case lower arguments of
+        [ predicate, Ast.Expr _ (Ast.List items) ] ->
+            Ast.and
+                (List.map
+                    (\item -> Ast.call predicate [ item ])
+                    (lower items)
+                )
+
+        _ ->
+            fail "predicateAll: expected a predicate and a list literal"
+```
+
+With partial operator sections, the call:
+
+```elm
+predicateAll!((> 5), [10, 12, 15])
+```
+
+constructs the equivalent of:
+
+```elm
+(> 5) 10 && (> 5) 12 && (> 5) 15
+```
+
+Normal beta reduction can simplify that further to:
+
+```elm
+(10 > 5) && (12 > 5) && (15 > 5)
+```
+
+The literal list is gone from the generated program, so there is no runtime
+fold or list traversal. The empty list expands to `True` through `Ast.and
+[]`. `predicateAll!((> 5), xs)` is rejected because a runtime list cannot be
+unrolled by inspecting its syntax. The ordinary runtime version remains:
+
+```elm
+predicateAll p xs =
+    List.foldr (\x acc -> p x && acc) True xs
+```
+
 ## What the macro sees: the `Ast` module
 
 `nash/core` ships an `Ast` module. Every type in it is Big, so a value is a
@@ -258,6 +352,8 @@ Input conventions (encoder, `nash-macro`):
 - `if` chains are nested `If`. `let` with several definitions is one `Let`
   with a `List Def` in source order. Elm's `LetRec`/`LetDestruct` fold
   into that list.
+- Partial operator sections have already been canonicalized to `Lambda` with
+  a `BinOp` body; macros do not receive a section-specific node.
 - `do` blocks arrive desugared (`Call (Var (Global Monad "bind")) ...`).
 - `Alias` types are fully expanded in `typ` slots (`Ast.Type` has no alias
   node); the alias *declaration* is still visible as `Decl.Alias`.

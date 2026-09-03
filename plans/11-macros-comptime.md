@@ -8,10 +8,12 @@ tests.
 
 Prerequisites:
 
-- plans/01 (syntax): `@attr(..)` on declarations, `name!(..)`, `comptime`
-  parsed into `nash-source`. This plan adds `macro`, `quote`, `~`. If
-  plans/01 named the surface types differently, use its names; the shapes
-  below are what this plan needs.
+- plans/01 (syntax): `@attr(..)` on declarations, `name!(..)`, `comptime`,
+  and partial operator sections such as `(> 5)` parsed into `nash-source`.
+  Sections canonicalize to ordinary lambdas before macro arguments are
+  reified. This plan adds `macro`, `quote`, `~`. If plans/01 named the
+  surface types differently, use its names; the shapes below are what this
+  plan needs.
 - plans/02 (kinds): `Kind` and `kind_of(&CanType)` in `nash-constrain`.
 - plans/03 (traits): `trait`/`impl` in `nash-source`/`nash-ast`, predicate
   resolution with a hook to defer unresolved predicates.
@@ -1743,6 +1745,16 @@ returns `print::module` of the named module after the final round.
 **Tests**
 
 - `expression_macro_quote`: `twice!(x)` → `Num.add x x` printed with global braces.
+- `expression_macro_tail_literal`: `tail!(3, xs)` → three nested calls to
+  the globally resolved `Builtin.tailList`; zero returns `xs`, a negative
+  literal fails, and a variable count fails because macro arguments are AST
+  rather than evaluated values. The test uses the partial builtin because
+  safe `List.tail` returns an `option` that cannot feed the next call.
+- `expression_macro_predicate_all_literal`:
+  `predicateAll!((> 5), [10, 12, 15])` → the conjunction of three
+  applications of the reified section lambda. The empty list becomes
+  `True`; a variable list fails because it cannot be unrolled at expansion
+  time.
 - `decl_macro_derive_eq`: `@derive(Eq) type Foo = A int | B` → original plus `impl Eq Foo`.
 - `hygiene_capture_avoided`: the `let x = 1 in ~body` case from chunk 6.
 - `nested_macro_two_rounds`: a macro whose output calls another macro.

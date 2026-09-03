@@ -237,9 +237,27 @@ values, traits and impls. They are stored on the declaration.
 ## Expressions
 
 Elm's expression language is kept: literals, variables, application,
-operators and sections, `if`, `case`, `let`, lambdas, lists, tuples,
-records, field access `r.x`, accessors `.x`, and record update
-`{ r | x = 1 }`. Additions:
+operators and whole-operator sections such as `(+)`, `if`, `case`, `let`,
+lambdas, lists, tuples, records, field access `r.x`, accessors `.x`, and
+record update `{ r | x = 1 }`. Additions:
+
+### Operator sections
+
+An operator in parentheses is a function. Nash also supports partial
+operator sections on either side:
+
+```elm
+(>)             -- \x y -> x > y
+(> 5)           -- \x -> x > 5
+(5 >)           -- \x -> 5 > x
+```
+
+The operand may be any expression that fits before the closing parenthesis.
+Sections are canonicalized to ordinary hygienic lambdas, so later phases and
+macros do not need section-specific handling. As in Haskell, `(-x)` remains
+negation rather than a right section of `-`; write `\y -> y - x` for that
+case. `(-)` is still the subtraction function, and `(x -)` is a valid left
+section.
 
 ### Keyword expressions
 
@@ -545,8 +563,11 @@ string         = string_literal ;
 number         = number_literal ;
 bytes          = bytes_literal ;                       (* new *)
 list           = '[' [ expression { ',' expression } ] ']' ;
-tuple          = '(' ')' | '(' operator ')' | '(' expression ')'
+tuple          = '(' ')' | operator_section | '(' expression ')'
                | '(' expression ',' expression { ',' expression } ')' ;
+operator_section = '(' operator ')'
+                 | '(' operator expression ')'         (* right section; '-' is negation *)
+                 | '(' expression operator ')' ;       (* left section *)
 record         = '{' '}' | '{' field { ',' field } '}'
                | '{' lower_var '|' field { ',' field } '}' ;
 field          = lower_var '=' expression ;
