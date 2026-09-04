@@ -95,6 +95,14 @@ pub enum Expr<'a> {
     Str(&'a str),
     Bytes(&'a [u8]),
     Int(i128),
+    Assert(&'a Located<Expr<'a>>),
+    Fail(Option<&'a Located<Expr<'a>>>),
+    Todo(Option<&'a Located<Expr<'a>>>),
+    Trace {
+        message: &'a Located<Expr<'a>>,
+        body: &'a Located<Expr<'a>>,
+    },
+    Comptime(&'a Located<Expr<'a>>),
     Var {
         kind: VarType,
         name: &'a str,

@@ -13,6 +13,7 @@ mod accessor;
 mod bytes;
 mod case;
 mod if_;
+mod keyword;
 mod lambda;
 mod let_;
 mod list;
@@ -55,6 +56,11 @@ impl<'a> Parser<'a> {
                 Box::new(|p: &mut Parser<'a>| p.if_(start)),
                 // Lambda: \args -> body
                 Box::new(|p: &mut Parser<'a>| p.lambda(start)),
+                Box::new(|p| p.assert_(start)),
+                Box::new(|p| p.fail(start)),
+                Box::new(|p| p.todo(start)),
+                Box::new(|p| p.trace(start)),
+                Box::new(|p| p.comptime(start)),
                 // Term (possibly negated) with function application
                 Box::new(|p| {
                     let expr = p.possibly_negative_term(start)?;
@@ -177,6 +183,11 @@ impl<'a> Parser<'a> {
                                                 Box::new(|p| p.case_(new_start)),
                                                 Box::new(|p| p.if_(new_start)),
                                                 Box::new(|p| p.lambda(new_start)),
+                                                Box::new(|p| p.assert_(new_start)),
+                                                Box::new(|p| p.fail(new_start)),
+                                                Box::new(|p| p.todo(new_start)),
+                                                Box::new(|p| p.trace(new_start)),
+                                                Box::new(|p| p.comptime(new_start)),
                                             ],
                                         )?;
 
@@ -482,6 +493,8 @@ macro_rules! assert_indented_expression_snapshot {
 pub(crate) use assert_expr_error_snapshot;
 #[cfg(test)]
 pub(crate) use assert_expr_snapshot;
+#[cfg(test)]
+pub(crate) use assert_expression_error_snapshot;
 #[cfg(test)]
 pub(crate) use assert_expression_snapshot;
 #[cfg(test)]

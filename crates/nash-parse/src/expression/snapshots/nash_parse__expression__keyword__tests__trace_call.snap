@@ -1,0 +1,81 @@
+---
+source: crates/nash-parse/src/expression/keyword.rs
+description: "Code:\n\ntrace \"m\" (f x)"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 16,
+        },
+    },
+    value: Trace {
+        message: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 7,
+                },
+                end: Position {
+                    line: 1,
+                    column: 10,
+                },
+            },
+            value: Str(
+                "m",
+            ),
+        },
+        body: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 12,
+                },
+                end: Position {
+                    line: 1,
+                    column: 15,
+                },
+            },
+            value: Call {
+                function: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 13,
+                        },
+                    },
+                    value: Var {
+                        kind: LowVar,
+                        name: "f",
+                    },
+                },
+                arguments: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 15,
+                            },
+                        },
+                        value: Var {
+                            kind: LowVar,
+                            name: "x",
+                        },
+                    },
+                ],
+            },
+        },
+    },
+}

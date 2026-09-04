@@ -89,6 +89,26 @@ impl<'a> Parser<'a> {
         self.keyword(b"in", to_error)
     }
 
+    pub fn keyword_assert<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"assert", to_error)
+    }
+
+    pub fn keyword_fail<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"fail", to_error)
+    }
+
+    pub fn keyword_todo<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"todo", to_error)
+    }
+
+    pub fn keyword_trace<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"trace", to_error)
+    }
+
+    pub fn keyword_comptime<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"comptime", to_error)
+    }
+
     /// Parse the `type` keyword.
     ///
     /// Mirrors Elm's `Keyword.type_`.

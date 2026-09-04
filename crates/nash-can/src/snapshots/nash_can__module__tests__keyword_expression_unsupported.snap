@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\nvalue = assert True\n"
+---
+[
+    Unsupported {
+        feature: "keyword expression",
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 9,
+            },
+            end: Position {
+                line: 3,
+                column: 20,
+            },
+        },
+    },
+]

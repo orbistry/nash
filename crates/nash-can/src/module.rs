@@ -4071,4 +4071,9 @@ mod tests {
     fn bytes_pattern_unsupported() {
         assert_module_error_snapshot!("module Main exposing (..)\n\nf #\"00\" = 1\n");
     }
+
+    #[test]
+    fn keyword_expression_unsupported() {
+        assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = assert True\n");
+    }
 }

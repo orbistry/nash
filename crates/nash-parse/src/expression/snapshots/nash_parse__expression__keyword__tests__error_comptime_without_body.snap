@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/expression/keyword.rs
+description: "Code:\n\ncomptime"
+---
+Comptime(
+    Body(
+        Start(
+            1,
+            9,
+        ),
+        1,
+        9,
+    ),
+    1,
+    1,
+)

@@ -103,6 +103,16 @@ pub fn canonicalize_expr<'a>(
             }]);
         }
         SourceExpr::Int(n) => CanExpr::Int(*n),
+        SourceExpr::Assert(_)
+        | SourceExpr::Fail(_)
+        | SourceExpr::Todo(_)
+        | SourceExpr::Trace { .. }
+        | SourceExpr::Comptime(_) => {
+            return Err(vec![Error::Unsupported {
+                feature: "keyword expression",
+                region,
+            }]);
+        }
 
         SourceExpr::Var {
             kind: VarType::LowVar,

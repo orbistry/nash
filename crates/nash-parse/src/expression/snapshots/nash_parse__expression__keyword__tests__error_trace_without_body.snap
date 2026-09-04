@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/expression/keyword.rs
+description: "Code:\n\ntrace \"m\""
+---
+Trace(
+    Body(
+        Start(
+            1,
+            10,
+        ),
+        1,
+        10,
+    ),
+    1,
+    1,
+)

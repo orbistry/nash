@@ -1,0 +1,65 @@
+---
+source: crates/nash-parse/src/expression/keyword.rs
+description: "Code:\n\ncomptime (fib 20)"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 18,
+        },
+    },
+    value: Comptime(
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 11,
+                },
+                end: Position {
+                    line: 1,
+                    column: 17,
+                },
+            },
+            value: Call {
+                function: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 14,
+                        },
+                    },
+                    value: Var {
+                        kind: LowVar,
+                        name: "fib",
+                    },
+                },
+                arguments: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 15,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 17,
+                            },
+                        },
+                        value: Int(
+                            20,
+                        ),
+                    },
+                ],
+            },
+        },
+    ),
+}

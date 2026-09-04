@@ -146,6 +146,11 @@ pub enum Expr<'a> {
     Record(&'a Record<'a>, Row, Col),
     Tuple(&'a Tuple<'a>, Row, Col),
     Func(&'a Func<'a>, Row, Col),
+    Assert(&'a Keyword<'a>, Row, Col),
+    Fail(&'a Keyword<'a>, Row, Col),
+    Todo(&'a Keyword<'a>, Row, Col),
+    Trace(&'a Keyword<'a>, Row, Col),
+    Comptime(&'a Keyword<'a>, Row, Col),
     Dot(Row, Col),
     Access(Row, Col),
     OperatorRight(&'a str, Row, Col),
@@ -156,6 +161,15 @@ pub enum Expr<'a> {
     Number(Number, Row, Col),
     Space(Space, Row, Col),
     IndentOperatorRight(&'a str, Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Keyword<'a> {
+    Space(Space, Row, Col),
+    Body(&'a Expr<'a>, Row, Col),
+    Message(&'a Expr<'a>, Row, Col),
+    IndentBody(Row, Col),
+    IndentMessage(Row, Col),
 }
 
 #[derive(Debug)]
