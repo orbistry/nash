@@ -1,0 +1,5 @@
+module Main exposing (..)
+type alias first = { x : unit }
+type alias second = { x : unit }
+bad : first -> second
+bad x = x

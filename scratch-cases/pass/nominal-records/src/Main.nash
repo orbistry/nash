@@ -1,0 +1,13 @@
+module Main exposing (..)
+type alias point 'a = { z : 'a, callback : unit -> unit }
+type alias wrapped 'a = point 'a
+identity x = x
+made = { callback = identity, z = () }
+get : wrapped 'a -> 'a
+get p = p.z
+change : point 'a -> (unit -> unit) -> point 'a
+change p f = { p | callback = f }
+pattern : point 'a -> 'a
+pattern { z } = z
+empty : point 'a -> unit
+empty {} = ()

@@ -1,0 +1,2 @@
+value = case x of
+    Just y => y

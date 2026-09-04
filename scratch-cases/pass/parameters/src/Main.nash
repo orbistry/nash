@@ -1,0 +1,9 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type Fix 'f = Fix ('f (Fix 'f))
+type alias xs ('a : Storable) = list 'a
+type wrapper ('a : Term) = Wrap 'a
+type constant ('a : Const) = Constant 'a
+type flexible 'f 'a = Flexible ('f 'a)

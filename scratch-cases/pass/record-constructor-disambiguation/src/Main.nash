@@ -1,0 +1,7 @@
+module Main exposing (..)
+type alias first = { value : unit }
+type alias second = { value : unit }
+a = first ()
+b = second ()
+get : first -> unit
+get x = x.value

@@ -1,0 +1,2 @@
+module Main exposing (..)
+type box = Box { x : unit, x : unit }

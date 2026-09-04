@@ -1,0 +1,8 @@
+module Main exposing (..)
+import Builtin exposing (type bool(..), Data(..))
+import Eq exposing (Eq)
+import Literal exposing (FromInt, FromString, FromBytes)
+type box 'a = Box 'a
+type alias point = { x : unit }
+f : point -> unit -> (unit, unit) -> box unit -> unit
+f { x } () (a, b) (Box c) = x

@@ -1,0 +1,10 @@
+module Main exposing (..)
+import Literal exposing (FromInt)
+type Token = A | B
+impl FromInt Token where
+    fromInt _ = A
+f x =
+    case x of
+        A -> ()
+        0 -> ()
+        B -> ()

@@ -1,0 +1,1 @@
+type alias account = 42

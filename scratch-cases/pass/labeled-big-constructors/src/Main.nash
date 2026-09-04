@@ -1,0 +1,17 @@
+module Main exposing (..)
+type Datum = Datum { owner : Bytes, deadline : Int }
+type Redeemer = Claim { owner : Bytes, amount : Int } | Cancel { owner : Bytes }
+make : Bytes -> Int -> Datum
+make o d = Datum { deadline = d, owner = o }
+positional : Bytes -> Int -> Datum
+positional o d = Datum o d
+ownerOf : Datum -> Bytes
+ownerOf d = d.owner
+due (Datum { deadline }) = deadline
+claim : Bytes -> Int -> Redeemer
+claim o a = Claim { amount = a, owner = o }
+who : Redeemer -> Bytes
+who r =
+    case r of
+        Claim { owner } -> owner
+        Cancel { owner } -> owner

@@ -1,0 +1,4 @@
+module Main exposing (..)
+type Redeemer = Claim { owner : Bytes } | Cancel { owner : Bytes }
+who : Redeemer -> Bytes
+who r = r.owner

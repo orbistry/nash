@@ -1,0 +1,8 @@
+module Main exposing (..)
+import Builtin exposing (type bool(..), Data(..))
+import Eq exposing (Eq)
+import Literal exposing (FromInt, FromString, FromBytes)
+f xs =
+    case xs of
+        [] -> ()
+        [_] -> ()

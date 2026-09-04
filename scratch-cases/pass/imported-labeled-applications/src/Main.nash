@@ -1,0 +1,6 @@
+module Main exposing (..)
+import Types
+type option 'a = Some 'a
+asList = Types.get (Types.Holder { value = [()] })
+asTerm = Types.get (Types.Holder (Some ()))
+pattern (Types.Holder { value }) = value

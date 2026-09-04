@@ -1,0 +1,5 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type alias record 'f 'a = { applied : 'f 'a, head : 'f }

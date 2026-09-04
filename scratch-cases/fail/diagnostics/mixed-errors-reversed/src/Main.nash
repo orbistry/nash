@@ -1,0 +1,14 @@
+module Main exposing (..)
+trait Round 'a where
+    create : () -> 'a
+    discard : 'a -> ()
+type higher 'f = Higher ('f ())
+idfa : 'f 'a -> 'f 'a
+idfa x = x
+kind = idfa (Higher [])
+ambiguous = discard (create ())
+constraint : 'a -> ()
+constraint x = discard x
+missing = discard ()
+mismatch : ()
+mismatch = \x -> x

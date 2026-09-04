@@ -1,0 +1,24 @@
+module Main exposing (..)
+import Builtin
+import Literal
+import Eq exposing (Eq)
+import Num exposing (Num)
+import Show exposing (Show)
+import Prelude exposing (..)
+import Lift exposing (Lift)
+type Packet = Packet Int
+number : int
+number = 42
+payload : bytes
+payload = #"cafe"
+text : string
+text = "nash"
+arithmetic = (number + 2, -number, number / 2)
+ordered = number < 50
+displayed = show number
+big : Int
+big = lift number
+structural = eq (Packet big) (Packet big)
+bigLists = eq [Packet big] [Packet big]
+value = Builtin.unValueData (Builtin.mapData [])
+valueEquality = eq value value

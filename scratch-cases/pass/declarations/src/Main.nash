@@ -1,0 +1,14 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type Box 'a = Box 'a
+type option 'a = None | Some 'a
+type both = Both (option Int) (option int)
+type Tag 'a = Tag Int
+type wrap 'f 'a = Wrap ('f 'a)
+type Tree = Node (List Branch)
+type alias Branch = Tree
+type alias Vault = { owner : Bytes, amount : Int }
+type alias acc = { total : int, seen : list Int }
+type Datum = Datum { owner : Bytes, amount : Int }

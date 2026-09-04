@@ -1,0 +1,2 @@
+module Shapes exposing (type point)
+type alias point = { z : unit, callback : unit -> unit }

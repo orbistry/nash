@@ -1,0 +1,3 @@
+module Contracts exposing (type fn)
+
+type alias fn ('a : Big) = 'a -> 'a

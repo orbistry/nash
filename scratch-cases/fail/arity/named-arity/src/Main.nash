@@ -1,0 +1,5 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type alias x = int Int

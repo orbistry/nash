@@ -1,0 +1,11 @@
+module Main exposing (..)
+trait Need 'a where
+    need : 'a -> ()
+outer x =
+    let
+        broken : ((), ())
+        broken = (x, \y -> y)
+    in
+    (x (), need x, broken)
+sibling : ()
+sibling = \x -> x

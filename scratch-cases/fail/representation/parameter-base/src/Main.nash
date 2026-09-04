@@ -1,0 +1,5 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type Box ('a : Const) = Box 'a

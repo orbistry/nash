@@ -1,0 +1,6 @@
+module Main exposing (..)
+import Shapes
+made = Shapes.point () (\x -> x)
+literal = { callback = (\x -> x), z = () }
+get : Shapes.point -> unit
+get p = p.z

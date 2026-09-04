@@ -1,0 +1,3 @@
+module Main exposing (..)
+import Middle
+x = Middle.x

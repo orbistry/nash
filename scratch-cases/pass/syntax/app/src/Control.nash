@@ -1,0 +1,15 @@
+module Control exposing (identity, const, applyTwice, choose)
+
+identity : 'a -> 'a
+identity value = value
+
+const : 'a -> 'b -> 'a
+const first _ = first
+
+applyTwice f value = f (f value)
+
+choose condition whenTrue whenFalse =
+    if condition then
+        whenTrue
+    else
+        whenFalse

@@ -1,0 +1,5 @@
+module Main exposing (..)
+import Methods exposing (Keep)
+import Types exposing (Token)
+impl Keep Token where
+    keep x = x
