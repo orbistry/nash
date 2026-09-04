@@ -53,7 +53,7 @@ Done:
 
 Planned, in execution order (each links to its plan):
 
-- [ ] 01 Syntax: `'a` type vars, little/Big names, `trait`/`impl`, `=>` contexts, kind annotations, `validator module`, `tests` block, `do`, attributes, `name!()`, `comptime`, `assert`/`fail`/`todo`/`trace`; drop `Float`/`Char`/record extension types — [plans/01-syntax.md](plans/01-syntax.md)
+- [x] 01 Syntax: `'a` type vars, little/Big names, `trait`/`impl`, `=>` contexts, kind annotations, `validator module`, `tests` block, `do`, attributes, `name!()`, `comptime`, `assert`/`fail`/`todo`/`trace`; drop `Float`/`Char`/record extension types — [plans/01-syntax.md](plans/01-syntax.md)
 - [ ] 02 Kinds: Big / Const / Term, kind inference, kind variables — [plans/02-kinds.md](plans/02-kinds.md)
 - [ ] 03 Traits: qualified types, resolution, superclasses, defaults, multi-param, orphan rules, literal traits + defaulting, evidence — [plans/03-traits.md](plans/03-traits.md)
 - [ ] 04 Representation: remove row polymorphism and Elm supertypes, builtin type inventory, record encoding — [plans/04-representation.md](plans/04-representation.md)

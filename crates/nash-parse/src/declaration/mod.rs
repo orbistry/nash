@@ -153,6 +153,8 @@ macro_rules! assert_decl_snapshot {
         let mut parser = crate::Parser::new(&bump, src_in_arena.as_bytes());
         match parser.declaration() {
             Ok((decl, _end)) => {
+                parser.chomp(|_, _, _| ()).expect("expected trailing space");
+                assert!(parser.is_eof(), "declaration parser left trailing input");
                 insta::with_settings!({
                     description => src,
                     omit_expression => true,

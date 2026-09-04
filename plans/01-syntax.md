@@ -10,6 +10,8 @@ partial operator sections, `validator module`, and the `tests` block. Remove
 Elm leftovers (`Char`, `Float`, ports, effects, shaders, record extension
 types).
 
+Status: complete. Chunks 0 through 12, including 6a, landed on 2026-09-04.
+
 ## Prerequisites
 
 None. This is the first plan. Every later plan (kinds, traits, testing,

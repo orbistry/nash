@@ -9,15 +9,7 @@ use crate::error;
 impl<'a> Parser<'a> {
     /// Parse a number expression.
     ///
-    /// Mirrors Elm's `number` helper:
-    /// ```haskell
-    /// number start =
-    ///   do  nmbr <- Number.number E.Start E.Number
-    ///       addEnd start $
-    ///         case nmbr of
-    ///           Number.Int int -> Src.Int int
-    ///           Number.Float float -> Src.Float float
-    /// ```
+    /// Parses Nash integer literals and adds the source region.
     pub(crate) fn number(
         &mut self,
         start: Position,

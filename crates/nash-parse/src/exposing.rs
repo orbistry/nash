@@ -191,6 +191,8 @@ mod tests {
             let result = parser.exposing();
             match result {
                 Ok(ref exposing) => {
+                    parser.chomp(|_, _, _| ()).expect("expected trailing space");
+                    assert!(parser.is_eof(), "exposing parser left trailing input");
                     insta::with_settings!({
                         description => format!("Code:\n\n{}", input),
                         omit_expression => true,

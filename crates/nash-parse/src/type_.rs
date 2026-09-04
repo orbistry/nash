@@ -241,7 +241,7 @@ impl<'a> Parser<'a> {
     /// - Named types: `Int`, `Maybe`, `Module.Type`
     /// - Type variables: `a`, `msg`
     /// - Tuples: `()`, `(Int, String)`
-    /// - Records: `{}`, `{ name : String }`, `{ a | name : String }`
+    /// - Records: `{}`, `{ name : String }`
     pub fn type_term(&mut self) -> Result<&'a Located<Type<'a>>, error::Type<'a>> {
         let start = self.get_position();
 
@@ -392,7 +392,7 @@ impl<'a> Parser<'a> {
     // Records
     // -------------------------------------------------------------------------
 
-    /// Parse a record type: `{}`, `{ name : String }`, `{ a | name : String }`
+    /// Parse a record type: `{}`, `{ name : String }`
     fn type_record(&mut self, start: Position) -> Result<&'a Located<Type<'a>>, error::Type<'a>> {
         self.in_context(
             |bump, record_err, row, col| error::Type::Record(bump.alloc(record_err), row, col),
@@ -662,6 +662,8 @@ macro_rules! assert_type_snapshot {
         let src = bump.alloc_str(indoc::indoc!($code));
         let mut parser = $crate::Parser::new(&bump, src.as_bytes());
         let (result, _end) = parser.type_expr().expect("expected successful parse");
+        parser.chomp(|_, _, _| ()).expect("expected trailing space");
+        assert!(parser.is_eof(), "type parser left trailing input");
 
         insta::with_settings!({
             description => format!("Code:\n\n{}", indoc::indoc!($code)),
@@ -696,6 +698,8 @@ macro_rules! assert_scheme_snapshot {
         let src = bump.alloc_str(indoc::indoc!($code));
         let mut parser = $crate::Parser::new(&bump, src.as_bytes());
         let (result, _end) = parser.type_scheme().expect("expected successful parse");
+        parser.chomp(|_, _, _| ()).expect("expected trailing space");
+        assert!(parser.is_eof(), "type scheme parser left trailing input");
 
         insta::with_settings!({
             description => format!("Code:\n\n{}", indoc::indoc!($code)),
@@ -737,6 +741,8 @@ macro_rules! assert_indented_type_snapshot {
             .chomp(|_, _, _| "space error")
             .expect("expected leading indent");
         let (result, _end) = parser.type_expr().expect("expected successful parse");
+        parser.chomp(|_, _, _| ()).expect("expected trailing space");
+        assert!(parser.is_eof(), "type parser left trailing input");
 
         insta::with_settings!({
             description => format!("Code (indented inside a declaration):\n\n{}", indented),

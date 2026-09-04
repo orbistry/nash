@@ -401,6 +401,8 @@ macro_rules! assert_expr_snapshot {
         let src = bump.alloc_str(indoc::indoc!($code));
         let mut parser = $crate::Parser::new(&bump, src.as_bytes());
         let result = parser.term().expect("expected successful parse");
+        parser.chomp(|_, _, _| ()).expect("expected trailing space");
+        assert!(parser.is_eof(), "expression parser left trailing input");
 
         insta::with_settings!({
             description => format!("Code:\n\n{}", indoc::indoc!($code)),
@@ -437,6 +439,8 @@ macro_rules! assert_expression_snapshot {
         let src = bump.alloc_str(indoc::indoc!($code));
         let mut parser = $crate::Parser::new(&bump, src.as_bytes());
         let (result, _end) = parser.expression().expect("expected successful parse");
+        parser.chomp(|_, _, _| ()).expect("expected trailing space");
+        assert!(parser.is_eof(), "expression parser left trailing input");
 
         insta::with_settings!({
             description => format!("Code:\n\n{}", indoc::indoc!($code)),
@@ -480,6 +484,8 @@ macro_rules! assert_indented_expr_snapshot {
             .chomp(|_, _, _| "space error")
             .expect("expected leading indent");
         let result = parser.term().expect("expected successful parse");
+        parser.chomp(|_, _, _| ()).expect("expected trailing space");
+        assert!(parser.is_eof(), "expression parser left trailing input");
 
         insta::with_settings!({
             description => format!("Code (indented inside a def):\n\n{}", indented),
@@ -503,6 +509,8 @@ macro_rules! assert_indented_expression_snapshot {
             .chomp(|_, _, _| "space error")
             .expect("expected leading indent");
         let (result, _end) = parser.expression().expect("expected successful parse");
+        parser.chomp(|_, _, _| ()).expect("expected trailing space");
+        assert!(parser.is_eof(), "expression parser left trailing input");
 
         insta::with_settings!({
             description => format!("Code (indented inside a def):\n\n{}", indented),
