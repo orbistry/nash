@@ -1,0 +1,77 @@
+---
+source: crates/nash-parse/src/expression/macro_.rs
+description: "Code:\n\nm!(x).field"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 12,
+        },
+    },
+    value: Access {
+        record: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 6,
+                },
+            },
+            value: MacroCall {
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 2,
+                        },
+                    },
+                    value: "m",
+                },
+                module: None,
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 4,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 5,
+                            },
+                        },
+                        value: Var {
+                            kind: LowVar,
+                            name: "x",
+                        },
+                    },
+                ],
+            },
+        },
+        field: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 7,
+                },
+                end: Position {
+                    line: 1,
+                    column: 12,
+                },
+            },
+            value: "field",
+        },
+    },
+}

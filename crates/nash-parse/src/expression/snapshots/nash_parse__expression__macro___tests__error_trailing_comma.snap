@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/expression/macro_.rs
+description: "Code:\n\nm!(1,)"
+---
+Macro(
+    Arg(
+        Start(
+            1,
+            6,
+        ),
+        1,
+        6,
+    ),
+    1,
+    2,
+)

@@ -1,18 +1,18 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\nvalue = do\n    action\n"
+description: "Code:\n\nmodule Main exposing (..)\n\nvalue = json!(1)\n"
 ---
 [
     Unsupported {
-        feature: "do block",
+        feature: "macro call",
         region: Region {
             start: Position {
                 line: 3,
                 column: 9,
             },
             end: Position {
-                line: 4,
-                column: 11,
+                line: 3,
+                column: 17,
             },
         },
     },

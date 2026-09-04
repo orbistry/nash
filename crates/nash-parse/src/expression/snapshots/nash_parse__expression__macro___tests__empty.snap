@@ -1,0 +1,33 @@
+---
+source: crates/nash-parse/src/expression/macro_.rs
+description: "Code:\n\nm!()"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 5,
+        },
+    },
+    value: MacroCall {
+        name: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 2,
+                },
+            },
+            value: "m",
+        },
+        module: None,
+        args: [],
+    },
+}

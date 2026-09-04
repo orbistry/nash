@@ -18,6 +18,7 @@ mod keyword;
 mod lambda;
 mod let_;
 mod list;
+mod macro_;
 mod number;
 mod record;
 mod string;
@@ -308,7 +309,8 @@ impl<'a> Parser<'a> {
             error::Expr::Start,
             vec![
                 Box::new(|p: &mut Parser<'a>| {
-                    let expr = p.variable(start)?;
+                    let variable = p.variable(start)?;
+                    let expr = p.macro_call_or_term(start, variable)?;
                     p.accessible(start, expr)
                 }),
                 Box::new(|p| p.bytes(start)),

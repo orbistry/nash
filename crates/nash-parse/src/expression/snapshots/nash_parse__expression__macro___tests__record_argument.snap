@@ -1,0 +1,80 @@
+---
+source: crates/nash-parse/src/expression/macro_.rs
+description: "Code:\n\njson!({ a = 1 })"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 17,
+        },
+    },
+    value: MacroCall {
+        name: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 5,
+                },
+            },
+            value: "json",
+        },
+        module: None,
+        args: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 7,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 16,
+                    },
+                },
+                value: Record(
+                    [
+                        FieldAssign {
+                            field: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 10,
+                                    },
+                                },
+                                value: "a",
+                            },
+                            value: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 13,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 14,
+                                    },
+                                },
+                                value: Int(
+                                    1,
+                                ),
+                            },
+                        },
+                    ],
+                ),
+            },
+        ],
+    },
+}

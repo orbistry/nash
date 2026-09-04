@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/expression/macro_.rs
+description: "Code:\n\nm!("
+---
+Macro(
+    Open(
+        1,
+        4,
+    ),
+    1,
+    2,
+)

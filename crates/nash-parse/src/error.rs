@@ -152,6 +152,7 @@ pub enum Expr<'a> {
     Trace(&'a Keyword<'a>, Row, Col),
     Comptime(&'a Keyword<'a>, Row, Col),
     Do(&'a Do<'a>, Row, Col),
+    Macro(&'a Macro<'a>, Row, Col),
     Dot(Row, Col),
     Access(Row, Col),
     OperatorRight(&'a str, Row, Col),
@@ -185,6 +186,16 @@ pub enum Do<'a> {
     IndentArrow(Row, Col),
     IndentExpr(Row, Col),
     Alignment(u16, Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Macro<'a> {
+    Open(Row, Col),
+    Arg(&'a Expr<'a>, Row, Col),
+    End(Row, Col),
+    Space(Space, Row, Col),
+    IndentArg(Row, Col),
+    IndentEnd(Row, Col),
 }
 
 #[derive(Debug)]

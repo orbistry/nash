@@ -4081,4 +4081,9 @@ mod tests {
     fn do_block_unsupported() {
         assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = do\n    action\n");
     }
+
+    #[test]
+    fn macro_call_unsupported() {
+        assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = json!(1)\n");
+    }
 }

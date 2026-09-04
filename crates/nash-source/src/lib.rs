@@ -107,6 +107,11 @@ pub enum Expr<'a> {
         stmts: &'a [&'a Located<Stmt<'a>>],
         last: &'a Located<Expr<'a>>,
     },
+    MacroCall {
+        name: &'a Located<&'a str>,
+        module: Option<&'a str>,
+        args: &'a [&'a Located<Expr<'a>>],
+    },
     Var {
         kind: VarType,
         name: &'a str,

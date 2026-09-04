@@ -1,0 +1,51 @@
+---
+source: crates/nash-parse/src/expression/macro_.rs
+description: "Code:\n\nCardano.Macros.address!(\"addr1\")"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 33,
+        },
+    },
+    value: MacroCall {
+        name: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 16,
+                },
+                end: Position {
+                    line: 1,
+                    column: 23,
+                },
+            },
+            value: "address",
+        },
+        module: Some(
+            "Cardano.Macros",
+        ),
+        args: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 25,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 32,
+                    },
+                },
+                value: Str(
+                    "addr1",
+                ),
+            },
+        ],
+    },
+}
