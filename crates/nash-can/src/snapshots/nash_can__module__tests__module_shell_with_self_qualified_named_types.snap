@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (Maybe(..), Wrapped)\n\ntype alias Wrapped a = Main.Maybe a\n\ntype Maybe a\n    = Just a\n    | Nothing\n"
+description: "Code:\n\nmodule Main exposing (Maybe(..), Wrapped)\n\ntype alias Wrapped 'a = Main.Maybe 'a\n\ntype Maybe 'a\n    = Just 'a\n    | Nothing\n"
 ---
 Module {
     name: ModuleName {
@@ -97,7 +97,7 @@ Module {
                                     },
                                     end: Position {
                                         line: 6,
-                                        column: 13,
+                                        column: 14,
                                     },
                                 },
                                 value: Var(
@@ -151,11 +151,11 @@ Module {
                     region: Region {
                         start: Position {
                             line: 3,
-                            column: 24,
+                            column: 25,
                         },
                         end: Position {
                             line: 3,
-                            column: 36,
+                            column: 38,
                         },
                     },
                     value: Named {
@@ -171,11 +171,11 @@ Module {
                                 region: Region {
                                     start: Position {
                                         line: 3,
-                                        column: 35,
+                                        column: 36,
                                     },
                                     end: Position {
                                         line: 3,
-                                        column: 36,
+                                        column: 38,
                                     },
                                 },
                                 value: Var(

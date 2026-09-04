@@ -34,21 +34,27 @@ pub struct Value<'a> {
 pub struct Union<'a> {
     pub name: &'a Located<&'a str>,
     // type vars
-    pub arguments: &'a [&'a Located<&'a str>],
+    pub arguments: &'a [&'a TypeParam<'a>],
     pub ctors: &'a [&'a Ctor<'a>],
 }
 
 #[derive(Debug)]
 pub struct Ctor<'a> {
     pub name: &'a Located<&'a str>,
-    pub arguments: &'a [&'a Located<Type<'a>>],
+    pub arguments: CtorArgs<'a>,
+}
+
+#[derive(Debug)]
+pub enum CtorArgs<'a> {
+    Positional(&'a [&'a Located<Type<'a>>]),
+    Labeled(&'a [(&'a Located<&'a str>, &'a Located<Type<'a>>)]),
 }
 
 #[derive(Debug)]
 pub struct Alias<'a> {
     pub name: &'a Located<&'a str>,
     // type vars
-    pub arguments: &'a [&'a Located<&'a str>],
+    pub arguments: &'a [&'a TypeParam<'a>],
     pub typ: &'a Located<Type<'a>>,
 }
 
@@ -215,6 +221,11 @@ pub enum Type<'a> {
         to: &'a Located<Type<'a>>,
     },
     Var(&'a str),
+    VarApp {
+        region: Region,
+        name: &'a str,
+        args: &'a [&'a Located<Type<'a>>],
+    },
     Type {
         region: Region,
         name: &'a str,
@@ -226,15 +237,30 @@ pub enum Type<'a> {
         name: &'a str,
         args: &'a [&'a Located<Type<'a>>],
     },
-    Record {
-        fields: &'a [&'a FieldType<'a>],
-        ext: Option<&'a Located<&'a str>>,
-    },
+    Record(&'a [&'a FieldType<'a>]),
     Unit,
     Tuple {
         first: &'a Located<Type<'a>>,
         second: &'a Located<Type<'a>>,
         rest: &'a [&'a Located<Type<'a>>],
+    },
+}
+
+#[derive(Debug)]
+pub struct TypeParam<'a> {
+    pub name: &'a Located<&'a str>,
+    pub kind: Option<&'a Located<Kind<'a>>>,
+}
+
+#[derive(Debug)]
+pub enum Kind<'a> {
+    Big,
+    Const,
+    Term,
+    Storable,
+    Arrow {
+        from: &'a Located<Kind<'a>>,
+        to: &'a Located<Kind<'a>>,
     },
 }
 
@@ -275,6 +301,10 @@ pub enum Exposing<'a> {
 pub enum Exposed<'a> {
     Lower(&'a Located<&'a str>),
     Upper {
+        name: &'a Located<&'a str>,
+        privacy: Privacy,
+    },
+    LowerType {
         name: &'a Located<&'a str>,
         privacy: Privacy,
     },

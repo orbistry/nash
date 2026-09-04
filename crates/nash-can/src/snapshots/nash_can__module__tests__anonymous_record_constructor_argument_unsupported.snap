@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntype D = D int { x : int }\n"
+---
+[
+    Unsupported {
+        feature: "anonymous record constructor arguments",
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 16,
+            },
+            end: Position {
+                line: 3,
+                column: 27,
+            },
+        },
+    },
+]

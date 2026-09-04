@@ -5,10 +5,12 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position};
-use nash_source::{Ctor, Union};
+use nash_source::{Ctor, CtorArgs, TypeParam, Union};
 
 use crate::Parser;
 use crate::error::CustomType;
+
+type CtorField<'a> = (&'a Located<&'a str>, &'a Located<nash_source::Type<'a>>);
 
 impl<'a> Parser<'a> {
     /// Parse the body of a custom type declaration (after "type").
@@ -44,9 +46,9 @@ impl<'a> Parser<'a> {
     /// Mirrors Elm's `chompCustomNameToEquals`.
     fn chomp_custom_name_to_equals(
         &mut self,
-    ) -> Result<(&'a Located<&'a str>, &'a [&'a Located<&'a str>]), CustomType<'a>> {
+    ) -> Result<(&'a Located<&'a str>, &'a [&'a TypeParam<'a>]), CustomType<'a>> {
         let name_start = self.get_position();
-        let name_str = self.upper_name(CustomType::Name)?;
+        let name_str = self.type_decl_name(CustomType::Name)?;
         let name = self.add_end(name_start, name_str);
 
         self.chomp_and_check_indent(CustomType::Space, CustomType::IndentEquals)?;
@@ -59,8 +61,8 @@ impl<'a> Parser<'a> {
     fn chomp_custom_name_to_equals_help(
         &mut self,
         name: &'a Located<&'a str>,
-    ) -> Result<(&'a Located<&'a str>, &'a [&'a Located<&'a str>]), CustomType<'a>> {
-        let mut args: BumpVec<'a, &'a Located<&'a str>> = BumpVec::new_in(self.bump);
+    ) -> Result<(&'a Located<&'a str>, &'a [&'a TypeParam<'a>]), CustomType<'a>> {
+        let mut args: BumpVec<'a, &'a TypeParam<'a>> = BumpVec::new_in(self.bump);
 
         loop {
             let args_clone = args.clone();
@@ -70,9 +72,10 @@ impl<'a> Parser<'a> {
                 vec![
                     // Parse a type parameter
                     Box::new(|p: &mut Parser<'a>| {
-                        let arg_start = p.get_position();
-                        let arg_str = p.lower_name(CustomType::Equals)?;
-                        let arg = p.add_end(arg_start, arg_str);
+                        let arg = p.specialize(
+                            |bump, e, row, col| CustomType::Param(bump.alloc(e), row, col),
+                            |p| p.type_param(),
+                        )?;
                         p.chomp_and_check_indent(CustomType::Space, CustomType::IndentEquals)?;
                         args.push(arg);
                         Ok(CustomNameState::MoreArgs)
@@ -104,17 +107,69 @@ impl<'a> Parser<'a> {
 
         self.chomp(CustomType::Space)?;
 
-        // Parse constructor arguments (type terms)
-        let (args, end) = self.specialize(
-            |bump, e, row, col| CustomType::VariantArg(bump.alloc(e), row, col),
-            |p| p.chomp_variant_args(name_end),
-        )?;
+        let (arguments, end) = if self.peek() == Some(b'{') {
+            self.check_indent(name_end.line, name_end.column, CustomType::IndentField)?;
+            self.advance();
+            self.chomp_and_check_indent(CustomType::Space, CustomType::IndentField)?;
+            let first = self.ctor_field()?;
+            let fields = self.ctor_fields_end(first)?;
+            let end = self.get_position();
+            self.chomp(CustomType::Space)?;
+            (CtorArgs::Labeled(fields), end)
+        } else {
+            let (args, end) = self.specialize(
+                |bump, e, row, col| CustomType::VariantArg(bump.alloc(e), row, col),
+                |p| p.chomp_variant_args(name_end),
+            )?;
+            (CtorArgs::Positional(args), end)
+        };
 
-        let ctor = self.alloc(Ctor {
-            name,
-            arguments: args,
-        });
+        let ctor = self.alloc(Ctor { name, arguments });
         Ok((ctor, end))
+    }
+
+    fn ctor_field(&mut self) -> Result<CtorField<'a>, CustomType<'a>> {
+        let name_start = self.get_position();
+        let name = self.lower_name(CustomType::Field)?;
+        let name = self.add_end(name_start, name);
+        self.chomp_and_check_indent(CustomType::Space, CustomType::FieldColon)?;
+        self.word1(b':', CustomType::FieldColon)?;
+        self.chomp_and_check_indent(CustomType::Space, CustomType::IndentFieldType)?;
+        let (typ, end) = self.specialize(
+            |bump, e, row, col| CustomType::FieldType(bump.alloc(e), row, col),
+            |p| p.type_expr(),
+        )?;
+        self.check_indent(end.line, end.column, CustomType::FieldEnd)?;
+        Ok((name, typ))
+    }
+
+    fn ctor_fields_end(
+        &mut self,
+        first: CtorField<'a>,
+    ) -> Result<&'a [CtorField<'a>], CustomType<'a>> {
+        let mut fields = BumpVec::new_in(self.bump);
+        fields.push(first);
+        loop {
+            self.chomp(CustomType::Space)?;
+            let done = self.one_of(
+                CustomType::FieldEnd,
+                vec![
+                    Box::new(|p: &mut Parser<'a>| {
+                        p.word1(b',', CustomType::FieldEnd)?;
+                        p.chomp_and_check_indent(CustomType::Space, CustomType::IndentField)?;
+                        fields.push(p.ctor_field()?);
+                        Ok(false)
+                    }),
+                    Box::new(|p: &mut Parser<'a>| {
+                        p.word1(b'}', CustomType::FieldEnd)?;
+                        Ok(true)
+                    }),
+                ],
+            )?;
+            if done {
+                return Ok(fields.into_bump_slice());
+            }
+        }
     }
 
     /// Parse variant constructor arguments.
@@ -179,7 +234,7 @@ impl<'a> Parser<'a> {
 /// State for parsing custom type name and parameters.
 enum CustomNameState<'a> {
     MoreArgs,
-    Done(&'a [&'a Located<&'a str>]),
+    Done(&'a [&'a TypeParam<'a>]),
 }
 
 /// State for parsing variant arguments.
@@ -190,7 +245,7 @@ enum VariantArgState<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::assert_decl_snapshot;
+    use super::super::{assert_decl_error_snapshot, assert_decl_snapshot};
 
     #[test]
     fn union_simple() {
@@ -199,12 +254,12 @@ mod tests {
 
     #[test]
     fn union_with_params() {
-        assert_decl_snapshot!("type Maybe a = Just a | Nothing");
+        assert_decl_snapshot!("type option 'a = Some 'a | None");
     }
 
     #[test]
     fn union_multiple_args() {
-        assert_decl_snapshot!("type Result e a = Ok a | Err e");
+        assert_decl_snapshot!("type Result 'e 'a = Ok 'a | Err 'e");
     }
 
     #[test]
@@ -224,8 +279,59 @@ mod tests {
         assert_decl_snapshot!(
             r#"
             {-| Represents optional values -}
-            type Maybe a = Just a | Nothing
+            type Maybe 'a = Just 'a | Nothing
         "#
         );
+    }
+
+    #[test]
+    fn union_with_kind() {
+        assert_decl_snapshot!("type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))");
+    }
+
+    #[test]
+    fn little_union() {
+        assert_decl_snapshot!("type step 'a = Done 'a | Next int 'a");
+    }
+
+    #[test]
+    fn labeled_constructor() {
+        assert_decl_snapshot!("type Datum = Datum { owner : Bytes, deadline : Int }");
+    }
+
+    #[test]
+    fn labeled_constructors_multiline() {
+        assert_decl_snapshot!(
+            r#"
+            type Shape
+                = Circle { r : int }
+                | Rect { w : int, h : int }
+        "#
+        );
+    }
+
+    #[test]
+    fn error_bare_parameter() {
+        assert_decl_error_snapshot!("type Maybe a = Just a");
+    }
+
+    #[test]
+    fn error_empty_kind() {
+        assert_decl_error_snapshot!("type T ('f : ) = A");
+    }
+
+    #[test]
+    fn error_unknown_kind() {
+        assert_decl_error_snapshot!("type T ('f : Foo) = A");
+    }
+
+    #[test]
+    fn error_labeled_field_without_type() {
+        assert_decl_error_snapshot!("type D = D { owner }");
+    }
+
+    #[test]
+    fn positional_record_argument_parses() {
+        assert_decl_snapshot!("type D = D int { x : int }");
     }
 }

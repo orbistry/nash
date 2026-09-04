@@ -1,0 +1,138 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type Datum = Datum { owner : Bytes, deadline : Int }"
+---
+Union(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 53,
+            },
+        },
+        value: Union {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 11,
+                    },
+                },
+                value: "Datum",
+            },
+            arguments: [],
+            ctors: [
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 19,
+                            },
+                        },
+                        value: "Datum",
+                    },
+                    arguments: Labeled(
+                        [
+                            (
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 22,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 27,
+                                        },
+                                    },
+                                    value: "owner",
+                                },
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 30,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 35,
+                                        },
+                                    },
+                                    value: Type {
+                                        region: Region {
+                                            start: Position {
+                                                line: 1,
+                                                column: 30,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 35,
+                                            },
+                                        },
+                                        name: "Bytes",
+                                        args: [],
+                                    },
+                                },
+                            ),
+                            (
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 37,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 45,
+                                        },
+                                    },
+                                    value: "deadline",
+                                },
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 48,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 51,
+                                        },
+                                    },
+                                    value: Type {
+                                        region: Region {
+                                            start: Position {
+                                                line: 1,
+                                                column: 48,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 51,
+                                            },
+                                        },
+                                        name: "Int",
+                                        args: [],
+                                    },
+                                },
+                            ),
+                        ],
+                    ),
+                },
+            ],
+        },
+    },
+)

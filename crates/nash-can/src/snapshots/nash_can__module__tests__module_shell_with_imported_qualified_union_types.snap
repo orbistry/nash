@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Result\n\ntype alias Wrapped e a = Result.Result e a\n"
+description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Result\n\ntype alias Wrapped 'e 'a = Result.Result 'e 'a\n"
 ---
 Module {
     name: ModuleName {
@@ -74,11 +74,11 @@ Module {
                     region: Region {
                         start: Position {
                             line: 5,
-                            column: 26,
+                            column: 28,
                         },
                         end: Position {
                             line: 5,
-                            column: 43,
+                            column: 47,
                         },
                     },
                     value: Named {
@@ -94,11 +94,11 @@ Module {
                                 region: Region {
                                     start: Position {
                                         line: 5,
-                                        column: 40,
+                                        column: 42,
                                     },
                                     end: Position {
                                         line: 5,
-                                        column: 41,
+                                        column: 44,
                                     },
                                 },
                                 value: Var(
@@ -109,11 +109,11 @@ Module {
                                 region: Region {
                                     start: Position {
                                         line: 5,
-                                        column: 42,
+                                        column: 45,
                                     },
                                     end: Position {
                                         line: 5,
-                                        column: 43,
+                                        column: 47,
                                     },
                                 },
                                 value: Var(

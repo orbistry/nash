@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (Decoder)\n\nimport Json.Decode as Decode\n\ntype alias Decoder msg = Decode.Decoder msg\n"
+description: "Code:\n\nmodule Main exposing (Decoder)\n\nimport Json.Decode as Decode\n\ntype alias Decoder 'msg = Decode.Decoder 'msg\n"
 ---
 Module {
     name: ModuleName {
@@ -73,11 +73,11 @@ Module {
                     region: Region {
                         start: Position {
                             line: 5,
-                            column: 26,
+                            column: 27,
                         },
                         end: Position {
                             line: 5,
-                            column: 44,
+                            column: 46,
                         },
                     },
                     value: Alias {
@@ -95,11 +95,11 @@ Module {
                                     region: Region {
                                         start: Position {
                                             line: 5,
-                                            column: 41,
+                                            column: 42,
                                         },
                                         end: Position {
                                             line: 5,
-                                            column: 44,
+                                            column: 46,
                                         },
                                     },
                                     value: Var(

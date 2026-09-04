@@ -1,0 +1,54 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (type option(..))\n\ntype option 'a = Some 'a | None\n"
+---
+Interface {
+    home: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    values: [],
+    aliases: [],
+    unions: [
+        InterfaceUnion {
+            name: "option",
+            parameters: [
+                "a",
+            ],
+            ctors: [
+                Ctor {
+                    name: "Some",
+                    index: 0,
+                    arity: 1,
+                    arguments: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 23,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 25,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Ctor {
+                    name: "None",
+                    index: 1,
+                    arity: 0,
+                    arguments: [],
+                },
+            ],
+            alternatives: 2,
+            options: Normal,
+            visibility: Open,
+        },
+    ],
+    binops: [],
+}

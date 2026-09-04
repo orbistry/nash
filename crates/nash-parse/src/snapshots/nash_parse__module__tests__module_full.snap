@@ -250,7 +250,9 @@ Module {
                             },
                             value: "Increment",
                         },
-                        arguments: [],
+                        arguments: Positional(
+                            [],
+                        ),
                     },
                     Ctor {
                         name: Located {
@@ -266,7 +268,9 @@ Module {
                             },
                             value: "Decrement",
                         },
-                        arguments: [],
+                        arguments: Positional(
+                            [],
+                        ),
                     },
                 ],
             },
@@ -310,8 +314,8 @@ Module {
                             column: 35,
                         },
                     },
-                    value: Record {
-                        fields: [
+                    value: Record(
+                        [
                             FieldType {
                                 field: Located {
                                     region: Region {
@@ -354,8 +358,7 @@ Module {
                                 },
                             },
                         ],
-                        ext: None,
-                    },
+                    ),
                 },
             },
         },

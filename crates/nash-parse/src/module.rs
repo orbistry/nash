@@ -327,6 +327,11 @@ mod tests {
     }
 
     #[test]
+    fn module_header_little_types() {
+        assert_module_header_snapshot!("module P exposing (type option(..), type step)");
+    }
+
+    #[test]
     fn module_header_deeply_nested() {
         assert_module_header_snapshot!("module Platform.Cmd.Extra exposing (batch, none)");
     }
@@ -392,8 +397,8 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type Maybe a
-                = Just a
+            type Maybe 'a
+                = Just 'a
                 | Nothing
         "#
         );
@@ -407,8 +412,8 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type Wrap a
-                = Wrap a
+            type Wrap 'a
+                = Wrap 'a
 
             f w = w
         "#

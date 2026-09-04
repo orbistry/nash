@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
-description: type Result e a = Ok a | Err e
+description: "type Result 'e 'a = Ok 'a | Err 'e"
 ---
 Union(
     None,
@@ -12,7 +12,7 @@ Union(
             },
             end: Position {
                 line: 1,
-                column: 31,
+                column: 35,
             },
         },
         value: Union {
@@ -30,31 +30,37 @@ Union(
                 value: "Result",
             },
             arguments: [
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 1,
-                            column: 13,
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 15,
+                            },
                         },
-                        end: Position {
-                            line: 1,
-                            column: 14,
-                        },
+                        value: "e",
                     },
-                    value: "e",
+                    kind: None,
                 },
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 1,
-                            column: 15,
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 16,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 18,
+                            },
                         },
-                        end: Position {
-                            line: 1,
-                            column: 16,
-                        },
+                        value: "a",
                     },
-                    value: "a",
+                    kind: None,
                 },
             ],
             ctors: [
@@ -63,64 +69,68 @@ Union(
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 19,
+                                column: 21,
                             },
                             end: Position {
                                 line: 1,
-                                column: 21,
+                                column: 23,
                             },
                         },
                         value: "Ok",
                     },
-                    arguments: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 1,
-                                    column: 22,
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 24,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 26,
+                                    },
                                 },
-                                end: Position {
-                                    line: 1,
-                                    column: 23,
-                                },
+                                value: Var(
+                                    "a",
+                                ),
                             },
-                            value: Var(
-                                "a",
-                            ),
-                        },
-                    ],
+                        ],
+                    ),
                 },
                 Ctor {
                     name: Located {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 26,
+                                column: 29,
                             },
                             end: Position {
                                 line: 1,
-                                column: 29,
+                                column: 32,
                             },
                         },
                         value: "Err",
                     },
-                    arguments: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 1,
-                                    column: 30,
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 33,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 35,
+                                    },
                                 },
-                                end: Position {
-                                    line: 1,
-                                    column: 31,
-                                },
+                                value: Var(
+                                    "e",
+                                ),
                             },
-                            value: Var(
-                                "e",
-                            ),
-                        },
-                    ],
+                        ],
+                    ),
                 },
             ],
         },

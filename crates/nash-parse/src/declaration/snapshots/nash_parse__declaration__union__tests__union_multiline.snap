@@ -45,7 +45,9 @@ Union(
                         },
                         value: "Increment",
                     },
-                    arguments: [],
+                    arguments: Positional(
+                        [],
+                    ),
                 },
                 Ctor {
                     name: Located {
@@ -61,7 +63,9 @@ Union(
                         },
                         value: "Decrement",
                     },
-                    arguments: [],
+                    arguments: Positional(
+                        [],
+                    ),
                 },
                 Ctor {
                     name: Located {
@@ -77,7 +81,9 @@ Union(
                         },
                         value: "Reset",
                     },
-                    arguments: [],
+                    arguments: Positional(
+                        [],
+                    ),
                 },
             ],
         },

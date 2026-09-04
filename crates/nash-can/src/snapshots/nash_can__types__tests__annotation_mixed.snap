@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-description: a -> List a
+description: "'a -> List 'a"
 ---
 Annotation {
     free_vars: [
@@ -14,7 +14,7 @@ Annotation {
             },
             end: Position {
                 line: 1,
-                column: 12,
+                column: 14,
             },
         },
         value: Lambda {
@@ -26,7 +26,7 @@ Annotation {
                     },
                     end: Position {
                         line: 1,
-                        column: 2,
+                        column: 3,
                     },
                 },
                 value: Var(
@@ -37,11 +37,11 @@ Annotation {
                 region: Region {
                     start: Position {
                         line: 1,
-                        column: 6,
+                        column: 7,
                     },
                     end: Position {
                         line: 1,
-                        column: 12,
+                        column: 14,
                     },
                 },
                 value: Named {
@@ -57,11 +57,11 @@ Annotation {
                             region: Region {
                                 start: Position {
                                     line: 1,
-                                    column: 11,
+                                    column: 12,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 12,
+                                    column: 14,
                                 },
                             },
                             value: Var(

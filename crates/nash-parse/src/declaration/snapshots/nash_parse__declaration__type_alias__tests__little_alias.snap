@@ -1,0 +1,160 @@
+---
+source: crates/nash-parse/src/declaration/type_alias.rs
+description: "type alias acc = { total : int, seen : list Int }"
+---
+Alias(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 50,
+            },
+        },
+        value: Alias {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 12,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 15,
+                    },
+                },
+                value: "acc",
+            },
+            arguments: [],
+            typ: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 18,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 50,
+                    },
+                },
+                value: Record(
+                    [
+                        FieldType {
+                            field: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 20,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 25,
+                                    },
+                                },
+                                value: "total",
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 28,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 31,
+                                    },
+                                },
+                                value: Type {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 28,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 31,
+                                        },
+                                    },
+                                    name: "int",
+                                    args: [],
+                                },
+                            },
+                        },
+                        FieldType {
+                            field: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 33,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 37,
+                                    },
+                                },
+                                value: "seen",
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 40,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 48,
+                                    },
+                                },
+                                value: Type {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 40,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 44,
+                                        },
+                                    },
+                                    name: "list",
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 45,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 48,
+                                                },
+                                            },
+                                            value: Type {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 45,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 48,
+                                                    },
+                                                },
+                                                name: "Int",
+                                                args: [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                ),
+            },
+        },
+    },
+)

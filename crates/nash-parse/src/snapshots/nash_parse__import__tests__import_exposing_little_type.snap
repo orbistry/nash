@@ -1,0 +1,66 @@
+---
+source: crates/nash-parse/src/import.rs
+description: "Code:\n\nimport Prelude exposing (type option(..), map)\n"
+---
+Import {
+    import: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 8,
+            },
+            end: Position {
+                line: 1,
+                column: 15,
+            },
+        },
+        value: "Prelude",
+    },
+    alias: None,
+    exposing: Explicit(
+        [
+            LowerType {
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 31,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 37,
+                        },
+                    },
+                    value: "option",
+                },
+                privacy: Public(
+                    Region {
+                        start: Position {
+                            line: 1,
+                            column: 38,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 40,
+                        },
+                    },
+                ),
+            },
+            Lower(
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 43,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 46,
+                        },
+                    },
+                    value: "map",
+                },
+            ),
+        ],
+    ),
+}

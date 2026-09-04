@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Bad a = b\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Bad 'a = 'b\n"
 ---
 [
     TypeVarsMessedUpInAlias {
@@ -28,7 +28,7 @@ description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Bad a = b\n"
                     },
                     end: Position {
                         line: 3,
-                        column: 17,
+                        column: 18,
                     },
                 },
             ),
@@ -39,11 +39,11 @@ description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Bad a = b\n"
                 Region {
                     start: Position {
                         line: 3,
-                        column: 20,
+                        column: 21,
                     },
                     end: Position {
                         line: 3,
-                        column: 21,
+                        column: 23,
                     },
                 },
             ),

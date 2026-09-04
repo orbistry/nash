@@ -1,0 +1,183 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))"
+---
+Union(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 47,
+            },
+        },
+        value: Union {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 9,
+                    },
+                },
+                value: "Fix",
+            },
+            arguments: [
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 11,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                        },
+                        value: "f",
+                    },
+                    kind: Some(
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 26,
+                                },
+                            },
+                            value: Arrow {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 19,
+                                        },
+                                    },
+                                    value: Big,
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 26,
+                                        },
+                                    },
+                                    value: Big,
+                                },
+                            },
+                        },
+                    ),
+                },
+            ],
+            ctors: [
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 30,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 33,
+                            },
+                        },
+                        value: "Fix",
+                    },
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 35,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 46,
+                                    },
+                                },
+                                value: VarApp {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 35,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 37,
+                                        },
+                                    },
+                                    name: "f",
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 39,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 45,
+                                                },
+                                            },
+                                            value: Type {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 39,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 42,
+                                                    },
+                                                },
+                                                name: "Fix",
+                                                args: [
+                                                    Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 1,
+                                                                column: 43,
+                                                            },
+                                                            end: Position {
+                                                                line: 1,
+                                                                column: 45,
+                                                            },
+                                                        },
+                                                        value: Var(
+                                                            "f",
+                                                        ),
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    ),
+                },
+            ],
+        },
+    },
+)

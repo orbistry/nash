@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/type_.rs
-description: "Code:\n\n{ onClick : msg -> Cmd msg }"
+description: "Code:\n\n{ onClick : 'msg -> Cmd 'msg }"
 ---
 Located {
     region: Region {
@@ -10,11 +10,11 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 29,
+            column: 31,
         },
     },
-    value: Record {
-        fields: [
+    value: Record(
+        [
             FieldType {
                 field: Located {
                     region: Region {
@@ -37,7 +37,7 @@ Located {
                         },
                         end: Position {
                             line: 1,
-                            column: 27,
+                            column: 29,
                         },
                     },
                     value: Lambda {
@@ -49,7 +49,7 @@ Located {
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 16,
+                                    column: 17,
                                 },
                             },
                             value: Var(
@@ -60,22 +60,22 @@ Located {
                             region: Region {
                                 start: Position {
                                     line: 1,
-                                    column: 20,
+                                    column: 21,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 27,
+                                    column: 29,
                                 },
                             },
                             value: Type {
                                 region: Region {
                                     start: Position {
                                         line: 1,
-                                        column: 20,
+                                        column: 21,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 23,
+                                        column: 24,
                                     },
                                 },
                                 name: "Cmd",
@@ -84,11 +84,11 @@ Located {
                                         region: Region {
                                             start: Position {
                                                 line: 1,
-                                                column: 24,
+                                                column: 25,
                                             },
                                             end: Position {
                                                 line: 1,
-                                                column: 27,
+                                                column: 29,
                                             },
                                         },
                                         value: Var(
@@ -102,6 +102,5 @@ Located {
                 },
             },
         ],
-        ext: None,
-    },
+    ),
 }

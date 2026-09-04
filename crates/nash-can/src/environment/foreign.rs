@@ -198,27 +198,54 @@ fn add_explicit_exposing<'a>(
                     });
                 }
             }
-            Exposed::Upper { name, privacy } => match privacy {
-                Privacy::Private => match raw_type_info.get(name.value) {
-                    Some((typ, ctors)) => {
-                        // Elm overwrites the type entry (`Map.insert`), and
-                        // only aliases bring their (record) ctor along.
-                        env.types
-                            .insert(name.value, Info::Specific(interface.home, *typ));
-                        if matches!(typ, Type::Alias { .. }) {
+            Exposed::Upper { name, privacy } | Exposed::LowerType { name, privacy } => {
+                match privacy {
+                    Privacy::Private => match raw_type_info.get(name.value) {
+                        Some((typ, ctors)) => {
+                            // Elm overwrites the type entry (`Map.insert`), and
+                            // only aliases bring their (record) ctor along.
+                            env.types
+                                .insert(name.value, Info::Specific(interface.home, *typ));
+                            if matches!(typ, Type::Alias { .. }) {
+                                for (ctor_name, ctor) in ctors {
+                                    merge_exposed(&mut env.ctors, ctor_name, interface.home, *ctor);
+                                }
+                            }
+                        }
+                        None => {
+                            if let Some(type_name) =
+                                check_for_ctor_mistake(raw_type_info, name.value)
+                            {
+                                errors.push(Error::ImportCtorByName {
+                                    region: name.region,
+                                    name: name.value,
+                                    type_name,
+                                });
+                            } else {
+                                errors.push(Error::ImportExposingNotFound {
+                                    region: name.region,
+                                    module: interface.home,
+                                    name: name.value,
+                                    available: available_types(bump, raw_type_info),
+                                });
+                            }
+                        }
+                    },
+                    Privacy::Public(dot_dot_region) => match raw_type_info.get(name.value) {
+                        Some((typ @ Type::Union { .. }, ctors)) => {
+                            env.types
+                                .insert(name.value, Info::Specific(interface.home, *typ));
                             for (ctor_name, ctor) in ctors {
                                 merge_exposed(&mut env.ctors, ctor_name, interface.home, *ctor);
                             }
                         }
-                    }
-                    None => {
-                        if let Some(type_name) = check_for_ctor_mistake(raw_type_info, name.value) {
-                            errors.push(Error::ImportCtorByName {
-                                region: name.region,
+                        Some((Type::Alias { .. }, _)) => {
+                            errors.push(Error::ImportOpenAlias {
+                                region: *dot_dot_region,
                                 name: name.value,
-                                type_name,
                             });
-                        } else {
+                        }
+                        None => {
                             errors.push(Error::ImportExposingNotFound {
                                 region: name.region,
                                 module: interface.home,
@@ -226,32 +253,9 @@ fn add_explicit_exposing<'a>(
                                 available: available_types(bump, raw_type_info),
                             });
                         }
-                    }
-                },
-                Privacy::Public(dot_dot_region) => match raw_type_info.get(name.value) {
-                    Some((typ @ Type::Union { .. }, ctors)) => {
-                        env.types
-                            .insert(name.value, Info::Specific(interface.home, *typ));
-                        for (ctor_name, ctor) in ctors {
-                            merge_exposed(&mut env.ctors, ctor_name, interface.home, *ctor);
-                        }
-                    }
-                    Some((Type::Alias { .. }, _)) => {
-                        errors.push(Error::ImportOpenAlias {
-                            region: *dot_dot_region,
-                            name: name.value,
-                        });
-                    }
-                    None => {
-                        errors.push(Error::ImportExposingNotFound {
-                            region: name.region,
-                            module: interface.home,
-                            name: name.value,
-                            available: available_types(bump, raw_type_info),
-                        });
-                    }
-                },
-            },
+                    },
+                }
+            }
             Exposed::Operator { region, op } => {
                 if let Some(binop) = interface.binops.iter().find(|b| b.symbol == *op) {
                     let info = to_env_binop(interface.home, binop);

@@ -7,8 +7,9 @@ use nash_ast::{
 };
 use nash_region::{Located, Region};
 use nash_source::{
-    Alias as SourceAlias, Ctor as SourceCtor, Exposed, Exposing, Infix, Module as SourceModule,
-    Privacy, Type as SourceType, Union as SourceUnion, Value as SourceValue,
+    Alias as SourceAlias, Ctor as SourceCtor, CtorArgs as SourceCtorArgs, Exposed, Exposing, Infix,
+    Module as SourceModule, Privacy, Type as SourceType, TypeParam as SourceTypeParam,
+    Union as SourceUnion, Value as SourceValue,
 };
 
 use crate::accumulate;
@@ -337,23 +338,52 @@ fn canonicalize_unions<'a>(
     )
 }
 
+fn reject_kind_annotations<'a>(params: &[&SourceTypeParam<'a>]) -> Result<(), Vec<Error<'a>>> {
+    for param in params {
+        if let Some(kind) = param.kind {
+            return Err(vec![Error::Unsupported {
+                feature: "kind annotations",
+                region: kind.region,
+            }]);
+        }
+    }
+    Ok(())
+}
+
+fn ctor_arg_types<'a>(
+    bump: &'a Bump,
+    ctor: &'a SourceCtor<'a>,
+) -> &'a [&'a Located<SourceType<'a>>] {
+    match &ctor.arguments {
+        SourceCtorArgs::Positional(args) => args,
+        SourceCtorArgs::Labeled(fields) => {
+            bump.alloc_slice_fill_iter(fields.iter().map(|(_, typ)| *typ))
+        }
+    }
+}
+
 fn canonicalize_union<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
     source_union: &'a Located<SourceUnion<'a>>,
 ) -> Result<CanUnion<'a>, Vec<Error<'a>>> {
     let union = &source_union.value;
+    reject_kind_annotations(union.arguments)?;
     let parameters =
-        bump.alloc_slice_fill_iter(union.arguments.iter().copied().map(|arg| arg.value));
+        bump.alloc_slice_fill_iter(union.arguments.iter().copied().map(|arg| arg.name.value));
     let ctors = canonicalize_ctors(bump, env, union.ctors)?;
     let alternatives = union
         .ctors
         .len()
         .try_into()
         .expect("union alternatives exceed u16");
-    let options = if union.ctors.len() == 1 && union.ctors[0].arguments.len() == 1 {
+    let options = if union.ctors.len() == 1 && ctor_arg_types(bump, union.ctors[0]).len() == 1 {
         CtorOpts::Unbox
-    } else if union.ctors.iter().all(|ctor| ctor.arguments.is_empty()) {
+    } else if union
+        .ctors
+        .iter()
+        .all(|ctor| ctor_arg_types(bump, ctor).is_empty())
+    {
         CtorOpts::Enum
     } else {
         CtorOpts::Normal
@@ -376,12 +406,22 @@ fn canonicalize_ctors<'a>(
     accumulate::try_all_alloc_ref(
         bump,
         ctors.iter().copied().enumerate().map(|(index, ctor)| {
-            let arguments = types::canonicalize_type_arguments(bump, env, ctor.arguments)?;
+            let source_arguments = ctor_arg_types(bump, ctor);
+            if matches!(&ctor.arguments, SourceCtorArgs::Positional(_))
+                && let Some(record) = source_arguments
+                    .iter()
+                    .find(|arg| matches!(arg.value, SourceType::Record(_)))
+            {
+                return Err(vec![Error::Unsupported {
+                    feature: "anonymous record constructor arguments",
+                    region: record.region,
+                }]);
+            }
+            let arguments = types::canonicalize_type_arguments(bump, env, source_arguments)?;
             Ok(&*bump.alloc(CanCtor {
                 name: ctor.name.value,
                 index: index.try_into().expect("constructor index exceeds u16"),
-                arity: ctor
-                    .arguments
+                arity: source_arguments
                     .len()
                     .try_into()
                     .expect("constructor arity exceeds u16"),
@@ -431,7 +471,8 @@ fn canonicalize_aliases<'a>(
                 return Err(vec![Error::RecursiveAlias {
                     region: first.value.name.region,
                     name: first.value.name.value,
-                    args: bump.alloc_slice_fill_iter(first.value.arguments.iter().map(|a| a.value)),
+                    args: bump
+                        .alloc_slice_fill_iter(first.value.arguments.iter().map(|a| a.name.value)),
                     typ: first.value.typ,
                     others: bump
                         .alloc_slice_fill_iter(cycle[1..].iter().map(|a| a.value.name.value)),
@@ -453,8 +494,9 @@ fn canonicalize_single_alias<'a>(
     source_alias: &'a Located<SourceAlias<'a>>,
 ) -> Result<&'a Located<CanAlias<'a>>, Vec<Error<'a>>> {
     let alias = &source_alias.value;
+    reject_kind_annotations(alias.arguments)?;
     let parameters =
-        bump.alloc_slice_fill_iter(alias.arguments.iter().copied().map(|arg| arg.value));
+        bump.alloc_slice_fill_iter(alias.arguments.iter().copied().map(|arg| arg.name.value));
     let typ = types::canonicalize_type(bump, env, alias.typ)?;
 
     let can_alias = CanAlias {
@@ -475,7 +517,10 @@ fn check_union_free_vars<'a>(
     // Elm builds the argument dups dict with foldr, so occurrences are
     // inserted in reverse source order; replicated for identical regions.
     dups::detect(
-        u.arguments.iter().rev().map(|a| (a.value, a.region)),
+        u.arguments
+            .iter()
+            .rev()
+            .map(|a| (a.name.value, a.name.region)),
         |arg_name, first, second| Error::DuplicateUnionArg {
             type_name: u.name.value,
             arg_name,
@@ -484,13 +529,13 @@ fn check_union_free_vars<'a>(
         },
     )?;
 
-    let bound: BTreeSet<&str> = u.arguments.iter().map(|a| a.value).collect();
+    let bound: BTreeSet<&str> = u.arguments.iter().map(|a| a.name.value).collect();
 
     // Elm folds ctors with foldr and overwriting inserts: later ctors are
     // processed first, so earlier ctors win region conflicts.
     let mut free_vars: BTreeMap<&str, Region> = BTreeMap::new();
     for ctor in u.ctors.iter().rev() {
-        for arg in ctor.arguments {
+        for arg in ctor_arg_types(bump, ctor) {
             collect_free_type_vars(arg, &mut free_vars);
         }
     }
@@ -503,7 +548,7 @@ fn check_union_free_vars<'a>(
     if unbound.is_empty() {
         Ok(())
     } else {
-        let args = bump.alloc_slice_fill_iter(u.arguments.iter().map(|a| a.value));
+        let args = bump.alloc_slice_fill_iter(u.arguments.iter().map(|a| a.name.value));
         let (first_unbound, rest_unbound) = unbound
             .split_first()
             .expect("unbound is non-empty: guarded by is_empty check");
@@ -525,7 +570,10 @@ fn check_alias_free_vars<'a>(
 
     // Reverse source order, matching Elm's foldr-built dups dict.
     dups::detect(
-        a.arguments.iter().rev().map(|arg| (arg.value, arg.region)),
+        a.arguments
+            .iter()
+            .rev()
+            .map(|arg| (arg.name.value, arg.name.region)),
         |arg_name, first, second| Error::DuplicateAliasArg {
             type_name: a.name.value,
             arg_name,
@@ -534,7 +582,7 @@ fn check_alias_free_vars<'a>(
         },
     )?;
 
-    let bound: BTreeSet<&str> = a.arguments.iter().map(|arg| arg.value).collect();
+    let bound: BTreeSet<&str> = a.arguments.iter().map(|arg| arg.name.value).collect();
 
     let mut free_vars: BTreeMap<&str, Region> = BTreeMap::new();
     collect_free_type_vars(a.typ, &mut free_vars);
@@ -543,8 +591,8 @@ fn check_alias_free_vars<'a>(
     let unused: BTreeMap<&str, Region> = a
         .arguments
         .iter()
-        .filter(|arg| !free_vars.contains_key(arg.value))
-        .map(|arg| (arg.value, arg.region))
+        .filter(|arg| !free_vars.contains_key(arg.name.value))
+        .map(|arg| (arg.name.value, arg.name.region))
         .collect();
 
     let unbound: Vec<(&str, Region)> = free_vars
@@ -555,7 +603,7 @@ fn check_alias_free_vars<'a>(
     if unused.is_empty() && unbound.is_empty() {
         Ok(())
     } else {
-        let args = bump.alloc_slice_fill_iter(a.arguments.iter().map(|arg| arg.value));
+        let args = bump.alloc_slice_fill_iter(a.arguments.iter().map(|arg| arg.name.value));
         Err(vec![Error::TypeVarsMessedUpInAlias {
             region: alias.region,
             name: a.name.value,
@@ -577,6 +625,11 @@ fn collect_type_edges<'a>(
             collect_type_edges(&to.value, alias_names, edges);
         }
         SourceType::Var(_) => {}
+        SourceType::VarApp { args, .. } => {
+            for arg in *args {
+                collect_type_edges(&arg.value, alias_names, edges);
+            }
+        }
         SourceType::Type { name, args, .. } => {
             // Elm's `getEdges` keeps duplicates; the caller reverses the
             // final list to match its prepend accumulation.
@@ -593,7 +646,7 @@ fn collect_type_edges<'a>(
                 collect_type_edges(&arg.value, alias_names, edges);
             }
         }
-        SourceType::Record { fields, ext: _ } => {
+        SourceType::Record(fields) => {
             for field in *fields {
                 collect_type_edges(&field.typ.value, alias_names, edges);
             }
@@ -620,6 +673,11 @@ fn collect_free_type_vars<'a>(typ: &Located<SourceType<'a>>, vars: &mut BTreeMap
         SourceType::Var(name) => {
             vars.insert(name, typ.region);
         }
+        SourceType::VarApp { args, .. } => {
+            for arg in *args {
+                collect_free_type_vars(arg, vars);
+            }
+        }
         SourceType::Lambda { from, to } => {
             collect_free_type_vars(from, vars);
             collect_free_type_vars(to, vars);
@@ -629,10 +687,7 @@ fn collect_free_type_vars<'a>(typ: &Located<SourceType<'a>>, vars: &mut BTreeMap
                 collect_free_type_vars(arg, vars);
             }
         }
-        SourceType::Record { fields, ext } => {
-            if let Some(ext_var) = ext {
-                vars.insert(ext_var.value, ext_var.region);
-            }
+        SourceType::Record(fields) => {
             for field in *fields {
                 collect_free_type_vars(field.typ, vars);
             }
@@ -702,47 +757,61 @@ fn canonicalize_exports<'a>(
                             });
                         }
                     }
-                    Exposed::Upper { name, privacy } => match privacy {
-                        Privacy::Public(dot_dot_region) => {
-                            if union_names.contains(name.value) {
-                                resolved.push((
-                                    name.value,
-                                    name.region,
-                                    Export::UnionOpen(name.value),
-                                ));
-                            } else if alias_names.contains(name.value) {
-                                errors.push(Error::ExportOpenAlias {
-                                    region: *dot_dot_region,
-                                    name: name.value,
-                                });
-                            } else {
-                                errors.push(Error::ExportNotFound {
-                                    region: name.region,
-                                    kind: VarKind::BadType,
-                                    name: name.value,
-                                    suggestions: type_suggestions(bump, &union_names, &alias_names),
-                                });
+                    Exposed::Upper { name, privacy } | Exposed::LowerType { name, privacy } => {
+                        match privacy {
+                            Privacy::Public(dot_dot_region) => {
+                                if union_names.contains(name.value) {
+                                    resolved.push((
+                                        name.value,
+                                        name.region,
+                                        Export::UnionOpen(name.value),
+                                    ));
+                                } else if alias_names.contains(name.value) {
+                                    errors.push(Error::ExportOpenAlias {
+                                        region: *dot_dot_region,
+                                        name: name.value,
+                                    });
+                                } else {
+                                    errors.push(Error::ExportNotFound {
+                                        region: name.region,
+                                        kind: VarKind::BadType,
+                                        name: name.value,
+                                        suggestions: type_suggestions(
+                                            bump,
+                                            &union_names,
+                                            &alias_names,
+                                        ),
+                                    });
+                                }
+                            }
+                            Privacy::Private => {
+                                if union_names.contains(name.value) {
+                                    resolved.push((
+                                        name.value,
+                                        name.region,
+                                        Export::UnionClosed(name.value),
+                                    ));
+                                } else if alias_names.contains(name.value) {
+                                    resolved.push((
+                                        name.value,
+                                        name.region,
+                                        Export::Alias(name.value),
+                                    ));
+                                } else {
+                                    errors.push(Error::ExportNotFound {
+                                        region: name.region,
+                                        kind: VarKind::BadType,
+                                        name: name.value,
+                                        suggestions: type_suggestions(
+                                            bump,
+                                            &union_names,
+                                            &alias_names,
+                                        ),
+                                    });
+                                }
                             }
                         }
-                        Privacy::Private => {
-                            if union_names.contains(name.value) {
-                                resolved.push((
-                                    name.value,
-                                    name.region,
-                                    Export::UnionClosed(name.value),
-                                ));
-                            } else if alias_names.contains(name.value) {
-                                resolved.push((name.value, name.region, Export::Alias(name.value)));
-                            } else {
-                                errors.push(Error::ExportNotFound {
-                                    region: name.region,
-                                    kind: VarKind::BadType,
-                                    name: name.value,
-                                    suggestions: type_suggestions(bump, &union_names, &alias_names),
-                                });
-                            }
-                        }
-                    },
+                    }
                 }
             }
 
@@ -1289,7 +1358,6 @@ mod tests {
     }
 
     // === Module tests ===
-
     #[test]
     fn module_shell_header_only() {
         assert_module_snapshot!("module Main exposing (..)\n");
@@ -1327,10 +1395,10 @@ mod tests {
             r#"
             module Main exposing (Pair, Maybe(..))
 
-            type alias Pair a b = (a, b)
+            type alias Pair 'a 'b = ('a, 'b)
 
-            type Maybe a
-                = Just a
+            type Maybe 'a
+                = Just 'a
                 | Nothing
         "#
         );
@@ -1342,14 +1410,14 @@ mod tests {
             r#"
             module Main exposing (Pair, WrappedPair, WrappedMaybe, Maybe(..))
 
-            type alias Pair a b = (a, b)
+            type alias Pair 'a 'b = ('a, 'b)
 
-            type alias WrappedPair a b = Pair a b
+            type alias WrappedPair 'a 'b = Pair 'a 'b
 
-            type alias WrappedMaybe a = Maybe a
+            type alias WrappedMaybe 'a = Maybe 'a
 
-            type Maybe a
-                = Just a
+            type Maybe 'a
+                = Just 'a
                 | Nothing
         "#
         );
@@ -1361,10 +1429,10 @@ mod tests {
             r#"
             module Main exposing (Maybe(..), Wrapped)
 
-            type alias Wrapped a = Main.Maybe a
+            type alias Wrapped 'a = Main.Maybe 'a
 
-            type Maybe a
-                = Just a
+            type Maybe 'a
+                = Just 'a
                 | Nothing
         "#
         );
@@ -1400,7 +1468,7 @@ mod tests {
 
             import Result
 
-            type alias Wrapped e a = Result.Result e a
+            type alias Wrapped 'e 'a = Result.Result 'e 'a
         "#
         );
     }
@@ -1415,7 +1483,7 @@ mod tests {
 
             import Option exposing (..)
 
-            type alias Wrapped a = Maybe a
+            type alias Wrapped 'a = Maybe 'a
         "#
         );
         let bump = Bump::new();
@@ -1455,7 +1523,7 @@ mod tests {
 
             import Option exposing (..)
 
-            type alias Wrapped a = Maybe a
+            type alias Wrapped 'a = Maybe 'a
         "#
         );
         let bump = Bump::new();
@@ -1495,7 +1563,7 @@ mod tests {
 
             import Html.Decode as Decode
 
-            type alias Wrapped msg = Decode.Decoder msg
+            type alias Wrapped 'msg = Decode.Decoder 'msg
         "#
         );
         let bump = Bump::new();
@@ -1545,8 +1613,8 @@ mod tests {
 
             type alias Wrapped = Maybe
 
-            type Maybe a
-                = Just a
+            type Maybe 'a
+                = Just 'a
                 | Nothing
         "#
         );
@@ -1574,7 +1642,7 @@ mod tests {
 
             import Choice exposing (..)
 
-            type alias Wrapped a = Maybe a
+            type alias Wrapped 'a = Maybe 'a
         "#
         );
         let bump = Bump::new();
@@ -1616,7 +1684,7 @@ mod tests {
 
             import Maybe exposing (Maybe)
 
-            type alias Wrapped a = Maybe a
+            type alias Wrapped 'a = Maybe 'a
         "#
         );
         let bump = Bump::new();
@@ -1648,7 +1716,7 @@ mod tests {
 
             import Result
 
-            type alias Wrapped e a = Result.Result e a
+            type alias Wrapped 'e 'a = Result.Result 'e 'a
         "#
         );
         let bump = Bump::new();
@@ -1680,7 +1748,7 @@ mod tests {
 
             import Json.Decode as Decode
 
-            type alias Decoder msg = Decode.Decoder msg
+            type alias Decoder 'msg = Decode.Decoder 'msg
         "#
         );
         let bump = Bump::new();
@@ -1750,7 +1818,7 @@ mod tests {
             r#"
             module Main exposing (Pair(..))
 
-            type alias Pair a b = (a, b)
+            type alias Pair 'a 'b = ('a, 'b)
         "#
         );
     }
@@ -1768,10 +1836,10 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Pair a b = (a, b)
+            type alias Pair 'a 'b = ('a, 'b)
 
-            type Maybe a
-                = Just a
+            type Maybe 'a
+                = Just 'a
                 | Nothing
         "#
         );
@@ -1809,9 +1877,9 @@ mod tests {
             r#"
             module Main exposing (PublicAlias)
 
-            type alias PublicAlias a = a
+            type alias PublicAlias 'a = 'a
 
-            type alias PrivateAlias a = a
+            type alias PrivateAlias 'a = 'a
 
             type PrivateUnion
                 = Foo
@@ -2027,8 +2095,8 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type MyType a
-                = MyTag b
+            type MyType 'a
+                = MyTag 'b
         "#
         );
     }
@@ -2039,7 +2107,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Phantom a = Int
+            type alias Phantom 'a = Int
         "#
         );
     }
@@ -2050,7 +2118,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Bad = List a
+            type alias Bad = List 'a
         "#
         );
     }
@@ -2061,7 +2129,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type Bad a a
+            type Bad 'a 'a
                 = Foo
         "#
         );
@@ -2073,7 +2141,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Bad a a = a
+            type alias Bad 'a 'a = 'a
         "#
         );
     }
@@ -2784,7 +2852,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Pair a b = { first : a, second : b }
+            type alias Pair 'a 'b = { first : 'a, second : 'b }
 
             p = Pair
         "#
@@ -2910,7 +2978,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            f : a -> a
+            f : 'a -> 'a
             f x = x
         "#
         );
@@ -2924,7 +2992,7 @@ mod tests {
 
             g =
                 let
-                    f : a -> a
+                    f : 'a -> 'a
                     f x = x
                 in
                 f 1
@@ -3473,11 +3541,11 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Point a = { x : a, y : a }
+            type alias Point 'a = { x : 'a, y : 'a }
 
-            type Shape a
-                = Point a a
-                | Circle a
+            type Shape 'a
+                = Point 'a 'a
+                | Circle 'a
         "#
         );
     }
@@ -3488,8 +3556,8 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type Wrap a
-                = Wrap a
+            type Wrap 'a
+                = Wrap 'a
         "#
         );
     }
@@ -3512,7 +3580,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Bad a = b
+            type alias Bad 'a = 'b
         "#
         );
     }
@@ -3560,7 +3628,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Point a = { x : a, y : a }
+            type alias Point 'a = { x : 'a, y : 'a }
 
             p = Point
         "#
@@ -3747,7 +3815,7 @@ mod tests {
 
             import Maybe exposing (Maybe)
 
-            f : Maybe a -> Maybe a
+            f : Maybe 'a -> Maybe 'a
             f x = x
         "#
         );
@@ -3921,49 +3989,14 @@ mod tests {
         );
     }
 
-    // === Record extension variables in type declarations ===
-
-    #[test]
-    fn extensible_record_alias_allowed() {
-        assert_module_snapshot!(
-            r#"
-            module Main exposing (..)
-
-            type alias Extend a b = { a | items : b }
-        "#
-        );
-    }
-
-    #[test]
-    fn unbound_record_ext_var_in_alias() {
-        assert_module_error_snapshot!(
-            r#"
-            module Main exposing (..)
-
-            type alias Bad = { r | items : List r }
-        "#
-        );
-    }
-
-    #[test]
-    fn unbound_record_ext_var_in_union() {
-        assert_module_error_snapshot!(
-            r#"
-            module Main exposing (..)
-
-            type Foo = Bar { r | items : List r }
-        "#
-        );
-    }
-
     #[test]
     fn let_destruct_local_ctor_pattern_binds_names() {
         assert_module_snapshot!(
             r#"
             module Main exposing (..)
 
-            type Wrap a
-                = Wrap a
+            type Wrap 'a
+                = Wrap 'a
 
             f w = let (Wrap x) = w in x
         "#
@@ -3989,11 +4022,30 @@ mod tests {
             r#"
             module Main exposing (..)
 
-            type alias Transform a = a -> a
+            type alias Transform 'a = 'a -> 'a
 
-            f : Transform (List b)
+            f : Transform (List 'b)
             f x = x
         "#
+        );
+    }
+
+    #[test]
+    fn kind_annotation_unsupported() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\n\ntype Fix ('f : Big -> Big) = Fix ('f (Fix 'f))\n"
+        );
+    }
+
+    #[test]
+    fn anonymous_record_constructor_argument_unsupported() {
+        assert_module_error_snapshot!("module Main exposing (..)\n\ntype D = D int { x : int }\n");
+    }
+
+    #[test]
+    fn little_type_open_export() {
+        assert_interface_snapshot!(
+            "module Main exposing (type option(..))\n\ntype option 'a = Some 'a | None\n"
         );
     }
 }

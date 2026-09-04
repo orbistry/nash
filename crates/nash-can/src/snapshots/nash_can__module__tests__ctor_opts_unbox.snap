@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap a\n    = Wrap a\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap 'a\n    = Wrap 'a\n"
 ---
 Module {
     name: ModuleName {
@@ -75,7 +75,7 @@ Module {
                                     },
                                     end: Position {
                                         line: 4,
-                                        column: 13,
+                                        column: 14,
                                     },
                                 },
                                 value: Var(

@@ -133,6 +133,19 @@ impl<'a> Parser<'a> {
                         privacy,
                     }))
                 }),
+                Box::new(|p: &mut Parser<'a>| {
+                    p.keyword_type(error::Exposing::Value)?;
+                    p.chomp_and_check_indent(error::Exposing::Space, error::Exposing::TypeName)?;
+                    let name_start = p.get_position();
+                    let name = p.lower_name(error::Exposing::TypeName)?;
+                    let located = p.add_end(name_start, name);
+                    p.chomp_and_check_indent(error::Exposing::Space, error::Exposing::IndentEnd)?;
+                    let privacy = p.privacy()?;
+                    Ok(p.alloc(Exposed::LowerType {
+                        name: located,
+                        privacy,
+                    }))
+                }),
             ],
         )
     }
@@ -192,6 +205,22 @@ mod tests {
         }};
     }
 
+    macro_rules! assert_exposing_error_snapshot {
+        ($input:expr) => {{
+            let input = indoc!($input);
+            let bump = Bump::new();
+            let src = bump.alloc_str(input);
+            let mut parser = Parser::new(&bump, src.as_bytes());
+            let error = parser.exposing().expect_err("expected exposing parse error");
+            insta::with_settings!({
+                description => format!("Code:\n\n{}", input),
+                omit_expression => true,
+            }, {
+                insta::assert_debug_snapshot!(error);
+            });
+        }};
+    }
+
     #[test]
     fn exposing_open() {
         assert_exposing_snapshot!("(..)");
@@ -235,6 +264,36 @@ mod tests {
     #[test]
     fn exposing_with_spaces() {
         assert_exposing_snapshot!("( foo , bar )");
+    }
+
+    #[test]
+    fn exposing_little_type_public() {
+        assert_exposing_snapshot!("(type option(..))");
+    }
+
+    #[test]
+    fn exposing_little_type_and_value() {
+        assert_exposing_snapshot!("(type step, map)");
+    }
+
+    #[test]
+    fn exposing_mixed_little_type() {
+        assert_exposing_snapshot!("(type option(..), Data(..), (+))");
+    }
+
+    #[test]
+    fn error_uppercase_after_type() {
+        assert_exposing_error_snapshot!("(type Foo)");
+    }
+
+    #[test]
+    fn error_missing_little_type_name() {
+        assert_exposing_error_snapshot!("(type)");
+    }
+
+    #[test]
+    fn error_unclosed_little_type() {
+        assert_exposing_error_snapshot!("(type option(..)");
     }
 
     // Note: Multiline exposing lists are tested indirectly through module/import tests,

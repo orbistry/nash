@@ -59,6 +59,7 @@ pub enum Exposing {
     OperatorReserved(BadOperator, Row, Col),
     OperatorRightParen(Row, Col),
     TypePrivacy(Row, Col),
+    TypeName(Row, Col),
     End(Row, Col),
     IndentEnd(Row, Col),
     IndentValue(Row, Col),
@@ -104,6 +105,7 @@ pub enum DeclType<'a> {
 pub enum TypeAlias<'a> {
     Space(Space, Row, Col),
     Name(Row, Col),
+    Param(&'a TypeParam<'a>, Row, Col),
     Equals(Row, Col),
     Body(&'a Type<'a>, Row, Col),
     IndentEquals(Row, Col),
@@ -114,6 +116,7 @@ pub enum TypeAlias<'a> {
 pub enum CustomType<'a> {
     Space(Space, Row, Col),
     Name(Row, Col),
+    Param(&'a TypeParam<'a>, Row, Col),
     Equals(Row, Col),
     Bar(Row, Col),
     Variant(Row, Col),
@@ -122,6 +125,12 @@ pub enum CustomType<'a> {
     IndentBar(Row, Col),
     IndentAfterBar(Row, Col),
     IndentAfterEquals(Row, Col),
+    Field(Row, Col),
+    FieldColon(Row, Col),
+    FieldType(&'a Type<'a>, Row, Col),
+    FieldEnd(Row, Col),
+    IndentField(Row, Col),
+    IndentFieldType(Row, Col),
 }
 
 // =============================================================================
@@ -329,8 +338,31 @@ pub enum Type<'a> {
     Record(&'a TRecord<'a>, Row, Col),
     Tuple(&'a TTuple<'a>, Row, Col),
     Start(Row, Col),
+    VarStart(Row, Col),
     Space(Space, Row, Col),
     IndentStart(Row, Col),
+}
+
+#[derive(Debug)]
+pub enum TypeParam<'a> {
+    Start(Row, Col),
+    Colon(Row, Col),
+    Kind(&'a Kind<'a>, Row, Col),
+    End(Row, Col),
+    Space(Space, Row, Col),
+    IndentColon(Row, Col),
+    IndentKind(Row, Col),
+    IndentEnd(Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Kind<'a> {
+    Start(Row, Col),
+    Name(&'a str, Row, Col),
+    End(Row, Col),
+    Space(Space, Row, Col),
+    IndentStart(Row, Col),
+    Paren(&'a Kind<'a>, Row, Col),
 }
 
 #[derive(Debug)]

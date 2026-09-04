@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/type_.rs
-description: "Code:\n\n(a -> b) -> List a -> List b"
+description: "Code:\n\n('a -> 'b) -> List 'a -> List 'b"
 ---
 Located {
     region: Region {
@@ -10,7 +10,7 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 29,
+            column: 33,
         },
     },
     value: Lambda {
@@ -22,7 +22,7 @@ Located {
                 },
                 end: Position {
                     line: 1,
-                    column: 8,
+                    column: 10,
                 },
             },
             value: Lambda {
@@ -34,7 +34,7 @@ Located {
                         },
                         end: Position {
                             line: 1,
-                            column: 3,
+                            column: 4,
                         },
                     },
                     value: Var(
@@ -45,11 +45,11 @@ Located {
                     region: Region {
                         start: Position {
                             line: 1,
-                            column: 7,
+                            column: 8,
                         },
                         end: Position {
                             line: 1,
-                            column: 8,
+                            column: 10,
                         },
                     },
                     value: Var(
@@ -62,11 +62,11 @@ Located {
             region: Region {
                 start: Position {
                     line: 1,
-                    column: 13,
+                    column: 15,
                 },
                 end: Position {
                     line: 1,
-                    column: 29,
+                    column: 33,
                 },
             },
             value: Lambda {
@@ -74,22 +74,22 @@ Located {
                     region: Region {
                         start: Position {
                             line: 1,
-                            column: 13,
+                            column: 15,
                         },
                         end: Position {
                             line: 1,
-                            column: 19,
+                            column: 22,
                         },
                     },
                     value: Type {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 13,
+                                column: 15,
                             },
                             end: Position {
                                 line: 1,
-                                column: 17,
+                                column: 19,
                             },
                         },
                         name: "List",
@@ -98,11 +98,11 @@ Located {
                                 region: Region {
                                     start: Position {
                                         line: 1,
-                                        column: 18,
+                                        column: 20,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 19,
+                                        column: 22,
                                     },
                                 },
                                 value: Var(
@@ -116,22 +116,22 @@ Located {
                     region: Region {
                         start: Position {
                             line: 1,
-                            column: 23,
+                            column: 26,
                         },
                         end: Position {
                             line: 1,
-                            column: 29,
+                            column: 33,
                         },
                     },
                     value: Type {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 23,
+                                column: 26,
                             },
                             end: Position {
                                 line: 1,
-                                column: 27,
+                                column: 30,
                             },
                         },
                         name: "List",
@@ -140,11 +140,11 @@ Located {
                                 region: Region {
                                     start: Position {
                                         line: 1,
-                                        column: 28,
+                                        column: 31,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 29,
+                                        column: 33,
                                     },
                                 },
                                 value: Var(

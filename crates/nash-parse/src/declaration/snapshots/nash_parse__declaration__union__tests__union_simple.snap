@@ -45,7 +45,9 @@ Union(
                         },
                         value: "True",
                     },
-                    arguments: [],
+                    arguments: Positional(
+                        [],
+                    ),
                 },
                 Ctor {
                     name: Located {
@@ -61,7 +63,9 @@ Union(
                         },
                         value: "False",
                     },
-                    arguments: [],
+                    arguments: Positional(
+                        [],
+                    ),
                 },
             ],
         },

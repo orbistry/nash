@@ -73,8 +73,8 @@ Alias(
                         column: 35,
                     },
                 },
-                value: Record {
-                    fields: [
+                value: Record(
+                    [
                         FieldType {
                             field: Located {
                                 region: Region {
@@ -117,8 +117,7 @@ Alias(
                             },
                         },
                     ],
-                    ext: None,
-                },
+                ),
             },
         },
     },

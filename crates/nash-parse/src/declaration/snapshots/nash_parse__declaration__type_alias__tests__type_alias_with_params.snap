@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/type_alias.rs
-description: type alias Result e a = Result e a
+description: "type alias Pair 'a 'b = ('a, 'b)"
 ---
 Alias(
     None,
@@ -12,7 +12,7 @@ Alias(
             },
             end: Position {
                 line: 1,
-                column: 35,
+                column: 33,
             },
         },
         value: Alias {
@@ -24,37 +24,43 @@ Alias(
                     },
                     end: Position {
                         line: 1,
-                        column: 18,
+                        column: 16,
                     },
                 },
-                value: "Result",
+                value: "Pair",
             },
             arguments: [
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 1,
-                            column: 19,
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 19,
+                            },
                         },
-                        end: Position {
-                            line: 1,
-                            column: 20,
-                        },
+                        value: "a",
                     },
-                    value: "e",
+                    kind: None,
                 },
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 1,
-                            column: 21,
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 20,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 22,
+                            },
                         },
-                        end: Position {
-                            line: 1,
-                            column: 22,
-                        },
+                        value: "b",
                     },
-                    value: "a",
+                    kind: None,
                 },
             ],
             typ: Located {
@@ -65,53 +71,41 @@ Alias(
                     },
                     end: Position {
                         line: 1,
-                        column: 35,
+                        column: 33,
                     },
                 },
-                value: Type {
-                    region: Region {
-                        start: Position {
-                            line: 1,
-                            column: 25,
+                value: Tuple {
+                    first: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 26,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 28,
+                            },
                         },
-                        end: Position {
-                            line: 1,
-                            column: 31,
-                        },
+                        value: Var(
+                            "a",
+                        ),
                     },
-                    name: "Result",
-                    args: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 1,
-                                    column: 32,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 33,
-                                },
+                    second: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 30,
                             },
-                            value: Var(
-                                "e",
-                            ),
-                        },
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 1,
-                                    column: 34,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 35,
-                                },
+                            end: Position {
+                                line: 1,
+                                column: 32,
                             },
-                            value: Var(
-                                "a",
-                            ),
                         },
-                    ],
+                        value: Var(
+                            "b",
+                        ),
+                    },
+                    rest: [],
                 },
             },
         },

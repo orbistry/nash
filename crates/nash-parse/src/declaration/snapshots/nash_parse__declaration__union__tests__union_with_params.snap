@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
-description: type Maybe a = Just a | Nothing
+description: "type option 'a = Some 'a | None"
 ---
 Union(
     None,
@@ -24,24 +24,27 @@ Union(
                     },
                     end: Position {
                         line: 1,
-                        column: 11,
+                        column: 12,
                     },
                 },
-                value: "Maybe",
+                value: "option",
             },
             arguments: [
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 1,
-                            column: 12,
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 15,
+                            },
                         },
-                        end: Position {
-                            line: 1,
-                            column: 13,
-                        },
+                        value: "a",
                     },
-                    value: "a",
+                    kind: None,
                 },
             ],
             ctors: [
@@ -50,48 +53,52 @@ Union(
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 16,
+                                column: 18,
                             },
                             end: Position {
                                 line: 1,
-                                column: 20,
+                                column: 22,
                             },
                         },
-                        value: "Just",
+                        value: "Some",
                     },
-                    arguments: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 1,
-                                    column: 21,
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 23,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 25,
+                                    },
                                 },
-                                end: Position {
-                                    line: 1,
-                                    column: 22,
-                                },
+                                value: Var(
+                                    "a",
+                                ),
                             },
-                            value: Var(
-                                "a",
-                            ),
-                        },
-                    ],
+                        ],
+                    ),
                 },
                 Ctor {
                     name: Located {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 25,
+                                column: 28,
                             },
                             end: Position {
                                 line: 1,
                                 column: 32,
                             },
                         },
-                        value: "Nothing",
+                        value: "None",
                     },
-                    arguments: [],
+                    arguments: Positional(
+                        [],
+                    ),
                 },
             ],
         },

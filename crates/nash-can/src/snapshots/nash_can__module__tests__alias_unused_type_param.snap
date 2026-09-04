@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Phantom a = Int\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Phantom 'a = Int\n"
 ---
 [
     TypeVarsMessedUpInAlias {
@@ -28,7 +28,7 @@ description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Phantom a = Int\n
                     },
                     end: Position {
                         line: 3,
-                        column: 21,
+                        column: 22,
                     },
                 },
             ),

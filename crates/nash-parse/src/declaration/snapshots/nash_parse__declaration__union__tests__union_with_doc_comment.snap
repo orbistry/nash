@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
-description: "{-| Represents optional values -}\ntype Maybe a = Just a | Nothing\n"
+description: "{-| Represents optional values -}\ntype Maybe 'a = Just 'a | Nothing\n"
 ---
 Union(
     Some(
@@ -67,18 +67,21 @@ Union(
                 value: "Maybe",
             },
             arguments: [
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 2,
-                            column: 12,
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 14,
+                            },
                         },
-                        end: Position {
-                            line: 2,
-                            column: 13,
-                        },
+                        value: "a",
                     },
-                    value: "a",
+                    kind: None,
                 },
             ],
             ctors: [
@@ -87,48 +90,52 @@ Union(
                         region: Region {
                             start: Position {
                                 line: 2,
-                                column: 16,
+                                column: 17,
                             },
                             end: Position {
                                 line: 2,
-                                column: 20,
+                                column: 21,
                             },
                         },
                         value: "Just",
                     },
-                    arguments: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 2,
-                                    column: 21,
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 22,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 24,
+                                    },
                                 },
-                                end: Position {
-                                    line: 2,
-                                    column: 22,
-                                },
+                                value: Var(
+                                    "a",
+                                ),
                             },
-                            value: Var(
-                                "a",
-                            ),
-                        },
-                    ],
+                        ],
+                    ),
                 },
                 Ctor {
                     name: Located {
                         region: Region {
                             start: Position {
                                 line: 2,
-                                column: 25,
+                                column: 27,
                             },
                             end: Position {
                                 line: 2,
-                                column: 32,
+                                column: 34,
                             },
                         },
                         value: "Nothing",
                     },
-                    arguments: [],
+                    arguments: Positional(
+                        [],
+                    ),
                 },
             ],
         },

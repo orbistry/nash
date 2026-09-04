@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/type_.rs
-description: "Code:\n\n(a -> b, c)"
+description: "Code:\n\n('a -> 'b, 'c)"
 ---
 Located {
     region: Region {
@@ -10,7 +10,7 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 12,
+            column: 15,
         },
     },
     value: Tuple {
@@ -22,7 +22,7 @@ Located {
                 },
                 end: Position {
                     line: 1,
-                    column: 8,
+                    column: 10,
                 },
             },
             value: Lambda {
@@ -34,7 +34,7 @@ Located {
                         },
                         end: Position {
                             line: 1,
-                            column: 3,
+                            column: 4,
                         },
                     },
                     value: Var(
@@ -45,11 +45,11 @@ Located {
                     region: Region {
                         start: Position {
                             line: 1,
-                            column: 7,
+                            column: 8,
                         },
                         end: Position {
                             line: 1,
-                            column: 8,
+                            column: 10,
                         },
                     },
                     value: Var(
@@ -62,11 +62,11 @@ Located {
             region: Region {
                 start: Position {
                     line: 1,
-                    column: 10,
+                    column: 12,
                 },
                 end: Position {
                     line: 1,
-                    column: 11,
+                    column: 14,
                 },
             },
             value: Var(

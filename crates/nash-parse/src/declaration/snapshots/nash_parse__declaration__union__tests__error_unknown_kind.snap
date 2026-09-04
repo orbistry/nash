@@ -1,0 +1,25 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type T ('f : Foo) = A"
+---
+Type(
+    Union(
+        Param(
+            Kind(
+                Name(
+                    "Foo",
+                    1,
+                    14,
+                ),
+                1,
+                14,
+            ),
+            1,
+            8,
+        ),
+        1,
+        6,
+    ),
+    1,
+    1,
+)

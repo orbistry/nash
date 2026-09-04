@@ -239,6 +239,11 @@ mod tests {
     }
 
     #[test]
+    fn import_exposing_little_type() {
+        assert_import_snapshot!("import Prelude exposing (type option(..), map)\n");
+    }
+
+    #[test]
     fn import_exposing_types() {
         assert_import_snapshot!("import Maybe exposing (Maybe(..))\n");
     }

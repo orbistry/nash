@@ -1,0 +1,198 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type Shape\n    = Circle { r : int }\n    | Rect { w : int, h : int }\n"
+---
+Union(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 4,
+                column: 1,
+            },
+        },
+        value: Union {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 11,
+                    },
+                },
+                value: "Shape",
+            },
+            arguments: [],
+            ctors: [
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 7,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 13,
+                            },
+                        },
+                        value: "Circle",
+                    },
+                    arguments: Labeled(
+                        [
+                            (
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 17,
+                                        },
+                                    },
+                                    value: "r",
+                                },
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 20,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 23,
+                                        },
+                                    },
+                                    value: Type {
+                                        region: Region {
+                                            start: Position {
+                                                line: 2,
+                                                column: 20,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 23,
+                                            },
+                                        },
+                                        name: "int",
+                                        args: [],
+                                    },
+                                },
+                            ),
+                        ],
+                    ),
+                },
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 7,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 11,
+                            },
+                        },
+                        value: "Rect",
+                    },
+                    arguments: Labeled(
+                        [
+                            (
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 14,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 15,
+                                        },
+                                    },
+                                    value: "w",
+                                },
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 18,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 21,
+                                        },
+                                    },
+                                    value: Type {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 18,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 21,
+                                            },
+                                        },
+                                        name: "int",
+                                        args: [],
+                                    },
+                                },
+                            ),
+                            (
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 24,
+                                        },
+                                    },
+                                    value: "h",
+                                },
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 27,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 30,
+                                        },
+                                    },
+                                    value: Type {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 27,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 30,
+                                            },
+                                        },
+                                        name: "int",
+                                        args: [],
+                                    },
+                                },
+                            ),
+                        ],
+                    ),
+                },
+            ],
+        },
+    },
+)

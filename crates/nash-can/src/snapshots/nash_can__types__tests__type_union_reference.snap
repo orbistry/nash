@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-description: List a
+description: "List 'a"
 ---
 Located {
     region: Region {
@@ -10,7 +10,7 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 7,
+            column: 8,
         },
     },
     value: Named {
@@ -30,7 +30,7 @@ Located {
                     },
                     end: Position {
                         line: 1,
-                        column: 7,
+                        column: 8,
                     },
                 },
                 value: Var(

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap a\n    = Wrap a\n\nf w = w\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap 'a\n    = Wrap 'a\n\nf w = w\n"
 ---
 Module {
     name: Some(
@@ -134,18 +134,21 @@ Module {
                     value: "Wrap",
                 },
                 arguments: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 3,
-                                column: 11,
+                    TypeParam {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 13,
+                                },
                             },
-                            end: Position {
-                                line: 3,
-                                column: 12,
-                            },
+                            value: "a",
                         },
-                        value: "a",
+                        kind: None,
                     },
                 ],
                 ctors: [
@@ -163,23 +166,25 @@ Module {
                             },
                             value: "Wrap",
                         },
-                        arguments: [
-                            Located {
-                                region: Region {
-                                    start: Position {
-                                        line: 4,
-                                        column: 12,
+                        arguments: Positional(
+                            [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 12,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 14,
+                                        },
                                     },
-                                    end: Position {
-                                        line: 4,
-                                        column: 13,
-                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
                                 },
-                                value: Var(
-                                    "a",
-                                ),
-                            },
-                        ],
+                            ],
+                        ),
                     },
                 ],
             },

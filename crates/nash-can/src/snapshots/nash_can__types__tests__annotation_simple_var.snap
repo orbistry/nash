@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-description: a
+description: "'a"
 ---
 Annotation {
     free_vars: [
@@ -14,7 +14,7 @@ Annotation {
             },
             end: Position {
                 line: 1,
-                column: 2,
+                column: 3,
             },
         },
         value: Var(

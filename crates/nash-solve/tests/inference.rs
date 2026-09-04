@@ -351,8 +351,8 @@ fn union_constructors() {
         r#"
         module Main exposing (Maybe(..), just, nothing)
 
-        type Maybe a
-            = Just a
+        type Maybe 'a
+            = Just 'a
             | Nothing
 
         just = Just
@@ -368,8 +368,8 @@ fn case_with_default() {
         r#"
         module Main exposing (Maybe(..), withDefault)
 
-        type Maybe a
-            = Just a
+        type Maybe 'a
+            = Just 'a
             | Nothing
 
         withDefault default maybe =
@@ -454,7 +454,7 @@ fn typed_identity() {
         r#"
         module Main exposing (id)
 
-        id : a -> a
+        id : 'a -> 'a
         id x = x
     "#
     );
@@ -550,7 +550,7 @@ fn rigid_vars_do_not_unify() {
         r#"
         module Main exposing (cast)
 
-        cast : a -> b
+        cast : 'a -> 'b
         cast x = x
     "#
     );

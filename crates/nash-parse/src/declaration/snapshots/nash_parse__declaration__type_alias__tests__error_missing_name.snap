@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/declaration/type_alias.rs
+description: type alias = int
+---
+Type(
+    Alias(
+        Name(
+            1,
+            12,
+        ),
+        1,
+        6,
+    ),
+    1,
+    1,
+)

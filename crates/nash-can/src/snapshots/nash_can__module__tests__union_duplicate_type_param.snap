@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype Bad a a\n    = Foo\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype Bad 'a 'a\n    = Foo\n"
 ---
 [
     DuplicateUnionArg {
@@ -9,11 +9,11 @@ description: "Code:\n\nmodule Main exposing (..)\n\ntype Bad a a\n    = Foo\n"
         first: Region {
             start: Position {
                 line: 3,
-                column: 12,
+                column: 13,
             },
             end: Position {
                 line: 3,
-                column: 13,
+                column: 15,
             },
         },
         second: Region {
@@ -23,7 +23,7 @@ description: "Code:\n\nmodule Main exposing (..)\n\ntype Bad a a\n    = Foo\n"
             },
             end: Position {
                 line: 3,
-                column: 11,
+                column: 12,
             },
         },
     },

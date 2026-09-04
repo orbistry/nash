@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Transform a = a -> a\n\nf : Transform (List b)\nf x = x\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Transform 'a = 'a -> 'a\n\nf : Transform (List 'b)\nf x = x\n"
 ---
 Module {
     name: ModuleName {
@@ -74,7 +74,7 @@ Module {
                             },
                             end: Position {
                                 line: 5,
-                                column: 22,
+                                column: 23,
                             },
                         },
                         value: Named {
@@ -94,7 +94,7 @@ Module {
                                         },
                                         end: Position {
                                             line: 5,
-                                            column: 22,
+                                            column: 23,
                                         },
                                     },
                                     value: Var(
@@ -129,7 +129,7 @@ Module {
                     },
                     end: Position {
                         line: 5,
-                        column: 22,
+                        column: 23,
                     },
                 },
                 value: Named {
@@ -149,7 +149,7 @@ Module {
                                 },
                                 end: Position {
                                     line: 5,
-                                    column: 22,
+                                    column: 23,
                                 },
                             },
                             value: Var(
@@ -196,11 +196,11 @@ Module {
                     region: Region {
                         start: Position {
                             line: 3,
-                            column: 26,
+                            column: 27,
                         },
                         end: Position {
                             line: 3,
-                            column: 32,
+                            column: 35,
                         },
                     },
                     value: Lambda {
@@ -208,11 +208,11 @@ Module {
                             region: Region {
                                 start: Position {
                                     line: 3,
-                                    column: 26,
+                                    column: 27,
                                 },
                                 end: Position {
                                     line: 3,
-                                    column: 27,
+                                    column: 29,
                                 },
                             },
                             value: Var(
@@ -223,11 +223,11 @@ Module {
                             region: Region {
                                 start: Position {
                                     line: 3,
-                                    column: 31,
+                                    column: 33,
                                 },
                                 end: Position {
                                     line: 3,
-                                    column: 32,
+                                    column: 35,
                                 },
                             },
                             value: Var(

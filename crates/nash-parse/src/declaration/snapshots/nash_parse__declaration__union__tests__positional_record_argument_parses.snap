@@ -1,0 +1,139 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type D = D int { x : int }"
+---
+Union(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 27,
+            },
+        },
+        value: Union {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 7,
+                    },
+                },
+                value: "D",
+            },
+            arguments: [],
+            ctors: [
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 10,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 11,
+                            },
+                        },
+                        value: "D",
+                    },
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 15,
+                                    },
+                                },
+                                value: Type {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 12,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 15,
+                                        },
+                                    },
+                                    name: "int",
+                                    args: [],
+                                },
+                            },
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 16,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 27,
+                                    },
+                                },
+                                value: Record(
+                                    [
+                                        FieldType {
+                                            field: Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 18,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 19,
+                                                    },
+                                                },
+                                                value: "x",
+                                            },
+                                            typ: Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 22,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 25,
+                                                    },
+                                                },
+                                                value: Type {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 22,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 25,
+                                                        },
+                                                    },
+                                                    name: "int",
+                                                    args: [],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                ),
+                            },
+                        ],
+                    ),
+                },
+            ],
+        },
+    },
+)

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-description: Maybe a
+description: "Maybe 'a"
 ---
 Located {
     region: Region {
@@ -10,7 +10,7 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 8,
+            column: 9,
         },
     },
     value: Alias {
@@ -32,7 +32,7 @@ Located {
                         },
                         end: Position {
                             line: 1,
-                            column: 8,
+                            column: 9,
                         },
                     },
                     value: Var(

@@ -1,0 +1,78 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\nmodule P exposing (type option(..), type step)"
+---
+(
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 8,
+            },
+            end: Position {
+                line: 1,
+                column: 9,
+            },
+        },
+        value: "P",
+    },
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 19,
+            },
+            end: Position {
+                line: 1,
+                column: 47,
+            },
+        },
+        value: Explicit(
+            [
+                LowerType {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 25,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 31,
+                            },
+                        },
+                        value: "option",
+                    },
+                    privacy: Public(
+                        Region {
+                            start: Position {
+                                line: 1,
+                                column: 32,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 34,
+                            },
+                        },
+                    ),
+                },
+                LowerType {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 42,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 46,
+                            },
+                        },
+                        value: "step",
+                    },
+                    privacy: Private,
+                },
+            ],
+        ),
+    },
+)

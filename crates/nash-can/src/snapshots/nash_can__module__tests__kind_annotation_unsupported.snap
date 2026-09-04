@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntype Fix ('f : Big -> Big) = Fix ('f (Fix 'f))\n"
+---
+[
+    Unsupported {
+        feature: "kind annotations",
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 16,
+            },
+            end: Position {
+                line: 3,
+                column: 26,
+            },
+        },
+    },
+]

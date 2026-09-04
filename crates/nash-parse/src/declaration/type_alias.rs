@@ -4,7 +4,7 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position};
-use nash_source::Alias;
+use nash_source::{Alias, TypeParam};
 
 use crate::Parser;
 use crate::error::TypeAlias;
@@ -42,9 +42,9 @@ impl<'a> Parser<'a> {
     /// Mirrors Elm's `chompAliasNameToEquals`.
     fn chomp_alias_name_to_equals(
         &mut self,
-    ) -> Result<(&'a Located<&'a str>, &'a [&'a Located<&'a str>]), TypeAlias<'a>> {
+    ) -> Result<(&'a Located<&'a str>, &'a [&'a TypeParam<'a>]), TypeAlias<'a>> {
         let name_start = self.get_position();
-        let name_str = self.upper_name(TypeAlias::Name)?;
+        let name_str = self.type_decl_name(TypeAlias::Name)?;
         let name = self.add_end(name_start, name_str);
 
         self.chomp_and_check_indent(TypeAlias::Space, TypeAlias::IndentEquals)?;
@@ -57,8 +57,8 @@ impl<'a> Parser<'a> {
     fn chomp_alias_name_to_equals_help(
         &mut self,
         name: &'a Located<&'a str>,
-    ) -> Result<(&'a Located<&'a str>, &'a [&'a Located<&'a str>]), TypeAlias<'a>> {
-        let mut args: BumpVec<'a, &'a Located<&'a str>> = BumpVec::new_in(self.bump);
+    ) -> Result<(&'a Located<&'a str>, &'a [&'a TypeParam<'a>]), TypeAlias<'a>> {
+        let mut args: BumpVec<'a, &'a TypeParam<'a>> = BumpVec::new_in(self.bump);
 
         loop {
             let args_clone = args.clone();
@@ -68,9 +68,10 @@ impl<'a> Parser<'a> {
                 vec![
                     // Parse a type parameter
                     Box::new(|p: &mut Parser<'a>| {
-                        let arg_start = p.get_position();
-                        let arg_str = p.lower_name(TypeAlias::Equals)?;
-                        let arg = p.add_end(arg_start, arg_str);
+                        let arg = p.specialize(
+                            |bump, e, row, col| TypeAlias::Param(bump.alloc(e), row, col),
+                            |p| p.type_param(),
+                        )?;
                         p.chomp_and_check_indent(TypeAlias::Space, TypeAlias::IndentEquals)?;
                         args.push(arg);
                         Ok(AliasNameState::MoreArgs)
@@ -95,12 +96,12 @@ impl<'a> Parser<'a> {
 /// State for parsing type alias name and parameters.
 enum AliasNameState<'a> {
     MoreArgs,
-    Done(&'a [&'a Located<&'a str>]),
+    Done(&'a [&'a TypeParam<'a>]),
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::assert_decl_snapshot;
+    use super::super::{assert_decl_error_snapshot, assert_decl_snapshot};
 
     #[test]
     fn type_alias_simple() {
@@ -109,7 +110,7 @@ mod tests {
 
     #[test]
     fn type_alias_with_params() {
-        assert_decl_snapshot!("type alias Result e a = Result e a");
+        assert_decl_snapshot!("type alias Pair 'a 'b = ('a, 'b)");
     }
 
     #[test]
@@ -125,5 +126,15 @@ mod tests {
             type alias Model = { count : Int }
         "#
         );
+    }
+
+    #[test]
+    fn little_alias() {
+        assert_decl_snapshot!("type alias acc = { total : int, seen : list Int }");
+    }
+
+    #[test]
+    fn error_missing_name() {
+        assert_decl_error_snapshot!("type alias = int");
     }
 }

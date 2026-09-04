@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-description: a -> b -> a
+description: "'a -> 'b -> 'a"
 ---
 Annotation {
     free_vars: [
@@ -15,7 +15,7 @@ Annotation {
             },
             end: Position {
                 line: 1,
-                column: 12,
+                column: 15,
             },
         },
         value: Lambda {
@@ -27,7 +27,7 @@ Annotation {
                     },
                     end: Position {
                         line: 1,
-                        column: 2,
+                        column: 3,
                     },
                 },
                 value: Var(
@@ -38,11 +38,11 @@ Annotation {
                 region: Region {
                     start: Position {
                         line: 1,
-                        column: 6,
+                        column: 7,
                     },
                     end: Position {
                         line: 1,
-                        column: 12,
+                        column: 15,
                     },
                 },
                 value: Lambda {
@@ -50,11 +50,11 @@ Annotation {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 6,
+                                column: 7,
                             },
                             end: Position {
                                 line: 1,
-                                column: 7,
+                                column: 9,
                             },
                         },
                         value: Var(
@@ -65,11 +65,11 @@ Annotation {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 11,
+                                column: 13,
                             },
                             end: Position {
                                 line: 1,
-                                column: 12,
+                                column: 15,
                             },
                         },
                         value: Var(

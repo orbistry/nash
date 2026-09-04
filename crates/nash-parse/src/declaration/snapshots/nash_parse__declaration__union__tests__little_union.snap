@@ -1,0 +1,148 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type step 'a = Done 'a | Next int 'a"
+---
+Union(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 37,
+            },
+        },
+        value: Union {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 10,
+                    },
+                },
+                value: "step",
+            },
+            arguments: [
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 11,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                        },
+                        value: "a",
+                    },
+                    kind: None,
+                },
+            ],
+            ctors: [
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 16,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 20,
+                            },
+                        },
+                        value: "Done",
+                    },
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 21,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 23,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    ),
+                },
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 26,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 30,
+                            },
+                        },
+                        value: "Next",
+                    },
+                    arguments: Positional(
+                        [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 31,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 34,
+                                    },
+                                },
+                                value: Type {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 31,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 34,
+                                        },
+                                    },
+                                    name: "int",
+                                    args: [],
+                                },
+                            },
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 35,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 37,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    ),
+                },
+            ],
+        },
+    },
+)

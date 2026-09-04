@@ -53,6 +53,35 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parse a quoted type variable and return its name without the quote.
+    pub(crate) fn type_var_name<E>(
+        &mut self,
+        to_error: impl FnOnce(u16, u16) -> E,
+    ) -> Result<&'a str, E> {
+        let (row, col) = self.position();
+        if self.peek() != Some(b'\'')
+            || !matches!(self.peek_at(1), Some(b) if b.is_ascii_lowercase())
+        {
+            return Err(to_error(row, col));
+        }
+        self.advance();
+        let start_pos = self.pos;
+        self.advance();
+        self.chomp_inner_chars();
+        Ok(self.slice_from(start_pos))
+    }
+
+    /// Parse an uppercase or lowercase type declaration name.
+    pub(crate) fn type_decl_name<E>(
+        &mut self,
+        to_error: impl FnOnce(u16, u16) -> E,
+    ) -> Result<&'a str, E> {
+        match self.peek() {
+            Some(b) if b.is_ascii_uppercase() => self.upper_name(to_error),
+            _ => self.lower_name(to_error),
+        }
+    }
+
     /// Parse an uppercase name.
     ///
     /// Mirrors Elm's `Var.upper`:

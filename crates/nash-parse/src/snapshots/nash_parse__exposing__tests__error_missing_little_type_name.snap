@@ -1,0 +1,8 @@
+---
+source: crates/nash-parse/src/exposing.rs
+description: "Code:\n\n(type)"
+---
+TypeName(
+    1,
+    6,
+)

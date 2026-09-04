@@ -69,6 +69,15 @@ fn canonicalize_type_value<'a>(
             CanType::Lambda { from, to }
         }
         SourceType::Var(name) => CanType::Var(name),
+        SourceType::VarApp {
+            region: name_region,
+            ..
+        } => {
+            return Err(vec![Error::Unsupported {
+                feature: "higher-kinded type application",
+                region: *name_region,
+            }]);
+        }
         SourceType::Type {
             region: name_region,
             name,
@@ -86,7 +95,7 @@ fn canonicalize_type_value<'a>(
             let info = find_type_qual(bump, env, *name_region, type_module, name)?;
             canonicalize_env_type(bump, env, region, name, args, info)?
         }
-        SourceType::Record { fields, ext } => {
+        SourceType::Record(fields) => {
             let field_dict = check_fields(fields)?;
             let can_fields = accumulate::try_all_alloc(
                 bump,
@@ -96,7 +105,7 @@ fn canonicalize_type_value<'a>(
             )?;
             CanType::Record {
                 fields: can_fields,
-                ext: ext.map(|name| name.value),
+                ext: None,
             }
         }
         SourceType::Unit => CanType::Unit,
@@ -573,12 +582,12 @@ mod tests {
 
     #[test]
     fn annotation_simple_var() {
-        assert_annotation_snapshot!("a", empty_env);
+        assert_annotation_snapshot!("'a", empty_env);
     }
 
     #[test]
     fn annotation_function() {
-        assert_annotation_snapshot!("a -> b -> a", empty_env);
+        assert_annotation_snapshot!("'a -> 'b -> 'a", empty_env);
     }
 
     #[test]
@@ -588,32 +597,32 @@ mod tests {
 
     #[test]
     fn annotation_mixed() {
-        assert_annotation_snapshot!("a -> List a", env_with_list_and_int);
-    }
-
-    #[test]
-    fn annotation_record_ext() {
-        assert_annotation_snapshot!("{ a | x : Int }", env_with_int);
+        assert_annotation_snapshot!("'a -> List 'a", env_with_list_and_int);
     }
 
     #[test]
     fn type_tuple_three() {
-        assert_type_snapshot!("( a, b, c )", empty_env);
+        assert_type_snapshot!("( 'a, 'b, 'c )", empty_env);
     }
 
     #[test]
     fn type_tuple_four_errors() {
-        assert_type_error_snapshot!("( a, b, c, d )", empty_env);
+        assert_type_error_snapshot!("( 'a, 'b, 'c, 'd )", empty_env);
     }
 
     #[test]
     fn type_alias_expansion() {
-        assert_type_snapshot!("Maybe a", env_with_maybe_alias);
+        assert_type_snapshot!("Maybe 'a", env_with_maybe_alias);
     }
 
     #[test]
     fn type_union_reference() {
-        assert_type_snapshot!("List a", env_with_list_and_int);
+        assert_type_snapshot!("List 'a", env_with_list_and_int);
+    }
+
+    #[test]
+    fn type_var_app_unsupported() {
+        assert_type_error_snapshot!("'f 'a", empty_env);
     }
 
     #[test]

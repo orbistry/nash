@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (PublicAlias)\n\ntype alias PublicAlias a = a\n\ntype alias PrivateAlias a = a\n\ntype PrivateUnion\n    = Foo\n    | Bar\n"
+description: "Code:\n\nmodule Main exposing (PublicAlias)\n\ntype alias PublicAlias 'a = 'a\n\ntype alias PrivateAlias 'a = 'a\n\ntype PrivateUnion\n    = Foo\n    | Bar\n"
 ---
 Interface {
     home: ModuleName {
@@ -18,11 +18,11 @@ Interface {
                 region: Region {
                     start: Position {
                         line: 3,
-                        column: 28,
+                        column: 29,
                     },
                     end: Position {
                         line: 3,
-                        column: 29,
+                        column: 31,
                     },
                 },
                 value: Var(
@@ -40,11 +40,11 @@ Interface {
                 region: Region {
                     start: Position {
                         line: 5,
-                        column: 29,
+                        column: 30,
                     },
                     end: Position {
                         line: 5,
-                        column: 30,
+                        column: 32,
                     },
                 },
                 value: Var(

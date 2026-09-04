@@ -34,6 +34,10 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    Unsupported {
+        feature: &'static str,
+        region: Region,
+    },
     MissingModuleHeader,
     NotFoundType {
         region: Region,

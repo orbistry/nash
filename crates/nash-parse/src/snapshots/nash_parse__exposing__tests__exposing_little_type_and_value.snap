@@ -1,0 +1,39 @@
+---
+source: crates/nash-parse/src/exposing.rs
+description: "Code:\n\n(type step, map)"
+---
+Explicit(
+    [
+        LowerType {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 7,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 11,
+                    },
+                },
+                value: "step",
+            },
+            privacy: Private,
+        },
+        Lower(
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 13,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 16,
+                    },
+                },
+                value: "map",
+            },
+        ),
+    ],
+)

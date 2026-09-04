@@ -157,4 +157,23 @@ macro_rules! assert_decl_snapshot {
 }
 
 #[cfg(test)]
+macro_rules! assert_decl_error_snapshot {
+    ($src:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = indoc::indoc!($src);
+        let src_in_arena = bump.alloc_str(src);
+        let mut parser = crate::Parser::new(&bump, src_in_arena.as_bytes());
+        let error = parser.declaration().expect_err("expected declaration parse error");
+        insta::with_settings!({
+            description => src,
+            omit_expression => true,
+        }, {
+            insta::assert_debug_snapshot!(error);
+        });
+    }};
+}
+
+#[cfg(test)]
+pub(crate) use assert_decl_error_snapshot;
+#[cfg(test)]
 pub(crate) use assert_decl_snapshot;

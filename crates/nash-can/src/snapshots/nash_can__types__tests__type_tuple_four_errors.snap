@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-description: "( a, b, c, d )"
+description: "( 'a, 'b, 'c, 'd )"
 ---
 [
     TupleLargerThanThree {
@@ -11,7 +11,7 @@ description: "( a, b, c, d )"
             },
             end: Position {
                 line: 1,
-                column: 15,
+                column: 19,
             },
         },
     },

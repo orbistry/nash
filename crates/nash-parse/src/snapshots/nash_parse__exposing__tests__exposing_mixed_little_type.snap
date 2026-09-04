@@ -1,0 +1,75 @@
+---
+source: crates/nash-parse/src/exposing.rs
+description: "Code:\n\n(type option(..), Data(..), (+))"
+---
+Explicit(
+    [
+        LowerType {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 7,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 13,
+                    },
+                },
+                value: "option",
+            },
+            privacy: Public(
+                Region {
+                    start: Position {
+                        line: 1,
+                        column: 14,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 16,
+                    },
+                },
+            ),
+        },
+        Upper {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 19,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 23,
+                    },
+                },
+                value: "Data",
+            },
+            privacy: Public(
+                Region {
+                    start: Position {
+                        line: 1,
+                        column: 24,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 26,
+                    },
+                },
+            ),
+        },
+        Operator {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 29,
+                },
+                end: Position {
+                    line: 1,
+                    column: 32,
+                },
+            },
+            op: "+",
+        },
+    ],
+)

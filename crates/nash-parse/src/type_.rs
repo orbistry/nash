@@ -8,15 +8,20 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position, Region};
-use nash_source::{FieldType, Type};
+use nash_source::{FieldType, Kind, Type, TypeParam};
 
 use crate::Parser;
 use crate::error::{self, TRecord, TTuple};
 
 /// Qualified or unqualified uppercase name (for types).
-enum ForeignUpper<'a> {
+enum TypeName<'a> {
     Unqualified(&'a str),
     Qualified(&'a str, &'a str), // (module, name)
+}
+
+enum Head<'a> {
+    Name(TypeName<'a>),
+    Var(&'a str),
 }
 
 impl<'a> Parser<'a> {
@@ -87,21 +92,31 @@ impl<'a> Parser<'a> {
         &mut self,
         start: Position,
     ) -> Result<(&'a Located<Type<'a>>, Position), error::Type<'a>> {
-        let upper = self.foreign_upper(error::Type::Start)?;
-        let upper_end = self.get_position();
+        let head = self.one_of(
+            error::Type::Start,
+            vec![
+                Box::new(|p: &mut Parser<'a>| p.type_name(error::Type::Start).map(Head::Name)),
+                Box::new(|p: &mut Parser<'a>| {
+                    p.type_var_name(error::Type::VarStart).map(Head::Var)
+                }),
+            ],
+        )?;
+        let head_end = self.get_position();
         self.chomp(error::Type::Space)?;
 
-        let (args, end) = self.type_chomp_args(upper_end)?;
+        let (args, end) = self.type_chomp_args(head_end)?;
 
-        let region = Region::new(start, upper_end);
-        let tipe = match upper {
-            ForeignUpper::Unqualified(name) => Type::Type { region, name, args },
-            ForeignUpper::Qualified(module, name) => Type::TypeQual {
+        let region = Region::new(start, head_end);
+        let tipe = match head {
+            Head::Name(TypeName::Unqualified(name)) => Type::Type { region, name, args },
+            Head::Name(TypeName::Qualified(module, name)) => Type::TypeQual {
                 region,
                 module,
                 name,
                 args,
             },
+            Head::Var(name) if args.is_empty() => Type::Var(name),
+            Head::Var(name) => Type::VarApp { region, name, args },
         };
 
         Ok((self.alloc(Located::at(Region::new(start, end), tipe)), end))
@@ -161,12 +176,12 @@ impl<'a> Parser<'a> {
             vec![
                 // Named type (no args in term - args handled by app)
                 Box::new(|p: &mut Parser<'a>| {
-                    let upper = p.foreign_upper(error::Type::Start)?;
+                    let name = p.type_name(error::Type::Start)?;
                     let end = p.get_position();
                     let region = Region::new(start, end);
 
-                    let tipe = match upper {
-                        ForeignUpper::Unqualified(name) => {
+                    let tipe = match name {
+                        TypeName::Unqualified(name) => {
                             let empty: &'a [&'a Located<Type<'a>>] = &[];
                             Type::Type {
                                 region,
@@ -174,7 +189,7 @@ impl<'a> Parser<'a> {
                                 args: empty,
                             }
                         }
-                        ForeignUpper::Qualified(module, name) => {
+                        TypeName::Qualified(module, name) => {
                             let empty: &'a [&'a Located<Type<'a>>] = &[];
                             Type::TypeQual {
                                 region,
@@ -189,7 +204,7 @@ impl<'a> Parser<'a> {
                 }),
                 // Type variable
                 Box::new(|p: &mut Parser<'a>| {
-                    let var = p.lower_name(error::Type::Start)?;
+                    let var = p.type_var_name(error::Type::VarStart)?;
                     Ok(p.add_end(start, Type::Var(var)))
                 }),
                 // Tuple (or unit, or parenthesized)
@@ -323,57 +338,13 @@ impl<'a> Parser<'a> {
                 Box::new(|p: &mut Parser<'a>| {
                     p.word1(0x7D, TRecord::Open)?; // }
                     let empty: &'a [&'a FieldType<'a>] = &[];
-                    Ok(p.add_end(
-                        start,
-                        Type::Record {
-                            fields: empty,
-                            ext: None,
-                        },
-                    ))
+                    Ok(p.add_end(start, Type::Record(empty)))
                 }),
                 // Non-empty record
                 Box::new(|p: &mut Parser<'a>| {
-                    let name_start = p.get_position();
-                    let name = p.lower_name(TRecord::Field)?;
-                    let name_loc = p.add_end(name_start, name);
-
-                    p.chomp_and_check_indent(TRecord::Space, TRecord::IndentColon)?;
-
-                    p.one_of(
-                        TRecord::Colon,
-                        vec![
-                            // Extension: `{ a | field : Type }`
-                            Box::new(|p: &mut Parser<'a>| {
-                                p.word1(0x7C, TRecord::Colon)?; // |
-                                p.chomp_and_check_indent(TRecord::Space, TRecord::IndentField)?;
-
-                                let field = p.type_record_field()?;
-                                let fields = p.type_record_end(field)?;
-                                Ok(p.add_end(
-                                    start,
-                                    Type::Record {
-                                        fields,
-                                        ext: Some(name_loc),
-                                    },
-                                ))
-                            }),
-                            // Regular field: `{ name : Type }`
-                            Box::new(|p: &mut Parser<'a>| {
-                                p.word1(0x3A, TRecord::Colon)?; // :
-                                p.chomp_and_check_indent(TRecord::Space, TRecord::IndentType)?;
-
-                                let (tipe, end) = p.type_record_type_entry()?;
-                                p.check_indent(end.line, end.column, TRecord::IndentEnd)?;
-
-                                let field = p.alloc(FieldType {
-                                    field: name_loc,
-                                    typ: tipe,
-                                });
-                                let fields = p.type_record_end(field)?;
-                                Ok(p.add_end(start, Type::Record { fields, ext: None }))
-                            }),
-                        ],
-                    )
+                    let field = p.type_record_field()?;
+                    let fields = p.type_record_end(field)?;
+                    Ok(p.add_end(start, Type::Record(fields)))
                 }),
             ],
         )
@@ -445,6 +416,111 @@ impl<'a> Parser<'a> {
         Ok(fields.into_bump_slice())
     }
 
+    /// Parse a declaration type parameter, with an optional kind annotation.
+    pub(crate) fn type_param(&mut self) -> Result<&'a TypeParam<'a>, error::TypeParam<'a>> {
+        let start = self.get_position();
+        self.one_of(
+            error::TypeParam::Start,
+            vec![
+                Box::new(|p: &mut Parser<'a>| {
+                    let name = p.type_var_name(error::TypeParam::Start)?;
+                    Ok(p.alloc(TypeParam {
+                        name: p.add_end(start, name),
+                        kind: None,
+                    }))
+                }),
+                Box::new(|p: &mut Parser<'a>| {
+                    p.word1(b'(', error::TypeParam::Start)?;
+                    p.chomp_and_check_indent(
+                        error::TypeParam::Space,
+                        error::TypeParam::IndentColon,
+                    )?;
+                    let name_start = p.get_position();
+                    let name = p.type_var_name(error::TypeParam::Start)?;
+                    let name = p.add_end(name_start, name);
+                    p.chomp_and_check_indent(
+                        error::TypeParam::Space,
+                        error::TypeParam::IndentColon,
+                    )?;
+                    p.word1(b':', error::TypeParam::Colon)?;
+                    p.chomp_and_check_indent(
+                        error::TypeParam::Space,
+                        error::TypeParam::IndentKind,
+                    )?;
+                    let (kind, end) = p.specialize(
+                        |bump, e, row, col| error::TypeParam::Kind(bump.alloc(e), row, col),
+                        |p| p.kind_expr(),
+                    )?;
+                    p.check_indent(end.line, end.column, error::TypeParam::IndentEnd)?;
+                    p.word1(b')', error::TypeParam::End)?;
+                    Ok(p.alloc(TypeParam {
+                        name,
+                        kind: Some(kind),
+                    }))
+                }),
+            ],
+        )
+    }
+
+    /// Parse a kind expression.
+    fn kind_expr(&mut self) -> Result<(&'a Located<Kind<'a>>, Position), error::Kind<'a>> {
+        let start = self.get_position();
+        let atom = self.kind_atom()?;
+        let end1 = self.get_position();
+        self.chomp(error::Kind::Space)?;
+        self.one_of_with_fallback(
+            vec![Box::new(|p: &mut Parser<'a>| {
+                p.check_indent(end1.line, end1.column, error::Kind::IndentStart)?;
+                p.word2(b'-', b'>', error::Kind::Start)?;
+                p.chomp_and_check_indent(error::Kind::Space, error::Kind::IndentStart)?;
+                let (to, end2) = p.kind_expr()?;
+                Ok((
+                    p.alloc(Located::at(
+                        Region::new(start, end2),
+                        Kind::Arrow { from: atom, to },
+                    )),
+                    end2,
+                ))
+            })],
+            (atom, end1),
+        )
+    }
+
+    /// Parse a base or parenthesized kind.
+    fn kind_atom(&mut self) -> Result<&'a Located<Kind<'a>>, error::Kind<'a>> {
+        let start = self.get_position();
+        self.one_of(
+            error::Kind::Start,
+            vec![
+                Box::new(|p: &mut Parser<'a>| {
+                    let (row, col) = p.position();
+                    let name = p.upper_name(error::Kind::Start)?;
+                    let kind = match name {
+                        "Big" => Kind::Big,
+                        "Const" => Kind::Const,
+                        "Term" => Kind::Term,
+                        "Storable" => Kind::Storable,
+                        other => return Err(error::Kind::Name(other, row, col)),
+                    };
+                    Ok(p.add_end(start, kind))
+                }),
+                Box::new(|p: &mut Parser<'a>| {
+                    p.in_context(
+                        |bump, e, row, col| error::Kind::Paren(bump.alloc(e), row, col),
+                        |p| p.word1(b'(', error::Kind::Start),
+                        |p| {
+                            p.chomp_and_check_indent(error::Kind::Space, error::Kind::IndentStart)?;
+                            let (kind, end) = p.kind_expr()?;
+                            p.check_indent(end.line, end.column, error::Kind::End)?;
+                            p.word1(b')', error::Kind::End)?;
+                            Ok(kind)
+                        },
+                    )
+                }),
+            ],
+        )
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -452,14 +528,14 @@ impl<'a> Parser<'a> {
     /// Parse a possibly-qualified uppercase name (for types).
     ///
     /// Mirrors Elm's `Var.foreignUpper`.
-    fn foreign_upper<E>(
-        &mut self,
-        to_error: impl FnOnce(u16, u16) -> E,
-    ) -> Result<ForeignUpper<'a>, E> {
+    fn type_name<E>(&mut self, to_error: impl FnOnce(u16, u16) -> E) -> Result<TypeName<'a>, E> {
         let (row, col) = self.position();
         let start_pos = self.pos;
 
         match self.peek() {
+            Some(b) if b.is_ascii_lowercase() => {
+                Ok(TypeName::Unqualified(self.lower_name(to_error)?))
+            }
             Some(b) if b.is_ascii_uppercase() => {
                 self.advance();
                 self.chomp_inner_chars();
@@ -472,7 +548,7 @@ impl<'a> Parser<'a> {
                     Err(to_error(row, col))
                 } else {
                     let name = self.slice_from(start_pos);
-                    Ok(ForeignUpper::Unqualified(name))
+                    Ok(TypeName::Unqualified(name))
                 }
             }
             _ => Err(to_error(row, col)),
@@ -480,10 +556,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Chomp through Module.Module... chain for type names.
-    fn chomp_qualified_upper_for_type<E>(
-        &mut self,
-        start_pos: usize,
-    ) -> Result<ForeignUpper<'a>, E> {
+    fn chomp_qualified_upper_for_type<E>(&mut self, start_pos: usize) -> Result<TypeName<'a>, E> {
         loop {
             if self.is_dot_upper() {
                 self.advance(); // consume dot
@@ -495,9 +568,9 @@ impl<'a> Parser<'a> {
                 if let Some(last_dot) = full.rfind('.') {
                     let module = &full[..last_dot];
                     let name = &full[last_dot + 1..];
-                    return Ok(ForeignUpper::Qualified(module, name));
+                    return Ok(TypeName::Qualified(module, name));
                 } else {
-                    return Ok(ForeignUpper::Unqualified(full));
+                    return Ok(TypeName::Unqualified(full));
                 }
             }
         }
@@ -515,6 +588,23 @@ macro_rules! assert_type_snapshot {
         let src = bump.alloc_str(indoc::indoc!($code));
         let mut parser = $crate::Parser::new(&bump, src.as_bytes());
         let (result, _end) = parser.type_expr().expect("expected successful parse");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+        }, {
+            insta::assert_debug_snapshot!(result);
+        });
+    }};
+}
+
+#[cfg(test)]
+macro_rules! assert_type_error_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let result = parser.type_expr().expect_err("expected parse error");
 
         insta::with_settings!({
             description => format!("Code:\n\n{}", indoc::indoc!($code)),
@@ -554,12 +644,12 @@ mod tests {
     // Type variables
     #[test]
     fn type_var_simple() {
-        assert_type_snapshot!("a");
+        assert_type_snapshot!("'a");
     }
 
     #[test]
     fn type_var_msg() {
-        assert_type_snapshot!("msg");
+        assert_type_snapshot!("'msg");
     }
 
     // Named types (no args)
@@ -607,12 +697,12 @@ mod tests {
     // Function types
     #[test]
     fn function_simple() {
-        assert_type_snapshot!("a -> b");
+        assert_type_snapshot!("'a -> 'b");
     }
 
     #[test]
     fn function_multi() {
-        assert_type_snapshot!("a -> b -> c");
+        assert_type_snapshot!("'a -> 'b -> 'c");
     }
 
     #[test]
@@ -622,7 +712,7 @@ mod tests {
 
     #[test]
     fn function_with_app() {
-        assert_type_snapshot!("Maybe a -> Result e a");
+        assert_type_snapshot!("Maybe 'a -> Result 'e 'a");
     }
 
     // Unit
@@ -649,7 +739,7 @@ mod tests {
 
     #[test]
     fn tuple_with_function() {
-        assert_type_snapshot!("(a -> b, c)");
+        assert_type_snapshot!("('a -> 'b, 'c)");
     }
 
     #[test]
@@ -681,17 +771,7 @@ mod tests {
 
     #[test]
     fn record_with_function() {
-        assert_type_snapshot!("{ onClick : msg -> Cmd msg }");
-    }
-
-    #[test]
-    fn record_extension() {
-        assert_type_snapshot!("{ a | name : String }");
-    }
-
-    #[test]
-    fn record_extension_multiple() {
-        assert_type_snapshot!("{ a | name : String, age : Int }");
+        assert_type_snapshot!("{ onClick : 'msg -> Cmd 'msg }");
     }
 
     #[test]
@@ -713,12 +793,49 @@ mod tests {
 
     #[test]
     fn parenthesized_function() {
-        assert_type_snapshot!("(a -> b) -> List a -> List b");
+        assert_type_snapshot!("('a -> 'b) -> List 'a -> List 'b");
     }
 
     // Complex combinations
     #[test]
     fn complex_model_msg() {
         assert_type_snapshot!("{ model : Model, update : Msg -> Model -> Model }");
+    }
+
+    #[test]
+    fn little_type() {
+        assert_type_snapshot!("a");
+    }
+
+    #[test]
+    fn little_type_application() {
+        assert_type_snapshot!("list int");
+    }
+
+    #[test]
+    fn type_variable_application() {
+        assert_type_snapshot!("'f 'a");
+    }
+
+    #[test]
+    fn mixed_type_names() {
+        assert_type_snapshot!("option 'a -> 'a");
+        assert_type_snapshot!("Map 'k (List 'v)");
+        assert_type_snapshot!("{ x : int, y : Int }");
+    }
+
+    #[test]
+    fn error_empty_type_variable() {
+        assert_type_error_snapshot!("'");
+    }
+
+    #[test]
+    fn error_upper_type_variable() {
+        assert_type_error_snapshot!("'A");
+    }
+
+    #[test]
+    fn error_record_extension() {
+        assert_type_error_snapshot!("{ r | x : int }");
     }
 }
