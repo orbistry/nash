@@ -112,6 +112,14 @@ pub enum Expr<'a> {
         module: Option<&'a str>,
         args: &'a [&'a Located<Expr<'a>>],
     },
+    LeftSection {
+        left: &'a Located<Expr<'a>>,
+        operator: &'a str,
+    },
+    RightSection {
+        operator: &'a str,
+        right: &'a Located<Expr<'a>>,
+    },
     Var {
         kind: VarType,
         name: &'a str,

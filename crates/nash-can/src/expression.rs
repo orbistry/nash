@@ -10,7 +10,7 @@ use nash_ast::{
 use nash_region::{Located, Region};
 use nash_source::{
     BinOpOperand, CaseArm, Def as SourceDef, Expr as SourceExpr, FieldAssign,
-    IfBranch as SourceIfBranch, VarType,
+    IfBranch as SourceIfBranch, Pattern as SourcePattern, VarType,
 };
 
 use crate::Error;
@@ -124,6 +124,28 @@ pub fn canonicalize_expr<'a>(
                 feature: "macro call",
                 region,
             }]);
+        }
+        SourceExpr::LeftSection { left, operator } => {
+            return canonicalize_section(
+                bump,
+                env,
+                SectionSide::Left(left),
+                operator,
+                region,
+                free_locals,
+                warnings,
+            );
+        }
+        SourceExpr::RightSection { operator, right } => {
+            return canonicalize_section(
+                bump,
+                env,
+                SectionSide::Right(right),
+                operator,
+                region,
+                free_locals,
+                warnings,
+            );
         }
 
         SourceExpr::Var {
@@ -245,6 +267,53 @@ pub fn canonicalize_expr<'a>(
         }
     };
     Ok(bump.alloc(Located::at(region, can_expr)))
+}
+
+enum SectionSide<'a> {
+    Left(&'a Located<SourceExpr<'a>>),
+    Right(&'a Located<SourceExpr<'a>>),
+}
+
+fn canonicalize_section<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    side: SectionSide<'a>,
+    operator: &'a str,
+    region: Region,
+    free_locals: &mut FreeLocals<'a>,
+    warnings: &mut Vec<Warning<'a>>,
+) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
+    const GENERATED: &str = "$section";
+    let parameter = &*bump.alloc(Located::at(region, SourcePattern::Var(GENERATED)));
+    let missing = &*bump.alloc(Located::at(
+        region,
+        SourceExpr::Var {
+            kind: VarType::LowVar,
+            name: GENERATED,
+        },
+    ));
+    let (left, right) = match side {
+        SectionSide::Left(left) => (left, missing),
+        SectionSide::Right(right) => (missing, right),
+    };
+    let op = &*bump.alloc(Located::at(region, operator));
+    let operand = &*bump.alloc(BinOpOperand { expr: left, op });
+    let body = &*bump.alloc(Located::at(
+        region,
+        SourceExpr::BinOps {
+            operands: bump.alloc_slice_copy(&[operand]),
+            last: right,
+        },
+    ));
+    canonicalize_lambda(
+        bump,
+        env,
+        bump.alloc_slice_copy(&[parameter]),
+        body,
+        region,
+        free_locals,
+        warnings,
+    )
 }
 
 fn find_var<'a>(

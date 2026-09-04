@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/expression/tuple.rs
+description: "Code:\n\n(> ,)"
+---
+Tuple(
+    Expr(
+        Start(
+            1,
+            4,
+        ),
+        1,
+        4,
+    ),
+    1,
+    1,
+)

@@ -4086,4 +4086,38 @@ mod tests {
     fn macro_call_unsupported() {
         assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = json!(1)\n");
     }
+
+    #[test]
+    fn right_operator_section() {
+        let input = "module Main exposing (..)\n\nimport Basics exposing (..)\n\nsection = (+ 5)\n";
+        let bump = Bump::new();
+        let interfaces = BTreeMap::from([("Basics", basics_with_binops_interface(&bump))]);
+        let result = parse_and_canonicalize(
+            &bump,
+            input,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+        )
+        .expect("expected successful canonicalization");
+        insta::assert_debug_snapshot!(result);
+    }
+
+    #[test]
+    fn left_operator_section() {
+        let input = "module Main exposing (..)\n\nimport Basics exposing (..)\n\nsection = (5 +)\n";
+        let bump = Bump::new();
+        let interfaces = BTreeMap::from([("Basics", basics_with_binops_interface(&bump))]);
+        let result = parse_and_canonicalize(
+            &bump,
+            input,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+        )
+        .expect("expected successful canonicalization");
+        insta::assert_debug_snapshot!(result);
+    }
 }

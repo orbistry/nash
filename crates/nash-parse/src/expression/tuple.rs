@@ -48,101 +48,62 @@ impl<'a> Parser<'a> {
     /// - `(+)` → Operator section (Op)
     /// - `(-expr)` → Parenthesized negation (parsed as expression)
     fn tuple_body(&mut self, start: Position) -> Result<&'a Located<Expr<'a>>, Tuple<'a>> {
-        let before = self.get_position();
-        // Chomp whitespace and check indent
         self.chomp_and_check_indent(Tuple::Space, Tuple::IndentExpr1)?;
-        let after = self.get_position();
+        self.one_of(
+            Tuple::IndentExpr1,
+            vec![
+                Box::new(|p: &mut Parser<'a>| {
+                    let op = p.operator(Tuple::IndentExpr1, Tuple::OperatorReserved)?;
+                    if p.peek() == Some(b')') {
+                        p.advance();
+                        return Ok(p.add_end(start, Expr::Op(op)));
+                    }
 
-        // If whitespace was consumed, parse expression normally
-        if before != after {
-            self.one_of(
-                Tuple::IndentExpr1,
-                vec![
-                    // Expression (might be parenthesized or start of tuple)
-                    Box::new(|p: &mut Parser<'a>| {
-                        let (first, end) = p.tuple_expr()?;
+                    if op == "-" {
+                        p.chomp_and_check_indent(Tuple::Space, Tuple::IndentExpr1)?;
+                        let inner = p.specialize(
+                            |bump, error, row, col| Tuple::Expr(bump.alloc(error), row, col),
+                            |p| p.term(),
+                        )?;
+                        let neg_end = p.get_position();
+                        let neg_start = Position::new(start.line, start.column + 1);
+                        let negated = p.alloc(Located::at(
+                            nash_region::Region::new(neg_start, neg_end),
+                            Expr::Negate(inner),
+                        ));
+                        p.chomp(Tuple::Space)?;
+                        let (full, end) = p.specialize(
+                            |bump, error, row, col| Tuple::Expr(bump.alloc(error), row, col),
+                            |p| p.chomp_expr_end(start, negated, vec![], neg_end),
+                        )?;
                         p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
-                        p.chomp_tuple_end(start, first)
-                    }),
-                ],
-            )
-        } else {
-            // No whitespace - check for operator section or unit
-            self.one_of(
-                Tuple::IndentExpr1,
-                vec![
-                    // Operator section: `(+)`, `(++)`, etc.
-                    // Note: `-` followed by `)` is `(-)`, otherwise it's negation
-                    Box::new(|p: &mut Parser<'a>| {
-                        let op = p.operator(Tuple::IndentExpr1, Tuple::OperatorReserved)?;
+                        return p.chomp_tuple_end(start, full);
+                    }
 
-                        if op == "-" {
-                            // Special case: `-` could be negation or minus operator
-                            p.one_of(
-                                Tuple::OperatorClose,
-                                vec![
-                                    // Just `(-)` - minus operator section
-                                    Box::new(|p: &mut Parser<'a>| {
-                                        p.word1(0x29, Tuple::OperatorClose)?;
-                                        Ok(p.add_end(start, Expr::Op(op)))
-                                    }),
-                                    // `(-expr)` or `(-expr, ...)` - negation followed by more
-                                    Box::new(|p: &mut Parser<'a>| {
-                                        // Parse the negation as part of the expression
-                                        let neg_start = Position::new(start.line, start.column + 1);
-                                        let inner = p.specialize(
-                                            |bump, e, row, col| {
-                                                Tuple::Expr(bump.alloc(e), row, col)
-                                            },
-                                            |p| p.term(),
-                                        )?;
-                                        let neg_end = p.get_position();
-                                        let neg_region =
-                                            nash_region::Region::new(neg_start, neg_end);
-                                        let negated = p.alloc(nash_region::Located::at(
-                                            neg_region,
-                                            Expr::Negate(inner),
-                                        ));
-
-                                        // Now handle rest of expression (function application, operators)
-                                        p.chomp(Tuple::Space)?;
-
-                                        let (full_expr, expr_end) = p.specialize(
-                                            |bump, e, row, col| {
-                                                Tuple::Expr(bump.alloc(e), row, col)
-                                            },
-                                            |p| p.chomp_expr_end(start, negated, vec![], neg_end),
-                                        )?;
-
-                                        p.check_indent(
-                                            expr_end.line,
-                                            expr_end.column,
-                                            Tuple::IndentEnd,
-                                        )?;
-                                        p.chomp_tuple_end(start, full_expr)
-                                    }),
-                                ],
-                            )
-                        } else {
-                            // Regular operator section
-                            p.word1(0x29, Tuple::OperatorClose)?;
-                            Ok(p.add_end(start, Expr::Op(op)))
-                        }
-                    }),
-                    // Unit: just ')'
-                    Box::new(|p: &mut Parser<'a>| {
-                        p.word1(0x29, Tuple::IndentExpr1)?;
-                        Ok(p.add_end(start, Expr::Unit))
-                    }),
-                    // Expression (might be parenthesized or start of tuple)
-                    Box::new(|p: &mut Parser<'a>| {
-                        let (first, end) = p.tuple_expr()?;
-                        p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
-                        p.chomp_tuple_end(start, first)
-                    }),
-                ],
-            )
-        }
+                    p.chomp_and_check_indent(Tuple::Space, Tuple::IndentExpr1)?;
+                    let (right, end) = p.tuple_expr()?;
+                    p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
+                    p.chomp(Tuple::Space)?;
+                    p.word1(b')', Tuple::OperatorClose)?;
+                    Ok(p.add_end(
+                        start,
+                        Expr::RightSection {
+                            operator: op,
+                            right,
+                        },
+                    ))
+                }),
+                Box::new(|p: &mut Parser<'a>| {
+                    p.word1(b')', Tuple::IndentExpr1)?;
+                    Ok(p.add_end(start, Expr::Unit))
+                }),
+                Box::new(|p: &mut Parser<'a>| {
+                    let (first, end) = p.tuple_expr()?;
+                    p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
+                    p.chomp_tuple_end(start, first)
+                }),
+            ],
+        )
     }
 
     /// Parse a tuple entry expression.
@@ -182,6 +143,29 @@ impl<'a> Parser<'a> {
         loop {
             // Chomp whitespace
             self.chomp(Tuple::Space)?;
+
+            let saved = self.save_state();
+            match self.operator(Tuple::End, Tuple::OperatorReserved) {
+                Ok(operator) => {
+                    self.chomp(Tuple::Space)?;
+                    if self.word1(b')', Tuple::OperatorClose).is_ok() {
+                        return Ok(self.add_end(
+                            start,
+                            Expr::LeftSection {
+                                left: first,
+                                operator,
+                            },
+                        ));
+                    }
+                    self.restore_state(saved);
+                }
+                Err(error) => {
+                    if self.pos != saved.pos {
+                        return Err(error);
+                    }
+                    self.restore_state(saved);
+                }
+            }
 
             // Expect comma or closing paren
             let done = self.one_of(
@@ -239,7 +223,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::expression::{
-        assert_expr_error_snapshot, assert_expr_snapshot, assert_indented_expr_snapshot,
+        assert_expr_error_snapshot, assert_expr_snapshot, assert_expression_snapshot,
+        assert_indented_expr_snapshot,
     };
 
     #[test]
@@ -306,5 +291,54 @@ mod tests {
     #[test]
     fn error_empty_comma() {
         assert_expr_error_snapshot!("(,)");
+    }
+
+    #[test]
+    fn right_section() {
+        assert_expr_snapshot!("(> 5)");
+    }
+    #[test]
+    fn left_section() {
+        assert_expr_snapshot!("(5 >)");
+    }
+    #[test]
+    fn call_left_section() {
+        assert_expr_snapshot!("(f x |> )");
+    }
+    #[test]
+    fn operator_application() {
+        assert_expr_snapshot!("((+) 1)");
+    }
+    #[test]
+    fn minus_operator() {
+        assert_expr_snapshot!("(-)");
+    }
+    #[test]
+    fn parenthesized_negative() {
+        assert_expr_snapshot!("(-1)");
+    }
+    #[test]
+    fn spaced_parenthesized_negative() {
+        assert_expr_snapshot!("(- 1)");
+    }
+    #[test]
+    fn minus_left_section() {
+        assert_expr_snapshot!("(1 -)");
+    }
+    #[test]
+    fn applied_section() {
+        assert_expression_snapshot!("(> 5) 10");
+    }
+    #[test]
+    fn error_section_unclosed() {
+        assert_expr_error_snapshot!("(> 5");
+    }
+    #[test]
+    fn error_reserved_section_operator() {
+        assert_expr_error_snapshot!("(=> 5)");
+    }
+    #[test]
+    fn error_section_missing_operand() {
+        assert_expr_error_snapshot!("(> ,)");
     }
 }

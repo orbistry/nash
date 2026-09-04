@@ -108,102 +108,109 @@ impl<'a> Parser<'a> {
         loop {
             let state_for_fallback = (ops.clone(), current_expr, current_args.clone(), current_end);
 
-            let result = self.one_of_with_fallback(
-                vec![
-                    // argument - function application
-                    Box::new(|p: &mut Parser<'a>| {
-                        let (row, col) = p.position();
-                        p.check_indent(row, col, error::Expr::Start)?;
-                        let arg = p.term()?;
-                        let new_end = p.get_position();
-                        p.chomp(error::Expr::Space)?;
-
-                        let mut new_args = current_args.clone();
-                        new_args.push(arg);
-
-                        Ok(ExprEndState::MoreArgs(new_args, new_end))
-                    }),
-                    // operator
-                    Box::new(|p: &mut Parser<'a>| {
-                        let (row, col) = p.position();
-                        p.check_indent(row, col, error::Expr::Start)?;
-
-                        // Save positions for negative-term detection
-                        let op_start = p.get_position();
-
-                        let op = p.add_location_operator(
-                            error::Expr::Start,
-                            error::Expr::OperatorReserved,
-                        )?;
-                        let op_name = op.value;
-                        let op_end = p.get_position();
-
-                        p.chomp_and_check_indent(error::Expr::Space, |row, col| {
-                            error::Expr::IndentOperatorRight(op_name, row, col)
-                        })?;
-
-                        let new_start = p.get_position();
-
-                        // Check for negative term: `-` operator where there's no space before
-                        // but space after (e.g., `a -b` means apply `a` to `-b`)
-                        if op_name == "-"
-                            && current_end != op_start // space before operator
-                            && op_end == new_start
-                        // no space after operator
-                        {
-                            // This is a negative term being passed as an argument
-                            let negated_expr = p.term()?;
-                            let neg_end = p.get_position();
-                            let neg_region = Region::new(op_start, neg_end);
-                            let neg = p.alloc(Located::at(neg_region, Expr::Negate(negated_expr)));
+            let result = if self.is_trailing_section_operator() {
+                ExprEndState::Done
+            } else {
+                self.one_of_with_fallback(
+                    vec![
+                        // argument - function application
+                        Box::new(|p: &mut Parser<'a>| {
+                            let (row, col) = p.position();
+                            p.check_indent(row, col, error::Expr::Start)?;
+                            let arg = p.term()?;
+                            let new_end = p.get_position();
                             p.chomp(error::Expr::Space)?;
 
                             let mut new_args = current_args.clone();
-                            new_args.push(neg);
+                            new_args.push(arg);
 
-                            Ok(ExprEndState::MoreArgs(new_args, neg_end))
-                        } else {
-                            // Regular binary operator
-                            p.one_of(
-                                |row, col| error::Expr::OperatorRight(op_name, row, col),
-                                vec![
-                                    // Parse a term (possibly negative)
-                                    Box::new(|p: &mut Parser<'a>| {
-                                        let new_expr = p.possibly_negative_term(new_start)?;
-                                        let new_end = p.get_position();
-                                        p.chomp(error::Expr::Space)?;
+                            Ok(ExprEndState::MoreArgs(new_args, new_end))
+                        }),
+                        // operator
+                        Box::new(|p: &mut Parser<'a>| {
+                            let (row, col) = p.position();
+                            p.check_indent(row, col, error::Expr::Start)?;
 
-                                        Ok(ExprEndState::MoreOps(op, new_expr, new_end))
-                                    }),
-                                    // Parse a "final" expression (let, case, if, lambda)
-                                    Box::new(|p: &mut Parser<'a>| {
-                                        let (final_expr, final_end) = p.one_of(
-                                            |row, col| {
-                                                error::Expr::OperatorRight(op_name, row, col)
-                                            },
-                                            vec![
-                                                Box::new(|p: &mut Parser<'a>| p.let_(new_start)),
-                                                Box::new(|p| p.case_(new_start)),
-                                                Box::new(|p| p.if_(new_start)),
-                                                Box::new(|p| p.lambda(new_start)),
-                                                Box::new(|p| p.assert_(new_start)),
-                                                Box::new(|p| p.fail(new_start)),
-                                                Box::new(|p| p.todo(new_start)),
-                                                Box::new(|p| p.trace(new_start)),
-                                                Box::new(|p| p.comptime(new_start)),
-                                                Box::new(|p| p.do_(new_start)),
-                                            ],
-                                        )?;
+                            // Save positions for negative-term detection
+                            let op_start = p.get_position();
 
-                                        Ok(ExprEndState::Final(op, final_expr, final_end))
-                                    }),
-                                ],
-                            )
-                        }
-                    }),
-                ],
-                ExprEndState::Done,
-            )?;
+                            let op = p.add_location_operator(
+                                error::Expr::Start,
+                                error::Expr::OperatorReserved,
+                            )?;
+                            let op_name = op.value;
+                            let op_end = p.get_position();
+
+                            p.chomp_and_check_indent(error::Expr::Space, |row, col| {
+                                error::Expr::IndentOperatorRight(op_name, row, col)
+                            })?;
+
+                            let new_start = p.get_position();
+
+                            // Check for negative term: `-` operator where there's no space before
+                            // but space after (e.g., `a -b` means apply `a` to `-b`)
+                            if op_name == "-"
+                            && current_end != op_start // space before operator
+                            && op_end == new_start
+                            // no space after operator
+                            {
+                                // This is a negative term being passed as an argument
+                                let negated_expr = p.term()?;
+                                let neg_end = p.get_position();
+                                let neg_region = Region::new(op_start, neg_end);
+                                let neg =
+                                    p.alloc(Located::at(neg_region, Expr::Negate(negated_expr)));
+                                p.chomp(error::Expr::Space)?;
+
+                                let mut new_args = current_args.clone();
+                                new_args.push(neg);
+
+                                Ok(ExprEndState::MoreArgs(new_args, neg_end))
+                            } else {
+                                // Regular binary operator
+                                p.one_of(
+                                    |row, col| error::Expr::OperatorRight(op_name, row, col),
+                                    vec![
+                                        // Parse a term (possibly negative)
+                                        Box::new(|p: &mut Parser<'a>| {
+                                            let new_expr = p.possibly_negative_term(new_start)?;
+                                            let new_end = p.get_position();
+                                            p.chomp(error::Expr::Space)?;
+
+                                            Ok(ExprEndState::MoreOps(op, new_expr, new_end))
+                                        }),
+                                        // Parse a "final" expression (let, case, if, lambda)
+                                        Box::new(|p: &mut Parser<'a>| {
+                                            let (final_expr, final_end) = p.one_of(
+                                                |row, col| {
+                                                    error::Expr::OperatorRight(op_name, row, col)
+                                                },
+                                                vec![
+                                                    Box::new(|p: &mut Parser<'a>| {
+                                                        p.let_(new_start)
+                                                    }),
+                                                    Box::new(|p| p.case_(new_start)),
+                                                    Box::new(|p| p.if_(new_start)),
+                                                    Box::new(|p| p.lambda(new_start)),
+                                                    Box::new(|p| p.assert_(new_start)),
+                                                    Box::new(|p| p.fail(new_start)),
+                                                    Box::new(|p| p.todo(new_start)),
+                                                    Box::new(|p| p.trace(new_start)),
+                                                    Box::new(|p| p.comptime(new_start)),
+                                                    Box::new(|p| p.do_(new_start)),
+                                                ],
+                                            )?;
+
+                                            Ok(ExprEndState::Final(op, final_expr, final_end))
+                                        }),
+                                    ],
+                                )
+                            }
+                        }),
+                    ],
+                    ExprEndState::Done,
+                )?
+            };
 
             match result {
                 ExprEndState::MoreArgs(new_args, new_end) => {
@@ -258,6 +265,18 @@ impl<'a> Parser<'a> {
                 }
             }
         }
+    }
+
+    /// A trailing operator before `)` belongs to a partial section, not this expression.
+    fn is_trailing_section_operator(&mut self) -> bool {
+        let saved = self.save_state();
+        let result = self
+            .operator(|_, _| (), |_, _, _| ())
+            .and_then(|_| self.chomp(|_, _, _| ()))
+            .is_ok()
+            && self.peek() == Some(b')');
+        self.restore_state(saved);
+        result
     }
 
     /// Parse possibly negated term: `-term` or `term`.
