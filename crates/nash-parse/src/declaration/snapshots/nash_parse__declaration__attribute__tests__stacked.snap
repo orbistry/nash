@@ -1,0 +1,101 @@
+---
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "@first\n@second(1)\nf = 1"
+---
+Value(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 1,
+            },
+            end: Position {
+                line: 3,
+                column: 6,
+            },
+        },
+        value: Value {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 2,
+                    },
+                },
+                value: "f",
+            },
+            arguments: [],
+            body: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 6,
+                    },
+                },
+                value: Int(
+                    1,
+                ),
+            },
+            annotation: None,
+            attributes: [
+                Attribute {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 7,
+                            },
+                        },
+                        value: "first",
+                    },
+                    args: [],
+                },
+                Attribute {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 8,
+                            },
+                        },
+                        value: "second",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 10,
+                                },
+                            },
+                            value: Int(
+                                1,
+                            ),
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+)

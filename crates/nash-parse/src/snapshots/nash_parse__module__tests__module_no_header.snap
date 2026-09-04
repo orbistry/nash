@@ -73,6 +73,7 @@ Module {
                     ),
                 },
                 annotation: None,
+                attributes: [],
             },
         },
     ],

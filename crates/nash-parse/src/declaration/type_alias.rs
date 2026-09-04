@@ -4,7 +4,7 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position};
-use nash_source::{Alias, TypeParam};
+use nash_source::{Alias, Attribute, TypeParam};
 
 use crate::Parser;
 use crate::error::TypeAlias;
@@ -18,6 +18,7 @@ impl<'a> Parser<'a> {
     pub(super) fn type_alias_body(
         &mut self,
         start: Position,
+        attributes: &'a [&'a Attribute<'a>],
     ) -> Result<(&'a Located<Alias<'a>>, Position), TypeAlias<'a>> {
         self.chomp_and_check_indent(TypeAlias::Space, TypeAlias::IndentEquals)?;
         let (name, args) = self.chomp_alias_name_to_equals()?;
@@ -31,6 +32,7 @@ impl<'a> Parser<'a> {
             name,
             arguments: args,
             typ,
+            attributes,
         };
         let located_alias = self.add_end(start, alias);
 

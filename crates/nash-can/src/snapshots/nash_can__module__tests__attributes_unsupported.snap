@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\n@inline\nvalue = 1\n"
+---
+[
+    Unsupported {
+        feature: "attributes",
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 2,
+            },
+            end: Position {
+                line: 3,
+                column: 8,
+            },
+        },
+    },
+]

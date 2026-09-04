@@ -1,0 +1,104 @@
+---
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "{-| doc -}\n@derive(Eq)\ntype T = A"
+---
+Union(
+    Some(
+        Comment(
+            Snippet {
+                data: [
+                    32,
+                    100,
+                    111,
+                    99,
+                    32,
+                ],
+                off_row: 1,
+                off_col: 4,
+            },
+        ),
+    ),
+    Located {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 1,
+            },
+            end: Position {
+                line: 3,
+                column: 11,
+            },
+        },
+        value: Union {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 7,
+                    },
+                },
+                value: "T",
+            },
+            arguments: [],
+            ctors: [
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 10,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 11,
+                            },
+                        },
+                        value: "A",
+                    },
+                    arguments: Positional(
+                        [],
+                    ),
+                },
+            ],
+            attributes: [
+                Attribute {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 8,
+                            },
+                        },
+                        value: "derive",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 11,
+                                },
+                            },
+                            value: Var {
+                                kind: CapVar,
+                                name: "Eq",
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+)

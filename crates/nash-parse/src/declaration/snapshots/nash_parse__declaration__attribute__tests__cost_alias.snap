@@ -1,0 +1,142 @@
+---
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "@cost(cpu 10, \"n\")\ntype alias a = int"
+---
+Alias(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 2,
+                column: 1,
+            },
+            end: Position {
+                line: 2,
+                column: 19,
+            },
+        },
+        value: Alias {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 2,
+                        column: 12,
+                    },
+                    end: Position {
+                        line: 2,
+                        column: 13,
+                    },
+                },
+                value: "a",
+            },
+            arguments: [],
+            typ: Located {
+                region: Region {
+                    start: Position {
+                        line: 2,
+                        column: 16,
+                    },
+                    end: Position {
+                        line: 2,
+                        column: 19,
+                    },
+                },
+                value: Type {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 19,
+                        },
+                    },
+                    name: "int",
+                    args: [],
+                },
+            },
+            attributes: [
+                Attribute {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        value: "cost",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 7,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 13,
+                                },
+                            },
+                            value: Call {
+                                function: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 7,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 10,
+                                        },
+                                    },
+                                    value: Var {
+                                        kind: LowVar,
+                                        name: "cpu",
+                                    },
+                                },
+                                arguments: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 1,
+                                                column: 11,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 13,
+                                            },
+                                        },
+                                        value: Int(
+                                            10,
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 18,
+                                },
+                            },
+                            value: Str(
+                                "n",
+                            ),
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+)

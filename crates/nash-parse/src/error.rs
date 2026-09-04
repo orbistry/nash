@@ -76,6 +76,18 @@ pub enum Decl<'a> {
     Type(&'a DeclType<'a>, Row, Col),
     Def(&'a str, &'a DeclDef<'a>, Row, Col),
     FreshLineAfterDocComment(Row, Col),
+    Attribute(&'a Attribute<'a>, Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Attribute<'a> {
+    Name(Row, Col),
+    Arg(&'a Expr<'a>, Row, Col),
+    End(Row, Col),
+    Space(Space, Row, Col),
+    FreshLine(Row, Col),
+    IndentArg(Row, Col),
+    IndentEnd(Row, Col),
 }
 
 #[derive(Debug)]

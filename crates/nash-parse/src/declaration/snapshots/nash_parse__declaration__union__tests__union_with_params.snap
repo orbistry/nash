@@ -101,6 +101,7 @@ Union(
                     ),
                 },
             ],
+            attributes: [],
         },
     },
 )

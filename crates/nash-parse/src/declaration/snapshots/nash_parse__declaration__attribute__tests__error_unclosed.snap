@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "@derive(Eq\ntype T = A"
+---
+Attribute(
+    IndentEnd(
+        1,
+        11,
+    ),
+    1,
+    1,
+)

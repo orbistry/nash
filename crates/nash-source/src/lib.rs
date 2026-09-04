@@ -25,6 +25,13 @@ pub struct Value<'a> {
     pub arguments: &'a [&'a Located<Pattern<'a>>],
     pub body: &'a Located<Expr<'a>>,
     pub annotation: Option<&'a Annotation<'a>>,
+    pub attributes: &'a [&'a Attribute<'a>],
+}
+
+#[derive(Debug)]
+pub struct Attribute<'a> {
+    pub name: &'a Located<&'a str>,
+    pub args: &'a [&'a Located<Expr<'a>>],
 }
 
 /// A type annotation with an optional constraint context.
@@ -50,6 +57,7 @@ pub struct Union<'a> {
     // type vars
     pub arguments: &'a [&'a TypeParam<'a>],
     pub ctors: &'a [&'a Ctor<'a>],
+    pub attributes: &'a [&'a Attribute<'a>],
 }
 
 #[derive(Debug)]
@@ -70,6 +78,7 @@ pub struct Alias<'a> {
     // type vars
     pub arguments: &'a [&'a TypeParam<'a>],
     pub typ: &'a Located<Type<'a>>,
+    pub attributes: &'a [&'a Attribute<'a>],
 }
 
 #[derive(Debug)]

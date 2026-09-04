@@ -3,6 +3,7 @@
 //! Ported from Elm's `Parse/Declaration.hs`.
 //! Handles value definitions, type annotations, type aliases, custom types, and infix declarations.
 
+mod attribute;
 mod infix;
 mod type_alias;
 mod union;
@@ -39,6 +40,7 @@ impl<'a> Parser<'a> {
     /// ```
     pub fn declaration(&mut self) -> Result<(Decl<'a>, Position), error::Decl<'a>> {
         let maybe_docs = self.chomp_doc_comment()?;
+        let attributes = self.chomp_attributes()?;
 
         let start = self.get_position();
 
@@ -46,9 +48,9 @@ impl<'a> Parser<'a> {
             DeclErr::Start,
             vec![
                 // type alias or type (union)
-                Box::new(|p: &mut Parser<'a>| p.type_decl(maybe_docs, start)),
+                Box::new(|p: &mut Parser<'a>| p.type_decl(maybe_docs, attributes, start)),
                 // value definition
-                Box::new(|p| p.value_decl(maybe_docs, start)),
+                Box::new(|p| p.value_decl(maybe_docs, attributes, start)),
             ],
         )
     }
@@ -95,6 +97,7 @@ impl<'a> Parser<'a> {
     fn type_decl(
         &mut self,
         maybe_docs: Option<&'a Comment<'a>>,
+        attributes: &'a [&'a nash_source::Attribute<'a>],
         start: Position,
     ) -> Result<(Decl<'a>, Position), error::Decl<'a>> {
         self.in_context(
@@ -112,7 +115,7 @@ impl<'a> Parser<'a> {
                                 |bump, e, row, col| error::DeclType::Alias(bump.alloc(e), row, col),
                                 |p| p.keyword_alias(error::DeclType::Name),
                                 |p| {
-                                    let (alias, end) = p.type_alias_body(start)?;
+                                    let (alias, end) = p.type_alias_body(start, attributes)?;
                                     Ok((Decl::Alias(maybe_docs, alias), end))
                                 },
                             )
@@ -122,7 +125,7 @@ impl<'a> Parser<'a> {
                             p.specialize(
                                 |bump, e, row, col| error::DeclType::Union(bump.alloc(e), row, col),
                                 |p| {
-                                    let (union, end) = p.union_body(start)?;
+                                    let (union, end) = p.union_body(start, attributes)?;
                                     Ok((Decl::Union(maybe_docs, union), end))
                                 },
                             )

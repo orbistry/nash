@@ -171,6 +171,7 @@ Module {
                         ],
                     ),
                 },
+                attributes: [],
             },
         },
     ],

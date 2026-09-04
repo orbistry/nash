@@ -245,6 +245,12 @@ fn to_node_one<'a>(
     warnings: &mut Vec<Warning<'a>>,
 ) -> Result<NodeOne<'a>, Vec<Error<'a>>> {
     let src = &value.value;
+    if let Some(attribute) = src.attributes.first() {
+        return Err(vec![Error::Unsupported {
+            feature: "attributes",
+            region: attribute.name.region,
+        }]);
+    }
 
     // Mirrors Elm's `toNodeOne`: typed definitions resolve the annotation
     // and match it against the arguments before the body is touched, and
@@ -374,6 +380,12 @@ fn canonicalize_union<'a>(
     source_union: &'a Located<SourceUnion<'a>>,
 ) -> Result<CanUnion<'a>, Vec<Error<'a>>> {
     let union = &source_union.value;
+    if let Some(attribute) = union.attributes.first() {
+        return Err(vec![Error::Unsupported {
+            feature: "attributes",
+            region: attribute.name.region,
+        }]);
+    }
     reject_kind_annotations(union.arguments)?;
     let parameters =
         bump.alloc_slice_fill_iter(union.arguments.iter().copied().map(|arg| arg.name.value));
@@ -500,6 +512,12 @@ fn canonicalize_single_alias<'a>(
     source_alias: &'a Located<SourceAlias<'a>>,
 ) -> Result<&'a Located<CanAlias<'a>>, Vec<Error<'a>>> {
     let alias = &source_alias.value;
+    if let Some(attribute) = alias.attributes.first() {
+        return Err(vec![Error::Unsupported {
+            feature: "attributes",
+            region: attribute.name.region,
+        }]);
+    }
     reject_kind_annotations(alias.arguments)?;
     let parameters =
         bump.alloc_slice_fill_iter(alias.arguments.iter().copied().map(|arg| arg.name.value));
@@ -4119,5 +4137,10 @@ mod tests {
         )
         .expect("expected successful canonicalization");
         insta::assert_debug_snapshot!(result);
+    }
+
+    #[test]
+    fn attributes_unsupported() {
+        assert_module_error_snapshot!("module Main exposing (..)\n\n@inline\nvalue = 1\n");
     }
 }

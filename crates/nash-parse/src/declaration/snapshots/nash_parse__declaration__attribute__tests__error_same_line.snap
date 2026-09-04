@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "@derive(Eq) type T = A"
+---
+Attribute(
+    FreshLine(
+        1,
+        13,
+    ),
+    1,
+    1,
+)

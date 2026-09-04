@@ -5,7 +5,7 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position};
-use nash_source::{Ctor, CtorArgs, TypeParam, Union};
+use nash_source::{Attribute, Ctor, CtorArgs, TypeParam, Union};
 
 use crate::Parser;
 use crate::error::CustomType;
@@ -21,6 +21,7 @@ impl<'a> Parser<'a> {
     pub(super) fn union_body(
         &mut self,
         start: Position,
+        attributes: &'a [&'a Attribute<'a>],
     ) -> Result<(&'a Located<Union<'a>>, Position), CustomType<'a>> {
         let (name, args) = self.chomp_custom_name_to_equals()?;
 
@@ -35,6 +36,7 @@ impl<'a> Parser<'a> {
             name,
             arguments: args,
             ctors,
+            attributes,
         };
         let located_union = self.add_end(start, union);
 

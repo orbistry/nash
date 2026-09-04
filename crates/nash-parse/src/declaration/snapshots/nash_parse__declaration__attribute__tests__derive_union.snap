@@ -1,0 +1,124 @@
+---
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "@derive(Eq, Show)\ntype T = A | B"
+---
+Union(
+    None,
+    Located {
+        region: Region {
+            start: Position {
+                line: 2,
+                column: 1,
+            },
+            end: Position {
+                line: 2,
+                column: 15,
+            },
+        },
+        value: Union {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 2,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 2,
+                        column: 7,
+                    },
+                },
+                value: "T",
+            },
+            arguments: [],
+            ctors: [
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 10,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 11,
+                            },
+                        },
+                        value: "A",
+                    },
+                    arguments: Positional(
+                        [],
+                    ),
+                },
+                Ctor {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 14,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 15,
+                            },
+                        },
+                        value: "B",
+                    },
+                    arguments: Positional(
+                        [],
+                    ),
+                },
+            ],
+            attributes: [
+                Attribute {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                        },
+                        value: "derive",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                            },
+                            value: Var {
+                                kind: CapVar,
+                                name: "Eq",
+                            },
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 17,
+                                },
+                            },
+                            value: Var {
+                                kind: CapVar,
+                                name: "Show",
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+)

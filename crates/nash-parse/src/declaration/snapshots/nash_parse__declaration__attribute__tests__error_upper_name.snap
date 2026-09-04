@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "@Derive(Eq)\ntype T = A"
+---
+Attribute(
+    Name(
+        1,
+        2,
+    ),
+    1,
+    1,
+)

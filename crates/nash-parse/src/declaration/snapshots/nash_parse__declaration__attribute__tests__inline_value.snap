@@ -1,75 +1,60 @@
 ---
-source: crates/nash-parse/src/declaration/value.rs
-description: add x y = x
+source: crates/nash-parse/src/declaration/attribute.rs
+description: "@inline\nf x = x"
 ---
 Value(
     None,
     Located {
         region: Region {
             start: Position {
-                line: 1,
+                line: 2,
                 column: 1,
             },
             end: Position {
-                line: 1,
-                column: 12,
+                line: 2,
+                column: 8,
             },
         },
         value: Value {
             name: Located {
                 region: Region {
                     start: Position {
-                        line: 1,
+                        line: 2,
                         column: 1,
                     },
                     end: Position {
-                        line: 1,
-                        column: 4,
+                        line: 2,
+                        column: 2,
                     },
                 },
-                value: "add",
+                value: "f",
             },
             arguments: [
                 Located {
                     region: Region {
                         start: Position {
-                            line: 1,
-                            column: 5,
+                            line: 2,
+                            column: 3,
                         },
                         end: Position {
-                            line: 1,
-                            column: 6,
+                            line: 2,
+                            column: 4,
                         },
                     },
                     value: Var(
                         "x",
                     ),
                 },
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 1,
-                            column: 7,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 8,
-                        },
-                    },
-                    value: Var(
-                        "y",
-                    ),
-                },
             ],
             body: Located {
                 region: Region {
                     start: Position {
-                        line: 1,
-                        column: 11,
+                        line: 2,
+                        column: 7,
                     },
                     end: Position {
-                        line: 1,
-                        column: 12,
+                        line: 2,
+                        column: 8,
                     },
                 },
                 value: Var {
@@ -78,7 +63,24 @@ Value(
                 },
             },
             annotation: None,
-            attributes: [],
+            attributes: [
+                Attribute {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                        },
+                        value: "inline",
+                    },
+                    args: [],
+                },
+            ],
         },
     },
 )

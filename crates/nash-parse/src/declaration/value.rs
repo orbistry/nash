@@ -4,7 +4,7 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position};
-use nash_source::{Comment, Value};
+use nash_source::{Attribute, Comment, Value};
 
 use super::Decl;
 use crate::Parser;
@@ -28,6 +28,7 @@ impl<'a> Parser<'a> {
     pub(super) fn value_decl(
         &mut self,
         maybe_docs: Option<&'a Comment<'a>>,
+        attributes: &'a [&'a Attribute<'a>],
         start: Position,
     ) -> Result<(Decl<'a>, Position), error::Decl<'a>> {
         let name = self.lower_name(error::Decl::Start)?;
@@ -56,13 +57,25 @@ impl<'a> Parser<'a> {
 
                             let def_name = p.chomp_matching_name_decl(name)?;
                             p.chomp_and_check_indent(DeclDef::Space, DeclDef::IndentEquals)?;
-                            p.chomp_value_args_and_body(maybe_docs, start, def_name, Some(type_ann))
+                            p.chomp_value_args_and_body(
+                                maybe_docs,
+                                attributes,
+                                start,
+                                def_name,
+                                Some(type_ann),
+                            )
                         }),
                         // No type annotation: name args = body
                         Box::new(|p: &mut Parser<'a>| {
                             let name_located =
                                 p.alloc(Located::at(nash_region::Region::new(start, end), name));
-                            p.chomp_value_args_and_body(maybe_docs, start, name_located, None)
+                            p.chomp_value_args_and_body(
+                                maybe_docs,
+                                attributes,
+                                start,
+                                name_located,
+                                None,
+                            )
                         }),
                     ],
                 )
@@ -76,6 +89,7 @@ impl<'a> Parser<'a> {
     fn chomp_value_args_and_body(
         &mut self,
         maybe_docs: Option<&'a Comment<'a>>,
+        attributes: &'a [&'a Attribute<'a>],
         start: Position,
         name: &'a Located<&'a str>,
         type_ann: Option<&'a nash_source::Annotation<'a>>,
@@ -114,6 +128,7 @@ impl<'a> Parser<'a> {
                             arguments: args_slice,
                             body,
                             annotation: type_ann,
+                            attributes,
                         };
                         let located_value = p.add_end(start, value);
                         Ok(ValueDeclState::Done(
