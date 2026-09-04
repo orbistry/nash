@@ -1012,7 +1012,13 @@ fn canonicalize_let_def<'a>(
             let (can_def_builder, arg_bindings): (DefBuilder<'a>, Bindings<'a>) = if let Some(ann) =
                 annotation
             {
-                let annotation_val = types::to_annotation(bump, env, ann)?;
+                if !ann.constraints.is_empty() {
+                    return Err(vec![Error::Unsupported {
+                        feature: "constraints",
+                        region: ann.constraints[0].region,
+                    }]);
+                }
+                let annotation_val = types::to_annotation(bump, env, ann.typ)?;
                 let mut bound: Vec<(&'a str, Region)> = Vec::new();
                 let (typed_args, result_type) =
                     gather_typed_args(bump, env, name.value, args, annotation_val.typ, &mut bound)?;

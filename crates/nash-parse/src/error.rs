@@ -339,6 +339,8 @@ pub enum Type<'a> {
     Tuple(&'a TTuple<'a>, Row, Col),
     Start(Row, Col),
     VarStart(Row, Col),
+    Context(Row, Col),
+    IndentAfterContext(Row, Col),
     Space(Space, Row, Col),
     IndentStart(Row, Col),
 }

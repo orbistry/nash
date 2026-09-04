@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/expression/let_.rs
-description: "Code (indented inside a def):\n\n    let\n        f : Int -> Int\n        f x = x\n    in\n        f 1\n"
+description: "Code (indented inside a def):\n\n    let\n        f : Eq 'a => 'a -> bool\n        f x = x == x\n    in\n        f 1\n"
 ---
 Located {
     region: Region {
@@ -65,41 +65,77 @@ Located {
                             },
                             end: Position {
                                 line: 3,
-                                column: 16,
+                                column: 21,
                             },
                         },
-                        value: Var {
-                            kind: LowVar,
-                            name: "x",
+                        value: BinOps {
+                            operands: [
+                                BinOpOperand {
+                                    expr: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 15,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 16,
+                                            },
+                                        },
+                                        value: Var {
+                                            kind: LowVar,
+                                            name: "x",
+                                        },
+                                    },
+                                    op: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 17,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 19,
+                                            },
+                                        },
+                                        value: "==",
+                                    },
+                                },
+                            ],
+                            last: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 20,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 21,
+                                    },
+                                },
+                                value: Var {
+                                    kind: LowVar,
+                                    name: "x",
+                                },
+                            },
                         },
                     },
                     annotation: Some(
                         Annotation {
-                            constraints: [],
-                            typ: Located {
-                                region: Region {
-                                    start: Position {
-                                        line: 2,
-                                        column: 13,
-                                    },
-                                    end: Position {
-                                        line: 2,
-                                        column: 23,
-                                    },
-                                },
-                                value: Lambda {
-                                    from: Located {
-                                        region: Region {
-                                            start: Position {
-                                                line: 2,
-                                                column: 13,
-                                            },
-                                            end: Position {
-                                                line: 2,
-                                                column: 16,
-                                            },
+                            constraints: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 13,
                                         },
-                                        value: Type {
+                                        end: Position {
+                                            line: 2,
+                                            column: 18,
+                                        },
+                                    },
+                                    value: Constraint {
+                                        class: Located {
                                             region: Region {
                                                 start: Position {
                                                     line: 2,
@@ -107,36 +143,82 @@ Located {
                                                 },
                                                 end: Position {
                                                     line: 2,
-                                                    column: 16,
+                                                    column: 15,
                                                 },
                                             },
-                                            name: "Int",
-                                            args: [],
+                                            value: "Eq",
                                         },
+                                        module: None,
+                                        args: [
+                                            Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 2,
+                                                        column: 16,
+                                                    },
+                                                    end: Position {
+                                                        line: 2,
+                                                        column: 18,
+                                                    },
+                                                },
+                                                value: Var(
+                                                    "a",
+                                                ),
+                                            },
+                                        ],
+                                    },
+                                },
+                            ],
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 22,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 32,
+                                    },
+                                },
+                                value: Lambda {
+                                    from: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 2,
+                                                column: 22,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 24,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
                                     },
                                     to: Located {
                                         region: Region {
                                             start: Position {
                                                 line: 2,
-                                                column: 20,
+                                                column: 28,
                                             },
                                             end: Position {
                                                 line: 2,
-                                                column: 23,
+                                                column: 32,
                                             },
                                         },
                                         value: Type {
                                             region: Region {
                                                 start: Position {
                                                     line: 2,
-                                                    column: 20,
+                                                    column: 28,
                                                 },
                                                 end: Position {
                                                     line: 2,
-                                                    column: 23,
+                                                    column: 32,
                                                 },
                                             },
-                                            name: "Int",
+                                            name: "bool",
                                             args: [],
                                         },
                                     },

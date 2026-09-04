@@ -1,0 +1,132 @@
+---
+source: crates/nash-parse/src/type_.rs
+description: "Code:\n\nCardano.Eq Datum => Datum -> bool"
+---
+Annotation {
+    constraints: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 17,
+                },
+            },
+            value: Constraint {
+                class: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                    },
+                    value: "Eq",
+                },
+                module: Some(
+                    "Cardano",
+                ),
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 17,
+                            },
+                        },
+                        value: Type {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 17,
+                                },
+                            },
+                            name: "Datum",
+                            args: [],
+                        },
+                    },
+                ],
+            },
+        },
+    ],
+    typ: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 21,
+            },
+            end: Position {
+                line: 1,
+                column: 34,
+            },
+        },
+        value: Lambda {
+            from: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 21,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 26,
+                    },
+                },
+                value: Type {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 21,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 26,
+                        },
+                    },
+                    name: "Datum",
+                    args: [],
+                },
+            },
+            to: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 30,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 34,
+                    },
+                },
+                value: Type {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 30,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 34,
+                        },
+                    },
+                    name: "bool",
+                    args: [],
+                },
+            },
+        },
+    },
+}

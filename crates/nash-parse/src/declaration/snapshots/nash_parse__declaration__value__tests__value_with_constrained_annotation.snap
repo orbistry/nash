@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/value.rs
-description: "add : Int -> Int -> Int\nadd x y = x\n"
+description: "max : Ord 'a => 'a -> 'a -> 'a\nmax a b = a\n"
 ---
 Value(
     None,
@@ -27,7 +27,7 @@ Value(
                         column: 4,
                     },
                 },
-                value: "add",
+                value: "max",
             },
             arguments: [
                 Located {
@@ -42,7 +42,7 @@ Value(
                         },
                     },
                     value: Var(
-                        "x",
+                        "a",
                     ),
                 },
                 Located {
@@ -57,7 +57,7 @@ Value(
                         },
                     },
                     value: Var(
-                        "y",
+                        "b",
                     ),
                 },
             ],
@@ -74,36 +74,25 @@ Value(
                 },
                 value: Var {
                     kind: LowVar,
-                    name: "x",
+                    name: "a",
                 },
             },
             annotation: Some(
                 Annotation {
-                    constraints: [],
-                    typ: Located {
-                        region: Region {
-                            start: Position {
-                                line: 1,
-                                column: 7,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 24,
-                            },
-                        },
-                        value: Lambda {
-                            from: Located {
-                                region: Region {
-                                    start: Position {
-                                        line: 1,
-                                        column: 7,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 10,
-                                    },
+                    constraints: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 7,
                                 },
-                                value: Type {
+                                end: Position {
+                                    line: 1,
+                                    column: 13,
+                                },
+                            },
+                            value: Constraint {
+                                class: Located {
                                     region: Region {
                                         start: Position {
                                             line: 1,
@@ -114,19 +103,65 @@ Value(
                                             column: 10,
                                         },
                                     },
-                                    name: "Int",
-                                    args: [],
+                                    value: "Ord",
                                 },
+                                module: None,
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 1,
+                                                column: 11,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 13,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 31,
+                            },
+                        },
+                        value: Lambda {
+                            from: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 17,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 19,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
                             },
                             to: Located {
                                 region: Region {
                                     start: Position {
                                         line: 1,
-                                        column: 14,
+                                        column: 23,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 24,
+                                        column: 31,
                                     },
                                 },
                                 value: Lambda {
@@ -134,53 +169,31 @@ Value(
                                         region: Region {
                                             start: Position {
                                                 line: 1,
-                                                column: 14,
+                                                column: 23,
                                             },
                                             end: Position {
                                                 line: 1,
-                                                column: 17,
+                                                column: 25,
                                             },
                                         },
-                                        value: Type {
-                                            region: Region {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 14,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 17,
-                                                },
-                                            },
-                                            name: "Int",
-                                            args: [],
-                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
                                     },
                                     to: Located {
                                         region: Region {
                                             start: Position {
                                                 line: 1,
-                                                column: 21,
+                                                column: 29,
                                             },
                                             end: Position {
                                                 line: 1,
-                                                column: 24,
+                                                column: 31,
                                             },
                                         },
-                                        value: Type {
-                                            region: Region {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 21,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 24,
-                                                },
-                                            },
-                                            name: "Int",
-                                            args: [],
-                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
                                     },
                                 },
                             },

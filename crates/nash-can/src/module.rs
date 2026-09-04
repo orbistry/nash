@@ -250,7 +250,13 @@ fn to_node_one<'a>(
     // and match it against the arguments before the body is touched, and
     // one duplicate scope spans all arguments either way.
     let (builder, arg_bindings) = if let Some(ann) = src.annotation {
-        let annotation = types::to_annotation(bump, env, ann)?;
+        if !ann.constraints.is_empty() {
+            return Err(vec![Error::Unsupported {
+                feature: "constraints",
+                region: ann.constraints[0].region,
+            }]);
+        }
+        let annotation = types::to_annotation(bump, env, ann.typ)?;
         let mut bound: Vec<(&'a str, Region)> = Vec::new();
         let (typed_args, result_type) = expression::gather_typed_args(
             bump,
@@ -4046,6 +4052,13 @@ mod tests {
     fn little_type_open_export() {
         assert_interface_snapshot!(
             "module Main exposing (type option(..))\n\ntype option 'a = Some 'a | None\n"
+        );
+    }
+
+    #[test]
+    fn constraints_unsupported() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\n\nid : Eq 'a => 'a -> 'a\nid x = x\n"
         );
     }
 }

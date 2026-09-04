@@ -1,0 +1,8 @@
+---
+source: crates/nash-parse/src/type_.rs
+description: "Code:\n\nint 'a => 'a"
+---
+Context(
+    1,
+    1,
+)

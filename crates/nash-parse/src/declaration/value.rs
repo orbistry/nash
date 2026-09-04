@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
 
                             let (type_ann, _) = p.specialize(
                                 |bump, e, row, col| DeclDef::Type(bump.alloc(e), row, col),
-                                |p| p.type_expr(),
+                                |p| p.type_scheme(),
                             )?;
 
                             // Must be on a fresh line for the definition
@@ -78,7 +78,7 @@ impl<'a> Parser<'a> {
         maybe_docs: Option<&'a Comment<'a>>,
         start: Position,
         name: &'a Located<&'a str>,
-        type_ann: Option<&'a Located<nash_source::Type<'a>>>,
+        type_ann: Option<&'a nash_source::Annotation<'a>>,
     ) -> Result<(Decl<'a>, Position), DeclDef<'a>> {
         let mut args: BumpVec<'a, &'a Located<nash_source::Pattern<'a>>> =
             BumpVec::new_in(self.bump);
@@ -175,6 +175,16 @@ mod tests {
             r#"
             add : Int -> Int -> Int
             add x y = x
+        "#
+        );
+    }
+
+    #[test]
+    fn value_with_constrained_annotation() {
+        assert_decl_snapshot!(
+            r#"
+            max : Ord 'a => 'a -> 'a -> 'a
+            max a b = a
         "#
         );
     }

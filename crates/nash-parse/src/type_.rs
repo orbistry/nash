@@ -8,7 +8,7 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position, Region};
-use nash_source::{FieldType, Kind, Type, TypeParam};
+use nash_source::{Annotation, Constraint, FieldType, Kind, Type, TypeParam};
 
 use crate::Parser;
 use crate::error::{self, TRecord, TTuple};
@@ -79,6 +79,80 @@ impl<'a> Parser<'a> {
             })],
             (tipe1, end1),
         )
+    }
+
+    /// Parse an optional constraint context followed by a type.
+    pub fn type_scheme(&mut self) -> Result<(&'a Annotation<'a>, Position), error::Type<'a>> {
+        let start = self.get_position();
+        let (first, end1) = self.type_expr()?;
+
+        self.one_of_with_fallback(
+            vec![Box::new(|p: &mut Parser<'a>| {
+                p.check_indent(end1.line, end1.column, error::Type::IndentStart)?;
+                p.word2(b'=', b'>', error::Type::Start)?;
+                let constraints = p.to_constraints(first, start)?;
+                p.chomp_and_check_indent(error::Type::Space, error::Type::IndentAfterContext)?;
+                let (typ, end2) = p.type_expr()?;
+                Ok((p.alloc(Annotation { constraints, typ }), end2))
+            })],
+            (
+                self.alloc(Annotation {
+                    constraints: &[],
+                    typ: first,
+                }),
+                end1,
+            ),
+        )
+    }
+
+    fn to_constraints(
+        &self,
+        typ: &'a Located<Type<'a>>,
+        start: Position,
+    ) -> Result<&'a [&'a Located<Constraint<'a>>], error::Type<'a>> {
+        let bad = || error::Type::Context(start.line, start.column);
+        match &typ.value {
+            Type::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                let mut out = BumpVec::new_in(self.bump);
+                for typ in [*first, *second].into_iter().chain(rest.iter().copied()) {
+                    out.push(self.to_constraint(typ).ok_or_else(bad)?);
+                }
+                Ok(out.into_bump_slice())
+            }
+            _ => Ok(self.alloc_slice_copy(&[self.to_constraint(typ).ok_or_else(bad)?])),
+        }
+    }
+
+    pub(crate) fn to_constraint(
+        &self,
+        typ: &'a Located<Type<'a>>,
+    ) -> Option<&'a Located<Constraint<'a>>> {
+        let (region, module, name, args) = match &typ.value {
+            Type::Type { region, name, args } if !args.is_empty() => (*region, None, *name, *args),
+            Type::TypeQual {
+                region,
+                module,
+                name,
+                args,
+            } if !args.is_empty() => (*region, Some(*module), *name, *args),
+            _ => return None,
+        };
+        if !name.starts_with(|c: char| c.is_ascii_uppercase()) {
+            return None;
+        }
+        let class = self.alloc(Located::at(region, name));
+        Some(self.alloc(Located::at(
+            typ.region,
+            Constraint {
+                class,
+                module,
+                args,
+            },
+        )))
     }
 
     // -------------------------------------------------------------------------
@@ -615,6 +689,40 @@ macro_rules! assert_type_error_snapshot {
     }};
 }
 
+#[cfg(test)]
+macro_rules! assert_scheme_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let (result, _end) = parser.type_scheme().expect("expected successful parse");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+        }, {
+            insta::assert_debug_snapshot!(result);
+        });
+    }};
+}
+
+#[cfg(test)]
+macro_rules! assert_scheme_error_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let result = parser.type_scheme().expect_err("expected parse error");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+        }, {
+            insta::assert_debug_snapshot!(result);
+        });
+    }};
+}
+
 /// Snapshot test macro for multiline types, laid out as they would appear
 /// indented inside a declaration (see `test_support::indent_fragment`).
 #[cfg(test)]
@@ -641,6 +749,51 @@ macro_rules! assert_indented_type_snapshot {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn scheme_single_constraint() {
+        assert_scheme_snapshot!("Eq 'a => 'a -> 'a -> bool");
+    }
+
+    #[test]
+    fn scheme_tuple_constraints() {
+        assert_scheme_snapshot!("(Eq 'a, Show 'b) => 'a -> 'b -> string");
+    }
+
+    #[test]
+    fn scheme_multi_argument_constraint() {
+        assert_scheme_snapshot!("Lift 'small 'big => 'small -> 'big");
+    }
+
+    #[test]
+    fn scheme_qualified_constraint() {
+        assert_scheme_snapshot!("Cardano.Eq Datum => Datum -> bool");
+    }
+
+    #[test]
+    fn scheme_without_constraints() {
+        assert_scheme_snapshot!("'a -> 'a");
+    }
+
+    #[test]
+    fn scheme_error_variable_context() {
+        assert_scheme_error_snapshot!("'a => 'a");
+    }
+
+    #[test]
+    fn scheme_error_constraint_without_argument() {
+        assert_scheme_error_snapshot!("Eq => 'a");
+    }
+
+    #[test]
+    fn scheme_error_tuple_member() {
+        assert_scheme_error_snapshot!("(Eq 'a, 'b) => 'a");
+    }
+
+    #[test]
+    fn scheme_error_little_class() {
+        assert_scheme_error_snapshot!("int 'a => 'a");
+    }
+
     // Type variables
     #[test]
     fn type_var_simple() {

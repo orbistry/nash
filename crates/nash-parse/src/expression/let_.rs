@@ -150,7 +150,7 @@ impl<'a> Parser<'a> {
 
                             let (type_ann, _) = p.specialize(
                                 |bump, e, row, col| DefErr::Type(bump.alloc(e), row, col),
-                                |p| p.type_expr(),
+                                |p| p.type_scheme(),
                             )?;
 
                             // type_expr already chomps trailing whitespace
@@ -176,7 +176,7 @@ impl<'a> Parser<'a> {
         &mut self,
         start: Position,
         name: &'a Located<&'a str>,
-        type_ann: Option<&'a Located<nash_source::Type<'a>>>,
+        type_ann: Option<&'a nash_source::Annotation<'a>>,
     ) -> Result<(&'a Located<Def<'a>>, Position), DefErr<'a>> {
         let mut args: BumpVec<'a, &'a Located<nash_source::Pattern<'a>>> =
             BumpVec::new_in(self.bump);
@@ -330,6 +330,19 @@ mod tests {
             let
                 f : Int -> Int
                 f x = x
+            in
+                f 1
+        "#
+        );
+    }
+
+    #[test]
+    fn let_with_constrained_annotation() {
+        assert_indented_expression_snapshot!(
+            r#"
+            let
+                f : Eq 'a => 'a -> bool
+                f x = x == x
             in
                 f 1
         "#

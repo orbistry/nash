@@ -24,7 +24,21 @@ pub struct Value<'a> {
     pub name: &'a Located<&'a str>,
     pub arguments: &'a [&'a Located<Pattern<'a>>],
     pub body: &'a Located<Expr<'a>>,
-    pub annotation: Option<&'a Located<Type<'a>>>,
+    pub annotation: Option<&'a Annotation<'a>>,
+}
+
+/// A type annotation with an optional constraint context.
+#[derive(Debug)]
+pub struct Annotation<'a> {
+    pub constraints: &'a [&'a Located<Constraint<'a>>],
+    pub typ: &'a Located<Type<'a>>,
+}
+
+#[derive(Debug)]
+pub struct Constraint<'a> {
+    pub class: &'a Located<&'a str>,
+    pub module: Option<&'a str>,
+    pub args: &'a [&'a Located<Type<'a>>],
 }
 
 // type Maybe a
@@ -159,7 +173,7 @@ pub enum Def<'a> {
         name: &'a Located<&'a str>,
         args: &'a [&'a Located<Pattern<'a>>],
         body: &'a Located<Expr<'a>>,
-        annotation: Option<&'a Located<Type<'a>>>,
+        annotation: Option<&'a Annotation<'a>>,
     },
     Destruct {
         pattern: &'a Located<Pattern<'a>>,
