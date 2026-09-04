@@ -9,6 +9,7 @@ pub struct Module<'a> {
     pub values: &'a [&'a Located<Value<'a>>],
     pub unions: &'a [&'a Located<Union<'a>>],
     pub aliases: &'a [&'a Located<Alias<'a>>],
+    pub traits: &'a [&'a Located<Trait<'a>>],
     pub binops: &'a [&'a Located<Infix<'a>>],
 }
 
@@ -32,6 +33,22 @@ pub struct Value<'a> {
 pub struct Attribute<'a> {
     pub name: &'a Located<&'a str>,
     pub args: &'a [&'a Located<Expr<'a>>],
+}
+
+#[derive(Debug)]
+pub struct Trait<'a> {
+    pub name: &'a Located<&'a str>,
+    pub params: &'a [&'a TypeParam<'a>],
+    pub supers: &'a [&'a Located<Constraint<'a>>],
+    pub methods: &'a [&'a TraitMethod<'a>],
+    pub attributes: &'a [&'a Attribute<'a>],
+}
+
+#[derive(Debug)]
+pub struct TraitMethod<'a> {
+    pub name: &'a Located<&'a str>,
+    pub annotation: &'a Annotation<'a>,
+    pub default: Option<&'a Located<Def<'a>>>,
 }
 
 /// A type annotation with an optional constraint context.

@@ -172,7 +172,7 @@ impl<'a> Parser<'a> {
     /// Parse function arguments and body.
     ///
     /// Mirrors Elm's `chompDefArgsAndBody`.
-    fn chomp_def_args_and_body(
+    pub(crate) fn chomp_def_args_and_body(
         &mut self,
         start: Position,
         name: &'a Located<&'a str>,
@@ -226,7 +226,10 @@ impl<'a> Parser<'a> {
     }
 
     /// Check that the name matches the expected name (for type-annotated definitions).
-    fn chomp_matching_name(&mut self, expected: &str) -> Result<&'a Located<&'a str>, DefErr<'a>> {
+    pub(crate) fn chomp_matching_name(
+        &mut self,
+        expected: &str,
+    ) -> Result<&'a Located<&'a str>, DefErr<'a>> {
         let start = self.get_position();
         let name = self.lower_name(DefErr::NameRepeat)?;
         let name_located = self.add_end(start, name);

@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: trait Eq where
+---
+Trait(
+    Param(
+        Start(
+            1,
+            10,
+        ),
+        1,
+        10,
+    ),
+    1,
+    1,
+)

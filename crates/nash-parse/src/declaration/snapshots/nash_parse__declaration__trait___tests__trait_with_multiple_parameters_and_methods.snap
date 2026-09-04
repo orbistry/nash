@@ -1,0 +1,197 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: "trait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n"
+---
+Trait(
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 3,
+                column: 27,
+            },
+        },
+        value: Trait {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 7,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 11,
+                    },
+                },
+                value: "Lift",
+            },
+            params: [
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 18,
+                            },
+                        },
+                        value: "small",
+                    },
+                    kind: None,
+                },
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 19,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 23,
+                            },
+                        },
+                        value: "big",
+                    },
+                    kind: None,
+                },
+            ],
+            supers: [],
+            methods: [
+                TraitMethod {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 9,
+                            },
+                        },
+                        value: "lift",
+                    },
+                    annotation: Annotation {
+                        constraints: [],
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 26,
+                                },
+                            },
+                            value: Lambda {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 12,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 18,
+                                        },
+                                    },
+                                    value: Var(
+                                        "small",
+                                    ),
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 22,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 26,
+                                        },
+                                    },
+                                    value: Var(
+                                        "big",
+                                    ),
+                                },
+                            },
+                        },
+                    },
+                    default: None,
+                },
+                TraitMethod {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 10,
+                            },
+                        },
+                        value: "lower",
+                    },
+                    annotation: Annotation {
+                        constraints: [],
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 27,
+                                },
+                            },
+                            value: Lambda {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 13,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 17,
+                                        },
+                                    },
+                                    value: Var(
+                                        "big",
+                                    ),
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 21,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 27,
+                                        },
+                                    },
+                                    value: Var(
+                                        "small",
+                                    ),
+                                },
+                            },
+                        },
+                    },
+                    default: None,
+                },
+            ],
+            attributes: [],
+        },
+    },
+)

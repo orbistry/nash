@@ -175,5 +175,6 @@ Module {
             },
         },
     ],
+    traits: [],
     binops: [],
 }

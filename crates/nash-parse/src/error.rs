@@ -77,6 +77,28 @@ pub enum Decl<'a> {
     Def(&'a str, &'a DeclDef<'a>, Row, Col),
     FreshLineAfterDocComment(Row, Col),
     Attribute(&'a Attribute<'a>, Row, Col),
+    Trait(&'a Trait<'a>, Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Trait<'a> {
+    Space(Space, Row, Col),
+    Name(Row, Col),
+    Param(&'a TypeParam<'a>, Row, Col),
+    Super(&'a Type<'a>, Row, Col),
+    SuperArg(Row, Col),
+    Where(Row, Col),
+    MethodName(Row, Col),
+    Colon(Row, Col),
+    Type(&'a Type<'a>, Row, Col),
+    Default(&'a str, &'a Def<'a>, Row, Col),
+    IndentName(Row, Col),
+    IndentParam(Row, Col),
+    IndentWhere(Row, Col),
+    IndentMethod(Row, Col),
+    IndentColon(Row, Col),
+    IndentType(Row, Col),
+    Alignment(u16, Row, Col),
 }
 
 #[derive(Debug)]

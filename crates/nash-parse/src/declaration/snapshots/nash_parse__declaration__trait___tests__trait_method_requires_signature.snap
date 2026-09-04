@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: "trait Eq 'a where\n    eq a = true\n"
+---
+Trait(
+    Colon(
+        2,
+        8,
+    ),
+    1,
+    1,
+)

@@ -79,5 +79,6 @@ Module {
     ],
     unions: [],
     aliases: [],
+    traits: [],
     binops: [],
 }

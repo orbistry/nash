@@ -1,0 +1,220 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: "trait (Ord 'k, ToData 'k) => Key 'k where\n    hash : 'k -> Bytes\n"
+---
+Trait(
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 2,
+                column: 23,
+            },
+        },
+        value: Trait {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 30,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 33,
+                    },
+                },
+                value: "Key",
+            },
+            params: [
+                TypeParam {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 34,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 36,
+                            },
+                        },
+                        value: "k",
+                    },
+                    kind: None,
+                },
+            ],
+            supers: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 14,
+                        },
+                    },
+                    value: Constraint {
+                        class: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 8,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                            },
+                            value: "Ord",
+                        },
+                        module: None,
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 14,
+                                    },
+                                },
+                                value: Var(
+                                    "k",
+                                ),
+                            },
+                        ],
+                    },
+                },
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 25,
+                        },
+                    },
+                    value: Constraint {
+                        class: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 22,
+                                },
+                            },
+                            value: "ToData",
+                        },
+                        module: None,
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 23,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 25,
+                                    },
+                                },
+                                value: Var(
+                                    "k",
+                                ),
+                            },
+                        ],
+                    },
+                },
+            ],
+            methods: [
+                TraitMethod {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 9,
+                            },
+                        },
+                        value: "hash",
+                    },
+                    annotation: Annotation {
+                        constraints: [],
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 23,
+                                },
+                            },
+                            value: Lambda {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 12,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 14,
+                                        },
+                                    },
+                                    value: Var(
+                                        "k",
+                                    ),
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 18,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 23,
+                                        },
+                                    },
+                                    value: Type {
+                                        region: Region {
+                                            start: Position {
+                                                line: 2,
+                                                column: 18,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 23,
+                                            },
+                                        },
+                                        name: "Bytes",
+                                        args: [],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    default: None,
+                },
+            ],
+            attributes: [],
+        },
+    },
+)

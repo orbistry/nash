@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: "trait Eq int => Ord 'a where"
+---
+Trait(
+    SuperArg(
+        1,
+        10,
+    ),
+    1,
+    1,
+)

@@ -51,6 +51,12 @@ pub fn canonicalize<'a>(
     context: Context<'a>,
     module: &SourceModule<'a>,
 ) -> Result<CanResult<'a>, Vec<Error<'a>>> {
+    if let Some(trait_) = module.traits.first() {
+        return Err(vec![Error::Unsupported {
+            feature: "trait declaration",
+            region: trait_.region,
+        }]);
+    }
     let home = canonicalize_header(context, module).map_err(|e| vec![e])?;
 
     let mut env =
@@ -4142,5 +4148,12 @@ mod tests {
     #[test]
     fn attributes_unsupported() {
         assert_module_error_snapshot!("module Main exposing (..)\n\n@inline\nvalue = 1\n");
+    }
+
+    #[test]
+    fn trait_declaration_unsupported() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n"
+        );
     }
 }

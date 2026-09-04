@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: "trait eq 'a where"
+---
+Trait(
+    Name(
+        1,
+        7,
+    ),
+    1,
+    1,
+)

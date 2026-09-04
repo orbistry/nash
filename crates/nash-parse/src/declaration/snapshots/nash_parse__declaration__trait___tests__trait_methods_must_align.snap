@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: "trait Eq 'a where\n    eq : 'a -> bool\n     neq : 'a -> bool\n"
+---
+Trait(
+    Alignment(
+        5,
+        3,
+        10,
+    ),
+    1,
+    1,
+)

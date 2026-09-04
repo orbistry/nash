@@ -183,6 +183,14 @@ impl<'a> Parser<'a> {
         self.keyword(b"module", to_error)
     }
 
+    pub fn keyword_trait<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"trait", to_error)
+    }
+
+    pub fn keyword_where<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"where", to_error)
+    }
+
     /// Generic keyword parser that checks bytes match and no identifier continuation follows.
     ///
     /// Mirrors Elm's `k2`, `k3`, `k4` etc. but generalized.

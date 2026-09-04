@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/trait_.rs
+description: "trait Eq 'a\n    eq : 'a -> bool\n"
+---
+Trait(
+    Where(
+        2,
+        5,
+    ),
+    1,
+    1,
+)

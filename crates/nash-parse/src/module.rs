@@ -8,7 +8,7 @@
 //! - Declarations: values, types, aliases
 
 use nash_region::{Located, Region};
-use nash_source::{Alias, Docs, Exposing, Import, Infix, Module, Union, Value};
+use nash_source::{Alias, Docs, Exposing, Import, Infix, Module, Trait, Union, Value};
 
 use crate::Parser;
 use crate::declaration::Decl;
@@ -235,7 +235,7 @@ impl<'a> Parser<'a> {
         let decls = self.declarations()?;
 
         // Categorize declarations into values, unions, aliases
-        let (values, unions, aliases) = self.categorize_decls(decls);
+        let (values, unions, aliases, traits) = self.categorize_decls(decls);
 
         // Build docs (simplified: no module-level docs for now)
         let docs = self.alloc(Docs::NoDocs(Region::new(start_pos, self.get_position())));
@@ -248,6 +248,7 @@ impl<'a> Parser<'a> {
             values,
             unions,
             aliases,
+            traits,
             binops,
         })
     }
@@ -261,16 +262,19 @@ impl<'a> Parser<'a> {
         &'a [&'a Located<Value<'a>>],
         &'a [&'a Located<Union<'a>>],
         &'a [&'a Located<Alias<'a>>],
+        &'a [&'a Located<Trait<'a>>],
     ) {
         let mut values = Vec::new();
         let mut unions = Vec::new();
         let mut aliases = Vec::new();
+        let mut traits = Vec::new();
 
         for decl in decls {
             match decl {
                 Decl::Value(_doc, value) => values.push(value),
                 Decl::Union(_doc, union) => unions.push(union),
                 Decl::Alias(_doc, alias) => aliases.push(alias),
+                Decl::Trait(trait_) => traits.push(trait_),
             }
         }
 
@@ -278,6 +282,7 @@ impl<'a> Parser<'a> {
             self.alloc_slice_copy(&values),
             self.alloc_slice_copy(&unions),
             self.alloc_slice_copy(&aliases),
+            self.alloc_slice_copy(&traits),
         )
     }
 }
@@ -466,6 +471,33 @@ mod tests {
             infix left 6 (|>) = apR
 
             apR f x = f x
+        "#
+        );
+    }
+
+    #[test]
+    fn module_with_empty_trait_then_value() {
+        assert_module_snapshot!(
+            r#"
+            module Main exposing (..)
+
+            trait Marker 'a where
+
+            x = 1
+        "#
+        );
+    }
+
+    #[test]
+    fn later_constraint_does_not_imply_trait_superclass() {
+        assert_module_snapshot!(
+            r#"
+            module Main exposing (..)
+
+            trait Show 'a where
+
+            id : Eq 'a => 'a -> 'a
+            id x = x
         "#
         );
     }
