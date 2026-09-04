@@ -1,6 +1,7 @@
 use bumpalo::Bump;
 use nash_region::{Located, Position, Region};
 
+mod bytes;
 mod declaration;
 pub mod error;
 mod exposing;

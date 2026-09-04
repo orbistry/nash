@@ -10,6 +10,7 @@ use crate::Parser;
 use crate::error;
 
 mod accessor;
+mod bytes;
 mod case;
 mod if_;
 mod lambda;
@@ -296,6 +297,7 @@ impl<'a> Parser<'a> {
                     let expr = p.variable(start)?;
                     p.accessible(start, expr)
                 }),
+                Box::new(|p| p.bytes(start)),
                 Box::new(|p| p.string(start)),
                 Box::new(|p| p.number(start)),
                 Box::new(|p| p.list(start)),
@@ -489,6 +491,11 @@ pub(crate) use assert_indented_expression_snapshot;
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn call_with_bytes_argument() {
+        assert_expression_snapshot!("f #\"01\" x");
+    }
+
     #[test]
     fn error_fat_arrow() {
         assert_expression_error_snapshot!("a => b");

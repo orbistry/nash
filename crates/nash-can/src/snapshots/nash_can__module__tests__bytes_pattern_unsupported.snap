@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\nf #\"00\" = 1\n"
+---
+[
+    Unsupported {
+        feature: "bytes literal",
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 3,
+            },
+            end: Position {
+                line: 3,
+                column: 8,
+            },
+        },
+    },
+]

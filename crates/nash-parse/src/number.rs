@@ -143,7 +143,7 @@ fn is_ident_inner(b: u8) -> bool {
 
 /// Get the numeric value of a hex digit.
 #[inline]
-fn hex_value(b: u8) -> u8 {
+pub(crate) fn hex_value(b: u8) -> u8 {
     match b {
         b'0'..=b'9' => b - b'0',
         b'a'..=b'f' => b - b'a' + 10,

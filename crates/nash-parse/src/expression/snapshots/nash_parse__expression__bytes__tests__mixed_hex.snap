@@ -1,0 +1,24 @@
+---
+source: crates/nash-parse/src/expression/bytes.rs
+description: "Code:\n\n#\"DEADbeef\""
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 12,
+        },
+    },
+    value: Bytes(
+        [
+            222,
+            173,
+            190,
+            239,
+        ],
+    ),
+}

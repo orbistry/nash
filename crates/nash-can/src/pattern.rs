@@ -159,6 +159,12 @@ pub fn canonicalize<'a>(
         }
 
         SourcePattern::Str(s) => CanPattern::Str(s),
+        SourcePattern::Bytes(_) => {
+            return Err(vec![Error::Unsupported {
+                feature: "bytes literal",
+                region: pattern.region,
+            }]);
+        }
         SourcePattern::Int(n) => CanPattern::Int(*n),
     };
 

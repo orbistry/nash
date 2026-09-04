@@ -1,0 +1,9 @@
+---
+source: crates/nash-parse/src/expression/bytes.rs
+description: "Code:\n\n#\"f\""
+---
+Bytes(
+    OddLength,
+    1,
+    1,
+)

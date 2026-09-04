@@ -29,6 +29,7 @@ impl<'a> Parser<'a> {
                 Box::new(|p: &mut Parser<'a>| p.pattern_ctor(start)),
                 // Number literal
                 Box::new(|p: &mut Parser<'a>| p.pattern_number(start)),
+                Box::new(|p: &mut Parser<'a>| p.pattern_bytes(start)),
                 // String literal
                 Box::new(|p: &mut Parser<'a>| p.pattern_string(start)),
             ],
@@ -185,6 +186,14 @@ impl<'a> Parser<'a> {
         })?;
         Ok(self.add_end(start, Pattern::Str(s)))
     }
+
+    fn pattern_bytes(
+        &mut self,
+        start: Position,
+    ) -> Result<&'a Located<Pattern<'a>>, error::Pattern<'a>> {
+        let bytes = self.bytes_literal(error::Pattern::Start, error::Pattern::Bytes)?;
+        Ok(self.add_end(start, Pattern::Bytes(bytes)))
+    }
 }
 
 use nash_region::Located;
@@ -235,6 +244,16 @@ mod tests {
     #[test]
     fn string_literal() {
         assert_pattern_snapshot!(r#""hello""#);
+    }
+
+    #[test]
+    fn bytes_literal() {
+        assert_pattern_snapshot!("#\"00\"");
+    }
+
+    #[test]
+    fn bytes_literal_odd_length() {
+        assert_pattern_error_snapshot!("#\"0\"");
     }
 
     // Errors

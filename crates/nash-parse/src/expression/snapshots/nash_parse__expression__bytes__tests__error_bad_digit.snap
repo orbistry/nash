@@ -1,0 +1,11 @@
+---
+source: crates/nash-parse/src/expression/bytes.rs
+description: "Code:\n\n#\"zz\""
+---
+Bytes(
+    BadHexDigit(
+        3,
+    ),
+    1,
+    3,
+)

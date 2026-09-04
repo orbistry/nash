@@ -152,6 +152,7 @@ pub enum Expr<'a> {
     OperatorReserved(BadOperator, Row, Col),
     Start(Row, Col),
     String(StringError, Row, Col),
+    Bytes(Bytes, Row, Col),
     Number(Number, Row, Col),
     Space(Space, Row, Col),
     IndentOperatorRight(&'a str, Row, Col),
@@ -288,12 +289,20 @@ pub enum Pattern<'a> {
     List(&'a PList<'a>, Row, Col),
     Start(Row, Col),
     String(StringError, Row, Col),
+    Bytes(Bytes, Row, Col),
     Number(Number, Row, Col),
     Alias(Row, Col),
     WildcardNotVar(&'a str, i32, Row, Col),
     Space(Space, Row, Col),
     IndentStart(Row, Col),
     IndentAlias(Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Bytes {
+    Endless,
+    OddLength,
+    BadHexDigit(u16),
 }
 
 #[derive(Debug)]

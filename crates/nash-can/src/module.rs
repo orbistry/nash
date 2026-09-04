@@ -4061,4 +4061,14 @@ mod tests {
             "module Main exposing (..)\n\nid : Eq 'a => 'a -> 'a\nid x = x\n"
         );
     }
+
+    #[test]
+    fn bytes_expression_unsupported() {
+        assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = #\"ff00\"\n");
+    }
+
+    #[test]
+    fn bytes_pattern_unsupported() {
+        assert_module_error_snapshot!("module Main exposing (..)\n\nf #\"00\" = 1\n");
+    }
 }

@@ -93,6 +93,7 @@ pub struct Precedence(pub u16);
 #[derive(Debug)]
 pub enum Expr<'a> {
     Str(&'a str),
+    Bytes(&'a [u8]),
     Int(i128),
     Var {
         kind: VarType,
@@ -225,6 +226,7 @@ pub enum Pattern<'a> {
         tail: &'a Located<Pattern<'a>>,
     },
     Str(&'a str),
+    Bytes(&'a [u8]),
     Int(i128),
 }
 

@@ -1,0 +1,21 @@
+---
+source: crates/nash-parse/src/pattern/term.rs
+description: "Code:\n\n#\"00\""
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 6,
+        },
+    },
+    value: Bytes(
+        [
+            0,
+        ],
+    ),
+}
