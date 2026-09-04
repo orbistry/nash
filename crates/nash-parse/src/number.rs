@@ -67,6 +67,10 @@ impl<'a> Parser<'a> {
                 Err(error::Number::NoLeadingZero)
             }
 
+            Some(b'.') if matches!(self.peek_at(1), Some(d) if d.is_ascii_digit()) => {
+                Err(error::Number::Dot(0))
+            }
+
             Some(b) if is_ident_inner(b) => {
                 // 0abc - dirty end
                 Err(error::Number::End)
@@ -83,6 +87,10 @@ impl<'a> Parser<'a> {
                 Some(b) if b.is_ascii_digit() => {
                     n = n * 10 + (b - b'0') as i128;
                     self.advance();
+                }
+
+                Some(b'.') if matches!(self.peek_at(1), Some(d) if d.is_ascii_digit()) => {
+                    return Err(error::Number::Dot(n));
                 }
 
                 Some(b) if is_ident_inner(b) => {

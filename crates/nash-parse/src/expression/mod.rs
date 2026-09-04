@@ -410,6 +410,24 @@ macro_rules! assert_expression_snapshot {
     }};
 }
 
+/// Snapshot test macro for full expression parse errors.
+#[cfg(test)]
+macro_rules! assert_expression_error_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let result = parser.expression().expect_err("expected parse error");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+        }, {
+            insta::assert_debug_snapshot!(result);
+        });
+    }};
+}
+
 /// Snapshot test macro for multiline terms, laid out as they would appear
 /// indented inside a definition. Bare fragments cannot use multiline
 /// layout: a token at column 1 always starts a new top-level declaration.
@@ -471,6 +489,16 @@ pub(crate) use assert_indented_expression_snapshot;
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn error_fat_arrow() {
+        assert_expression_error_snapshot!("a => b");
+    }
+
+    #[test]
+    fn error_left_arrow() {
+        assert_expression_error_snapshot!("a <- b");
+    }
+
     #[test]
     fn negate_var() {
         assert_expression_snapshot!("-x");

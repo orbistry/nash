@@ -36,12 +36,14 @@ impl<'a> Parser<'a> {
 
         match self.peek() {
             Some(b) if b.is_ascii_lowercase() => {
+                let saved = self.save_state();
                 self.advance();
                 self.chomp_inner_chars();
 
                 let name = self.slice_from(start_pos);
 
                 if keyword::is_reserved(name) {
+                    self.restore_state(saved);
                     return Err(to_error(row, col));
                 }
 
@@ -316,5 +318,25 @@ mod tests {
     #[test]
     fn not_reserved_prefix() {
         assert_expr_snapshot!("letter");
+    }
+
+    #[test]
+    fn error_reserved_do() {
+        assert_expr_error_snapshot!("do");
+    }
+
+    #[test]
+    fn error_reserved_trait() {
+        assert_expr_error_snapshot!("trait");
+    }
+
+    #[test]
+    fn port_is_not_reserved() {
+        assert_expr_snapshot!("port");
+    }
+
+    #[test]
+    fn test_is_not_reserved() {
+        assert_expr_snapshot!("test");
     }
 }

@@ -242,4 +242,9 @@ mod tests {
     fn error_wildcard_not_var() {
         assert_pattern_error_snapshot!("_foo");
     }
+
+    #[test]
+    fn error_char_literal() {
+        assert_pattern_error_snapshot!("'x'");
+    }
 }

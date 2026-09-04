@@ -1,0 +1,8 @@
+---
+source: crates/nash-parse/src/pattern/term.rs
+description: "Code:\n\n'x'"
+---
+Start(
+    1,
+    1,
+)

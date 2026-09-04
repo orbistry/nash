@@ -54,6 +54,8 @@ impl<'a> Parser<'a> {
             "->" => Err(to_error(BadOperator::Arrow, row, col)),
             "=" => Err(to_error(BadOperator::Equals, row, col)),
             ":" => Err(to_error(BadOperator::HasType, row, col)),
+            "=>" => Err(to_error(BadOperator::FatArrow, row, col)),
+            "<-" => Err(to_error(BadOperator::LeftArrow, row, col)),
             _ => Ok(op),
         }
     }

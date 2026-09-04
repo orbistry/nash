@@ -21,27 +21,6 @@ pub enum Error<'a> {
         row: Row,
         col: Col,
     },
-    UnexpectedPort {
-        row: Row,
-        col: Col,
-    },
-    NoPorts {
-        row: Row,
-        col: Col,
-    },
-    NoPortsInPackage {
-        name: &'a str,
-        row: Row,
-        col: Col,
-    },
-    NoPortModulesInPackage {
-        row: Row,
-        col: Col,
-    },
-    NoEffectsOutsideKernel {
-        row: Row,
-        col: Col,
-    },
     ParseError(&'a Module<'a>),
 }
 
@@ -56,10 +35,6 @@ pub enum Module<'a> {
     Problem(Row, Col),
     Name(Row, Col),
     Exposing(&'a Exposing, Row, Col),
-    PortProblem(Row, Col),
-    PortName(Row, Col),
-    PortExposing(&'a Exposing, Row, Col),
-    Effect(Row, Col),
     FreshLine(Row, Col),
     ImportStart(Row, Col),
     ImportName(Row, Col),
@@ -97,7 +72,6 @@ pub enum Exposing {
 pub enum Decl<'a> {
     Start(Row, Col),
     Space(Space, Row, Col),
-    Port(&'a Port<'a>, Row, Col),
     Type(&'a DeclType<'a>, Row, Col),
     Def(&'a str, &'a DeclDef<'a>, Row, Col),
     FreshLineAfterDocComment(Row, Col),
@@ -115,17 +89,6 @@ pub enum DeclDef<'a> {
     IndentType(Row, Col),
     IndentEquals(Row, Col),
     IndentBody(Row, Col),
-}
-
-#[derive(Debug)]
-pub enum Port<'a> {
-    Space(Space, Row, Col),
-    Name(Row, Col),
-    Colon(Row, Col),
-    Type(&'a Type<'a>, Row, Col),
-    IndentName(Row, Col),
-    IndentColon(Row, Col),
-    IndentType(Row, Col),
 }
 
 #[derive(Debug)]
@@ -179,12 +142,9 @@ pub enum Expr<'a> {
     OperatorRight(&'a str, Row, Col),
     OperatorReserved(BadOperator, Row, Col),
     Start(Row, Col),
-    Char(Char, Row, Col),
     String(StringError, Row, Col),
     Number(Number, Row, Col),
     Space(Space, Row, Col),
-    EndlessShader(Row, Col),
-    ShaderProblem(Row, Col),
     IndentOperatorRight(&'a str, Row, Col),
 }
 
@@ -318,10 +278,8 @@ pub enum Pattern<'a> {
     Tuple(&'a PTuple<'a>, Row, Col),
     List(&'a PList<'a>, Row, Col),
     Start(Row, Col),
-    Char(Char, Row, Col),
     String(StringError, Row, Col),
     Number(Number, Row, Col),
-    Float(u16, Row, Col),
     Alias(Row, Col),
     WildcardNotVar(&'a str, i32, Row, Col),
     Space(Space, Row, Col),
@@ -406,13 +364,6 @@ pub enum TTuple<'a> {
 // =============================================================================
 
 #[derive(Debug)]
-pub enum Char {
-    Endless,
-    Escape(Escape),
-    NotString(u16),
-}
-
-#[derive(Debug)]
 pub enum StringError {
     EndlessSingle,
     EndlessMulti,
@@ -434,7 +385,7 @@ pub enum Escape {
 #[derive(Debug)]
 pub enum Number {
     End,
-    Dot(i32),
+    Dot(i128),
     HexDigit,
     NoLeadingZero,
 }
@@ -456,4 +407,6 @@ pub enum BadOperator {
     Arrow,
     Equals,
     HasType,
+    FatArrow,
+    LeftArrow,
 }

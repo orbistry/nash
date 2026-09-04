@@ -1,0 +1,11 @@
+---
+source: crates/nash-parse/src/expression/number.rs
+description: "Code:\n\n0.5"
+---
+Number(
+    Dot(
+        0,
+    ),
+    1,
+    2,
+)

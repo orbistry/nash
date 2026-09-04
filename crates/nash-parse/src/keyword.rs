@@ -6,8 +6,29 @@ use crate::Parser;
 
 /// Reserved words that cannot be used as variable names.
 pub const RESERVED: &[&str] = &[
-    "if", "then", "else", "case", "of", "let", "in", "type", "module", "where", "import",
-    "exposing", "as", "port",
+    "if",
+    "then",
+    "else",
+    "case",
+    "of",
+    "let",
+    "in",
+    "do",
+    "type",
+    "module",
+    "where",
+    "import",
+    "exposing",
+    "as",
+    "trait",
+    "impl",
+    "comptime",
+    "assert",
+    "fail",
+    "todo",
+    "trace",
+    "tests",
+    "validator",
 ];
 
 /// Check if a name is a reserved keyword.
