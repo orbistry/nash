@@ -639,5 +639,6 @@ Module {
     ],
     traits: [],
     impls: [],
+    tests: None,
     binops: [],
 }

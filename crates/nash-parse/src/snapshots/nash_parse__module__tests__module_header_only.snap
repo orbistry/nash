@@ -50,5 +50,6 @@ Module {
     aliases: [],
     traits: [],
     impls: [],
+    tests: None,
     binops: [],
 }

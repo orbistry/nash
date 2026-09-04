@@ -49,6 +49,44 @@ pub enum Module<'a> {
     ImportIndentExposingList(Row, Col),
     Infix(Row, Col),
     Declarations(&'a Decl<'a>, Row, Col),
+    Tests(&'a Tests<'a>, Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Tests<'a> {
+    Space(Space, Row, Col),
+    Import(&'a Module<'a>, Row, Col),
+    Test(&'a Test<'a>, Row, Col),
+    Start(Row, Col),
+    IndentStart(Row, Col),
+    Alignment(u16, Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Test<'a> {
+    Space(Space, Row, Col),
+    Name(StringError, Row, Col),
+    NameStart(Row, Col),
+    OnceOnUnitTest(Row, Col),
+    WithinOpen(Row, Col),
+    WithinKind(Row, Col),
+    WithinNumber(Number, Row, Col),
+    WithinDuplicate(Row, Col),
+    WithinEnd(Row, Col),
+    Equals(Row, Col),
+    Do(Row, Col),
+    Body(&'a Do<'a>, Row, Col),
+    Let(Row, Col),
+    Pattern(&'a Pattern<'a>, Row, Col),
+    Via(Row, Col),
+    Fuzzer(&'a Expr<'a>, Row, Col),
+    In(Row, Col),
+    IndentName(Row, Col),
+    IndentEquals(Row, Col),
+    IndentBody(Row, Col),
+    IndentBinder(Row, Col),
+    IndentIn(Row, Col),
+    BinderAlignment(u16, Row, Col),
 }
 
 #[derive(Debug)]

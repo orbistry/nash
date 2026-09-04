@@ -1,0 +1,20 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    prop \"p\" = let in do\n        assert True\n"
+---
+Tests(
+    Test(
+        Pattern(
+            Start(
+                4,
+                20,
+            ),
+            4,
+            20,
+        ),
+        4,
+        5,
+    ),
+    3,
+    1,
+)

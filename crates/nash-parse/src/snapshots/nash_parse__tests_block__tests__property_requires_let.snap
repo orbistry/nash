@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    prop \"p\" = assert True\n"
+---
+Tests(
+    Test(
+        Let(
+            4,
+            16,
+        ),
+        4,
+        5,
+    ),
+    3,
+    1,
+)

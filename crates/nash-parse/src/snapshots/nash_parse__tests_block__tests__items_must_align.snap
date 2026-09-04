@@ -1,0 +1,21 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"first\" = do\n        assert True\n     test \"second\" = do\n         assert True\n"
+---
+Tests(
+    Test(
+        Body(
+            Alignment(
+                9,
+                6,
+                6,
+            ),
+            5,
+            9,
+        ),
+        4,
+        5,
+    ),
+    3,
+    1,
+)

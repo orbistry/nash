@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"t\" =\n        assert True\n"
+---
+Tests(
+    Test(
+        Do(
+            5,
+            9,
+        ),
+        4,
+        5,
+    ),
+    3,
+    1,
+)

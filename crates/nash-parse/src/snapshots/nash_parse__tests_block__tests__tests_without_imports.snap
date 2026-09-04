@@ -1,0 +1,125 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"truth\" = do\n        assert True\n"
+---
+Module {
+    kind: Normal,
+    name: Some(
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 8,
+                },
+                end: Position {
+                    line: 1,
+                    column: 12,
+                },
+            },
+            value: "Main",
+        },
+    ),
+    exports: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+        value: Open,
+    },
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 6,
+                column: 1,
+            },
+        },
+    ),
+    imports: [],
+    values: [],
+    unions: [],
+    aliases: [],
+    traits: [],
+    impls: [],
+    tests: Some(
+        Tests {
+            imports: [],
+            tests: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 4,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 5,
+                            column: 20,
+                        },
+                    },
+                    value: Test {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 10,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 17,
+                                },
+                            },
+                            value: "truth",
+                        },
+                        expect: Pass,
+                        budget: None,
+                        body: Unit(
+                            Block {
+                                stmts: [],
+                                last: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 9,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 20,
+                                        },
+                                    },
+                                    value: Assert(
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 5,
+                                                    column: 16,
+                                                },
+                                                end: Position {
+                                                    line: 5,
+                                                    column: 20,
+                                                },
+                                            },
+                                            value: Var {
+                                                kind: CapVar,
+                                                name: "True",
+                                            },
+                                        },
+                                    ),
+                                },
+                            },
+                        ),
+                    },
+                },
+            ],
+        },
+    ),
+    binops: [],
+}

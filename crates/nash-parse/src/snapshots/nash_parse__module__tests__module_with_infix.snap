@@ -160,6 +160,7 @@ Module {
     aliases: [],
     traits: [],
     impls: [],
+    tests: None,
     binops: [
         Located {
             region: Region {

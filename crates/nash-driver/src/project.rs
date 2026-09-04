@@ -47,6 +47,12 @@ impl Project {
 
         // Find project root (directory containing nash.jsonc)
         let root = find_project_root(path)?;
+        let root = root
+            .canonicalize()
+            .map_err(|source| DriverError::ReadError {
+                path: root.clone(),
+                source,
+            })?;
         let config_path = root.join("nash.jsonc");
 
         // Parse the config

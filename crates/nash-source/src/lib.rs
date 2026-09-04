@@ -12,6 +12,7 @@ pub struct Module<'a> {
     pub aliases: &'a [&'a Located<Alias<'a>>],
     pub traits: &'a [&'a Located<Trait<'a>>],
     pub impls: &'a [&'a Located<Impl<'a>>],
+    pub tests: Option<&'a Tests<'a>>,
     pub binops: &'a [&'a Located<Infix<'a>>],
 }
 
@@ -65,6 +66,55 @@ pub struct Impl<'a> {
     pub head: &'a Located<Constraint<'a>>,
     pub methods: &'a [&'a Located<Def<'a>>],
     pub attributes: &'a [&'a Attribute<'a>],
+}
+
+#[derive(Debug)]
+pub struct Tests<'a> {
+    pub imports: &'a [&'a Import<'a>],
+    pub tests: &'a [&'a Located<Test<'a>>],
+}
+
+#[derive(Debug)]
+pub struct Test<'a> {
+    pub name: &'a Located<&'a str>,
+    pub expect: Expect,
+    pub budget: Option<Budget>,
+    pub body: TestBody<'a>,
+}
+
+#[derive(Debug)]
+pub struct Block<'a> {
+    pub stmts: &'a [&'a Located<Stmt<'a>>],
+    pub last: &'a Located<Expr<'a>>,
+}
+
+#[derive(Debug)]
+pub enum TestBody<'a> {
+    Unit(&'a Block<'a>),
+    Prop {
+        binders: &'a [&'a Located<ViaBinder<'a>>],
+        body: &'a Block<'a>,
+    },
+}
+
+#[derive(Debug)]
+pub struct ViaBinder<'a> {
+    pub pattern: &'a Located<Pattern<'a>>,
+    pub fuzzer: &'a Located<Expr<'a>>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Expect {
+    Pass,
+    Fail,
+    FailOnce,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Budget {
+    Cpu(i128),
+    Mem(i128),
+    Both { cpu: i128, mem: i128 },
 }
 
 /// A type annotation with an optional constraint context.

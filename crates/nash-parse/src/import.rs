@@ -47,7 +47,7 @@ impl<'a> Parser<'a> {
         module_name: &'a Located<&'a str>,
     ) -> Result<&'a Import<'a>, error::Module<'a>> {
         // Try fresh line first (import done, no alias or exposing)
-        if self.col == 1 {
+        if self.col <= self.indent {
             let default_exposing = self.alloc(Exposing::Explicit(&[]));
             return Ok(self.alloc(Import {
                 import: module_name,
@@ -85,7 +85,7 @@ impl<'a> Parser<'a> {
         self.chomp(error::Module::Space)?;
 
         // Check for exposing or end
-        if self.col == 1 {
+        if self.col <= self.indent {
             // Fresh line - done
             let default_exposing = self.alloc(Exposing::Explicit(&[]));
             Ok(self.alloc(Import {
@@ -122,7 +122,9 @@ impl<'a> Parser<'a> {
 
         // Check for fresh line (end of import)
         self.chomp(error::Module::Space)?;
-        self.check_fresh_line(error::Module::ImportEnd)?;
+        if self.col > self.indent {
+            return Err(error::Module::ImportEnd(self.row, self.col));
+        }
 
         Ok(self.alloc(Import {
             import: module_name,

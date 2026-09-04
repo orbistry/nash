@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"t\" within (cpu 1, cpu 2) = do\n        assert True\n"
+---
+Tests(
+    Test(
+        WithinDuplicate(
+            4,
+            29,
+        ),
+        4,
+        5,
+    ),
+    3,
+    1,
+)

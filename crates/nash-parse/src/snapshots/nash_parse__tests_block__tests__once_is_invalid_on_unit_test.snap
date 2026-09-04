@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"t\" fail once = do\n        assert True\n"
+---
+Tests(
+    Test(
+        OnceOnUnitTest(
+            4,
+            19,
+        ),
+        4,
+        5,
+    ),
+    3,
+    1,
+)

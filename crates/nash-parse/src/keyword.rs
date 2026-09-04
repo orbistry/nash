@@ -199,6 +199,38 @@ impl<'a> Parser<'a> {
         self.keyword(b"validator", to_error)
     }
 
+    pub fn keyword_tests<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"tests", to_error)
+    }
+
+    pub fn keyword_test<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"test", to_error)
+    }
+
+    pub fn keyword_prop<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"prop", to_error)
+    }
+
+    pub fn keyword_via<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"via", to_error)
+    }
+
+    pub fn keyword_once<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"once", to_error)
+    }
+
+    pub fn keyword_within<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"within", to_error)
+    }
+
+    pub fn keyword_cpu<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"cpu", to_error)
+    }
+
+    pub fn keyword_mem<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"mem", to_error)
+    }
+
     /// Generic keyword parser that checks bytes match and no identifier continuation follows.
     ///
     /// Mirrors Elm's `k2`, `k3`, `k4` etc. but generalized.

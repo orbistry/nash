@@ -1,0 +1,16 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    prop \"p\" = let x = int in x\n"
+---
+Tests(
+    Test(
+        Via(
+            4,
+            22,
+        ),
+        4,
+        5,
+    ),
+    3,
+    1,
+)

@@ -88,7 +88,7 @@ impl<'a> Parser<'a> {
     ///     ]
     ///     (reverse imports)
     /// ```
-    fn imports(&mut self) -> Result<&'a [&'a Import<'a>], error::Module<'a>> {
+    pub(crate) fn imports(&mut self) -> Result<&'a [&'a Import<'a>], error::Module<'a>> {
         let mut imports = Vec::new();
 
         loop {
@@ -237,6 +237,18 @@ impl<'a> Parser<'a> {
         // Parse declarations
         let decls = self.declarations()?;
 
+        self.chomp(error::Module::Space)?;
+        let tests = self.one_of_with_fallback(
+            vec![Box::new(|parser: &mut Parser<'a>| {
+                parser.tests_block().map(Some)
+            })],
+            None,
+        )?;
+        self.chomp(error::Module::Space)?;
+        if !self.is_eof() {
+            return Err(error::Module::BadEnd(self.row, self.col));
+        }
+
         // Categorize declarations into values, unions, aliases
         let (values, unions, aliases, traits, impls) = self.categorize_decls(decls);
 
@@ -254,6 +266,7 @@ impl<'a> Parser<'a> {
             aliases,
             traits,
             impls,
+            tests,
             binops,
         })
     }
@@ -538,6 +551,7 @@ mod tests {
         "#
         );
     }
+
     #[test]
     fn module_with_empty_impl_then_value() {
         assert_module_snapshot!(

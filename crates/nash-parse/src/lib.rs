@@ -16,6 +16,7 @@ mod string;
 mod symbol;
 #[cfg(test)]
 pub(crate) mod test_support;
+mod tests_block;
 mod type_;
 
 pub type Row = u16;

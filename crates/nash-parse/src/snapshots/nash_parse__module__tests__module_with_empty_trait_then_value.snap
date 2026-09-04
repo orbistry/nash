@@ -145,5 +145,6 @@ Module {
         },
     ],
     impls: [],
+    tests: None,
     binops: [],
 }

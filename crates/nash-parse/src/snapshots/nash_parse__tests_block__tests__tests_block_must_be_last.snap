@@ -1,0 +1,8 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\nx = 1\n"
+---
+BadEnd(
+    4,
+    1,
+)

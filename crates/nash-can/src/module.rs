@@ -63,6 +63,21 @@ pub fn canonicalize<'a>(
             region: impl_.region,
         }]);
     }
+    if let Some(tests) = module.tests {
+        let region = tests.tests.first().map_or_else(
+            || {
+                tests
+                    .imports
+                    .first()
+                    .map_or(Region::zero(), |import| import.import.region)
+            },
+            |test| test.region,
+        );
+        return Err(vec![Error::Unsupported {
+            feature: "tests block",
+            region,
+        }]);
+    }
     let home = canonicalize_header(context, module).map_err(|e| vec![e])?;
 
     let mut env =
@@ -4173,6 +4188,13 @@ mod tests {
     fn implementation_declaration_unsupported() {
         assert_module_error_snapshot!(
             "module Main exposing (..)\n\nimpl Eq int where\n    eq a b = true\n"
+        );
+    }
+
+    #[test]
+    fn tests_block_unsupported() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\n\ntests\n    test \"truth\" = do\n        assert True\n"
         );
     }
 }

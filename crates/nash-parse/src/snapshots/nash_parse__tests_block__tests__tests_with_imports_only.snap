@@ -1,0 +1,96 @@
+---
+source: crates/nash-parse/src/tests_block.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    import Fuzz exposing (int)\n"
+---
+Module {
+    kind: Normal,
+    name: Some(
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 8,
+                },
+                end: Position {
+                    line: 1,
+                    column: 12,
+                },
+            },
+            value: "Main",
+        },
+    ),
+    exports: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+        value: Open,
+    },
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 5,
+                column: 1,
+            },
+        },
+    ),
+    imports: [],
+    values: [],
+    unions: [],
+    aliases: [],
+    traits: [],
+    impls: [],
+    tests: Some(
+        Tests {
+            imports: [
+                Import {
+                    import: Located {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 16,
+                            },
+                        },
+                        value: "Fuzz",
+                    },
+                    alias: None,
+                    exposing: Explicit(
+                        [
+                            Lower(
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 27,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 30,
+                                        },
+                                    },
+                                    value: "int",
+                                },
+                            ),
+                        ],
+                    ),
+                },
+            ],
+            tests: [],
+        },
+    ),
+    binops: [],
+}
