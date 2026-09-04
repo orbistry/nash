@@ -1,9 +1,20 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\nf = ()\n"
+description: "Code:\n\nvalidator module Main exposing (..)\n\nmain = 1\n"
 ---
 Module {
-    kind: Normal,
+    kind: Validator(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 10,
+            },
+        },
+    ),
     name: ModuleName {
         package: None,
         name: "Main",
@@ -12,11 +23,11 @@ Module {
         Region {
             start: Position {
                 line: 1,
-                column: 22,
+                column: 32,
             },
             end: Position {
                 line: 1,
-                column: 26,
+                column: 36,
             },
         },
     ),
@@ -42,24 +53,26 @@ Module {
                     },
                     end: Position {
                         line: 3,
-                        column: 2,
+                        column: 5,
                     },
                 },
-                value: "f",
+                value: "main",
             },
             args: [],
             body: Located {
                 region: Region {
                     start: Position {
                         line: 3,
-                        column: 5,
+                        column: 8,
                     },
                     end: Position {
                         line: 3,
-                        column: 7,
+                        column: 9,
                     },
                 },
-                value: Unit,
+                value: Int(
+                    1,
+                ),
             },
         },
         next: Empty,

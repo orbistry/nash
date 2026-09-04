@@ -3,6 +3,7 @@ source: crates/nash-parse/src/module.rs
 description: "Code:\n\nmodule Main exposing (main, Model, Msg(..))\n\nimport Html exposing (div)\nimport Platform.Cmd as Cmd\n\ntype alias Model = { count : Int }\n\ntype Msg\n    = Increment\n    | Decrement\n\nmain = 0\n"
 ---
 Module {
+    kind: Normal,
     name: Some(
         Located {
             region: Region {

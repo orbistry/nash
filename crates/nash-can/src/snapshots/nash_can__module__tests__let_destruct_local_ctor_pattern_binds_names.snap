@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap 'a\n    = Wrap 'a\n\nf w = let (Wrap x) = w in x\n"
 ---
 Module {
+    kind: Normal,
     name: ModuleName {
         package: None,
         name: "Main",

@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Decoder)\n\nimport Json.Decode as Decode\n\ntype alias Decoder 'msg = Decode.Decoder 'msg\n"
 ---
 Module {
+    kind: Normal,
     name: ModuleName {
         package: None,
         name: "Main",

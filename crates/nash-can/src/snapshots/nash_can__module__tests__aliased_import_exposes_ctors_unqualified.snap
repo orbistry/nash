@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Maybe as M exposing (Maybe(..))\n\nx = Just\n"
 ---
 Module {
+    kind: Normal,
     name: ModuleName {
         package: None,
         name: "Main",

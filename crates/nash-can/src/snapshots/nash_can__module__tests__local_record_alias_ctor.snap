@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Point 'a = { x : 'a, y : 'a }\n\np = Point\n"
 ---
 Module {
+    kind: Normal,
     name: ModuleName {
         package: None,
         name: "Main",

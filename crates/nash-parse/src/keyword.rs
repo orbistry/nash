@@ -195,6 +195,10 @@ impl<'a> Parser<'a> {
         self.keyword(b"impl", to_error)
     }
 
+    pub fn keyword_validator<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"validator", to_error)
+    }
+
     /// Generic keyword parser that checks bytes match and no identifier continuation follows.
     ///
     /// Mirrors Elm's `k2`, `k3`, `k4` etc. but generalized.

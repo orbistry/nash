@@ -3,6 +3,7 @@ source: crates/nash-parse/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntrait Marker 'a where\n\nx = 1\n"
 ---
 Module {
+    kind: Normal,
     name: Some(
         Located {
             region: Region {

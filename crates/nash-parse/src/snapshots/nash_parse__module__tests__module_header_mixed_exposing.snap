@@ -3,6 +3,7 @@ source: crates/nash-parse/src/module.rs
 description: "Code:\n\nmodule Main exposing (main, Msg(..))"
 ---
 (
+    Normal,
     Located {
         region: Region {
             start: Position {

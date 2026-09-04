@@ -8,7 +8,9 @@
 //! - Declarations: values, types, aliases
 
 use nash_region::{Located, Region};
-use nash_source::{Alias, Docs, Exposing, Impl, Import, Infix, Module, Trait, Union, Value};
+use nash_source::{
+    Alias, Docs, Exposing, Impl, Import, Infix, Module, ModuleKind, Trait, Union, Value,
+};
 
 use crate::Parser;
 use crate::declaration::Decl;
@@ -25,7 +27,18 @@ impl<'a> Parser<'a> {
     /// Returns the module name and exports as a tuple.
     pub fn module_header(
         &mut self,
-    ) -> Result<(&'a Located<&'a str>, &'a Located<Exposing<'a>>), error::Module<'a>> {
+    ) -> Result<(ModuleKind, &'a Located<&'a str>, &'a Located<Exposing<'a>>), error::Module<'a>>
+    {
+        let kind = self.one_of_with_fallback(
+            vec![Box::new(|parser: &mut Parser<'a>| {
+                let start = parser.get_position();
+                parser.keyword_validator(error::Module::Validator)?;
+                let end = parser.get_position();
+                parser.chomp_and_check_indent(error::Module::Space, error::Module::Validator)?;
+                Ok(ModuleKind::Validator(Region::new(start, end)))
+            })],
+            ModuleKind::Normal,
+        )?;
         // Match 'module' keyword
         self.keyword_module(error::Module::Problem)?;
 
@@ -60,7 +73,7 @@ impl<'a> Parser<'a> {
         )?;
         let exposing_located = self.add_end(exposing_start, exposing);
 
-        Ok((module_name, exposing_located))
+        Ok((kind, module_name, exposing_located))
     }
 
     /// Parse zero or more import statements.
@@ -203,26 +216,16 @@ impl<'a> Parser<'a> {
         let start_pos = self.get_position();
 
         // Try to parse module header (optional)
-        let (name, exports) = {
-            let state = self.save_state();
-            match self.module_header() {
-                Ok((n, e)) => {
-                    // Consume whitespace after header and check fresh line
-                    self.chomp(error::Module::Space)?;
-                    self.check_fresh_line(error::Module::FreshLine)?;
-                    (Some(n), e)
-                }
-                Err(_) => {
-                    // No header - restore and use defaults
-                    if self.pos == state.pos {
-                        self.restore_state(state);
-                    }
-                    // Default: name = None, exports = Open
-                    let default_exports = self.alloc(Located::at(Region::one(), Exposing::Open));
-                    (None, default_exports)
-                }
-            }
-        };
+        let (kind, name, exports) =
+            if self.starts_keyword(b"module") || self.starts_keyword(b"validator") {
+                let (kind, name, exports) = self.module_header()?;
+                self.chomp(error::Module::Space)?;
+                self.check_fresh_line(error::Module::FreshLine)?;
+                (kind, Some(name), exports)
+            } else {
+                let default_exports = self.alloc(Located::at(Region::one(), Exposing::Open));
+                (ModuleKind::Normal, None, default_exports)
+            };
 
         // Parse imports
         let imports = self.imports()?;
@@ -241,6 +244,7 @@ impl<'a> Parser<'a> {
         let docs = self.alloc(Docs::NoDocs(Region::new(start_pos, self.get_position())));
 
         Ok(Module {
+            kind,
             name,
             exports,
             docs,
@@ -252,6 +256,14 @@ impl<'a> Parser<'a> {
             impls,
             binops,
         })
+    }
+
+    fn starts_keyword(&self, keyword: &[u8]) -> bool {
+        let remaining = self.remaining();
+        remaining.starts_with(keyword)
+            && remaining
+                .get(keyword.len())
+                .is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
     }
 
     /// Categorize declarations into separate slices by type.
@@ -306,12 +318,12 @@ mod tests {
             let mut parser = Parser::new(&bump, src.as_bytes());
             let result = parser.module_header();
             match result {
-                Ok((name, exposing)) => {
+                Ok((kind, name, exposing)) => {
                     insta::with_settings!({
                         description => format!("Code:\n\n{}", input),
                         omit_expression => true,
                     }, {
-                        insta::assert_debug_snapshot!((name, exposing));
+                        insta::assert_debug_snapshot!((kind, name, exposing));
                     });
                 }
                 Err(e) => {
@@ -346,6 +358,11 @@ mod tests {
         assert_module_header_snapshot!("module Platform.Cmd.Extra exposing (batch, none)");
     }
 
+    #[test]
+    fn validator_module_header() {
+        assert_module_header_snapshot!("validator module Vesting exposing (main)");
+    }
+
     // =========================================================================
     // Full module parsing tests
     // =========================================================================
@@ -370,6 +387,22 @@ mod tests {
                     panic!("Expected successful parse, got error: {:?}", e);
                 }
             }
+        }};
+    }
+
+    macro_rules! assert_module_error_snapshot {
+        ($input:expr) => {{
+            let input = indoc!($input);
+            let bump = Bump::new();
+            let src = bump.alloc_str(input);
+            let mut parser = Parser::new(&bump, src.as_bytes());
+            let error = parser.module().expect_err("expected module parse error");
+            insta::with_settings!({
+                description => format!("Code:\n\n{}", input),
+                omit_expression => true,
+            }, {
+                insta::assert_debug_snapshot!(error);
+            });
         }};
     }
 
@@ -516,5 +549,34 @@ mod tests {
             x = 1
         "#
         );
+    }
+
+    #[test]
+    fn validator_module_full() {
+        assert_module_snapshot!(
+            r#"
+            validator module Vesting exposing (main)
+
+            import Cardano.Tx exposing (Tx, Output)
+
+            type Datum = Datum { owner : Bytes, deadline : Int }
+
+            type step 'a = Done 'a | Next int 'a
+
+            type alias acc = { total : int, seen : list Int }
+
+            main datum = assert True
+        "#
+        );
+    }
+
+    #[test]
+    fn validator_requires_module_keyword() {
+        assert_module_error_snapshot!("validator Vesting exposing (main)");
+    }
+
+    #[test]
+    fn validator_module_must_remain_indented() {
+        assert_module_error_snapshot!("validator\nmodule V exposing (..)");
     }
 }

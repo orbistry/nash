@@ -1,6 +1,6 @@
 use nash_region::{Located, Region};
 
-pub use nash_source::{Associativity, Docs, Precedence};
+pub use nash_source::{Associativity, Docs, ModuleKind, Precedence};
 
 pub type FreeVars<'a> = &'a [&'a str];
 
@@ -31,6 +31,7 @@ pub struct ConstructorName<'a> {
 
 #[derive(Debug)]
 pub struct Module<'a> {
+    pub kind: ModuleKind,
     pub name: ModuleName<'a>,
     pub exports: Exports<'a>,
     pub docs: &'a Docs<'a>,

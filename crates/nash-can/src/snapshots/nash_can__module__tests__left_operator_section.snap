@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 expression: result
 ---
 Module {
+    kind: Normal,
     name: ModuleName {
         package: None,
         name: "Main",

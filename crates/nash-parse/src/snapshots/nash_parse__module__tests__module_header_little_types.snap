@@ -3,6 +3,7 @@ source: crates/nash-parse/src/module.rs
 description: "Code:\n\nmodule P exposing (type option(..), type step)"
 ---
 (
+    Normal,
     Located {
         region: Region {
             start: Position {

@@ -2,6 +2,7 @@ use nash_region::{Located, Region};
 
 #[derive(Debug)]
 pub struct Module<'a> {
+    pub kind: ModuleKind,
     pub name: Option<&'a Located<&'a str>>,
     pub exports: &'a Located<Exposing<'a>>,
     pub docs: &'a Docs<'a>,
@@ -12,6 +13,12 @@ pub struct Module<'a> {
     pub traits: &'a [&'a Located<Trait<'a>>],
     pub impls: &'a [&'a Located<Impl<'a>>],
     pub binops: &'a [&'a Located<Infix<'a>>],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ModuleKind {
+    Normal,
+    Validator(Region),
 }
 
 #[derive(Debug)]

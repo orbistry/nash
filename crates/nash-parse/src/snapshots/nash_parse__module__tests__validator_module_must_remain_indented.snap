@@ -1,0 +1,8 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\nvalidator\nmodule V exposing (..)"
+---
+Validator(
+    1,
+    10,
+)

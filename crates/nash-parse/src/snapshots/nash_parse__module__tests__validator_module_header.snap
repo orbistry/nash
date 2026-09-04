@@ -1,31 +1,42 @@
 ---
 source: crates/nash-parse/src/module.rs
-description: "Code:\n\nmodule Platform.Cmd.Extra exposing (batch, none)"
+description: "Code:\n\nvalidator module Vesting exposing (main)"
 ---
 (
-    Normal,
+    Validator(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 10,
+            },
+        },
+    ),
     Located {
         region: Region {
             start: Position {
                 line: 1,
-                column: 8,
+                column: 18,
             },
             end: Position {
                 line: 1,
-                column: 26,
+                column: 25,
             },
         },
-        value: "Platform.Cmd.Extra",
+        value: "Vesting",
     },
     Located {
         region: Region {
             start: Position {
                 line: 1,
-                column: 36,
+                column: 35,
             },
             end: Position {
                 line: 1,
-                column: 49,
+                column: 41,
             },
         },
         value: Explicit(
@@ -35,29 +46,14 @@ description: "Code:\n\nmodule Platform.Cmd.Extra exposing (batch, none)"
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 37,
+                                column: 36,
                             },
                             end: Position {
                                 line: 1,
-                                column: 42,
+                                column: 40,
                             },
                         },
-                        value: "batch",
-                    },
-                ),
-                Lower(
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 1,
-                                column: 44,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 48,
-                            },
-                        },
-                        value: "none",
+                        value: "main",
                     },
                 ),
             ],

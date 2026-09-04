@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Json.Decode exposing (..)\n"
 ---
 Module {
+    kind: Normal,
     name: ModuleName {
         package: Some(
             PackageName {

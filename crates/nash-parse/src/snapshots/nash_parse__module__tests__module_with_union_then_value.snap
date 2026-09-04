@@ -3,6 +3,7 @@ source: crates/nash-parse/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap 'a\n    = Wrap 'a\n\nf w = w\n"
 ---
 Module {
+    kind: Normal,
     name: Some(
         Located {
             region: Region {

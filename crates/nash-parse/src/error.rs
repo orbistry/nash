@@ -33,6 +33,7 @@ pub enum Module<'a> {
     Space(Space, Row, Col),
     BadEnd(Row, Col),
     Problem(Row, Col),
+    Validator(Row, Col),
     Name(Row, Col),
     Exposing(&'a Exposing, Row, Col),
     FreshLine(Row, Col),

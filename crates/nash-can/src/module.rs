@@ -87,6 +87,7 @@ pub fn canonicalize<'a>(
     let exports = canonicalize_exports(bump, module)?;
 
     let can_module = CanModule {
+        kind: module.kind,
         name: env.home,
         exports,
         docs: module.docs,
@@ -1397,6 +1398,11 @@ mod tests {
     #[test]
     fn module_shell_header_only() {
         assert_module_snapshot!("module Main exposing (..)\n");
+    }
+
+    #[test]
+    fn validator_module_kind_is_preserved() {
+        assert_module_snapshot!("validator module Main exposing (..)\n\nmain = 1\n");
     }
 
     #[test]

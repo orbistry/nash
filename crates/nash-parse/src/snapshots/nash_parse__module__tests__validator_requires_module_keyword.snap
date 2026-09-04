@@ -1,0 +1,8 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\nvalidator Vesting exposing (main)"
+---
+Problem(
+    1,
+    11,
+)
