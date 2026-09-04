@@ -94,5 +94,6 @@ Module {
     unions: [],
     aliases: [],
     traits: [],
+    impls: [],
     binops: [],
 }

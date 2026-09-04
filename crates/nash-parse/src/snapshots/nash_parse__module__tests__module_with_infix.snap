@@ -158,6 +158,7 @@ Module {
     unions: [],
     aliases: [],
     traits: [],
+    impls: [],
     binops: [
         Located {
             region: Region {

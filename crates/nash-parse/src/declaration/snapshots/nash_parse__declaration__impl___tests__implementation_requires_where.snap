@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/impl_.rs
+description: impl Eq int
+---
+Impl(
+    Where(
+        1,
+        12,
+    ),
+    1,
+    1,
+)

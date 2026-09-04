@@ -4,6 +4,7 @@
 //! Handles value definitions, type annotations, type aliases, custom types, and infix declarations.
 
 mod attribute;
+mod impl_;
 mod infix;
 mod trait_;
 mod type_alias;
@@ -11,7 +12,7 @@ mod union;
 mod value;
 
 use nash_region::{Located, Position};
-use nash_source::{Alias, Comment, Trait, Union, Value};
+use nash_source::{Alias, Comment, Impl, Trait, Union, Value};
 
 use crate::Parser;
 use crate::error::{self, Decl as DeclErr};
@@ -23,6 +24,7 @@ pub enum Decl<'a> {
     Union(Option<&'a Comment<'a>>, &'a Located<Union<'a>>),
     Alias(Option<&'a Comment<'a>>, &'a Located<Alias<'a>>),
     Trait(&'a Located<Trait<'a>>),
+    Impl(&'a Located<Impl<'a>>),
 }
 
 impl<'a> Parser<'a> {
@@ -52,6 +54,7 @@ impl<'a> Parser<'a> {
                 // type alias or type (union)
                 Box::new(|p: &mut Parser<'a>| p.type_decl(maybe_docs, attributes, start)),
                 Box::new(|p: &mut Parser<'a>| p.trait_decl(attributes, start)),
+                Box::new(|p: &mut Parser<'a>| p.impl_decl(attributes, start)),
                 // value definition
                 Box::new(|p| p.value_decl(maybe_docs, attributes, start)),
             ],

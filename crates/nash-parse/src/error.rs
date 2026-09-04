@@ -78,6 +78,21 @@ pub enum Decl<'a> {
     FreshLineAfterDocComment(Row, Col),
     Attribute(&'a Attribute<'a>, Row, Col),
     Trait(&'a Trait<'a>, Row, Col),
+    Impl(&'a Impl<'a>, Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Impl<'a> {
+    Space(Space, Row, Col),
+    Head(&'a Type<'a>, Row, Col),
+    BadHead(Row, Col),
+    Where(Row, Col),
+    Method(&'a str, &'a Def<'a>, Row, Col),
+    MethodName(Row, Col),
+    IndentHead(Row, Col),
+    IndentWhere(Row, Col),
+    IndentMethod(Row, Col),
+    Alignment(u16, Row, Col),
 }
 
 #[derive(Debug)]

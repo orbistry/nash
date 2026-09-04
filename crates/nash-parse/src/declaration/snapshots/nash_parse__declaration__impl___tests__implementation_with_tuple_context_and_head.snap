@@ -1,0 +1,435 @@
+---
+source: crates/nash-parse/src/declaration/impl_.rs
+description: "impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where\n    eq (a, b) (c, d) = a == c && b == d\n"
+---
+Impl(
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 2,
+                column: 40,
+            },
+        },
+        value: Impl {
+            context: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                    },
+                    value: Constraint {
+                        class: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 7,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 9,
+                                },
+                            },
+                            value: "Eq",
+                        },
+                        module: None,
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 10,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 12,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                },
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 14,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 19,
+                        },
+                    },
+                    value: Constraint {
+                        class: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 14,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                            },
+                            value: "Eq",
+                        },
+                        module: None,
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 17,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 19,
+                                    },
+                                },
+                                value: Var(
+                                    "b",
+                                ),
+                            },
+                        ],
+                    },
+                },
+            ],
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 24,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 35,
+                    },
+                },
+                value: Constraint {
+                    class: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 24,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 26,
+                            },
+                        },
+                        value: "Eq",
+                    },
+                    module: None,
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 27,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 35,
+                                },
+                            },
+                            value: Tuple {
+                                first: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 28,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 30,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                                second: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 1,
+                                            column: 32,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 34,
+                                        },
+                                    },
+                                    value: Var(
+                                        "b",
+                                    ),
+                                },
+                                rest: [],
+                            },
+                        },
+                    ],
+                },
+            },
+            methods: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 1,
+                        },
+                    },
+                    value: Define {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 7,
+                                },
+                            },
+                            value: "eq",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 8,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 14,
+                                    },
+                                },
+                                value: Tuple {
+                                    first: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 2,
+                                                column: 9,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 10,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                    second: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 2,
+                                                column: 12,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 13,
+                                            },
+                                        },
+                                        value: Var(
+                                            "b",
+                                        ),
+                                    },
+                                    rest: [],
+                                },
+                            },
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 15,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 21,
+                                    },
+                                },
+                                value: Tuple {
+                                    first: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 2,
+                                                column: 16,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 17,
+                                            },
+                                        },
+                                        value: Var(
+                                            "c",
+                                        ),
+                                    },
+                                    second: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 2,
+                                                column: 19,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 20,
+                                            },
+                                        },
+                                        value: Var(
+                                            "d",
+                                        ),
+                                    },
+                                    rest: [],
+                                },
+                            },
+                        ],
+                        body: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 24,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 40,
+                                },
+                            },
+                            value: BinOps {
+                                operands: [
+                                    BinOpOperand {
+                                        expr: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 24,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 25,
+                                                },
+                                            },
+                                            value: Var {
+                                                kind: LowVar,
+                                                name: "a",
+                                            },
+                                        },
+                                        op: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 26,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 28,
+                                                },
+                                            },
+                                            value: "==",
+                                        },
+                                    },
+                                    BinOpOperand {
+                                        expr: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 29,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 30,
+                                                },
+                                            },
+                                            value: Var {
+                                                kind: LowVar,
+                                                name: "c",
+                                            },
+                                        },
+                                        op: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 31,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 33,
+                                                },
+                                            },
+                                            value: "&&",
+                                        },
+                                    },
+                                    BinOpOperand {
+                                        expr: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 34,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 35,
+                                                },
+                                            },
+                                            value: Var {
+                                                kind: LowVar,
+                                                name: "b",
+                                            },
+                                        },
+                                        op: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 36,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 38,
+                                                },
+                                            },
+                                            value: "==",
+                                        },
+                                    },
+                                ],
+                                last: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 39,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 40,
+                                        },
+                                    },
+                                    value: Var {
+                                        kind: LowVar,
+                                        name: "d",
+                                    },
+                                },
+                            },
+                        },
+                        annotation: None,
+                    },
+                },
+            ],
+            attributes: [],
+        },
+    },
+)

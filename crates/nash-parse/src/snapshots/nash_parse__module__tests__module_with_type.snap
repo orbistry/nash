@@ -149,5 +149,6 @@ Module {
     ],
     aliases: [],
     traits: [],
+    impls: [],
     binops: [],
 }

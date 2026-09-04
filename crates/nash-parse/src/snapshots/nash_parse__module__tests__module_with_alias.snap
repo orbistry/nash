@@ -176,5 +176,6 @@ Module {
         },
     ],
     traits: [],
+    impls: [],
     binops: [],
 }

@@ -1,0 +1,17 @@
+---
+source: crates/nash-parse/src/declaration/impl_.rs
+description: "impl Eq int where\n    eq : int -> bool\n"
+---
+Impl(
+    Method(
+        "eq",
+        Equals(
+            2,
+            8,
+        ),
+        2,
+        7,
+    ),
+    1,
+    1,
+)

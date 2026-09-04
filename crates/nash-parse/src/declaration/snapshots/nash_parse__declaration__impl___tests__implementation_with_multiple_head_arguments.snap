@@ -1,0 +1,196 @@
+---
+source: crates/nash-parse/src/declaration/impl_.rs
+description: "impl Lift int Int where\n    lift = liftInt\n    lower = lowerInt\n"
+---
+Impl(
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 3,
+                column: 21,
+            },
+        },
+        value: Impl {
+            context: [],
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 18,
+                    },
+                },
+                value: Constraint {
+                    class: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 10,
+                            },
+                        },
+                        value: "Lift",
+                    },
+                    module: None,
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 14,
+                                },
+                            },
+                            value: Type {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 11,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 14,
+                                    },
+                                },
+                                name: "int",
+                                args: [],
+                            },
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 18,
+                                },
+                            },
+                            value: Type {
+                                region: Region {
+                                    start: Position {
+                                        line: 1,
+                                        column: 15,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 18,
+                                    },
+                                },
+                                name: "Int",
+                                args: [],
+                            },
+                        },
+                    ],
+                },
+            },
+            methods: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 5,
+                        },
+                    },
+                    value: Define {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 9,
+                                },
+                            },
+                            value: "lift",
+                        },
+                        args: [],
+                        body: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 2,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 19,
+                                },
+                            },
+                            value: Var {
+                                kind: LowVar,
+                                name: "liftInt",
+                            },
+                        },
+                        annotation: None,
+                    },
+                },
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 4,
+                            column: 1,
+                        },
+                    },
+                    value: Define {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 10,
+                                },
+                            },
+                            value: "lower",
+                        },
+                        args: [],
+                        body: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 21,
+                                },
+                            },
+                            value: Var {
+                                kind: LowVar,
+                                name: "lowerInt",
+                            },
+                        },
+                        annotation: None,
+                    },
+                },
+            ],
+            attributes: [],
+        },
+    },
+)

@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/declaration/impl_.rs
+description: impl Eq where
+---
+Impl(
+    BadHead(
+        1,
+        6,
+    ),
+    1,
+    1,
+)

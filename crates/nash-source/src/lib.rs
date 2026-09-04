@@ -10,6 +10,7 @@ pub struct Module<'a> {
     pub unions: &'a [&'a Located<Union<'a>>],
     pub aliases: &'a [&'a Located<Alias<'a>>],
     pub traits: &'a [&'a Located<Trait<'a>>],
+    pub impls: &'a [&'a Located<Impl<'a>>],
     pub binops: &'a [&'a Located<Infix<'a>>],
 }
 
@@ -49,6 +50,14 @@ pub struct TraitMethod<'a> {
     pub name: &'a Located<&'a str>,
     pub annotation: &'a Annotation<'a>,
     pub default: Option<&'a Located<Def<'a>>>,
+}
+
+#[derive(Debug)]
+pub struct Impl<'a> {
+    pub context: &'a [&'a Located<Constraint<'a>>],
+    pub head: &'a Located<Constraint<'a>>,
+    pub methods: &'a [&'a Located<Def<'a>>],
+    pub attributes: &'a [&'a Attribute<'a>],
 }
 
 /// A type annotation with an optional constraint context.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap 'a\n    = Wrap 'a\n\nf w = w\n"
+description: "Code:\n\nmodule Main exposing (..)\n\nimpl Show unit where\n\nx = 1\n"
 ---
 Module {
     name: Some(
@@ -38,7 +38,7 @@ Module {
                 column: 1,
             },
             end: Position {
-                line: 7,
+                line: 6,
                 column: 1,
             },
         },
@@ -48,11 +48,11 @@ Module {
         Located {
             region: Region {
                 start: Position {
-                    line: 6,
+                    line: 5,
                     column: 1,
                 },
                 end: Position {
-                    line: 7,
+                    line: 6,
                     column: 1,
                 },
             },
@@ -60,55 +60,41 @@ Module {
                 name: Located {
                     region: Region {
                         start: Position {
-                            line: 6,
+                            line: 5,
                             column: 1,
                         },
                         end: Position {
-                            line: 6,
+                            line: 5,
                             column: 2,
                         },
                     },
-                    value: "f",
+                    value: "x",
                 },
-                arguments: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 6,
-                                column: 3,
-                            },
-                            end: Position {
-                                line: 6,
-                                column: 4,
-                            },
-                        },
-                        value: Var(
-                            "w",
-                        ),
-                    },
-                ],
+                arguments: [],
                 body: Located {
                     region: Region {
                         start: Position {
-                            line: 6,
-                            column: 7,
+                            line: 5,
+                            column: 5,
                         },
                         end: Position {
-                            line: 6,
-                            column: 8,
+                            line: 5,
+                            column: 6,
                         },
                     },
-                    value: Var {
-                        kind: LowVar,
-                        name: "w",
-                    },
+                    value: Int(
+                        1,
+                    ),
                 },
                 annotation: None,
                 attributes: [],
             },
         },
     ],
-    unions: [
+    unions: [],
+    aliases: [],
+    traits: [],
+    impls: [
         Located {
             region: Region {
                 start: Position {
@@ -116,12 +102,13 @@ Module {
                     column: 1,
                 },
                 end: Position {
-                    line: 6,
-                    column: 1,
+                    line: 3,
+                    column: 21,
                 },
             },
-            value: Union {
-                name: Located {
+            value: Impl {
+                context: [],
+                head: Located {
                     region: Region {
                         start: Position {
                             line: 3,
@@ -129,71 +116,58 @@ Module {
                         },
                         end: Position {
                             line: 3,
-                            column: 10,
+                            column: 15,
                         },
                     },
-                    value: "Wrap",
-                },
-                arguments: [
-                    TypeParam {
-                        name: Located {
+                    value: Constraint {
+                        class: Located {
                             region: Region {
                                 start: Position {
                                     line: 3,
-                                    column: 11,
+                                    column: 6,
                                 },
                                 end: Position {
                                     line: 3,
-                                    column: 13,
+                                    column: 10,
                                 },
                             },
-                            value: "a",
+                            value: "Show",
                         },
-                        kind: None,
-                    },
-                ],
-                ctors: [
-                    Ctor {
-                        name: Located {
-                            region: Region {
-                                start: Position {
-                                    line: 4,
-                                    column: 7,
+                        module: None,
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 11,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 15,
+                                    },
                                 },
-                                end: Position {
-                                    line: 4,
-                                    column: 11,
-                                },
-                            },
-                            value: "Wrap",
-                        },
-                        arguments: Positional(
-                            [
-                                Located {
+                                value: Type {
                                     region: Region {
                                         start: Position {
-                                            line: 4,
-                                            column: 12,
+                                            line: 3,
+                                            column: 11,
                                         },
                                         end: Position {
-                                            line: 4,
-                                            column: 14,
+                                            line: 3,
+                                            column: 15,
                                         },
                                     },
-                                    value: Var(
-                                        "a",
-                                    ),
+                                    name: "unit",
+                                    args: [],
                                 },
-                            ],
-                        ),
+                            },
+                        ],
                     },
-                ],
+                },
+                methods: [],
                 attributes: [],
             },
         },
     ],
-    aliases: [],
-    traits: [],
-    impls: [],
     binops: [],
 }

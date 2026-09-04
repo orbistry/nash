@@ -57,6 +57,12 @@ pub fn canonicalize<'a>(
             region: trait_.region,
         }]);
     }
+    if let Some(impl_) = module.impls.first() {
+        return Err(vec![Error::Unsupported {
+            feature: "implementation declaration",
+            region: impl_.region,
+        }]);
+    }
     let home = canonicalize_header(context, module).map_err(|e| vec![e])?;
 
     let mut env =
@@ -4154,6 +4160,13 @@ mod tests {
     fn trait_declaration_unsupported() {
         assert_module_error_snapshot!(
             "module Main exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n"
+        );
+    }
+
+    #[test]
+    fn implementation_declaration_unsupported() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\n\nimpl Eq int where\n    eq a b = true\n"
         );
     }
 }
