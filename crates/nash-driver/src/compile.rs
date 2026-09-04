@@ -13,7 +13,6 @@ use std::sync::Arc;
 use bumpalo::Bump;
 use nash_can::Interface;
 use tokio::sync::Mutex;
-use tokio::task::JoinSet;
 use url::Url;
 
 use crate::database::Database;
@@ -89,7 +88,7 @@ pub async fn build(db: Arc<Mutex<Database>>, graph: &DepGraph) -> BuildResult {
 /// solved module's interface to its dependents through a build-wide arena.
 ///
 /// Type checking is inherently dependency-ordered, so within-build
-/// parallelism is limited to source fetching for now.
+/// compilation is sequential within a build.
 fn build_sync(sources: Vec<(Url, Result<String, String>)>) -> BuildResult {
     let store = Bump::new();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
@@ -127,30 +126,18 @@ fn build_sync(sources: Vec<(Url, Result<String, String>)>) -> BuildResult {
     }
 }
 
-/// Fetch source content for all modules, in parallel.
+/// Fetch source content in dependency order, retaining failed reads in place.
 async fn fetch_sources(
     db: &Arc<Mutex<Database>>,
     uris: &[&Url],
 ) -> Vec<(Url, Result<String, String>)> {
-    let mut set = JoinSet::new();
-
-    for &uri in uris {
-        let uri = uri.clone();
-        let db = db.clone();
-        set.spawn(async move {
-            let source = {
-                let mut db = db.lock().await;
-                db.source(&uri).await.map(|s| s.to_string())
-            };
-            (uri, source.map_err(|e| e.to_string()))
-        });
-    }
-
+    // Database::source needs exclusive access across the read, so spawning
+    // tasks cannot parallelize these reads and would lose dependency order.
+    let mut db = db.lock().await;
     let mut results = Vec::with_capacity(uris.len());
-    while let Some(res) = set.join_next().await {
-        if let Ok(r) = res {
-            results.push(r);
-        }
+    for &uri in uris {
+        let source = db.source(uri).await.map(str::to_owned);
+        results.push((uri.clone(), source.map_err(|e| e.to_string())));
     }
     results
 }
@@ -312,6 +299,54 @@ mod tests {
 
     fn url(path: &str) -> Url {
         Url::parse(&format!("file:///{}", path)).unwrap()
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn source_fetch_preserves_dependency_order_and_errors() {
+        let mem = InMemorySource::new();
+        let uris: Vec<_> = (0..128).map(|i| url(&format!("Module{i}.nash"))).collect();
+        for (index, uri) in uris.iter().enumerate() {
+            if index != 63 {
+                mem.insert(uri.clone(), format!("source {index}"));
+            }
+        }
+        let db = Arc::new(Mutex::new(Database::new(mem)));
+        let ordered: Vec<_> = uris.iter().collect();
+        let sources = fetch_sources(&db, &ordered).await;
+        assert_eq!(sources.len(), uris.len());
+        for (index, (uri, source)) in sources.iter().enumerate() {
+            assert_eq!(uri, &uris[index], "source moved out of dependency order");
+            if index == 63 {
+                assert!(source.is_err(), "missing source must retain its position");
+            } else {
+                assert_eq!(source.as_ref().unwrap(), &format!("source {index}"));
+            }
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn reverse_input_dependency_chain_builds_all_interfaces() {
+        let mem = InMemorySource::new();
+        let modules = [url("Main.nash"), url("Middle.nash"), url("Base.nash")];
+        let sources = [
+            "module Main exposing (value)\nimport Middle exposing (identity)\nvalue = identity ()\n",
+            "module Middle exposing (identity)\nimport Base\nidentity x = Base.identity x\n",
+            "module Base exposing (identity)\nidentity x = x\n",
+        ];
+        for (uri, source) in modules.iter().zip(sources) {
+            mem.insert(uri.clone(), source.to_owned());
+        }
+        let db = Arc::new(Mutex::new(Database::new(mem)));
+        let graph = build_graph(db.clone(), &modules).await.unwrap();
+        let result = build(db, &graph).await;
+        assert_eq!(result.total, 3);
+        assert!(result.is_success(), "{result:?}");
+        for uri in &modules {
+            assert!(
+                result.interfaces.contains_key(uri),
+                "missing interface: {uri}"
+            );
+        }
     }
 
     #[tokio::test]
