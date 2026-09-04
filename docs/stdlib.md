@@ -42,6 +42,7 @@ core/
     Bytes.nash            bytes functions; Big Bytes
     String.nash           string (little only; no Big twin)
     List.nash             list functions; Big List
+    Cons.nash             cons: Term-kind linked list (elements of any kind)
     Pair.nash             pair
     Array.nash            array
     Map.nash              Map (Big; its little form is `list (pair 'k 'v)`)
@@ -50,7 +51,7 @@ core/
     Data/Encode.nash      encoders
     Fuzz.nash             fuzzers
     Test.nash             label, assertFailed (`assert` is a keyword)
-    Ast.nash              macro AST (see macros.md)
+    Ast.nash              macro AST: little ADTs over cons (see macros.md)
     Derive.nash           @derive
     Cardano/Tx.nash       script context (sketch)
     Cardano/Address.nash
@@ -84,7 +85,7 @@ little `string` module.
     "exposedModules": {
         "Prelude": ["Prelude", "Builtin", "Debug"],
         "Traits": ["Eq", "Ord", "Show", "Num", "Integral", "Semigroup", "Monoid", "Functor", "Applicative", "Monad", "Lift", "Data", "Literal"],
-        "Types": ["Bool", "Unit", "Option", "Result", "Ordering", "Int", "Bytes", "String", "List", "Pair", "Array", "Map"],
+        "Types": ["Bool", "Unit", "Option", "Result", "Ordering", "Int", "Bytes", "String", "List", "Cons", "Pair", "Array", "Map"],
         "Data": ["Data.Decode", "Data.Encode"],
         "Testing": ["Fuzz", "Test"],
         "Macros": ["Ast", "Derive"],
@@ -121,6 +122,7 @@ import Unit exposing (Unit)
 import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Ordering exposing (Ordering, type ordering(..))
+import Cons exposing (type cons(..))
 import Derive exposing (derive)
 import Debug
 import Builtin
@@ -187,8 +189,9 @@ table binds (`|>`, `<|`, `<<`, `>>`, `::` targets, plus
 count as defined in `nash/core` under the orphan rule. Everything else
 lives in the trait modules or the type modules. `Prelude` imports every
 trait module and `Bool` (for `&&`/`||`); none of those import `Prelude`.
-`cons` stays in `Prelude` rather than `List` because `List` imports
-`Prelude` for its operators.
+The `::` target is named `prepend` (not `cons`, which is the `Cons`
+module's constructor) and stays in `Prelude` rather than `List` because
+`List` imports `Prelude` for its operators.
 
 ```elm
 module Prelude exposing (..)
@@ -218,7 +221,7 @@ infix non   4 (>)   = gt
 infix non   4 (<=)  = le
 infix non   4 (>=)  = ge
 infix right 5 (++)  = append
-infix right 5 (::)  = cons
+infix right 5 (::)  = prepend
 infix left  6 (+)   = add
 infix left  6 (-)   = sub
 infix left  7 (*)   = mul
@@ -246,8 +249,8 @@ composeLeft g f x = g (f x)
 composeRight : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c
 composeRight f g x = g (f x)
 
-cons : 'a -> list 'a -> list 'a
-cons = Builtin.mkCons
+prepend : 'a -> list 'a -> list 'a
+prepend = Builtin.mkCons
 
 impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where
     eq (a1, b1) (a2, b2) = eq a1 a2 && eq b1 b2
@@ -274,7 +277,7 @@ not repeated here. What each module adds beyond its trait:
 | `Functor`, `Applicative`, `Monad` | `list` (`Functor` only for `pair 'k`). No impls for `List`: Big twins carry no function set |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
 | `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
-| `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString Bytes` (UTF-8 encode), `FromBytes bytes`, `FromBytes Bytes` |
+| `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromBytes bytes`, `FromBytes Bytes` |
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
@@ -499,6 +502,7 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 | `Debug.trace`, `Debug.todo`, `Debug.fail` | trace levels, compiler-generated traces switch |
 | `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
 | `Fuzz.fuzzer`, `Fuzz.Prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
+| `Ast.*`, `Cons.cons` | reified by `nash-macro` as `Term::Constr` trees by constructor index and walked back after evaluation (macros.md); the compiler knows the tag table, the Nash side is plain little ADTs |
 | `Derive.derive` | nothing special beyond being a macro; listed because default imports expose it |
 
 ## Builtin
@@ -746,7 +750,41 @@ work on the `list`, `lift` the result. `List.map = Functor.map` at `list`.
 
 `zip` returns a `list` of tuples, which are `Term` elements and therefore
 illegal for `list` (elements must be `Storable`). `zip`/`unzip` are
-omitted; `map2` covers the common case.
+omitted; `map2` covers the common case. A list of tuples (or of any
+other `Term` value) is a `cons`, below.
+
+### `Cons`
+
+A Term-kind linked list for elements `list` cannot hold (functions,
+tuples, little ADTs such as `Ast` nodes). Each cell is a UPLC `constr`
+(`Nil` = `constr 0 []`, `Cons x xs` = `constr 1 [x, xs]`), so elements
+may be of any kind. It is the list type of the macro `Ast` family
+(macros.md) and is default-imported with its constructors open.
+
+```elm
+module Cons exposing (type cons(..), map, indexedMap, map2, foldr, foldl, append, length, singleton, fromList, toList)
+
+import Prelude exposing (..)
+import Functor exposing (Functor)
+import Eq exposing (Eq)
+
+type cons 'a = Nil | Cons 'a (cons 'a)
+
+singleton : 'a -> cons 'a
+map : ('a -> 'b) -> cons 'a -> cons 'b            -- also `impl Functor cons`
+indexedMap : (int -> 'a -> 'b) -> cons 'a -> cons 'b
+map2 : ('a -> 'b -> 'c) -> cons 'a -> cons 'b -> cons 'c
+foldr : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
+foldl : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
+append : cons 'a -> cons 'a -> cons 'a
+length : cons 'a -> int
+fromList : list 'a -> cons 'a                     -- 'a : Storable, from `list`
+toList : cons 'a -> list 'a                       -- 'a : Storable, from `list`
+```
+
+`fromList`/`toList` carry the `Storable` kind bound that `list 'a`
+implies (kinds.md); `Eq (cons 'a)` and `Show (cons 'a)` impls are in
+`Cons` too.
 
 ### `Pair`, `Array`
 
@@ -940,10 +978,13 @@ handled by the runner.
 
 ## `Ast` and `Derive`
 
-See [macros.md](macros.md). `Ast` holds the Big AST types and builders;
-`Derive` holds the `derive` macro and the per-trait derivations. Both are
-plain Nash. `Derive` imports `Ast`; `Ast` imports `List` and the trait
-modules; neither is imported by anything else in core, so no cycle.
+See [macros.md](macros.md). `Ast` holds the macro AST as **little** ADTs
+(kind `Term`: `constr` trees with `string`/`int`/`bytes` leaves and
+`cons` child lists) plus the builders; `Derive` holds the `derive` macro
+and the per-trait derivations. Both are plain Nash with no `Data` or
+`Lift` involvement. `Derive` imports `Ast`, `Cons`, `String`; `Ast`
+imports `Prelude`, `Cons`, and the trait modules; neither is imported by
+anything else in core, so no cycle.
 
 ## `Cardano.*` (sketch)
 

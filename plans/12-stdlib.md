@@ -236,6 +236,7 @@ pub fn defaults<'a>(bump: &'a Bump) -> &'a [&'a Import<'a>] {
         explicit("Option", &[upper("Option"), little("option")]),
         explicit("Result", &[upper("Result"), little("result")]),
         explicit("Ordering", &[upper("Ordering"), little("ordering")]),
+        explicit("Cons", &[little("cons")]),
         explicit("Derive", &[lower("derive")]),
         closed("Debug"),
         closed("Builtin"),
@@ -651,9 +652,10 @@ recursive `mapList`; chunk 6's `List.map` is `Functor.map` specialized at
 
 `core/src/Prelude.nash` is docs/stdlib.md "Prelude" verbatim: the `infix`
 block (`infix non 4 (==) = eq`, `infix left 6 (+) = add`,
-`infix left 7 (/) = div`, `infix right 5 (::) = cons`, ...), `identity`,
+`infix left 7 (/) = div`, `infix right 5 (::) = prepend`, ...), `identity`,
 `always`, `applyForward`, `applyBackward`, `composeLeft`, `composeRight`,
-`cons = Builtin.mkCons` (kept here because `List` imports `Prelude`), and
+`prepend = Builtin.mkCons` (kept here because `List` imports `Prelude`;
+named `prepend` because `Cons` is the `Cons` module's constructor), and
 `impl (Eq 'a, Eq 'b) => Eq ('a, 'b)` and friends up to 4-tuples for
 `Eq`, `Ord`, `Show` (tuples count as defined in `nash/core` for the orphan
 rule).
@@ -684,7 +686,7 @@ Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 
 **Files**
 
-- `core/src/Int.nash`, `Bytes.nash`, `String.nash`, `List.nash`, `Pair.nash`, `Array.nash`, `Option.nash`, `Result.nash`, `Ordering.nash`, `Bool.nash`
+- `core/src/Int.nash`, `Bytes.nash`, `String.nash`, `List.nash`, `Cons.nash`, `Pair.nash`, `Array.nash`, `Option.nash`, `Result.nash`, `Ordering.nash`, `Bool.nash`
 
 **Change**
 
@@ -692,8 +694,11 @@ Write the APIs listed in docs/stdlib.md "Little-type modules" and "Twin
 modules". Every function takes the little twin (`list 'a`, `option 'a`,
 `int`, ...); the Big twins (`List 'a`, `Int`, `Option 'a`, ...) get no
 functions, only the impls from chunk 5. `String.nash` is the little
-`string` module; there is no Big `String`. All functions are total unless
-documented (`Array.at`, `Option.unwrap`).
+`string` module; there is no Big `String`. `Cons.nash` is the Term-kind
+linked list `type cons 'a = Nil | Cons 'a (cons 'a)` (docs/stdlib.md
+"`Cons`") that chunk 10's `Ast` and plans/11 depend on; its `fromList`
+and `toList` carry the `Storable` bound of `list`. All functions are
+total unless documented (`Array.at`, `Option.unwrap`).
 
 **Code** (`core/src/List.nash` excerpt, the shape everything else follows)
 
@@ -978,12 +983,12 @@ listBetween lo hi item =
     let
         go n =
             if n >= hi then constant []
-            else if n < lo then cons n
+            else if n < lo then more n
             else
                 do
                     continue <- choice 1
-                    if continue == 0 then constant [] else cons n
-        cons n =
+                    if continue == 0 then constant [] else more n
+        more n =
             do
                 x <- item
                 xs <- go (n + 1)
@@ -1085,52 +1090,53 @@ power-assert output through this module.
 **Change**
 
 The `Ast` types and builders from docs/macros.md, matching
-`crates/nash-macro/src/tags.rs` (plans/11 chunk 4); `Derive` from
-plans/11 chunk 10. Both are plain Nash; `Ast` imports the trait modules,
-`List`, `String` and `Lift` only. All `Ast` text fields are `Bytes`
-(UTF-8); builders take little `string`/`list`/`int` arguments and `lift`
-them, so macro code stays on little types.
+`crates/nash-macro/src/tags.rs` (plans/11 chunk 4; constructor tags are
+declaration indices, so the two files change together); `Derive` from
+plans/11 chunk 10. Both are plain Nash. Every `Ast` type is a little ADT
+with native `string`/`int`/`bytes` fields, `option` slots, and `cons`
+child lists (chunk 6); `Ast` imports `Prelude`, `Cons`, `String`, and the
+trait modules. No `Data`, `Lift`, or Big type appears.
 
 **Code** (`core/src/Ast.nash` builders excerpt)
 
 ```elm
-expr : ExprNode -> Expr
-expr node = Expr { span = Option.None, typ = Option.None } node
+expr : exprNode -> expr
+expr node = Expr { span = None, typ = None } node
 
-name : string -> Name
-name s = Local (lift s)
+name : string -> name
+name s = Local s
 
-var : Name -> Expr
+var : name -> expr
 var n = expr (Var n)
 
-int : int -> Expr
-int n = expr (Int (lift n))
+int : int -> expr
+int n = expr (IntLit n)
 
-call : Expr -> list Expr -> Expr
-call f args = expr (Call f (lift args))
+call : expr -> cons expr -> expr
+call f args = expr (Call f args)
 
-and : list Expr -> Expr
+tuple : cons expr -> expr
+tuple es = expr (Tuple es)
+
+and : cons expr -> expr
 and es =
     case es of
-        [] -> expr (Var (Global builtinModule "True"))
-        e :: rest -> List.foldl (\b acc -> expr (BinOp (Global boolModule "and") acc b)) e rest
+        Nil -> expr (Var (Global builtinModule "True"))
+        Cons e rest -> Cons.foldl (\b acc -> expr (BinOp (Global boolModule "and") acc b)) e rest
 
-builtinModule : Module
-builtinModule = { package = Option.Some "nash/core", name = "Builtin" }
+builtinModule : modname
+builtinModule = { package = Some "nash/core", name = "Builtin" }
 
-boolModule : Module
-boolModule = { package = Option.Some "nash/core", name = "Bool" }
+boolModule : modname
+boolModule = { package = Some "nash/core", name = "Bool" }
 
-exprName : Expr -> option string
+exprName : expr -> option string
 exprName (Expr _ node) =
     case node of
-        Var (Raw s) -> Some (lower s)
-        Var (Global _ s) -> Some (lower s)
+        Var (Raw s) -> Some s
+        Var (Global _ s) -> Some s
         _ -> None
 ```
-
-`"nash/core"` and `"Builtin"` are `string` literals at type `Bytes` via
-`FromString Bytes`; `lift`/`lower` on names is `Lift string Bytes`.
 
 **Elm/Aiken reference**
 
@@ -1139,7 +1145,8 @@ None; see plans/11.
 **Tests**
 
 `core/tests/DeriveTests.nash` per plans/11 chunk 10; `Ast.nash` `tests`:
-`exprName (var (raw "Eq")) == Some "Eq"`, `and [] ` is `True`.
+`exprName (var (raw "Eq")) == Some "Eq"`, `and Nil` is the `True` node,
+`Cons.length (Cons (int 1) Nil) == 1`.
 
 **Done when** plans/11 chunk 12's `decl_macro_derive_eq` snapshot passes.
 

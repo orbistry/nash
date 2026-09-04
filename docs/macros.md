@@ -16,7 +16,7 @@ macros.
 |---|---|
 | Macro | A top-level function declared with `macro`, of one of two fixed shapes (declaration macro or expression macro). |
 | Invocation | `@name(args)` before a declaration, or `name!(args)` in an expression. |
-| Reification | Turning compiler AST into `Ast.*` values (Big types, so they are `Data` at runtime) and back. |
+| Reification | Turning compiler AST into `Ast.*` values (little ADTs, so they are UPLC `constr` terms at runtime) and back. |
 | Expansion round | One pass: find every invocation in a module, run each macro, splice results. |
 | Hygiene | Binders created by a macro cannot capture or be captured by user names unless the macro asks for it with `Ast.raw`. |
 | Comptime | `comptime e`: evaluate `e` on the CEK machine at compile time, splice the resulting constant. |
@@ -29,25 +29,29 @@ with `macro`. The annotation is mandatory. It fixes the macro's shape.
 ```elm
 module Derive exposing (derive)
 
-import Ast exposing (Decl, Expr)
+import Ast exposing (type decl, type expr)
+import Cons exposing (type cons(..))
 
-macro derive : Decl -> List Expr -> List Decl
+macro derive : decl -> cons expr -> cons decl
 derive decl traits =
-    lift (List.map (deriveOne decl) (lower traits))
+    Cons decl (Cons.map (deriveOne decl) traits)
 ```
 
-Macro arguments and results are Big lists (`List Ast.Expr`), the same
-type as the lists inside `Ast` nodes. Macro code `lower`s them to
-`list` at entry and `lift`s the result (stdlib.md).
+Every `Ast` type is a little ADT (kind `Term`). Argument lists, result
+lists, and the child lists inside `Ast` nodes are `cons 'a`, the
+Term-kind linked list from the core `Cons` module
+(`type cons 'a = Nil | Cons 'a (cons 'a)`, [stdlib.md](stdlib.md)); `list`
+cannot hold Term elements. No `Data`, `lift`, or `lower` appears anywhere
+in macro code.
 
 The two shapes:
 
 ```elm
 -- declaration macro: the decorated declaration, then the attribute arguments
-macro name : Ast.Decl -> List Ast.Expr -> List Ast.Decl
+macro name : Ast.decl -> cons Ast.expr -> cons Ast.decl
 
 -- expression macro: the call arguments
-macro name : List Ast.Expr -> Ast.Expr
+macro name : cons Ast.expr -> Ast.expr
 ```
 
 Any other annotation on a `macro` line is an error (`MacroBadShape`).
@@ -90,13 +94,13 @@ double x = x + x
   qualified, `@Derive.derive(Eq)` is valid). It must resolve to a
   declaration macro.
 - The arguments are parsed as expressions but **not** type checked. They
-  are not in any scope. `Eq` is passed as `Ast.Expr` whose node is
+  are not in any scope. `Eq` is passed as `Ast.expr` whose node is
   `Var (Raw "Eq")` with `typ = None`. The macro interprets them.
-- The macro receives the decorated declaration as a **typed** `Ast.Decl`
+- The macro receives the decorated declaration as a **typed** `Ast.decl`
   (see "What the macro sees").
-- The result `List Ast.Decl` **replaces** the decorated declaration. To
+- The result `cons Ast.decl` **replaces** the decorated declaration. To
   keep the original, return it as the first element. `derive` returns
-  `[decl, impl1, impl2, ...]`.
+  `Cons decl (Cons impl1 (Cons impl2 ...))`.
 
 ```ebnf
 attribute        = '@' ( lower_var | qualified_var ) [ '(' [ expression { ',' expression } ] ')' ] ;
@@ -220,193 +224,206 @@ predicateAll p xs =
 
 ## What the macro sees: the `Ast` module
 
-`nash/core` ships an `Ast` module. Every type in it is Big, so a value is a
-`Data` constant at runtime and can be handed to and from the CEK machine
-without conversion. One family of types serves both input (typed) and
-output (surface). Type information lives in optional slots that are
-`Some` on input and are ignored on output. Text (names, string literals,
-labels) is `Bytes` holding UTF-8: there is no Big `String`, and
-`impl Lift string Bytes` (`encodeUtf8`/`decodeUtf8`) converts to and from
-the little `string`.
+`nash/core` ships an `Ast` module. Every type in it is a **little** ADT
+(kind `Term`): a value is a UPLC `constr` tree whose leaves are `string`,
+`int`, and `bytes` constants, exactly the layout of any user little type
+([representation.md](representation.md)). The compiler builds that tree
+directly as `nash_plutus::Term::Constr` nodes, applies the macro program
+to it, and walks the resulting `constr` tree back into surface AST; no
+`Data` encoding is involved. One family of types serves both input
+(typed) and output (surface). Type information lives in `option` slots
+that are `Some` on input and are ignored on output. Child lists are
+`cons` ([stdlib.md](stdlib.md) "`Cons`") because `list` elements must be
+`Storable` and `Ast` nodes are `Term`.
 
 ```elm
 module Ast exposing (..)
 
-type alias Span = { startRow : Int, startCol : Int, endRow : Int, endCol : Int }
+import Cons exposing (type cons(..))
+
+type alias span = { startRow : int, startCol : int, endRow : int, endCol : int }
 
 -- How a name resolves after splicing.
-type Name
-    = Local Bytes             -- hygienic: renamed per expansion (see Hygiene)
-    | Raw Bytes               -- spliced verbatim, resolves at the invocation site
-    | Global Module Bytes     -- fully qualified, resolves regardless of imports
+type name
+    = Local string            -- hygienic: renamed per expansion (see Hygiene)
+    | Raw string              -- spliced verbatim, resolves at the invocation site
+    | Global modname string   -- fully qualified, resolves regardless of imports
 
-type alias Module = { package : Option Bytes, name : Bytes }
+type alias modname = { package : option string, name : string }
 
-type Kind
+type kind
     = Big
     | Const
     | Term
     | Storable                -- Big or Const, for `list`/`array` elements
     | Any
-    | Arrow Kind Kind
-    | KindVar Bytes
+    | Arrow kind kind
+    | KindVar string
 
-type alias Meta = { span : Option Span, typ : Option Type }
+type alias meta = { span : option span, typ : option typ }
 
-type Expr = Expr Meta ExprNode
+type expr = Expr meta exprNode
 
-type ExprNode
-    = Int Int
-    | Str Bytes                        -- UTF-8
-    | Bytes Bytes
-    | Var Name
-    | Op Name                          -- operator used as a value: (+)
-    | List (List Expr)
-    | Negate Expr
-    | BinOp Name Expr Expr             -- resolved to the operator's function name
-    | Lambda (List Pattern) Expr
-    | Call Expr (List Expr)
-    | If Expr Expr Expr
-    | Let (List Def) Expr
-    | Case Expr (List Arm)
-    | Accessor Bytes
-    | Access Expr Bytes
-    | Update Name (List FieldAssign)
-    | Record (List FieldAssign)
-    | Unit
-    | Tuple (List Expr)                -- length >= 2
-    | MacroCall Name (List Expr)       -- output may contain new invocations
-    | Comptime Expr
+type exprNode
+    = IntLit int
+    | StrLit string
+    | BytesLit bytes
+    | Var name
+    | Op name                          -- operator used as a value: (+)
+    | ListLit (cons expr)
+    | Negate expr
+    | BinOp name expr expr             -- resolved to the operator's function name
+    | Lambda (cons pattern) expr
+    | Call expr (cons expr)
+    | If expr expr expr
+    | Let (cons def) expr
+    | Case expr (cons arm)
+    | Accessor string
+    | Access expr string
+    | Update name (cons fieldAssign)
+    | Record (cons fieldAssign)
+    | UnitLit
+    | Tuple (cons expr)                -- length >= 2
+    | MacroCall name (cons expr)       -- output may contain new invocations
+    | Comptime expr
 
-type Def
-    = Define Name (List Pattern) Expr (Option Type)
-    | Destruct Pattern Expr
+type def
+    = Define name (cons pattern) expr (option typ)
+    | Destruct pattern expr
 
-type alias Arm = { pattern : Pattern, body : Expr }
-type alias FieldAssign = { field : Bytes, value : Expr }
+type alias arm = { pattern : pattern, body : expr }
+type alias fieldAssign = { field : string, value : expr }
 
-type Pattern = Pattern Meta PatternNode
+type pattern = Pattern meta patternNode
 
-type PatternNode
+type patternNode
     = PAny
-    | PVar Name
-    | PRecord (List Name)
-    | PAlias Pattern Name
+    | PVar name
+    | PRecord (cons name)
+    | PAlias pattern name
     | PUnit
-    | PTuple (List Pattern)
-    | PCtor Name (List Pattern)
-    | PList (List Pattern)
-    | PCons Pattern Pattern
-    | PInt Int
-    | PStr Bytes
-    | PBytes Bytes
+    | PTuple (cons pattern)
+    | PCtor name (cons pattern)
+    | PList (cons pattern)
+    | PCons pattern pattern
+    | PInt int
+    | PStr string
+    | PBytes bytes
 
-type Type
-    = TVar Bytes
-    | TCon Name (List Type)
-    | TFun Type Type
-    | TRecord (List Field)
-    | TTuple (List Type)
+type typ
+    = TVar string
+    | TCon name (cons typ)
+    | TFun typ typ
+    | TRecord (cons field)
+    | TTuple (cons typ)
     | TUnit
 
-type alias Field = { name : Bytes, typ : Type }
-type alias Param = { name : Bytes, kind : Option Kind }
-type alias Constraint = { trait : Name, args : List Type }
+type alias field = { name : string, typ : typ }
+type alias param = { name : string, kind : option kind }
+type alias constraint = { traitName : name, args : cons typ }
 
-type Decl
-    = Value { name : Name, args : List Pattern, body : Expr, annotation : Option Type }
-    | Union { name : Name, params : List Param, kind : Option Kind, ctors : List Ctor }
-    | Alias { name : Name, params : List Param, kind : Option Kind, typ : Type }
-    | Trait Trait
-    | Impl Impl
-    | Infix { op : Bytes, assoc : Assoc, prec : Int, function : Name }
+type decl
+    = Value { name : name, args : cons pattern, body : expr, annotation : option typ }
+    | Union { name : name, params : cons param, kind : option kind, ctors : cons ctor }
+    | Alias { name : name, params : cons param, kind : option kind, typ : typ }
+    | Trait traitDef
+    | Impl implDef
+    | Infix { op : string, assoc : assoc, prec : int, function : name }
 
-type alias Ctor = { name : Name, args : List Type }
-type Assoc = LeftAssoc | RightAssoc | NonAssoc
+type alias ctor = { name : name, args : cons typ }
+type assoc = LeftAssoc | RightAssoc | NonAssoc
 
-type alias Trait =
-    { name : Name
-    , params : List Param
-    , supers : List Constraint
-    , methods : List Method
+type alias traitDef =
+    { name : name
+    , params : cons param
+    , supers : cons constraint
+    , methods : cons method
     }
 
-type alias Method = { name : Name, typ : Type, default : Option Expr }
+type alias method = { name : name, typ : typ, default : option expr }
 
-type alias Impl =
-    { trait : Name
-    , args : List Type
-    , context : List Constraint
-    , defs : List Def
+type alias implDef =
+    { traitName : name
+    , args : cons typ
+    , context : cons constraint
+    , defs : cons def
     }
 ```
 
-Input conventions (encoder, `nash-macro`):
+Naming: type names avoid the keywords `type`, `module`, `trait`, `impl`
+(`typ`, `modname`, `traitDef`, `implDef`, field `traitName`), and literal
+constructors carry a `Lit` suffix so they do not collide with the
+compiler-known `Data` constructors (`List`, `I`, `B`) that are in scope
+everywhere. Little records (`meta`, `arm`, `span`, ...) are `constr 0`
+terms; labeled constructors (`Value {..}`) are flat `constr i` terms, and
+`case decl of Union { name, params, ctors } -> ...` is the pattern sugar
+that reads them.
 
-- Every `Expr` and `Pattern` has `span = Some` and `typ = Some` (the
+Input conventions (reification, `nash-macro`):
+
+- Every `expr` and `pattern` has `span = Some` and `typ = Some` (the
   solved type). `Union`/`Alias` carry `kind = Some`.
 - Local variables and their binders are `Raw "x"`. Copying an input
   subtree into output keeps it resolving as the user wrote it.
 - Top-level, foreign, constructor, and operator references are
-  `Global module name`. `BinOp` carries the operator's *function* name.
+  `Global modname name`. `BinOp` carries the operator's *function* name.
 - `if` chains are nested `If`. `let` with several definitions is one `Let`
-  with a `List Def` in source order. Elm's `LetRec`/`LetDestruct` fold
+  with a `cons def` in source order. Elm's `LetRec`/`LetDestruct` fold
   into that list.
 - Partial operator sections have already been canonicalized to `Lambda` with
   a `BinOp` body; macros do not receive a section-specific node.
 - `do` blocks arrive desugared (`Call (Var (Global Monad "bind")) ...`).
-- `Alias` types are fully expanded in `typ` slots (`Ast.Type` has no alias
+- `Alias` types are fully expanded in `typ` slots (`Ast.typ` has no alias
   node); the alias *declaration* is still visible as `Decl.Alias`.
 
-Output conventions (decoder):
+Output conventions (the walk back to surface AST):
 
 - `span` is ignored. Every spliced node gets the invocation site's region
   so diagnostics point at the `@derive(..)` or `name!(..)`.
 - `typ` is ignored.
-- `Name` decides resolution as described under Hygiene.
+- `name` decides resolution as described under Hygiene.
 - `Union.kind`/`Alias.kind` are ignored; the name's casing decides.
+- The result must be a pure constructor tree: a lambda, delayed term, or
+  partially applied builtin where a node is expected is `MacroBadOutput`.
 
-`Ast` also exports builders so macro code does not spell every `Meta`.
-Builders take little values (`string`, `list`, `int`) and `lift` them
-into the Big node fields, so macro code works on little types and only
-touches `lift`/`lower` at the macro's own boundary:
+`Ast` also exports builders so macro code does not spell every `meta`:
 
 ```elm
-expr : ExprNode -> Expr                    -- span = None, typ = None
-pat : PatternNode -> Pattern
-name : string -> Name                      -- Local
-raw : string -> Name                       -- Raw
-var : Name -> Expr
-int : int -> Expr
-str : string -> Expr
-call : Expr -> list Expr -> Expr
-lambda : list Pattern -> Expr -> Expr
-case_ : Expr -> list Arm -> Expr
-tuple : list Expr -> Expr
-arm : Pattern -> Expr -> Arm
-pvar : Name -> Pattern
-pctor : Name -> list Pattern -> Pattern
-ptuple : list Pattern -> Pattern
-wildcard : Pattern
-tcon : Name -> list Type -> Type
-tvar : string -> Type
-constraint : Name -> list Type -> Constraint
-impl : Name -> list Type -> list Constraint -> list Def -> Decl
-def : Name -> list Pattern -> Expr -> Def
-and : list Expr -> Expr                    -- folds with (&&), `True` when empty
-nameText : Name -> string
-exprName : Expr -> option string           -- `Some "Eq"` for `Var (Raw "Eq")`
+expr : exprNode -> expr                    -- span = None, typ = None
+pat : patternNode -> pattern
+name : string -> name                      -- Local
+raw : string -> name                       -- Raw
+var : name -> expr
+int : int -> expr
+str : string -> expr
+call : expr -> cons expr -> expr
+lambda : cons pattern -> expr -> expr
+case_ : expr -> cons arm -> expr
+tuple : cons expr -> expr
+arm : pattern -> expr -> arm
+pvar : name -> pattern
+pctor : name -> cons pattern -> pattern
+ptuple : cons pattern -> pattern
+wildcard : pattern
+tcon : name -> cons typ -> typ
+tvar : string -> typ
+constraint : name -> cons typ -> constraint
+impl : name -> cons typ -> cons constraint -> cons def -> decl
+def : name -> cons pattern -> expr -> def
+and : cons expr -> expr                    -- folds with (&&), `True` when empty
+nameText : name -> string
+exprName : expr -> option string           -- `Some "Eq"` for `Var (Raw "Eq")`
 ```
 
 ## `quote` and splices
 
 Building trees by hand is verbose. `quote (e)` is parser sugar that turns
-an expression into the `Ast.Expr` value that builds it. `~x` inside a quote
-splices an `Ast.Expr` value; `~(e)` splices the result of an expression of
-type `Ast.Expr`.
+an expression into the `Ast.expr` value that builds it. `~x` inside a quote
+splices an `Ast.expr` value; `~(e)` splices the result of an expression of
+type `Ast.expr`.
 
 ```elm
-eqField : Ast.Name -> Ast.Name -> Ast.Expr
+eqField : Ast.name -> Ast.name -> Ast.expr
 eqField x y =
     quote (~(Ast.var x) == ~(Ast.var y))
 ```
@@ -430,7 +447,7 @@ Semantics:
   in v1; use builders (`Ast.call f args`, `Ast.pvar`).
 - A `quote` may not contain a `quote`. A splice outside a quote is a parse
   error (`SpliceOutsideQuote`).
-- `quote` has type `Ast.Expr`. It is only useful in modules that import
+- `quote` has type `Ast.expr`. It is only useful in modules that import
   `Ast`; using it elsewhere is a normal "unknown type" error.
 
 `quote type (t)`, `quote pattern (p)`, and `quote decl (d)` are planned
@@ -438,8 +455,8 @@ later chunks with the same shape.
 
 ## Hygiene
 
-Names in macro output carry a resolution mode (`Ast.Name`). The decoder
-applies it when splicing:
+Names in macro output carry a resolution mode (`Ast.name`). The walk back
+to surface AST applies it when splicing:
 
 | Name | Binder position | Reference position |
 |---|---|---|
@@ -484,11 +501,11 @@ loop
         error MacroExpansionLimit { sites: uses }
     for each use in uses (declaration attributes first, source order):
         program = compiled_macro(use.macro)            -- from the defining module's build output
-        input   = encode(use, can, types)              -- PlutusData
+        input   = reify(use, can, types)               -- Term::Constr tree
         result  = cek.run(program applied to input, budget)
         match result:
             Err(machine_error, logs) -> error MacroFailed { site: use.region, message: last(logs) }
-            Ok(constant)             -> output = decode(constant)      -- surface AST
+            Ok(value)                -> output = unreify(value)        -- constr tree -> surface AST
         output = gensym(output, round, use)
     spliced  = splice(surface, uses, outputs)
 ```
@@ -577,7 +594,7 @@ Compiler-detected errors:
 | `MacroNotAMacro` | `@name` / `name!` resolves to a plain value |
 | `MacroWrongKind` | declaration macro used as `name!(..)` or vice versa |
 | `MacroFailed` | CEK error during expansion |
-| `MacroBadOutput` | result `Data` does not decode to the `Ast` type |
+| `MacroBadOutput` | result term is not a well-formed `Ast` constructor tree (wrong tag or arity, or a lambda/delay/builtin where a node was expected) |
 | `MacroUnboundLocal` | `Local` reference without binder in the output |
 | `MacroGlobalBinder` | `Global` name in binder position |
 | `MacroExpansionLimit` | more than `macroExpansionLimit` rounds |
@@ -608,7 +625,10 @@ Semantics:
 - `comptime e` has the type of `e`.
 - After solving, the kind of that type must be `Const` or `Big`. A `Term`
   kind (functions, little ADTs, tuples) is an error (`ComptimeNotConstant`)
-  because the result must be representable as a UPLC constant.
+  because the result must be representable as a UPLC constant. This is
+  the one place the two mechanisms differ: a macro result is an `Ast`
+  `constr` tree that the compiler walks, while a `comptime` result is
+  spliced as a constant into the program.
 - `e` must be **closed**: it may not mention local variables of the
   enclosing function (lambda parameters, `let` bindings, pattern
   variables). Top-level values and imports are allowed. Violation is
@@ -645,17 +665,17 @@ Sketch of the `Eq` derivation in Nash:
 ```elm
 module Derive exposing (derive)
 
-import Ast exposing (Decl(..), Expr, Name(..), Pattern)
-import List
+import Ast exposing (type decl(..), type expr, type name(..), type pattern)
+import Cons exposing (type cons(..))
 import String
 
-macro derive : Decl -> List Expr -> List Decl
+macro derive : decl -> cons expr -> cons decl
 derive decl traits =
-    lift (decl :: List.map (deriveOne decl) (lower traits))
+    Cons decl (Cons.map (deriveOne decl) traits)
 
-deriveOne : Decl -> Expr -> Decl
-deriveOne decl trait =
-    case Ast.exprName trait of
+deriveOne : decl -> expr -> decl
+deriveOne decl arg =
+    case Ast.exprName arg of
         Some "Eq" -> deriveEq decl
         Some "Ord" -> deriveOrd decl
         Some "Show" -> deriveShow decl
@@ -664,34 +684,30 @@ deriveOne decl trait =
         Some other -> fail ("derive: no derivation for " ++ other)
         None -> fail "derive: expected a trait name such as Eq, Ord, Show, ToData, FromData"
 
-deriveEq : Decl -> Decl
+deriveEq : decl -> decl
 deriveEq decl =
     case decl of
-        Union union ->
+        Union { name, params, ctors } ->
             let
-                -- input lists are Big; lower them once
-                params = lower union.params
-                ctors = lower union.ctors
-
                 self =
-                    Ast.tcon union.name (List.map (\p -> Ast.tvar (lower p.name)) params)
+                    Ast.tcon name (Cons.map (\p -> Ast.tvar p.name) params)
 
                 context =
-                    List.map (\p -> Ast.constraint (Raw "Eq") [ Ast.tvar (lower p.name) ]) params
+                    Cons.map (\p -> Ast.constraint (Raw "Eq") (Cons.singleton (Ast.tvar p.name))) params
 
                 names prefix ctor =
-                    List.indexedMap (\i _ -> Ast.name (prefix ++ String.fromInt i)) (lower ctor.args)
+                    Cons.indexedMap (\i _ -> Ast.name (prefix ++ String.fromInt i)) ctor.args
 
                 ctorArm ctor =
                     let
                         xs = names "x" ctor
                         ys = names "y" ctor
                         fieldsEqual =
-                            List.map2 (\x y -> quote (~(Ast.var x) == ~(Ast.var y))) xs ys
+                            Cons.map2 (\x y -> quote (~(Ast.var x) == ~(Ast.var y))) xs ys
                     in
                     Ast.arm
-                        (Ast.ptuple [ Ast.pctor ctor.name (List.map Ast.pvar xs)
-                                    , Ast.pctor ctor.name (List.map Ast.pvar ys) ])
+                        (Ast.ptuple (Cons (Ast.pctor ctor.name (Cons.map Ast.pvar xs))
+                                    (Cons.singleton (Ast.pctor ctor.name (Cons.map Ast.pvar ys)))))
                         (Ast.and fieldsEqual)
 
                 fallthrough =
@@ -701,11 +717,12 @@ deriveEq decl =
                 b = Ast.name "b"
 
                 body =
-                    Ast.case_ (Ast.tuple [ Ast.var a, Ast.var b ])
-                        (List.map ctorArm ctors ++ [ fallthrough ])
+                    Ast.case_ (Ast.tuple (Cons (Ast.var a) (Cons.singleton (Ast.var b))))
+                        (Cons.append (Cons.map ctorArm ctors) (Cons.singleton fallthrough))
             in
-            Ast.impl (Raw "Eq") [ self ] context
-                [ Ast.def (Raw "eq") [ Ast.pvar a, Ast.pvar b ] body ]
+            Ast.impl (Raw "Eq") (Cons.singleton self) context
+                (Cons.singleton
+                    (Ast.def (Raw "eq") (Cons (Ast.pvar a) (Cons.singleton (Ast.pvar b))) body))
 
         _ ->
             fail "derive(Eq): only `type` declarations can derive Eq"
@@ -717,13 +734,14 @@ Notes on the sketch:
   the right constructors even if the user's module renames them on import.
 - The trait name and the method name are `Raw`: `Eq` must resolve at the
   invocation site (it is in the prelude), and `eq` is the method the trait
-  declares. `Raw "Eq"` is a `string` literal at type `Bytes` via
-  `FromString Bytes`.
+  declares.
 - `x0`, `y0`, `a`, `b` are `Local` and get renamed, so a field named `a`
   cannot interfere.
-- `lower` on `List Param` / `List Ctor` / `List Type` uses the
-  `Lift (list 'a) (List 'b)` impl with the reflexive element impl, so it
-  is one `unListData`. Builders `lift` their list arguments back.
+- `Union { name, params, ctors }` is the labeled-constructor pattern sugar
+  (representation.md); `kind` is not mentioned, so it becomes `_`.
+- Everything is a little value: `cons` lists are walked with `Cons.map`,
+  `Cons.map2`, `Cons.indexedMap`, `Cons.append`; there is no `Data`
+  conversion at any point.
 - The `fallthrough` arm is omitted for single-constructor types by the
   real implementation to avoid a redundant-pattern warning.
 - `ToData`/`FromData` derivations check `union.kind == Some Big` and fail

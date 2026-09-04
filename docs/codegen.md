@@ -544,7 +544,10 @@ the resulting `Term::Constant` becomes a `Lit` in the enclosing `Core`.
 Evaluation errors and non-constant results are compile errors. Constant
 folding uses the same function on any closed `Builtin` subterm, so the
 comptime hook is not a special path. Macros (see [macros.md](macros.md))
-use the same evaluator on their own programs.
+use the same CEK machine but not the constant rule: the `Ast` family is
+`Term` kind, so the host applies the macro program to a `Term::Constr`
+tree and reads the output `Ast` from the result `Value`, never through
+`Data`.
 
 ## Interactions
 

@@ -20,7 +20,9 @@ Prerequisites:
 - plans/07 (codegen): `nash_codegen::lower_value(&ModuleSet, QualifiedName) -> &Term<DeBruijn>`
   and `Core::Const`.
 - plans/12 (stdlib) chunk "Ast": `core/src/Ast.nash` is the Nash side of the
-  encoder/decoder in this plan. The two must be changed together.
+  reifier/unreifier in this plan (chunks 4 and 5), and chunk 6 there
+  supplies `Cons.cons`. The tag table and `Ast.nash` must be changed
+  together.
 
 Crates touched: `nash-source`, `nash-parse`, `nash-ast`, `nash-can`,
 `nash-constrain`, `nash-solve`, `nash-codegen`, `nash-driver`, `nash-report`,
@@ -37,19 +39,26 @@ References:
   `generate_test`) for compiling a single definition to a program;
   `crates/aiken-project/src/lib.rs` (`run_tests`) for running programs
   with a budget and collecting traces; `crates/uplc/src/ast.rs`
-  (`Data`/`PlutusData` construction).
+  (`Term::Constr` construction).
 - Current code: `crates/nash-driver/src/compile.rs:145` (`compile_module`),
   `crates/nash-can/src/module.rs:48` (`canonicalize`),
   `crates/nash-constrain/src/expression.rs:25` (`constrain`),
   `crates/nash-plutus/src/program.rs:51` (`eval_version_budget`),
-  `crates/nash-plutus/src/data.rs` (`PlutusData`).
+  `crates/nash-plutus/src/term.rs:31` (`Term::Constr`),
+  `crates/nash-plutus/src/machine/discharge.rs` (`value_as_term`),
+  `crates/nash-plutus/src/constant.rs` (`Constant::{Integer, String, ByteString}`).
 
 Conventions: `'a` is the module arena lifetime. `Arena` is
-`nash_plutus::arena::Arena`; `'p` is its lifetime. Big ADT layout
-(representation.md): constructor tag = declaration index; fields
-positional; Big record alias = `Data.List` of fields in declaration order;
-`Option` = `Some` tag 0 / `None` tag 1; `Bytes` = `B` (all `Ast` text is
-UTF-8 `Bytes`; there is no Big `String`); `Int` = `I`.
+`nash_plutus::arena::Arena`; `'p` is its lifetime. The `Ast` family is
+little (kind `Term`), so its runtime layout is representation.md's
+"Term types": constructor = `constr i [fields]` with `i` the declaration
+index and fields positional; a little record alias or labeled constructor
+is `constr 0 [..]`/`constr i [..]` in field order; `string`/`int`/`bytes`
+fields are the UPLC constants `Constant::String`/`Integer`/`ByteString`;
+`option` = `Some` tag 0 / `None` tag 1; `cons` = `Nil` tag 0 /
+`Cons` tag 1 (`core/Cons.nash`). Nothing in the macro path is `Data`.
+`comptime` results (chunk 9) are unchanged: they must be UPLC constants
+(`Const` or `Big` kind) and are spliced as `Core::Const`.
 
 ---
 
@@ -305,9 +314,9 @@ forms; `Parse/Keyword.hs` for the keyword helpers.
 ```rust
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MacroShape {
-    /// `Ast.Decl -> List Ast.Expr -> List Ast.Decl`
+    /// `Ast.decl -> cons Ast.expr -> cons Ast.decl`
     Decl,
-    /// `List Ast.Expr -> Ast.Expr`
+    /// `cons Ast.expr -> Ast.expr`
     Expr,
 }
 
@@ -399,19 +408,25 @@ Macro shape from the annotation (in `module.rs`, after `canonicalize_aliases`):
 ```rust
 fn macro_shape<'a>(annotation: &Located<CanType<'a>>) -> Result<MacroShape, Error<'a>> {
     match &annotation.value {
-        CanType::Lambda { from, to } if is_ast(from, "Decl") => match &to.value {
+        CanType::Lambda { from, to } if is_ast(from, "decl") => match &to.value {
             CanType::Lambda { from: args, to: out }
-                if is_big_list_of(args, "Expr") && is_big_list_of(out, "Decl") =>
+                if is_cons_of(args, "expr") && is_cons_of(out, "decl") =>
             {
                 Ok(MacroShape::Decl)
             }
             _ => Err(Error::MacroBadShape { region: annotation.region }),
         },
-        CanType::Lambda { from, to } if is_big_list_of(from, "Expr") && is_ast(to, "Expr") => {
+        CanType::Lambda { from, to } if is_cons_of(from, "expr") && is_ast(to, "expr") => {
             Ok(MacroShape::Expr)
         }
         _ => Err(Error::MacroBadShape { region: annotation.region }),
     }
+}
+
+/// `Cons.cons` applied to the named `Ast` type.
+fn is_cons_of(t: &Located<CanType<'_>>, name: &str) -> bool {
+    matches!(&t.value, CanType::Named { reference, args: [elem] }
+        if reference.home.name == "Cons" && reference.name == "cons" && is_ast(elem, name))
 }
 
 fn is_ast(t: &Located<CanType<'_>>, name: &str) -> bool {
@@ -517,8 +532,8 @@ struct Quoter<'a, 'e> { bump: &'a Bump, ast: AstCtors<'a>, env: &'e Env<'a> }
 impl<'a> Quoter<'a, '_> {
     fn expr(&self, e: &'a Located<CanExpr<'a>>) -> CanExpr<'a> {
         let node = match &e.value {
-            CanExpr::Int(n) => self.ctor("Int", &[self.big_int(*n)]),
-            CanExpr::Str(s) => self.ctor("Str", &[self.big_str(s)]),
+            CanExpr::Int(n) => self.ctor("IntLit", &[CanExpr::Int(*n)]),
+            CanExpr::Str(s) => self.ctor("StrLit", &[CanExpr::Str(s)]),
             CanExpr::VarLocal(name) => self.ctor("Var", &[self.name_local(name)]),
             CanExpr::VarTopLevel(q) | CanExpr::VarForeign { reference: q, .. } => {
                 self.ctor("Var", &[self.name_global(*q)])
@@ -529,22 +544,25 @@ impl<'a> Quoter<'a, '_> {
             ),
             CanExpr::Lambda { parameters, body } => self.ctor(
                 "Lambda",
-                &[self.big_list(parameters.iter().map(|p| self.pattern(p))), self.expr_ref(body)],
+                &[self.cons_list(parameters.iter().map(|p| self.pattern(p))), self.expr_ref(body)],
             ),
             CanExpr::Call { function, arguments } => self.ctor(
                 "Call",
-                &[self.expr_ref(function), self.big_list(arguments.iter().map(|a| self.expr_ref(a)))],
+                &[self.expr_ref(function), self.cons_list(arguments.iter().map(|a| self.expr_ref(a)))],
             ),
-            // Splice: the user's expression already evaluates to an Ast.Expr.
+            // Splice: the user's expression already evaluates to an Ast.expr.
             CanExpr::Splice(inner) => return inner.value_copy(),
-            // ...one arm per variant, mirroring Encoder::expr in chunk 4...
+            // ...one arm per variant, mirroring Reifier::expr in chunk 4...
         };
-        self.wrap_expr(node)   // Ast.Expr (Meta None None) node
+        self.wrap_expr(node)   // Ast.Expr { span = None, typ = None } node
     }
+
+    /// `Cons x0 (Cons x1 ... Nil)` built from the `Cons` module's constructors.
+    fn cons_list(&self, items: impl Iterator<Item = CanExpr<'a>>) -> CanExpr<'a> { ... }
 
     fn name_local(&self, s: &str) -> CanExpr<'a> {
         // Binders inside the quote are hygienic.
-        self.ctor("Local", &[self.big_str(s)])
+        self.ctor("Local", &[CanExpr::Str(s)])
     }
 }
 ```
@@ -568,7 +586,7 @@ entries follow `addExposedValue`); `Elm/Interface.hs` `fromModule`
 
 **Tests** (`crates/nash-can/src/snapshots`)
 
-- `assert_can_snapshot!` module declaring `macro m : List Ast.Expr -> Ast.Expr` with an `import Ast` interface stub.
+- `assert_can_snapshot!` module declaring `macro m : cons Ast.expr -> Ast.expr` with `import Ast` and `import Cons` interface stubs.
 - `assert_can_error_snapshot!` same module invoking `m!(1)` → `MacroSameModule`.
 - Importing module using `@Derive.derive(Eq)` on a union → `macro_uses` has one `Decl` use; snapshot it.
 - `m!(x)` where `m` is a value → `MacroNotAMacro`; a decl macro used as `m!()` → `MacroWrongKind`.
@@ -589,7 +607,7 @@ entries follow `addExposedValue`); `Elm/Interface.hs` `fromModule`
 
 **Change**
 
-The encoder needs the solved type of every expression and pattern. Elm
+The reifier needs the solved type of every expression and pattern. Elm
 only produces top-level annotations. Record, per node, the type variable
 the constraint generator used, then resolve after solving.
 
@@ -680,17 +698,23 @@ tests pass.
 
 ---
 
-## Chunk 4: `nash-macro` crate and the encoder
+## Chunk 4: `nash-macro` crate and the reifier (`nash_ast` → `Term::Constr`)
 
 **Files**
 
 - `crates/nash-macro/Cargo.toml` (new; deps: `nash-ast`, `nash-source`, `nash-region`, `nash-plutus`, `nash-solve`, `bumpalo`)
-- `crates/nash-macro/src/lib.rs`, `tags.rs`, `encode.rs`
-- `core/src/Ast.nash` (plans/12 chunk "Ast" — same PR)
+- `crates/nash-macro/src/lib.rs`, `tags.rs`, `reify.rs`
+- `core/src/Ast.nash`, `core/src/Cons.nash` (plans/12 chunks 10 and 6 — same PR)
 
 **Change**
 
-Encode a `MacroUse` into `PlutusData` matching `core/src/Ast.nash`.
+Build, for a `MacroUse`, the UPLC `Term::Constr` tree that *is* the
+little `Ast` value the macro expects, matching `core/src/Ast.nash`. The
+tree is arena-allocated (`nash_plutus::arena::Arena`), constructor tags
+are declaration indices, leaves are `Constant::String`/`Integer`/
+`ByteString` constants, child lists are `Cons`/`Nil` chains, and the
+result is handed to the CEK machine with `Term::apply` (chunk 7). No
+`PlutusData` is built anywhere.
 
 `tags.rs` is the single place the two sides agree. Constructor tags are
 declaration indices in `Ast.nash`; keep the two files side by side.
@@ -699,6 +723,7 @@ declaration indices in `Ast.nash`; keep the two files side by side.
 
 ```rust
 // crates/nash-macro/src/tags.rs
+pub mod cons { pub const NIL: usize = 0; pub const CONS: usize = 1; }          // core/Cons.nash
 pub mod name { pub const LOCAL: u64 = 0; pub const RAW: u64 = 1; pub const GLOBAL: u64 = 2; }
 pub mod kind { pub const BIG: u64 = 0; pub const CONST: u64 = 1; pub const TERM: u64 = 2; pub const STORABLE: u64 = 3; pub const ANY: u64 = 4; pub const ARROW: u64 = 5; pub const VAR: u64 = 6; }
 pub mod expr {
@@ -727,55 +752,66 @@ pub mod assoc { pub const LEFT: u64 = 0; pub const RIGHT: u64 = 1; pub const NON
 pub mod option { pub const SOME: u64 = 0; pub const NONE: u64 = 1; }
 ```
 
-Matching Nash (`core/src/Ast.nash`, order is load-bearing):
+Matching Nash (`core/src/Ast.nash`, little types, order is load-bearing;
+the full listing is docs/macros.md "What the macro sees"):
 
 ```elm
--- text fields are `Bytes` (UTF-8); `Lift string Bytes` converts
-type Name = Local Bytes | Raw Bytes | Global Module Bytes
-type Kind = Big | Const | Term | Storable | Any | Arrow Kind Kind | KindVar Bytes
-type ExprNode
-    = Int Int | Str Bytes | Bytes Bytes | Var Name | Op Name | List (List Expr)
-    | Negate Expr | BinOp Name Expr Expr | Lambda (List Pattern) Expr | Call Expr (List Expr)
-    | If Expr Expr Expr | Let (List Def) Expr | Case Expr (List Arm) | Accessor Bytes
-    | Access Expr Bytes | Update Name (List FieldAssign) | Record (List FieldAssign)
-    | Unit | Tuple (List Expr) | MacroCall Name (List Expr) | Comptime Expr
-type Def = Define Name (List Pattern) Expr (Option Type) | Destruct Pattern Expr
-type PatternNode
-    = PAny | PVar Name | PRecord (List Name) | PAlias Pattern Name | PUnit | PTuple (List Pattern)
-    | PCtor Name (List Pattern) | PList (List Pattern) | PCons Pattern Pattern
-    | PInt Int | PStr Bytes | PBytes Bytes
-type Type = TVar Bytes | TCon Name (List Type) | TFun Type Type | TRecord (List Field) | TTuple (List Type) | TUnit
-type Decl = Value {..} | Union {..} | Alias {..} | Trait Trait | Impl Impl | Infix {..}
-type Assoc = LeftAssoc | RightAssoc | NonAssoc
+type name = Local string | Raw string | Global modname string
+type alias modname = { package : option string, name : string }
+type kind = Big | Const | Term | Storable | Any | Arrow kind kind | KindVar string
+type alias meta = { span : option span, typ : option typ }
+type expr = Expr meta exprNode
+type exprNode
+    = IntLit int | StrLit string | BytesLit bytes | Var name | Op name | ListLit (cons expr)
+    | Negate expr | BinOp name expr expr | Lambda (cons pattern) expr | Call expr (cons expr)
+    | If expr expr expr | Let (cons def) expr | Case expr (cons arm) | Accessor string
+    | Access expr string | Update name (cons fieldAssign) | Record (cons fieldAssign)
+    | UnitLit | Tuple (cons expr) | MacroCall name (cons expr) | Comptime expr
+type def = Define name (cons pattern) expr (option typ) | Destruct pattern expr
+type patternNode
+    = PAny | PVar name | PRecord (cons name) | PAlias pattern name | PUnit | PTuple (cons pattern)
+    | PCtor name (cons pattern) | PList (cons pattern) | PCons pattern pattern
+    | PInt int | PStr string | PBytes bytes
+type typ = TVar string | TCon name (cons typ) | TFun typ typ | TRecord (cons field) | TTuple (cons typ) | TUnit
+type decl = Value {..} | Union {..} | Alias {..} | Trait traitDef | Impl implDef | Infix {..}
+type assoc = LeftAssoc | RightAssoc | NonAssoc
 ```
 
-Encoder:
+Runtime layout (representation.md "Term types"): a constructor is
+`constr i [fields]`, a record alias (`meta`, `modname`, `span`, `arm`,
+...) is `constr 0 [fields]` in field order, a labeled constructor
+(`Value {..}`) is `constr i [fields]` flat, and `cons` cells are
+`constr 0 []` / `constr 1 [x, xs]`.
+
+Reifier:
 
 ```rust
-// crates/nash-macro/src/encode.rs
+// crates/nash-macro/src/reify.rs
 use nash_ast::{Expr as CanExpr, Pattern as CanPattern, Type as CanType, ModuleName, QualifiedName};
-use nash_plutus::{arena::Arena, data::PlutusData};
+use nash_plutus::{arena::Arena, binder::DeBruijn, constant::{Constant, Integer}, term::Term};
 use nash_solve::NodeTypeMap;
 use nash_constrain::NodeId;
 
-pub struct Encoder<'p, 'a> {
+type T<'p> = &'p Term<'p, DeBruijn>;
+
+pub struct Reifier<'p, 'a> {
     arena: &'p Arena,
     types: &'a NodeTypeMap<'a>,
     kinds: &'a dyn Fn(&CanType<'a>) -> nash_constrain::Kind,
 }
 
-impl<'p, 'a> Encoder<'p, 'a> {
-    pub fn decl_use(&self, target: &'a DeclSnapshot<'a>, attr: &'a nash_ast::Attribute<'a>) -> (&'p PlutusData<'p>, &'p PlutusData<'p>) {
+impl<'p, 'a> Reifier<'p, 'a> {
+    pub fn decl_use(&self, target: &'a DeclSnapshot<'a>, attr: &'a nash_ast::Attribute<'a>) -> (T<'p>, T<'p>) {
         let decl = self.decl(target);
-        let args = self.big_list(attr.arguments.iter().map(|a| self.surface_expr(a)));
+        let args = self.cons_list(attr.arguments.iter().map(|a| self.surface_expr(a)));
         (decl, args)
     }
 
-    pub fn expr_use(&self, arguments: &'a [&'a Located<CanExpr<'a>>]) -> &'p PlutusData<'p> {
-        self.big_list(arguments.iter().map(|a| self.expr(a)))
+    pub fn expr_use(&self, arguments: &'a [&'a Located<CanExpr<'a>>]) -> T<'p> {
+        self.cons_list(arguments.iter().map(|a| self.expr(a)))
     }
 
-    pub fn expr(&self, e: &'a Located<CanExpr<'a>>) -> &'p PlutusData<'p> {
+    pub fn expr(&self, e: &'a Located<CanExpr<'a>>) -> T<'p> {
         let typ = self.types.get(&NodeId::of(e)).map(|t| self.typ(t));
         let meta = self.meta(Some(e.region), typ);
         let node = match &e.value {
@@ -789,7 +825,7 @@ impl<'p, 'a> Encoder<'p, 'a> {
                 &[self.global(QualifiedName { home: reference.home, name: reference.name })],
             ),
             CanExpr::VarOperator { reference, .. } => self.constr(tags::expr::OP, &[self.global(*reference)]),
-            CanExpr::List(items) => self.constr(tags::expr::LIST, &[self.big_list(items.iter().map(|i| self.expr(i)))]),
+            CanExpr::List(items) => self.constr(tags::expr::LIST, &[self.cons_list(items.iter().map(|i| self.expr(i)))]),
             CanExpr::Negate(inner) => self.constr(tags::expr::NEGATE, &[self.expr(inner)]),
             CanExpr::Binop { reference, left, right, .. } => self.constr(
                 tags::expr::BINOP,
@@ -797,55 +833,55 @@ impl<'p, 'a> Encoder<'p, 'a> {
             ),
             CanExpr::Lambda { parameters, body } => self.constr(
                 tags::expr::LAMBDA,
-                &[self.big_list(parameters.iter().map(|p| self.pattern(p))), self.expr(body)],
+                &[self.cons_list(parameters.iter().map(|p| self.pattern(p))), self.expr(body)],
             ),
             CanExpr::Call { function, arguments } => self.constr(
                 tags::expr::CALL,
-                &[self.expr(function), self.big_list(arguments.iter().map(|a| self.expr(a)))],
+                &[self.expr(function), self.cons_list(arguments.iter().map(|a| self.expr(a)))],
             ),
             CanExpr::If { branches, final_else } => self.if_chain(branches, final_else),
             CanExpr::Let { definition, body } => self.constr(
                 tags::expr::LET,
-                &[self.big_list([self.def(definition)]), self.expr(body)],
+                &[self.cons_list([self.def(definition)]), self.expr(body)],
             ),
             CanExpr::LetRec { definitions, body } => self.constr(
                 tags::expr::LET,
-                &[self.big_list(definitions.iter().map(|d| self.def(d))), self.expr(body)],
+                &[self.cons_list(definitions.iter().map(|d| self.def(d))), self.expr(body)],
             ),
             CanExpr::LetDestruct { pattern, value, body } => self.constr(
                 tags::expr::LET,
-                &[self.big_list([self.constr(tags::def::DESTRUCT, &[self.pattern(pattern), self.expr(value)])]), self.expr(body)],
+                &[self.cons_list([self.constr(tags::def::DESTRUCT, &[self.pattern(pattern), self.expr(value)])]), self.expr(body)],
             ),
             CanExpr::Case { scrutinee, branches } => self.constr(
                 tags::expr::CASE,
-                &[self.expr(scrutinee), self.big_list(branches.iter().map(|b| self.arm(b)))],
+                &[self.expr(scrutinee), self.cons_list(branches.iter().map(|b| self.arm(b)))],
             ),
             CanExpr::Accessor(field) => self.constr(tags::expr::ACCESSOR, &[self.str(field)]),
             CanExpr::Access { record, field } => self.constr(tags::expr::ACCESS, &[self.expr(record), self.str(field.value)]),
             CanExpr::Update { record, fields, .. } => self.constr(
                 tags::expr::UPDATE,
-                &[self.raw(record), self.big_list(fields.iter().map(|f| self.field_assign(f.field.value, f.value)))],
+                &[self.raw(record), self.cons_list(fields.iter().map(|f| self.field_assign(f.field.value, f.value)))],
             ),
             CanExpr::Record(fields) => self.constr(
                 tags::expr::RECORD,
-                &[self.big_list(fields.iter().map(|f| self.field_assign(f.field.value, f.value)))],
+                &[self.cons_list(fields.iter().map(|f| self.field_assign(f.field.value, f.value)))],
             ),
             CanExpr::Unit => self.constr(tags::expr::UNIT, &[]),
             CanExpr::Tuple { first, second, rest } => self.constr(
                 tags::expr::TUPLE,
-                &[self.big_list([first, second].into_iter().chain(rest.iter().copied()).map(|e| self.expr(e)))],
+                &[self.cons_list([first, second].into_iter().chain(rest.iter().copied()).map(|e| self.expr(e)))],
             ),
             CanExpr::MacroCall { reference, arguments } => self.constr(
                 tags::expr::MACRO_CALL,
-                &[self.global(*reference), self.big_list(arguments.iter().map(|a| self.expr(a)))],
+                &[self.global(*reference), self.cons_list(arguments.iter().map(|a| self.expr(a)))],
             ),
             CanExpr::Comptime(inner) => self.constr(tags::expr::COMPTIME, &[self.expr(inner)]),
-            CanExpr::Hole => unreachable!("holes never survive to encoding: strict pass ran"),
+            CanExpr::Hole => unreachable!("holes never survive to reification: strict pass ran"),
         };
-        self.constr(0, &[meta, node])
+        self.constr(0, &[meta, node])   // `Expr meta node`
     }
 
-    fn if_chain(&self, branches: &'a [nash_ast::IfBranch<'a>], final_else: &'a Located<CanExpr<'a>>) -> &'p PlutusData<'p> {
+    fn if_chain(&self, branches: &'a [nash_ast::IfBranch<'a>], final_else: &'a Located<CanExpr<'a>>) -> T<'p> {
         let (first, rest) = branches.split_first().expect("If has at least one branch");
         let else_ = if rest.is_empty() {
             self.expr(final_else)
@@ -857,114 +893,134 @@ impl<'p, 'a> Encoder<'p, 'a> {
 
     // --- names ---
 
-    fn raw(&self, s: &str) -> &'p PlutusData<'p> {
+    fn raw(&self, s: &str) -> T<'p> {
         self.constr(tags::name::RAW, &[self.str(s)])
     }
 
-    fn global(&self, q: QualifiedName<'a>) -> &'p PlutusData<'p> {
+    fn global(&self, q: QualifiedName<'a>) -> T<'p> {
         self.constr(tags::name::GLOBAL, &[self.module(q.home), self.str(q.name)])
     }
 
-    fn module(&self, m: ModuleName<'a>) -> &'p PlutusData<'p> {
+    /// `modname` is a little record alias: `constr 0 [package, name]`.
+    fn module(&self, m: ModuleName<'a>) -> T<'p> {
         let package = match m.package {
             Some(p) => self.some(self.str(&format!("{}/{}", p.author, p.project))),
             None => self.none(),
         };
-        self.list(&[package, self.str(m.name)])
+        self.record(&[package, self.str(m.name)])
     }
 
     // --- primitives ---
 
-    fn meta(&self, span: Option<Region>, typ: Option<&'p PlutusData<'p>>) -> &'p PlutusData<'p> {
+    fn meta(&self, span: Option<Region>, typ: Option<T<'p>>) -> T<'p> {
         let span = match span {
-            Some(r) => self.some(self.list(&[
+            Some(r) => self.some(self.record(&[
                 self.int(r.start.line as i128), self.int(r.start.column as i128),
                 self.int(r.end.line as i128), self.int(r.end.column as i128),
             ])),
             None => self.none(),
         };
         let typ = typ.map_or_else(|| self.none(), |t| self.some(t));
-        self.list(&[span, typ])
+        self.record(&[span, typ])
     }
 
-    fn constr(&self, tag: u64, fields: &[&'p PlutusData<'p>]) -> &'p PlutusData<'p> {
-        PlutusData::constr(self.arena, tag, self.arena.alloc_slice_copy(fields))
+    fn constr(&self, tag: u64, fields: &[T<'p>]) -> T<'p> {
+        Term::constr(self.arena, tag as usize, self.arena.alloc_slice_copy(fields))
     }
-    fn list(&self, items: &[&'p PlutusData<'p>]) -> &'p PlutusData<'p> {
-        PlutusData::list(self.arena, self.arena.alloc_slice_copy(items))
+    /// Little record alias: `constr 0 [fields]` in declaration order.
+    fn record(&self, fields: &[T<'p>]) -> T<'p> { self.constr(0, fields) }
+    /// `Cons x0 (Cons x1 (... Nil))`, built from the tail.
+    fn cons_list(&self, items: impl IntoIterator<Item = T<'p>>) -> T<'p> {
+        let items: Vec<T<'p>> = items.into_iter().collect();
+        items.iter().rev().fold(self.constr(tags::cons::NIL as u64, &[]), |tail, x| {
+            self.constr(tags::cons::CONS as u64, &[x, tail])
+        })
     }
-    fn big_list(&self, items: impl IntoIterator<Item = &'p PlutusData<'p>>) -> &'p PlutusData<'p> {
-        let v: Vec<_> = items.into_iter().collect();
-        self.list(&v)
+    fn some(&self, t: T<'p>) -> T<'p> { self.constr(tags::option::SOME, &[t]) }
+    fn none(&self) -> T<'p> { self.constr(tags::option::NONE, &[]) }
+    fn int(&self, n: i128) -> T<'p> {
+        Term::constant(self.arena, self.arena.alloc(Constant::Integer(self.arena.alloc(Integer::from(n)))))
     }
-    fn some(&self, d: &'p PlutusData<'p>) -> &'p PlutusData<'p> { self.constr(tags::option::SOME, &[d]) }
-    fn none(&self) -> &'p PlutusData<'p> { self.constr(tags::option::NONE, &[]) }
-    fn int(&self, n: i128) -> &'p PlutusData<'p> { PlutusData::integer_from(self.arena, n) }
-    fn str(&self, s: &str) -> &'p PlutusData<'p> {
-        PlutusData::byte_string(self.arena, self.arena.alloc_slice_copy(s.as_bytes()))
+    fn str(&self, s: &str) -> T<'p> {
+        Term::constant(self.arena, self.arena.alloc(Constant::String(self.arena.alloc_str(s))))
+    }
+    fn bytes(&self, b: &[u8]) -> T<'p> {
+        Term::constant(self.arena, self.arena.alloc(Constant::ByteString(self.arena.alloc_slice_copy(b))))
     }
 }
 ```
 
 `DeclSnapshot` is the canonical view of one decorated declaration
 (`Def` + annotation for values, `Union`/`Alias` with the kind from
-plans/02, `Trait`/`Impl` from plans/03). `surface_expr` encodes attribute
+plans/02, `Trait`/`Impl` from plans/03). `surface_expr` reifies attribute
 arguments from `nash_source::Expr` with `typ = None` and `Raw` names.
-`typ` encodes `CanType` with `Alias` expanded through `AliasType::Filled`.
+`typ` reifies `CanType` with `Alias` expanded through `AliasType::Filled`.
 
-Check `Arena` has `alloc_slice_copy` (`crates/nash-plutus/src/arena.rs`);
-add it if not.
+Check `Arena` has `alloc_slice_copy` and `alloc_str`
+(`crates/nash-plutus/src/arena.rs`); add them if not. `Term::constr` and
+`Term::constant` exist (`term.rs:70-76`).
 
 **Elm/Aiken reference**
 
-Aiken `crates/uplc/src/ast.rs` `Data::constr`/`Data::list` builders; the
-`PlutusData` representation of Aiken's own AST is not reified, so there is
-no direct analogue. Elm has none.
+`crates/nash-plutus/src/term.rs` `Term::constr` and the `Value::Constr`
+arm of `machine/discharge.rs` are the two directions of the same layout.
+Aiken does not reify its AST; Elm has none.
 
-**Tests** (`crates/nash-macro/src/encode.rs` tests)
+**Tests** (`crates/nash-macro/src/reify.rs` tests)
 
-Round-trip tests need the decoder (chunk 5); here, structural snapshots
-of `PlutusData` via `format!("{:?}")`:
+Structural snapshots of the `Term` via `format!("{:?}")` (round trips are
+chunk 5):
 
-- `encode_int_literal`: `1` → `Constr 0 [List [Some span, Some (Constr 1 [Global Builtin int ...])], Constr 0 [I 1]]`.
-- `encode_lambda_local_binder`: `\x -> x` → binder and use both `Raw "x"`.
-- `encode_foreign_var`: `List.map` → `Global {package: Some "nash/core", name: "List"} "map"`.
-- `encode_if_chain`: `if a then 1 else if b then 2 else 3` → nested `If`.
-- `encode_union_decl`: `type Foo 'a = A 'a | B` → `Union` with `kind = Some Big`.
+- `reify_int_literal`: `1` → `Constr 0 [Constr 0 [Some (Constr 0 [ints..]), Some (Constr 1 [Global Builtin "int", Nil])], Constr 0 [(con integer 1)]]`.
+- `reify_lambda_local_binder`: `\x -> x` → binder and use both `Raw "x"`; the parameter list is `Cons (..) Nil`.
+- `reify_foreign_var`: `List.map` → `Global {package: Some "nash/core", name: "List"} "map"`.
+- `reify_if_chain`: `if a then 1 else if b then 2 else 3` → nested `If`.
+- `reify_union_decl`: `type Foo 'a = A 'a | B` → `Union` with `kind = Some Big`.
+- `reify_no_data`: no `Constant::Data` anywhere in the tree for any input (walk and assert).
 
 **Done when** the crate builds in the workspace and the tests pass.
 
 ---
 
-## Chunk 5: decoder `PlutusData` → `nash_source`
+## Chunk 5: unreifier: CEK result `Term` → `nash_source`
 
 **Files**
 
-- `crates/nash-macro/src/decode.rs`
+- `crates/nash-macro/src/unreify.rs`
 - `crates/nash-macro/src/error.rs`
 
 **Change**
 
-Decode macro output into surface AST allocated in the module bump. Every
-node gets the invocation region. Names decode per docs/macros.md:
-`Raw` → plain; `Global` → `VarGlobal`/`CtorGlobal`/`TypeGlobal`;
-`Local` → the text with a trailing `·` (U+00B7), renamed by chunk 6.
+Walk the macro's result back into surface AST allocated in the module
+bump. The CEK machine returns the result `Value` already discharged to a
+`Term` (`EvalResult.term`, via `machine/discharge.rs` `value_as_term`), so
+the walker reads `Term::Constr { tag, fields }` nodes and
+`Term::Constant` leaves and nothing else: a `Term::Lambda`, `Delay`,
+`Builtin`/`Apply`/`Force` (a partially applied builtin), or a constant
+where a constructor is expected is `UnreifyError::NotConstr`, reported as
+`MacroBadOutput`. Every node gets the invocation region. Names decode per
+docs/macros.md: `Raw` → plain; `Global` → `VarGlobal`/`CtorGlobal`/
+`TypeGlobal`; `Local` → the text with a trailing `·` (U+00B7), renamed by
+chunk 6.
 
 **Code**
 
 ```rust
 // crates/nash-macro/src/error.rs
 #[derive(Debug)]
-pub enum DecodeError {
+pub enum UnreifyError {
     /// `path` is the chain of constructor names from the root, for the diagnostic.
     BadShape { path: Vec<&'static str>, found: String },
-    BadUtf8 { path: Vec<&'static str> },
+    /// A node position held something that is not a `constr` tree.
+    NotConstr { path: Vec<&'static str>, found: &'static str },   // "lambda" | "delay" | "builtin" | "constant"
     GlobalBinder { name: String },
     TupleTooShort { len: usize },
 }
 
-// crates/nash-macro/src/decode.rs
-pub struct Decoder<'a> {
+// crates/nash-macro/src/unreify.rs
+type T<'p> = &'p Term<'p, DeBruijn>;
+
+pub struct Unreifier<'a> {
     bump: &'a Bump,
     site: Region,
     path: Vec<&'static str>,
@@ -972,16 +1028,51 @@ pub struct Decoder<'a> {
 
 pub const LOCAL_MARK: char = '\u{00B7}';
 
-impl<'a> Decoder<'a> {
+impl<'a> Unreifier<'a> {
     pub fn new(bump: &'a Bump, site: Region) -> Self { Self { bump, site, path: Vec::new() } }
 
-    pub fn decls(&mut self, d: &PlutusData<'_>) -> Result<Vec<DecodedDecl<'a>>, DecodeError> {
-        self.list_of(d, "List Decl", |s, x| s.decl(x))
+    pub fn decls(&mut self, t: T<'_>) -> Result<Vec<DecodedDecl<'a>>, UnreifyError> {
+        self.cons_of(t, "cons decl", |s, x| s.decl(x))
     }
 
-    pub fn expr(&mut self, d: &PlutusData<'_>) -> Result<&'a Located<SourceExpr<'a>>, DecodeError> {
-        let [_meta, node] = self.fields(d, 0, "Expr")? else { unreachable!() };
-        let (tag, fields) = self.constr(node, "ExprNode")?;
+    /// `Term::Constr` or an error naming what was found instead.
+    fn constr<'p>(&mut self, t: T<'p>, what: &'static str) -> Result<(usize, &'p [T<'p>]), UnreifyError> {
+        self.path.push(what);
+        match t {
+            Term::Constr { tag, fields } => Ok((*tag, fields)),
+            Term::Lambda { .. } => Err(self.not_constr("lambda")),
+            Term::Delay(_) => Err(self.not_constr("delay")),
+            Term::Builtin(_) | Term::Apply { .. } | Term::Force(_) => Err(self.not_constr("builtin")),
+            Term::Constant(_) => Err(self.not_constr("constant")),
+            // a discharged value is closed and fully evaluated
+            Term::Var(_) | Term::Case { .. } | Term::Error => unreachable!("not a value"),
+        }
+    }
+
+    /// Walk a `Cons x rest` chain to `Nil`.
+    fn cons_of<'p, X>(&mut self, mut t: T<'p>, what: &'static str, f: impl Fn(&mut Self, T<'p>) -> Result<X, UnreifyError>) -> Result<Vec<X>, UnreifyError> {
+        let mut out = Vec::new();
+        loop {
+            match self.constr(t, what)? {
+                (tags::cons::NIL, []) => return Ok(out),
+                (tags::cons::CONS, [x, rest]) => { out.push(f(self, x)?); t = rest; }
+                (tag, fields) => return Err(self.bad_shape(format!("cons tag {tag} with {} fields", fields.len()))),
+            }
+        }
+    }
+
+    fn str(&mut self, t: T<'_>) -> Result<&'a str, UnreifyError> {
+        match t {
+            Term::Constant(Constant::String(s)) => Ok(self.bump.alloc_str(s)),
+            other => Err(self.bad_shape(format!("expected a string constant, found {other:?}"))),
+        }
+    }
+    // `int` (`Constant::Integer`), `bytes` (`Constant::ByteString`), and
+    // `option` (`SOME [x]` / `NONE []`) follow the same shape.
+
+    pub fn expr(&mut self, t: T<'_>) -> Result<&'a Located<SourceExpr<'a>>, UnreifyError> {
+        let [_meta, node] = self.fields(t, 0, "expr")? else { unreachable!() };
+        let (tag, fields) = self.constr(node, "exprNode")?;
         let value = match (tag, fields) {
             (tags::expr::INT, [n]) => SourceExpr::Int(self.int(n)?),
             (tags::expr::STR, [s]) => SourceExpr::Str(self.str(s)?),
@@ -1006,31 +1097,31 @@ impl<'a> Decoder<'a> {
                 final_else: self.expr(e)?,
             },
             (tags::expr::LET, [defs, body]) => SourceExpr::Let {
-                defs: self.list_of_refs(defs, "List Def", |s, x| s.def(x))?,
+                defs: self.cons_of_refs(defs, "cons def", |s, x| s.def(x))?,
                 body: self.expr(body)?,
             },
             (tags::expr::CASE, [scrut, arms]) => SourceExpr::Case {
                 scrutinee: self.expr(scrut)?,
-                arms: self.list_of_refs(arms, "List Arm", |s, x| s.arm(x))?,
+                arms: self.cons_of_refs(arms, "cons arm", |s, x| s.arm(x))?,
             },
             (tags::expr::UNIT, []) => SourceExpr::Unit,
             (tags::expr::TUPLE, [items]) => {
                 let items = self.exprs(items)?;
                 let [first, second, rest @ ..] = items else {
-                    return Err(DecodeError::TupleTooShort { len: items.len() });
+                    return Err(UnreifyError::TupleTooShort { len: items.len() });
                 };
                 SourceExpr::Tuple { first, second, rest }
             }
             (tags::expr::MACRO_CALL, [name, args]) => self.macro_call(name, args)?,
             (tags::expr::COMPTIME, [e]) => SourceExpr::Comptime(self.expr(e)?),
             // ...ACCESSOR, ACCESS, UPDATE, RECORD, BYTES...
-            (tag, fields) => return Err(self.bad_shape(format!("ExprNode tag {tag} with {} fields", fields.len()))),
+            (tag, fields) => return Err(self.bad_shape(format!("exprNode tag {tag} with {} fields", fields.len()))),
         };
         Ok(self.at(value))
     }
 
     /// `Var` with the three name modes.
-    fn var(&mut self, name: &PlutusData<'_>) -> Result<SourceExpr<'a>, DecodeError> {
+    fn var(&mut self, name: T<'_>) -> Result<SourceExpr<'a>, UnreifyError> {
         Ok(match self.name(name)? {
             Name::Local(s) => SourceExpr::Var { kind: var_type(s), name: self.local(s) },
             Name::Raw(s) => SourceExpr::Var { kind: var_type(s), name: self.str_alloc(s) },
@@ -1049,7 +1140,7 @@ impl<'a> Decoder<'a> {
     /// symbol the invocation module will see: for a `Global` function name the
     /// decoder emits a `Call (VarGlobal fn) [l, r]` instead, because operator
     /// symbols are not stable across modules.
-    fn binop(&mut self, op: &PlutusData<'_>, l: &PlutusData<'_>, r: &PlutusData<'_>) -> Result<SourceExpr<'a>, DecodeError> {
+    fn binop(&mut self, op: T<'_>, l: T<'_>, r: T<'_>) -> Result<SourceExpr<'a>, UnreifyError> {
         let function = match self.name(op)? {
             Name::Global { package, module, name } => self.at(SourceExpr::VarGlobal { package, module, name }),
             Name::Raw(s) | Name::Local(s) => self.at(SourceExpr::Var { kind: VarType::LowVar, name: self.str_alloc(s) }),
@@ -1064,20 +1155,21 @@ impl<'a> Decoder<'a> {
         self.bump.alloc(Located::at(self.site, value))
     }
 
-    fn name(&mut self, d: &PlutusData<'_>) -> Result<Name<'a>, DecodeError> {
-        let (tag, fields) = self.constr(d, "Name")?;
+    fn name(&mut self, t: T<'_>) -> Result<Name<'a>, UnreifyError> {
+        let (tag, fields) = self.constr(t, "name")?;
         Ok(match (tag, fields) {
             (tags::name::LOCAL, [s]) => Name::Local(self.str(s)?),
             (tags::name::RAW, [s]) => Name::Raw(self.str(s)?),
             (tags::name::GLOBAL, [m, s]) => {
-                let [package, module] = self.fields_list(m, "Module")? else { unreachable!() };
+                // `modname` record alias: constr 0 [package, name]
+                let [package, module] = self.fields(m, 0, "modname")? else { unreachable!() };
                 Name::Global {
                     package: self.option(package, |s, x| s.str(x))?,
                     module: self.str(module)?,
                     name: self.str(s)?,
                 }
             }
-            _ => return Err(self.bad_shape("Name")),
+            _ => return Err(self.bad_shape("name")),
         })
     }
 }
@@ -1099,27 +1191,31 @@ pub enum DecodedDecl<'a> {
 ```
 
 Binder positions (`PVar`, `Define` name, lambda params via `PVar`,
-`Union.name`, `Ctor.name`, `Value.name`) reject `Global` with
-`DecodeError::GlobalBinder`.
+`Union.name`, `ctor.name`, `Value.name`) reject `Global` with
+`UnreifyError::GlobalBinder`.
 
-Strings come back as `B` UTF-8; `self.str` validates and reports
-`BadUtf8` with the path.
+Strings are native `Constant::String` (`&str`), so there is no UTF-8
+check; ints are `Constant::Integer` (`BigInt`, converted with a range
+check for spans and precedences); bytes are `Constant::ByteString`.
 
 **Elm/Aiken reference**
 
-None direct. Aiken's `crates/aiken-lang/src/test_framework.rs`
-`Prng::from_result` shows reading structured `PlutusData` back out of an
-evaluated term, which is how the driver obtains the `PlutusData` this
-decoder consumes.
+`crates/nash-plutus/src/machine/discharge.rs` `value_as_term` is what
+turns the CEK `Value` (with `Value::Constr(tag, fields)`) into the `Term`
+this walker reads; `EvalResult.term` already carries it. Aiken's
+`test_framework.rs` `Prng::from_result` is the analogous read-back of a
+structured result, over `PlutusData` rather than `constr`.
 
-**Tests** (`crates/nash-macro/src/decode.rs`, round trips with chunk 4)
+**Tests** (`crates/nash-macro/src/unreify.rs`, round trips with chunk 4;
+no CEK evaluation is needed because both sides are `Term`)
 
-- `roundtrip_expr`: parse → canonicalize → encode → decode → print equals
+- `roundtrip_expr`: parse → canonicalize → reify → unreify → print equals
   the printed original for `\x -> if x then 1 else f x 2`, `case m of Some y -> y; None -> 0`,
   `let a = 1 in a + a`, `{ r | f = 1 }`, `(a, b, c)`.
-- `decode_local_marks`: `Lambda [PVar (Local "x")] (Var (Local "x"))` decodes to `\x· -> x·`.
-- `decode_global_binder_rejected`.
-- `decode_bad_shape_reports_path`: tag 99 at `Expr/Call/arguments[1]`.
+- `unreify_local_marks`: `Lambda (Cons (PVar (Local "x")) Nil) (Var (Local "x"))` decodes to `\x· -> x·`.
+- `unreify_global_binder_rejected`.
+- `unreify_bad_shape_reports_path`: tag 99 at `expr/Call/arguments[1]`.
+- `unreify_lambda_rejected`: a `Term::Lambda` in an argument position is `NotConstr { found: "lambda" }`.
 
 **Done when** round trips are byte-identical under the debug printer of
 chunk 12 (written first as a test helper, promoted in chunk 12).
@@ -1134,7 +1230,7 @@ chunk 12 (written first as a test helper, promoted in chunk 12).
 
 **Change**
 
-Rename every `x·` name produced by the decoder to `x·{round}_{use}` so
+Rename every `x·` name produced by the unreifier to `x·{round}_{use}` so
 that each expansion's locals are distinct from user names and from other
 expansions. No scope analysis is needed: all `Local "x"` in one
 expansion denote the same binder family by construction (docs/macros.md).
@@ -1164,7 +1260,7 @@ The walk is a full surface-AST rebuild (the arena AST is immutable);
 it touches `Expr::Var`, `Pattern::Var`, `Pattern::Alias`, `Def::Define`
 names, `Value.name`, `Union.name`, `Ctor.name`, `Alias.name`, and
 record field names in `Pattern::Record` (a `Local` field name is an
-error: fields are not binders — `DecodeError::LocalField`).
+error: fields are not binders — `UnreifyError::LocalField`).
 
 Diagnostics: `nash-report` renders a `NotFoundVar` whose name contains
 `LOCAL_MARK` as `MacroUnboundLocal` (chunk 11).
@@ -1196,16 +1292,16 @@ None. Conceptually Racket's "marks", simplified to one mark per expansion.
 **Change**
 
 `nash-codegen` produces a UPLC program per macro. `nash-macro::run`
-applies it to the encoded input under a budget and returns the result
-`PlutusData` or the failure message.
+applies it to the reified input terms under a budget and returns the
+result `Term` (the discharged value) or the failure message.
 
 **Code**
 
 ```rust
 // crates/nash-codegen/src/macro_.rs
 /// Compile one macro definition to a closed program: the macro's Core
-/// term with all dependencies inlined. Arguments are Data (Big), so no
-/// wrapper conversion is needed.
+/// term with all dependencies inlined. Arguments are little `Ast` values,
+/// i.e. `constr` terms applied directly, so no wrapper conversion is needed.
 pub fn compile_macro<'p>(
     arena: &'p Arena,
     set: &ModuleSet<'_>,
@@ -1225,7 +1321,8 @@ pub fn encode_macro(program: &Program<'_, DeBruijn>) -> Vec<u8> {
 ```rust
 // crates/nash-macro/src/run.rs
 pub struct MacroRun<'p> {
-    pub output: &'p PlutusData<'p>,
+    /// The discharged result value (`EvalResult.term`); chunk 5 walks it.
+    pub output: &'p Term<'p, DeBruijn>,
     pub budget: ExBudget,
     pub logs: Vec<String>,
 }
@@ -1233,37 +1330,37 @@ pub struct MacroRun<'p> {
 pub enum MacroRunError {
     /// `message` is the last trace line, if any; `machine` the CEK error text.
     Failed { message: Option<String>, machine: String, logs: Vec<String> },
-    NotData { term: String },
 }
 
 pub fn run_decl_macro<'p>(
     arena: &'p Arena,
     program: &[u8],
-    decl: &'p PlutusData<'p>,
-    args: &'p PlutusData<'p>,
+    decl: &'p Term<'p, DeBruijn>,
+    args: &'p Term<'p, DeBruijn>,
     budget: ExBudget,
 ) -> Result<MacroRun<'p>, MacroRunError> {
     let program = nash_plutus::flat::decode::<DeBruijn>(arena, program).expect("macro program was encoded by this compiler");
-    let applied = program
-        .apply(arena, Term::data(arena, decl))
-        .apply(arena, Term::data(arena, args));
-    finish(arena, applied.eval_version_budget(arena, PlutusVersion::V3, budget))
+    let applied = program.apply(arena, decl).apply(arena, args);   // Program::apply wraps Term::Apply
+    finish(applied.eval_version_budget(arena, PlutusVersion::V3, budget))
 }
 
-pub fn run_expr_macro<'p>(arena: &'p Arena, program: &[u8], args: &'p PlutusData<'p>, budget: ExBudget) -> Result<MacroRun<'p>, MacroRunError> {
+pub fn run_expr_macro<'p>(arena: &'p Arena, program: &[u8], args: &'p Term<'p, DeBruijn>, budget: ExBudget) -> Result<MacroRun<'p>, MacroRunError> {
     let program = nash_plutus::flat::decode::<DeBruijn>(arena, program).expect("macro program was encoded by this compiler");
-    finish(arena, program.apply(arena, Term::data(arena, args)).eval_version_budget(arena, PlutusVersion::V3, budget))
+    finish(program.apply(arena, args).eval_version_budget(arena, PlutusVersion::V3, budget))
 }
 
-fn finish<'p>(arena: &'p Arena, result: EvalResult<'p, DeBruijn>) -> Result<MacroRun<'p>, MacroRunError> {
+fn finish<'p>(result: EvalResult<'p, DeBruijn>) -> Result<MacroRun<'p>, MacroRunError> {
     let logs = result.info.logs;
     match result.term {
-        Ok(Term::Constant(Constant::Data(d))) => Ok(MacroRun { output: d, budget: result.info.consumed_budget, logs }),
-        Ok(other) => Err(MacroRunError::NotData { term: format!("{other:?}") }),
+        Ok(term) => Ok(MacroRun { output: term, budget: result.info.consumed_budget, logs }),
         Err(e) => Err(MacroRunError::Failed { message: logs.last().cloned(), machine: format!("{e}"), logs }),
     }
 }
 ```
+
+The argument terms are closed `constr`/constant trees, so applying them
+to a De Bruijn program needs no index shifting. Whether the result has
+the right shape is chunk 5's job; `run` does not inspect it.
 
 Match the real `Term`/`Constant` variant names in
 `crates/nash-plutus/src/term.rs:9` and `constant.rs`.
@@ -1276,7 +1373,7 @@ definition with its dependencies to a `Program`), `crates/aiken-project/src/lib.
 
 **Tests** (`crates/nash-codegen/tests/macro_.rs`)
 
-- Compile `macro id : List Ast.Expr -> Ast.Expr; id args = List.head (lower args) |> Option.unwrap` and run it on `[Ast.int 1]`; output equals the input `Data`.
+- Compile `macro id : cons Ast.expr -> Ast.expr; id args = case args of Cons e _ -> e; Nil -> fail "no args"` and run it on the reified `Cons (Ast.int 1) Nil`; the output `Term` equals the reified `Ast.int 1`.
 - A macro that `fail "boom"`s returns `Failed { message: Some("boom") }`.
 - Budget exhaustion returns `Failed` with the machine's budget error.
 
@@ -1355,25 +1452,25 @@ pub fn expand<'a, 's>(
         }
 
         let arena = Arena::new();
-        let encoder = Encoder::new(&arena, &node_types, kind_of);
+        let reifier = Reifier::new(&arena, &node_types, kind_of);
         let mut outputs: Vec<Output<'a>> = Vec::with_capacity(can.macro_uses.len());
         for (use_index, use_) in can.macro_uses.iter().enumerate() {
             let gensym = Gensym { round, use_index: use_index as u32 };
             let program = state.macro_program(use_.reference())?;
             let output = match use_ {
                 MacroUse::Decl { target, attribute } => {
-                    let (decl, args) = encoder.decl_use(&can.module.snapshot(*target), attribute);
+                    let (decl, args) = reifier.decl_use(&can.module.snapshot(*target), attribute);
                     let run = run_decl_macro(&arena, program, decl, args, state.limits.budget)
                         .map_err(|e| Diagnostic::macro_failed(attribute.region, use_.reference(), e))?;
-                    let decls = Decoder::new(bump, attribute.region).decls(run.output)
+                    let decls = Unreifier::new(bump, attribute.region).decls(run.output)
                         .map_err(|e| Diagnostic::macro_bad_output(attribute.region, use_.reference(), e))?;
                     Output::Decls { target: *target, decls: gensym.rename(bump, decls) }
                 }
                 MacroUse::Expr { region, arguments, .. } => {
-                    let args = encoder.expr_use(arguments);
+                    let args = reifier.expr_use(arguments);
                     let run = run_expr_macro(&arena, program, args, state.limits.budget)
                         .map_err(|e| Diagnostic::macro_failed(*region, use_.reference(), e))?;
-                    let expr = Decoder::new(bump, *region).expr(run.output)
+                    let expr = Unreifier::new(bump, *region).expr(run.output)
                         .map_err(|e| Diagnostic::macro_bad_output(*region, use_.reference(), e))?;
                     Output::Expr { region: *region, expr: gensym.rename_expr(bump, expr) }
                 }
@@ -1421,7 +1518,7 @@ loop wraps). Aiken has no macros; its `aiken-project/src/lib.rs`
 
 **Tests** (`crates/nash-driver/src/compile.rs` tests, in-memory sources)
 
-- `test_expression_macro_expands`: module `M` with `macro twice : List Ast.Expr -> Ast.Expr; twice args = quote (~(head args) + ~(head args))`; module `Main` with `main = twice!(1)`; build succeeds and `Main`'s interface says `main : int`.
+- `test_expression_macro_expands`: module `M` with `macro twice : cons Ast.expr -> Ast.expr; twice args = case args of Cons a _ -> quote (~a + ~a); Nil -> fail "twice: one argument"`; module `Main` with `main = twice!(1)`; build succeeds and `Main`'s interface says `main : int`.
 - `test_decl_macro_appends`: a decl macro that returns `[decl, decl2]`; `Main` exports both.
 - `test_same_module_use_rejected`.
 - `test_expansion_limit`: a macro that emits itself; error names the site.
@@ -1560,12 +1657,12 @@ renders `Ctor field1 field2` with parentheses for nested; `ToData` /
 **Code** (`core/src/Derive.nash`, excerpt beyond the doc's `deriveEq`)
 
 ```elm
-deriveOrd : Decl -> Decl
+deriveOrd : decl -> decl
 deriveOrd decl =
     case decl of
-        Union union ->
+        Union { name, params, ctors } ->
             let
-                self = selfType union
+                self = selfType name params
                 a = Ast.name "a"
                 b = Ast.name "b"
 
@@ -1574,42 +1671,40 @@ deriveOrd decl =
                     let
                         xs = binders "x" ctor
                         ys = binders "y" ctor
-                        pairs = List.map2 (\x y -> quote (compare ~(Ast.var x) ~(Ast.var y))) xs ys
+                        pairs = Cons.map2 (\x y -> quote (compare ~(Ast.var x) ~(Ast.var y))) xs ys
                     in
                     Ast.arm
-                        (Ast.ptuple [ ctorPat ctor xs, ctorPat ctor ys ])
-                        (List.foldr (\c acc -> quote (Ordering.then_ ~c ~acc)) (quote EQ) pairs)
+                        (Ast.ptuple (Cons (ctorPat ctor xs) (Cons.singleton (ctorPat ctor ys))))
+                        (Cons.foldr (\c acc -> quote (Ordering.then_ ~c ~acc)) (quote EQ) pairs)
 
                 differentCtor =
                     Ast.arm Ast.wildcard
                         (quote (compare (~(indexOf a)) (~(indexOf b))))
 
-                -- `union.ctors : List Ctor` is Big; lower once, builders lift back
-                ctors = lower union.ctors
-
                 indexOf v =
                     Ast.case_ (Ast.var v)
-                        (List.indexedMap (\i ctor -> Ast.arm (ctorPat ctor (wild ctor)) (Ast.int i)) ctors)
+                        (Cons.indexedMap (\i ctor -> Ast.arm (ctorPat ctor (wild ctor)) (Ast.int i)) ctors)
             in
-            Ast.impl (Raw "Ord") [ self ] (context "Ord" union)
-                [ Ast.def (Raw "compare") [ Ast.pvar a, Ast.pvar b ]
-                    (Ast.case_ (Ast.tuple [ Ast.var a, Ast.var b ])
-                        (List.indexedMap sameCtor ctors ++ [ differentCtor ])) ]
+            Ast.impl (Raw "Ord") (Cons.singleton self) (context "Ord" params)
+                (Cons.singleton
+                    (Ast.def (Raw "compare") (Cons (Ast.pvar a) (Cons.singleton (Ast.pvar b)))
+                        (Ast.case_ (Ast.tuple (Cons (Ast.var a) (Cons.singleton (Ast.var b))))
+                            (Cons.append (Cons.indexedMap sameCtor ctors) (Cons.singleton differentCtor)))))
 
         _ ->
             fail "derive(Ord): only `type` declarations can derive Ord"
 
-deriveToData : Decl -> Decl
+deriveToData : decl -> decl
 deriveToData decl =
     case decl of
-        Union union ->
-            if union.kind /= Some Big then
-                fail ("derive(ToData): " ++ Ast.nameText union.name ++ " is not a Big type")
+        Union { name, params, kind } ->
+            if kind /= Some Big then
+                fail ("derive(ToData): " ++ Ast.nameText name ++ " is not a Big type")
             else
-                Ast.impl (Raw "ToData") [ selfType union ] []
-                    [ Ast.def (Raw "toData") [] (quote Builtin.identity) ]
+                Ast.impl (Raw "ToData") (Cons.singleton (selfType name params)) Nil
+                    (Cons.singleton (Ast.def (Raw "toData") Nil (quote Builtin.identity)))
 
-        Alias alias ->
+        Alias { name, params, kind, typ } ->
             ...
 
         _ ->
@@ -1644,7 +1739,8 @@ docs/macros.md's description.
 
 Render every macro/comptime error listed in docs/macros.md as a miette
 `Diagnostic` with Elm-style prose. `MacroFailed` shows the macro name,
-the site, and the message. `MacroBadOutput` shows the decoder path.
+the site, and the message. `MacroBadOutput` shows the unreifier path and
+the offending term (a lambda, a wrong tag, a wrong field count).
 Strict-pass errors inside generated code include the generated
 declaration pretty-printed by the chunk 12 printer (replaced by
 `nash-fmt` when plans/13 lands).
@@ -1769,7 +1865,7 @@ returns `print::module` of the named module after the final round.
 
 ```
 1 syntax ─┐
-2 can ────┼─ 3 node types ─ 4 encoder ─ 5 decoder ─ 6 hygiene ─┐
+2 can ────┼─ 3 node types ─ 4 reifier ─ 5 unreifier ─ 6 hygiene ─┐
            │                                                   ├─ 8 driver loop ─ 10 derive ─ 12 snapshots
 7 codegen (needs plans/07) ────────────────────────────────────┘        │
 9 comptime (needs plans/02, plans/07)                                   11 diagnostics
