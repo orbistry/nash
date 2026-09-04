@@ -40,6 +40,7 @@ tests, macros, comptime, stdlib, fmt, docs.
 | Big <-> little | Explicit. `ToData`/`FromData` on Big types (`toData`, `fromData` shallow, `validateData` full). `Lift 'small 'big` multi-param trait (`lift`/`lower`) between reprs; built-in reflexive `impl Big 'a => Lift 'a 'a` (exempt from head rules) so `Lift 'a 'b => Lift (list 'a) (List 'b)` covers `list Int`. `validateData : Data -> 'a` traps on mismatch; `Data.Decode` is the non-failing path. No implicit coercion. |
 | Literals | Polymorphic via `FromInt` / `FromString` / `FromBytes` traits. Ambiguous literals default to little (`int`, `string`, `bytes`). |
 | Operators | Trait methods (`Num`, `Integral`, `Eq`, `Ord`, `Semigroup`, ...). Elm's `number`/`comparable`/`appendable` supertypes removed. |
+| Operator sections | Whole `(+)` plus partial `(> 5)` / `(5 >)`, canonicalized to hygienic lambdas; `(-x)` stays negation. |
 | Dropped from Elm | `Float`, `Char`, row polymorphism, magic supertypes, ports/effects. |
 | Validators | `validator module Foo exposing (main)`. `main` required, signature free (args must be Big or Const kind; Term-kind args are an error), all args become lambdas. Success = evaluation does not error; return value ignored. No blueprint. |
 | Tests | `tests` block at end of module with its own imports. `test "name" =`, `prop "name" =` with `let x via gen in`. Bodies are sequencing blocks (`e : unit` ⇒ `let () = e in ..`; `x <- e` ⇒ `let x = e`; no test monad). Power-assert `assert`. `fail` / `fail once`, `within (cpu N, mem M)`, `label`. |

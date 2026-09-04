@@ -139,18 +139,20 @@ constructs that many calls to the primitive `Builtin.tailList`:
 ```elm
 module TailMacro exposing (tail)
 
-import Ast
+import Ast exposing (type expr(..), type exprNode(..))
 import Builtin
+import Cons exposing (type cons(..))
 
-macro tail : List Ast.Expr -> Ast.Expr
+macro tail : cons Ast.expr -> Ast.expr
 tail arguments =
-    case lower arguments of
-        [ Ast.Expr _ (Ast.Int count), value ] ->
-            repeatTail (lower count) value
+    case arguments of
+        Cons (Expr _ (IntLit count)) (Cons value Nil) ->
+            repeatTail count value
 
         _ ->
             fail "tail: expected an integer literal and an expression"
 
+repeatTail : int -> Ast.expr -> Ast.expr
 repeatTail count value =
     if count < 0 then
         fail "tail: count cannot be negative"
@@ -160,34 +162,22 @@ repeatTail count value =
         repeatTail (count - 1) (quote (~value |> Builtin.tailList))
 ```
 
-From another module, `tail!(3, xs)` expands to:
-
-```elm
-xs |> Builtin.tailList |> Builtin.tailList |> Builtin.tailList
-```
-
-`tail!(0, xs)` expands to `xs`, while `tail!(n, xs)` is rejected because the
-value of `n` is not available during expansion. `Builtin.tailList` is partial,
-so the generated program fails at runtime if the list has fewer than `count`
-elements. The safe `List.tail` returns an `option` and therefore cannot be
-piped directly into another `List.tail`.
-
 A macro can likewise unroll a predicate over a list literal:
 
 ```elm
 module PredicateMacros exposing (predicateAll)
 
-import Ast
-import List
+import Ast exposing (type expr(..), type exprNode(..))
+import Cons exposing (type cons(..))
 
-macro predicateAll : List Ast.Expr -> Ast.Expr
+macro predicateAll : cons Ast.expr -> Ast.expr
 predicateAll arguments =
-    case lower arguments of
-        [ predicate, Ast.Expr _ (Ast.List items) ] ->
+    case arguments of
+        Cons predicate (Cons (Expr _ (ListLit items)) Nil) ->
             Ast.and
-                (List.map
-                    (\item -> Ast.call predicate [ item ])
-                    (lower items)
+                (Cons.map
+                    (\item -> Ast.call predicate (Cons.singleton item))
+                    items
                 )
 
         _ ->
@@ -214,7 +204,7 @@ Normal beta reduction can simplify that further to:
 
 The literal list is gone from the generated program, so there is no runtime
 fold or list traversal. The empty list expands to `True` through `Ast.and
-[]`. `predicateAll!((> 5), xs)` is rejected because a runtime list cannot be
+Nil`. `predicateAll!((> 5), xs)` is rejected because a runtime list cannot be
 unrolled by inspecting its syntax. The ordinary runtime version remains:
 
 ```elm
