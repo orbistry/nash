@@ -1,0 +1,310 @@
+---
+source: crates/nash-parse/src/expression/do_.rs
+description: "Code (indented inside a def):\n\n    do\n        let\n            twice = x * 2\n            name = \"n\"\n        label name\n        assert (twice > x)\n"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 5,
+        },
+        end: Position {
+            line: 6,
+            column: 27,
+        },
+    },
+    value: Do {
+        stmts: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 2,
+                        column: 9,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 23,
+                    },
+                },
+                value: Let(
+                    [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 13,
+                                },
+                            },
+                            value: Define {
+                                name: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 13,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 18,
+                                        },
+                                    },
+                                    value: "twice",
+                                },
+                                args: [],
+                                body: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 21,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 26,
+                                        },
+                                    },
+                                    value: BinOps {
+                                        operands: [
+                                            BinOpOperand {
+                                                expr: Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 3,
+                                                            column: 21,
+                                                        },
+                                                        end: Position {
+                                                            line: 3,
+                                                            column: 22,
+                                                        },
+                                                    },
+                                                    value: Var {
+                                                        kind: LowVar,
+                                                        name: "x",
+                                                    },
+                                                },
+                                                op: Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 3,
+                                                            column: 23,
+                                                        },
+                                                        end: Position {
+                                                            line: 3,
+                                                            column: 24,
+                                                        },
+                                                    },
+                                                    value: "*",
+                                                },
+                                            },
+                                        ],
+                                        last: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 3,
+                                                    column: 25,
+                                                },
+                                                end: Position {
+                                                    line: 3,
+                                                    column: 26,
+                                                },
+                                            },
+                                            value: Int(
+                                                2,
+                                            ),
+                                        },
+                                    },
+                                },
+                                annotation: None,
+                            },
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 9,
+                                },
+                            },
+                            value: Define {
+                                name: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 13,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 17,
+                                        },
+                                    },
+                                    value: "name",
+                                },
+                                args: [],
+                                body: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 20,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 23,
+                                        },
+                                    },
+                                    value: Str(
+                                        "n",
+                                    ),
+                                },
+                                annotation: None,
+                            },
+                        },
+                    ],
+                ),
+            },
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 5,
+                        column: 9,
+                    },
+                    end: Position {
+                        line: 5,
+                        column: 19,
+                    },
+                },
+                value: Expr(
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 9,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 19,
+                            },
+                        },
+                        value: Call {
+                            function: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 5,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        column: 14,
+                                    },
+                                },
+                                value: Var {
+                                    kind: LowVar,
+                                    name: "label",
+                                },
+                            },
+                            arguments: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 15,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 19,
+                                        },
+                                    },
+                                    value: Var {
+                                        kind: LowVar,
+                                        name: "name",
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ),
+            },
+        ],
+        last: Located {
+            region: Region {
+                start: Position {
+                    line: 6,
+                    column: 9,
+                },
+                end: Position {
+                    line: 6,
+                    column: 27,
+                },
+            },
+            value: Assert(
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 26,
+                        },
+                    },
+                    value: BinOps {
+                        operands: [
+                            BinOpOperand {
+                                expr: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 17,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 22,
+                                        },
+                                    },
+                                    value: Var {
+                                        kind: LowVar,
+                                        name: "twice",
+                                    },
+                                },
+                                op: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 24,
+                                        },
+                                    },
+                                    value: ">",
+                                },
+                            },
+                        ],
+                        last: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 25,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 26,
+                                },
+                            },
+                            value: Var {
+                                kind: LowVar,
+                                name: "x",
+                            },
+                        },
+                    },
+                },
+            ),
+        },
+    },
+}

@@ -4076,4 +4076,9 @@ mod tests {
     fn keyword_expression_unsupported() {
         assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = assert True\n");
     }
+
+    #[test]
+    fn do_block_unsupported() {
+        assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = do\n    action\n");
+    }
 }

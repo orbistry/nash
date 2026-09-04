@@ -151,6 +151,7 @@ pub enum Expr<'a> {
     Todo(&'a Keyword<'a>, Row, Col),
     Trace(&'a Keyword<'a>, Row, Col),
     Comptime(&'a Keyword<'a>, Row, Col),
+    Do(&'a Do<'a>, Row, Col),
     Dot(Row, Col),
     Access(Row, Col),
     OperatorRight(&'a str, Row, Col),
@@ -170,6 +171,20 @@ pub enum Keyword<'a> {
     Message(&'a Expr<'a>, Row, Col),
     IndentBody(Row, Col),
     IndentMessage(Row, Col),
+}
+
+#[derive(Debug)]
+pub enum Do<'a> {
+    Space(Space, Row, Col),
+    Let(&'a Let<'a>, Row, Col),
+    Pattern(&'a Pattern<'a>, Row, Col),
+    Arrow(Row, Col),
+    Expr(&'a Expr<'a>, Row, Col),
+    LastNotExpr(Row, Col),
+    IndentStmt(Row, Col),
+    IndentArrow(Row, Col),
+    IndentExpr(Row, Col),
+    Alignment(u16, Row, Col),
 }
 
 #[derive(Debug)]

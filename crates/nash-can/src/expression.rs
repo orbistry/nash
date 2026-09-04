@@ -107,7 +107,8 @@ pub fn canonicalize_expr<'a>(
         | SourceExpr::Fail(_)
         | SourceExpr::Todo(_)
         | SourceExpr::Trace { .. }
-        | SourceExpr::Comptime(_) => {
+        | SourceExpr::Comptime(_)
+        | SourceExpr::Do { .. } => {
             return Err(vec![Error::Unsupported {
                 feature: "keyword expression",
                 region,

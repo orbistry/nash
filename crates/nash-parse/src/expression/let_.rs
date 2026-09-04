@@ -84,7 +84,7 @@ impl<'a> Parser<'a> {
     ///     ]
     ///     (reverse revDefs, end)
     /// ```
-    fn chomp_let_defs(
+    pub(crate) fn chomp_let_defs(
         &mut self,
         mut defs: Vec<&'a Located<Def<'a>>>,
         end: Position,
@@ -117,7 +117,7 @@ impl<'a> Parser<'a> {
     ///     , destructure
     ///     ]
     /// ```
-    fn chomp_let_def(&mut self) -> Result<(&'a Located<Def<'a>>, Position), Let<'a>> {
+    pub(crate) fn chomp_let_def(&mut self) -> Result<(&'a Located<Def<'a>>, Position), Let<'a>> {
         self.one_of(
             Let::DefName,
             vec![

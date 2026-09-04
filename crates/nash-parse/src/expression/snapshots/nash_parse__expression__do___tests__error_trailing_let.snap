@@ -1,0 +1,12 @@
+---
+source: crates/nash-parse/src/expression/do_.rs
+description: "Code (indented inside a def):\n\n    do\n        let y = 1\n"
+---
+Do(
+    LastNotExpr(
+        2,
+        9,
+    ),
+    1,
+    5,
+)

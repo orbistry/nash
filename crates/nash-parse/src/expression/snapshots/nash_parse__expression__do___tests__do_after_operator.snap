@@ -1,0 +1,160 @@
+---
+source: crates/nash-parse/src/expression/do_.rs
+description: "Code (indented inside a def):\n\n    a + do\n        x <- action\n        pure x\n"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 5,
+        },
+        end: Position {
+            line: 3,
+            column: 15,
+        },
+    },
+    value: BinOps {
+        operands: [
+            BinOpOperand {
+                expr: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                    },
+                    value: Var {
+                        kind: LowVar,
+                        name: "a",
+                    },
+                },
+                op: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                    },
+                    value: "+",
+                },
+            },
+        ],
+        last: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 9,
+                },
+                end: Position {
+                    line: 3,
+                    column: 15,
+                },
+            },
+            value: Do {
+                stmts: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 9,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 20,
+                            },
+                        },
+                        value: Bind {
+                            pattern: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 10,
+                                    },
+                                },
+                                value: Var(
+                                    "x",
+                                ),
+                            },
+                            expr: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 14,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 20,
+                                    },
+                                },
+                                value: Var {
+                                    kind: LowVar,
+                                    name: "action",
+                                },
+                            },
+                        },
+                    },
+                ],
+                last: Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 15,
+                        },
+                    },
+                    value: Call {
+                        function: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 13,
+                                },
+                            },
+                            value: Var {
+                                kind: LowVar,
+                                name: "pure",
+                            },
+                        },
+                        arguments: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 14,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 15,
+                                    },
+                                },
+                                value: Var {
+                                    kind: LowVar,
+                                    name: "x",
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    },
+}

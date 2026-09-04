@@ -89,6 +89,10 @@ impl<'a> Parser<'a> {
         self.keyword(b"in", to_error)
     }
 
+    pub fn keyword_do<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"do", to_error)
+    }
+
     pub fn keyword_assert<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
         self.keyword(b"assert", to_error)
     }

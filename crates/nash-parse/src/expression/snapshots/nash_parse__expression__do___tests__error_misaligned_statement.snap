@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/expression/do_.rs
+description: "Code (indented inside a def):\n\n    do\n        x <- e\n      y\n"
+---
+Do(
+    Alignment(
+        9,
+        3,
+        7,
+    ),
+    1,
+    5,
+)

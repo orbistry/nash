@@ -1,0 +1,143 @@
+---
+source: crates/nash-parse/src/expression/do_.rs
+description: "Code (indented inside a def):\n\n    do\n        (a, b) <- pair\n        pure a\n"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 5,
+        },
+        end: Position {
+            line: 3,
+            column: 15,
+        },
+    },
+    value: Do {
+        stmts: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 2,
+                        column: 9,
+                    },
+                    end: Position {
+                        line: 2,
+                        column: 23,
+                    },
+                },
+                value: Bind {
+                    pattern: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 9,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 15,
+                            },
+                        },
+                        value: Tuple {
+                            first: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 10,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 11,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                            second: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 13,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 14,
+                                    },
+                                },
+                                value: Var(
+                                    "b",
+                                ),
+                            },
+                            rest: [],
+                        },
+                    },
+                    expr: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 19,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 23,
+                            },
+                        },
+                        value: Var {
+                            kind: LowVar,
+                            name: "pair",
+                        },
+                    },
+                },
+            },
+        ],
+        last: Located {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 9,
+                },
+                end: Position {
+                    line: 3,
+                    column: 15,
+                },
+            },
+            value: Call {
+                function: Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 13,
+                        },
+                    },
+                    value: Var {
+                        kind: LowVar,
+                        name: "pure",
+                    },
+                },
+                arguments: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 14,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 15,
+                            },
+                        },
+                        value: Var {
+                            kind: LowVar,
+                            name: "a",
+                        },
+                    },
+                ],
+            },
+        },
+    },
+}

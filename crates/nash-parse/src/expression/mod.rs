@@ -12,6 +12,7 @@ use crate::error;
 mod accessor;
 mod bytes;
 mod case;
+mod do_;
 mod if_;
 mod keyword;
 mod lambda;
@@ -61,6 +62,7 @@ impl<'a> Parser<'a> {
                 Box::new(|p| p.todo(start)),
                 Box::new(|p| p.trace(start)),
                 Box::new(|p| p.comptime(start)),
+                Box::new(|p| p.do_(start)),
                 // Term (possibly negated) with function application
                 Box::new(|p| {
                     let expr = p.possibly_negative_term(start)?;
@@ -188,6 +190,7 @@ impl<'a> Parser<'a> {
                                                 Box::new(|p| p.todo(new_start)),
                                                 Box::new(|p| p.trace(new_start)),
                                                 Box::new(|p| p.comptime(new_start)),
+                                                Box::new(|p| p.do_(new_start)),
                                             ],
                                         )?;
 

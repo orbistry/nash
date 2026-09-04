@@ -103,6 +103,10 @@ pub enum Expr<'a> {
         body: &'a Located<Expr<'a>>,
     },
     Comptime(&'a Located<Expr<'a>>),
+    Do {
+        stmts: &'a [&'a Located<Stmt<'a>>],
+        last: &'a Located<Expr<'a>>,
+    },
     Var {
         kind: VarType,
         name: &'a str,
@@ -155,6 +159,16 @@ pub enum Expr<'a> {
         second: &'a Located<Expr<'a>>,
         rest: &'a [&'a Located<Expr<'a>>],
     },
+}
+
+#[derive(Debug)]
+pub enum Stmt<'a> {
+    Let(&'a [&'a Located<Def<'a>>]),
+    Bind {
+        pattern: &'a Located<Pattern<'a>>,
+        expr: &'a Located<Expr<'a>>,
+    },
+    Expr(&'a Located<Expr<'a>>),
 }
 
 #[derive(Debug)]
