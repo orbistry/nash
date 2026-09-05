@@ -213,6 +213,51 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn annotated_body_requires_a_given_for_a_rigid_trait_argument() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        missing : 'a -> 'a
+        missing x = keep x
+    "#
+    );
+}
+
+#[test]
+fn superclass_context_satisfies_an_annotated_body() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        trait Keep 'a => Strong 'a where
+            strong : 'a -> 'a
+        present : Strong 'a => 'a -> 'a
+        present x = keep x
+    "#
+    );
+}
+
+#[test]
+fn local_helper_reports_missing_constraint_on_its_annotated_owner() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        outer : 'a -> 'a
+        outer x =
+            let
+                helper ignored = keep x
+            in
+            helper ()
+    "#
+    );
+}
+
+#[test]
 fn declared_contexts_are_available_at_local_and_recursive_uses() {
     let bump = Bump::new();
     let source = indoc!(
@@ -490,6 +535,20 @@ fn impl_body_must_match_its_specialized_annotation() {
             keep : 'a -> 'a
         impl Keep Color where
             keep x = ()
+    "#
+    );
+}
+
+#[test]
+fn impl_body_requires_its_element_constraint() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Box 'a = Box 'a
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep (Box 'a) where
+            keep (Box x) = Box (keep x)
     "#
     );
 }

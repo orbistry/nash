@@ -13,6 +13,14 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    /// A rigid trait argument needs a constraint in the owner's annotation.
+    MissingConstraint {
+        region: Region,
+        name: &'a str,
+        trait_: nash_ast::QualifiedName<'a>,
+        args: &'a [&'a ErrorType<'a>],
+        binder: &'a nash_region::Located<&'a str>,
+    },
     /// An annotation quantifies a variable fixed by an enclosing scope.
     AnnotationVariableEscapes {
         region: Region,

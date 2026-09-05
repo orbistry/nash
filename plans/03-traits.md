@@ -1203,7 +1203,14 @@ explicit givens precede projections, and `Solution::Super` preserves the
 original context index and path. The regression checks a transitive chain,
 selection of a trait's second parameter, and direct-given precedence.
 
-Missing-constraint diagnostics, impl resolution,
+Annotated bodies now report `MissingConstraint` for an unmatched bare rigid
+trait argument, preserving the originating use and owning definition. Tests
+cover direct calls, impl element constraints, outer captures through local
+helpers, and successful superclass givens. The CLI exits with status 1 and
+the same diagnostic. Constructor-headed requirements still need impl
+resolution; the core reflexive Lift rule still needs its Big kind proof.
+
+Complete missing-constraint classification, impl resolution,
 retained-evidence ownership, final scheme/instance recording, and the resulting
 solver API are not implemented yet.
 Ground predicates remain visible in inferred contexts

@@ -1,0 +1,44 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nmissing : 'a -> 'a\nmissing x = keep x\n"
+---
+[
+    MissingConstraint {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 13,
+            },
+            end: Position {
+                line: 5,
+                column: 17,
+            },
+        },
+        name: "keep",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Keep",
+        },
+        args: [
+            RigidVar(
+                "a",
+            ),
+        ],
+        binder: Located {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 1,
+                },
+                end: Position {
+                    line: 5,
+                    column: 8,
+                },
+            },
+            value: "missing",
+        },
+    },
+]

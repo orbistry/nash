@@ -132,7 +132,8 @@ impl<'a> Solver<'a, '_> {
         state: State<'a>,
         constraint: &Constraint<'a>,
         given: &[type_::Pred<'a>],
-        binder: Option<&Located<&'a str>>,
+        binder: Option<&'a Located<&'a str>>,
+        annotated: bool,
     ) -> State<'a> {
         let depth = self.givens.len();
         if let Some(binder) = binder.filter(|_| !given.is_empty()) {
@@ -193,7 +194,9 @@ impl<'a> Solver<'a, '_> {
             });
         }
         let start = self.wanted.len();
-        let state = self.solve(uf, env, rank, state, constraint);
+        let mut state = self.solve(uf, env, rank, state, constraint);
+        let report_missing =
+            annotated && state.errors.is_empty() && self.conversion_errors.is_empty();
         for (rank, id) in self.wanted.split_off(start) {
             let wanted = self.predicates.get(id);
             let solution = self.givens.iter().rev().find_map(|frame| {
@@ -205,6 +208,30 @@ impl<'a> Solver<'a, '_> {
             });
             if let Some((binder, index, path)) = solution {
                 self.predicates.solve_given(uf, id, binder, index, path);
+            } else if report_missing
+                && let Some(binder) = binder
+                && let Origin::Use { site, .. } = wanted.origin
+                // Constructor-headed impls cannot discharge a bare rigid head.
+                // Core Lift also has a compiler rule; its Big proof belongs
+                // to kind-aware resolution, so leave that requirement pending.
+                && !(wanted.trait_ == nash_ast::primitives::lift_trait()
+                    && self.tables.has_reflexive_lift())
+                && wanted.args.iter().any(|arg| {
+                    matches!(uf.get(*arg).content, Content::RigidVar(_))
+                })
+            {
+                let args: Vec<_> = wanted
+                    .args
+                    .iter()
+                    .map(|arg| to_error_type(self.bump, uf, *arg))
+                    .collect();
+                state.errors.push(Error::MissingConstraint {
+                    region: site.region,
+                    name: site.name,
+                    trait_: wanted.trait_,
+                    args: self.bump.alloc_slice_copy(&args),
+                    binder,
+                });
             } else {
                 self.wanted.push((rank, id));
             }
@@ -358,13 +385,14 @@ impl<'a> Solver<'a, '_> {
                 body_con,
             } => {
                 let wanted_start = self.wanted.len();
+                let annotated = definitions.iter().any(|def| def.context.is_some());
                 if rigid_vars.is_empty() && matches!(body_con, Constraint::True) {
                     self.introduce(uf, rank, flex_vars);
-                    self.solve_header(uf, env, rank, state, header_con, given, *binder)
+                    self.solve_header(uf, env, rank, state, header_con, given, *binder, annotated)
                 } else if rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let state1 =
-                        self.solve_header(uf, env, rank, state, header_con, given, *binder);
+                    let state1 = self
+                        .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
                         .map(|(name, loc_type)| {
@@ -408,8 +436,9 @@ impl<'a> Solver<'a, '_> {
                         })
                         .collect();
                     let declared = self.declared_contexts(uf, next_rank, definitions, declarations);
-                    let mut state1 =
-                        self.solve_header(uf, env, next_rank, state, header_con, given, *binder);
+                    let mut state1 = self.solve_header(
+                        uf, env, next_rank, state, header_con, given, *binder, annotated,
+                    );
 
                     let young_mark = state1.mark;
                     let visit_mark = young_mark.next();
