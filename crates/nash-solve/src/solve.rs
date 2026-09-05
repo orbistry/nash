@@ -38,6 +38,7 @@ pub fn run<'a>(
         recursive_uses: Vec::new(),
         uses: Vec::new(),
         owners: Vec::new(),
+        resolution_work: std::collections::HashMap::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -129,6 +130,7 @@ struct Solver<'a, 'tables> {
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
     owners: Vec<nash_ast::NodeId>,
+    resolution_work: std::collections::HashMap<nash_ast::NodeId, usize>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -570,6 +572,26 @@ impl<'a> Solver<'a, '_> {
         binder: Option<&'a Located<&'a str>>,
         annotated: bool,
     ) -> State<'a> {
+        let depth = self.enter_givens(uf, rank, given, binder);
+        let start = self.wanted.len();
+        let owner_depth = self.owners.len();
+        if let Some(binder) = binder {
+            self.owners.push(nash_ast::NodeId::def(binder));
+        }
+        let mut state = self.solve(uf, env, rank, state, constraint);
+        state = self.resolve_wanted(uf, rank, state, start, binder, annotated);
+        self.givens.truncate(depth);
+        self.owners.truncate(owner_depth);
+        state
+    }
+
+    fn enter_givens(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        given: &[type_::Pred<'a>],
+        binder: Option<&'a Located<&'a str>>,
+    ) -> usize {
         let depth = self.givens.len();
         if let Some(binder) = binder.filter(|_| !given.is_empty()) {
             let mut predicates: Vec<Given<'a>> = given
@@ -592,21 +614,26 @@ impl<'a> Solver<'a, '_> {
                 predicates,
             });
         }
-        let start = self.wanted.len();
-        let owner_depth = self.owners.len();
-        if let Some(binder) = binder {
-            self.owners.push(nash_ast::NodeId::def(binder));
-        }
-        let mut state = self.solve(uf, env, rank, state, constraint);
+        depth
+    }
+
+    fn resolve_wanted(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        mut state: State<'a>,
+        start: usize,
+        binder: Option<&'a Located<&'a str>>,
+        annotated: bool,
+    ) -> State<'a> {
         let report_errors = state.errors.is_empty() && self.conversion_errors.is_empty();
         let report_missing = annotated && report_errors;
         let mut queue: VecDeque<_> = self
             .wanted
             .split_off(start)
             .into_iter()
-            .map(|(rank, id)| (rank, id, 0usize))
+            .map(|(rank, id)| (rank, id, self.predicates.depth(id)))
             .collect();
-        let mut work = 0usize;
         while let Some((wanted_rank, id, resolution_depth)) = queue.pop_front() {
             let wanted = self.predicates.get(id);
             let solution = self.givens.iter().rev().find_map(|frame| {
@@ -651,6 +678,7 @@ impl<'a> Solver<'a, '_> {
                     binder,
                 });
             } else if report_errors
+                && let Some(binder) = binder
                 && !(wanted.trait_ == nash_ast::primitives::lift_trait()
                     && self.tables.has_reflexive_lift())
             {
@@ -658,8 +686,12 @@ impl<'a> Solver<'a, '_> {
                     .predicates
                     .use_site(id)
                     .expect("wanteds originate at uses");
-                work += 1;
-                if work > 16_384 || resolution_depth >= 128 {
+                let work = self
+                    .resolution_work
+                    .entry(nash_ast::NodeId::def(binder))
+                    .or_default();
+                *work += 1;
+                if *work > 16_384 || resolution_depth >= 128 {
                     state.errors.push(Error::ImplResolutionLimit {
                         region: site.region,
                         name: site.name,
@@ -740,8 +772,6 @@ impl<'a> Solver<'a, '_> {
                 self.wanted.push((wanted_rank, id));
             }
         }
-        self.givens.truncate(depth);
-        self.owners.truncate(owner_depth);
         state
     }
 
@@ -994,13 +1024,27 @@ impl<'a> Solver<'a, '_> {
                         && self.conversion_errors.is_empty()
                         && let Some(binder) = binder
                     {
-                        state1.errors.extend(self.check_ambiguity(
-                            uf,
-                            rank,
-                            wanted_start,
-                            definitions,
-                            binder,
-                        ));
+                        let depth = self.enter_givens(uf, rank, given, Some(binder));
+                        loop {
+                            let (errors, defaulted) =
+                                self.check_ambiguity(uf, rank, wanted_start, definitions, binder);
+                            state1.errors.extend(errors);
+                            if !defaulted || !state1.errors.is_empty() {
+                                break;
+                            }
+                            state1 = self.resolve_wanted(
+                                uf,
+                                next_rank,
+                                state1,
+                                wanted_start,
+                                Some(binder),
+                                annotated,
+                            );
+                            if !state1.errors.is_empty() {
+                                break;
+                            }
+                        }
+                        self.givens.truncate(depth);
                     }
                     let context = if !definitions.is_empty()
                         && definitions.iter().all(|def| def.context.is_none())
@@ -1642,7 +1686,7 @@ impl<'a> Solver<'a, '_> {
         start: usize,
         definitions: &[type_::Definition<'a>],
         binder: &'a Located<&'a str>,
-    ) -> Vec<Error<'a>> {
+    ) -> (Vec<Error<'a>>, bool) {
         let roots: Vec<_> = definitions
             .iter()
             .map(|def| self.type_to_variable(uf, rank, def.typ))
@@ -1667,8 +1711,8 @@ impl<'a> Solver<'a, '_> {
             }
             crate::annotation::prepare_scope(self.bump, uf, &roots);
         }
-        let mut errors = Vec::new();
-        let mut rejected = BTreeSet::new();
+        let mut defaulted = false;
+        let mut unresolved = Vec::new();
         for (var, ids) in ambiguous {
             let mut distinct = Vec::new();
             for id in &ids {
@@ -1681,6 +1725,38 @@ impl<'a> Solver<'a, '_> {
                     distinct.push(*id);
                 }
             }
+            let defaults: BTreeMap<_, _> = distinct
+                .iter()
+                .filter_map(|id| {
+                    let pred = self.predicates.get(*id);
+                    if pred.args.len() == 1 && uf.equivalent(pred.args[0], var) {
+                        type_::literal_default(pred.trait_).map(|typ| (pred.trait_, typ))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            if defaults.len() == 1 && matches!(uf.get(var).content, Content::FlexVar(_)) {
+                let typ = self.bump.alloc(defaults.into_values().next().unwrap());
+                let target = self.type_to_variable(uf, rank, typ);
+                if matches!(
+                    unify::unify(self.bump, uf, var, target),
+                    unify::Answer::Ok(_)
+                ) {
+                    defaulted = true;
+                    continue;
+                }
+            }
+            unresolved.push((var, ids, distinct));
+        }
+        // A default can unlock an impl which supplies a literal constraint
+        // for another hidden variable. Retry before declaring ambiguity.
+        if defaulted {
+            return (Vec::new(), true);
+        }
+        let mut errors = Vec::new();
+        let mut rejected = BTreeSet::new();
+        for (var, ids, distinct) in unresolved {
             let predicates: Vec<_> = distinct
                 .iter()
                 .map(|id| {
@@ -1708,7 +1784,7 @@ impl<'a> Solver<'a, '_> {
             self.predicates.detach(uf, *id);
         }
         self.wanted.retain(|(_, id)| !rejected.contains(id));
-        errors
+        (errors, defaulted)
     }
 
     fn type_variables(uf: &mut UnionFind<'a>, mut pending: Vec<Variable>) -> BTreeSet<Variable> {
@@ -2150,6 +2226,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2214,6 +2291,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2273,6 +2351,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2352,6 +2431,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2466,6 +2546,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2600,6 +2681,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
@@ -2675,6 +2757,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();

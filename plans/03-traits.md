@@ -1944,7 +1944,12 @@ closed evidence pass. Non-literal ambiguity is checked after generalization
 and before context reduction, for inferred and annotated definitions. The
 check uses all full header types in an untyped recursive group and preserves
 outer captures. Diagnostics identify the innermost definition and deduplicate
-equal requirements. Literal traits, defaulting and SuperType removal remain.
+equal requirements. Defaulting now recognizes the three exact core literal
+traits and retries resolution with the same givens and limits. Real interfaces
+test explicit literal-method calls, including chained defaults and duplicate
+requirements; traits from another package remain ambiguous. Literal expression
+and pattern constraints still use the old path. Their conversion, core source
+modules and SuperType removal remain.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,
@@ -1993,9 +1998,9 @@ pub fn literal_default<'a>(trait_: QualifiedName<'a>) -> Option<Type<'a>> {
 }
 ```
 
-`int()`/`string()`/`bytes()` are the little types; until plan 02 lands
-they keep today's `Basics.Int`/`String.String` homes and plan 02 renames
-them in one place.
+Default types use the actual `nash/core` `Builtin` identities from Plan 02.
+The old `type_::int()` and `type_::string()` still serve pre-trait literal
+constraints and must be removed or replaced with that path in this chunk.
 
 ```rust
 // expression.rs
@@ -2371,6 +2376,11 @@ Files: `crates/nash-driver/src/compile.rs`, `crates/nash-can/src/interface.rs`,
 
 Change: the driver passes tables to the solver, keeps each module's
 `SolvedTypes` output for codegen, and imports traits/impls across modules.
+It must also propagate each source's package identity into `nash_can::Context`.
+The current `compile_module` supplies `package: None`; this prevents a real
+`nash/core` Literal module from receiving the identity required for defaulting.
+Preserve application modules without a package and associate package/workspace
+sources with their owning package before the CLI core/defaulting acceptance test.
 
 Code:
 
@@ -2461,8 +2471,9 @@ up to the `tests` block.
 
 ## Open questions
 
-- **Pre-seeded little types.** Defaulting needs `int`, `string`, `bytes`
-  in scope from plan 02. Chunk 7's tests declare stand-ins until then.
+- **Pre-seeded little types.** Plan 02 supplies `int`, `string`, `bytes`
+  through the real Builtin interface. Chunk 7's defaulting tests use those
+  types and canonicalized literal impls, without stand-ins.
 - **Per-module arenas** are settled: plans/09's `build_with` retains a
   `SolvedModule { module, annotations, types: &SolvedTypes, .. }` per
   module in the build-wide arena. Chunk 11 is the first step of that

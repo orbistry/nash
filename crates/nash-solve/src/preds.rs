@@ -104,6 +104,15 @@ impl<'a> Store<'a> {
         &self.predicates[id.0 as usize]
     }
 
+    pub(crate) fn depth(&self, mut id: PredId) -> usize {
+        let mut depth = 0;
+        while let Origin::Sub { parent, .. } = self.get(id).origin {
+            depth += 1;
+            id = parent;
+        }
+        depth
+    }
+
     pub fn push(&mut self, uf: &mut UnionFind<'a>, predicate: Predicate<'a>) -> PredId {
         let id = PredId(u32::try_from(self.predicates.len()).expect("predicate store exhausted"));
         for arg in &predicate.args {

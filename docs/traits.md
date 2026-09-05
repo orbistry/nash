@@ -309,11 +309,17 @@ definition and list equal requirements once.
 
 For each ambiguous variable, in order:
 
-- If its predicates include exactly one of `FromInt`, `FromString`,
-  `FromBytes`, unify it with `int`, `string`, or `bytes` respectively, then
-  resolve its predicates by instance. This is why unannotated literals are
-  little types.
+- If its predicates include exactly one distinct literal trait from package
+  `nash/core`, module `Literal` (`FromInt`, `FromString`, `FromBytes`), unify
+  it with `Builtin.int`, `Builtin.string`, or `Builtin.bytes` respectively.
+  The predicate's sole argument must be that variable, not a type containing
+  it. Repeated requirements of the same trait still select one default.
 - Otherwise report an ambiguous type error listing the predicates.
+
+Apply available defaults and retry resolution before reporting remaining
+ambiguity: an impl selected by one default can introduce the literal
+requirement for another variable. Keep the same enclosing givens, boundary
+rank, predicate origins and resolution limits across these rounds.
 
 Defaulting runs at every generalizing Let, not only at the top level, so
 the error region is the innermost definition that lost the variable. This

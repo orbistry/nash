@@ -286,6 +286,150 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
+    for (primitive, trait_name, method) in [
+        ("int", "FromInt", "fromInt"),
+        ("string", "FromString", "fromString"),
+        ("bytes", "FromBytes", "fromBytes"),
+    ] {
+        for trusted in [true, false] {
+            let package = if trusted {
+                nash_ast::primitives::CORE
+            } else {
+                nash_ast::PackageName {
+                    author: "example",
+                    project: "literal",
+                }
+            };
+            let bump = Bump::new();
+            let interfaces = std::collections::BTreeMap::from([(
+                "Builtin",
+                nash_can::kinds::builtin_interface(&bump),
+            )]);
+            let literal = indoc!(
+                r#"
+        module Literal exposing (..)
+        import Builtin exposing (..)
+        trait FromInt 'a where
+            fromInt : int -> 'a
+        impl FromInt int where
+            fromInt x = x
+    "#
+            )
+            .replace("FromInt", trait_name)
+            .replace("fromInt", method)
+            .replace("int", primitive);
+            let parsed = nash_parse::Parser::new(&bump, literal.as_bytes())
+                .module()
+                .unwrap();
+            let canonical = nash_can::canonicalize(
+                &bump,
+                Context {
+                    package: Some(package),
+                    interfaces: Some(&interfaces),
+                },
+                &parsed,
+            )
+            .unwrap();
+            let mut uf = UnionFind::new();
+            let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+            let (annotations, _) =
+                nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+            let interfaces = std::collections::BTreeMap::from([
+                ("Builtin", nash_can::kinds::builtin_interface(&bump)),
+                (
+                    "Literal",
+                    nash_can::from_module(&bump, &canonical.module, &annotations),
+                ),
+            ]);
+            let main = indoc!(
+                r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        import Literal exposing (FromInt, fromInt)
+        type Box 'a = Box 'a
+        trait Permit 'a where
+            permit : 'a -> 'a
+        trait Gate 'a 'b where
+            gate : 'a -> 'b -> ()
+        impl Permit 'a => Gate int (Box 'a) where
+            gate x box = ()
+        same : 'a -> 'a -> 'a
+        same x y = x
+        run : Permit 'a => int -> Box 'a -> ()
+        run n box = gate (same (fromInt n) (fromInt n)) box
+        type option 'a = None | Some 'a
+        trait Seed 'a where
+            seed : int -> 'a
+        impl Seed int where
+            seed n = n
+        trait Step 'a 'b where
+            step : 'a -> 'b -> ()
+        impl FromInt 'a => Step int (option 'a) where
+            step x box = ()
+        chain n = step (fromInt n) (Some (seed n))
+    "#
+            )
+            .replace("FromInt", trait_name)
+            .replace("fromInt", method)
+            .replace("int", primitive);
+            let parsed = nash_parse::Parser::new(&bump, main.as_bytes())
+                .module()
+                .unwrap();
+            let canonical = nash_can::canonicalize(
+                &bump,
+                Context {
+                    package: None,
+                    interfaces: Some(&interfaces),
+                },
+                &parsed,
+            )
+            .unwrap();
+            let mut uf = UnionFind::new();
+            let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+            let result = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables);
+            if !trusted {
+                let errors =
+                    result.expect_err("a same-named trait from another package cannot default");
+                assert!(
+                    errors
+                        .iter()
+                        .any(|error| matches!(error, Error::AmbiguousType { .. }))
+                );
+                continue;
+            }
+            let (annotations, solved) = result.unwrap();
+            assert_eq!(annotations["run"].context.len(), 1);
+            let gate = solved.instances.values().flat_map(|instance| instance.evidence).find(|evidence| {
+        matches!(evidence, nash_ast::Evidence::Impl { impl_, .. } if impl_.key.trait_.name == "Gate")
+    }).expect("defaulting selects the actual Gate impl");
+            let nash_ast::Evidence::Impl { args, .. } = gate else {
+                unreachable!()
+            };
+            let run_binder = solved
+                .schemes
+                .values()
+                .find(|scheme| std::ptr::eq(scheme.annotation, annotations["run"]))
+                .unwrap()
+                .binder;
+            assert!(
+                matches!(args, [nash_ast::Evidence::Given { binder, index: 0 }]
+                if *binder == run_binder)
+            );
+            assert!(solved.instances.values().flat_map(|instance| instance.evidence).any(|evidence| {
+        matches!(evidence, nash_ast::Evidence::Impl { impl_, .. }
+            if impl_.home.package == Some(nash_ast::primitives::CORE) && impl_.key.trait_.name == trait_name)
+    }));
+            assert!(annotations["chain"].context.is_empty());
+            insta::assert_snapshot!(
+                format!("literal_method_defaulting_{primitive}"),
+                render_annotations(&annotations)
+            );
+        }
+    }
+}
+
+#[test]
 fn ambiguous_predicates_keep_distinct_variable_names() {
     let bump = Bump::new();
     let errors = infer(

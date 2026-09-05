@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: render_annotations(&annotations)
+---
+chain : bytes -> ()
+run : forall a. Permit a => bytes -> Box a -> ()
+same : forall a. a -> a -> a

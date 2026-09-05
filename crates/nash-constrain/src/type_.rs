@@ -242,6 +242,24 @@ pub const fn char_home<'a>() -> ModuleName<'a> {
 
 // PRIMITIVE TYPES
 
+/// Only the compiler-known literal traits select a little default type.
+pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<Type<'static>> {
+    if trait_.home.package != Some(nash_ast::primitives::CORE) || trait_.home.name != "Literal" {
+        return None;
+    }
+    let name = match trait_.name {
+        "FromInt" => "int",
+        "FromString" => "string",
+        "FromBytes" => "bytes",
+        _ => return None,
+    };
+    Some(Type::AppN {
+        home: nash_ast::primitives::builtin_home(),
+        name,
+        args: &[],
+    })
+}
+
 pub const fn int<'a>() -> Type<'a> {
     Type::AppN {
         home: basics(),
