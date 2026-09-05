@@ -894,6 +894,12 @@ and imported impls, and all listed errors have snapshots.
 
 ## Chunk 4: predicates in the constraint language
 
+Status: in progress. Default and impl method bodies now pass through the
+ordinary typed-definition constraints, with no module value header. Inference
+snapshots cover invalid default and specialized impl return types, and module
+helper visibility without exporting method bindings. Predicate metadata,
+definition identities, and given-context handling remain to be implemented.
+
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/module.rs`, `crates/nash-constrain/src/pattern.rs`,
 `crates/nash-constrain/src/error.rs`, `crates/nash-solve/src/solve.rs`

@@ -1,0 +1,33 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = ()\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 6,
+                column: 14,
+            },
+            end: Position {
+                line: 6,
+                column: 16,
+            },
+        },
+        Unit,
+        Unit,
+        FromAnnotation(
+            "keep",
+            1,
+            TypedBody,
+            Type {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Color",
+                args: [],
+            },
+        ),
+    ),
+]

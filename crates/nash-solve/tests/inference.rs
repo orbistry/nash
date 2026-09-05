@@ -213,6 +213,48 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn trait_default_body_must_match_its_annotation() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+            keep x = ()
+    "#
+    );
+}
+
+#[test]
+fn impl_body_must_match_its_specialized_annotation() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Color = Red
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep Color where
+            keep x = ()
+    "#
+    );
+}
+
+#[test]
+fn methods_see_module_helpers_without_becoming_module_bindings() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Color = Red
+        trait Keep 'a where
+            keep : 'a -> 'a
+            keep x = helper x
+        impl Keep Color where
+            keep x = helper x
+        helper x = x
+    "#
+    );
+}
+
+#[test]
 fn int_literal() {
     assert_inference_snapshot!(
         r#"

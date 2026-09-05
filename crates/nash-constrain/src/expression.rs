@@ -879,6 +879,29 @@ pub fn constrain_def<'a>(
     def: &CanDef<'a>,
     body_con: Constraint<'a>,
 ) -> Constraint<'a> {
+    constrain_definition(bump, uf, rtv, def, body_con, true)
+}
+
+/// Check a method body in the module environment without introducing its
+/// name as a top-level value. Its annotation is already specialized for
+/// the enclosing trait or impl by canonicalization.
+pub fn constrain_method<'a>(
+    bump: &'a Bump,
+    uf: &mut UnionFind<'a>,
+    def: &CanDef<'a>,
+) -> Constraint<'a> {
+    assert!(matches!(def, CanDef::TypedDef { .. }));
+    constrain_definition(bump, uf, &Rtv::new(), def, Constraint::True, false)
+}
+
+fn constrain_definition<'a>(
+    bump: &'a Bump,
+    uf: &mut UnionFind<'a>,
+    rtv: &Rtv<'a>,
+    def: &CanDef<'a>,
+    body_con: Constraint<'a>,
+    bind_name: bool,
+) -> Constraint<'a> {
     match def {
         CanDef::Def { name, args, body } => {
             let Args {
@@ -893,7 +916,11 @@ pub fn constrain_def<'a>(
             Constraint::Let {
                 rigid_vars: &[],
                 flex_vars: bump.alloc_slice_fill_iter(vars),
-                header: singleton_header(bump, name.value, name.region, tipe),
+                header: if bind_name {
+                    singleton_header(bump, name.value, name.region, tipe)
+                } else {
+                    &[]
+                },
                 header_con: bump.alloc(Constraint::Let {
                     rigid_vars: &[],
                     flex_vars: bump.alloc_slice_fill_iter(state.vars),
@@ -932,7 +959,11 @@ pub fn constrain_def<'a>(
             Constraint::Let {
                 rigid_vars: bump.alloc_slice_fill_iter(new_rigids.iter().map(|(_, var)| *var)),
                 flex_vars: &[],
-                header: singleton_header(bump, name.value, name.region, tipe),
+                header: if bind_name {
+                    singleton_header(bump, name.value, name.region, tipe)
+                } else {
+                    &[]
+                },
                 header_con: bump.alloc(Constraint::Let {
                     rigid_vars: &[],
                     flex_vars: bump.alloc_slice_fill_iter(state.vars),

@@ -15,7 +15,32 @@ pub fn constrain<'a>(
     uf: &mut UnionFind<'a>,
     module: &CanModule<'a>,
 ) -> Constraint<'a> {
-    constrain_decls(bump, uf, module.decls, Constraint::SaveTheEnvironment)
+    let definitions = module
+        .traits
+        .iter()
+        .flat_map(|trait_| {
+            trait_
+                .value
+                .methods
+                .iter()
+                .filter_map(|method| method.default)
+        })
+        .chain(
+            module
+                .impls
+                .iter()
+                .flat_map(|impl_| impl_.value.methods.iter().copied()),
+        );
+    let mut methods: Vec<_> = definitions
+        .map(|definition| expression::constrain_method(bump, uf, definition))
+        .collect();
+    methods.push(Constraint::SaveTheEnvironment);
+    constrain_decls(
+        bump,
+        uf,
+        module.decls,
+        Constraint::And(bump.alloc_slice_fill_iter(methods)),
+    )
 }
 
 fn constrain_decls<'a>(
