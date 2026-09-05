@@ -342,6 +342,52 @@ fn nested_contexts_defer_outer_variables_and_keep_mixed_scheme_sharing() {
 }
 
 #[test]
+fn inferred_context_removes_duplicates_and_superclass_requirements() {
+    let bump = Bump::new();
+    let annotations = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        trait Base 'a where
+            base : 'a -> 'a
+        trait Base 'a => Strong 'a where
+            strong : 'a -> 'a
+        trait Strong 'a => Top 'a where
+            top : 'a -> 'a
+        trait Base 'b => Select 'a 'b where
+            select : 'a -> 'b -> 'b
+        reduced x = (base x, top x, strong (base x))
+        reversed x = (top x, strong x, base x)
+        distinct x y = (base x, top y, base x)
+        permuted x y = (base x, select x y, base y)
+    "#
+        ),
+    )
+    .unwrap();
+    assert_eq!(annotations["reduced"].context.len(), 1);
+    assert_eq!(annotations["distinct"].context.len(), 2);
+    assert_eq!(annotations["reversed"].context.len(), 1);
+    assert_eq!(annotations["permuted"].context.len(), 2);
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
+#[test]
+fn recursive_identity_cannot_change_its_argument_type() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Color = Red
+        first x = (second x, x)
+        second x = case first x of
+            (previous, current) -> current
+        bad : () -> Color
+        bad x = second x
+    "#
+    );
+}
+
+#[test]
 fn enclosing_given_waits_for_rank_propagation_through_case_branches() {
     assert_inference_snapshot!(
         r#"

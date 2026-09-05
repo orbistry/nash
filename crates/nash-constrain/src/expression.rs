@@ -1106,20 +1106,12 @@ pub fn constrain_recursive_defs<'a>(
     for def in defs {
         match def {
             CanDef::Def { name, args, body } => {
-                // Elm seeds this def's pattern state with the flex vars
-                // accumulated so far, and then replaces the accumulator
-                // with just this def's arg/result vars. Bug-for-bug.
-                let seeded_state = pattern::State {
-                    headers: pattern::Header::new(),
-                    vars: std::mem::take(&mut flex_info.vars),
-                    rev_cons: Vec::new(),
-                };
                 let Args {
                     vars: new_flex_vars,
                     tipe,
                     result_type,
                     state,
-                } = args_help(bump, uf, args, seeded_state);
+                } = constrain_args(bump, uf, args);
 
                 let expr_con = constrain(bump, uf, rtv, body, Expected::NoExpectation(result_type));
 
@@ -1135,7 +1127,10 @@ pub fn constrain_recursive_defs<'a>(
                     body_con: bump.alloc(expr_con),
                 };
 
-                flex_info.vars = new_flex_vars;
+                // All recursive headers share one rank until every body has
+                // been checked. Introducing an earlier header's variables in a
+                // later definition's pattern scope can generalize them early.
+                flex_info.vars.extend(new_flex_vars);
                 flex_info.cons.push(def_con);
                 flex_info.definitions.push(Definition {
                     name,

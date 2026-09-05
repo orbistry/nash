@@ -273,6 +273,13 @@ contents of its argument variables:
    this Let. The predicate joins the scheme's context. Its index in the
    context, in creation order, is the `Given` index used inside the body.
 
+Inferred contexts keep the first exact duplicate and remove requirements
+entailed by another retained predicate's superclass closure. Compare the
+substituted arguments without unification. Assign slots after reduction,
+preserving the surviving predicates' creation order; removed requirements
+refer to those final slots through `Given` or `Super` evidence. Declared
+annotation contexts retain their declared order and slots.
+
 Untyped definitions therefore infer their contexts (`member x xs = ...`
 gets `Eq 'a => 'a -> List 'a -> bool`). Typed definitions get the same
 treatment; the rigid variables make step 2 apply, and the annotation's

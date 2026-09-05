@@ -1,0 +1,37 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\nfirst x = (second x, x)\nsecond x = case first x of\n    (previous, current) -> current\nbad : () -> Color\nbad x = second x\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 7,
+                column: 9,
+            },
+            end: Position {
+                line: 7,
+                column: 17,
+            },
+        },
+        CallResult(
+            FuncName(
+                "second",
+            ),
+        ),
+        Unit,
+        FromAnnotation(
+            "bad",
+            1,
+            TypedBody,
+            Type {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Color",
+                args: [],
+            },
+        ),
+    ),
+]

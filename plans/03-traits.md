@@ -1210,8 +1210,18 @@ helpers, and successful superclass givens. The CLI exits with status 1 and
 the same diagnostic. Constructor-headed requirements still need impl
 resolution; the core reflexive Lift rule still needs its Big kind proof.
 
+Retained predicates now receive `Given` or `Super` solutions at the owning
+definition's final context slots without changing their original use/sub
+provenance. Inferred contexts remove duplicate and superclass-implied
+requirements without unification, keeping surviving predicate creation order.
+The shared recursive context uses the first original definition name as binder.
+All recursive members' argument/result variables now belong to the group Let;
+placing earlier members' roots in later pattern scopes generalized them early
+and disconnected recursive argument/result relationships. The evidence
+regression exposed and verifies the correction.
+
 Complete missing-constraint classification,
-retained-evidence ownership, final scheme/instance recording, and the resulting
+final scheme/instance recording, and the resulting
 solver API are not implemented yet.
 Chunk 6 now resolves ordinary constructor-headed predicates, including impl
 contexts, before inference publishes a scheme. Do not mark this chunk complete from the current
@@ -1649,8 +1659,12 @@ another module and successfully checks `keep [[()]]`.
 Replacing the element with a type that has no impl reports `MissingImpl` at
 the importing module's call and exits with status 1.
 
-Final AST evidence and SolvedTypes publication, retained-context superclass
-reduction, the standalone canonical resolver, and kind-aware reflexive Lift
+Retained-context reduction and evidence ownership are implemented. Tests cover
+duplicate uses, transitive paths in either source order, permuted superclass
+parameters with distinct variables, and impl-child evidence in recursive groups.
+
+Final AST evidence and SolvedTypes publication,
+the standalone canonical resolver, and kind-aware reflexive Lift
 resolution remain unfinished. No chunk completion is claimed here.
 
 Files: `crates/nash-solve/src/solve.rs`, new `crates/nash-solve/src/resolve.rs`,

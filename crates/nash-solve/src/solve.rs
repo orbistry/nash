@@ -123,6 +123,51 @@ struct Given<'a> {
 }
 
 impl<'a> Solver<'a, '_> {
+    fn expand_givens(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        predicates: &mut Vec<Given<'a>>,
+    ) {
+        // Canonicalization rejects superclass cycles. Breadth-first
+        // expansion keeps explicit givens first and chooses short paths.
+        let mut cursor = 0;
+        while cursor < predicates.len() {
+            let current = predicates[cursor].clone();
+            cursor += 1;
+            let Some(info) = self.tables.traits.get(&current.trait_).copied() else {
+                continue;
+            };
+            let vars = info
+                .parameters
+                .iter()
+                .copied()
+                .zip(current.args.iter().copied())
+                .collect();
+            for (index, superclass) in info.supers.iter().enumerate() {
+                let args: Vec<_> = superclass
+                    .args
+                    .iter()
+                    .map(|arg| self.src_type_to_var(uf, rank, &vars, arg))
+                    .collect();
+                if predicates.iter().any(|existing| {
+                    existing.trait_ == superclass.trait_
+                        && crate::preds::same_args(uf, &existing.args, &args)
+                }) {
+                    continue;
+                }
+                let mut path = current.path.clone();
+                path.push(index);
+                predicates.push(Given {
+                    trait_: superclass.trait_,
+                    args,
+                    index: current.index,
+                    path,
+                });
+            }
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn solve_header(
         &mut self,
@@ -151,43 +196,7 @@ impl<'a> Solver<'a, '_> {
                     path: Vec::new(),
                 })
                 .collect();
-            // Canonicalization rejects superclass cycles. Breadth-first
-            // expansion keeps explicit givens first and chooses short paths.
-            let mut cursor = 0;
-            while cursor < predicates.len() {
-                let current = predicates[cursor].clone();
-                cursor += 1;
-                let Some(info) = self.tables.traits.get(&current.trait_).copied() else {
-                    continue;
-                };
-                let vars = info
-                    .parameters
-                    .iter()
-                    .copied()
-                    .zip(current.args.iter().copied())
-                    .collect();
-                for (index, superclass) in info.supers.iter().enumerate() {
-                    let args: Vec<_> = superclass
-                        .args
-                        .iter()
-                        .map(|arg| self.src_type_to_var(uf, rank, &vars, arg))
-                        .collect();
-                    if predicates.iter().any(|existing| {
-                        existing.trait_ == superclass.trait_
-                            && crate::preds::same_args(uf, &existing.args, &args)
-                    }) {
-                        continue;
-                    }
-                    let mut path = current.path.clone();
-                    path.push(index);
-                    predicates.push(Given {
-                        trait_: superclass.trait_,
-                        args,
-                        index: current.index,
-                        path,
-                    });
-                }
-            }
+            self.expand_givens(uf, rank, &mut predicates);
             self.givens.push(GivenFrame {
                 binder: nash_ast::NodeId::def(binder),
                 predicates,
@@ -572,7 +581,12 @@ impl<'a> Solver<'a, '_> {
                     let context = if !definitions.is_empty()
                         && definitions.iter().all(|def| def.context.is_none())
                     {
-                        self.retain_wanted(uf, rank, wanted_start)
+                        self.retain_wanted(
+                            uf,
+                            rank,
+                            wanted_start,
+                            nash_ast::NodeId::def(binder.expect("inferred definition binder")),
+                        )
                     } else {
                         &[]
                     };
@@ -1082,6 +1096,7 @@ impl<'a> Solver<'a, '_> {
         uf: &mut UnionFind<'a>,
         rank: usize,
         start: usize,
+        binder: nash_ast::NodeId,
     ) -> &'a [type_::PredId] {
         let pending = self.wanted.split_off(start);
         let mut retained = Vec::new();
@@ -1124,7 +1139,67 @@ impl<'a> Solver<'a, '_> {
                 self.wanted.push((rank, id));
             }
         }
-        self.bump.alloc_slice_copy(&retained)
+        self.reduce_context(uf, rank, binder, retained)
+    }
+
+    fn reduce_context(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        binder: nash_ast::NodeId,
+        mut retained: Vec<type_::PredId>,
+    ) -> &'a [type_::PredId] {
+        // Resolution queues can reorder children and deferred requirements.
+        // IDs preserve creation order, which defines the context slot order.
+        retained.sort_unstable();
+        let closures: Vec<_> = retained
+            .iter()
+            .enumerate()
+            .map(|(index, id)| {
+                let pred = self.predicates.get(*id);
+                let mut closure = vec![Given {
+                    trait_: pred.trait_,
+                    args: pred.args.clone(),
+                    index,
+                    path: Vec::new(),
+                }];
+                self.expand_givens(uf, rank, &mut closure);
+                closure
+            })
+            .collect();
+        let survivors: Vec<_> = retained
+            .iter()
+            .enumerate()
+            .filter_map(|(index, id)| {
+                let pred = self.predicates.get(*id);
+                let implied = closures.iter().enumerate().any(|(other, closure)| {
+                    other != index
+                        && closure.iter().any(|given| {
+                            (other < index || !given.path.is_empty())
+                                && given.trait_ == pred.trait_
+                                && crate::preds::same_args(uf, &given.args, &pred.args)
+                        })
+                });
+                (!implied).then_some(index)
+            })
+            .collect();
+        for id in &retained {
+            let pred = self.predicates.get(*id);
+            let (index, path) = survivors
+                .iter()
+                .enumerate()
+                .find_map(|(slot, survivor)| {
+                    closures[*survivor].iter().find_map(|given| {
+                        (given.trait_ == pred.trait_
+                            && crate::preds::same_args(uf, &given.args, &pred.args))
+                        .then(|| (slot, given.path.clone()))
+                    })
+                })
+                .expect("acyclic superclass reduction leaves an evidence root");
+            self.predicates.solve_given(uf, *id, binder, index, path);
+        }
+        self.bump
+            .alloc_slice_fill_iter(survivors.into_iter().map(|index| retained[index]))
     }
 
     /// Copy all roots of one scheme (type and context) together, retaining
@@ -1611,6 +1686,112 @@ mod copy_tests {
         assert_eq!(subs.len(), 1);
         assert!(
             matches!(solver.predicates.get(subs[0]).solution.as_ref(), Some(crate::preds::Solution::Impl { type_vars, subs, .. }) if type_vars.is_empty() && subs.is_empty())
+        );
+    }
+
+    #[test]
+    fn retained_impl_children_and_recursive_uses_reference_final_context_slots() {
+        let bump = Bump::new();
+        let source = "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (List 'a) where\n    base xs = xs\nf x = (base [g x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n";
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical =
+            nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
+        let mut group_binder = None;
+        let mut h_binder = None;
+        let mut decls = canonical.module.decls;
+        loop {
+            let (definition, next, recursive) = match decls {
+                nash_ast::Decls::Declare { definition, next } => (definition, next, false),
+                nash_ast::Decls::DeclareRec {
+                    definition, next, ..
+                } => (definition, next, true),
+                nash_ast::Decls::Empty => break,
+            };
+            let name = match definition {
+                nash_ast::Def::Def { name, .. } | nash_ast::Def::TypedDef { name, .. } => name,
+            };
+            if recursive {
+                group_binder = Some(nash_ast::NodeId::def(name));
+            }
+            if name.value == "h" {
+                h_binder = Some(nash_ast::NodeId::def(name));
+            }
+            decls = next;
+        }
+        let group_binder = group_binder.unwrap();
+        let h_binder = h_binder.unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let mut solver = Solver {
+            bump: &bump,
+            tables: &canonical.tables,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            givens: Vec::new(),
+            conversion_errors: Vec::new(),
+        };
+        let result = solver.solve(
+            &mut uf,
+            &Env::new(),
+            OUTERMOST_RANK,
+            State {
+                env: Env::new(),
+                mark: NO_MARK.next(),
+                errors: Vec::new(),
+            },
+            &constraint,
+        );
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        assert!(solver.wanted.is_empty());
+        assert_eq!(result.env["f"].context, result.env["g"].context);
+        assert_eq!(result.env["f"].context.len(), 1);
+        assert_eq!(
+            result.env["h"].context.len(),
+            1,
+            "{:?}",
+            result.env["h"]
+                .context
+                .iter()
+                .map(|id| solver.predicates.get(*id))
+                .collect::<Vec<_>>()
+        );
+        let mut children = 0;
+        let mut h_uses = 0;
+        for pred in solver.predicates.iter() {
+            match &pred.origin {
+                Origin::Sub { parent, index } => {
+                    children += 1;
+                    assert_eq!(*index, 0);
+                    let parent = solver.predicates.get(*parent);
+                    assert!(matches!(
+                        parent.solution,
+                        Some(crate::preds::Solution::Impl { .. })
+                    ));
+                    assert!(
+                        matches!(&pred.solution, Some(crate::preds::Solution::Super { binder, index: 0, path }) if *binder == group_binder && path == &[0, 0])
+                    );
+                }
+                Origin::Use { site, .. } if site.region.start.line == 13 => {
+                    h_uses += 1;
+                    assert_eq!(
+                        pred.solution,
+                        Some(crate::preds::Solution::Given {
+                            binder: h_binder,
+                            index: 0
+                        })
+                    );
+                }
+                _ => {}
+            }
+        }
+        assert_eq!(children, 1);
+        assert_eq!(
+            h_uses, 2,
+            "each use copies the reduced scheme and receives its own evidence"
         );
     }
 
