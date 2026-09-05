@@ -1,0 +1,136 @@
+---
+source: crates/nash-can/tests/traits.rs
+expression: "(interfaces[\"Identity\"].traits, references)"
+---
+(
+    [
+        InterfaceTrait {
+            name: "Keep",
+            parameters: [
+                "a",
+            ],
+            kind: KindScheme {
+                bounds: [
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+            },
+            supers: [],
+            methods: [
+                InterfaceMethod {
+                    name: "keep",
+                    annotation: Annotation {
+                        context: [
+                            Pred {
+                                trait_: QualifiedName {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Identity",
+                                    },
+                                    name: "Keep",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 12,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 14,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                ],
+                            },
+                        ],
+                        free_vars: [
+                            "a",
+                        ],
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 20,
+                                },
+                            },
+                            value: Lambda {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 12,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 14,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 18,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 20,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                        },
+                    },
+                    has_default: true,
+                },
+            ],
+            exported: true,
+        },
+    ],
+    [
+        (
+            QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Identity",
+                },
+                name: "Keep",
+            },
+            "keep",
+        ),
+        (
+            QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Identity",
+                },
+                name: "Keep",
+            },
+            "keep",
+        ),
+    ],
+)

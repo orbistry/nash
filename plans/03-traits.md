@@ -312,12 +312,12 @@ changes have been reviewed.
 
 ## Chunk 2: contexts on annotations and trait declarations in nash-can
 
-Status: in progress. Annotation contexts resolve qualified and unqualified
-trait names, check arity and reject variables absent from the annotated
-type. Top-level and let definitions preserve the context. Local trait
-declarations and defaults canonicalize; method scopes, superclass checks
-and SCC kind inference are implemented. Interface trait exports/imports
-and their cross-module validation remain.
+Status: complete. Annotation contexts, local declarations and defaults,
+method resolution, superclass checks and SCC kind inference are implemented.
+Interfaces retain trait schemes and method metadata across arena copies;
+qualified and exposed imports respect visibility and diagnose ambiguity.
+Acceptance snapshots cover higher-kinded method contexts, independent method
+quantifiers, default-body checks, private metadata and source-arena disposal.
 
 Files: `crates/nash-can/src/types.rs`, `crates/nash-can/src/environment.rs`,
 `crates/nash-can/src/environment/local.rs`, `crates/nash-can/src/environment/foreign.rs`,
@@ -548,6 +548,8 @@ Interface:
 ```rust
 #[derive(Clone, Copy, Debug)]
 pub struct InterfaceTrait<'a> {
+    /// Private metadata is retained, but never exposed through import scopes.
+    pub exported: bool,
     pub name: &'a str,
     pub parameters: &'a [&'a str],
     pub kind: KindScheme<'a>,
@@ -563,7 +565,8 @@ pub struct InterfaceMethod<'a> {
 pub struct Interface<'a> { /* ... */ pub traits: &'a [InterfaceTrait<'a>] }
 ```
 
-Exported when `Export::Trait(name)` or `Exports::Everything`. `foreign.rs`
+The `exported` flag is true for `Export::Trait(name)` or `Exports::Everything`.
+Retain private traits for kind checking exported contexts. `foreign.rs`
 adds exposed traits to `env.traits`/`q_traits` and their methods to
 `env.vars` as `Var::Method` (and `q_vars` with the annotation).
 `canonicalize_exports` resolves `Exposed::Upper` against trait names too;
@@ -581,15 +584,24 @@ Elm reference: `Canonicalize/Environment/Local.hs` (`addTypes`,
 (`fromModule`, `toPublicUnion`), `Canonicalize/Environment/Foreign.hs`
 (`addExposedValue`).
 
-Tests (nash-can `module.rs` test module, `assert_module_snapshot!` style):
+Acceptance coverage is in `crates/nash-can/tests/traits.rs`:
 
-- `trait_simple`: `trait Show 'a where\n    show : 'a -> string` (declare `type string = string` locally until plan 02 seeds it).
-- `trait_superclass_and_default`: the `Ord` example from docs.
-- `trait_method_context`: `trait Traversable 't where\n    traverse : Applicative 'f => ('a -> 'f 'b) -> 't 'a -> 'f ('t 'b)`.
-- `annotation_with_context`: `member : Eq 'a => 'a -> List 'a -> Bool`.
-- errors: `trait_duplicate_method`, `trait_method_missing_parameter`,
-  `context_var_not_in_type` (`f : Eq 'b => 'a -> 'a`), `superclass_cycle`,
-  `unknown_trait_in_context`, `trait_arity`.
+- `superclass_and_default_method`, `higher_kinded_method_context`,
+  `method_quantifiers_have_independent_kinds`;
+- `superclass_cycle`,
+  `mutually_referencing_method_contexts_are_not_superclass_cycles`;
+- `method_requires_each_trait_parameter`, `method_predicate_checks_argument_kind`,
+  `methods_share_the_module_value_namespace`;
+- `default_body_checks_nested_annotation_kinds`,
+  `default_parameter_cannot_shadow_local_method`;
+- `imported_trait_methods_survive_source_arena_drop`,
+  `private_trait_metadata_does_not_expose_names`,
+  `imported_trait_and_method_ambiguity`.
+
+`types.rs::context_tests` covers qualified annotation contexts, context
+variables absent from the type and trait arity. The existing module-level
+unknown-constraint test now checks `NotFoundTrait` as
+`unknown_trait_in_context`.
 
 Done when: a module with traits canonicalizes; methods resolve to
 `VarMethod`; exported traits appear in `Interface.traits`; `deep_copy`

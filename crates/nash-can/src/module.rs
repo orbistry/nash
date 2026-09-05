@@ -1499,6 +1499,7 @@ mod tests {
         parameters: &'a [&'a str],
     ) -> Interface<'a> {
         Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: module_name,
@@ -1526,6 +1527,7 @@ mod tests {
         typ: &'a Located<CanType<'a>>,
     ) -> Interface<'a> {
         Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: module_name,
@@ -2841,6 +2843,7 @@ mod tests {
         val_name: &'a str,
     ) -> Interface<'a> {
         Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: module_name,
@@ -2925,6 +2928,7 @@ mod tests {
             arguments: &[],
         });
         Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: "Maybe",
@@ -2946,6 +2950,7 @@ mod tests {
 
     fn basics_with_binops_interface<'a>(bump: &'a Bump) -> Interface<'a> {
         Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: "Basics",
@@ -3437,6 +3442,7 @@ mod tests {
             arguments: &[],
         });
         let maybe_interface = Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: "Maybe",
@@ -3469,6 +3475,7 @@ mod tests {
             arguments: &[],
         });
         let option_interface = Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: "Option",
@@ -3518,6 +3525,7 @@ mod tests {
         let bump = Bump::new();
         let basics = basics_with_binops_interface(&bump);
         let mymath = Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: "MyMath",
@@ -3561,6 +3569,7 @@ mod tests {
         );
         let bump = Bump::new();
         let basics = Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: "Basics",
@@ -3975,6 +3984,7 @@ mod tests {
         let bump = Bump::new();
         let alias_type = bump.alloc(Located::at(Region::zero(), CanType::Var("a")));
         let foo = Interface {
+            traits: &[],
             home: ModuleName {
                 package: None,
                 name: "Foo",
@@ -4043,6 +4053,7 @@ mod tests {
     ) -> Interface<'a> {
         let base = maybe_with_ctors_interface(bump);
         Interface {
+            traits: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
                 visibility,
                 ..base.unions[0]

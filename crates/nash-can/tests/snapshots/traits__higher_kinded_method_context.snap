@@ -1,0 +1,73 @@
+---
+source: crates/nash-can/tests/traits.rs
+expression: "(schemes, context)"
+---
+(
+    [
+        (
+            "Applicative",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        7,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Arrow(
+                        Var(
+                            0,
+                        ),
+                        Var(
+                            1,
+                        ),
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+            },
+        ),
+        (
+            "Traversable",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Arrow(
+                        Var(
+                            0,
+                        ),
+                        Var(
+                            0,
+                        ),
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+            },
+        ),
+    ],
+    [
+        QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Traversable",
+        },
+        QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Applicative",
+        },
+    ],
+)

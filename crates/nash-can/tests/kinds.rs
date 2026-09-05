@@ -345,6 +345,7 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
     let a = bump.alloc(Located::at_zero(Type::Var("a")));
     let body = bump.alloc(Located::at_zero(Type::Lambda { from: a, to: a }));
     let interface = nash_can::Interface {
+        traits: &[],
         home: nash_ast::ModuleName {
             package: None,
             name: "Restricted",

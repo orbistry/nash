@@ -491,9 +491,11 @@ Notes:
 
 A module's interface gains:
 
-- `traits`: every exported trait with its parameters, kind scheme,
-  superclasses, and method schemes (default bodies are not in the
-  interface; codegen reads them from the defining module).
+- `traits`: trait parameters, kind schemes, superclasses, and method
+  schemes, with export visibility. Private metadata is retained to check
+  exported schemes that reference it; private trait and method names do
+  not enter import scopes. Default bodies are not in the interface;
+  codegen reads them from the defining module.
 - `impls`: every impl of the module, regardless of the export list: trait,
   heads, context, and the set of methods defined (so codegen knows which
   ones fall back to defaults).

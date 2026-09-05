@@ -36,6 +36,10 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    ImportOpenTrait {
+        region: Region,
+        name: &'a str,
+    },
     DuplicateTrait {
         name: &'a str,
         first: Region,

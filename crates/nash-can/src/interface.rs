@@ -30,11 +30,30 @@ pub enum AliasVisibility {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Interface<'a> {
+    pub traits: &'a [InterfaceTrait<'a>],
     pub home: ModuleName<'a>,
     pub values: &'a [InterfaceValue<'a>],
     pub aliases: &'a [InterfaceAlias<'a>],
     pub unions: &'a [InterfaceUnion<'a>],
     pub binops: &'a [InterfaceBinop<'a>],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct InterfaceTrait<'a> {
+    pub name: &'a str,
+    pub parameters: &'a [&'a str],
+    pub kind: nash_ast::KindScheme<'a>,
+    pub supers: &'a [nash_ast::Pred<'a>],
+    pub methods: &'a [InterfaceMethod<'a>],
+    /// Private metadata remains available to check exported schemes.
+    pub exported: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct InterfaceMethod<'a> {
+    pub name: &'a str,
+    pub annotation: &'a Annotation<'a>,
+    pub has_default: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -82,6 +101,25 @@ pub fn from_module<'a>(
     annotations: &Annotations<'a>,
 ) -> Interface<'a> {
     Interface {
+        traits: bump.alloc_slice_fill_iter(module.traits.iter().map(|t| InterfaceTrait {
+            name: t.value.name.value,
+            parameters: t.value.parameters,
+            kind: t.value.kind,
+            supers: t.value.supers,
+            methods: bump.alloc_slice_fill_iter(t.value.methods.iter().map(|m| InterfaceMethod {
+                name: m.name.value,
+                annotation: m.annotation,
+                has_default: m.default.is_some(),
+            })),
+            exported: match module.exports {
+                Exports::Everything(_) => true,
+                Exports::Explicit(exports) => {
+                    exports.iter().any(
+                        |e| matches!(e.value, Export::Trait(name) if name == t.value.name.value),
+                    )
+                }
+            },
+        })),
         home: module.name,
         values: extract_values(bump, &module.exports, module.decls, annotations),
         unions: extract_unions(bump, &module.exports, module.unions),
@@ -391,6 +429,18 @@ fn copy_ctor<'d>(dst: &'d Bump, c: &CanCtor<'_>) -> &'d CanCtor<'d> {
 /// Deep-copy an `Interface` into a different bump arena.
 pub fn deep_copy<'d>(dst: &'d Bump, src: &Interface<'_>) -> Interface<'d> {
     Interface {
+        traits: dst.alloc_slice_fill_iter(src.traits.iter().map(|t| InterfaceTrait {
+            name: copy_str(dst, t.name),
+            parameters: dst.alloc_slice_fill_iter(t.parameters.iter().map(|p| copy_str(dst, p))),
+            kind: copy_kind_scheme(dst, t.kind),
+            supers: dst.alloc_slice_fill_iter(t.supers.iter().map(|p| copy_pred(dst, p))),
+            methods: dst.alloc_slice_fill_iter(t.methods.iter().map(|m| InterfaceMethod {
+                name: copy_str(dst, m.name),
+                annotation: copy_annotation(dst, m.annotation),
+                has_default: m.has_default,
+            })),
+            exported: t.exported,
+        })),
         home: copy_module_name(dst, &src.home),
         values: dst.alloc_slice_fill_iter(src.values.iter().map(|v| InterfaceValue {
             name: copy_str(dst, v.name),

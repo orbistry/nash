@@ -1,0 +1,5 @@
+---
+cargo/nash-can: minor
+---
+
+Export and import trait schemes and method metadata. Preserve them across arena copies, retain private metadata for checking public schemes, and report ambiguous trait and method imports.

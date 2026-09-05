@@ -392,6 +392,7 @@ pub struct KindEnv<'a> {
 impl<'a> KindEnv<'a> {
     pub fn from_interfaces(interfaces: Option<&BTreeMap<&'a str, crate::Interface<'a>>>) -> Self {
         let mut schemes = BTreeMap::new();
+        let mut trait_schemes = BTreeMap::new();
         for p in primitives::PRIMITIVES {
             schemes.insert(
                 QualifiedName {
@@ -402,6 +403,15 @@ impl<'a> KindEnv<'a> {
             );
         }
         for interface in interfaces.into_iter().flat_map(|m| m.values()) {
+            for trait_ in interface.traits {
+                trait_schemes.insert(
+                    QualifiedName {
+                        home: interface.home,
+                        name: trait_.name,
+                    },
+                    trait_.kind,
+                );
+            }
             for union in interface.unions {
                 schemes.insert(
                     QualifiedName {
@@ -423,7 +433,7 @@ impl<'a> KindEnv<'a> {
         }
         KindEnv {
             schemes,
-            trait_schemes: BTreeMap::new(),
+            trait_schemes,
         }
     }
 
@@ -974,6 +984,7 @@ pub enum KindHead<'a> {
 /// Explicit builtin interface for callers that have not installed the prelude.
 pub fn builtin_interface<'a>(bump: &'a Bump) -> crate::Interface<'a> {
     crate::Interface {
+        traits: &[],
         home: primitives::builtin_home(),
         values: &[],
         aliases: &[],

@@ -1,0 +1,68 @@
+---
+source: crates/nash-can/tests/traits.rs
+expression: "(can.module.traits[0].value.kind,\nnash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),\nnash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),)"
+---
+(
+    KindScheme {
+        bounds: [],
+        kind: Arrow(
+            Base(
+                Big,
+            ),
+            Base(
+                Term,
+            ),
+        ),
+    },
+    [
+        NotFoundTrait {
+            region: Region {
+                start: Position {
+                    line: 4,
+                    column: 5,
+                },
+                end: Position {
+                    line: 4,
+                    column: 20,
+                },
+            },
+            prefix: Some(
+                "Identity",
+            ),
+            name: "Hidden",
+        },
+    ],
+    [
+        NotFoundVar {
+            region: Region {
+                start: Position {
+                    line: 4,
+                    column: 7,
+                },
+                end: Position {
+                    line: 4,
+                    column: 22,
+                },
+            },
+            prefix: Some(
+                "Identity",
+            ),
+            name: "hidden",
+            suggestions: PossibleNames {
+                locals: [
+                    "f",
+                    "keep",
+                    "x",
+                ],
+                qualified: [
+                    (
+                        "Identity",
+                        [
+                            "keep",
+                        ],
+                    ),
+                ],
+            },
+        },
+    ],
+)

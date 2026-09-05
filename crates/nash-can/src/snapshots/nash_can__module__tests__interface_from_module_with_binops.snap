@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing ((|>))\n\ninfix left 6 (|>) = apR\n\napR x f = f x\n"
 ---
 Interface {
+    traits: [],
     home: ModuleName {
         package: None,
         name: "Main",

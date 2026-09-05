@@ -80,10 +80,32 @@ pub fn create_initial_env<'a>(
                 },
             );
         }
+        for trait_ in interface.traits.iter().filter(|t| t.exported) {
+            let info = trait_info(bump, interface.home, trait_);
+            merge_qualified(&mut env.q_traits, prefix, info.name, info.home, info);
+            for method in info.methods {
+                merge_qualified(
+                    &mut env.q_vars,
+                    prefix,
+                    method.name,
+                    info.home,
+                    super::QualifiedValue {
+                        annotation: method.annotation,
+                        trait_: Some(nash_ast::QualifiedName {
+                            home: info.home,
+                            name: info.name,
+                        }),
+                    },
+                );
+            }
+        }
 
         // Unqualified exposure depends on the exposing clause.
         match &import.exposing {
             Exposing::Open => {
+                for trait_ in interface.traits.iter().filter(|t| t.exported) {
+                    expose_trait(&mut env, trait_info(bump, interface.home, trait_));
+                }
                 for (name, (typ, ctors)) in &raw_type_info {
                     merge_exposed(&mut env.types, name, interface.home, *typ);
                     for (ctor_name, ctor) in ctors {
@@ -192,6 +214,30 @@ fn add_explicit_exposing<'a>(
             Exposed::Lower(name) => {
                 if let Some(value) = interface.values.iter().find(|v| v.name == name.value) {
                     add_single_value(env, interface.home, value.name, value.annotation);
+                } else if let Some((trait_, method)) = interface
+                    .traits
+                    .iter()
+                    .filter(|t| t.exported)
+                    .find_map(|t| {
+                        t.methods
+                            .iter()
+                            .find(|m| m.name == name.value)
+                            .map(|m| (t, m))
+                    })
+                {
+                    add_imported_var(
+                        env,
+                        interface.home,
+                        method.name,
+                        Var::Method {
+                            trait_: nash_ast::QualifiedName {
+                                home: interface.home,
+                                name: trait_.name,
+                            },
+                            annotation: method.annotation,
+                            local_region: None,
+                        },
+                    );
                 } else {
                     errors.push(Error::ImportExposingNotFound {
                         region: name.region,
@@ -202,6 +248,22 @@ fn add_explicit_exposing<'a>(
                 }
             }
             Exposed::Upper { name, privacy } | Exposed::LowerType { name, privacy } => {
+                if let Some(trait_) = interface
+                    .traits
+                    .iter()
+                    .find(|t| t.exported && t.name == name.value)
+                {
+                    match privacy {
+                        Privacy::Private => {
+                            expose_trait(env, trait_info(bump, interface.home, trait_))
+                        }
+                        Privacy::Public(region) => errors.push(Error::ImportOpenTrait {
+                            region: *region,
+                            name: name.value,
+                        }),
+                    }
+                    continue;
+                }
                 match privacy {
                     Privacy::Private => match raw_type_info.get(name.value) {
                         Some((typ, ctors)) => {
@@ -292,15 +354,23 @@ fn add_single_value<'a>(
     name: &'a str,
     annotation: &'a nash_ast::Annotation<'a>,
 ) {
+    add_imported_var(env, home, name, Var::Foreign(home, annotation));
+}
+
+fn add_imported_var<'a>(env: &mut Env<'a>, home: ModuleName<'a>, name: &'a str, var: Var<'a>) {
     use std::collections::btree_map::Entry;
     match env.vars.entry(name) {
         Entry::Vacant(e) => {
-            e.insert(Var::Foreign(home, annotation));
+            e.insert(var);
         }
         Entry::Occupied(mut e) => match e.get() {
             // Full canonical comparison, like Elm's `mergeInfo`.
             Var::Foreign(existing, _) if *existing != home => {
                 let first = *existing;
+                e.insert(Var::Foreigns(first, vec![home]));
+            }
+            Var::Method { trait_, .. } if trait_.home != home => {
+                let first = trait_.home;
                 e.insert(Var::Foreigns(first, vec![home]));
             }
             Var::Foreigns(..) => {
@@ -350,6 +420,13 @@ fn check_for_ctor_mistake<'a>(
 
 fn available_values<'a>(bump: &'a Bump, interface: &Interface<'a>) -> &'a [&'a str] {
     let mut names: Vec<&'a str> = interface.values.iter().map(|v| v.name).collect();
+    names.extend(
+        interface
+            .traits
+            .iter()
+            .filter(|t| t.exported)
+            .flat_map(|t| t.methods.iter().map(|m| m.name)),
+    );
     names.sort_unstable();
     bump.alloc_slice_fill_iter(names)
 }
@@ -404,6 +481,44 @@ fn find_interface<'a>(
                 module: import.import.value,
             }]
         })
+}
+
+fn trait_info<'a>(
+    bump: &'a Bump,
+    home: ModuleName<'a>,
+    trait_: &crate::InterfaceTrait<'a>,
+) -> &'a super::TraitInfo<'a> {
+    bump.alloc(super::TraitInfo {
+        home,
+        name: trait_.name,
+        parameters: trait_.parameters,
+        kind: trait_.kind,
+        supers: trait_.supers,
+        methods: bump.alloc_slice_fill_iter(trait_.methods.iter().map(|m| super::MethodInfo {
+            name: m.name,
+            annotation: m.annotation,
+            has_default: m.has_default,
+        })),
+    })
+}
+
+fn expose_trait<'a>(env: &mut Env<'a>, trait_: &'a super::TraitInfo<'a>) {
+    merge_exposed(&mut env.traits, trait_.name, trait_.home, trait_);
+    for method in trait_.methods {
+        add_imported_var(
+            env,
+            trait_.home,
+            method.name,
+            Var::Method {
+                trait_: nash_ast::QualifiedName {
+                    home: trait_.home,
+                    name: trait_.name,
+                },
+                annotation: method.annotation,
+                local_region: None,
+            },
+        );
+    }
 }
 
 #[cfg(test)]

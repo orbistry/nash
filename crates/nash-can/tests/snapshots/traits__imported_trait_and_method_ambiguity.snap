@@ -1,0 +1,58 @@
+---
+source: crates/nash-can/tests/traits.rs
+expression: "(nash_can::canonicalize(&bump, context, trait_source).unwrap_err(),\nnash_can::canonicalize(&bump, context, method_source).unwrap_err(),)"
+---
+(
+    [
+        AmbiguousTrait {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 5,
+                },
+                end: Position {
+                    line: 5,
+                    column: 9,
+                },
+            },
+            prefix: None,
+            name: "Keep",
+            first_module: ModuleName {
+                package: None,
+                name: "A",
+            },
+            other_modules: [
+                ModuleName {
+                    package: None,
+                    name: "B",
+                },
+            ],
+        },
+    ],
+    [
+        AmbiguousVar {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 7,
+                },
+                end: Position {
+                    line: 5,
+                    column: 11,
+                },
+            },
+            prefix: None,
+            name: "keep",
+            first_module: ModuleName {
+                package: None,
+                name: "A",
+            },
+            other_modules: [
+                ModuleName {
+                    package: None,
+                    name: "B",
+                },
+            ],
+        },
+    ],
+)
