@@ -81,14 +81,23 @@ restriction. Snapshots cover Big/Const combinations, Term rejection at either
 argument, and all four signatures. No plan 01 grammar change is needed.
 The correction has its own Sampo changeset: nash-ast minor and nash-can patch.
 
+### Test audit
+
+Removed 14 redundant tests and nine snapshots: six parser cases already
+covered by equivalent or nested syntax, three repeated canonicalizer/kind
+cases, and five basic driver checks covered by stronger retained tests.
+The retained cache test now checks behavior after the underlying source changes;
+the graph tests check exact dependency levels, ordering, and cycle diagnostics.
+The 994 Plutus conformance cases remain intact. No runtime code changed.
+
 ### Final verification
 
 - `cargo fmt --all`: pass.
 - `cargo clippy --all-targets --all-features -- -D warnings`: pass.
 - `cargo insta test`: pass; new snapshots reviewed before acceptance.
-- `cargo test`: 1,778 passed, 0 failed, 3 ignored.
+- `cargo test`: 1,764 passed, 0 failed, 3 ignored.
 - `cargo insta test --unreferenced reject`: pass; no unreferenced or pending snapshots.
-- The 52 source-level kind acceptance tests cover declarations, recursive groups,
+- The 50 source-level kind acceptance tests cover declarations, recursive groups,
   annotations, record fields, imported contracts, and copied interfaces. Driver
   tests cover cross-module builds, kind and bound fingerprints, and cache round trips. Solver tests retain the nested-section
   regression, verify that Builtin.List annotations match list literals and
@@ -1069,8 +1078,8 @@ canonical module so the `kind` fields show in the Debug snapshot;
 - `kind_big_union_parameter`: `type Box 'a = Box 'a` — `Big -> Big`.
 - `kind_phantom_parameter_generalized`: `type Tag 'a = Tag Int` —
   `bounds: [ALL]`, `k0 -> Big`.
-- `kind_little_union_any_fields`: `type option 'a = None | Some 'a` —
-  `bounds: [ANY]`, `k0 -> Term`.
+- `independent_instantiations` covers `type option 'a = None | Some 'a`
+  (`bounds: [ANY]`, `k0 -> Term`) and distinct Big/Const instantiations.
 - `kind_little_union_function_field`: `type thunk 'a = Thunk (unit -> 'a)`.
 - `kind_higher_kinded_parameter`: `type wrap 'f 'a = Wrap ('f 'a)` —
   `'f : k0 -> k1`, `'a : k0`, with `k0` bounded `ALL` and `k1` bounded
@@ -1191,9 +1200,11 @@ expressions are checked in the same walk by recursing into
   `annotation_kind_error_list_of_little` (`f : list (option int) -> int`),
   `annotation_kind_error_arrow_arg_higher_kinded`
   (`f : ('f 'a, 'f) -> int`, a higher-kinded variable in a value position),
-  `annotation_kind_var_app` (`f : 'f 'a -> 'f 'a`, ok), `let_annotation_kind_error`.
+  `let_annotation_kind_error`. Variable applications (`f : 'f 'a -> 'f 'a`)
+  must canonicalize successfully in the solver's
+  `higher_kinded_value_inference_is_explicitly_deferred` regression.
 - `interface_from_module_exports_kinds` (Debug snapshot shows `kind`).
-- `nash-driver`: `test_interface_fingerprint_changes_with_kind`.
+- `nash-driver`: the real-export kind and bound fingerprint tests.
 - `nash-driver` `compile.rs` integration: a module importing a Big alias
   from another module and using it as a `list` element compiles; using a
   little alias fails with a kind error.

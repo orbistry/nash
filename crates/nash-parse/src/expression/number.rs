@@ -39,11 +39,6 @@ mod tests {
     }
 
     #[test]
-    fn int_large() {
-        assert_expr_snapshot!("123456789");
-    }
-
-    #[test]
     fn error_leading_zero() {
         assert_expr_error_snapshot!("007");
     }

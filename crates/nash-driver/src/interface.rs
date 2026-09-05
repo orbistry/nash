@@ -283,26 +283,6 @@ mod kind_tests {
     use super::*;
 
     #[test]
-    fn kind_and_bound_changes_change_fingerprints() {
-        let make = |kind: &str| {
-            Interface::new(
-                "Types".into(),
-                vec![Export::Type {
-                    name: "item".into(),
-                    constructors_exposed: false,
-                    kind: kind.into(),
-                }],
-            )
-        };
-        assert!(make("Big").differs_from(&make("Const")));
-        assert!(
-            make("forall k0:{Big,Const}. k0 -> Const")
-                .differs_from(&make("forall k0:{Big,Const,Term}. k0 -> Const"))
-        );
-        assert!(!make("Big").differs_from(&make("Big")));
-    }
-
-    #[test]
     fn kind_interfaces_round_trip() {
         let root = std::env::temp_dir().join(format!("nash-kind-interface-{}", std::process::id()));
         let cache = InterfaceCache::new(&root);

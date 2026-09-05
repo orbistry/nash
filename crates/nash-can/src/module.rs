@@ -4155,13 +4155,6 @@ mod tests {
     }
 
     #[test]
-    fn kind_annotation_fix() {
-        assert_module_snapshot!(
-            "module Main exposing (..)\n\ntype Fix ('f : Big -> Big) = Fix ('f (Fix 'f))\n"
-        );
-    }
-
-    #[test]
     fn anonymous_record_constructor_argument_unsupported() {
         assert_module_error_snapshot!("module Main exposing (..)\n\ntype D = D int { x : int }\n");
     }

@@ -315,30 +315,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_compile_single_module() {
-        let mem = InMemorySource::new();
-        let uri = url("Main.nash");
-        mem.insert(
-            uri.clone(),
-            r#"
-module Main exposing (..)
-
-main = 42
-"#
-            .to_string(),
-        );
-
-        let db = Arc::new(Mutex::new(Database::new(mem)));
-        let modules = vec![uri];
-        let graph = build_graph(db.clone(), &modules).await.unwrap();
-        let result = build(db, &graph).await;
-
-        assert_eq!(result.total, 1);
-        assert_eq!(result.success, 1);
-        assert!(result.is_success());
-    }
-
-    #[tokio::test]
     async fn test_compile_invalid_module() {
         let mem = InMemorySource::new();
         let uri = url("Bad.nash");
@@ -354,45 +330,6 @@ main = 42
 
         assert_eq!(result.total, 1);
         assert_eq!(result.failed, 1);
-    }
-
-    #[tokio::test]
-    async fn test_import_compiles_against_solved_interface() {
-        let mem = InMemorySource::new();
-
-        mem.insert(
-            url("Utils.nash"),
-            r#"
-module Utils exposing (..)
-
-helper = 1
-"#
-            .to_string(),
-        );
-
-        mem.insert(
-            url("Main.nash"),
-            r#"
-module Main exposing (..)
-
-import Utils
-
-main = Utils.helper
-"#
-            .to_string(),
-        );
-
-        let db = Arc::new(Mutex::new(Database::new(mem)));
-        let modules = vec![url("Utils.nash"), url("Main.nash")];
-
-        let graph = build_graph(db.clone(), &modules).await.unwrap();
-        let result = build(db, &graph).await;
-
-        // Utils is solved first; Main canonicalizes and type checks
-        // against its interface.
-        assert_eq!(result.total, 2);
-        assert_eq!(result.success, 2);
-        assert!(result.is_success());
     }
 
     #[tokio::test]

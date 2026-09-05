@@ -45,10 +45,6 @@ fn phantom_parameter() {
     assert_kinds_snapshot!("type Tag 'a = Tag Int");
 }
 #[test]
-fn little_union() {
-    assert_kinds_snapshot!("type option 'a = None | Some 'a");
-}
-#[test]
 fn little_function_field() {
     assert_kinds_snapshot!("type thunk 'a = Thunk (unit -> 'a)");
 }
@@ -245,11 +241,6 @@ fn annotation_rejects_little_container_element_in_argument() {
 #[test]
 fn annotation_rejects_higher_kinded_value_position() {
     assert_kind_error_snapshot!("f : ('f 'a, 'f) -> int\nf x = 1");
-}
-
-#[test]
-fn annotation_accepts_variable_application() {
-    assert_kinds_snapshot!("f : 'f 'a -> 'f 'a\nf x = x");
 }
 
 #[test]

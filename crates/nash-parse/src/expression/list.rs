@@ -156,11 +156,6 @@ mod tests {
     }
 
     #[test]
-    fn single() {
-        assert_expr_snapshot!("[1]");
-    }
-
-    #[test]
     fn multiple() {
         assert_expr_snapshot!("[1, 2, 3]");
     }

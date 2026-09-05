@@ -310,11 +310,6 @@ mod tests {
     }
 
     #[test]
-    fn upper_constructor() {
-        assert_expr_snapshot!("Just");
-    }
-
-    #[test]
     fn qualified_lower() {
         assert_expr_snapshot!("Module.foo");
     }

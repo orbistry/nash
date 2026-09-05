@@ -136,23 +136,6 @@ mod tests {
     use crate::source::InMemorySource;
 
     #[tokio::test]
-    async fn test_database_source_caching() {
-        let mem = InMemorySource::new();
-        let uri = Url::parse("file:///test/Main.nash").unwrap();
-        mem.insert(uri.clone(), "module Main exposing (..)".to_string());
-
-        let mut db = Database::new(mem);
-
-        // First read - fetches from source
-        let content = db.source(&uri).await.unwrap();
-        assert_eq!(content, "module Main exposing (..)");
-
-        // Second read - should be cached (we can't easily verify this without internal access)
-        let content2 = db.source(&uri).await.unwrap();
-        assert_eq!(content2, "module Main exposing (..)");
-    }
-
-    #[tokio::test]
     async fn test_database_imports() {
         let mem = InMemorySource::new();
         let mut db = Database::new(mem);
@@ -183,12 +166,11 @@ mod tests {
 
         let mut db = Database::new(mem);
 
-        // Read to cache
-        let _ = db.source(&uri).await.unwrap();
-        assert!(db.files.contains_key(&uri));
+        assert_eq!(db.source(&uri).await.unwrap(), "original");
+        db.write(&uri, "updated").await.unwrap();
+        assert_eq!(db.source(&uri).await.unwrap(), "original");
 
-        // Invalidate
         db.invalidate(&uri);
-        assert!(!db.files.contains_key(&uri));
+        assert_eq!(db.source(&uri).await.unwrap(), "updated");
     }
 }

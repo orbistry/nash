@@ -237,30 +237,6 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_graph() {
-        let mut graph = DepGraph::new();
-
-        // Main imports Utils
-        graph.add_module(url("Main.nash"), vec![url("Utils.nash")]);
-        graph.add_module(url("Utils.nash"), vec![]);
-
-        graph.compute_order().unwrap();
-
-        // Utils should come before Main
-        let main_idx = graph
-            .order
-            .iter()
-            .position(|u| u == &url("Main.nash"))
-            .unwrap();
-        let utils_idx = graph
-            .order
-            .iter()
-            .position(|u| u == &url("Utils.nash"))
-            .unwrap();
-        assert!(utils_idx < main_idx);
-    }
-
-    #[test]
     fn test_cycle_detection() {
         let mut graph = DepGraph::new();
 
@@ -269,13 +245,10 @@ mod tests {
         graph.add_module(url("B.nash"), vec![url("C.nash")]);
         graph.add_module(url("C.nash"), vec![url("A.nash")]);
 
-        let result = graph.compute_order();
-        assert!(result.is_err());
-
-        if let Err(DriverError::ImportCycle { cycle }) = result {
-            // Cycle should mention all three modules
-            assert!(cycle.contains("A") || cycle.contains("B") || cycle.contains("C"));
-        }
+        let Err(DriverError::ImportCycle { cycle }) = graph.compute_order() else {
+            panic!("expected an import-cycle error");
+        };
+        assert!(["A", "B", "C"].iter().all(|name| cycle.contains(name)));
     }
 
     #[test]
@@ -289,12 +262,25 @@ mod tests {
         graph.add_module(url("Core.nash"), vec![]);
 
         graph.compute_order().unwrap();
-        let levels = graph.levels();
+        let mut levels = graph.levels();
+        for level in &mut levels {
+            level.sort();
+        }
+        assert_eq!(levels.len(), 3);
+        assert_eq!(levels[0], vec![&url("Core.nash")]);
+        assert_eq!(levels[1], vec![&url("A.nash"), &url("B.nash")]);
+        assert_eq!(levels[2], vec![&url("Main.nash")]);
 
-        // Should have 3 levels:
-        // Level 0: Core
-        // Level 1: A, B
-        // Level 2: Main
-        assert!(levels.len() >= 2);
+        let position = |name| {
+            graph
+                .order
+                .iter()
+                .position(|uri| *uri == url(name))
+                .unwrap()
+        };
+        for middle in ["A.nash", "B.nash"] {
+            assert!(position("Core.nash") < position(middle));
+            assert!(position(middle) < position("Main.nash"));
+        }
     }
 }

@@ -818,11 +818,6 @@ mod tests {
     }
 
     #[test]
-    fn named_type_string() {
-        assert_type_snapshot!("String");
-    }
-
-    #[test]
     fn named_type_qualified() {
         assert_type_snapshot!("Dict.Dict");
     }

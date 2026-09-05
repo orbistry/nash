@@ -118,11 +118,6 @@ mod tests {
     }
 
     #[test]
-    fn single() {
-        assert_pattern_snapshot!("[a]");
-    }
-
-    #[test]
     fn multiple() {
         assert_pattern_snapshot!("[a, b, c]");
     }

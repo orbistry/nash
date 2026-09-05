@@ -238,11 +238,6 @@ mod tests {
     }
 
     #[test]
-    fn parenthesized_var() {
-        assert_expr_snapshot!("(foo)");
-    }
-
-    #[test]
     fn pair() {
         assert_expr_snapshot!("(1, 2)");
     }
