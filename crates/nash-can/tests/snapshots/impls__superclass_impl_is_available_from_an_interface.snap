@@ -1,0 +1,46 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: "result.tables.impls.keys().collect::<Vec<_>>()"
+---
+[
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Base",
+            },
+            name: "Eq",
+        },
+        heads: [
+            Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Base",
+                    },
+                    name: "Color",
+                },
+            ),
+        ],
+    },
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Ord",
+        },
+        heads: [
+            Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Base",
+                    },
+                    name: "Color",
+                },
+            ),
+        ],
+    },
+]

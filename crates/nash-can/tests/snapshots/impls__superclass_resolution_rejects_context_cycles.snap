@@ -1,0 +1,84 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: result.unwrap_err()
+---
+[
+    MissingSuperclass {
+        region: Region {
+            start: Position {
+                line: 9,
+                column: 1,
+            },
+            end: Position {
+                line: 10,
+                column: 18,
+            },
+        },
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Ord",
+        },
+        heads: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 9,
+                        column: 10,
+                    },
+                    end: Position {
+                        line: 9,
+                        column: 15,
+                    },
+                },
+                value: Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Color",
+                    },
+                    vars: [],
+                },
+            },
+        ],
+        superclass: Pred {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Eq",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 9,
+                            column: 10,
+                        },
+                        end: Position {
+                            line: 9,
+                            column: 15,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "Color",
+                        },
+                        args: [],
+                    },
+                },
+            ],
+        },
+        index: 0,
+        reason: Cycle,
+    },
+]

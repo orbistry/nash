@@ -1,4 +1,5 @@
 mod accumulate;
+mod entailment;
 pub mod environment;
 mod error;
 pub mod expression;
@@ -12,6 +13,7 @@ mod traits;
 pub mod types;
 pub mod warning;
 
+pub use crate::entailment::Failure as EntailmentFailure;
 pub use crate::error::{BadArityContext, DuplicatePatternContext, Error, PossibleNames, VarKind};
 pub use crate::interface::{
     AliasVisibility, Annotations, Interface, InterfaceAlias, InterfaceBinop, InterfaceMethod,

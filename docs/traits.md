@@ -183,6 +183,15 @@ when it needs one that is missing.
   `P`'s key exists, and `Given ⊢ Q` for every `Q` in the impl's context
   instantiated at `P`'s arguments.
 
+Superclass checking during canonicalization performs a bounded search.
+A predicate already active in the instance-resolution chain is a cycle,
+not a proof. Expanding flexible contexts are bounded too: each impl check
+allows 16,384 work steps and fewer than 128 nested resolution or type
+conversion calls. Predicate comparisons count toward the work limit.
+Failure reports the instantiated superclass requirement and distinguishes
+a missing proof, a cycle, and the search limit. The given superclass
+closure is computed once per impl and reused for its requirements.
+
 Evidence is the derivation:
 
 ```

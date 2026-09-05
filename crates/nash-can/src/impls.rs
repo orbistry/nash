@@ -91,6 +91,9 @@ pub(crate) fn tables<'a>(
             bump.alloc(info(bump, module.name, impl_)),
         )?;
     }
+    for impl_ in tables.impls.values().filter(|i| i.home == module.name) {
+        crate::entailment::check(bump, &tables, impl_)?;
+    }
     Ok(tables)
 }
 

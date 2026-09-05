@@ -1,0 +1,112 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: result.unwrap_err()
+---
+[
+    MissingSuperclass {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 1,
+            },
+            end: Position {
+                line: 9,
+                column: 18,
+            },
+        },
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Ord",
+        },
+        heads: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 8,
+                        column: 11,
+                    },
+                    end: Position {
+                        line: 8,
+                        column: 18,
+                    },
+                },
+                value: Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "List",
+                    },
+                    vars: [
+                        "a",
+                    ],
+                },
+            },
+        ],
+        superclass: Pred {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Eq",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 8,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 8,
+                            column: 18,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "List",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 8,
+                                        column: 11,
+                                    },
+                                    end: Position {
+                                        line: 8,
+                                        column: 18,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                },
+            ],
+        },
+        index: 0,
+        reason: Limit,
+    },
+]

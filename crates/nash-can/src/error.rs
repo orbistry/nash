@@ -36,6 +36,14 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    MissingSuperclass {
+        region: Region,
+        trait_: QualifiedName<'a>,
+        heads: &'a [Located<nash_ast::Head<'a>>],
+        superclass: &'a nash_ast::Pred<'a>,
+        index: u16,
+        reason: crate::entailment::Failure,
+    },
     BadInstanceHead {
         region: Region,
         reason: BadHead,

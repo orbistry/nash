@@ -615,7 +615,10 @@ Status: in progress. Local impl heads, capture-safe method substitution,
 head/context kind checks, method checks, and local orphan/overlap checks
 are implemented. Global tables now retain local and interface impls and
 private trait metadata, with overlap checks across interfaces. Focused
-snapshots cover these paths. Superclass entailment remains to be implemented. Partial alias
+snapshots cover these paths. Superclass entailment now checks local impls
+after the global table is assembled, using givens, superclass closure and
+instance contexts with cycle and work limits. The compiler-owned reflexive
+Lift rule is still pending. Partial alias
 heads must retain their unsupplied formal parameters through application;
 the existing constraint instantiator cannot yet expand them safely. Do not
 mark this chunk complete before that contract and the remaining acceptance
@@ -779,8 +782,14 @@ fn check_superclasses<'a>(bump, tables: &Tables<'a>, impl_: &ImplInfo<'a>) -> Re
 fn entails_static<'a>(bump, tables, given: &[Pred<'a>], wanted: &Pred<'a>) -> bool
 ```
 
-`entails_static` is small (contexts are on variables, heads are one level
-deep) and is the only place nash-can reasons about entailment.
+`entailment.rs` is the only place nash-can reasons about entailment. Contexts
+are flexible and may contain nested types or higher-kinded applications.
+It uses rigid, nominal terms, flattens type applications, and ignores source
+regions when comparing predicates. Given superclass closure is computed
+once per impl. Active instance cycles fail; expanding contexts and
+structural comparisons share a 16,384-step budget, with a depth limit of
+128. `MissingSuperclass` includes the instantiated requirement and a
+`Missing`, `Cycle`, or `Limit` reason. No failed or limited search is a proof.
 
 Methods:
 

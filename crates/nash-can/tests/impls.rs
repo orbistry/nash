@@ -2,6 +2,203 @@ use bumpalo::Bump;
 use indoc::indoc;
 
 #[test]
+fn superclass_givens_preserve_nominal_alias_identity() {
+    let bump = Bump::new();
+    let mut results = Vec::new();
+    for given in ["Box", "Other"] {
+        let source = format!(
+            "module Main exposing (..)\ntype alias Box 'a = {{ value : 'a }}\ntype alias Other 'a = {{ value : 'a }}\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq ({given} 'a) => Ord (Box 'a) where\n    compare x = x\n"
+        );
+        results.push(canonicalize(&bump, &source).map(|_| ()));
+    }
+    insta::assert_debug_snapshot!(results);
+}
+
+#[test]
+fn superclass_context_substitutes_higher_kinded_arguments() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        type Wrap 'f 'a = Wrap ('f 'a)
+        trait Eq 'a where
+            eq : 'a -> 'a
+        trait Eq 'a => Ord 'a where
+            compare : 'a -> 'a
+        impl Eq ('f 'a) => Eq (Wrap 'f 'a) where
+            eq x = x
+        impl Eq ('f 'a) => Ord (Wrap 'f 'a) where
+            compare x = x
+    "
+        ),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+}
+
+#[test]
+fn superclass_impl_is_available_from_an_interface() {
+    let bump = Bump::new();
+    let base = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Base exposing (..)
+        type Color = Red
+        trait Eq 'a where
+            eq : 'a -> 'a
+        impl Eq Color where
+            eq x = x
+    "
+        ),
+    )
+    .unwrap();
+    let interfaces = std::collections::BTreeMap::from([(
+        "Base",
+        nash_can::from_module(&bump, &base.module, &Default::default()),
+    )]);
+    let source = indoc!(
+        "
+        module Main exposing (..)
+        import Base exposing (Eq, Color)
+        trait Eq 'a => Ord 'a where
+            compare : 'a -> 'a
+        impl Ord Color where
+            compare x = x
+    "
+    );
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let result = nash_can::canonicalize(
+        &bump,
+        nash_can::Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+}
+
+#[test]
+fn superclass_context_uses_given_superclasses() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        trait Eq 'a where
+            eq : 'a -> 'a
+        trait Eq 'a => Ord 'a where
+            compare : 'a -> 'a
+        impl Eq 'a => Eq (List 'a) where
+            eq x = x
+        impl Ord 'a => Ord (List 'a) where
+            compare x = x
+    "
+        ),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+}
+
+#[test]
+fn superclass_resolution_bounds_expanding_contexts() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        trait Eq 'a where
+            eq : 'a -> 'a
+        trait Eq 'a => Ord 'a where
+            compare : 'a -> 'a
+        impl Eq (List (List 'a)) => Eq (List 'a) where
+            eq x = x
+        impl Ord (List 'a) where
+            compare x = x
+    "
+        ),
+    );
+    insta::assert_debug_snapshot!(result.unwrap_err());
+}
+
+#[test]
+fn missing_superclass_is_rejected() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        type Color = Red
+        trait Eq 'a where
+            eq : 'a -> 'a
+        trait Eq 'a => Ord 'a where
+            compare : 'a -> 'a
+        impl Ord Color where
+            compare x = x
+    "
+        ),
+    );
+    insta::assert_debug_snapshot!(result.unwrap_err());
+}
+
+#[test]
+fn superclass_impl_may_follow_its_use() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        type Color = Red
+        trait Eq 'a where
+            eq : 'a -> 'a
+        trait Eq 'a => Ord 'a where
+            compare : 'a -> 'a
+        impl Ord Color where
+            compare x = x
+        impl Eq Color where
+            eq x = x
+    "
+        ),
+    )
+    .unwrap();
+    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+}
+
+#[test]
+fn superclass_resolution_rejects_context_cycles() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        type Color = Red
+        trait Eq 'a where
+            eq : 'a -> 'a
+        trait Eq 'a => Ord 'a where
+            compare : 'a -> 'a
+        impl Eq Color => Eq Color where
+            eq x = x
+        impl Ord Color where
+            compare x = x
+    "
+        ),
+    );
+    insta::assert_debug_snapshot!(result.unwrap_err());
+}
+
+#[test]
 fn global_overlap_between_core_modules() {
     let bump = Bump::new();
     let trait_module = canonicalize(
