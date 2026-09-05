@@ -1,0 +1,51 @@
+---
+source: crates/nash-can/tests/traits.rs
+expression: "nash_can::canonicalize(&bump, nash_can::Context\n{ package: None, interfaces: Some(&interfaces) }, source).unwrap_err()"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 25,
+            },
+            end: Position {
+                line: 8,
+                column: 33,
+            },
+        },
+        context: TypeArg {
+            head: Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                },
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    3,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Term,
+            ),
+        },
+    },
+]

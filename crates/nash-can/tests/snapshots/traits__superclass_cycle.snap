@@ -1,0 +1,36 @@
+---
+source: crates/nash-can/tests/traits.rs
+expression: "nash_can::canonicalize(&bump, nash_can::Context::default(),\nsource).unwrap_err()"
+---
+[
+    RecursiveSuperclass {
+        names: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 20,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 25,
+                    },
+                },
+                value: "First",
+            },
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 6,
+                        column: 19,
+                    },
+                    end: Position {
+                        line: 6,
+                        column: 25,
+                    },
+                },
+                value: "Second",
+            },
+        ],
+    },
+]

@@ -385,6 +385,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Kind schemes of every type constructor visible to the module.
 pub struct KindEnv<'a> {
+    trait_schemes: BTreeMap<QualifiedName<'a>, KindScheme<'a>>,
     schemes: BTreeMap<QualifiedName<'a>, KindScheme<'a>>,
 }
 
@@ -420,7 +421,10 @@ impl<'a> KindEnv<'a> {
                 );
             }
         }
-        KindEnv { schemes }
+        KindEnv {
+            schemes,
+            trait_schemes: BTreeMap::new(),
+        }
     }
 
     pub fn insert(&mut self, name: QualifiedName<'a>, scheme: KindScheme<'a>) {
@@ -1020,6 +1024,9 @@ pub fn check_annotation<'a>(
             .map(|name| (*name, walker.infer.fresh_k(KindSet::ALL)))
             .collect(),
     };
+    for predicate in annotation.context {
+        walker.infer_predicate(&scope, predicate, &BTreeMap::new());
+    }
     let kind = walker.infer_type(&scope, annotation.typ);
     let any = walker.infer.fresh_k(KindSet::ANY);
     walker.expect(
@@ -1205,5 +1212,169 @@ impl<'a> AnnotationChecker<'_, 'a> {
                 }
             }
         }
+    }
+}
+
+/// Infer mutually dependent trait schemes without mixing the trait and type namespaces.
+pub(crate) fn infer_traits<'a>(
+    bump: &'a Bump,
+    env: &mut KindEnv<'a>,
+    home: ModuleName<'a>,
+    traits: &[crate::traits::PreTrait<'a>],
+) -> Result<BTreeMap<&'a str, KindScheme<'a>>, Vec<Error<'a>>> {
+    let nodes = traits
+        .iter()
+        .map(|t| {
+            let predicates = t.supers.iter().chain(
+                t.methods
+                    .iter()
+                    .flat_map(|m| m.annotation.context.iter().skip(1)),
+            );
+            crate::scc::Node {
+                key: t.source.value.name.value,
+                value: t,
+                deps: predicates
+                    .filter(|p| p.trait_.home == home)
+                    .map(|p| p.trait_.name)
+                    .collect(),
+            }
+        })
+        .collect();
+    let mut schemes = BTreeMap::new();
+    for component in crate::scc::strongly_connected_components(nodes) {
+        let group = match component {
+            crate::scc::Scc::Acyclic(t) => vec![t],
+            crate::scc::Scc::Cyclic(group) => group,
+        };
+        let mut walker = Walker {
+            bump,
+            infer: Infer::new(bump),
+            env,
+            home,
+            group: BTreeMap::new(),
+            errors: Vec::new(),
+        };
+        let mut trait_kinds = BTreeMap::new();
+        let mut scopes = Vec::new();
+        for t in &group {
+            let params: BTreeMap<_, _> = t
+                .parameters
+                .iter()
+                .map(|p| (*p, walker.infer.fresh_k(KindSet::ALL)))
+                .collect();
+            let mut root: &K = bump.alloc(K::Base(BaseKind::Term));
+            for p in t.parameters.iter().rev() {
+                root = bump.alloc(K::Arrow(params[p], root));
+            }
+            trait_kinds.insert(
+                QualifiedName {
+                    home,
+                    name: t.source.value.name.value,
+                },
+                root,
+            );
+            scopes.push(Scope { params });
+        }
+        for (t, scope) in group.iter().zip(&scopes) {
+            for predicate in t.supers {
+                walker.infer_predicate(scope, predicate, &trait_kinds);
+            }
+            for method in t.methods {
+                let mut method_scope = Scope {
+                    params: scope.params.clone(),
+                };
+                for variable in method.annotation.free_vars {
+                    method_scope
+                        .params
+                        .entry(variable)
+                        .or_insert_with(|| walker.infer.fresh_k(KindSet::ALL));
+                }
+                walker.expect_any(&method_scope, method.annotation.typ);
+                for predicate in method.annotation.context.iter().skip(1) {
+                    walker.infer_predicate(&method_scope, predicate, &trait_kinds);
+                }
+            }
+            for param in t.source.value.params {
+                if let Some(annotation) = param.kind {
+                    let expected = walker.annotation_kind(annotation);
+                    walker.expect(
+                        annotation.region,
+                        KindContext::ParamAnnotation {
+                            type_name: t.source.value.name.value,
+                            param: param.name.value,
+                        },
+                        expected,
+                        scope.params[param.name.value],
+                    );
+                }
+            }
+        }
+        if !walker.errors.is_empty() {
+            return Err(walker.errors);
+        }
+        let finished: Vec<_> = trait_kinds
+            .into_iter()
+            .map(|(name, kind)| (name, walker.infer.generalize(kind)))
+            .collect();
+        for (name, kind) in finished {
+            env.trait_schemes.insert(name, kind);
+            schemes.insert(name.name, kind);
+        }
+    }
+    Ok(schemes)
+}
+
+impl<'a> Walker<'_, 'a> {
+    fn infer_predicate(
+        &mut self,
+        scope: &Scope<'a>,
+        predicate: &nash_ast::Pred<'a>,
+        group: &BTreeMap<QualifiedName<'a>, &'a K<'a>>,
+    ) {
+        let root = match group.get(&predicate.trait_) {
+            Some(kind) => *kind,
+            None => self.infer.instantiate(
+                self.env
+                    .trait_schemes
+                    .get(&predicate.trait_)
+                    .expect("trait kinds cover resolved predicates"),
+            ),
+        };
+        self.apply_args(
+            scope,
+            predicate
+                .args
+                .first()
+                .map_or(Region::zero(), |arg| arg.region),
+            KindHead::Named(predicate.trait_),
+            root,
+            predicate.args,
+        );
+    }
+}
+
+pub(crate) fn check_trait_defaults<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    home: ModuleName<'a>,
+    traits: &[&'a Located<nash_ast::Trait<'a>>],
+) -> Result<(), Vec<Error<'a>>> {
+    let mut checker = AnnotationChecker {
+        bump,
+        env,
+        home,
+        errors: Vec::new(),
+    };
+    for trait_ in traits {
+        for method in trait_.value.methods {
+            if let Some(definition) = method.default {
+                checker.definition(definition);
+            }
+        }
+    }
+    if checker.errors.is_empty() {
+        Ok(())
+    } else {
+        Err(checker.errors)
     }
 }

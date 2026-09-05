@@ -74,7 +74,10 @@ pub fn create_initial_env<'a>(
                 prefix,
                 value.name,
                 interface.home,
-                value.annotation,
+                super::QualifiedValue {
+                    annotation: value.annotation,
+                    trait_: None,
+                },
             );
         }
 

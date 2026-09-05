@@ -329,6 +329,13 @@ fn find_var<'a>(
     free_locals: &mut FreeLocals<'a>,
 ) -> Result<CanExpr<'a>, Vec<Error<'a>>> {
     match env.vars.get(name) {
+        Some(Var::Method {
+            trait_, annotation, ..
+        }) => Ok(CanExpr::VarMethod {
+            trait_: *trait_,
+            method: name,
+            annotation,
+        }),
         Some(Var::Local(_)) => {
             log_var(free_locals, name);
             Ok(CanExpr::VarLocal(name))
@@ -380,9 +387,16 @@ fn find_var_qual<'a>(
             }]
         })?;
     match info {
-        Info::Specific(home, annotation) => Ok(CanExpr::VarForeign {
-            reference: QualifiedName { home: *home, name },
-            annotation,
+        Info::Specific(home, value) => Ok(match value.trait_ {
+            Some(trait_) => CanExpr::VarMethod {
+                trait_,
+                method: name,
+                annotation: value.annotation,
+            },
+            None => CanExpr::VarForeign {
+                reference: QualifiedName { home: *home, name },
+                annotation: value.annotation,
+            },
         }),
         Info::Ambiguous(first, others) => Err(vec![Error::AmbiguousVar {
             region,

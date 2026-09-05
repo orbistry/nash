@@ -314,8 +314,10 @@ changes have been reviewed.
 
 Status: in progress. Annotation contexts resolve qualified and unqualified
 trait names, check arity and reject variables absent from the annotated
-type. Top-level and let definitions preserve the context. Source trait
-declarations, kind inference, defaults and interface imports remain.
+type. Top-level and let definitions preserve the context. Local trait
+declarations and defaults canonicalize; method scopes, superclass checks
+and SCC kind inference are implemented. Interface trait exports/imports
+and their cross-module validation remain.
 
 Files: `crates/nash-can/src/types.rs`, `crates/nash-can/src/environment.rs`,
 `crates/nash-can/src/environment/local.rs`, `crates/nash-can/src/environment/foreign.rs`,

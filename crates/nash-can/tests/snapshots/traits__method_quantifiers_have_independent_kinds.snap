@@ -1,0 +1,38 @@
+---
+source: crates/nash-can/tests/traits.rs
+expression: "(&trait_.kind, variables)"
+---
+(
+    KindScheme {
+        bounds: [
+            KindSet(
+                7,
+            ),
+        ],
+        kind: Arrow(
+            Var(
+                0,
+            ),
+            Base(
+                Term,
+            ),
+        ),
+    },
+    [
+        (
+            "ordinary",
+            [
+                "a",
+                "b",
+            ],
+        ),
+        (
+            "higher",
+            [
+                "a",
+                "b",
+                "c",
+            ],
+        ),
+    ],
+)

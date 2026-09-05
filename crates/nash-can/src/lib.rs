@@ -7,6 +7,7 @@ pub mod kinds;
 mod module;
 pub mod pattern;
 mod scc;
+mod traits;
 pub mod types;
 pub mod warning;
 

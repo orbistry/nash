@@ -36,6 +36,37 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    DuplicateTrait {
+        name: &'a str,
+        first: Region,
+        second: Region,
+    },
+    DuplicateMethod {
+        name: &'a str,
+        first: Region,
+        second: Region,
+    },
+    DuplicateTraitParameter {
+        name: &'a str,
+        first: Region,
+        second: Region,
+    },
+    SuperclassBadArg {
+        region: Region,
+        trait_: &'a str,
+    },
+    MethodMissingParameter {
+        region: Region,
+        method: &'a str,
+        parameter: &'a str,
+    },
+    RecursiveSuperclass {
+        names: &'a [&'a Located<&'a str>],
+    },
+    ExportOpenTrait {
+        region: Region,
+        name: &'a str,
+    },
     NotFoundTrait {
         region: Region,
         prefix: Option<&'a str>,

@@ -52,12 +52,6 @@ pub fn canonicalize<'a>(
     context: Context<'a>,
     module: &SourceModule<'a>,
 ) -> Result<CanResult<'a>, Vec<Error<'a>>> {
-    if let Some(trait_) = module.traits.first() {
-        return Err(vec![Error::Unsupported {
-            feature: "trait declaration",
-            region: trait_.region,
-        }]);
-    }
     if let Some(impl_) = module.impls.first() {
         return Err(vec![Error::Unsupported {
             feature: "implementation declaration",
@@ -124,13 +118,15 @@ pub fn canonicalize<'a>(
     environment::local::check_binops(&env, module.binops)?;
 
     let mut warnings = Vec::new();
+    let traits = crate::traits::canonicalize(bump, &mut env, &mut kind_env, module, &mut warnings)?;
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
     kinds::check_decl_annotations(bump, &kind_env, home, decls)?;
+    kinds::check_trait_defaults(bump, &kind_env, home, traits)?;
     let binops = canonicalize_binops(bump, module.binops);
     let exports = canonicalize_exports(bump, module)?;
 
     let can_module = CanModule {
-        traits: &[],
+        traits,
         impls: &[],
         kind: module.kind,
         name: env.home,
@@ -172,7 +168,7 @@ fn canonicalize_decls<'a>(
     let mut errors = Vec::new();
     let mut nodes: Vec<NodeOne<'a>> = Vec::with_capacity(values.len());
     for value in values {
-        match to_node_one(bump, env, value, warnings) {
+        match to_node_one(bump, env, value, None, warnings) {
             Ok(node) => nodes.push(node),
             Err(errs) => errors.extend(errs),
         }
@@ -302,6 +298,7 @@ fn to_node_one<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
     value: &'a Located<SourceValue<'a>>,
+    known_annotation: Option<&'a nash_ast::Annotation<'a>>,
     warnings: &mut Vec<Warning<'a>>,
 ) -> Result<NodeOne<'a>, Vec<Error<'a>>> {
     let src = &value.value;
@@ -315,8 +312,14 @@ fn to_node_one<'a>(
     // Mirrors Elm's `toNodeOne`: typed definitions resolve the annotation
     // and match it against the arguments before the body is touched, and
     // one duplicate scope spans all arguments either way.
-    let (builder, arg_bindings) = if let Some(ann) = src.annotation {
-        let annotation = types::to_annotation(bump, env, ann)?;
+    let annotation = match known_annotation {
+        Some(annotation) => Some(annotation),
+        None => src
+            .annotation
+            .map(|ann| types::to_annotation(bump, env, ann))
+            .transpose()?,
+    };
+    let (builder, arg_bindings) = if let Some(annotation) = annotation {
         let mut bound: Vec<(&'a str, Region)> = Vec::new();
         let (typed_args, result_type) = expression::gather_typed_args(
             bump,
@@ -821,6 +824,8 @@ fn canonicalize_exports<'a>(
                 module.unions.iter().map(|u| u.value.name.value).collect();
             let alias_names: BTreeSet<&str> =
                 module.aliases.iter().map(|a| a.value.name.value).collect();
+            let trait_names: BTreeSet<&str> =
+                module.traits.iter().map(|t| t.value.name.value).collect();
             let binop_names: BTreeSet<&str> = module.binops.iter().map(|b| b.value.op).collect();
 
             let mut resolved: Vec<(&'a str, Region, Export<'a>)> = Vec::new();
@@ -855,6 +860,20 @@ fn canonicalize_exports<'a>(
                         }
                     }
                     Exposed::Upper { name, privacy } | Exposed::LowerType { name, privacy } => {
+                        if trait_names.contains(name.value) {
+                            match privacy {
+                                Privacy::Private => resolved.push((
+                                    name.value,
+                                    name.region,
+                                    Export::Trait(name.value),
+                                )),
+                                Privacy::Public(region) => errors.push(Error::ExportOpenTrait {
+                                    region: *region,
+                                    name: name.value,
+                                }),
+                            }
+                            continue;
+                        }
                         match privacy {
                             Privacy::Public(dot_dot_region) => {
                                 if union_names.contains(name.value) {
@@ -982,6 +1001,20 @@ fn collect_used_modules<'a>(module: &CanModule<'a>) -> BTreeSet<&'a str> {
     let mut used = BTreeSet::new();
     let home = module.name;
     collect_from_decls(module.decls, home, &mut used);
+    for trait_ in module.traits {
+        for predicate in trait_.value.supers {
+            collect_from_predicate(predicate, home, &mut used);
+        }
+        for method in trait_.value.methods {
+            collect_from_type(&method.annotation.typ.value, home, &mut used);
+            for predicate in method.annotation.context {
+                collect_from_predicate(predicate, home, &mut used);
+            }
+            if let Some(default) = method.default {
+                collect_from_def(default, home, &mut used);
+            }
+        }
+    }
     for union in module.unions {
         for ctor in union.value.ctors {
             for arg in ctor.arguments {
@@ -1047,10 +1080,7 @@ fn collect_from_def<'a>(
             ..
         } => {
             for predicate in *context {
-                add_if_foreign(home, predicate.trait_.home, used);
-                for argument in predicate.args {
-                    collect_from_type(&argument.value, home, used);
-                }
+                collect_from_predicate(predicate, home, used);
             }
             for arg in *args {
                 collect_from_pattern(&arg.pattern.value, home, used);
@@ -1282,6 +1312,43 @@ fn collect_from_type<'a>(
                 }
             }
         }
+    }
+}
+
+pub(crate) fn canonicalize_typed_value<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    definition: &'a Located<nash_source::Def<'a>>,
+    annotation: &'a nash_ast::Annotation<'a>,
+    warnings: &mut Vec<Warning<'a>>,
+) -> Result<&'a nash_ast::Def<'a>, Vec<Error<'a>>> {
+    let nash_source::Def::Define {
+        name, args, body, ..
+    } = &definition.value
+    else {
+        unreachable!("trait defaults are named definitions")
+    };
+    let value = bump.alloc(Located::at(
+        definition.region,
+        SourceValue {
+            name,
+            arguments: args,
+            body,
+            annotation: None,
+            attributes: &[],
+        },
+    ));
+    Ok(to_node_one(bump, env, value, Some(annotation), warnings)?.def)
+}
+
+fn collect_from_predicate<'a>(
+    predicate: &nash_ast::Pred<'a>,
+    home: ModuleName<'a>,
+    used: &mut BTreeSet<&'a str>,
+) {
+    add_if_foreign(home, predicate.trait_.home, used);
+    for argument in predicate.args {
+        collect_from_type(&argument.value, home, used);
     }
 }
 
@@ -4280,13 +4347,6 @@ mod tests {
     #[test]
     fn attributes_unsupported() {
         assert_module_error_snapshot!("module Main exposing (..)\n\n@inline\nvalue = 1\n");
-    }
-
-    #[test]
-    fn trait_declaration_unsupported() {
-        assert_module_error_snapshot!(
-            "module Main exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n"
-        );
     }
 
     #[test]

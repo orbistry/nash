@@ -43,6 +43,11 @@ pub struct MethodInfo<'a> {
 /// A value variable in scope.
 #[derive(Clone, Debug)]
 pub enum Var<'a> {
+    Method {
+        trait_: nash_ast::QualifiedName<'a>,
+        annotation: &'a nash_ast::Annotation<'a>,
+        local_region: Option<Region>,
+    },
     Local(Region),
     TopLevel(Region),
     /// Imported from another module, like Elm's `Foreign home annotation`.
@@ -51,6 +56,12 @@ pub enum Var<'a> {
     Foreign(ModuleName<'a>, &'a nash_ast::Annotation<'a>),
     /// Ambiguous import: same name imported from multiple modules.
     Foreigns(ModuleName<'a>, Vec<ModuleName<'a>>),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct QualifiedValue<'a> {
+    pub annotation: &'a nash_ast::Annotation<'a>,
+    pub trait_: Option<nash_ast::QualifiedName<'a>>,
 }
 
 /// A type in scope (alias or union).
@@ -183,9 +194,8 @@ pub struct Env<'a> {
     pub types: Exposed<'a, Type<'a>>,
     pub ctors: Exposed<'a, Ctor<'a>>,
     pub binops: Exposed<'a, Binop<'a>>,
-    /// Qualified value lookups carry the imported value's annotation,
-    /// like Elm's `_q_vars :: Qualified Can.Annotation`.
-    pub q_vars: Qualified<'a, &'a nash_ast::Annotation<'a>>,
+    /// Qualified values carry their scheme and, for methods, their owning trait.
+    pub q_vars: Qualified<'a, QualifiedValue<'a>>,
     pub q_types: Qualified<'a, Type<'a>>,
     pub q_ctors: Qualified<'a, Ctor<'a>>,
 }
@@ -310,7 +320,12 @@ impl<'a> Env<'a> {
 
         for (&name, &region) in bindings {
             match new_env.vars.get(name) {
-                Some(Var::Local(original)) | Some(Var::TopLevel(original)) => {
+                Some(Var::Local(original))
+                | Some(Var::TopLevel(original))
+                | Some(Var::Method {
+                    local_region: Some(original),
+                    ..
+                }) => {
                     errors.push(Error::Shadowing {
                         name,
                         original: *original,
