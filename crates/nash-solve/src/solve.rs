@@ -25,7 +25,7 @@ pub fn run<'a>(
     uf: &mut UnionFind<'a>,
     constraint: &Constraint<'a>,
     tables: &nash_can::environment::Tables<'a>,
-) -> Result<Annotations<'a>, Vec<Error<'a>>> {
+) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
     let mut solver = Solver {
         bump,
         tables,
@@ -36,6 +36,8 @@ pub fn run<'a>(
         givens: Vec::new(),
         schemes: Vec::new(),
         recursive_uses: Vec::new(),
+        uses: Vec::new(),
+        owners: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -51,38 +53,9 @@ pub fn run<'a>(
         constraint,
     );
 
-    state.errors.extend(solver.conversion_errors);
+    state.errors.append(&mut solver.conversion_errors);
     if state.errors.is_empty() {
-        Ok(state
-            .env
-            .iter()
-            .map(|(name, binding)| {
-                let scheme = solver
-                    .schemes
-                    .iter()
-                    .find(|scheme| Some(nash_ast::NodeId::def(scheme.name)) == binding.definition)
-                    .expect("exported definition has a recorded scheme");
-                let binding = &scheme.binding;
-                let context: Vec<_> = binding
-                    .context
-                    .iter()
-                    .map(|id| {
-                        let predicate = solver.predicates.get(*id);
-                        (predicate.trait_, predicate.args.as_slice())
-                    })
-                    .collect();
-                (
-                    *name,
-                    crate::annotation::to_scheme_annotation(
-                        bump,
-                        uf,
-                        binding.variable,
-                        &context,
-                        &scheme.quantified,
-                    ),
-                )
-            })
-            .collect())
+        solver.finish(uf, &state.env)
     } else {
         // Elm accumulates errors by prepending; match its final order.
         let mut errors = state.errors;
@@ -108,11 +81,24 @@ struct SchemeRecord<'a> {
     /// Freeze the variables owned by this scheme at its own boundary.
     quantified: Vec<Variable>,
     binder: nash_ast::NodeId,
+    parent: Option<nash_ast::NodeId>,
 }
 
-struct RecursiveUse<'a> {
-    definition: nash_ast::NodeId,
+enum UseSource {
+    Local {
+        definition: nash_ast::NodeId,
+        copies: Vec<(Variable, Variable)>,
+    },
+    Foreign {
+        variables: Vec<Variable>,
+    },
+}
+
+struct UseRecord<'a> {
     site: UseSite<'a>,
+    owner: Option<nash_ast::NodeId>,
+    source: UseSource,
+    predicates: Vec<type_::PredId>,
 }
 
 type Env<'a> = BTreeMap<&'a str, Binding<'a>>;
@@ -137,7 +123,9 @@ struct Solver<'a, 'tables> {
     wanted: Vec<(usize, type_::PredId)>,
     givens: Vec<GivenFrame<'a>>,
     schemes: Vec<SchemeRecord<'a>>,
-    recursive_uses: Vec<RecursiveUse<'a>>,
+    recursive_uses: Vec<usize>,
+    uses: Vec<UseRecord<'a>>,
+    owners: Vec<nash_ast::NodeId>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -155,6 +143,295 @@ struct Given<'a> {
 }
 
 impl<'a> Solver<'a, '_> {
+    fn scope(&self, mut owner: nash_ast::NodeId) -> (nash_ast::NodeId, usize) {
+        let mut depth = 0;
+        loop {
+            let scheme = self
+                .schemes
+                .iter()
+                .find(|scheme| nash_ast::NodeId::def(scheme.name) == owner)
+                .expect("body owner has a recorded scheme");
+            match scheme.parent {
+                Some(parent) => {
+                    owner = parent;
+                    depth += 1;
+                }
+                None => return (scheme.binder, depth),
+            }
+        }
+    }
+
+    fn use_variables(
+        &self,
+        uf: &mut UnionFind<'a>,
+        use_: &UseRecord<'a>,
+        quantified: &[Variable],
+    ) -> Vec<Variable> {
+        match &use_.source {
+            UseSource::Foreign { variables } => variables.clone(),
+            UseSource::Local { copies, .. } => quantified
+                .iter()
+                .map(|var| {
+                    if copies.is_empty() {
+                        return *var;
+                    }
+                    copies
+                        .iter()
+                        .find_map(|(original, copy)| {
+                            uf.equivalent(*original, *var).then_some(*copy)
+                        })
+                        .expect("scheme quantifier was copied with its type and context")
+                })
+                .collect(),
+        }
+    }
+
+    fn finish(
+        &self,
+        uf: &mut UnionFind<'a>,
+        env: &Env<'a>,
+    ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
+        use crate::solved::{Instance, Scheme, SolvedTypes};
+        use std::collections::HashMap;
+        let mut errors = Vec::new();
+        for use_ in &self.uses {
+            let mut pending = use_.predicates.clone();
+            let mut seen = BTreeSet::new();
+            while let Some(id) = pending.pop() {
+                if !seen.insert(id) {
+                    continue;
+                }
+                let pred = self.predicates.get(id);
+                match &pred.solution {
+                    Some(crate::preds::Solution::Impl { subs, .. }) => pending.extend(subs),
+                    Some(_) => {}
+                    None => {
+                        let args = pred
+                            .args
+                            .iter()
+                            .map(|var| to_error_type(self.bump, uf, *var))
+                            .collect::<Vec<_>>();
+                        errors.push(Error::UnresolvedConstraint {
+                            region: use_.site.region,
+                            name: use_.site.name,
+                            trait_: pred.trait_,
+                            args: self.bump.alloc_slice_copy(&args),
+                        });
+                    }
+                }
+            }
+        }
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+        let mut solved = SolvedTypes::default();
+        let mut orders = HashMap::new();
+        let mut rendered_uses = HashMap::new();
+        let mut scopes = Vec::new();
+        for scheme in &self.schemes {
+            let root = self.scope(nash_ast::NodeId::def(scheme.name)).0;
+            if !scopes.contains(&root) {
+                scopes.push(root);
+            }
+        }
+        // Quantifier order must be frozen with its rendered scheme, before
+        // another body can assign names to its own instantiations.
+        for scope in &scopes {
+            let mut members: Vec<_> = self
+                .schemes
+                .iter()
+                .filter(|scheme| self.scope(nash_ast::NodeId::def(scheme.name)).0 == *scope)
+                .collect();
+            members.sort_by_key(|scheme| self.scope(nash_ast::NodeId::def(scheme.name)).1);
+            let mut roots = Vec::new();
+            for scheme in &members {
+                roots.push(scheme.binding.variable);
+                for id in scheme.binding.context {
+                    roots.extend(&self.predicates.get(*id).args);
+                }
+            }
+            for use_ in &self.uses {
+                if self
+                    .scope(use_.owner.expect("use belongs to a definition"))
+                    .0
+                    != *scope
+                {
+                    continue;
+                }
+                let quantified = match use_.source {
+                    UseSource::Local { definition, .. } => self
+                        .schemes
+                        .iter()
+                        .find(|scheme| nash_ast::NodeId::def(scheme.name) == definition)
+                        .unwrap()
+                        .quantified
+                        .as_slice(),
+                    UseSource::Foreign { .. } => &[],
+                };
+                roots.extend(self.use_variables(uf, use_, quantified));
+                let mut pending = use_.predicates.clone();
+                while let Some(id) = pending.pop() {
+                    if let Some(crate::preds::Solution::Impl {
+                        type_vars, subs, ..
+                    }) = &self.predicates.get(id).solution
+                    {
+                        roots.extend(type_vars);
+                        pending.extend(subs);
+                    }
+                }
+            }
+            crate::annotation::prepare_scope(self.bump, uf, &roots);
+            for scheme in members {
+                let id = nash_ast::NodeId::def(scheme.name);
+                let context: Vec<_> = scheme
+                    .binding
+                    .context
+                    .iter()
+                    .map(|id| {
+                        let pred = self.predicates.get(*id);
+                        (pred.trait_, pred.args.as_slice())
+                    })
+                    .collect();
+                let annotation = crate::annotation::to_scheme_annotation(
+                    self.bump,
+                    uf,
+                    scheme.binding.variable,
+                    &context,
+                    &scheme.quantified,
+                );
+                orders.insert(
+                    id,
+                    crate::annotation::ordered_quantifiers(uf, &scheme.quantified),
+                );
+                solved.schemes.insert(
+                    id,
+                    Scheme {
+                        annotation,
+                        binder: scheme.binder,
+                    },
+                );
+            }
+            for use_ in &self.uses {
+                if self
+                    .scope(use_.owner.expect("use belongs to a definition"))
+                    .0
+                    != *scope
+                {
+                    continue;
+                }
+                let keys = match &use_.source {
+                    UseSource::Local { definition, .. } => self
+                        .schemes
+                        .iter()
+                        .find(|scheme| nash_ast::NodeId::def(scheme.name) == *definition)
+                        .unwrap()
+                        .quantified
+                        .clone(),
+                    UseSource::Foreign { variables } => variables.clone(),
+                };
+                let variables = self.use_variables(uf, use_, &keys);
+                let types: Vec<_> = keys
+                    .into_iter()
+                    .zip(variables)
+                    .map(|(key, var)| (key, crate::annotation::to_solved_type(self.bump, uf, var)))
+                    .collect();
+                let evidence = &*self
+                    .bump
+                    .alloc_slice_fill_iter(use_.predicates.iter().map(|id| self.evidence(uf, *id)));
+                assert!(
+                    rendered_uses
+                        .insert(use_.site.node, (types, evidence))
+                        .is_none(),
+                    "one instance per original use node"
+                );
+            }
+        }
+        // Callees in other scopes may have been rendered later. Reorder the
+        // already-rendered caller types using the callee's frozen identities.
+        for use_ in &self.uses {
+            let (types, evidence) = rendered_uses.remove(&use_.site.node).unwrap();
+            let type_args: Vec<_> = match use_.source {
+                UseSource::Local { definition, .. } => orders[&definition]
+                    .iter()
+                    .map(|var| {
+                        types
+                            .iter()
+                            .find(|(key, _)| key == var)
+                            .expect("rendered quantifier argument")
+                            .1
+                    })
+                    .collect(),
+                UseSource::Foreign { .. } => types.into_iter().map(|(_, typ)| typ).collect(),
+            };
+            solved.instances.insert(
+                use_.site.node,
+                Instance {
+                    type_args: self.bump.alloc_slice_fill_iter(type_args),
+                    evidence,
+                },
+            );
+        }
+        let annotations = env
+            .iter()
+            .map(|(name, binding)| {
+                (
+                    *name,
+                    solved.schemes[&binding.definition.expect("exported definition")].annotation,
+                )
+            })
+            .collect();
+        Ok((annotations, solved))
+    }
+
+    fn evidence(&self, uf: &mut UnionFind<'a>, id: type_::PredId) -> nash_ast::Evidence<'a> {
+        use crate::preds::Solution;
+        use nash_ast::Evidence;
+        match self
+            .predicates
+            .get(id)
+            .solution
+            .as_ref()
+            .expect("validated use evidence")
+        {
+            Solution::Given { binder, index } => Evidence::Given {
+                binder: *binder,
+                index: u16::try_from(*index).expect("context slot fits evidence index"),
+            },
+            Solution::Super {
+                binder,
+                index,
+                path,
+            } => {
+                let mut evidence = Evidence::Given {
+                    binder: *binder,
+                    index: u16::try_from(*index).expect("context slot fits evidence index"),
+                };
+                for index in path {
+                    evidence = Evidence::Super {
+                        of: self.bump.alloc(evidence),
+                        index: u16::try_from(*index).expect("superclass slot fits evidence index"),
+                    };
+                }
+                evidence
+            }
+            Solution::Impl {
+                impl_,
+                type_vars,
+                subs,
+            } => Evidence::Impl {
+                impl_: *impl_,
+                type_args: self.bump.alloc_slice_fill_iter(
+                    type_vars
+                        .iter()
+                        .map(|var| crate::annotation::to_solved_type(self.bump, uf, *var)),
+                ),
+                args: self
+                    .bump
+                    .alloc_slice_fill_iter(subs.iter().map(|id| self.evidence(uf, *id))),
+            },
+        }
+    }
+
     fn expand_givens(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -235,6 +512,10 @@ impl<'a> Solver<'a, '_> {
             });
         }
         let start = self.wanted.len();
+        let owner_depth = self.owners.len();
+        if let Some(binder) = binder {
+            self.owners.push(nash_ast::NodeId::def(binder));
+        }
         let mut state = self.solve(uf, env, rank, state, constraint);
         let report_errors = state.errors.is_empty() && self.conversion_errors.is_empty();
         let report_missing = annotated && report_errors;
@@ -379,6 +660,7 @@ impl<'a> Solver<'a, '_> {
             }
         }
         self.givens.truncate(depth);
+        self.owners.truncate(owner_depth);
         state
     }
 
@@ -931,6 +1213,7 @@ impl<'a> Solver<'a, '_> {
         self.pools[rank].extend(flex_vars.values().copied());
 
         let typ = self.src_type_to_var(uf, rank, &flex_vars, annotation.typ);
+        let mut predicates = Vec::new();
         for (index, predicate) in annotation.context.iter().enumerate() {
             let args = predicate
                 .args
@@ -947,7 +1230,20 @@ impl<'a> Solver<'a, '_> {
                 },
             );
             self.wanted.push((rank, id));
+            predicates.push(id);
         }
+        self.uses.push(UseRecord {
+            site,
+            owner: self.owners.last().copied(),
+            source: UseSource::Foreign {
+                variables: annotation
+                    .free_vars
+                    .iter()
+                    .map(|name| flex_vars[name])
+                    .collect(),
+            },
+            predicates,
+        });
         typ
     }
 
@@ -1139,16 +1435,22 @@ impl<'a> Solver<'a, '_> {
                 binding,
                 quantified,
                 binder: nash_ast::NodeId::def(binder.unwrap_or(definition.name)),
+                parent: self.owners.last().copied(),
             });
         }
         let pending = std::mem::take(&mut self.recursive_uses);
-        for use_ in pending {
+        for use_index in pending {
+            let use_ = &self.uses[use_index];
+            let site = use_.site;
+            let UseSource::Local { definition, .. } = use_.source else {
+                unreachable!("recursive local use")
+            };
             let Some(scheme) = self
                 .schemes
                 .iter()
-                .find(|scheme| nash_ast::NodeId::def(scheme.name) == use_.definition)
+                .find(|scheme| nash_ast::NodeId::def(scheme.name) == definition)
             else {
-                self.recursive_uses.push(use_);
+                self.recursive_uses.push(use_index);
                 continue;
             };
             for (index, id) in scheme.binding.context.iter().enumerate() {
@@ -1158,10 +1460,7 @@ impl<'a> Solver<'a, '_> {
                     Predicate {
                         trait_: pred.trait_,
                         args: pred.args.clone(),
-                        origin: Origin::Use {
-                            site: use_.site,
-                            index,
-                        },
+                        origin: Origin::Use { site, index },
                         solution: None,
                     },
                 );
@@ -1169,6 +1468,7 @@ impl<'a> Solver<'a, '_> {
                 // variables and pass its final context through unchanged.
                 self.predicates
                     .solve_given(uf, id, scheme.binder, index, Vec::new());
+                self.uses[use_index].predicates.push(id);
             }
         }
     }
@@ -1217,19 +1517,12 @@ impl<'a> Solver<'a, '_> {
         binding: Binding<'a>,
         site: UseSite<'a>,
     ) -> Variable {
-        if !binding.context_is_final {
-            self.recursive_uses.push(RecursiveUse {
-                definition: binding
-                    .definition
-                    .expect("recursive header has definition identity"),
-                site,
-            });
-        }
         let mut roots = vec![binding.variable];
         for id in binding.context {
             roots.extend_from_slice(&self.predicates.get(*id).args);
         }
-        let copies = self.make_copies(uf, rank, &roots).0;
+        let (copies, pairs) = self.make_copies(uf, rank, &roots);
+        let mut predicates = Vec::new();
         let mut offset = 1;
         for (index, id) in binding.context.iter().enumerate() {
             let predicate = self.predicates.get(*id);
@@ -1242,7 +1535,22 @@ impl<'a> Solver<'a, '_> {
             };
             let id = self.predicates.push(uf, predicate);
             self.wanted.push((rank, id));
+            predicates.push(id);
             offset = end;
+        }
+        if let Some(definition) = binding.definition {
+            if !binding.context_is_final {
+                self.recursive_uses.push(self.uses.len());
+            }
+            self.uses.push(UseRecord {
+                site,
+                owner: self.owners.last().copied(),
+                source: UseSource::Local {
+                    definition,
+                    copies: pairs,
+                },
+                predicates,
+            });
         }
         copies[0]
     }
@@ -1665,6 +1973,8 @@ mod copy_tests {
             givens: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1727,6 +2037,8 @@ mod copy_tests {
             givens: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1784,6 +2096,8 @@ mod copy_tests {
             givens: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1861,6 +2175,8 @@ mod copy_tests {
             givens: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1973,6 +2289,8 @@ mod copy_tests {
             givens: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2059,6 +2377,36 @@ mod copy_tests {
             h_uses, 2,
             "each use copies the reduced scheme and receives its own evidence"
         );
+        let (_, solved) = solver.finish(&mut uf, &result.env).unwrap();
+        for use_ in &solver.uses {
+            let instance = &solved.instances[&use_.site.node];
+            assert_eq!(instance.evidence.len(), use_.predicates.len());
+            if matches!(use_.site.name, "f" | "g") {
+                let expected_binder = if use_.site.region.start.line == 13 {
+                    h_binder
+                } else {
+                    group_binder
+                };
+                assert!(matches!(
+                    instance.evidence,
+                    [nash_ast::Evidence::Given { binder, index: 0 }]
+                        if *binder == expected_binder
+                ));
+            }
+            if use_.site.name == "base" {
+                let [nash_ast::Evidence::Impl { args, .. }] = instance.evidence else {
+                    panic!("list Base use must publish impl evidence")
+                };
+                let [nash_ast::Evidence::Super { of, index: 0 }] = *args else {
+                    panic!("Base evidence must project from Strong")
+                };
+                let nash_ast::Evidence::Super { of, index: 0 } = of else {
+                    panic!("Strong evidence must project from Top")
+                };
+                assert!(matches!(of, nash_ast::Evidence::Given { binder, index: 0 }
+                    if *binder == group_binder));
+            }
+        }
     }
 
     #[test]
@@ -2075,6 +2423,8 @@ mod copy_tests {
             givens: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
@@ -2148,6 +2498,8 @@ mod copy_tests {
             givens: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();

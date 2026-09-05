@@ -1573,9 +1573,14 @@ headers additionally feed `Annotations` as today. It returns
 stores `SolvedTypes`; `from_module` keeps taking `&Annotations`.
 ### Solver API
 
-The Plan 03 target signature is below. The current implementation takes these
-four inputs and returns `Annotations`; the paired `SolvedTypes` result remains
-to be implemented as required by the shared Plan 07 contract.
+The implementation now returns the paired result below. Definition schemes
+and local/foreign use instances preserve quantifier and context order,
+including empty-context calls and recursive group evidence. Types within an
+outer definition's scope share capture names. Unresolved use evidence produces
+an error before publication. Literal and do instances remain for their chunks;
+expression and pattern type maps remain for Plan 07. The driver currently
+consumes annotations only: retaining canonical arenas and solved results is
+still required by chunk 11.
 
 ```rust
 // crates/nash-solve/src/solve.rs

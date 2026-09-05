@@ -20,6 +20,79 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(bump, &mut uf, &can_result.module);
     nash_solve::run(bump, &mut uf, &constraint, &can_result.tables)
+        .map(|(annotations, _)| annotations)
+}
+
+#[test]
+fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
+    let bump = Bump::new();
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        outer x =
+            let
+                local y = (x, y)
+            in
+            (local (), local x)
+    "#
+    );
+    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    assert_eq!(solved.schemes.len(), 2);
+    assert_eq!(
+        solved.instances.len(),
+        2,
+        "both local calls need type arguments even with no evidence"
+    );
+    let nash_ast::Decls::Declare { definition, .. } = canonical.module.decls else {
+        panic!("outer declaration")
+    };
+    let nash_ast::Def::Def { body, .. } = definition else {
+        panic!("outer definition")
+    };
+    let nash_ast::Expr::Let { definition, .. } = body.value else {
+        panic!("local let")
+    };
+    let nash_ast::Def::Def { name, .. } = definition else {
+        panic!("local definition")
+    };
+    assert_eq!(name.value, "local");
+    let local = &solved.schemes[&nash_ast::NodeId::def(name)];
+    assert_eq!(local.annotation.free_vars.len(), 1);
+    let outer = annotations["outer"];
+    let CanType::Lambda { from, .. } = outer.typ.value else {
+        panic!("outer type")
+    };
+    let CanType::Var(outer_var) = from.value else {
+        panic!("outer variable")
+    };
+    let CanType::Lambda { to, .. } = local.annotation.typ.value else {
+        panic!("local function type")
+    };
+    let CanType::Tuple { first, .. } = to.value else {
+        panic!("local result type")
+    };
+    assert!(matches!(first.value, CanType::Var(name) if name == outer_var));
+    assert_ne!(local.annotation.free_vars[0], outer_var);
+    let mut rendered = solved
+        .instances
+        .values()
+        .map(|instance| {
+            assert!(instance.evidence.is_empty());
+            assert_eq!(instance.type_args.len(), 1);
+            render_type(instance.type_args[0], Ctx::None)
+        })
+        .collect::<Vec<_>>();
+    rendered.sort();
+    let mut expected = vec!["()".to_owned(), outer_var.to_owned()];
+    expected.sort();
+    assert_eq!(rendered, expected);
 }
 
 #[test]
@@ -56,7 +129,7 @@ fn builtin_list_annotations_match_literals_and_patterns() {
     .unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let annotations = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
+    let (annotations, _) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
         .expect("annotations, list literals, and patterns use the same builtin type");
     insta::assert_snapshot!(render_annotations(&annotations));
 }
@@ -1194,7 +1267,7 @@ fn nested_operator_sections_apply() {
     .expect("nested sections canonicalize");
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let annotations = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
+    let (annotations, _) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
         .expect("nested sections infer");
     let rendered = render_annotations(&annotations);
     assert!(rendered.contains("right : String"), "{rendered}");

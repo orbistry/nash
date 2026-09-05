@@ -13,6 +13,13 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    /// Inference finished without a proof for this use-site requirement.
+    UnresolvedConstraint {
+        region: Region,
+        name: &'a str,
+        trait_: nash_ast::QualifiedName<'a>,
+        args: &'a [&'a ErrorType<'a>],
+    },
     MissingImpl {
         region: Region,
         name: &'a str,

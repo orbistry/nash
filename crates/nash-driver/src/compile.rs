@@ -195,7 +195,7 @@ fn compile_module<'s>(
     let mut uf = nash_constrain::UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &can_result.module);
     let annotations = match nash_solve::run(&bump, &mut uf, &constraint, &can_result.tables) {
-        Ok(annotations) => annotations,
+        Ok((annotations, _solved_types)) => annotations,
         Err(errors) => return failed(format!("{:?}", errors)),
     };
 

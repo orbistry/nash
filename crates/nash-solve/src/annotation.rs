@@ -13,6 +13,46 @@ use nash_region::Located;
 
 // TO TYPE ANNOTATION
 
+/// Assign names across a body's schemes and uses before serializing any of
+/// them. Earlier roots keep their names; later roots cannot rename a capture
+/// that has already appeared in the owning scheme.
+pub(crate) fn prepare_scope<'a>(bump: &'a Bump, uf: &mut UnionFind<'a>, roots: &[Variable]) {
+    let mut names = BTreeMap::new();
+    for root in roots {
+        names = get_var_names(bump, uf, &mut BTreeSet::new(), *root, names);
+        let mut state = NameState::new(&names);
+        variable_to_can_type(bump, uf, &mut state, *root);
+        names = get_var_names(bump, uf, &mut BTreeSet::new(), *root, names);
+    }
+}
+
+pub(crate) fn to_solved_type<'a>(
+    bump: &'a Bump,
+    uf: &mut UnionFind<'a>,
+    var: Variable,
+) -> &'a Located<CanType<'a>> {
+    // prepare_scope has already assigned names consistently with the owner.
+    variable_to_can_type(bump, uf, &mut NameState::new(&BTreeMap::new()), var)
+}
+
+pub(crate) fn ordered_quantifiers<'a>(
+    uf: &mut UnionFind<'a>,
+    quantified: &[Variable],
+) -> Vec<Variable> {
+    let mut named = BTreeMap::new();
+    for var in quantified {
+        let name = match uf.get(*var).content {
+            Content::FlexVar(Some(name))
+            | Content::FlexSuper(_, Some(name))
+            | Content::RigidVar(name)
+            | Content::RigidSuper(_, name) => name,
+            _ => continue,
+        };
+        named.insert(name, *var);
+    }
+    named.into_values().collect()
+}
+
 pub fn to_annotation<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
