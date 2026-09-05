@@ -55,6 +55,38 @@ pub fn to_annotation_with_context<'a>(
     })
 }
 
+/// Unlike a type's free variables, a scheme's quantifiers exclude captures.
+/// Their ownership was fixed at the definition's generalization boundary.
+pub(crate) fn to_scheme_annotation<'a>(
+    bump: &'a Bump,
+    uf: &mut UnionFind<'a>,
+    variable: Variable,
+    context: &[(QualifiedName<'a>, &[Variable])],
+    quantified: &[Variable],
+) -> &'a Annotation<'a> {
+    let annotation = to_annotation_with_context(bump, uf, variable, context);
+    let names: BTreeSet<_> = quantified
+        .iter()
+        .filter_map(|var| match uf.get(*var).content {
+            Content::FlexVar(name) | Content::FlexSuper(_, name) => name,
+            Content::RigidVar(name) | Content::RigidSuper(_, name) => Some(name),
+            _ => None,
+        })
+        .collect();
+    bump.alloc(Annotation {
+        free_vars: bump.alloc_slice_fill_iter(
+            annotation
+                .free_vars
+                .iter()
+                .copied()
+                .filter(|name| names.contains(name))
+                .collect::<Vec<_>>(),
+        ),
+        context: annotation.context,
+        typ: annotation.typ,
+    })
+}
+
 fn variable_to_can_type<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,

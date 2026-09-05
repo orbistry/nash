@@ -13,7 +13,7 @@ use nash_constrain::type_::{
 use nash_constrain::{UnionFind, Variable};
 use nash_region::Located;
 
-use crate::annotation::{to_annotation_with_context, to_error_type};
+use crate::annotation::to_error_type;
 use crate::occurs;
 use crate::preds::{Origin, Predicate, Store, UseSite};
 use crate::unify;
@@ -34,6 +34,7 @@ pub fn run<'a>(
         predicates: Store::default(),
         wanted: Vec::new(),
         givens: Vec::new(),
+        schemes: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -55,6 +56,12 @@ pub fn run<'a>(
             .env
             .iter()
             .map(|(name, binding)| {
+                let scheme = solver
+                    .schemes
+                    .iter()
+                    .find(|scheme| Some(nash_ast::NodeId::def(scheme.name)) == binding.definition)
+                    .expect("exported definition has a recorded scheme");
+                let binding = &scheme.binding;
                 let context: Vec<_> = binding
                     .context
                     .iter()
@@ -65,7 +72,13 @@ pub fn run<'a>(
                     .collect();
                 (
                     *name,
-                    to_annotation_with_context(bump, uf, binding.variable, &context),
+                    crate::annotation::to_scheme_annotation(
+                        bump,
+                        uf,
+                        binding.variable,
+                        &context,
+                        &scheme.quantified,
+                    ),
                 )
             })
             .collect())
@@ -83,6 +96,15 @@ pub fn run<'a>(
 struct Binding<'a> {
     variable: Variable,
     context: &'a [type_::PredId],
+    definition: Option<nash_ast::NodeId>,
+}
+
+struct SchemeRecord<'a> {
+    name: &'a Located<&'a str>,
+    binding: Binding<'a>,
+    /// Captures may become generalized later in an enclosing definition.
+    /// Freeze the variables owned by this scheme at its own boundary.
+    quantified: Vec<Variable>,
 }
 
 type Env<'a> = BTreeMap<&'a str, Binding<'a>>;
@@ -106,6 +128,7 @@ struct Solver<'a, 'tables> {
     predicates: Store<'a>,
     wanted: Vec<(usize, type_::PredId)>,
     givens: Vec<GivenFrame<'a>>,
+    schemes: Vec<SchemeRecord<'a>>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -498,11 +521,16 @@ impl<'a> Solver<'a, '_> {
                 let annotated = definitions.iter().any(|def| def.context.is_some());
                 if rigid_vars.is_empty() && matches!(body_con, Constraint::True) {
                     self.introduce(uf, rank, flex_vars);
-                    self.solve_header(uf, env, rank, state, header_con, given, *binder, annotated)
+                    let declared = self.declared_contexts(uf, rank, definitions, declarations);
+                    let state1 = self
+                        .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
+                    self.record_definitions(uf, rank, definitions, &declared, &[]);
+                    state1
                 } else if rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
+                    self.record_definitions(uf, rank, definitions, &declared, &[]);
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
                         .map(|(name, loc_type)| {
@@ -515,6 +543,11 @@ impl<'a> Solver<'a, '_> {
                         new_env.entry(name).or_insert(Binding {
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(&[]),
+                            definition: definitions
+                                .iter()
+                                .chain(declarations.iter())
+                                .find(|def| def.name.value == *name)
+                                .map(|def| nash_ast::NodeId::def(def.name)),
                         });
                     }
                     let state2 = self.solve(uf, &new_env, rank, state1, body_con);
@@ -592,10 +625,16 @@ impl<'a> Solver<'a, '_> {
                     };
 
                     let mut new_env = env.clone();
+                    self.record_definitions(uf, rank, definitions, &declared, context);
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(context),
+                            definition: definitions
+                                .iter()
+                                .chain(declarations.iter())
+                                .find(|def| def.name.value == *name)
+                                .map(|def| nash_ast::NodeId::def(def.name)),
                         });
                     }
                     let temp_state = State {
@@ -1024,6 +1063,69 @@ impl<'a> Solver<'a, '_> {
     }
 
     // COPY
+
+    fn record_definitions(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        definitions: &[type_::Definition<'a>],
+        declared: &BTreeMap<&'a str, &'a [type_::PredId]>,
+        inferred: &'a [type_::PredId],
+    ) {
+        for definition in definitions {
+            if !self.conversion_errors.is_empty() {
+                return;
+            }
+            let binding = Binding {
+                variable: self.type_to_variable(uf, rank, definition.typ),
+                context: declared
+                    .get(definition.name.value)
+                    .copied()
+                    .unwrap_or(inferred),
+                definition: Some(nash_ast::NodeId::def(definition.name)),
+            };
+            let mut pending = vec![binding.variable];
+            for id in binding.context {
+                pending.extend(&self.predicates.get(*id).args);
+            }
+            let mut seen = BTreeSet::new();
+            let mut quantified = Vec::new();
+            while let Some(var) = pending.pop() {
+                let var = uf.find(var);
+                if !seen.insert(var) {
+                    continue;
+                }
+                let desc = uf.get(var);
+                match &desc.content {
+                    Content::FlexVar(_)
+                    | Content::RigidVar(_)
+                    | Content::FlexSuper(..)
+                    | Content::RigidSuper(..)
+                        if desc.rank == NO_RANK =>
+                    {
+                        quantified.push(var)
+                    }
+                    Content::Structure(FlatType::App1(_, _, args)) => pending.extend(args),
+                    Content::Structure(FlatType::Fun1(a, b)) => pending.extend([a, b]),
+                    Content::Structure(FlatType::Tuple1(a, b, c)) => {
+                        pending.extend([a, b]);
+                        pending.extend(c);
+                    }
+                    Content::Structure(FlatType::Record1(fields, ext)) => {
+                        pending.extend(fields.values());
+                        pending.push(*ext);
+                    }
+                    Content::Alias { args, .. } => pending.extend(args.iter().map(|(_, var)| var)),
+                    _ => {}
+                }
+            }
+            self.schemes.push(SchemeRecord {
+                name: definition.name,
+                binding,
+                quantified,
+            });
+        }
+    }
 
     fn declared_contexts(
         &mut self,
@@ -1507,6 +1609,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            schemes: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1567,6 +1670,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            schemes: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1604,6 +1708,82 @@ mod copy_tests {
     }
 
     #[test]
+    fn scheme_records_freeze_local_quantifiers_before_outer_generalization() {
+        let bump = Bump::new();
+        let source = "module Main exposing (..)\nouter x =\n    let\n        local y = (x, y)\n    in\n    local ()\n";
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical =
+            nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let mut solver = Solver {
+            bump: &bump,
+            tables: &canonical.tables,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            givens: Vec::new(),
+            schemes: Vec::new(),
+            conversion_errors: Vec::new(),
+        };
+        let result = solver.solve(
+            &mut uf,
+            &Env::new(),
+            OUTERMOST_RANK,
+            State {
+                env: Env::new(),
+                mark: NO_MARK.next(),
+                errors: Vec::new(),
+            },
+            &constraint,
+        );
+        assert!(result.errors.is_empty());
+        let local = solver
+            .schemes
+            .iter()
+            .find(|scheme| scheme.name.value == "local")
+            .unwrap();
+        let outer = solver
+            .schemes
+            .iter()
+            .find(|scheme| scheme.name.value == "outer")
+            .unwrap();
+        assert_eq!(local.quantified.len(), 1);
+        assert_eq!(outer.quantified.len(), 1);
+        assert!(
+            !uf.equivalent(local.quantified[0], outer.quantified[0]),
+            "captured x is not quantified by local"
+        );
+        let Content::Structure(FlatType::Fun1(arg, result)) =
+            uf.get(local.binding.variable).content
+        else {
+            panic!("local function")
+        };
+        let Content::Structure(FlatType::Tuple1(capture, value, None)) = uf.get(result).content
+        else {
+            panic!("local result")
+        };
+        assert!(uf.equivalent(arg, local.quantified[0]));
+        assert!(uf.equivalent(value, local.quantified[0]));
+        assert!(uf.equivalent(capture, outer.quantified[0]));
+        let annotation = crate::annotation::to_scheme_annotation(
+            &bump,
+            &mut uf,
+            local.binding.variable,
+            &[],
+            &local.quantified,
+        );
+        assert_eq!(
+            annotation.free_vars.len(),
+            1,
+            "the serialized scheme excludes its captured variable"
+        );
+    }
+
+    #[test]
     fn nested_impl_solutions_preserve_substitution_and_child_origins() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nvalue = keep [[()]]\n";
@@ -1622,6 +1802,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            schemes: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1732,6 +1913,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            schemes: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1807,6 +1989,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            schemes: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
@@ -1878,6 +2061,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            schemes: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();

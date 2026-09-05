@@ -1223,6 +1223,15 @@ regression exposed and verifies the correction.
 Complete missing-constraint classification,
 final scheme/instance recording, and the resulting
 solver API are not implemented yet.
+Definition records now preserve each original name-node identity, solved type,
+context and quantified variable identities at its generalization boundary.
+This includes local definitions and monomorphic methods through all three Let
+paths. Exported annotations use those records. The local-capture regression
+checks that `local y = (x, y)` quantifies only `y`, even after the enclosing
+definition generalizes `x`; scheme conversion excludes the captured variable
+from `free_vars`. Evidence-owner binders, ordered instance arguments, all-use
+recording (including early recursive calls), and scoped output naming still
+need to be connected before publishing the shared `SolvedTypes` result.
 Chunk 6 now resolves ordinary constructor-headed predicates, including impl
 contexts, before inference publishes a scheme. Do not mark this chunk complete from the current
 inference snapshots alone.
