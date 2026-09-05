@@ -8,54 +8,51 @@ expression: result.unwrap_err()
             trait_: QualifiedName {
                 home: ModuleName {
                     package: None,
-                    name: "Main",
+                    name: "Keep",
                 },
                 name: "Keep",
             },
             heads: [
-                Named(
-                    QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "List",
-                    },
-                ),
+                Unit,
             ],
         },
         first: Region {
             start: Position {
-                line: 4,
+                line: 3,
                 column: 1,
             },
             end: Position {
-                line: 5,
+                line: 4,
                 column: 15,
             },
         },
         second: Region {
             start: Position {
-                line: 6,
+                line: 3,
                 column: 1,
             },
             end: Position {
-                line: 7,
+                line: 4,
                 column: 15,
             },
         },
         first_home: ModuleName {
-            package: None,
-            name: "Main",
+            package: Some(
+                PackageName {
+                    author: "nash",
+                    project: "core",
+                },
+            ),
+            name: "First",
         },
         second_home: ModuleName {
-            package: None,
-            name: "Main",
+            package: Some(
+                PackageName {
+                    author: "nash",
+                    project: "core",
+                },
+            ),
+            name: "Second",
         },
     },
 ]

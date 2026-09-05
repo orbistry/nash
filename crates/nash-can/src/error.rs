@@ -69,6 +69,7 @@ pub enum Error<'a> {
         first: Region,
         second: Region,
         first_home: ModuleName<'a>,
+        second_home: ModuleName<'a>,
     },
     ImportOpenTrait {
         region: Region,

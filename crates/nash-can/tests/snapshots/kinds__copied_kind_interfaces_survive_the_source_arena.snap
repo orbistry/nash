@@ -4,6 +4,7 @@ expression: "(copied, canonical.module.unions[0].value.kind)"
 ---
 (
     Interface {
+        impls: [],
         traits: [],
         home: ModuleName {
             package: None,

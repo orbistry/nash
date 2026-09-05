@@ -9,6 +9,112 @@ use nash_region::{Located, Region};
 use nash_source::Type as SourceType;
 use std::collections::{BTreeMap, BTreeSet};
 
+pub(crate) fn info<'a>(
+    bump: &'a Bump,
+    home: nash_ast::ModuleName<'a>,
+    impl_: &Located<Impl<'a>>,
+) -> crate::environment::ImplInfo<'a> {
+    crate::environment::ImplInfo {
+        home,
+        region: impl_.region,
+        trait_: impl_.value.trait_,
+        context: impl_.value.context,
+        heads: impl_.value.heads,
+        methods: bump.alloc_slice_fill_iter(impl_.value.methods.iter().map(|m| match m {
+            nash_ast::Def::Def { name, .. } | nash_ast::Def::TypedDef { name, .. } => name.value,
+        })),
+    }
+}
+
+pub(crate) fn tables<'a>(
+    bump: &'a Bump,
+    interfaces: Option<&'a BTreeMap<&'a str, crate::Interface<'a>>>,
+    module: &nash_ast::Module<'a>,
+) -> Result<crate::environment::Tables<'a>, Vec<Error<'a>>> {
+    use crate::environment::{MethodInfo, Tables};
+    let mut tables = Tables::default();
+    // Resolution sees all build interfaces, independently of source import visibility.
+    for interface in interfaces.into_iter().flat_map(|i| i.values()) {
+        for trait_ in interface.traits {
+            let name = QualifiedName {
+                home: interface.home,
+                name: trait_.name,
+            };
+            tables.traits.insert(
+                name,
+                bump.alloc(TraitInfo {
+                    home: name.home,
+                    name: name.name,
+                    parameters: trait_.parameters,
+                    kind: trait_.kind,
+                    supers: trait_.supers,
+                    methods: bump.alloc_slice_fill_iter(trait_.methods.iter().map(|m| {
+                        MethodInfo {
+                            name: m.name,
+                            annotation: m.annotation,
+                            has_default: m.has_default,
+                        }
+                    })),
+                }),
+            );
+        }
+        for impl_ in interface.impls {
+            insert_impl(bump, &mut tables.impls, impl_)?;
+        }
+    }
+    for trait_ in module.traits {
+        let t = &trait_.value;
+        let name = QualifiedName {
+            home: module.name,
+            name: t.name.value,
+        };
+        tables.traits.insert(
+            name,
+            bump.alloc(TraitInfo {
+                home: name.home,
+                name: name.name,
+                parameters: t.parameters,
+                kind: t.kind,
+                supers: t.supers,
+                methods: bump.alloc_slice_fill_iter(t.methods.iter().map(|m| MethodInfo {
+                    name: m.name.value,
+                    annotation: m.annotation,
+                    has_default: m.default.is_some(),
+                })),
+            }),
+        );
+    }
+    for impl_ in module.impls {
+        insert_impl(
+            bump,
+            &mut tables.impls,
+            bump.alloc(info(bump, module.name, impl_)),
+        )?;
+    }
+    Ok(tables)
+}
+
+fn insert_impl<'a>(
+    bump: &'a Bump,
+    table: &mut crate::environment::ImplTable<'a>,
+    impl_: &'a crate::environment::ImplInfo<'a>,
+) -> Result<(), Vec<Error<'a>>> {
+    let key = ImplKey {
+        trait_: impl_.trait_,
+        heads: bump.alloc_slice_fill_iter(impl_.heads.iter().map(|h| h.value.con())),
+    };
+    if let Some(first) = table.insert(key, impl_) {
+        return Err(vec![Error::OverlappingImpls {
+            key: bump.alloc(key),
+            first: first.region,
+            second: impl_.region,
+            first_home: first.home,
+            second_home: impl_.home,
+        }]);
+    }
+    Ok(())
+}
+
 pub(crate) fn canonicalize<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
@@ -17,7 +123,6 @@ pub(crate) fn canonicalize<'a>(
     warnings: &mut Vec<Warning<'a>>,
 ) -> Result<&'a [&'a Located<Impl<'a>>], Vec<Error<'a>>> {
     let mut result = Vec::new();
-    let mut keys = BTreeMap::new();
     for source in sources {
         let src = &source.value;
         if let Some(attribute) = src.attributes.first() {
@@ -53,10 +158,6 @@ pub(crate) fn canonicalize<'a>(
             heads.push(head);
             head_types.push(typ);
         }
-        let key = ImplKey {
-            trait_,
-            heads: bump.alloc_slice_fill_iter(heads.iter().map(|h| h.value.con())),
-        };
         if trait_.home != env.home
             && !heads.iter().any(|h| match &h.value {
                 Head::Named { reference, .. } => reference.home == env.home,
@@ -66,15 +167,7 @@ pub(crate) fn canonicalize<'a>(
             return Err(vec![Error::OrphanImpl {
                 region: source.region,
                 trait_,
-                heads: key.heads,
-            }]);
-        }
-        if let Some(first) = keys.insert(key, source.region) {
-            return Err(vec![Error::OverlappingImpls {
-                key: bump.alloc(key),
-                first,
-                second: source.region,
-                first_home: env.home,
+                heads: bump.alloc_slice_fill_iter(heads.iter().map(|h| h.value.con())),
             }]);
         }
         let context = types::canonicalize_context(bump, env, src.context)?;

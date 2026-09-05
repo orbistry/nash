@@ -30,6 +30,7 @@ pub enum AliasVisibility {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Interface<'a> {
+    pub impls: &'a [crate::environment::ImplInfo<'a>],
     pub traits: &'a [InterfaceTrait<'a>],
     pub home: ModuleName<'a>,
     pub values: &'a [InterfaceValue<'a>],
@@ -101,6 +102,12 @@ pub fn from_module<'a>(
     annotations: &Annotations<'a>,
 ) -> Interface<'a> {
     Interface {
+        impls: bump.alloc_slice_fill_iter(
+            module
+                .impls
+                .iter()
+                .map(|i| crate::impls::info(bump, module.name, i)),
+        ),
         traits: bump.alloc_slice_fill_iter(module.traits.iter().map(|t| InterfaceTrait {
             name: t.value.name.value,
             parameters: t.value.parameters,
@@ -429,6 +436,28 @@ fn copy_ctor<'d>(dst: &'d Bump, c: &CanCtor<'_>) -> &'d CanCtor<'d> {
 /// Deep-copy an `Interface` into a different bump arena.
 pub fn deep_copy<'d>(dst: &'d Bump, src: &Interface<'_>) -> Interface<'d> {
     Interface {
+        impls: dst.alloc_slice_fill_iter(src.impls.iter().map(|i| crate::environment::ImplInfo {
+            home: copy_module_name(dst, &i.home),
+            region: i.region,
+            trait_: copy_qualified_name(dst, &i.trait_),
+            context: dst.alloc_slice_fill_iter(i.context.iter().map(|p| copy_pred(dst, p))),
+            heads: dst.alloc_slice_fill_iter(i.heads.iter().map(|h| {
+                Located::at(
+                    h.region,
+                    match &h.value {
+                        nash_ast::Head::Named { reference, vars } => nash_ast::Head::Named {
+                            reference: copy_qualified_name(dst, reference),
+                            vars: dst.alloc_slice_fill_iter(vars.iter().map(|v| copy_str(dst, v))),
+                        },
+                        nash_ast::Head::Unit => nash_ast::Head::Unit,
+                        nash_ast::Head::Tuple(vars) => nash_ast::Head::Tuple(
+                            dst.alloc_slice_fill_iter(vars.iter().map(|v| copy_str(dst, v))),
+                        ),
+                    },
+                )
+            })),
+            methods: dst.alloc_slice_fill_iter(i.methods.iter().map(|m| copy_str(dst, m))),
+        })),
         traits: dst.alloc_slice_fill_iter(src.traits.iter().map(|t| InterfaceTrait {
             name: copy_str(dst, t.name),
             parameters: dst.alloc_slice_fill_iter(t.parameters.iter().map(|p| copy_str(dst, p))),

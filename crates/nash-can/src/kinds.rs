@@ -984,6 +984,7 @@ pub enum KindHead<'a> {
 /// Explicit builtin interface for callers that have not installed the prelude.
 pub fn builtin_interface<'a>(bump: &'a Bump) -> crate::Interface<'a> {
     crate::Interface {
+        impls: &[],
         traits: &[],
         home: primitives::builtin_home(),
         values: &[],

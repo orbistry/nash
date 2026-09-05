@@ -40,6 +40,25 @@ pub struct MethodInfo<'a> {
     pub has_default: bool,
 }
 
+/// Resolution metadata retained for every impl, including private declarations.
+#[derive(Clone, Copy, Debug)]
+pub struct ImplInfo<'a> {
+    pub home: ModuleName<'a>,
+    pub region: Region,
+    pub trait_: nash_ast::QualifiedName<'a>,
+    pub context: &'a [nash_ast::Pred<'a>],
+    pub heads: &'a [Located<nash_ast::Head<'a>>],
+    pub methods: &'a [&'a str],
+}
+
+pub type ImplTable<'a> = BTreeMap<nash_ast::ImplKey<'a>, &'a ImplInfo<'a>>;
+
+#[derive(Clone, Debug, Default)]
+pub struct Tables<'a> {
+    pub traits: BTreeMap<nash_ast::QualifiedName<'a>, &'a TraitInfo<'a>>,
+    pub impls: ImplTable<'a>,
+}
+
 /// A value variable in scope.
 #[derive(Clone, Debug)]
 pub enum Var<'a> {

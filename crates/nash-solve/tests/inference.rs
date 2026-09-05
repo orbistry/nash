@@ -710,6 +710,7 @@ fn imported_higher_kinded_value_inference_is_explicitly_deferred() {
         typ,
     });
     let interface = nash_can::Interface {
+        impls: &[],
         traits: &[],
         home: nash_ast::ModuleName {
             package: None,

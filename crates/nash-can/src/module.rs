@@ -31,6 +31,7 @@ pub struct Context<'a> {
 
 #[derive(Debug)]
 pub struct CanResult<'a> {
+    pub tables: environment::Tables<'a>,
     pub module: CanModule<'a>,
     pub warnings: Vec<Warning<'a>>,
 }
@@ -145,6 +146,7 @@ pub fn canonicalize<'a>(
     }
 
     Ok(CanResult {
+        tables: crate::impls::tables(bump, context.interfaces, &can_module)?,
         module: can_module,
         warnings,
     })
@@ -1508,6 +1510,7 @@ mod tests {
         parameters: &'a [&'a str],
     ) -> Interface<'a> {
         Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -1536,6 +1539,7 @@ mod tests {
         typ: &'a Located<CanType<'a>>,
     ) -> Interface<'a> {
         Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -2852,6 +2856,7 @@ mod tests {
         val_name: &'a str,
     ) -> Interface<'a> {
         Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -2937,6 +2942,7 @@ mod tests {
             arguments: &[],
         });
         Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -2959,6 +2965,7 @@ mod tests {
 
     fn basics_with_binops_interface<'a>(bump: &'a Bump) -> Interface<'a> {
         Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -3451,6 +3458,7 @@ mod tests {
             arguments: &[],
         });
         let maybe_interface = Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -3484,6 +3492,7 @@ mod tests {
             arguments: &[],
         });
         let option_interface = Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -3534,6 +3543,7 @@ mod tests {
         let bump = Bump::new();
         let basics = basics_with_binops_interface(&bump);
         let mymath = Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -3578,6 +3588,7 @@ mod tests {
         );
         let bump = Bump::new();
         let basics = Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -3993,6 +4004,7 @@ mod tests {
         let bump = Bump::new();
         let alias_type = bump.alloc(Located::at(Region::zero(), CanType::Var("a")));
         let foo = Interface {
+            impls: &[],
             traits: &[],
             home: ModuleName {
                 package: None,
@@ -4062,6 +4074,7 @@ mod tests {
     ) -> Interface<'a> {
         let base = maybe_with_ctors_interface(bump);
         Interface {
+            impls: &[],
             traits: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
                 visibility,

@@ -1,0 +1,133 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: "(traits, result.tables.impls)"
+---
+(
+    [
+        QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Instances",
+            },
+            name: "Hidden",
+        },
+        QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Instances",
+            },
+            name: "Keep",
+        },
+    ],
+    {
+        ImplKey {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Instances",
+                },
+                name: "Keep",
+            },
+            heads: [
+                Named(
+                    QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "List",
+                    },
+                ),
+            ],
+        }: ImplInfo {
+            home: ModuleName {
+                package: None,
+                name: "Instances",
+            },
+            region: Region {
+                start: Position {
+                    line: 6,
+                    column: 1,
+                },
+                end: Position {
+                    line: 7,
+                    column: 15,
+                },
+            },
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Instances",
+                },
+                name: "Keep",
+            },
+            context: [
+                Pred {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Instances",
+                        },
+                        name: "Hidden",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 15,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
+            heads: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 25,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 32,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "List",
+                        },
+                        vars: [
+                            "a",
+                        ],
+                    },
+                },
+            ],
+            methods: [
+                "keep",
+            ],
+        },
+    },
+)

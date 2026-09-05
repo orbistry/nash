@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (PublicAlias)\n\ntype alias PublicAlias 'a = 'a\n\ntype alias PrivateAlias 'a = 'a\n\ntype PrivateUnion\n    = Foo\n    | Bar\n"
 ---
 Interface {
+    impls: [],
     traits: [],
     home: ModuleName {
         package: None,

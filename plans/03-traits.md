@@ -613,8 +613,9 @@ round-trips them.
 
 Status: in progress. Local impl heads, capture-safe method substitution,
 head/context kind checks, method checks, and local orphan/overlap checks
-are implemented. Focused snapshots cover these paths. Global interface
-tables and superclass entailment remain to be implemented. Partial alias
+are implemented. Global tables now retain local and interface impls and
+private trait metadata, with overlap checks across interfaces. Focused
+snapshots cover these paths. Superclass entailment remains to be implemented. Partial alias
 heads must retain their unsupplied formal parameters through application;
 the existing constraint instantiator cannot yet expand them safely. Do not
 mark this chunk complete before that contract and the remaining acceptance
@@ -651,8 +652,6 @@ pub struct ImplInfo<'a> {
 
 pub type ImplTable<'a> = BTreeMap<ImplKey<'a>, &'a ImplInfo<'a>>;
 
-pub struct Env<'a> { /* ... */ pub impls: ImplTable<'a> }
-
 /// Tables the solver needs; returned in `CanResult`.
 #[derive(Clone, Debug)]
 pub struct Tables<'a> {
@@ -661,11 +660,11 @@ pub struct Tables<'a> {
 }
 ```
 
-`foreign.rs::create_initial_env` seeds `env.impls` from **every**
-interface in `interfaces` (not only imported ones; see coherence in the
-doc) and `env.traits`-by-qualified-name for all of them into
-`Tables.traits` (the solver needs superclass info even for traits the
-module never names, because resolution can go through them).
+`impls::tables` builds `Tables` from **every** interface in `interfaces`
+(not only imported ones; see coherence in the doc), then adds local
+declarations. `Tables.traits` includes private metadata: the solver needs
+superclass info even for traits the module never names, because resolution
+can go through them. Source name lookup remains in `Env`.
 
 Head canonicalization:
 
@@ -749,10 +748,10 @@ fn impl_key<'a>(bump: &'a Bump, trait_: QualifiedName<'a>, heads: &[Located<Head
 }
 ```
 
-Overlap: `local::add_impls` inserts into `env.impls`; an existing key is
-`Error::OverlappingImpls { key, first: Region, second: Region }` (the
-first is `existing.region`; for an imported impl that region is in another
-module, so the error carries `existing.home` as well).
+Overlap: `impls::tables` inserts into `Tables.impls`; an existing key is
+`Error::OverlappingImpls { key, first, second, first_home, second_home }`.
+Both regions include their defining module because either entry can come
+from an interface. The same insertion check handles local and imported impls.
 
 Superclass check (after all local impls are in the table so order does not
 matter):
@@ -842,8 +841,10 @@ add_union_types -> check_union_free_vars -> add_traits (stubs)
 -> check_superclasses (all) -> check_binops (accepts Var::Method) -> decls -> exports
 ```
 
-`CanResult` gains `tables: Tables<'a>`. `Interface` gains `impls: &'a [InterfaceImpl<'a>]`
-(`trait_`, `context`, `heads`, `methods`, `region`), always all of them.
+`CanResult` gains `tables: Tables<'a>`. `Interface` gains
+`impls: &'a [ImplInfo<'a>]`, retaining every local impl regardless of exports.
+The interface and table share the same metadata type; interface copying
+copies all strings, heads and predicates into the destination arena.
 
 Errors added: `BadInstanceHead { region, reason: BadHead }`,
 `OrphanImpl`, `OverlappingImpls`, `MissingSuperclass`, `MissingMethod`,

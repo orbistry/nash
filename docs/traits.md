@@ -153,10 +153,10 @@ heads that are always constructors. There are no uncovered type parameters
 to worry about because a head is never a bare variable, so Rust's extra
 ordering condition for multi-parameter traits is vacuous.
 
-**Overlap.** Two impls with the same key are an error. With the orphan rule
-this can only happen inside one module: for two modules to both mention
-`T` and every head constructor, each would have to import the other's
-defining module, which the acyclic import graph forbids.
+**Overlap.** Two impls with the same key are an error. Check this across
+all build interfaces as well as within a module. In particular, separate
+modules in `nash/core` may both satisfy the orphan rule for unit or tuple
+heads; that ownership does not permit duplicate impls.
 
 Consequence: the impl table is global. Canonicalization builds it from
 every interface in the build plus the current module, and a module can use
@@ -498,8 +498,13 @@ A module's interface gains:
   codegen reads them from the defining module.
 - `impls`: every impl of the module, regardless of the export list: trait,
   heads, context, and the set of methods defined (so codegen knows which
-  ones fall back to defaults).
+  ones fall back to defaults), plus its defining module and source region.
 - `values` annotations now carry contexts.
+
+Canonicalization returns resolution tables built from every available
+build interface and the current module. These tables retain private trait
+metadata without adding private names to source import scopes. Duplicate
+impl keys report the defining module and source region for both entries.
 
 Importing a trait brings its method names into the value namespace with
 their method schemes. Method uses canonicalize to `Expr::VarMethod`, never

@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Bool)\n\ntype Bool\n    = True\n    | False\n"
 ---
 Interface {
+    impls: [],
     traits: [],
     home: ModuleName {
         package: None,
