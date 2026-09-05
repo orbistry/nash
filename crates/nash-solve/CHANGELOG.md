@@ -1,5 +1,12 @@
 # nash-solve
 
+## 0.2.3 — 2026-09-05
+
+### Patch changes
+
+- [5875804](https://github.com/orbistry/nash/commit/5875804f6e6ea1ce8901ab43f44e1c5e3c4752cf) Infer kind schemes across recursive type declarations and preserve them through canonical interfaces. Check constructor and record fields, retain applied type variables, and report unsupported higher-kinded value unification explicitly until plan 03. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.5.0, nash-can@0.4.0, nash-constrain@0.2.3
+
 ## 0.2.2 — 2026-09-05
 
 ### Patch changes
