@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Maybe exposing (Maybe(..))\n\nf w = let (Just x) = w in x\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,

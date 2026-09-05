@@ -130,6 +130,8 @@ pub fn canonicalize<'a>(
     let exports = canonicalize_exports(bump, module)?;
 
     let can_module = CanModule {
+        traits: &[],
+        impls: &[],
         kind: module.kind,
         name: env.home,
         exports,
@@ -374,6 +376,7 @@ fn to_node_one<'a>(
             args,
             typ,
         } => bump.alloc(nash_ast::Def::TypedDef {
+            context: &[],
             annotation,
             name: src.name,
             free_vars,
@@ -1068,6 +1071,7 @@ fn collect_from_expr<'a>(
         // Only the reference counts as a use: the annotation is data from
         // the origin module's solver, not something written here.
         VarForeign { reference, .. } => add_if_foreign(home, reference.home, used),
+        VarMethod { trait_, .. } => add_if_foreign(home, trait_.home, used),
         VarConstructor {
             reference,
             annotation,
@@ -1363,6 +1367,7 @@ mod tests {
     /// Stand-in for a solver-produced annotation in tests: `Forall [a] a`.
     fn test_annotation<'a>(bump: &'a Bump) -> &'a nash_ast::Annotation<'a> {
         bump.alloc(nash_ast::Annotation {
+            context: &[],
             free_vars: bump.alloc_slice_fill_iter(["a"]),
             typ: var_type(bump, "a"),
         })

@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 expression: result
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,
@@ -98,6 +100,7 @@ Module {
                                 name: "add",
                             },
                             annotation: Annotation {
+                                context: [],
                                 free_vars: [
                                     "a",
                                 ],
@@ -179,6 +182,7 @@ Module {
                                                         name: "add",
                                                     },
                                                     annotation: Annotation {
+                                                        context: [],
                                                         free_vars: [
                                                             "a",
                                                         ],

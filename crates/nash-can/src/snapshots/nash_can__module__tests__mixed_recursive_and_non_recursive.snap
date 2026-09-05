@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nx = 1\n\nf a = g a\n\ng a = f a\n\ny = 2\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,

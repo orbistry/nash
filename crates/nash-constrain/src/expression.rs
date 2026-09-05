@@ -40,6 +40,10 @@ pub fn constrain<'a>(
             annotation,
         } => Constraint::Foreign(region, reference.name, annotation, expected),
 
+        CanExpr::VarMethod {
+            method, annotation, ..
+        } => Constraint::Foreign(region, method, annotation, expected),
+
         CanExpr::VarConstructor {
             reference,
             annotation,

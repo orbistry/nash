@@ -14,6 +14,7 @@ Interface {
         InterfaceBinop {
             symbol: "|>",
             annotation: Annotation {
+                context: [],
                 free_vars: [
                     "a",
                 ],

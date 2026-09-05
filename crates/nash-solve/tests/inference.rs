@@ -79,7 +79,20 @@ fn render_annotations(annotations: &Annotations<'_>) -> String {
 }
 
 fn render_annotation(annotation: &Annotation<'_>) -> String {
-    let tipe = render_type(annotation.typ, Ctx::None);
+    let mut tipe = render_type(annotation.typ, Ctx::None);
+    if !annotation.context.is_empty() {
+        let predicates: Vec<_> = annotation
+            .context
+            .iter()
+            .map(|p| render_apply(p.trait_.name, p.args, Ctx::None))
+            .collect();
+        let context = if predicates.len() == 1 {
+            predicates[0].clone()
+        } else {
+            format!("({})", predicates.join(", "))
+        };
+        tipe = format!("{context} => {tipe}");
+    }
     if annotation.free_vars.is_empty() {
         tipe
     } else {
@@ -692,6 +705,7 @@ fn imported_higher_kinded_value_inference_is_explicitly_deferred() {
         args: bump.alloc_slice_copy(&[&*arg]),
     }));
     let annotation = bump.alloc(Annotation {
+        context: &[],
         free_vars: &["f", "a"],
         typ,
     });

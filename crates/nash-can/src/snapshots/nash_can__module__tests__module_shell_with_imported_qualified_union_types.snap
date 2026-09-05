@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Result\n\ntype alias Wrapped 'e 'a = Result.Result 'e 'a\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,

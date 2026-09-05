@@ -1,3 +1,4 @@
+mod evidence;
 pub mod primitives;
 
 use nash_region::{Located, Region};
@@ -105,6 +106,8 @@ pub struct ConstructorName<'a> {
 
 #[derive(Debug)]
 pub struct Module<'a> {
+    pub traits: &'a [&'a Located<Trait<'a>>],
+    pub impls: &'a [&'a Located<Impl<'a>>],
     pub kind: ModuleKind,
     pub name: ModuleName<'a>,
     pub exports: Exports<'a>,
@@ -137,6 +140,7 @@ pub enum Def<'a> {
         body: &'a Located<Expr<'a>>,
     },
     TypedDef {
+        context: &'a [Pred<'a>],
         /// The original annotation, before aliases and function arguments are split.
         annotation: &'a Located<Type<'a>>,
         name: &'a Located<&'a str>,
@@ -196,6 +200,11 @@ pub enum CtorOpts {
 
 #[derive(Debug)]
 pub enum Expr<'a> {
+    VarMethod {
+        trait_: QualifiedName<'a>,
+        method: &'a str,
+        annotation: &'a Annotation<'a>,
+    },
     VarLocal(&'a str),
     VarTopLevel(QualifiedName<'a>),
     /// Mirrors Elm's `Can.VarForeign home name annotation`. The annotation
@@ -349,11 +358,13 @@ pub struct PatternCtorArg<'a> {
 
 #[derive(Debug)]
 pub struct Annotation<'a> {
+    /// Scheme context, in evidence order.
+    pub context: &'a [Pred<'a>],
     pub free_vars: FreeVars<'a>,
     pub typ: &'a Located<Type<'a>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Type<'a> {
     Lambda {
         from: &'a Located<Type<'a>>,
@@ -386,19 +397,19 @@ pub enum Type<'a> {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum AliasType<'a> {
     Open(&'a Located<Type<'a>>),
     Filled(&'a Located<Type<'a>>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct AliasArgument<'a> {
     pub name: &'a str,
     pub typ: &'a Located<Type<'a>>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FieldType<'a> {
     pub index: u16,
     pub field: &'a str,
@@ -413,11 +424,124 @@ pub enum Exports<'a> {
 
 #[derive(Debug)]
 pub enum Export<'a> {
+    Trait(&'a str),
     Value(&'a str),
     Binop(&'a str),
     Alias(&'a str),
     UnionOpen(&'a str),
     UnionClosed(&'a str),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct NodeId(usize);
+impl NodeId {
+    pub fn expr(e: &Located<Expr<'_>>) -> Self {
+        NodeId(e as *const _ as usize)
+    }
+    pub fn pattern(p: &Located<Pattern<'_>>) -> Self {
+        NodeId(p as *const _ as usize)
+    }
+    /// A definition, addressed by its name node (`Def::{Def, TypedDef}.name`).
+    pub fn def(name: &Located<&str>) -> Self {
+        NodeId(name as *const _ as usize)
+    }
+}
+
+/// `Tr t1 .. tn`: the claim that `t1..tn` have an impl of `Tr`.
+#[derive(Debug)]
+pub struct Pred<'a> {
+    pub trait_: QualifiedName<'a>,
+    pub args: &'a [&'a Located<Type<'a>>],
+}
+
+#[derive(Debug)]
+pub struct Trait<'a> {
+    pub name: &'a Located<&'a str>,
+    pub parameters: &'a [&'a str],
+    /// One kind per parameter, generalized together (plans/02 `KindScheme`).
+    pub kind: KindScheme<'a>,
+    /// Superclasses; args are `Type::Var` over `parameters`.
+    pub supers: &'a [Pred<'a>],
+    pub methods: &'a [Method<'a>],
+}
+
+#[derive(Debug)]
+pub struct Method<'a> {
+    pub name: &'a Located<&'a str>,
+    /// Full method scheme: trait predicate first, then the method's own context.
+    pub annotation: &'a Annotation<'a>,
+    /// Default body as a `TypedDef` whose annotation is `annotation`.
+    pub default: Option<&'a Def<'a>>,
+}
+
+/// One instance head: a constructor over distinct variables, or unit/tuple.
+#[derive(Debug)]
+pub enum Head<'a> {
+    Named {
+        reference: QualifiedName<'a>,
+        vars: &'a [&'a str],
+    },
+    Unit,
+    Tuple(&'a [&'a str]),
+}
+
+#[derive(Debug)]
+pub struct Impl<'a> {
+    pub trait_: QualifiedName<'a>,
+    /// Over the head variables only.
+    pub context: &'a [Pred<'a>],
+    pub heads: &'a [Located<Head<'a>>],
+    /// Each a `TypedDef` whose annotation is the method scheme at the heads.
+    pub methods: &'a [&'a Def<'a>],
+}
+
+/// The constructor of a head, for impl lookup.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum HeadCon<'a> {
+    Named(QualifiedName<'a>),
+    Unit,
+    Tuple(u8),
+    /// Function types never have impls; a wanted `Show (a -> b)` fails lookup.
+    Fun,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ImplKey<'a> {
+    pub trait_: QualifiedName<'a>,
+    pub heads: &'a [HeadCon<'a>],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ImplRef<'a> {
+    pub home: ModuleName<'a>,
+    pub key: ImplKey<'a>,
+}
+
+/// How one wanted predicate was satisfied. Consumed by codegen
+/// (plans/07 chunk 9 keys specializations by ground evidence, hence `Hash`).
+#[derive(Debug)]
+pub enum Evidence<'a> {
+    Impl {
+        impl_: ImplRef<'a>,
+        /// The impl head's variables, in head order, at this use.
+        type_args: &'a [&'a Located<Type<'a>>],
+        /// One per predicate of the impl's context, in order.
+        args: &'a [Evidence<'a>],
+    },
+    /// The `index`-th context predicate of the definition `binder` (a `NodeId::def`).
+    Given { binder: NodeId, index: u16 },
+    /// The `index`-th superclass of `of`'s trait.
+    Super { of: &'a Evidence<'a>, index: u16 },
+}
+
+impl<'a> Head<'a> {
+    pub fn con(&self) -> HeadCon<'a> {
+        match self {
+            Head::Named { reference, .. } => HeadCon::Named(*reference),
+            Head::Unit => HeadCon::Unit,
+            Head::Tuple(vars) => HeadCon::Tuple(vars.len() as u8),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -480,5 +604,74 @@ mod kind_tests {
         };
         assert!(std::ptr::eq(scheme.result(), &var));
         assert!(std::ptr::eq(KindScheme::mono(&big).result(), &big));
+    }
+}
+
+#[cfg(test)]
+mod evidence_tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn impl_evidence_shares_types_across_source_locations() {
+        let home = ModuleName {
+            package: None,
+            name: "Example",
+        };
+        let reference = QualifiedName {
+            home,
+            name: "Value",
+        };
+        let first_element = Located::at_zero(Type::Unit);
+        let second_element = Located::at(Region::one(), Type::Unit);
+        let first_elements = [&first_element];
+        let second_elements = [&second_element];
+        let first = Located::at_zero(Type::Named {
+            reference,
+            args: &first_elements,
+        });
+        let second = Located::at(
+            Region::one(),
+            Type::Named {
+                reference,
+                args: &second_elements,
+            },
+        );
+        let other = Located::at_zero(Type::Named {
+            reference: QualifiedName {
+                home,
+                name: "Other",
+            },
+            args: &[],
+        });
+        let impl_ = ImplRef {
+            home,
+            key: ImplKey {
+                trait_: QualifiedName { home, name: "Show" },
+                heads: &[],
+            },
+        };
+        let first_args = [&first];
+        let second_args = [&second];
+        let other_args = [&other];
+        let a = Evidence::Impl {
+            impl_,
+            type_args: &first_args,
+            args: &[],
+        };
+        let b = Evidence::Impl {
+            impl_,
+            type_args: &second_args,
+            args: &[],
+        };
+        let c = Evidence::Impl {
+            impl_,
+            type_args: &other_args,
+            args: &[],
+        };
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        let keys = HashSet::from([a, b, c]);
+        assert_eq!(keys.len(), 2);
     }
 }

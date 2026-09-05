@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Foo exposing (bar)\n\nx = bar\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,
@@ -68,6 +70,7 @@ Module {
                         name: "bar",
                     },
                     annotation: Annotation {
+                        context: [],
                         free_vars: [
                             "a",
                         ],

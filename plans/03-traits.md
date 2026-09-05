@@ -24,15 +24,16 @@ Prerequisites:
     `Stmt::{Let(defs), Bind { pattern, expr }, Expr(expr)}`.
   - `Type::Var("a")` stores the name without the quote; `Type::VarApp { region, name, args }` is `'f 'a`.
   - Until this plan lands, nash-can answers non-empty `constraints`, `traits`,
-    `impls`, `VarApp`, and `Do` with `Error::Unsupported { feature, region }`.
-    Chunks 2, 3, 8, and 10 delete those gates as they take over each feature.
+    `impls`, and `Do` with `Error::Unsupported { feature, region }`.
+    Chunks 2, 3, and 10 delete those gates as they take over each feature.
 - [plans/02-kinds.md](02-kinds.md) chunks 1-5: `nash_ast::{BaseKind, KindSet, Kind, KindScheme}`,
   the engine `nash_can::kinds::{Infer, KindEnv, Walker, check_annotation}`,
   `nash_can::Error::KindMismatch { region, context: KindContext, expected, actual }`,
   and the pre-seeded little types `int`, `string`, `bytes` used by defaulting.
   Chunk 3 (impl head kinds) and chunk 9 (kind predicates on value schemes)
-  depend on it; chunks 1-2 and 4-8 do not.
-- [plans/07-codegen.md](07-codegen.md) chunk 3 defines `nash_solve::solved::{NodeId, SolvedTypes, Instance}`.
+  depend on it, as does chunk 2 trait-kind inference; chunks 1 and 4-8 do not.
+- The shared contract with [plans/07-codegen.md](07-codegen.md) chunk 3 defines `nash_solve::solved::{NodeId, SolvedTypes, Instance}`.
+  The file does not exist after plan 02; bootstrap it in this plan.
   This plan fills `SolvedTypes::instances` and adds `SolvedTypes::schemes`;
   it does not define a parallel table. The exact contract is in
   [Contract with plans/07](#contract-with-plans07-codegenmd) below.
@@ -110,12 +111,18 @@ resolved through the impl table. `Mono::request_method` reads
 `instance.evidence[i]` as an `Evidence`, substitutes the current
 specialization's `Given`s, and expects an `Impl` afterwards (the solver
 guarantees every non-`Given` leaf is an `Impl`). `MonoKey.evidence` is the
-substituted, ground `&[Evidence]`; `Evidence` derives `PartialEq, Eq, Hash`
+substituted, ground `&[Evidence]`; `Evidence` implements `PartialEq, Eq, Hash`
 for that purpose.
 
 ---
 
 ## Chunk 1: canonical AST for traits
+
+Status: complete. Canonical declarations, contexts, method references and
+evidence are present. The original typed annotation is retained. Evidence
+identity ignores source locations recursively. Workspace tests, strict
+Clippy, formatting and snapshot hygiene pass; 68 snapshots changed only
+for empty context/trait/impl fields. Later chunks produce these new nodes.
 
 Files: `crates/nash-ast/src/lib.rs`, plus every constructor of
 `Annotation` and `Def::TypedDef` (`crates/nash-can/src/types.rs:18`,
@@ -125,8 +132,8 @@ Files: `crates/nash-ast/src/lib.rs`, plus every constructor of
 
 Change: add predicates and contexts, trait and impl declarations, method
 variables, the impl key used by every later chunk, and the evidence type
-codegen will consume. Nothing produces a non-empty context yet, so all
-existing snapshots are unchanged.
+codegen will consume. Nothing produces a non-empty context yet. Derived Debug snapshots gain
+empty context, traits, and impls fields; review these structural additions.
 
 Code:
 
@@ -151,6 +158,8 @@ pub struct Annotation<'a> {
 pub enum Def<'a> {
     Def { .. },   // unchanged
     TypedDef {
+        /// Preserve plan 02's original annotation for kind checking.
+        annotation: &'a Located<Type<'a>>,
         name: &'a Located<&'a str>,
         free_vars: FreeVars<'a>,
         context: &'a [Pred<'a>],
@@ -224,7 +233,7 @@ pub struct ImplKey<'a> {
     pub heads: &'a [HeadCon<'a>],
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ImplRef<'a> {
     pub home: ModuleName<'a>,
     pub key: ImplKey<'a>,
@@ -232,7 +241,7 @@ pub struct ImplRef<'a> {
 
 /// How one wanted predicate was satisfied. Consumed by codegen
 /// (plans/07 chunk 9 keys specializations by ground evidence, hence `Hash`).
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub enum Evidence<'a> {
     Impl {
         impl_: ImplRef<'a>,
@@ -248,10 +257,11 @@ pub enum Evidence<'a> {
 }
 ```
 
-`Located<Type>` does not derive `Hash`/`Eq` today; add
-`PartialEq, Eq, Hash` derives to `Type`, `FieldType`, `AliasArgument`,
-`AliasType`, `Located`, and `Region` (all plain data). `type_args` are
-ground after substitution, so structural equality is the right notion.
+Add structural `PartialEq, Eq, Hash` derives to `Type`, `FieldType`,
+`AliasArgument`, and `AliasType`. `Located` and `Region` already have them.
+Evidence equality and hashing must ignore locations recursively in type
+arguments; ordinary derived equality on `Located<Type>` includes regions
+and is not a specialization key. `ImplRef` also derives `Hash`.
 
 ```rust
 
@@ -291,9 +301,12 @@ like Nash source.
 
 Elm reference: `AST/Canonical.hs` (`Annotation`, `Def`, `Export`).
 
-Tests: none new. `cargo test` passes unchanged.
+Tests: evidence keys share identical types at different source locations
+and distinguish different types. Existing behavior snapshots gain only empty
+trait/context fields.
 
-Done when: workspace compiles, all snapshots identical.
+Done when: workspace compiles, evidence identity tests pass, and all snapshot
+changes have been reviewed.
 
 ---
 
@@ -338,6 +351,7 @@ pub enum Var<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct TraitInfo<'a> {
+    pub kind: KindScheme<'a>,
     pub home: ModuleName<'a>,
     pub name: &'a str,
     pub parameters: &'a [&'a str],
@@ -483,9 +497,10 @@ pub fn infer_trait_scheme<'a>(
 ) -> Result<KindScheme<'a>, Vec<Error<'a>>>
 ```
 
-built on `Walker::infer_type` with one `Scope` whose `params` map the trait
-parameters to fresh kind variables (or the annotated kinds) and the method
-signature's other free variables to fresh `KindSet::ALL` variables. The
+built on `Walker::infer_type`. Share kind variables only for trait parameters
+(or their annotated kinds); freshen other quantified variables independently
+for each method. Check superclass and method-context predicate arguments
+against the referenced trait schemes in the same inference engine. The
 result is stored as `nash_ast::Trait.kind` and `InterfaceTrait.kind`
 (deep-copied with plan 02's `copy_kind_scheme`). This runs in
 `canonicalize_traits`, which therefore executes after plan 02's
@@ -658,30 +673,14 @@ Kind check of heads, in `canonicalize_impl` once heads are known (uses
 plan 02's engine directly, so it lives in nash-can rather than
 nash-constrain):
 
-```rust
-/// Each head must instantiate the trait's kind scheme.
-fn check_head_kinds<'a>(bump, kind_env: &KindEnv<'a>, home, info: &TraitInfo<'a>, heads: &[Located<Head<'a>>]) -> Result<(), Vec<Error<'a>>> {
-    let mut infer = Infer::new(bump);
-    let expected = infer.instantiate(&info.kind);                 // Arrow chain, one component per parameter
-    for (param_kind, head) in components(expected).zip(heads) {
-        let actual = match &head.value {
-            Head::Named { reference, vars } => {
-                let mut k = infer.instantiate(&kind_env.scheme(*reference));
-                for _ in vars.iter() { k = infer.apply(k).1; }   // applied to each head var
-                k
-            }
-            Head::Unit | Head::Tuple(_) => infer.fresh_k(KindSet::TERM),
-        };
-        infer.unify(param_kind, actual).map_err(|_| vec![Error::KindMismatch {
-            region: head.region,
-            context: KindContext::ImplHead { trait_: info.name, index: index as u16 },
-            expected: infer.generalize(param_kind),
-            actual: infer.generalize(actual),
-        }])?;
-    }
-    Ok(())
-}
-```
+Instantiate the trait scheme once, preserving shared kind variables across
+its parameters. For each head, instantiate the named type's scheme and
+apply it once per head variable. `Infer::apply` returns a `Result`;
+convert application failures to `KindMismatch` at the impl head region,
+with `KindContext::ImplHead`. Unify the remaining kind with the matching
+trait parameter kind. Unit and tuple heads have kind `Term`. Report
+unification failures with the same head context and generalized expected
+and actual kinds; do not unwrap either operation.
 
 `Error::KindMismatch` here is `nash_can::Error::KindMismatch` (plan 02
 puts all kind errors in nash-can, not nash-constrain).
@@ -1855,19 +1854,18 @@ Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/types.rs`,
 `crates/nash-solve/src/{solve.rs,unify.rs,annotation.rs,occurs.rs}`,
 `crates/nash-can/src/interface.rs`.
 
-Ownership: plan 02 owns `nash_ast::Type::VarApp` and the solver-side
-variant declarations `nash_constrain::Type::AppVarN` and
-`FlatType::AppV1` (shapes below; if plan 02 lands first without them, add
-them there under the same names). This plan owns everything that
-*unifies* or *walks* them: the arms in `unify.rs`, `solve.rs`,
+Ownership: plan 02 provides canonical `nash_ast::Type::App { head, args }`,
+including substitution and interface copying. Keep that representation.
+This plan adds solver-side `nash_constrain::Type::AppVarN` and
+`FlatType::AppV1` and owns everything that *unifies* or *walks* them: the arms in `unify.rs`, `solve.rs`,
 `annotation.rs`, `occurs.rs`, `instantiate.rs`. The impl head kind check
 is already done in chunk 3 (it adds `KindContext::ImplHead` to plan 02's
 enum).
 
 Change: `'f 'a` in signatures. A variable applied to arguments is a new
 type form; unification decomposes it against constructor applications.
-Plan 01's `Unsupported { feature: "higher-kinded type application" }` gate
-in `types.rs` is deleted.
+Remove plan 02's explicit `UnsupportedApplication` inference boundary once
+the solver handles canonical applications end to end.
 
 Code:
 
@@ -1875,7 +1873,7 @@ Code:
 // nash-ast (plan 02 chunk 1 already added this variant; shown for reference)
 pub enum Type<'a> {
     // ...
-    VarApp { name: &'a str, args: &'a [&'a Located<Type<'a>>] },
+    App { head: &'a Located<Type<'a>>, args: &'a [&'a Located<Type<'a>>] },
 }
 
 // nash-constrain type_.rs
@@ -1925,11 +1923,11 @@ with the args it has; `render_type` in the tests prints `List`.
 
 Other walkers get an `AppV1` arm: `adjust_rank_content` (max over `f` and
 args), `restore_content`, `copy_flat_type`, `occurs`, `get_var_names`,
-`term_to_can_type` (produce `VarApp` when `f` is a variable, or fold into
+`term_to_can_type` (produce `App` when `f` is a variable, or fold into
 `Named` when `f` resolved to `App1`), `term_to_error_type` (add
 `ErrorType::VarApp`), `head_of` (an `AppV1` whose head resolves to `App1`
 has that constructor as head; otherwise `None`), `actual_args` (append).
-`instantiate::from_src_type` and `src_type_to_var` map `CanType::VarApp`
+`instantiate::from_src_type` and `src_type_to_var` map `CanType::App`
 to `AppVarN`/`AppV1`. `types.rs::canonicalize_type_value` maps
 `SourceType::VarApp`. `interface.rs::copy_type` copies it.
 
@@ -1990,7 +1988,7 @@ pub struct Annotation<'a> {
 
 `module.rs` stores `check_annotation`'s result into the `TypedDef`'s
 annotation (it currently discards it); `to_annotation` in `types.rs` fills
-`kinds` with `KindScheme::mono(Kind::Var(0))` bounded `ALL` and the kind
+`kinds` with `KindScheme { bounds: &[KindSet::ALL], kind: &Kind::Var(0) }` and the kind
 pass overwrites it. Method schemes and impl method schemes (chunks 2-3) get
 their kinds from the trait's `Trait.kind` components and the head kinds.
 

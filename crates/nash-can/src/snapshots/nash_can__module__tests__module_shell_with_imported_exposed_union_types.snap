@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Maybe exposing (Maybe)\n\ntype alias Wrapped 'a = Maybe 'a\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,

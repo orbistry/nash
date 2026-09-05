@@ -315,9 +315,17 @@ fn copy_located_type<'d>(dst: &'d Bump, lt: &Located<CanType<'_>>) -> &'d Locate
 
 fn copy_annotation<'d>(dst: &'d Bump, a: &Annotation<'_>) -> &'d Annotation<'d> {
     dst.alloc(Annotation {
+        context: dst.alloc_slice_fill_iter(a.context.iter().map(|p| copy_pred(dst, p))),
         free_vars: dst.alloc_slice_fill_iter(a.free_vars.iter().map(|v| copy_str(dst, v))),
         typ: copy_located_type(dst, a.typ),
     })
+}
+
+fn copy_pred<'d>(dst: &'d Bump, p: &nash_ast::Pred<'_>) -> nash_ast::Pred<'d> {
+    nash_ast::Pred {
+        trait_: copy_qualified_name(dst, &p.trait_),
+        args: dst.alloc_slice_fill_iter(p.args.iter().map(|t| copy_located_type(dst, t))),
+    }
 }
 
 fn copy_type<'d>(dst: &'d Bump, t: &CanType<'_>) -> CanType<'d> {

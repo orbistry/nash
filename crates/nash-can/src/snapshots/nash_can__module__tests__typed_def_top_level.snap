@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf : 'a -> 'a\nf x = x\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,
@@ -34,6 +36,7 @@ Module {
     ),
     decls: Declare {
         definition: TypedDef {
+            context: [],
             annotation: Located {
                 region: Region {
                     start: Position {

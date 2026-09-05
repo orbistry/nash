@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Basics exposing (..)\n\nx a b c = a <| b <| c\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,
@@ -115,6 +117,7 @@ Module {
                         name: "apL",
                     },
                     annotation: Annotation {
+                        context: [],
                         free_vars: [
                             "a",
                         ],
@@ -170,6 +173,7 @@ Module {
                                 name: "apL",
                             },
                             annotation: Annotation {
+                                context: [],
                                 free_vars: [
                                     "a",
                                 ],

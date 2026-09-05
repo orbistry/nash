@@ -23,6 +23,7 @@ pub fn to_annotation<'a>(
     let mut state = NameState::new(&user_names);
     let tipe = variable_to_can_type(bump, uf, &mut state, variable);
     bump.alloc(Annotation {
+        context: &[],
         free_vars: bump.alloc_slice_fill_iter(state.taken.keys().copied()),
         typ: tipe,
     })

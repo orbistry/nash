@@ -3,6 +3,7 @@ source: crates/nash-can/src/types.rs
 description: "'a"
 ---
 Annotation {
+    context: [],
     free_vars: [
         "a",
     ],

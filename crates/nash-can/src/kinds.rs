@@ -1100,6 +1100,7 @@ impl<'a> AnnotationChecker<'_, 'a> {
                 ..
             } => {
                 let annotation = nash_ast::Annotation {
+                    context: &[],
                     free_vars,
                     typ: annotation,
                 };
@@ -1119,6 +1120,7 @@ impl<'a> AnnotationChecker<'_, 'a> {
             Expr::VarLocal(_)
             | Expr::VarTopLevel(_)
             | Expr::VarForeign { .. }
+            | Expr::VarMethod { .. }
             | Expr::VarConstructor { .. }
             | Expr::VarOperator { .. }
             | Expr::Str(_)

@@ -433,7 +433,11 @@ fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr
                     CanType::Lambda { from: arg, to: typ },
                 ));
             }
-            let annotation = bump.alloc(Annotation { free_vars, typ });
+            let annotation = bump.alloc(Annotation {
+                context: &[],
+                free_vars,
+                typ,
+            });
 
             CanExpr::VarConstructor {
                 options: *options,
@@ -448,6 +452,7 @@ fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr
         }
         EnvCtor::Bool { home, union, index } => {
             let annotation = bump.alloc(Annotation {
+                context: &[],
                 free_vars: &[],
                 typ: bump.alloc(Located::at(
                     Region::zero(),
@@ -484,7 +489,11 @@ fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr
             sorted_vars.sort_unstable();
             sorted_vars.dedup();
             let free_vars: FreeVars<'a> = bump.alloc_slice_fill_iter(sorted_vars);
-            let annotation = bump.alloc(Annotation { free_vars, typ });
+            let annotation = bump.alloc(Annotation {
+                context: &[],
+                free_vars,
+                typ,
+            });
 
             CanExpr::VarConstructor {
                 options: CtorOpts::Normal,
@@ -1180,6 +1189,7 @@ fn canonicalize_let_def<'a>(
                     args,
                     typ,
                 } => bump.alloc(CanDef::TypedDef {
+                    context: &[],
                     annotation,
                     name,
                     free_vars,

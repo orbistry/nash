@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Basics exposing (..)\n\nx a b = a + b\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,
@@ -100,6 +102,7 @@ Module {
                         name: "add",
                     },
                     annotation: Annotation {
+                        context: [],
                         free_vars: [
                             "a",
                         ],

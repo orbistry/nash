@@ -24,7 +24,11 @@ pub fn to_annotation<'a>(
     let mut free_var_set: BTreeSet<&'a str> = BTreeSet::new();
     collect_free_vars(&typ.value, &mut free_var_set);
     let free_vars: FreeVars<'a> = bump.alloc_slice_fill_iter(free_var_set);
-    Ok(bump.alloc(Annotation { free_vars, typ }))
+    Ok(bump.alloc(Annotation {
+        context: &[],
+        free_vars,
+        typ,
+    }))
 }
 
 /// Canonicalize a source type using the environment.

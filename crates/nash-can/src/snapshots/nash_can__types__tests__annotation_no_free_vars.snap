@@ -3,6 +3,7 @@ source: crates/nash-can/src/types.rs
 description: Int
 ---
 Annotation {
+    context: [],
     free_vars: [],
     typ: Located {
         region: Region {

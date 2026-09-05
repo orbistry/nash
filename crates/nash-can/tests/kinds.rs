@@ -317,6 +317,7 @@ fn annotation_returns_shared_storable_bound() {
         to: list,
     }));
     let annotation = nash_ast::Annotation {
+        context: &[],
         free_vars: &["a"],
         typ,
     };

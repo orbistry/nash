@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Pair 'a 'b = { first : 'a, second : 'b }\n\np = Pair\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Normal,
     name: ModuleName {
         package: None,
@@ -71,6 +73,7 @@ Module {
                     },
                     index: 0,
                     annotation: Annotation {
+                        context: [],
                         free_vars: [
                             "a",
                             "b",

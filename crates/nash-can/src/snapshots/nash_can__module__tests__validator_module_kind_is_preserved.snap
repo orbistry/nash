@@ -3,6 +3,8 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nvalidator module Main exposing (..)\n\nmain = 1\n"
 ---
 Module {
+    traits: [],
+    impls: [],
     kind: Validator(
         Region {
             start: Position {
