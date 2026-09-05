@@ -34,6 +34,50 @@ Module {
     ),
     decls: Declare {
         definition: TypedDef {
+            annotation: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 13,
+                    },
+                },
+                value: Lambda {
+                    from: Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 7,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                    to: Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 11,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 13,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                },
+            },
             name: Located {
                 region: Region {
                     start: Position {

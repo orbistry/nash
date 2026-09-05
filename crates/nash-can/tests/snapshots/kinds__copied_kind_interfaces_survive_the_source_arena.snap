@@ -1,0 +1,221 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: "(copied, canonical.module.unions[0].value.kind)"
+---
+(
+    Interface {
+        home: ModuleName {
+            package: None,
+            name: "Shapes",
+        },
+        values: [],
+        aliases: [
+            InterfaceAlias {
+                kind: KindScheme {
+                    bounds: [
+                        KindSet(
+                            15,
+                        ),
+                        KindSet(
+                            6,
+                        ),
+                    ],
+                    kind: Arrow(
+                        Arrow(
+                            Var(
+                                0,
+                            ),
+                            Var(
+                                1,
+                            ),
+                        ),
+                        Arrow(
+                            Var(
+                                0,
+                            ),
+                            Var(
+                                1,
+                            ),
+                        ),
+                    ),
+                },
+                name: "applied",
+                parameters: [
+                    "f",
+                    "a",
+                ],
+                typ: Located {
+                    region: Region {
+                        start: Position {
+                            line: 4,
+                            column: 28,
+                        },
+                        end: Position {
+                            line: 4,
+                            column: 33,
+                        },
+                    },
+                    value: App {
+                        head: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 28,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 30,
+                                },
+                            },
+                            value: Var(
+                                "f",
+                            ),
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 4,
+                                        column: 31,
+                                    },
+                                    end: Position {
+                                        line: 4,
+                                        column: 33,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                },
+                visibility: Public,
+            },
+        ],
+        unions: [
+            InterfaceUnion {
+                kind: KindScheme {
+                    bounds: [
+                        KindSet(
+                            15,
+                        ),
+                        KindSet(
+                            7,
+                        ),
+                    ],
+                    kind: Arrow(
+                        Arrow(
+                            Var(
+                                0,
+                            ),
+                            Var(
+                                1,
+                            ),
+                        ),
+                        Arrow(
+                            Var(
+                                0,
+                            ),
+                            Base(
+                                Term,
+                            ),
+                        ),
+                    ),
+                },
+                name: "wrap",
+                parameters: [
+                    "f",
+                    "a",
+                ],
+                ctors: [
+                    Ctor {
+                        name: "Wrap",
+                        index: 0,
+                        arity: 1,
+                        arguments: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 25,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 30,
+                                    },
+                                },
+                                value: App {
+                                    head: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 25,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 27,
+                                            },
+                                        },
+                                        value: Var(
+                                            "f",
+                                        ),
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 3,
+                                                    column: 28,
+                                                },
+                                                end: Position {
+                                                    line: 3,
+                                                    column: 30,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+                alternatives: 1,
+                options: Unbox,
+                visibility: Open,
+            },
+        ],
+        binops: [],
+    },
+    KindScheme {
+        bounds: [
+            KindSet(
+                15,
+            ),
+            KindSet(
+                7,
+            ),
+        ],
+        kind: Arrow(
+            Arrow(
+                Var(
+                    0,
+                ),
+                Var(
+                    1,
+                ),
+            ),
+            Arrow(
+                Var(
+                    0,
+                ),
+                Base(
+                    Term,
+                ),
+            ),
+        ),
+    },
+)

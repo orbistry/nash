@@ -973,3 +973,211 @@ pub(crate) fn test_big_kind<'a>(bump: &'a Bump, arity: usize) -> KindScheme<'a> 
     let kind = (0..arity).fold(big, |result, _| &*bump.alloc(Kind::Arrow(big, result)));
     KindScheme::mono(kind)
 }
+
+/// Check a value annotation and return its free-variable kind schemes in name order.
+pub fn check_annotation<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    home: ModuleName<'a>,
+    name: &'a str,
+    annotation: &nash_ast::Annotation<'a>,
+) -> Result<Vec<(&'a str, KindScheme<'a>)>, Vec<Error<'a>>> {
+    let mut walker = Walker {
+        bump,
+        infer: Infer::new(bump),
+        env,
+        group: BTreeMap::new(),
+        home,
+        errors: Vec::new(),
+    };
+    let scope = Scope {
+        params: annotation
+            .free_vars
+            .iter()
+            .map(|name| (*name, walker.infer.fresh_k(KindSet::ALL)))
+            .collect(),
+    };
+    let kind = walker.infer_type(&scope, annotation.typ);
+    let any = walker.infer.fresh_k(KindSet::ANY);
+    walker.expect(
+        annotation.typ.region,
+        KindContext::Annotation { name },
+        any,
+        kind,
+    );
+    if !walker.errors.is_empty() {
+        return Err(walker.errors);
+    }
+    Ok(scope
+        .params
+        .iter()
+        .map(|(name, kind)| (*name, walker.infer.generalize(kind)))
+        .collect())
+}
+
+pub(crate) fn check_decl_annotations<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    home: ModuleName<'a>,
+    decls: &nash_ast::Decls<'a>,
+) -> Result<(), Vec<Error<'a>>> {
+    let mut checker = AnnotationChecker {
+        bump,
+        env,
+        home,
+        errors: Vec::new(),
+    };
+    let mut next = decls;
+    loop {
+        match next {
+            nash_ast::Decls::Empty => break,
+            nash_ast::Decls::Declare {
+                definition,
+                next: rest,
+            } => {
+                checker.definition(definition);
+                next = rest;
+            }
+            nash_ast::Decls::DeclareRec {
+                definition,
+                following,
+                next: rest,
+            } => {
+                checker.definition(definition);
+                for def in *following {
+                    checker.definition(def);
+                }
+                next = rest;
+            }
+        }
+    }
+    if checker.errors.is_empty() {
+        Ok(())
+    } else {
+        Err(checker.errors)
+    }
+}
+
+struct AnnotationChecker<'e, 'a> {
+    bump: &'a Bump,
+    env: &'e KindEnv<'a>,
+    home: ModuleName<'a>,
+    errors: Vec<Error<'a>>,
+}
+
+impl<'a> AnnotationChecker<'_, 'a> {
+    fn definition(&mut self, def: &nash_ast::Def<'a>) {
+        match def {
+            nash_ast::Def::Def { body, .. } => self.expression(&body.value),
+            nash_ast::Def::TypedDef {
+                name,
+                free_vars,
+                annotation,
+                body,
+                ..
+            } => {
+                let annotation = nash_ast::Annotation {
+                    free_vars,
+                    typ: annotation,
+                };
+                if let Err(errors) =
+                    check_annotation(self.bump, self.env, self.home, name.value, &annotation)
+                {
+                    self.errors.extend(errors);
+                }
+                self.expression(&body.value);
+            }
+        }
+    }
+
+    fn expression(&mut self, expr: &nash_ast::Expr<'a>) {
+        use nash_ast::Expr;
+        match expr {
+            Expr::VarLocal(_)
+            | Expr::VarTopLevel(_)
+            | Expr::VarForeign { .. }
+            | Expr::VarConstructor { .. }
+            | Expr::VarOperator { .. }
+            | Expr::Str(_)
+            | Expr::Int(_)
+            | Expr::Unit
+            | Expr::Accessor(_) => {}
+            Expr::Negate(expr)
+            | Expr::Lambda { body: expr, .. }
+            | Expr::Access { record: expr, .. } => self.expression(&expr.value),
+            Expr::List(items) => {
+                for item in *items {
+                    self.expression(&item.value);
+                }
+            }
+            Expr::Binop { left, right, .. } => {
+                self.expression(&left.value);
+                self.expression(&right.value);
+            }
+            Expr::Call {
+                function,
+                arguments,
+            } => {
+                self.expression(&function.value);
+                for arg in *arguments {
+                    self.expression(&arg.value);
+                }
+            }
+            Expr::If {
+                branches,
+                final_else,
+            } => {
+                for branch in *branches {
+                    self.expression(&branch.condition.value);
+                    self.expression(&branch.then_branch.value);
+                }
+                self.expression(&final_else.value);
+            }
+            Expr::Let { definition, body } => {
+                self.definition(definition);
+                self.expression(&body.value);
+            }
+            Expr::LetRec { definitions, body } => {
+                for def in *definitions {
+                    self.definition(def);
+                }
+                self.expression(&body.value);
+            }
+            Expr::LetDestruct { value, body, .. } => {
+                self.expression(&value.value);
+                self.expression(&body.value);
+            }
+            Expr::Case {
+                scrutinee,
+                branches,
+            } => {
+                self.expression(&scrutinee.value);
+                for branch in *branches {
+                    self.expression(&branch.body.value);
+                }
+            }
+            Expr::Update { base, fields, .. } => {
+                self.expression(&base.value);
+                for field in *fields {
+                    self.expression(&field.value.value);
+                }
+            }
+            Expr::Record(fields) => {
+                for field in *fields {
+                    self.expression(&field.value.value);
+                }
+            }
+            Expr::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                self.expression(&first.value);
+                self.expression(&second.value);
+                for item in *rest {
+                    self.expression(&item.value);
+                }
+            }
+        }
+    }
+}

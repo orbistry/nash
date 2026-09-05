@@ -12,6 +12,8 @@ use std::time::SystemTime;
 
 use crate::error::DriverError;
 
+const INTERFACE_MAGIC: &[u8] = b"NASHI\0\x02\0";
+
 /// Module interface for incremental compilation.
 ///
 /// Contains the public exports of a module and a fingerprint
@@ -29,7 +31,7 @@ pub struct Interface {
 }
 
 /// An exported item from a module.
-#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub enum Export {
     /// A value export (function or constant).
     Value {
@@ -42,6 +44,8 @@ pub enum Export {
         name: String,
         /// Whether constructors are exposed.
         constructors_exposed: bool,
+        /// Kind scheme, including every quantified variable bound.
+        kind: String,
     },
 }
 
@@ -56,6 +60,41 @@ impl Interface {
         }
     }
 
+    /// Capture exported canonical types and their inferred kind contracts.
+    pub fn from_canonical(interface: &nash_can::Interface<'_>) -> Self {
+        let mut exports: Vec<Export> = interface
+            .values
+            .iter()
+            .map(|value| Export::Value {
+                name: value.name.into(),
+            })
+            .collect();
+        exports.extend(
+            interface
+                .unions
+                .iter()
+                .filter_map(|union| union.to_public())
+                .map(|union| Export::Type {
+                    name: union.name.into(),
+                    constructors_exposed: union.visibility == nash_can::UnionVisibility::Open,
+                    kind: render_kind_scheme(union.kind),
+                }),
+        );
+        exports.extend(
+            interface
+                .aliases
+                .iter()
+                .filter_map(|alias| alias.to_public())
+                .map(|alias| Export::Type {
+                    name: alias.name.into(),
+                    constructors_exposed: false,
+                    kind: render_kind_scheme(alias.kind),
+                }),
+        );
+        exports.sort_by(|a, b| export_name(a).cmp(export_name(b)));
+        Self::new(interface.home.name.into(), exports)
+    }
+
     /// Load an interface from a file.
     pub fn load(path: &Path) -> Result<Self, DriverError> {
         let bytes = std::fs::read(path).map_err(|source| DriverError::ReadError {
@@ -63,7 +102,12 @@ impl Interface {
             source,
         })?;
 
-        bincode::deserialize(&bytes).map_err(DriverError::SerializeError)
+        let payload = bytes.strip_prefix(INTERFACE_MAGIC).ok_or_else(|| {
+            DriverError::SerializeError(Box::new(bincode::ErrorKind::Custom(
+                "unsupported interface cache format".into(),
+            )))
+        })?;
+        bincode::deserialize(payload).map_err(DriverError::SerializeError)
     }
 
     /// Save the interface to a file.
@@ -76,7 +120,8 @@ impl Interface {
             })?;
         }
 
-        let bytes = bincode::serialize(self)?;
+        let mut bytes = INTERFACE_MAGIC.to_vec();
+        bytes.extend(bincode::serialize(self)?);
         std::fs::write(path, bytes).map_err(|source| DriverError::WriteError {
             path: path.to_path_buf(),
             source,
@@ -239,4 +284,107 @@ mod tests {
             PathBuf::from("/project/.nash/interfaces/Json/Decode.nashi")
         );
     }
+}
+
+#[cfg(test)]
+mod kind_tests {
+    use super::*;
+
+    #[test]
+    fn kind_and_bound_changes_change_fingerprints() {
+        let make = |kind: &str| {
+            Interface::new(
+                "Types".into(),
+                vec![Export::Type {
+                    name: "item".into(),
+                    constructors_exposed: false,
+                    kind: kind.into(),
+                }],
+            )
+        };
+        assert!(make("Big").differs_from(&make("Const")));
+        assert!(
+            make("forall k0:{Big,Const}. k0 -> Const")
+                .differs_from(&make("forall k0:{Big,Const,Term}. k0 -> Const"))
+        );
+        assert!(!make("Big").differs_from(&make("Big")));
+    }
+
+    #[test]
+    fn kind_interfaces_round_trip_and_old_cache_files_are_misses() {
+        let root = std::env::temp_dir().join(format!("nash-kind-interface-{}", std::process::id()));
+        let cache = InterfaceCache::new(&root);
+        let original = Interface::new(
+            "Kinds".into(),
+            vec![Export::Type {
+                name: "list".into(),
+                constructors_exposed: false,
+                kind: "forall k0:{Big,Const}. k0 -> Const".into(),
+            }],
+        );
+        cache.save(&original).unwrap();
+        let loaded = cache.load("Kinds").expect("new format loads");
+        assert_eq!(loaded.fingerprint, original.fingerprint);
+        assert_eq!(loaded.exports, original.exports);
+        let legacy = Interface::new(
+            "Legacy".into(),
+            vec![Export::Value {
+                name: "value".into(),
+            }],
+        );
+        std::fs::write(
+            cache.cache_path("Legacy"),
+            bincode::serialize(&legacy).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            cache.load("Legacy").is_none(),
+            "unversioned legacy format must rebuild"
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+}
+
+fn export_name(export: &Export) -> &str {
+    match export {
+        Export::Value { name } | Export::Type { name, .. } => name,
+    }
+}
+
+fn render_kind_scheme(scheme: nash_ast::KindScheme<'_>) -> String {
+    fn render(kind: &nash_ast::Kind<'_>, argument: bool) -> String {
+        use nash_ast::Kind;
+        match kind {
+            Kind::Base(base) => format!("{base:?}"),
+            Kind::Var(index) => format!("k{index}"),
+            Kind::Arrow(from, to) => {
+                let text = format!("{} -> {}", render(from, true), render(to, false));
+                if argument { format!("({text})") } else { text }
+            }
+        }
+    }
+    let body = render(scheme.kind, false);
+    if scheme.bounds.is_empty() {
+        return body;
+    }
+    use nash_ast::KindSet;
+    let bounds = scheme
+        .bounds
+        .iter()
+        .enumerate()
+        .map(|(index, bound)| {
+            let names: Vec<_> = [
+                (KindSet::BIG, "Big"),
+                (KindSet::CONST, "Const"),
+                (KindSet::TERM, "Term"),
+                (KindSet::ARROW, "Arrow"),
+            ]
+            .into_iter()
+            .filter_map(|(shape, name)| bound.contains(shape).then_some(name))
+            .collect();
+            format!("k{index}:{{{}}}", names.join(","))
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!("forall {bounds}. {body}")
 }

@@ -1,0 +1,8 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "f : 'f 'a -> 'f 'a\nf x = x"
+---
+(
+    [],
+    [],
+)

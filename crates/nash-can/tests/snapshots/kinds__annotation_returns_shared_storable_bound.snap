@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: kinds
+---
+[
+    (
+        "a",
+        KindScheme {
+            bounds: [
+                KindSet(
+                    3,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+    ),
+]

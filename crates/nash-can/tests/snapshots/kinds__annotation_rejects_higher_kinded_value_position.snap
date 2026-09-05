@@ -1,0 +1,47 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "f : ('f 'a, 'f) -> int\nf x = 1"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 13,
+            },
+            end: Position {
+                line: 5,
+                column: 15,
+            },
+        },
+        context: ValuePosition,
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    15,
+                ),
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Arrow(
+                Var(
+                    0,
+                ),
+                Var(
+                    1,
+                ),
+            ),
+        },
+    },
+]

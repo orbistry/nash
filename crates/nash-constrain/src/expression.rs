@@ -907,6 +907,7 @@ pub fn constrain_def<'a>(
             args,
             body,
             typ: src_result_type,
+            ..
         } => {
             let (new_rigids, new_rtv) = make_rigids(bump, uf, rtv, free_vars);
 
@@ -1038,6 +1039,7 @@ pub fn constrain_recursive_defs<'a>(
                 args,
                 body,
                 typ: src_result_type,
+                ..
             } => {
                 let (new_rigids, new_rtv) = make_rigids(bump, uf, rtv, free_vars);
 

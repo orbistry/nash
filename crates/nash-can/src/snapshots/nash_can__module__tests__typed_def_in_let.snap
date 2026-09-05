@@ -61,6 +61,50 @@ Module {
                 },
                 value: Let {
                     definition: TypedDef {
+                        annotation: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 21,
+                                },
+                            },
+                            value: Lambda {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 13,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 15,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 19,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 21,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                        },
                         name: Located {
                             region: Region {
                                 start: Position {

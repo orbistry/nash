@@ -197,7 +197,10 @@ canonicalized and before value declarations are canonicalized:
    polymorphic, which is what lets `type option 'a` accept any kind and lets
    phantom parameters carry any kind.
 
-Value annotations are checked afterwards with the same walker: every free
+Value annotations are checked afterwards with the same walker. The compiler
+retains the original annotation before splitting argument/result types or
+expanding function aliases, so explicit alias parameter bounds remain
+visible to this check. For each annotation, every free
 type variable of the annotation gets a fresh `All` variable shared by all
 its occurrences, every `Type::Named` application is checked against the
 constructor's scheme, and the walk yields the kind of every free variable.

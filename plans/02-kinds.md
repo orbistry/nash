@@ -67,7 +67,7 @@ round-trip test even when the added field is a `String`.
 - [x] Chunk 2: kind inference engine. Seven tests cover bounds, links, occurs checks, arrows, sharing, and fresh instantiation; tests failed before implementation. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 3: builtin kinds and environment. Tests verify all 17 primitive names, arities, representation bounds, and seeded lookup. Tests failed before implementation; formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 4: declaration inference. Source acceptance tests cover casing, SCCs, bounds, free application heads, alias substitution, and error recovery. Kind schemes also cross canonical interfaces so imported declarations can be checked. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
-- [ ] Chunk 5: interfaces and value annotations.
+- [x] Chunk 5: interfaces and value annotations. Checks retain original annotations across alias expansion and visit nested lets. Tests verify copied interfaces after source-arena drop, real cross-module builds, kind/bound fingerprint changes, versioned cache round trips, and old-format cache misses. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [ ] Chunk 6: user parameter annotations.
 - [ ] Chunk 7: changeset, final acceptance audit, and SPEC.
 
@@ -100,6 +100,15 @@ plans/03 (traits).
 - Haskell 98 Report section 4.6 (kind inference) is the algorithm.
 
 ## Implementation decisions
+
+- Typed definitions retain their original canonical annotation in addition
+  to the split argument/result types used by the value solver. Checking a
+  reconstructed function type would lose stricter alias parameter kinds.
+  Both top-level and let annotations use the retained original tree.
+- Driver results expose public interface metadata generated from actual
+  canonical interfaces. Serialized files use format 2 (`NASHI` magic), and
+  old files are cache misses. Fingerprints include kind-variable bounds;
+  this plan does not add a new persistent incremental build engine.
 
 - Canonical `Type::App { head, args }` preserves source `VarApp` and permits
   substitution into both the head and arguments. Both solver conversion
@@ -1079,9 +1088,12 @@ prelude lands (plans/04 chunk C1).
    and run `kinds::check_annotation`. The walk returns the kind of every
    free variable; this chunk discards it (plans/03 stores it as predicates).
 3. `nash-driver` fingerprint: `Export::Type` gains `kind: String` (the
-   scheme rendered with `k0 -> Big` notation) so a kind change invalidates
-   dependents. `Interface::new` callers pass it; bincode serialization is
-   unaffected structurally because the field is a `String`.
+   scheme rendered with `k0 -> Big` notation and explicit bounds).
+   `Interface::from_canonical` builds this metadata from successful compiler
+   output, and `BuildResult.interfaces` exposes it. Interface files have a
+   versioned magic prefix; old unversioned files become cache misses. The
+   current driver rebuilds all modules and does not yet use persistent
+   fingerprints to skip compilation.
 
 **Code**:
 

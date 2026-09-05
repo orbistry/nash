@@ -1,0 +1,42 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: errors
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 16,
+            },
+            end: Position {
+                line: 5,
+                column: 18,
+            },
+        },
+        context: TypeArg {
+            head: Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Restricted",
+                    },
+                    name: "restricted",
+                },
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+    },
+]

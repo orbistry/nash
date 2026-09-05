@@ -1132,6 +1132,7 @@ fn canonicalize_let_def<'a>(
                 )?;
                 (
                     DefBuilder::Typed {
+                        annotation: annotation_val.typ,
                         free_vars: annotation_val.free_vars,
                         args: bump.alloc_slice_fill_iter(typed_args),
                         typ: result_type,
@@ -1174,10 +1175,12 @@ fn canonicalize_let_def<'a>(
             let has_args = !args.is_empty();
             let can_def: &'a CanDef<'a> = match can_def_builder {
                 DefBuilder::Typed {
+                    annotation,
                     free_vars,
                     args,
                     typ,
                 } => bump.alloc(CanDef::TypedDef {
+                    annotation,
                     name,
                     free_vars,
                     args,
@@ -1234,6 +1237,7 @@ fn canonicalize_let_def<'a>(
 
 enum DefBuilder<'a> {
     Typed {
+        annotation: &'a Located<nash_ast::Type<'a>>,
         free_vars: nash_ast::FreeVars<'a>,
         args: &'a [CanTypedPattern<'a>],
         typ: &'a Located<CanType<'a>>,

@@ -1,0 +1,23 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "f : list 'f -> 'f 'a -> int\nf xs g = 1"
+---
+[
+    KindTooManyArgs {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 16,
+            },
+            end: Position {
+                line: 5,
+                column: 21,
+            },
+        },
+        head: Var(
+            "f",
+        ),
+        applied: 1,
+        accepted: 0,
+    },
+]

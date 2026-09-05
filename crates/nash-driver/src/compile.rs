@@ -41,6 +41,9 @@ pub struct BuildResult {
     /// Results for each module.
     pub modules: HashMap<Url, ModuleResult>,
 
+    /// Public interface fingerprints and kind contracts from successful modules.
+    pub interfaces: HashMap<Url, crate::interface::Interface>,
+
     /// Total number of modules processed.
     pub total: usize,
 
@@ -89,7 +92,8 @@ pub async fn build(db: Arc<Mutex<Database>>, graph: &DepGraph) -> BuildResult {
 /// parallelism is limited to source fetching for now.
 fn build_sync(sources: Vec<(Url, Result<String, String>)>) -> BuildResult {
     let store = Bump::new();
-    let mut interfaces: BTreeMap<&str, Interface<'_>> = BTreeMap::new();
+    let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
+    let mut public_interfaces = HashMap::new();
 
     let mut results: HashMap<Url, ModuleResult> = HashMap::new();
     let mut all_warnings: Vec<String> = Vec::new();
@@ -97,6 +101,10 @@ fn build_sync(sources: Vec<(Url, Result<String, String>)>) -> BuildResult {
     for (uri, source) in &sources {
         let (output, interface) = compile_module(uri, source, &store, &interfaces);
         if let Some(interface) = interface {
+            public_interfaces.insert(
+                uri.clone(),
+                crate::interface::Interface::from_canonical(&interface),
+            );
             interfaces.insert(interface.home.name, interface);
         }
         all_warnings.extend(output.warnings);
@@ -111,6 +119,7 @@ fn build_sync(sources: Vec<(Url, Result<String, String>)>) -> BuildResult {
 
     BuildResult {
         modules: results,
+        interfaces: public_interfaces,
         total,
         success,
         failed: total - success,
@@ -471,5 +480,71 @@ main = Utils.pong 1
         assert_eq!(result.total, 2);
         assert_eq!(result.success, 2);
         assert!(result.is_success());
+    }
+}
+
+#[cfg(test)]
+mod kind_tests {
+    use super::*;
+    use crate::source::InMemorySource;
+
+    async fn compile_pair(producer: &str, consumer: &str) -> BuildResult {
+        let mem = InMemorySource::new();
+        let types = Url::parse("file:///Types.nash").unwrap();
+        let main = Url::parse("file:///Main.nash").unwrap();
+        mem.insert(types.clone(), producer.to_owned());
+        mem.insert(main.clone(), consumer.to_owned());
+        let db = Arc::new(Mutex::new(Database::new(mem)));
+        let graph = build_graph(db.clone(), &[main, types]).await.unwrap();
+        build(db, &graph).await
+    }
+
+    #[tokio::test]
+    async fn imported_big_alias_is_a_valid_list_element() {
+        let result = compile_pair(
+            "module Types exposing (Item)\n\nimport Builtin exposing (..)\n\ntype alias Item = Int\n",
+            "module Main exposing (..)\n\nimport Builtin exposing (..)\nimport Types\n\ntype alias items = list Types.Item\n",
+        ).await;
+        assert_eq!(result.success, 2, "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn imported_term_alias_is_rejected_as_a_list_element() {
+        let result = compile_pair(
+            "module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n",
+            "module Main exposing (..)\n\nimport Builtin exposing (..)\nimport Types exposing (type item)\n\ntype alias items = list item\n",
+        ).await;
+        assert_eq!(result.success, 1, "{result:?}");
+        let ModuleResult::Failed { message } =
+            &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+        else {
+            panic!("invalid consumer compiled");
+        };
+        assert!(message.contains("KindMismatch"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn real_export_kind_changes_the_build_interface_fingerprint() {
+        let big = compile_pair("module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = int\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
+        let term = compile_pair("module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
+        assert_eq!(big.success, 2, "{big:?}");
+        assert_eq!(term.success, 2, "{term:?}");
+        let uri = Url::parse("file:///Types.nash").unwrap();
+        assert!(big.interfaces[&uri].differs_from(&term.interfaces[&uri]));
+    }
+    #[tokio::test]
+    async fn real_export_bound_changes_the_build_interface_fingerprint() {
+        let consumer = "module Main exposing (..)\n\nimport Types exposing (type box)\n";
+        let any = compile_pair("module Types exposing (type box)\n\nimport Builtin exposing (..)\n\ntype box 'a = Box 'a\n", consumer).await;
+        let storable = compile_pair("module Types exposing (type box)\n\nimport Builtin exposing (..)\n\ntype box 'a = Box (list 'a)\n", consumer).await;
+        assert_eq!(any.success, 2, "{any:?}");
+        assert_eq!(storable.success, 2, "{storable:?}");
+        let uri = Url::parse("file:///Types.nash").unwrap();
+        assert!(any.interfaces[&uri].differs_from(&storable.interfaces[&uri]));
+        let crate::interface::Export::Type { kind, .. } = &storable.interfaces[&uri].exports[0]
+        else {
+            panic!("missing type export");
+        };
+        assert_eq!(kind, "forall k0:{Big,Const}. k0 -> Term");
     }
 }

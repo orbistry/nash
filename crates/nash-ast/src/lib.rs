@@ -137,6 +137,8 @@ pub enum Def<'a> {
         body: &'a Located<Expr<'a>>,
     },
     TypedDef {
+        /// The original annotation, before aliases and function arguments are split.
+        annotation: &'a Located<Type<'a>>,
         name: &'a Located<&'a str>,
         free_vars: FreeVars<'a>,
         args: &'a [TypedPattern<'a>],

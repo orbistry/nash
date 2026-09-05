@@ -125,6 +125,7 @@ pub fn canonicalize<'a>(
 
     let mut warnings = Vec::new();
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
+    kinds::check_decl_annotations(bump, &kind_env, home, decls)?;
     let binops = canonicalize_binops(bump, module.binops);
     let exports = canonicalize_exports(bump, module)?;
 
@@ -284,6 +285,7 @@ struct NodeOne<'a> {
 
 enum TopLevelDefBuilder<'a> {
     Typed {
+        annotation: &'a Located<nash_ast::Type<'a>>,
         free_vars: nash_ast::FreeVars<'a>,
         args: &'a [nash_ast::TypedPattern<'a>],
         typ: &'a Located<nash_ast::Type<'a>>,
@@ -331,6 +333,7 @@ fn to_node_one<'a>(
             pattern::detect_duplicates(DuplicatePatternContext::FuncArgs(src.name.value), bound)?;
         (
             TopLevelDefBuilder::Typed {
+                annotation: annotation.typ,
                 free_vars: annotation.free_vars,
                 args: bump.alloc_slice_fill_iter(typed_args),
                 typ: result_type,
@@ -366,10 +369,12 @@ fn to_node_one<'a>(
 
     let def = match builder {
         TopLevelDefBuilder::Typed {
+            annotation,
             free_vars,
             args,
             typ,
         } => bump.alloc(nash_ast::Def::TypedDef {
+            annotation,
             name: src.name,
             free_vars,
             args,
@@ -1048,13 +1053,18 @@ fn collect_from_def<'a>(
             collect_from_expr(&body.value, home, used);
         }
         nash_ast::Def::TypedDef {
-            args, body, typ, ..
+            annotation,
+            args,
+            body,
+            typ,
+            ..
         } => {
             for arg in *args {
                 collect_from_pattern(&arg.pattern.value, home, used);
                 collect_from_type(&arg.typ.value, home, used);
             }
             collect_from_expr(&body.value, home, used);
+            collect_from_type(&annotation.value, home, used);
             collect_from_type(&typ.value, home, used);
         }
     }
