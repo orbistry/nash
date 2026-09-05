@@ -213,6 +213,37 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn declared_contexts_are_available_at_local_and_recursive_uses() {
+    let bump = Bump::new();
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        type Container 'a = Wrap 'a
+        boxed : Keep (Container 'a) => 'a -> 'a
+        boxed x = x
+        useBox = (boxed (), boxed "hello")
+        forward : Keep 'a => 'a -> 'a
+        forward x = x
+        monomorphic : Keep () => ()
+        monomorphic = ()
+        use = (forward (), monomorphic)
+        recursive : Keep 'a => 'a -> 'a
+        recursive x = helper x
+        helper x = recursive x
+    "#
+    );
+    let annotations = infer(&bump, source).unwrap();
+    for name in ["boxed", "forward", "monomorphic", "recursive", "helper"] {
+        assert_eq!(annotations[name].context.len(), 1, "{name}");
+    }
+    assert_eq!(annotations["use"].context.len(), 2);
+    assert_eq!(annotations["useBox"].context.len(), 2);
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
+#[test]
 fn inferred_context_is_instantiated_independently_at_each_local_use() {
     let bump = Bump::new();
     let source = indoc!(

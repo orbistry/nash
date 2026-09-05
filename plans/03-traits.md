@@ -1178,12 +1178,21 @@ outer-only predicates to the enclosing boundary. Local uses copy the complete
 type and context together and create fresh wanteds with their own provenance.
 Recursive group members receive the same context. Snapshots cover independent
 uses, outer-only and mixed-rank scopes, constructed predicate arguments, and
-mutual recursion. `Definition.annotated` distinguishes declarations whose
-explicit contexts must be checked instead of inferred.
+mutual recursion. `Definition.context` distinguishes declared schemes
+(`Some`, including empty) from inferred schemes (`None`).
 
-Annotated scheme publication, given checking, predicate resolution, evidence
-ownership, final scheme/instance recording, and the resulting solver API are
-not implemented yet. Ground predicates remain visible in inferred contexts
+Declared contexts now remain on lexical bindings, including monomorphic
+annotations. `Constraint::Let.declarations` carries typed recursive schemes
+to the point where their headers enter scope, before group bodies are checked.
+These declarations share the rigid variables and context slice used by their
+later body-check definitions. Predicate provenance distinguishes annotation
+binders from originating use nodes. Snapshots cover declared constructed
+arguments instantiated at two types and an inferred recursive helper that
+uses an annotated member's context.
+
+Given checking, predicate resolution, evidence ownership, final scheme/instance
+recording, and the resulting solver API are not implemented yet.
+Ground predicates remain visible in inferred contexts
 until chunk 6 resolves them. Do not mark this chunk complete from the current
 inference snapshots alone.
 

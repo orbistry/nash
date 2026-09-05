@@ -295,6 +295,7 @@ fn constrain_lambda<'a>(
             bump,
             vec![
                 Constraint::Let {
+                    declarations: &[],
                     given: &[],
                     binder: None,
                     definitions: &[],
@@ -679,6 +680,7 @@ fn constrain_case_branch<'a>(
     let body_con = constrain(bump, uf, rtv, branch.body, b_expect);
 
     Constraint::Let {
+        declarations: &[],
         given: &[],
         binder: None,
         definitions: &[],
@@ -881,6 +883,7 @@ fn constrain_destruct<'a>(
     cons.push(expr_con);
 
     Constraint::Let {
+        declarations: &[],
         given: &[],
         binder: None,
         definitions: &[],
@@ -936,12 +939,13 @@ fn constrain_definition<'a>(
             let expr_con = constrain(bump, uf, rtv, body, Expected::NoExpectation(result_type));
 
             Constraint::Let {
+                declarations: &[],
                 given: &[],
                 binder: Some(name),
                 definitions: bump.alloc_slice_copy(&[Definition {
                     name,
                     typ: tipe,
-                    annotated: false,
+                    context: None,
                 }]),
                 rigid_vars: &[],
                 flex_vars: bump.alloc_slice_fill_iter(vars),
@@ -951,6 +955,7 @@ fn constrain_definition<'a>(
                     &[]
                 },
                 header_con: bump.alloc(Constraint::Let {
+                    declarations: &[],
                     given: &[],
                     binder: None,
                     definitions: &[],
@@ -988,14 +993,16 @@ fn constrain_definition<'a>(
                 result_type,
             );
             let expr_con = constrain(bump, uf, &new_rtv, body, expected);
+            let given = instantiate_context(bump, &new_rtv, context);
 
             Constraint::Let {
-                given: instantiate_context(bump, &new_rtv, context),
+                declarations: &[],
+                given,
                 binder: Some(name),
                 definitions: bump.alloc_slice_copy(&[Definition {
                     name,
                     typ: tipe,
-                    annotated: true,
+                    context: Some(given),
                 }]),
                 rigid_vars: bump.alloc_slice_fill_iter(new_rigids.iter().map(|(_, var)| *var)),
                 flex_vars: &[],
@@ -1005,6 +1012,7 @@ fn constrain_definition<'a>(
                     &[]
                 },
                 header_con: bump.alloc(Constraint::Let {
+                    declarations: &[],
                     given: &[],
                     binder: None,
                     definitions: &[],
@@ -1116,6 +1124,7 @@ pub fn constrain_recursive_defs<'a>(
                 let expr_con = constrain(bump, uf, rtv, body, Expected::NoExpectation(result_type));
 
                 let def_con = Constraint::Let {
+                    declarations: &[],
                     given: &[],
                     binder: None,
                     definitions: &[],
@@ -1131,7 +1140,7 @@ pub fn constrain_recursive_defs<'a>(
                 flex_info.definitions.push(Definition {
                     name,
                     typ: tipe,
-                    annotated: false,
+                    context: None,
                 });
                 flex_info
                     .headers
@@ -1169,6 +1178,7 @@ pub fn constrain_recursive_defs<'a>(
                 );
 
                 let def_con = Constraint::Let {
+                    declarations: &[],
                     given: &[],
                     binder: None,
                     definitions: &[],
@@ -1179,18 +1189,26 @@ pub fn constrain_recursive_defs<'a>(
                     body_con: bump.alloc(expr_con),
                 };
 
+                let given = instantiate_context(bump, &new_rtv, context);
+
                 // Elm prepends each def's rigids: latest def first, names
                 // sorted within a def.
                 let mut vars: Vec<Variable> = new_rigids.iter().map(|(_, var)| *var).collect();
                 vars.append(&mut rigid_info.vars);
                 rigid_info.vars = vars;
+                rigid_info.definitions.push(Definition {
+                    name,
+                    typ: tipe,
+                    context: Some(given),
+                });
                 rigid_info.cons.push(Constraint::Let {
-                    given: instantiate_context(bump, &new_rtv, context),
+                    declarations: &[],
+                    given,
                     binder: Some(name),
                     definitions: bump.alloc_slice_copy(&[Definition {
                         name,
                         typ: tipe,
-                        annotated: true,
+                        context: Some(given),
                     }]),
                     rigid_vars: bump.alloc_slice_fill_iter(new_rigids.iter().map(|(_, var)| *var)),
                     flex_vars: &[],
@@ -1211,6 +1229,7 @@ pub fn constrain_recursive_defs<'a>(
 
     let flex_headers = header_slice(bump, flex_info.headers);
     Constraint::Let {
+        declarations: bump.alloc_slice_fill_iter(rigid_info.definitions),
         given: &[],
         binder: None,
         definitions: &[],
@@ -1219,6 +1238,7 @@ pub fn constrain_recursive_defs<'a>(
         header: header_slice(bump, rigid_info.headers),
         header_con: bump.alloc(Constraint::True),
         body_con: bump.alloc(Constraint::Let {
+            declarations: &[],
             given: &[],
             binder: flex_info.definitions.first().map(|def| def.name),
             definitions: bump.alloc_slice_fill_iter(flex_info.definitions),
@@ -1226,6 +1246,7 @@ pub fn constrain_recursive_defs<'a>(
             flex_vars: bump.alloc_slice_fill_iter(flex_info.vars),
             header: flex_headers,
             header_con: bump.alloc(Constraint::Let {
+                declarations: &[],
                 given: &[],
                 binder: None,
                 definitions: &[],

@@ -14,12 +14,16 @@ pub struct UseSite<'a> {
 }
 
 #[derive(Clone, Debug)]
+pub enum Origin<'a> {
+    Use { site: UseSite<'a>, index: usize },
+    Annotation { binder: NodeId, index: usize },
+}
+
+#[derive(Clone, Debug)]
 pub struct Predicate<'a> {
     pub trait_: QualifiedName<'a>,
     pub args: Vec<Variable>,
-    pub site: UseSite<'a>,
-    /// Context position at the originating use, in evidence order.
-    pub index: usize,
+    pub origin: Origin<'a>,
 }
 
 #[derive(Default)]

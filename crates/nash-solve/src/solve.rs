@@ -15,7 +15,7 @@ use nash_region::Located;
 
 use crate::annotation::{to_annotation_with_context, to_error_type};
 use crate::occurs;
-use crate::preds::{Predicate, Store, UseSite};
+use crate::preds::{Origin, Predicate, Store, UseSite};
 use crate::unify;
 
 // RUN SOLVER
@@ -239,6 +239,7 @@ impl<'a> Solver<'a> {
                 .fold(state, |state, sub| self.solve(uf, env, rank, state, sub)),
 
             Constraint::Let {
+                declarations,
                 given: _given,
                 binder,
                 definitions,
@@ -253,6 +254,7 @@ impl<'a> Solver<'a> {
                     self.introduce(uf, rank, flex_vars);
                     self.solve(uf, env, rank, state, header_con)
                 } else if rigid_vars.is_empty() && flex_vars.is_empty() {
+                    let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self.solve(uf, env, rank, state, header_con);
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
@@ -265,7 +267,7 @@ impl<'a> Solver<'a> {
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
                             variable: loc.value,
-                            context: &[],
+                            context: declared.get(name).copied().unwrap_or(&[]),
                         });
                     }
                     let state2 = self.solve(uf, &new_env, rank, state1, body_con);
@@ -296,6 +298,7 @@ impl<'a> Solver<'a> {
                             (*name, Located::at(loc_type.region, var))
                         })
                         .collect();
+                    let declared = self.declared_contexts(uf, next_rank, definitions, declarations);
                     let mut state1 = self.solve(uf, env, next_rank, state, header_con);
 
                     let young_mark = state1.mark;
@@ -327,7 +330,7 @@ impl<'a> Solver<'a> {
                     }
 
                     let context = if !definitions.is_empty()
-                        && definitions.iter().all(|def| !def.annotated)
+                        && definitions.iter().all(|def| def.context.is_none())
                     {
                         self.retain_wanted(uf, rank, wanted_start)
                     } else {
@@ -338,7 +341,7 @@ impl<'a> Solver<'a> {
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
                             variable: loc.value,
-                            context,
+                            context: declared.get(name).copied().unwrap_or(context),
                         });
                     }
                     let temp_state = State {
@@ -633,8 +636,7 @@ impl<'a> Solver<'a> {
                 Predicate {
                     trait_: predicate.trait_,
                     args,
-                    site,
-                    index,
+                    origin: Origin::Use { site, index },
                 },
             );
             self.wanted.push((rank, id));
@@ -768,6 +770,42 @@ impl<'a> Solver<'a> {
 
     // COPY
 
+    fn declared_contexts(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        definitions: &[type_::Definition<'a>],
+        declarations: &[type_::Definition<'a>],
+    ) -> BTreeMap<&'a str, &'a [type_::PredId]> {
+        let mut contexts = BTreeMap::new();
+        for definition in definitions.iter().chain(declarations) {
+            let Some(context) = definition.context else {
+                continue;
+            };
+            let mut ids = Vec::new();
+            for (index, pred) in context.iter().enumerate() {
+                let args = pred
+                    .args
+                    .iter()
+                    .map(|arg| self.type_to_variable(uf, rank, arg))
+                    .collect();
+                ids.push(self.predicates.push(
+                    uf,
+                    Predicate {
+                        trait_: pred.trait_,
+                        args,
+                        origin: Origin::Annotation {
+                            binder: nash_ast::NodeId::def(definition.name),
+                            index,
+                        },
+                    },
+                ));
+            }
+            contexts.insert(definition.name.value, &*self.bump.alloc_slice_copy(&ids));
+        }
+        contexts
+    }
+
     fn instantiate_binding(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -787,8 +825,7 @@ impl<'a> Solver<'a> {
             let predicate = Predicate {
                 trait_: predicate.trait_,
                 args: copies[offset..end].to_vec(),
-                site,
-                index,
+                origin: Origin::Use { site, index },
             };
             let id = self.predicates.push(uf, predicate);
             self.wanted.push((rank, id));
@@ -1183,8 +1220,15 @@ mod copy_tests {
             assert_eq!(rank, 2);
             assert_eq!(predicate.trait_, trait_);
             assert_eq!(predicate.args, [arg, arg]);
-            assert_eq!(predicate.site.node, site.node);
-            assert_eq!(predicate.index, 0);
+            let Origin::Use {
+                site: origin,
+                index,
+            } = &predicate.origin
+            else {
+                panic!("use origin")
+            };
+            assert_eq!(origin.node, site.node);
+            assert_eq!(*index, 0);
             assert_eq!(
                 uf.get(arg).preds,
                 [id],

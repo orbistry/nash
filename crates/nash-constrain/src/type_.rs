@@ -26,7 +26,8 @@ pub struct Pred<'a> {
 pub struct Definition<'a> {
     pub name: &'a Located<&'a str>,
     pub typ: &'a Type<'a>,
-    pub annotated: bool,
+    /// `Some`, including an empty slice, distinguishes a declared scheme.
+    pub context: Option<&'a [Pred<'a>]>,
 }
 
 /// Elm's `Type.Constraint`. Allocated in a bump arena, so collections are
@@ -57,6 +58,8 @@ pub enum Constraint<'a> {
     ),
     And(&'a [Constraint<'a>]),
     Let {
+        /// Annotated recursive bindings published before checking group bodies.
+        declarations: &'a [Definition<'a>],
         /// Assumed while checking the definition body, over its rigid variables.
         given: &'a [Pred<'a>],
         /// Evidence owner; the first untyped member for a recursive group.
@@ -79,6 +82,7 @@ pub fn exists<'a>(
     constraint: Constraint<'a>,
 ) -> Constraint<'a> {
     Constraint::Let {
+        declarations: &[],
         given: &[],
         binder: None,
         definitions: &[],
