@@ -31,6 +31,7 @@ pub fn run<'a>(
         copied: Vec::new(),
         predicates: Store::default(),
         wanted: Vec::new(),
+        givens: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -101,10 +102,71 @@ struct Solver<'a> {
     copied: Vec<(Variable, Variable)>,
     predicates: Store<'a>,
     wanted: Vec<(usize, type_::PredId)>,
+    givens: Vec<GivenFrame<'a>>,
     conversion_errors: Vec<Error<'a>>,
 }
 
+struct GivenFrame<'a> {
+    binder: nash_ast::NodeId,
+    predicates: Vec<(nash_ast::QualifiedName<'a>, Vec<Variable>)>,
+}
+
 impl<'a> Solver<'a> {
+    #[allow(clippy::too_many_arguments)]
+    fn solve_header(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        env: &Env<'a>,
+        rank: usize,
+        state: State<'a>,
+        constraint: &Constraint<'a>,
+        given: &[type_::Pred<'a>],
+        binder: Option<&Located<&'a str>>,
+    ) -> State<'a> {
+        let depth = self.givens.len();
+        if let Some(binder) = binder.filter(|_| !given.is_empty()) {
+            let predicates = given
+                .iter()
+                .map(|pred| {
+                    (
+                        pred.trait_,
+                        pred.args
+                            .iter()
+                            .map(|arg| self.type_to_variable(uf, rank, arg))
+                            .collect(),
+                    )
+                })
+                .collect();
+            self.givens.push(GivenFrame {
+                binder: nash_ast::NodeId::def(binder),
+                predicates,
+            });
+        }
+        let start = self.wanted.len();
+        let state = self.solve(uf, env, rank, state, constraint);
+        for (rank, id) in self.wanted.split_off(start) {
+            let wanted = self.predicates.get(id);
+            let solution = self.givens.iter().rev().find_map(|frame| {
+                frame
+                    .predicates
+                    .iter()
+                    .enumerate()
+                    .find_map(|(index, (trait_, args))| {
+                        (*trait_ == wanted.trait_
+                            && crate::preds::same_args(uf, args, &wanted.args))
+                        .then_some((frame.binder, index))
+                    })
+            });
+            if let Some((binder, index)) = solution {
+                self.predicates.solve_given(uf, id, binder, index);
+            } else {
+                self.wanted.push((rank, id));
+            }
+        }
+        self.givens.truncate(depth);
+        state
+    }
+
     fn solve(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -240,7 +302,7 @@ impl<'a> Solver<'a> {
 
             Constraint::Let {
                 declarations,
-                given: _given,
+                given,
                 binder,
                 definitions,
                 rigid_vars,
@@ -252,10 +314,11 @@ impl<'a> Solver<'a> {
                 let wanted_start = self.wanted.len();
                 if rigid_vars.is_empty() && matches!(body_con, Constraint::True) {
                     self.introduce(uf, rank, flex_vars);
-                    self.solve(uf, env, rank, state, header_con)
+                    self.solve_header(uf, env, rank, state, header_con, given, *binder)
                 } else if rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let state1 = self.solve(uf, env, rank, state, header_con);
+                    let state1 =
+                        self.solve_header(uf, env, rank, state, header_con, given, *binder);
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
                         .map(|(name, loc_type)| {
@@ -299,7 +362,8 @@ impl<'a> Solver<'a> {
                         })
                         .collect();
                     let declared = self.declared_contexts(uf, next_rank, definitions, declarations);
-                    let mut state1 = self.solve(uf, env, next_rank, state, header_con);
+                    let mut state1 =
+                        self.solve_header(uf, env, next_rank, state, header_con, given, *binder);
 
                     let young_mark = state1.mark;
                     let visit_mark = young_mark.next();
@@ -636,6 +700,7 @@ impl<'a> Solver<'a> {
                 Predicate {
                     trait_: predicate.trait_,
                     args,
+                    solution: None,
                     origin: Origin::Use { site, index },
                 },
             );
@@ -794,6 +859,7 @@ impl<'a> Solver<'a> {
                     Predicate {
                         trait_: pred.trait_,
                         args,
+                        solution: None,
                         origin: Origin::Annotation {
                             binder: nash_ast::NodeId::def(definition.name),
                             index,
@@ -825,6 +891,7 @@ impl<'a> Solver<'a> {
             let predicate = Predicate {
                 trait_: predicate.trait_,
                 args: copies[offset..end].to_vec(),
+                solution: None,
                 origin: Origin::Use { site, index },
             };
             let id = self.predicates.push(uf, predicate);
@@ -1171,6 +1238,58 @@ mod copy_tests {
     use nash_constrain::type_::{PredId, make_descriptor};
 
     #[test]
+    fn givens_discharge_body_uses_without_escaping_their_scope() {
+        let bump = Bump::new();
+        let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nf : Keep 'a => 'a -> 'a\nf x = keep x\ng : Keep () => ()\ng = keep ()\nh = keep ()\n";
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical =
+            nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let mut solver = Solver {
+            bump: &bump,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            givens: Vec::new(),
+            conversion_errors: Vec::new(),
+        };
+        let result = solver.solve(
+            &mut uf,
+            &Env::new(),
+            OUTERMOST_RANK,
+            State {
+                env: Env::new(),
+                mark: NO_MARK.next(),
+                errors: Vec::new(),
+            },
+            &constraint,
+        );
+        assert!(result.errors.is_empty());
+        assert!(solver.conversion_errors.is_empty());
+        assert!(solver.givens.is_empty());
+        let uses: Vec<_> = solver
+            .predicates
+            .iter()
+            .filter_map(|pred| {
+                if let Origin::Use { site, .. } = &pred.origin {
+                    Some((site.region.start.line, pred.solution.is_some()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(uses.len(), 3);
+        for (line, solved) in uses {
+            assert_eq!(solved, line != 8, "only f and g have enclosing givens");
+        }
+        assert_eq!(result.env["h"].context.len(), 1);
+    }
+
+    #[test]
     fn foreign_context_uses_the_same_fresh_variables_as_its_type() {
         use nash_ast::{Annotation, Expr, ModuleName, NodeId, Pred, QualifiedName};
         let bump = Bump::new();
@@ -1180,6 +1299,7 @@ mod copy_tests {
             copied: Vec::new(),
             predicates: Store::default(),
             wanted: Vec::new(),
+            givens: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
@@ -1249,6 +1369,7 @@ mod copy_tests {
             copied: Vec::new(),
             predicates: Store::default(),
             wanted: Vec::new(),
+            givens: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();

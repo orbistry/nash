@@ -1190,8 +1190,16 @@ binders from originating use nodes. Snapshots cover declared constructed
 arguments instantiated at two types and an inferred recursive helper that
 uses an annotated member's context.
 
-Given checking, predicate resolution, evidence ownership, final scheme/instance
-recording, and the resulting solver API are not implemented yet.
+Exact givens now discharge body wanteds in every Let path, including
+monomorphic definitions. Frames are scoped to the header/body check and do not
+leak into subsequent bindings. Matching follows current representatives,
+preserves nominal alias identity, normalizes record extension chains, and
+never unifies variables to force a match. Discharged predicates retain their
+use origin and record `Solution::Given { binder, index }`.
+
+Superclass entailment, missing-constraint diagnostics, impl resolution,
+retained-evidence ownership, final scheme/instance recording, and the resulting
+solver API are not implemented yet.
 Ground predicates remain visible in inferred contexts
 until chunk 6 resolves them. Do not mark this chunk complete from the current
 inference snapshots alone.

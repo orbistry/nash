@@ -3,8 +3,10 @@
 
 use nash_ast::{NodeId, QualifiedName};
 use nash_constrain::type_::PredId;
+use nash_constrain::{Content, FlatType};
 use nash_constrain::{UnionFind, Variable};
 use nash_region::Region;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Copy, Debug)]
 pub struct UseSite<'a> {
@@ -24,6 +26,12 @@ pub struct Predicate<'a> {
     pub trait_: QualifiedName<'a>,
     pub args: Vec<Variable>,
     pub origin: Origin<'a>,
+    pub solution: Option<Solution>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Solution {
+    Given { binder: NodeId, index: usize },
 }
 
 #[derive(Default)]
@@ -32,6 +40,22 @@ pub struct Store<'a> {
 }
 
 impl<'a> Store<'a> {
+    pub fn iter(&self) -> impl Iterator<Item = &Predicate<'a>> {
+        self.predicates.iter()
+    }
+    pub fn solve_given(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        id: PredId,
+        binder: NodeId,
+        index: usize,
+    ) {
+        let predicate = &mut self.predicates[id.0 as usize];
+        predicate.solution = Some(Solution::Given { binder, index });
+        for arg in &predicate.args {
+            uf.modify(*arg, |desc| desc.preds.retain(|pending| *pending != id));
+        }
+    }
     pub fn get(&self, id: PredId) -> &Predicate<'a> {
         &self.predicates[id.0 as usize]
     }
@@ -47,5 +71,181 @@ impl<'a> Store<'a> {
         }
         self.predicates.push(predicate);
         id
+    }
+}
+
+/// Compare already-known types without solving a variable to make them fit.
+pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Variable]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    let mut pending: Vec<_> = left.iter().copied().zip(right.iter().copied()).collect();
+    let mut seen = BTreeSet::new();
+    while let Some((a, b)) = pending.pop() {
+        let a = uf.find(a);
+        let b = uf.find(b);
+        if a == b || !seen.insert((a, b)) {
+            continue;
+        }
+        let a_content = uf.get(a).content.clone();
+        let b_content = uf.get(b).content.clone();
+        match (a_content, b_content) {
+            (
+                Content::Structure(FlatType::App1(ha, na, aa)),
+                Content::Structure(FlatType::App1(hb, nb, ab)),
+            ) if ha == hb && na == nb && aa.len() == ab.len() => {
+                pending.extend(aa.into_iter().zip(ab))
+            }
+            (
+                Content::Structure(FlatType::Fun1(a, b)),
+                Content::Structure(FlatType::Fun1(c, d)),
+            ) => pending.extend([(a, c), (b, d)]),
+            (
+                Content::Structure(FlatType::Tuple1(a, b, c)),
+                Content::Structure(FlatType::Tuple1(d, e, f)),
+            ) if c.is_some() == f.is_some() => {
+                pending.extend([(a, d), (b, e)]);
+                pending.extend(c.into_iter().zip(f));
+            }
+            (Content::Structure(FlatType::Unit1), Content::Structure(FlatType::Unit1))
+            | (
+                Content::Structure(FlatType::EmptyRecord1),
+                Content::Structure(FlatType::EmptyRecord1),
+            ) => {}
+            (
+                Content::Structure(FlatType::Record1(..)),
+                Content::Structure(FlatType::Record1(..) | FlatType::EmptyRecord1),
+            )
+            | (
+                Content::Structure(FlatType::EmptyRecord1),
+                Content::Structure(FlatType::Record1(..)),
+            ) => {
+                let (Some((a, ae)), Some((b, be))) = (record_fields(uf, a), record_fields(uf, b))
+                else {
+                    return false;
+                };
+                if !a.keys().eq(b.keys()) {
+                    return false;
+                }
+                pending.push((ae, be));
+                pending.extend(a.into_values().zip(b.into_values()));
+            }
+            (
+                Content::Alias {
+                    home: ha,
+                    name: na,
+                    args: aa,
+                    ..
+                },
+                Content::Alias {
+                    home: hb,
+                    name: nb,
+                    args: ab,
+                    ..
+                },
+            ) if ha == hb && na == nb && aa.len() == ab.len() => {
+                pending.extend(aa.into_iter().zip(ab).map(|((_, a), (_, b))| (a, b)));
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+fn record_fields<'a>(
+    uf: &mut UnionFind<'a>,
+    mut variable: Variable,
+) -> Option<(BTreeMap<&'a str, Variable>, Variable)> {
+    let mut fields = BTreeMap::new();
+    let mut seen = BTreeSet::new();
+    loop {
+        variable = uf.find(variable);
+        if !seen.insert(variable) {
+            return None;
+        }
+        match uf.get(variable).content.clone() {
+            Content::Structure(FlatType::Record1(more, ext)) => {
+                for (name, typ) in more {
+                    fields.entry(name).or_insert(typ);
+                }
+                variable = ext;
+            }
+            Content::Alias { real, .. } => variable = real,
+            _ => return Some((fields, variable)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nash_constrain::type_::make_descriptor;
+
+    #[test]
+    fn matching_normalizes_record_extensions_without_unifying_them() {
+        let mut uf = UnionFind::new();
+        let a = uf.fresh(make_descriptor(Content::RigidVar("a")));
+        let empty = uf.fresh(make_descriptor(Content::Structure(FlatType::EmptyRecord1)));
+        let y = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            BTreeMap::from([("y", a)]),
+            empty,
+        ))));
+        let nested = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            BTreeMap::from([("x", a)]),
+            y,
+        ))));
+        let flat = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            BTreeMap::from([("x", a), ("y", a)]),
+            empty,
+        ))));
+        assert!(same_args(&mut uf, &[nested], &[flat]));
+        let wrapped_empty = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            BTreeMap::new(),
+            empty,
+        ))));
+        assert!(same_args(&mut uf, &[wrapped_empty], &[empty]));
+        assert!(!same_args(&mut uf, &[nested], &[y]));
+        assert!(!uf.equivalent(nested, flat));
+    }
+
+    #[test]
+    fn matching_preserves_unknown_variables_and_nominal_alias_identity() {
+        let mut uf = UnionFind::new();
+        let a = uf.fresh(make_descriptor(Content::RigidVar("a")));
+        let another_a = uf.fresh(make_descriptor(Content::RigidVar("a")));
+        let unknown = uf.fresh(make_descriptor(Content::FlexVar(None)));
+        assert!(!same_args(&mut uf, &[a], &[another_a]));
+        assert!(!same_args(&mut uf, &[a], &[unknown]));
+        assert!(!uf.equivalent(a, unknown));
+        assert!(matches!(uf.get(unknown).content, Content::FlexVar(None)));
+        let home = nash_ast::ModuleName {
+            package: None,
+            name: "Main",
+        };
+        let first = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
+            home,
+            "List",
+            vec![a],
+        ))));
+        let second = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
+            home,
+            "List",
+            vec![a],
+        ))));
+        assert!(same_args(&mut uf, &[first], &[second]));
+        let alias_a = uf.fresh(make_descriptor(Content::Alias {
+            home,
+            name: "A",
+            args: vec![("x", a)],
+            real: first,
+        }));
+        let alias_b = uf.fresh(make_descriptor(Content::Alias {
+            home,
+            name: "B",
+            args: vec![("x", a)],
+            real: first,
+        }));
+        assert!(!same_args(&mut uf, &[alias_a], &[alias_b]));
+        assert!(!same_args(&mut uf, &[alias_a], &[first]));
     }
 }
