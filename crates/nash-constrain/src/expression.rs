@@ -938,7 +938,11 @@ fn constrain_definition<'a>(
             Constraint::Let {
                 given: &[],
                 binder: Some(name),
-                definitions: bump.alloc_slice_copy(&[Definition { name, typ: tipe }]),
+                definitions: bump.alloc_slice_copy(&[Definition {
+                    name,
+                    typ: tipe,
+                    annotated: false,
+                }]),
                 rigid_vars: &[],
                 flex_vars: bump.alloc_slice_fill_iter(vars),
                 header: if bind_name {
@@ -988,7 +992,11 @@ fn constrain_definition<'a>(
             Constraint::Let {
                 given: instantiate_context(bump, &new_rtv, context),
                 binder: Some(name),
-                definitions: bump.alloc_slice_copy(&[Definition { name, typ: tipe }]),
+                definitions: bump.alloc_slice_copy(&[Definition {
+                    name,
+                    typ: tipe,
+                    annotated: true,
+                }]),
                 rigid_vars: bump.alloc_slice_fill_iter(new_rigids.iter().map(|(_, var)| *var)),
                 flex_vars: &[],
                 header: if bind_name {
@@ -1120,7 +1128,11 @@ pub fn constrain_recursive_defs<'a>(
 
                 flex_info.vars = new_flex_vars;
                 flex_info.cons.push(def_con);
-                flex_info.definitions.push(Definition { name, typ: tipe });
+                flex_info.definitions.push(Definition {
+                    name,
+                    typ: tipe,
+                    annotated: false,
+                });
                 flex_info
                     .headers
                     .insert(name.value, Located::at(name.region, tipe));
@@ -1175,7 +1187,11 @@ pub fn constrain_recursive_defs<'a>(
                 rigid_info.cons.push(Constraint::Let {
                     given: instantiate_context(bump, &new_rtv, context),
                     binder: Some(name),
-                    definitions: bump.alloc_slice_copy(&[Definition { name, typ: tipe }]),
+                    definitions: bump.alloc_slice_copy(&[Definition {
+                        name,
+                        typ: tipe,
+                        annotated: true,
+                    }]),
                     rigid_vars: bump.alloc_slice_fill_iter(new_rigids.iter().map(|(_, var)| *var)),
                     flex_vars: &[],
                     header: &[],

@@ -1,7 +1,7 @@
 //! Port of Elm's `Type.Solve`: solve a constraint tree with rank-based
 //! generalization, producing an annotation per top-level value.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use bumpalo::Bump;
 use nash_ast::Type as CanType;
@@ -13,7 +13,7 @@ use nash_constrain::type_::{
 use nash_constrain::{UnionFind, Variable};
 use nash_region::Located;
 
-use crate::annotation::{to_annotation, to_error_type};
+use crate::annotation::{to_annotation_with_context, to_error_type};
 use crate::occurs;
 use crate::preds::{Predicate, Store, UseSite};
 use crate::unify;
@@ -51,7 +51,20 @@ pub fn run<'a>(
         Ok(state
             .env
             .iter()
-            .map(|(name, var)| (*name, to_annotation(bump, uf, *var)))
+            .map(|(name, binding)| {
+                let context: Vec<_> = binding
+                    .context
+                    .iter()
+                    .map(|id| {
+                        let predicate = solver.predicates.get(*id);
+                        (predicate.trait_, predicate.args.as_slice())
+                    })
+                    .collect();
+                (
+                    *name,
+                    to_annotation_with_context(bump, uf, binding.variable, &context),
+                )
+            })
             .collect())
     } else {
         // Elm accumulates errors by prepending; match its final order.
@@ -63,7 +76,13 @@ pub fn run<'a>(
 
 // SOLVER
 
-type Env<'a> = BTreeMap<&'a str, Variable>;
+#[derive(Clone, Copy)]
+struct Binding<'a> {
+    variable: Variable,
+    context: &'a [type_::PredId],
+}
+
+type Env<'a> = BTreeMap<&'a str, Binding<'a>>;
 
 struct State<'a> {
     env: Env<'a>,
@@ -125,11 +144,20 @@ impl<'a> Solver<'a> {
                 }
             }
 
-            Constraint::Local(region, _node, name, expectation) => {
-                let local_var = *env
+            Constraint::Local(region, node, name, expectation) => {
+                let binding = *env
                     .get(name)
                     .expect("constraint generator only references bound locals");
-                let actual = self.make_copy(uf, rank, local_var);
+                let actual = self.instantiate_binding(
+                    uf,
+                    rank,
+                    binding,
+                    UseSite {
+                        node: *node,
+                        region: *region,
+                        name,
+                    },
+                );
                 let expected = self.expected_to_variable(uf, rank, expectation);
                 match unify::unify(self.bump, uf, actual, expected) {
                     unify::Answer::Ok(vars) => {
@@ -213,13 +241,14 @@ impl<'a> Solver<'a> {
             Constraint::Let {
                 given: _given,
                 binder,
-                definitions: _definitions,
+                definitions,
                 rigid_vars,
                 flex_vars,
                 header,
                 header_con,
                 body_con,
             } => {
+                let wanted_start = self.wanted.len();
                 if rigid_vars.is_empty() && matches!(body_con, Constraint::True) {
                     self.introduce(uf, rank, flex_vars);
                     self.solve(uf, env, rank, state, header_con)
@@ -234,7 +263,10 @@ impl<'a> Solver<'a> {
                         .collect();
                     let mut new_env = env.clone();
                     for (name, loc) in &locals {
-                        new_env.entry(name).or_insert(loc.value);
+                        new_env.entry(name).or_insert(Binding {
+                            variable: loc.value,
+                            context: &[],
+                        });
                     }
                     let state2 = self.solve(uf, &new_env, rank, state1, body_con);
                     locals.into_iter().fold(state2, |state, (name, loc)| {
@@ -294,9 +326,20 @@ impl<'a> Solver<'a> {
                         }
                     }
 
+                    let context = if !definitions.is_empty()
+                        && definitions.iter().all(|def| !def.annotated)
+                    {
+                        self.retain_wanted(uf, rank, wanted_start)
+                    } else {
+                        &[]
+                    };
+
                     let mut new_env = env.clone();
                     for (name, loc) in &locals {
-                        new_env.entry(name).or_insert(loc.value);
+                        new_env.entry(name).or_insert(Binding {
+                            variable: loc.value,
+                            context,
+                        });
                     }
                     let temp_state = State {
                         env: state1.env,
@@ -725,8 +768,83 @@ impl<'a> Solver<'a> {
 
     // COPY
 
-    fn make_copy(&mut self, uf: &mut UnionFind<'a>, rank: usize, var: Variable) -> Variable {
-        self.make_copies(uf, rank, &[var]).0[0]
+    fn instantiate_binding(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        binding: Binding<'a>,
+        site: UseSite<'a>,
+    ) -> Variable {
+        let mut roots = vec![binding.variable];
+        for id in binding.context {
+            roots.extend_from_slice(&self.predicates.get(*id).args);
+        }
+        let copies = self.make_copies(uf, rank, &roots).0;
+        let mut offset = 1;
+        for (index, id) in binding.context.iter().enumerate() {
+            let predicate = self.predicates.get(*id);
+            let end = offset + predicate.args.len();
+            let predicate = Predicate {
+                trait_: predicate.trait_,
+                args: copies[offset..end].to_vec(),
+                site,
+                index,
+            };
+            let id = self.predicates.push(uf, predicate);
+            self.wanted.push((rank, id));
+            offset = end;
+        }
+        copies[0]
+    }
+
+    fn retain_wanted(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        start: usize,
+    ) -> &'a [type_::PredId] {
+        let pending = self.wanted.split_off(start);
+        let mut retained = Vec::new();
+        for (_, id) in pending {
+            let mut seen = BTreeSet::new();
+            let mut stack = self.predicates.get(id).args.clone();
+            let mut generalized = false;
+            let mut outer = false;
+            while let Some(var) = stack.pop() {
+                if !seen.insert(uf.find(var)) {
+                    continue;
+                }
+                let desc = uf.get(var);
+                match &desc.content {
+                    Content::FlexVar(_)
+                    | Content::RigidVar(_)
+                    | Content::FlexSuper(..)
+                    | Content::RigidSuper(..) => {
+                        generalized |= desc.rank == NO_RANK;
+                        outer |= desc.rank != NO_RANK;
+                    }
+                    Content::Structure(FlatType::App1(_, _, args)) => stack.extend(args),
+                    Content::Structure(FlatType::Fun1(a, b)) => stack.extend([a, b]),
+                    Content::Structure(FlatType::Tuple1(a, b, c)) => {
+                        stack.extend([a, b]);
+                        stack.extend(c);
+                    }
+                    Content::Structure(FlatType::Record1(fields, ext)) => {
+                        stack.extend(fields.values());
+                        stack.push(*ext);
+                    }
+                    Content::Alias { args, .. } => stack.extend(args.iter().map(|(_, var)| var)),
+                    Content::Structure(FlatType::Unit1 | FlatType::EmptyRecord1)
+                    | Content::Error => {}
+                }
+            }
+            if generalized || !outer {
+                retained.push(id);
+            } else {
+                self.wanted.push((rank, id));
+            }
+        }
+        self.bump.alloc_slice_copy(&retained)
     }
 
     /// Copy all roots of one scheme (type and context) together, retaining

@@ -213,6 +213,63 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn inferred_context_is_instantiated_independently_at_each_local_use() {
+    let bump = Bump::new();
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        forward x = keep x
+        pair = (forward (), forward "hello")
+    "#
+    );
+    let annotations = infer(&bump, source).unwrap();
+    assert_eq!(annotations["forward"].context.len(), 1);
+    assert_eq!(annotations["pair"].context.len(), 2);
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
+#[test]
+fn nested_contexts_defer_outer_variables_and_keep_mixed_scheme_sharing() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        trait Convert 'a 'b where
+            convert : 'a -> 'b
+        outer x =
+            let
+                inner y = keep x
+            in
+            inner ()
+        mixed x =
+            let
+                inner y = convert x
+            in
+            (inner (), inner "hello")
+    "#
+    );
+}
+
+#[test]
+fn inferred_context_preserves_constructed_arguments_and_recursive_groups() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Observe 'a where
+            observe : 'a -> ()
+        trait Keep 'a where
+            keep : 'a -> 'a
+        observeList x = observe [x]
+        first x = keep (second x)
+        second x = first x
+    "#
+    );
+}
+
+#[test]
 fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
     use nash_ast::{ModuleName, QualifiedName};
     use nash_constrain::type_::{Content, FlatType, make_descriptor, mk_flex_var};

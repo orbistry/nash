@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\ntrait Convert 'a 'b where\n    convert : 'a -> 'b\nouter x =\n    let\n        inner y = keep x\n    in\n    inner ()\nmixed x =\n    let\n        inner y = convert x\n    in\n    (inner (), inner \"hello\")\n"
+---
+mixed : forall a b b1. (Convert a b1, Convert a b) => a -> ( b1, b )
+outer : forall a. Keep a => a -> a

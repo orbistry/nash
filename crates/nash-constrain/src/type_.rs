@@ -26,6 +26,7 @@ pub struct Pred<'a> {
 pub struct Definition<'a> {
     pub name: &'a Located<&'a str>,
     pub typ: &'a Type<'a>,
+    pub annotated: bool,
 }
 
 /// Elm's `Type.Constraint`. Allocated in a bump arena, so collections are

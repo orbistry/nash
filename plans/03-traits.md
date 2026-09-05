@@ -1172,10 +1172,20 @@ generalized rigid variables, context-only roots, and retained outer variables.
 Foreign and method annotation instantiation now creates wanted predicates
 with shared type variables, original use identity, context position, and rank.
 The predicate store attaches each ID once per argument equivalence class.
-The queue is not yet consumed by generalization or resolution. Local scheme
-ownership, predicate copying, generalization, and the resulting solver API
-are not implemented yet. Do not mark this chunk complete
-from the conversion and variable-copying tests alone.
+Unannotated definition boundaries now consume their pending wanteds, retain
+generalized or ground contexts explicitly on lexical bindings, and defer
+outer-only predicates to the enclosing boundary. Local uses copy the complete
+type and context together and create fresh wanteds with their own provenance.
+Recursive group members receive the same context. Snapshots cover independent
+uses, outer-only and mixed-rank scopes, constructed predicate arguments, and
+mutual recursion. `Definition.annotated` distinguishes declarations whose
+explicit contexts must be checked instead of inferred.
+
+Annotated scheme publication, given checking, predicate resolution, evidence
+ownership, final scheme/instance recording, and the resulting solver API are
+not implemented yet. Ground predicates remain visible in inferred contexts
+until chunk 6 resolves them. Do not mark this chunk complete from the current
+inference snapshots alone.
 
 Code:
 
