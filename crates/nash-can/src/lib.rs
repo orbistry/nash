@@ -2,6 +2,7 @@ mod accumulate;
 pub mod environment;
 mod error;
 pub mod expression;
+mod impls;
 mod interface;
 pub mod kinds;
 mod module;

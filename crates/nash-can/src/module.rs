@@ -52,12 +52,6 @@ pub fn canonicalize<'a>(
     context: Context<'a>,
     module: &SourceModule<'a>,
 ) -> Result<CanResult<'a>, Vec<Error<'a>>> {
-    if let Some(impl_) = module.impls.first() {
-        return Err(vec![Error::Unsupported {
-            feature: "implementation declaration",
-            region: impl_.region,
-        }]);
-    }
     if let Some(tests) = module.tests {
         let region = tests.tests.first().map_or_else(
             || {
@@ -119,15 +113,16 @@ pub fn canonicalize<'a>(
 
     let mut warnings = Vec::new();
     let traits = crate::traits::canonicalize(bump, &mut env, &mut kind_env, module, &mut warnings)?;
+    let impls = crate::impls::canonicalize(bump, &env, &kind_env, module.impls, &mut warnings)?;
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
     kinds::check_decl_annotations(bump, &kind_env, home, decls)?;
-    kinds::check_trait_defaults(bump, &kind_env, home, traits)?;
+    kinds::check_trait_method_annotations(bump, &kind_env, home, traits, impls)?;
     let binops = canonicalize_binops(bump, module.binops);
     let exports = canonicalize_exports(bump, module)?;
 
     let can_module = CanModule {
         traits,
-        impls: &[],
+        impls,
         kind: module.kind,
         name: env.home,
         exports,
@@ -1001,6 +996,20 @@ fn collect_used_modules<'a>(module: &CanModule<'a>) -> BTreeSet<&'a str> {
     let mut used = BTreeSet::new();
     let home = module.name;
     collect_from_decls(module.decls, home, &mut used);
+    for impl_ in module.impls {
+        add_if_foreign(home, impl_.value.trait_.home, &mut used);
+        for head in impl_.value.heads {
+            if let nash_ast::Head::Named { reference, .. } = head.value {
+                add_if_foreign(home, reference.home, &mut used);
+            }
+        }
+        for predicate in impl_.value.context {
+            collect_from_predicate(predicate, home, &mut used);
+        }
+        for method in impl_.value.methods {
+            collect_from_def(method, home, &mut used);
+        }
+    }
     for trait_ in module.traits {
         for predicate in trait_.value.supers {
             collect_from_predicate(predicate, home, &mut used);
@@ -4361,7 +4370,7 @@ mod tests {
     }
 
     #[test]
-    fn implementation_declaration_unsupported() {
+    fn unknown_trait_in_impl() {
         assert_module_error_snapshot!(
             "module Main exposing (..)\n\nimpl Eq int where\n    eq a b = true\n"
         );

@@ -3,17 +3,18 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimpl Eq int where\n    eq a b = true\n"
 ---
 [
-    Unsupported {
-        feature: "implementation declaration",
+    NotFoundTrait {
         region: Region {
             start: Position {
                 line: 3,
-                column: 1,
+                column: 6,
             },
             end: Position {
-                line: 4,
-                column: 18,
+                line: 3,
+                column: 8,
             },
         },
+        prefix: None,
+        name: "Eq",
     },
 ]

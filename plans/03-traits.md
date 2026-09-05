@@ -611,6 +611,15 @@ round-trips them.
 
 ## Chunk 3: impl declarations and the impl table
 
+Status: in progress. Local impl heads, capture-safe method substitution,
+head/context kind checks, method checks, and local orphan/overlap checks
+are implemented. Focused snapshots cover these paths. Global interface
+tables and superclass entailment remain to be implemented. Partial alias
+heads must retain their unsupplied formal parameters through application;
+the existing constraint instantiator cannot yet expand them safely. Do not
+mark this chunk complete before that contract and the remaining acceptance
+cases are verified.
+
 Files: `crates/nash-can/src/traits.rs`, `crates/nash-can/src/environment.rs`,
 `crates/nash-can/src/environment/local.rs`, `crates/nash-can/src/environment/foreign.rs`,
 `crates/nash-can/src/interface.rs`, `crates/nash-can/src/module.rs`,
@@ -712,8 +721,8 @@ and actual kinds; do not unwrap either operation.
 
 `Error::KindMismatch` here is `nash_can::Error::KindMismatch` (plan 02
 puts all kind errors in nash-can, not nash-constrain).
-`KindContext::ImplHead { trait_: &'a str, index: u16 }` is an addition to
-plan 02's `KindContext` enum (plans/02 chunk 2), rendered by plans/06
+`KindContext::ImplHead { trait_: QualifiedName<'a>, index: u16 }` already
+exists in plan 02's `KindContext` enum, and is rendered by plans/06
 chunk 13 alongside the other kind contexts. No new error variant.
 
 `components` splits the scheme's `Kind::Arrow` chain into one kind per

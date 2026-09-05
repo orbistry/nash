@@ -36,6 +36,40 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    BadInstanceHead {
+        region: Region,
+        reason: BadHead,
+    },
+    RepeatedHeadVar {
+        name: &'a str,
+        first: Region,
+        second: Region,
+    },
+    ImplContextVarNotInHead {
+        region: Region,
+        name: &'a str,
+    },
+    MissingMethod {
+        region: Region,
+        trait_: &'a str,
+        name: &'a str,
+    },
+    UnknownMethod {
+        region: Region,
+        trait_: &'a str,
+        name: &'a str,
+    },
+    OrphanImpl {
+        region: Region,
+        trait_: QualifiedName<'a>,
+        heads: &'a [nash_ast::HeadCon<'a>],
+    },
+    OverlappingImpls {
+        key: &'a nash_ast::ImplKey<'a>,
+        first: Region,
+        second: Region,
+        first_home: ModuleName<'a>,
+    },
     ImportOpenTrait {
         region: Region,
         name: &'a str,
@@ -360,4 +394,13 @@ pub enum KindContext<'a> {
         trait_: QualifiedName<'a>,
         index: u16,
     },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum BadHead {
+    BareVariable,
+    NonVariableArgument,
+    Function,
+    Record,
+    VariableApplication,
 }

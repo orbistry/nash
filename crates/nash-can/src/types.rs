@@ -413,12 +413,12 @@ pub fn dealias<'a>(
         CanAliasType::Open(typ) => {
             let table: BTreeMap<&'a str, &'a Located<CanType<'a>>> =
                 arguments.iter().map(|arg| (arg.name, arg.typ)).collect();
-            dealias_help(bump, &table, typ)
+            substitute_type(bump, &table, typ)
         }
     }
 }
 
-fn dealias_help<'a>(
+pub fn substitute_type<'a>(
     bump: &'a Bump,
     table: &BTreeMap<&'a str, &'a Located<CanType<'a>>>,
     typ: &'a Located<CanType<'a>>,
@@ -426,17 +426,19 @@ fn dealias_help<'a>(
     let substituted = match &typ.value {
         CanType::Var(name) => return table.get(name).copied().unwrap_or(typ),
         CanType::App { head, args } => CanType::App {
-            head: dealias_help(bump, table, head),
-            args: bump.alloc_slice_fill_iter(args.iter().map(|arg| dealias_help(bump, table, arg))),
+            head: substitute_type(bump, table, head),
+            args: bump
+                .alloc_slice_fill_iter(args.iter().map(|arg| substitute_type(bump, table, arg))),
         },
         CanType::Unit => return typ,
         CanType::Lambda { from, to } => CanType::Lambda {
-            from: dealias_help(bump, table, from),
-            to: dealias_help(bump, table, to),
+            from: substitute_type(bump, table, from),
+            to: substitute_type(bump, table, to),
         },
         CanType::Named { reference, args } => CanType::Named {
             reference: *reference,
-            args: bump.alloc_slice_fill_iter(args.iter().map(|arg| dealias_help(bump, table, arg))),
+            args: bump
+                .alloc_slice_fill_iter(args.iter().map(|arg| substitute_type(bump, table, arg))),
         },
         // NOTE: like Elm's `dealiasHelp`, the record extension variable is
         // not substituted.
@@ -444,7 +446,7 @@ fn dealias_help<'a>(
             fields: bump.alloc_slice_fill_iter(fields.iter().map(|f| CanFieldType {
                 index: f.index,
                 field: f.field,
-                typ: dealias_help(bump, table, f.typ),
+                typ: substitute_type(bump, table, f.typ),
             })),
             ext: *ext,
         },
@@ -458,7 +460,7 @@ fn dealias_help<'a>(
             reference: *reference,
             arguments: bump.alloc_slice_fill_iter(arguments.iter().map(|arg| CanAliasArgument {
                 name: arg.name,
-                typ: dealias_help(bump, table, arg.typ),
+                typ: substitute_type(bump, table, arg.typ),
             })),
             target: match target {
                 CanAliasType::Open(t) => CanAliasType::Open(t),
@@ -470,9 +472,9 @@ fn dealias_help<'a>(
             second,
             rest,
         } => CanType::Tuple {
-            first: dealias_help(bump, table, first),
-            second: dealias_help(bump, table, second),
-            rest: bump.alloc_slice_fill_iter(rest.iter().map(|r| dealias_help(bump, table, r))),
+            first: substitute_type(bump, table, first),
+            second: substitute_type(bump, table, second),
+            rest: bump.alloc_slice_fill_iter(rest.iter().map(|r| substitute_type(bump, table, r))),
         },
     };
     bump.alloc(Located::at(typ.region, substituted))
@@ -488,6 +490,19 @@ pub fn iterated_dealias<'a>(
             arguments, target, ..
         } => iterated_dealias(bump, dealias(bump, arguments, target)),
         _ => typ,
+    }
+}
+
+pub(crate) fn find_type_info<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    region: Region,
+    prefix: Option<&'a str>,
+    name: &'a str,
+) -> Result<environment::Type<'a>, Vec<Error<'a>>> {
+    match prefix {
+        Some(prefix) => find_type_qual(bump, env, region, prefix, name),
+        None => find_type(bump, env, region, name),
     }
 }
 

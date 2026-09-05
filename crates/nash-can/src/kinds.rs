@@ -1364,11 +1364,77 @@ impl<'a> Walker<'_, 'a> {
     }
 }
 
-pub(crate) fn check_trait_defaults<'a>(
+pub(crate) fn check_impl_heads<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    home: ModuleName<'a>,
+    info: &crate::environment::TraitInfo<'a>,
+    heads: &[&'a Located<CanType<'a>>],
+    variables: &BTreeMap<&'a str, Region>,
+    context: &[nash_ast::Pred<'a>],
+) -> Result<(), Vec<Error<'a>>> {
+    let mut walker = Walker {
+        bump,
+        env,
+        home,
+        infer: Infer::new(bump),
+        group: BTreeMap::new(),
+        errors: Vec::new(),
+    };
+    let scope = Scope {
+        params: variables
+            .keys()
+            .map(|name| (*name, walker.infer.fresh_k(KindSet::ALL)))
+            .collect(),
+    };
+    let mut kind = walker.infer.instantiate(&info.kind);
+    for (index, head) in heads.iter().enumerate() {
+        let (expected, result) = match walker.infer.apply(kind) {
+            Ok(parts) => parts,
+            Err(_) => {
+                walker.errors.push(Error::KindTooManyArgs {
+                    region: head.region,
+                    head: KindHead::Named(QualifiedName {
+                        home: info.home,
+                        name: info.name,
+                    }),
+                    applied: heads.len(),
+                    accepted: index,
+                });
+                return Err(walker.errors);
+            }
+        };
+        let actual = walker.infer_type(&scope, head);
+        walker.expect(
+            head.region,
+            KindContext::ImplHead {
+                trait_: QualifiedName {
+                    home: info.home,
+                    name: info.name,
+                },
+                index: index as u16,
+            },
+            expected,
+            actual,
+        );
+        kind = result;
+    }
+    for predicate in context {
+        walker.infer_predicate(&scope, predicate, &BTreeMap::new());
+    }
+    if walker.errors.is_empty() {
+        Ok(())
+    } else {
+        Err(walker.errors)
+    }
+}
+
+pub(crate) fn check_trait_method_annotations<'a>(
     bump: &'a Bump,
     env: &KindEnv<'a>,
     home: ModuleName<'a>,
     traits: &[&'a Located<nash_ast::Trait<'a>>],
+    impls: &[&'a Located<nash_ast::Impl<'a>>],
 ) -> Result<(), Vec<Error<'a>>> {
     let mut checker = AnnotationChecker {
         bump,
@@ -1381,6 +1447,11 @@ pub(crate) fn check_trait_defaults<'a>(
             if let Some(definition) = method.default {
                 checker.definition(definition);
             }
+        }
+    }
+    for impl_ in impls {
+        for method in impl_.value.methods {
+            checker.definition(method);
         }
     }
     if checker.errors.is_empty() {

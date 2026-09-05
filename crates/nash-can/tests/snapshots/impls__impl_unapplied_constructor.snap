@@ -1,0 +1,33 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: "result.module.impls[0].value.heads"
+---
+[
+    Located {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 14,
+            },
+            end: Position {
+                line: 6,
+                column: 18,
+            },
+        },
+        value: Named {
+            reference: QualifiedName {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "List",
+            },
+            vars: [],
+        },
+    },
+]

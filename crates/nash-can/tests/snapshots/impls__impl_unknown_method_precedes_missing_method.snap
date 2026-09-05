@@ -1,0 +1,20 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: result.unwrap_err()
+---
+[
+    UnknownMethod {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 5,
+            },
+            end: Position {
+                line: 5,
+                column: 9,
+            },
+        },
+        trait_: "Keep",
+        name: "typo",
+    },
+]

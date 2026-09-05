@@ -1,0 +1,52 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: result.unwrap_err()
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 14,
+            },
+            end: Position {
+                line: 7,
+                column: 19,
+            },
+        },
+        context: ImplHead {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Functor",
+            },
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Arrow(
+                Var(
+                    0,
+                ),
+                Var(
+                    1,
+                ),
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+    },
+]

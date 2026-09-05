@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: result.unwrap_err()
+---
+[
+    ImplContextVarNotInHead {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 11,
+            },
+            end: Position {
+                line: 4,
+                column: 13,
+            },
+        },
+        name: "b",
+    },
+]
