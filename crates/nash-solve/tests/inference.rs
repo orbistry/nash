@@ -19,7 +19,7 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
 
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(bump, &mut uf, &can_result.module);
-    nash_solve::run(bump, &mut uf, &constraint)
+    nash_solve::run(bump, &mut uf, &constraint, &can_result.tables)
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn builtin_list_annotations_match_literals_and_patterns() {
     .unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let annotations = nash_solve::run(&bump, &mut uf, &constraint)
+    let annotations = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
         .expect("annotations, list literals, and patterns use the same builtin type");
     insta::assert_snapshot!(render_annotations(&annotations));
 }
@@ -986,7 +986,8 @@ fn nested_operator_sections_apply() {
     .expect("nested sections canonicalize");
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let annotations = nash_solve::run(&bump, &mut uf, &constraint).expect("nested sections infer");
+    let annotations = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
+        .expect("nested sections infer");
     let rendered = render_annotations(&annotations);
     assert!(rendered.contains("right : String"), "{rendered}");
     assert!(rendered.contains("left : ()"), "{rendered}");
@@ -1055,7 +1056,7 @@ fn imported_higher_kinded_value_inference_is_explicitly_deferred() {
     .unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let errors = nash_solve::run(&bump, &mut uf, &constraint)
+    let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
         .expect_err("imported HKT must not silently become a value type");
     assert!(
         errors

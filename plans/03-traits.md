@@ -1197,7 +1197,13 @@ preserves nominal alias identity, normalizes record extension chains, and
 never unifies variables to force a match. Discharged predicates retain their
 use origin and record `Solution::Given { binder, index }`.
 
-Superclass entailment, missing-constraint diagnostics, impl resolution,
+Given lookup now expands superclass metadata breadth-first from the canonical
+tables. Trait parameters are substituted into each superclass requirement;
+explicit givens precede projections, and `Solution::Super` preserves the
+original context index and path. The regression checks a transitive chain,
+selection of a trait's second parameter, and direct-given precedence.
+
+Missing-constraint diagnostics, impl resolution,
 retained-evidence ownership, final scheme/instance recording, and the resulting
 solver API are not implemented yet.
 Ground predicates remain visible in inferred contexts
@@ -1533,8 +1539,9 @@ headers additionally feed `Annotations` as today. It returns
 stores `SolvedTypes`; `from_module` keeps taking `&Annotations`.
 ### Solver API
 
-The one signature every plan cites (base: `crates/nash-solve/src/solve.rs:22`,
-today `run(bump, uf, constraint) -> Result<Annotations, Vec<Error>>`):
+The Plan 03 target signature is below. The current implementation takes these
+four inputs and returns `Annotations`; the paired `SolvedTypes` result remains
+to be implemented as required by the shared Plan 07 contract.
 
 ```rust
 // crates/nash-solve/src/solve.rs
@@ -1542,20 +1549,18 @@ pub fn run<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
     constraint: &Constraint<'a>,
-    tables: &'a nash_can::Tables<'a>,       // traits + impls (this plan, chunk 3)
-    fields: &'a nash_can::FieldTable<'a>,   // labeled constructor fields (plans/04 chunk A5)
-    mode: nash_can::Mode,                   // Strict | Lenient (plans/11 chunk 2)
+    tables: &nash_can::environment::Tables<'a>, // traits + impls from canonicalization
 ) -> Result<(Annotations<'a>, SolvedTypes<'a>), Vec<Error<'a>>>
 ```
 
 `Annotations` is unchanged (`nash_can::Annotations`, now with contexts);
 `SolvedTypes` is `nash_solve::solved::SolvedTypes` (plans/07 chunk 3,
 extended in this plan's contract section); `Error` is
-`nash_constrain::error::Error`. Plans that land before another plan's
-parameter exists pass its unit value (`&Tables::default()`,
-`&FieldTable::default()`, `Mode::Strict`) so the signature is fixed once.
-`nash_driver::compile_module` calls
-`nash_solve::run(&bump, &mut uf, &constraint, &can_result.tables, &can_result.fields, Mode::Strict)`.
+`nash_constrain::error::Error`. The driver passes `&can_result.tables` directly;
+the solver borrows these tables for the run. Plan 04 adds its field-table
+parameter when labeled constructor fields exist, and Plan 11 adds its
+macro-round mode when that behavior exists. Do not add empty field-table or
+mode placeholders in this plan merely to freeze a future signature.
 
 Elm reference: `Type/Solve.hs` lines 157-201 (`CLet` generalizing branch),
 574-660 (`makeCopy`, `makeCopyHelp`, `restore`), 501-570 (`srcTypeToVariable`);

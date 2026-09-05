@@ -29,9 +29,17 @@ pub struct Predicate<'a> {
     pub solution: Option<Solution>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Solution {
-    Given { binder: NodeId, index: usize },
+    Given {
+        binder: NodeId,
+        index: usize,
+    },
+    Super {
+        binder: NodeId,
+        index: usize,
+        path: Vec<usize>,
+    },
 }
 
 #[derive(Default)]
@@ -49,9 +57,18 @@ impl<'a> Store<'a> {
         id: PredId,
         binder: NodeId,
         index: usize,
+        path: Vec<usize>,
     ) {
         let predicate = &mut self.predicates[id.0 as usize];
-        predicate.solution = Some(Solution::Given { binder, index });
+        predicate.solution = Some(if path.is_empty() {
+            Solution::Given { binder, index }
+        } else {
+            Solution::Super {
+                binder,
+                index,
+                path,
+            }
+        });
         for arg in &predicate.args {
             uf.modify(*arg, |desc| desc.preds.retain(|pending| *pending != id));
         }

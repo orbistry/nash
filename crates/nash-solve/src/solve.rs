@@ -24,9 +24,11 @@ pub fn run<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
     constraint: &Constraint<'a>,
+    tables: &nash_can::environment::Tables<'a>,
 ) -> Result<Annotations<'a>, Vec<Error<'a>>> {
     let mut solver = Solver {
         bump,
+        tables,
         pools: vec![Vec::new(); 8],
         copied: Vec::new(),
         predicates: Store::default(),
@@ -96,8 +98,9 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
     state
 }
 
-struct Solver<'a> {
+struct Solver<'a, 'tables> {
     bump: &'a Bump,
+    tables: &'tables nash_can::environment::Tables<'a>,
     pools: Vec<Vec<Variable>>,
     copied: Vec<(Variable, Variable)>,
     predicates: Store<'a>,
@@ -108,10 +111,18 @@ struct Solver<'a> {
 
 struct GivenFrame<'a> {
     binder: nash_ast::NodeId,
-    predicates: Vec<(nash_ast::QualifiedName<'a>, Vec<Variable>)>,
+    predicates: Vec<Given<'a>>,
 }
 
-impl<'a> Solver<'a> {
+#[derive(Clone)]
+struct Given<'a> {
+    trait_: nash_ast::QualifiedName<'a>,
+    args: Vec<Variable>,
+    index: usize,
+    path: Vec<usize>,
+}
+
+impl<'a> Solver<'a, '_> {
     #[allow(clippy::too_many_arguments)]
     fn solve_header(
         &mut self,
@@ -125,18 +136,57 @@ impl<'a> Solver<'a> {
     ) -> State<'a> {
         let depth = self.givens.len();
         if let Some(binder) = binder.filter(|_| !given.is_empty()) {
-            let predicates = given
+            let mut predicates: Vec<Given<'a>> = given
                 .iter()
-                .map(|pred| {
-                    (
-                        pred.trait_,
-                        pred.args
-                            .iter()
-                            .map(|arg| self.type_to_variable(uf, rank, arg))
-                            .collect(),
-                    )
+                .enumerate()
+                .map(|(index, pred)| Given {
+                    trait_: pred.trait_,
+                    args: pred
+                        .args
+                        .iter()
+                        .map(|arg| self.type_to_variable(uf, rank, arg))
+                        .collect(),
+                    index,
+                    path: Vec::new(),
                 })
                 .collect();
+            // Canonicalization rejects superclass cycles. Breadth-first
+            // expansion keeps explicit givens first and chooses short paths.
+            let mut cursor = 0;
+            while cursor < predicates.len() {
+                let current = predicates[cursor].clone();
+                cursor += 1;
+                let Some(info) = self.tables.traits.get(&current.trait_).copied() else {
+                    continue;
+                };
+                let vars = info
+                    .parameters
+                    .iter()
+                    .copied()
+                    .zip(current.args.iter().copied())
+                    .collect();
+                for (index, superclass) in info.supers.iter().enumerate() {
+                    let args: Vec<_> = superclass
+                        .args
+                        .iter()
+                        .map(|arg| self.src_type_to_var(uf, rank, &vars, arg))
+                        .collect();
+                    if predicates.iter().any(|existing| {
+                        existing.trait_ == superclass.trait_
+                            && crate::preds::same_args(uf, &existing.args, &args)
+                    }) {
+                        continue;
+                    }
+                    let mut path = current.path.clone();
+                    path.push(index);
+                    predicates.push(Given {
+                        trait_: superclass.trait_,
+                        args,
+                        index: current.index,
+                        path,
+                    });
+                }
+            }
             self.givens.push(GivenFrame {
                 binder: nash_ast::NodeId::def(binder),
                 predicates,
@@ -147,18 +197,14 @@ impl<'a> Solver<'a> {
         for (rank, id) in self.wanted.split_off(start) {
             let wanted = self.predicates.get(id);
             let solution = self.givens.iter().rev().find_map(|frame| {
-                frame
-                    .predicates
-                    .iter()
-                    .enumerate()
-                    .find_map(|(index, (trait_, args))| {
-                        (*trait_ == wanted.trait_
-                            && crate::preds::same_args(uf, args, &wanted.args))
-                        .then_some((frame.binder, index))
-                    })
+                frame.predicates.iter().find_map(|given| {
+                    (given.trait_ == wanted.trait_
+                        && crate::preds::same_args(uf, &given.args, &wanted.args))
+                    .then_some((frame.binder, given.index, given.path.clone()))
+                })
             });
-            if let Some((binder, index)) = solution {
-                self.predicates.solve_given(uf, id, binder, index);
+            if let Some((binder, index, path)) = solution {
+                self.predicates.solve_given(uf, id, binder, index, path);
             } else {
                 self.wanted.push((rank, id));
             }
@@ -1238,6 +1284,66 @@ mod copy_tests {
     use nash_constrain::type_::{PredId, make_descriptor};
 
     #[test]
+    fn superclass_givens_record_transitive_paths_and_substitute_arguments() {
+        let bump = Bump::new();
+        let source = "module Main exposing (..)\ntype Container 'a = Wrap 'a\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    ord : 'a -> 'a\ntrait Ord 'a => Top 'a where\n    top : 'a -> 'a\ntrait Eq 'b => Select 'a 'b where\n    select : 'a -> 'b -> 'a\nf : Top 'a => 'a -> 'a\nf x = eq x\ng : Select 'a 'b => 'a -> 'b -> 'b\ng x y = eq y\nh : (Top 'a, Eq 'a) => 'a -> 'a\nh x = eq x\n";
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical =
+            nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let mut solver = Solver {
+            bump: &bump,
+            tables: &canonical.tables,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            givens: Vec::new(),
+            conversion_errors: Vec::new(),
+        };
+        let result = solver.solve(
+            &mut uf,
+            &Env::new(),
+            OUTERMOST_RANK,
+            State {
+                env: Env::new(),
+                mark: NO_MARK.next(),
+                errors: Vec::new(),
+            },
+            &constraint,
+        );
+        assert!(result.errors.is_empty());
+        assert!(solver.conversion_errors.is_empty());
+        assert!(
+            solver.wanted.is_empty(),
+            "superclass givens must discharge eq uses"
+        );
+        let solutions: Vec<_> = solver
+            .predicates
+            .iter()
+            .filter_map(|pred| {
+                if matches!(pred.origin, Origin::Use { .. }) {
+                    Some(pred.solution.as_ref().unwrap())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(solutions.len(), 3);
+        assert!(solutions.iter().any(|solution| matches!(solution, crate::preds::Solution::Super { index: 0, path, .. } if path == &[0, 0])));
+        assert!(solutions.iter().any(|solution| matches!(solution, crate::preds::Solution::Super { index: 0, path, .. } if path == &[0])));
+        assert!(
+            solutions
+                .iter()
+                .any(|solution| matches!(solution, crate::preds::Solution::Given { index: 1, .. })),
+            "explicit Eq evidence precedes its superclass projection"
+        );
+    }
+
+    #[test]
     fn givens_discharge_body_uses_without_escaping_their_scope() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nf : Keep 'a => 'a -> 'a\nf x = keep x\ng : Keep () => ()\ng = keep ()\nh = keep ()\n";
@@ -1250,6 +1356,7 @@ mod copy_tests {
         let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
+            tables: &nash_can::environment::Tables::default(),
             pools: vec![Vec::new(); 8],
             copied: Vec::new(),
             predicates: Store::default(),
@@ -1295,6 +1402,7 @@ mod copy_tests {
         let bump = Bump::new();
         let mut solver = Solver {
             bump: &bump,
+            tables: &nash_can::environment::Tables::default(),
             pools: vec![Vec::new(); 8],
             copied: Vec::new(),
             predicates: Store::default(),
@@ -1365,6 +1473,7 @@ mod copy_tests {
         let bump = Bump::new();
         let mut solver = Solver {
             bump: &bump,
+            tables: &nash_can::environment::Tables::default(),
             pools: vec![Vec::new(); 8],
             copied: Vec::new(),
             predicates: Store::default(),
