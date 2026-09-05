@@ -1,9 +1,24 @@
 ---
 source: crates/nash-can/src/module.rs
-expression: alias.to_public()
 ---
 Some(
     InterfaceAlias {
+        kind: KindScheme {
+            bounds: [],
+            kind: Arrow(
+                Base(
+                    Big,
+                ),
+                Arrow(
+                    Base(
+                        Big,
+                    ),
+                    Base(
+                        Big,
+                    ),
+                ),
+            ),
+        },
         name: "Pair",
         parameters: [
             "a",

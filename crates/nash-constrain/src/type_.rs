@@ -82,6 +82,7 @@ pub enum FlatType<'a> {
 /// Elm's `Type.Type`: the language the constraint generator writes types in.
 #[derive(Clone, Copy, Debug)]
 pub enum Type<'a> {
+    UnsupportedApplication(Region),
     PlaceHolder(&'a str),
     AliasN {
         home: ModuleName<'a>,

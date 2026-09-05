@@ -66,7 +66,7 @@ round-trip test even when the added field is a `String`.
 - [x] Chunk 1: kind vocabulary. Tests failed before implementation; bounds and result-kind tests pass. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 2: kind inference engine. Seven tests cover bounds, links, occurs checks, arrows, sharing, and fresh instantiation; tests failed before implementation. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 3: builtin kinds and environment. Tests verify all 17 primitive names, arities, representation bounds, and seeded lookup. Tests failed before implementation; formatting, strict Clippy, snapshot tests, and workspace tests pass.
-- [ ] Chunk 4: declaration inference.
+- [x] Chunk 4: declaration inference. Source acceptance tests cover casing, SCCs, bounds, free application heads, alias substitution, and error recovery. Kind schemes also cross canonical interfaces so imported declarations can be checked. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [ ] Chunk 5: interfaces and value annotations.
 - [ ] Chunk 6: user parameter annotations.
 - [ ] Chunk 7: changeset, final acceptance audit, and SPEC.
@@ -82,7 +82,9 @@ round-trip test even when the added field is a `String`.
 ## Crates touched
 
 `nash-ast`, `nash-can`, `nash-driver`. `nash-constrain` and `nash-solve`
-are untouched: kind predicates on value schemes belong to plans/03 (traits).
+receive only an explicit unsupported-application compatibility path;
+higher-kinded unification and kind predicates on value schemes belong to
+plans/03 (traits).
 
 ## Reference
 
@@ -96,6 +98,28 @@ are untouched: kind predicates on value schemes belong to plans/03 (traits).
 - Aiken has no kinds either; its `crates/aiken-lang/src/tipo/environment.rs`
   `register_types` is the analogue of the declaration pass.
 - Haskell 98 Report section 4.6 (kind inference) is the algorithm.
+
+## Implementation decisions
+
+- Canonical `Type::App { head, args }` preserves source `VarApp` and permits
+  substitution into both the head and arguments. Both solver conversion
+  paths return `UnsupportedTypeApplication` when value inference needs
+  plan 03 support; no application is erased or treated as a nominal type.
+- Interface kind fields and deep copying landed with chunk 4, since even
+  declaration-only inference must know the schemes of imported opaque
+  types. Chunk 5 verifies their cross-module and serialization behavior.
+- Preserve exact named-constructor arity checks before kind inference.
+  `int Int` and unapplied `List` remain `BadArity`, as allowed by the
+  Errors section of `docs/kinds.md`. A base-bounded variable application
+  tests `KindTooManyArgs`; value-position tests must use a higher-kinded
+  variable to reach kind checking. Named partial application remains plan 03.
+- Allocate large `KindContext` error data in the arena. Keep the existing
+  alias-only cycle check in addition to the combined kind SCC pass. Skip
+  dependents of failed SCCs, continue independent groups, and report every
+  alias result unification failure.
+- The explicit Builtin List import replaces only the legacy implicit List
+  binding. The legacy binding retains its own `Big -> Big` scheme until
+  the prelude migration.
 
 ## Design summary
 

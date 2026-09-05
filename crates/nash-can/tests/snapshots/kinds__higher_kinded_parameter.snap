@@ -1,0 +1,40 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type wrap 'f 'a = Wrap ('f 'a)"
+---
+(
+    [
+        (
+            "wrap",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Arrow(
+                        Var(
+                            0,
+                        ),
+                        Var(
+                            1,
+                        ),
+                    ),
+                    Arrow(
+                        Var(
+                            0,
+                        ),
+                        Base(
+                            Term,
+                        ),
+                    ),
+                ),
+            },
+        ),
+    ],
+    [],
+)

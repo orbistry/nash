@@ -63,6 +63,7 @@ fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
         }
 
         CanType::Var(name) => (*name).to_string(),
+        CanType::App { head, args } => render_apply(&render_type(head, Ctx::App), args, ctx),
 
         CanType::Named { reference, args } => render_apply(reference.name, args, ctx),
 
@@ -624,4 +625,73 @@ fn nested_operator_sections_apply() {
     assert!(rendered.contains("right : String"), "{rendered}");
     assert!(rendered.contains("left : ()"), "{rendered}");
     insta::assert_snapshot!(rendered);
+}
+
+#[test]
+fn higher_kinded_value_inference_is_explicitly_deferred() {
+    let bump = Bump::new();
+    let errors = infer(
+        &bump,
+        "module Main exposing (..)\n\nf : 'f 'a -> 'f 'a\nf x = x\n",
+    )
+    .expect_err("higher-kinded value unification belongs to plan 03");
+    assert!(
+        errors
+            .iter()
+            .any(|error| matches!(error, Error::UnsupportedTypeApplication { .. }))
+    );
+    insta::assert_debug_snapshot!(errors);
+}
+
+#[test]
+fn imported_higher_kinded_value_inference_is_explicitly_deferred() {
+    let bump = Bump::new();
+    let head = bump.alloc(Located::at_zero(CanType::Var("f")));
+    let arg = bump.alloc(Located::at_zero(CanType::Var("a")));
+    let typ = bump.alloc(Located::at_zero(CanType::App {
+        head,
+        args: bump.alloc_slice_copy(&[&*arg]),
+    }));
+    let annotation = bump.alloc(Annotation {
+        free_vars: &["f", "a"],
+        typ,
+    });
+    let interface = nash_can::Interface {
+        home: nash_ast::ModuleName {
+            package: None,
+            name: "Higher",
+        },
+        values: bump.alloc_slice_copy(&[nash_can::InterfaceValue {
+            name: "value",
+            annotation,
+        }]),
+        unions: &[],
+        aliases: &[],
+        binops: &[],
+    };
+    let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
+    let source =
+        bump.alloc_str("module Main exposing (..)\n\nimport Higher\n\nvalue = Higher.value\n");
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let errors = nash_solve::run(&bump, &mut uf, &constraint)
+        .expect_err("imported HKT must not silently become a value type");
+    assert!(
+        errors
+            .iter()
+            .any(|error| matches!(error, Error::UnsupportedTypeApplication { .. }))
+    );
+    insta::assert_debug_snapshot!(errors);
 }

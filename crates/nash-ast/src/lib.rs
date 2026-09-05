@@ -153,6 +153,7 @@ pub struct TypedPattern<'a> {
 
 #[derive(Debug)]
 pub struct Union<'a> {
+    pub kind: KindScheme<'a>,
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
     pub ctors: &'a [&'a Ctor<'a>],
@@ -170,6 +171,7 @@ pub struct Ctor<'a> {
 
 #[derive(Debug)]
 pub struct Alias<'a> {
+    pub kind: KindScheme<'a>,
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
     pub typ: &'a Located<Type<'a>>,
@@ -356,6 +358,11 @@ pub enum Type<'a> {
         to: &'a Located<Type<'a>>,
     },
     Var(&'a str),
+    /// Application with a substitutable head, including higher-kinded variables.
+    App {
+        head: &'a Located<Type<'a>>,
+        args: &'a [&'a Located<Type<'a>>],
+    },
     Named {
         reference: QualifiedName<'a>,
         args: &'a [&'a Located<Type<'a>>],

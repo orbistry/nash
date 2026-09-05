@@ -1,0 +1,28 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Tree = Node (List Branch)\ntype alias Branch = Tree"
+---
+(
+    [
+        (
+            "Tree",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+            },
+        ),
+    ],
+    [
+        (
+            "Branch",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+            },
+        ),
+    ],
+)

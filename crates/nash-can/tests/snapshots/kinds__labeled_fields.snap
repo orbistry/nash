@@ -1,0 +1,18 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Datum = Datum { owner : Bytes, amount : Int }"
+---
+(
+    [
+        (
+            "Datum",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+            },
+        ),
+    ],
+    [],
+)

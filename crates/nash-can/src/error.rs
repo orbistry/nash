@@ -1,4 +1,6 @@
+use crate::kinds::KindHead;
 use nash_ast::ModuleName;
+use nash_ast::{KindScheme, QualifiedName};
 use nash_region::{Located, Region};
 use nash_source::Type as SourceType;
 
@@ -34,6 +36,24 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    // --- Kind errors (docs/kinds.md) ---
+    KindMismatch {
+        region: Region,
+        context: &'a KindContext<'a>,
+        expected: KindScheme<'a>,
+        actual: KindScheme<'a>,
+    },
+    KindInfinite {
+        region: Region,
+        context: &'a KindContext<'a>,
+    },
+    KindTooManyArgs {
+        region: Region,
+        head: KindHead<'a>,
+        applied: usize,
+        accepted: usize,
+    },
+
     Unsupported {
         feature: &'static str,
         region: Region,
@@ -241,5 +261,46 @@ pub enum Error<'a> {
     ImportOpenAlias {
         region: Region,
         name: &'a str,
+    },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum KindContext<'a> {
+    TypeArg {
+        head: KindHead<'a>,
+        index: u16,
+    },
+    BigField {
+        union: &'a str,
+        ctor: &'a str,
+        index: u16,
+    },
+    LittleField {
+        union: &'a str,
+        ctor: &'a str,
+        index: u16,
+    },
+    RecordField {
+        alias: &'a str,
+        field: &'a str,
+        big: bool,
+    },
+    AliasCasing {
+        alias: &'a str,
+        big: bool,
+    },
+    /// Function argument/result or tuple component: must be a base kind.
+    ValuePosition,
+    Annotation {
+        name: &'a str,
+    },
+    ParamAnnotation {
+        type_name: &'a str,
+        param: &'a str,
+    },
+    /// The `index`th type in an `impl Trait T1 .. Tn` head (plans/03).
+    ImplHead {
+        trait_: QualifiedName<'a>,
+        index: u16,
     },
 }

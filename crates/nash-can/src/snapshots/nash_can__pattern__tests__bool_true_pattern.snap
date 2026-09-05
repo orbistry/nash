@@ -16,6 +16,12 @@ description: "True"
         },
         value: Bool {
             union: Union {
+                kind: KindScheme {
+                    bounds: [],
+                    kind: Base(
+                        Big,
+                    ),
+                },
                 name: Located {
                     region: Region {
                         start: Position {

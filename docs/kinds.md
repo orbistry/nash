@@ -180,8 +180,9 @@ canonicalized and before value declarations are canonicalized:
 1. Build the dependency graph of the module's unions and aliases (an edge for
    every `Type::Named` / `Type::Alias` reference to a local declaration) and
    compute strongly connected components in dependency order. Union and
-   alias declarations share one graph because `type Tree = Node forest` with
-   `type alias forest = list Tree` is legal.
+   alias declarations share one graph because `type Tree = Node (List Branch)` with
+   `type alias Branch = Tree` is legal. Both the union field and alias
+   body have kind `Big`.
 2. For each SCC, give every declaration a monomorphic kind
    `p1 -> ... -> pn -> r`: each parameter `pi` is a fresh `All` variable (or
    the user annotation), and `r` is `Big` or `Term` for unions, or a fresh
@@ -324,6 +325,15 @@ I cannot find a kind for `'f` in `type bad 'f = Bad ('f 'f)`:
 
 Wrong argument *count* against an exact arity is still Elm's `BadArity`
 error from `nash-can`.
+
+In plan 02, canonical variable applications retain a general `App` head
+and argument list, including during alias substitution and interface copying.
+Kind checking accepts these declarations. Value inference that needs
+higher-kinded application unification returns `UnsupportedTypeApplication`
+from both local and imported annotation conversion until plan 03 implements
+that unification. Named constructors still require exact arity during
+canonicalization; a base-bounded variable applied to arguments instead
+reaches the kind-specific too-many-arguments error.
 
 ## Kinds in codegen
 

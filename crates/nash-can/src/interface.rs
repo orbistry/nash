@@ -39,6 +39,7 @@ pub struct Interface<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct InterfaceUnion<'a> {
+    pub kind: nash_ast::KindScheme<'a>,
     pub name: &'a str,
     pub parameters: &'a [&'a str],
     pub ctors: &'a [&'a CanCtor<'a>],
@@ -49,6 +50,7 @@ pub struct InterfaceUnion<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct InterfaceAlias<'a> {
+    pub kind: nash_ast::KindScheme<'a>,
     pub name: &'a str,
     pub parameters: &'a [&'a str],
     pub typ: &'a Located<CanType<'a>>,
@@ -184,6 +186,7 @@ fn extract_unions<'a>(
         let name = union.value.name.value;
         InterfaceUnion {
             name,
+            kind: union.value.kind,
             parameters: union.value.parameters,
             ctors: union.value.ctors,
             alternatives: union.value.alternatives,
@@ -202,6 +205,7 @@ fn extract_aliases<'a>(
         let name = alias.value.name.value;
         InterfaceAlias {
             name,
+            kind: alias.value.kind,
             parameters: alias.value.parameters,
             typ: alias.value.typ,
             visibility: alias_visibility(exports, name),
@@ -323,6 +327,10 @@ fn copy_type<'d>(dst: &'d Bump, t: &CanType<'_>) -> CanType<'d> {
             to: copy_located_type(dst, to),
         },
         CanType::Var(name) => CanType::Var(copy_str(dst, name)),
+        CanType::App { head, args } => CanType::App {
+            head: copy_located_type(dst, head),
+            args: dst.alloc_slice_fill_iter(args.iter().map(|arg| copy_located_type(dst, arg))),
+        },
         CanType::Named { reference, args } => CanType::Named {
             reference: copy_qualified_name(dst, reference),
             args: dst.alloc_slice_fill_iter(args.iter().map(|a| copy_located_type(dst, a))),
@@ -381,12 +389,14 @@ pub fn deep_copy<'d>(dst: &'d Bump, src: &Interface<'_>) -> Interface<'d> {
             annotation: copy_annotation(dst, v.annotation),
         })),
         aliases: dst.alloc_slice_fill_iter(src.aliases.iter().map(|a| InterfaceAlias {
+            kind: copy_kind_scheme(dst, a.kind),
             name: copy_str(dst, a.name),
             parameters: dst.alloc_slice_fill_iter(a.parameters.iter().map(|p| copy_str(dst, p))),
             typ: copy_located_type(dst, a.typ),
             visibility: a.visibility,
         })),
         unions: dst.alloc_slice_fill_iter(src.unions.iter().map(|u| InterfaceUnion {
+            kind: copy_kind_scheme(dst, u.kind),
             name: copy_str(dst, u.name),
             parameters: dst.alloc_slice_fill_iter(u.parameters.iter().map(|p| copy_str(dst, p))),
             ctors: dst.alloc_slice_fill_iter(u.ctors.iter().map(|c| copy_ctor(dst, c))),
@@ -401,5 +411,24 @@ pub fn deep_copy<'d>(dst: &'d Bump, src: &Interface<'_>) -> Interface<'d> {
             precedence: b.precedence,
             function: copy_str(dst, b.function),
         })),
+    }
+}
+
+fn copy_kind<'d>(dst: &'d Bump, kind: &nash_ast::Kind<'_>) -> &'d nash_ast::Kind<'d> {
+    use nash_ast::Kind;
+    dst.alloc(match kind {
+        Kind::Base(base) => Kind::Base(*base),
+        Kind::Var(index) => Kind::Var(*index),
+        Kind::Arrow(from, to) => Kind::Arrow(copy_kind(dst, from), copy_kind(dst, to)),
+    })
+}
+
+fn copy_kind_scheme<'d>(
+    dst: &'d Bump,
+    scheme: nash_ast::KindScheme<'_>,
+) -> nash_ast::KindScheme<'d> {
+    nash_ast::KindScheme {
+        bounds: dst.alloc_slice_copy(scheme.bounds),
+        kind: copy_kind(dst, scheme.kind),
     }
 }

@@ -1,0 +1,27 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Tag 'a = Tag Int"
+---
+(
+    [
+        (
+            "Tag",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        15,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Big,
+                    ),
+                ),
+            },
+        ),
+    ],
+    [],
+)

@@ -1,0 +1,34 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: type alias Count = int
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 20,
+            },
+            end: Position {
+                line: 5,
+                column: 23,
+            },
+        },
+        context: AliasCasing {
+            alias: "Count",
+            big: true,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+    },
+]

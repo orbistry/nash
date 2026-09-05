@@ -11,6 +11,12 @@ Interface {
     aliases: [],
     unions: [
         InterfaceUnion {
+            kind: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+            },
             name: "Bool",
             parameters: [],
             ctors: [

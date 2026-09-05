@@ -71,13 +71,12 @@ fn canonicalize_type_value<'a>(
         SourceType::Var(name) => CanType::Var(name),
         SourceType::VarApp {
             region: name_region,
-            ..
-        } => {
-            return Err(vec![Error::Unsupported {
-                feature: "higher-kinded type application",
-                region: *name_region,
-            }]);
-        }
+            name,
+            args,
+        } => CanType::App {
+            head: bump.alloc(Located::at(*name_region, CanType::Var(name))),
+            args: canonicalize_type_arguments(bump, env, args)?,
+        },
         SourceType::Type {
             region: name_region,
             name,
@@ -308,6 +307,12 @@ fn canonicalize_field_type<'a>(
 
 pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
     match typ {
+        CanType::App { head, args } => {
+            collect_free_vars(&head.value, vars);
+            for arg in *args {
+                collect_free_vars(&arg.value, vars);
+            }
+        }
         CanType::Var(name) => {
             vars.insert(name);
         }
@@ -373,6 +378,10 @@ fn dealias_help<'a>(
 ) -> &'a Located<CanType<'a>> {
     let substituted = match &typ.value {
         CanType::Var(name) => return table.get(name).copied().unwrap_or(typ),
+        CanType::App { head, args } => CanType::App {
+            head: dealias_help(bump, table, head),
+            args: bump.alloc_slice_fill_iter(args.iter().map(|arg| dealias_help(bump, table, arg))),
+        },
         CanType::Unit => return typ,
         CanType::Lambda { from, to } => CanType::Lambda {
             from: dealias_help(bump, table, from),
@@ -621,8 +630,8 @@ mod tests {
     }
 
     #[test]
-    fn type_var_app_unsupported() {
-        assert_type_error_snapshot!("'f 'a", empty_env);
+    fn type_var_application() {
+        assert_type_snapshot!("'f 'a", empty_env);
     }
 
     #[test]

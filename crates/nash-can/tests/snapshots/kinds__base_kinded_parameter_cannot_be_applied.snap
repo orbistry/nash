@@ -1,0 +1,23 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type wrong 'f = Wrong 'f ('f Int)"
+---
+[
+    KindTooManyArgs {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 27,
+            },
+            end: Position {
+                line: 5,
+                column: 33,
+            },
+        },
+        head: Var(
+            "f",
+        ),
+        applied: 1,
+        accepted: 0,
+    },
+]

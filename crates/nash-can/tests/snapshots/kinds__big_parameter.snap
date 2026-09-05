@@ -1,0 +1,23 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Box 'a = Box 'a"
+---
+(
+    [
+        (
+            "Box",
+            KindScheme {
+                bounds: [],
+                kind: Arrow(
+                    Base(
+                        Big,
+                    ),
+                    Base(
+                        Big,
+                    ),
+                ),
+            },
+        ),
+    ],
+    [],
+)

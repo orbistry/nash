@@ -1,0 +1,60 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: substituted
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 0,
+            column: 0,
+        },
+        end: Position {
+            line: 0,
+            column: 0,
+        },
+    },
+    value: App {
+        head: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                },
+                args: [],
+            },
+        },
+        args: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Unit,
+            },
+        ],
+    },
+}

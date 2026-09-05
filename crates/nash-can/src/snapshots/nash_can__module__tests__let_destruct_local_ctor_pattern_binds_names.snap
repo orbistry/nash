@@ -98,6 +98,17 @@ Module {
                                     name: "Wrap",
                                 },
                                 union: Union {
+                                    kind: KindScheme {
+                                        bounds: [],
+                                        kind: Arrow(
+                                            Base(
+                                                Big,
+                                            ),
+                                            Base(
+                                                Big,
+                                            ),
+                                        ),
+                                    },
                                     name: Located {
                                         region: Region {
                                             start: Position {
@@ -230,6 +241,17 @@ Module {
                 },
             },
             value: Union {
+                kind: KindScheme {
+                    bounds: [],
+                    kind: Arrow(
+                        Base(
+                            Big,
+                        ),
+                        Base(
+                            Big,
+                        ),
+                    ),
+                },
                 name: Located {
                     region: Region {
                         start: Position {

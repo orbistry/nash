@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Transform 'a = 'a -> 'a\n\nf : Transform (List 'b)\nf x = x\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype alias transform 'a = 'a -> 'a\n\nf : transform (List 'b)\nf x = x\n"
 ---
 Module {
     kind: Normal,
@@ -177,6 +177,21 @@ Module {
                 },
             },
             value: Alias {
+                kind: KindScheme {
+                    bounds: [
+                        KindSet(
+                            7,
+                        ),
+                    ],
+                    kind: Arrow(
+                        Var(
+                            0,
+                        ),
+                        Base(
+                            Term,
+                        ),
+                    ),
+                },
                 name: Located {
                     region: Region {
                         start: Position {
@@ -188,7 +203,7 @@ Module {
                             column: 21,
                         },
                     },
-                    value: "Transform",
+                    value: "transform",
                 },
                 parameters: [
                     "a",

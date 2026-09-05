@@ -54,6 +54,22 @@ Module {
                 },
             },
             value: Alias {
+                kind: KindScheme {
+                    bounds: [],
+                    kind: Arrow(
+                        Base(
+                            Big,
+                        ),
+                        Arrow(
+                            Base(
+                                Big,
+                            ),
+                            Base(
+                                Big,
+                            ),
+                        ),
+                    ),
+                },
                 name: Located {
                     region: Region {
                         start: Position {

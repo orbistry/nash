@@ -327,6 +327,7 @@ mod tests {
             arguments: bump.alloc_slice_fill_iter([&*just_arg_typ]),
         });
         let maybe_union: &Union = bump.alloc(Union {
+            kind: crate::kinds::test_big_kind(bump, 1),
             name: bump.alloc(Located::at(Region::zero(), "Maybe")),
             parameters: bump.alloc_slice_fill_iter(["a"]),
             ctors: bump.alloc_slice_fill_iter([&*nothing_ctor, &*just_ctor]),
@@ -423,6 +424,7 @@ mod tests {
             arguments: &[],
         });
         let bool_union: &Union = bump.alloc(Union {
+            kind: nash_ast::KindScheme::mono(&nash_ast::Kind::Base(nash_ast::BaseKind::Big)),
             name: bump.alloc(Located::at(Region::zero(), "Bool")),
             parameters: &[],
             ctors: bump.alloc_slice_fill_iter([&*true_ctor, &*false_ctor]),

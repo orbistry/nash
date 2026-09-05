@@ -1,0 +1,18 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias acc = { total : int, seen : list Int }"
+---
+(
+    [],
+    [
+        (
+            "acc",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+            },
+        ),
+    ],
+)

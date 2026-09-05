@@ -1,0 +1,22 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: errors
+---
+[
+    BadArity {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 16,
+            },
+            end: Position {
+                line: 5,
+                column: 23,
+            },
+        },
+        context: TypeArity,
+        name: "int",
+        expected: 0,
+        actual: 1,
+    },
+]

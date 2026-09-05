@@ -1,0 +1,64 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Bad = Bad int\ntype Wrong = Wrong bytes"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 20,
+            },
+            end: Position {
+                line: 6,
+                column: 25,
+            },
+        },
+        context: BigField {
+            union: "Wrong",
+            ctor: "Wrong",
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+    },
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 16,
+            },
+            end: Position {
+                line: 5,
+                column: 19,
+            },
+        },
+        context: BigField {
+            union: "Bad",
+            ctor: "Bad",
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+    },
+]

@@ -27,9 +27,10 @@ pub fn run<'a>(
     let mut solver = Solver {
         bump,
         pools: vec![Vec::new(); 8],
+        conversion_errors: Vec::new(),
     };
 
-    let state = solver.solve(
+    let mut state = solver.solve(
         uf,
         &Env::new(),
         OUTERMOST_RANK,
@@ -41,6 +42,7 @@ pub fn run<'a>(
         constraint,
     );
 
+    state.errors.extend(solver.conversion_errors);
     if state.errors.is_empty() {
         Ok(state
             .env
@@ -73,6 +75,7 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
 struct Solver<'a> {
     bump: &'a Bump,
     pools: Vec<Vec<Variable>>,
+    conversion_errors: Vec<Error<'a>>,
 }
 
 impl<'a> Solver<'a> {
@@ -421,6 +424,11 @@ impl<'a> Solver<'a> {
         tipe: &Type<'a>,
     ) -> Variable {
         match tipe {
+            Type::UnsupportedApplication(region) => {
+                self.conversion_errors
+                    .push(Error::UnsupportedTypeApplication { region: *region });
+                self.register(uf, rank, Content::Error)
+            }
             Type::VarN(var) => *var,
 
             Type::AppN { home, name, args } => {
@@ -558,6 +566,13 @@ impl<'a> Solver<'a> {
         src_type: &Located<CanType<'a>>,
     ) -> Variable {
         match &src_type.value {
+            CanType::App { .. } => {
+                self.conversion_errors
+                    .push(Error::UnsupportedTypeApplication {
+                        region: src_type.region,
+                    });
+                self.register(uf, rank, Content::Error)
+            }
             CanType::Lambda { from, to } => {
                 let arg_var = self.src_type_to_var(uf, rank, flex_vars, from);
                 let result_var = self.src_type_to_var(uf, rank, flex_vars, to);

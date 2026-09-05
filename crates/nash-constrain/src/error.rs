@@ -13,6 +13,9 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    UnsupportedTypeApplication {
+        region: Region,
+    },
     BadExpr(
         Region,
         Category<'a>,

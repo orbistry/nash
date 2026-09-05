@@ -1,0 +1,51 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type option 'a = None | Some 'a\ntype alias xs = list (option int)"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 23,
+            },
+            end: Position {
+                line: 6,
+                column: 33,
+            },
+        },
+        context: TypeArg {
+            head: Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                },
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    3,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Term,
+            ),
+        },
+    },
+]

@@ -1,0 +1,18 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: type alias Id = Int
+---
+(
+    [],
+    [
+        (
+            "Id",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+            },
+        ),
+    ],
+)

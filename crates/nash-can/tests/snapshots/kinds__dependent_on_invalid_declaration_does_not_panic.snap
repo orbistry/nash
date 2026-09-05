@@ -1,0 +1,35 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Bad = Bad int\ntype Dependent = Dependent Bad"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 16,
+            },
+            end: Position {
+                line: 5,
+                column: 19,
+            },
+        },
+        context: BigField {
+            union: "Bad",
+            ctor: "Bad",
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+    },
+]

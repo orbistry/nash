@@ -1,0 +1,18 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: type Box = Box Int
+---
+(
+    [
+        (
+            "Box",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+            },
+        ),
+    ],
+    [],
+)

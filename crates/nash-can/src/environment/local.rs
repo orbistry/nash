@@ -37,14 +37,19 @@ pub fn add_union_types<'a>(
 
 /// Add an alias's type entry to the env. The record constructor (if any)
 /// is added later by `add_ctors`, matching Elm's `addTypes`/`addCtors` split.
-pub fn add_alias_type<'a>(env: &mut Env<'a>, can_alias: &CanAlias<'a>) {
+pub fn add_alias_type<'a>(
+    env: &mut Env<'a>,
+    name: &'a str,
+    parameters: &'a [&'a str],
+    body: &'a Located<nash_ast::Type<'a>>,
+) {
     let typ = Type::Alias {
-        arity: can_alias.parameters.len(),
+        arity: parameters.len(),
         home: env.home,
-        parameters: can_alias.parameters,
-        typ: can_alias.typ,
+        parameters,
+        typ: body,
     };
-    env.insert_local_type(can_alias.name.value, typ);
+    env.insert_local_type(name, typ);
 }
 
 /// Mirrors Elm's `addCtors`: detect duplicate constructors (union ctors

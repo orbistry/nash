@@ -1,0 +1,24 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type bad 'f = Bad ('f 'f)"
+---
+[
+    KindInfinite {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 23,
+            },
+            end: Position {
+                line: 5,
+                column: 25,
+            },
+        },
+        context: TypeArg {
+            head: Var(
+                "f",
+            ),
+            index: 0,
+        },
+    },
+]

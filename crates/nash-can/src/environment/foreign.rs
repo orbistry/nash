@@ -79,6 +79,15 @@ pub fn create_initial_env<'a>(
             );
         }
 
+        // Explicit builtin exposure replaces the legacy implicit List entry.
+        if interface.home == nash_ast::primitives::builtin_home()
+            && matches!(env.types.get("List"), Some(Info::Specific(home, _)) if *home == list_home)
+            && (matches!(import.exposing, Exposing::Open)
+                || matches!(&import.exposing, Exposing::Explicit(items) if items.iter().any(|item| matches!(item, nash_source::Exposed::Upper { name, .. } if name.value == "List"))))
+        {
+            env.types.remove("List");
+        }
+
         // Unqualified exposure depends on the exposing clause.
         match &import.exposing {
             Exposing::Open => {
@@ -123,6 +132,7 @@ fn build_raw_type_info<'a>(bump: &'a Bump, interface: &Interface<'a>) -> RawType
         if let Some(public) = union.to_public() {
             let can_union = bump.alloc(nash_ast::Union {
                 name: bump.alloc(Located::at(Region::zero(), public.name)),
+                kind: public.kind,
                 parameters: public.parameters,
                 ctors: public.ctors,
                 alternatives: public.alternatives,

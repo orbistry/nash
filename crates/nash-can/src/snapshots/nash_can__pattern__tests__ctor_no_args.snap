@@ -25,6 +25,17 @@ description: Nothing
                     name: "Nothing",
                 },
                 union: Union {
+                    kind: KindScheme {
+                        bounds: [],
+                        kind: Arrow(
+                            Base(
+                                Big,
+                            ),
+                            Base(
+                                Big,
+                            ),
+                        ),
+                    },
                     name: Located {
                         region: Region {
                             start: Position {

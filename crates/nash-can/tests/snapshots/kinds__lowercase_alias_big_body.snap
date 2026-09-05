@@ -1,0 +1,38 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: type alias id = Int
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 17,
+            },
+            end: Position {
+                line: 5,
+                column: 20,
+            },
+        },
+        context: AliasCasing {
+            alias: "id",
+            big: false,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    6,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+    },
+]

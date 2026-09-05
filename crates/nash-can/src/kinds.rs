@@ -375,8 +375,13 @@ mod environment_tests {
     }
 }
 
+use crate::error::KindContext;
+use crate::module::{PreAlias, PreUnion};
+use crate::{Error, scc};
+use nash_ast::{FieldType, ModuleName, Type as CanType};
 use nash_ast::{QualifiedName, primitives};
-use std::collections::BTreeMap;
+use nash_region::{Located, Region};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Kind schemes of every type constructor visible to the module.
 pub struct KindEnv<'a> {
@@ -384,7 +389,7 @@ pub struct KindEnv<'a> {
 }
 
 impl<'a> KindEnv<'a> {
-    pub fn from_interfaces(_interfaces: Option<&BTreeMap<&'a str, crate::Interface<'a>>>) -> Self {
+    pub fn from_interfaces(interfaces: Option<&BTreeMap<&'a str, crate::Interface<'a>>>) -> Self {
         let mut schemes = BTreeMap::new();
         for p in primitives::PRIMITIVES {
             schemes.insert(
@@ -394,6 +399,41 @@ impl<'a> KindEnv<'a> {
                 },
                 p.kind,
             );
+        }
+        // Match the legacy List entry still seeded by canonicalization.
+        schemes.insert(
+            QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "List",
+                },
+                name: "List",
+            },
+            primitives::PRIMITIVES
+                .iter()
+                .find(|p| p.name == "List")
+                .unwrap()
+                .kind,
+        );
+        for interface in interfaces.into_iter().flat_map(|m| m.values()) {
+            for union in interface.unions {
+                schemes.insert(
+                    QualifiedName {
+                        home: interface.home,
+                        name: union.name,
+                    },
+                    union.kind,
+                );
+            }
+            for alias in interface.aliases {
+                schemes.insert(
+                    QualifiedName {
+                        home: interface.home,
+                        name: alias.name,
+                    },
+                    alias.kind,
+                );
+            }
         }
         KindEnv { schemes }
     }
@@ -409,4 +449,527 @@ impl<'a> KindEnv<'a> {
             .get(&name)
             .expect("kind env covers every resolved type")
     }
+}
+
+pub struct Schemes<'a> {
+    unions: BTreeMap<&'a str, KindScheme<'a>>,
+    aliases: BTreeMap<&'a str, KindScheme<'a>>,
+}
+
+impl<'a> Schemes<'a> {
+    pub fn union(&self, name: &str) -> KindScheme<'a> {
+        self.unions[name]
+    }
+    pub fn alias(&self, name: &str) -> KindScheme<'a> {
+        self.aliases[name]
+    }
+}
+
+enum Decl<'p, 'a> {
+    Union(&'p PreUnion<'a>),
+    Alias(&'p PreAlias<'a>),
+}
+
+impl<'p, 'a> Decl<'p, 'a> {
+    fn name(&self) -> &'a Located<&'a str> {
+        match self {
+            Self::Union(u) => u.name,
+            Self::Alias(a) => a.name,
+        }
+    }
+    fn parameters(&self) -> &'a [&'a str] {
+        match self {
+            Self::Union(u) => u.parameters,
+            Self::Alias(a) => a.parameters,
+        }
+    }
+}
+
+fn is_big_name(name: &str) -> bool {
+    name.chars().next().is_some_and(char::is_uppercase)
+}
+
+/// Infer one module's type declarations, SCC by SCC, and record every
+/// scheme in `env` under `home`.
+pub(crate) fn infer_declarations<'a>(
+    bump: &'a Bump,
+    env: &mut KindEnv<'a>,
+    home: ModuleName<'a>,
+    unions: &[PreUnion<'a>],
+    aliases: &[PreAlias<'a>],
+) -> Result<Schemes<'a>, Vec<Error<'a>>> {
+    let decls: Vec<Decl<'_, 'a>> = unions
+        .iter()
+        .map(Decl::Union)
+        .chain(aliases.iter().map(Decl::Alias))
+        .collect();
+    let local: BTreeSet<&str> = decls.iter().map(|d| d.name().value).collect();
+
+    let nodes = decls
+        .iter()
+        .map(|decl| {
+            let mut deps = Vec::new();
+            match decl {
+                Decl::Union(u) => {
+                    for ctor in u.ctors {
+                        for arg in ctor.arguments {
+                            local_type_edges(&arg.value, home, &local, &mut deps);
+                        }
+                    }
+                }
+                Decl::Alias(a) => local_type_edges(&a.typ.value, home, &local, &mut deps),
+            }
+            scc::Node {
+                key: decl.name().value,
+                value: decl,
+                deps,
+            }
+        })
+        .collect();
+
+    let mut schemes = Schemes {
+        unions: BTreeMap::new(),
+        aliases: BTreeMap::new(),
+    };
+    let mut errors = Vec::new();
+    let mut failed = BTreeSet::new();
+    for component in scc::strongly_connected_components(nodes) {
+        let group: Vec<&Decl<'_, 'a>> = match &component {
+            scc::Scc::Acyclic(d) => vec![*d],
+            scc::Scc::Cyclic(ds) => ds.to_vec(),
+        };
+        let mut dependencies = Vec::new();
+        for decl in &group {
+            match decl {
+                Decl::Union(u) => {
+                    for ctor in u.ctors {
+                        for arg in ctor.arguments {
+                            local_type_edges(&arg.value, home, &local, &mut dependencies);
+                        }
+                    }
+                }
+                Decl::Alias(a) => local_type_edges(&a.typ.value, home, &local, &mut dependencies),
+            }
+        }
+        if dependencies.iter().any(|name| failed.contains(name)) {
+            failed.extend(group.iter().map(|d| d.name().value));
+            continue;
+        }
+        match infer_group(bump, env, home, &group) {
+            Ok(results) => {
+                for (decl, scheme) in group.iter().zip(results) {
+                    let name = decl.name().value;
+                    env.insert(QualifiedName { home, name }, scheme);
+                    match decl {
+                        Decl::Union(_) => schemes.unions.insert(name, scheme),
+                        Decl::Alias(_) => schemes.aliases.insert(name, scheme),
+                    };
+                }
+            }
+            Err(errs) => {
+                failed.extend(group.iter().map(|d| d.name().value));
+                errors.extend(errs);
+            }
+        }
+    }
+    if errors.is_empty() {
+        Ok(schemes)
+    } else {
+        Err(errors)
+    }
+}
+
+/// Edges to local declarations, both `Named` (unions) and `Alias` references.
+fn local_type_edges<'a>(
+    typ: &CanType<'a>,
+    home: ModuleName<'a>,
+    local: &BTreeSet<&str>,
+    edges: &mut Vec<&'a str>,
+) {
+    match typ {
+        CanType::Named { reference, args } => {
+            if reference.home == home && local.contains(reference.name) {
+                edges.push(reference.name);
+            }
+            for arg in *args {
+                local_type_edges(&arg.value, home, local, edges);
+            }
+        }
+        CanType::Alias {
+            reference,
+            arguments,
+            ..
+        } => {
+            if reference.home == home && local.contains(reference.name) {
+                edges.push(reference.name);
+            }
+            for arg in *arguments {
+                local_type_edges(&arg.typ.value, home, local, edges);
+            }
+        }
+        CanType::Lambda { from, to } => {
+            local_type_edges(&from.value, home, local, edges);
+            local_type_edges(&to.value, home, local, edges);
+        }
+        CanType::Record { fields, .. } => {
+            for field in *fields {
+                local_type_edges(&field.typ.value, home, local, edges);
+            }
+        }
+        CanType::Tuple {
+            first,
+            second,
+            rest,
+        } => {
+            local_type_edges(&first.value, home, local, edges);
+            local_type_edges(&second.value, home, local, edges);
+            for r in *rest {
+                local_type_edges(&r.value, home, local, edges);
+            }
+        }
+        CanType::App { head, args } => {
+            local_type_edges(&head.value, home, local, edges);
+            for arg in *args {
+                local_type_edges(&arg.value, home, local, edges);
+            }
+        }
+        CanType::Var(_) | CanType::Unit => {}
+    }
+}
+
+struct Scope<'a> {
+    /// Type parameter name -> its kind, for the declaration being walked.
+    params: BTreeMap<&'a str, &'a K<'a>>,
+}
+
+struct Walker<'e, 'a> {
+    bump: &'a Bump,
+    infer: Infer<'a>,
+    env: &'e KindEnv<'a>,
+    /// Monomorphic kinds of the SCC members, by name.
+    group: BTreeMap<&'a str, &'a K<'a>>,
+    home: ModuleName<'a>,
+    errors: Vec<Error<'a>>,
+}
+
+fn infer_group<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    home: ModuleName<'a>,
+    group: &[&Decl<'_, 'a>],
+) -> Result<Vec<KindScheme<'a>>, Vec<Error<'a>>> {
+    let mut w = Walker {
+        bump,
+        infer: Infer::new(bump),
+        env,
+        group: BTreeMap::new(),
+        home,
+        errors: Vec::new(),
+    };
+
+    // Monomorphic kinds first, so recursive references resolve.
+    let mut scopes = Vec::with_capacity(group.len());
+    for decl in group {
+        let params: Vec<(&'a str, &'a K<'a>)> = decl
+            .parameters()
+            .iter()
+            .map(|p| (*p, w.infer.fresh_k(KindSet::ALL)))
+            .collect();
+        let result = match decl {
+            Decl::Union(u) if is_big_name(u.name.value) => bump.alloc(K::Base(BaseKind::Big)),
+            Decl::Union(_) => bump.alloc(K::Base(BaseKind::Term)),
+            Decl::Alias(_) => w.infer.fresh_k(KindSet::ALL),
+        };
+        let kind = params
+            .iter()
+            .rev()
+            .fold(result, |acc, (_, p)| &*bump.alloc(K::Arrow(p, acc)));
+        w.group.insert(decl.name().value, kind);
+        scopes.push((
+            Scope {
+                params: params.into_iter().collect(),
+            },
+            result,
+        ));
+    }
+
+    for (decl, (scope, result)) in group.iter().zip(&scopes) {
+        match decl {
+            Decl::Union(u) => {
+                let big = is_big_name(u.name.value);
+                for ctor in u.ctors {
+                    for (index, arg) in ctor.arguments.iter().enumerate() {
+                        let k = w.infer_type(scope, arg);
+                        let expected = if big {
+                            K::Base(BaseKind::Big)
+                        } else {
+                            K::Var(w.infer.fresh(KindSet::ANY))
+                        };
+                        let expected = bump.alloc(expected);
+                        let context = if big {
+                            KindContext::BigField {
+                                union: u.name.value,
+                                ctor: ctor.name,
+                                index: index as u16,
+                            }
+                        } else {
+                            KindContext::LittleField {
+                                union: u.name.value,
+                                ctor: ctor.name,
+                                index: index as u16,
+                            }
+                        };
+                        w.expect(arg.region, context, expected, k);
+                    }
+                }
+            }
+            Decl::Alias(a) => {
+                let big = is_big_name(a.name.value);
+                let k = match &a.typ.value {
+                    CanType::Record { fields, .. } => {
+                        w.infer_record_body(scope, a.name.value, big, fields)
+                    }
+                    _ => w.infer_type(scope, a.typ),
+                };
+                w.expect(
+                    a.typ.region,
+                    KindContext::AliasCasing {
+                        alias: a.name.value,
+                        big,
+                    },
+                    result,
+                    k,
+                );
+                let expected: &K = if big {
+                    bump.alloc(K::Base(BaseKind::Big))
+                } else {
+                    w.infer.fresh_k(KindSet::LITTLE)
+                };
+                w.expect(
+                    a.typ.region,
+                    KindContext::AliasCasing {
+                        alias: a.name.value,
+                        big,
+                    },
+                    expected,
+                    result,
+                );
+            }
+        }
+    }
+
+    if !w.errors.is_empty() {
+        return Err(w.errors);
+    }
+    Ok(group
+        .iter()
+        .map(|d| w.infer.generalize(w.group[d.name().value]))
+        .collect())
+}
+
+impl<'e, 'a> Walker<'e, 'a> {
+    fn infer_type(&mut self, scope: &Scope<'a>, typ: &'a Located<CanType<'a>>) -> &'a K<'a> {
+        match &typ.value {
+            CanType::Var(name) => scope.params[name],
+            CanType::App { head, args } => {
+                let kind = self.infer_type(scope, head);
+                let head = match &head.value {
+                    CanType::Var(name) => KindHead::Var(name),
+                    CanType::Named { reference, .. } | CanType::Alias { reference, .. } => {
+                        KindHead::Named(*reference)
+                    }
+                    _ => KindHead::Application,
+                };
+                self.apply_args(scope, typ.region, head, kind, args)
+            }
+            CanType::Named { reference, args } => {
+                let head = self.head_kind(*reference);
+                self.apply_args(scope, typ.region, KindHead::Named(*reference), head, args)
+            }
+            CanType::Alias {
+                reference,
+                arguments,
+                ..
+            } => {
+                let head = self.head_kind(*reference);
+                let args: Vec<_> = arguments.iter().map(|a| a.typ).collect();
+                self.apply_args(scope, typ.region, KindHead::Named(*reference), head, &args)
+            }
+            CanType::Lambda { from, to } => {
+                self.expect_any(scope, from);
+                self.expect_any(scope, to);
+                self.bump.alloc(K::Base(BaseKind::Term))
+            }
+            CanType::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                self.expect_any(scope, first);
+                self.expect_any(scope, second);
+                for r in *rest {
+                    self.expect_any(scope, r);
+                }
+                self.bump.alloc(K::Base(BaseKind::Term))
+            }
+            CanType::Unit => self.bump.alloc(K::Base(BaseKind::Const)),
+            CanType::Record { .. } => {
+                // Only legal as an alias body (plans/04 chunk A1); handled by infer_record_body.
+                self.errors.push(Error::Unsupported {
+                    feature: "anonymous record types outside alias bodies",
+                    region: typ.region,
+                });
+                self.infer.fresh_k(KindSet::ANY)
+            }
+        }
+    }
+
+    fn head_kind(&mut self, reference: QualifiedName<'a>) -> &'a K<'a> {
+        if reference.home == self.home
+            && let Some(kind) = self.group.get(reference.name)
+        {
+            return kind;
+        }
+        let scheme = self.env.scheme(reference);
+        self.infer.instantiate(&scheme)
+    }
+
+    fn apply_args(
+        &mut self,
+        scope: &Scope<'a>,
+        region: Region,
+        head: KindHead<'a>,
+        mut kind: &'a K<'a>,
+        args: &[&'a Located<CanType<'a>>],
+    ) -> &'a K<'a> {
+        for (index, arg) in args.iter().enumerate() {
+            let (param, result) = match self.infer.apply(kind) {
+                Ok(pair) => pair,
+                Err(_) => {
+                    self.errors.push(Error::KindTooManyArgs {
+                        region,
+                        head,
+                        applied: args.len(),
+                        accepted: index,
+                    });
+                    return self.infer.fresh_k(KindSet::ALL);
+                }
+            };
+            let actual = self.infer_type(scope, arg);
+            self.expect(
+                arg.region,
+                KindContext::TypeArg {
+                    head,
+                    index: index as u16,
+                },
+                param,
+                actual,
+            );
+            kind = result;
+        }
+        kind
+    }
+
+    fn expect_any(&mut self, scope: &Scope<'a>, typ: &'a Located<CanType<'a>>) {
+        let k = self.infer_type(scope, typ);
+        let any = self.infer.fresh_k(KindSet::ANY);
+        self.expect(typ.region, KindContext::ValuePosition, any, k);
+    }
+
+    fn infer_record_body(
+        &mut self,
+        scope: &Scope<'a>,
+        alias: &'a str,
+        big: bool,
+        fields: &'a [FieldType<'a>],
+    ) -> &'a K<'a> {
+        for field in fields {
+            let k = self.infer_type(scope, field.typ);
+            let expected: &K = if big {
+                self.bump.alloc(K::Base(BaseKind::Big))
+            } else {
+                self.infer.fresh_k(KindSet::ANY)
+            };
+            self.expect(
+                field.typ.region,
+                KindContext::RecordField {
+                    alias,
+                    field: field.field,
+                    big,
+                },
+                expected,
+                k,
+            );
+        }
+        self.bump
+            .alloc(K::Base(if big { BaseKind::Big } else { BaseKind::Term }))
+    }
+
+    fn expect(
+        &mut self,
+        region: Region,
+        context: KindContext<'a>,
+        expected: &'a K<'a>,
+        actual: &'a K<'a>,
+    ) {
+        match self.infer.unify(expected, actual) {
+            Ok(()) => {}
+            Err(Mismatch::Shapes { .. }) => {
+                let expected = self.render(expected);
+                let actual = self.render(actual);
+                self.errors.push(Error::KindMismatch {
+                    region,
+                    context: self.bump.alloc(context),
+                    expected,
+                    actual,
+                });
+            }
+            Err(Mismatch::Infinite(_)) => self.errors.push(Error::KindInfinite {
+                region,
+                context: self.bump.alloc(context),
+            }),
+        }
+    }
+
+    /// Zonk to a `nash_ast::Kind` for error data; unbound vars are numbered in order of appearance.
+    fn render(&mut self, kind: &'a K<'a>) -> KindScheme<'a> {
+        self.infer.generalize(kind)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum KindHead<'a> {
+    Application,
+    Named(QualifiedName<'a>),
+    Var(&'a str),
+}
+
+/// Explicit builtin interface for callers that have not installed the prelude.
+pub fn builtin_interface<'a>(bump: &'a Bump) -> crate::Interface<'a> {
+    crate::Interface {
+        home: primitives::builtin_home(),
+        values: &[],
+        aliases: &[],
+        binops: &[],
+        unions: bump.alloc_slice_fill_iter(primitives::PRIMITIVES.iter().map(|p| {
+            crate::interface::InterfaceUnion {
+                name: p.name,
+                parameters: bump.alloc_slice_fill_iter(
+                    (0..p.arity).map(|i| &*bump.alloc_str(&format!("p{i}"))),
+                ),
+                ctors: &[],
+                alternatives: 0,
+                options: nash_ast::CtorOpts::Enum,
+                visibility: crate::interface::UnionVisibility::Closed,
+                kind: p.kind,
+            }
+        })),
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn test_big_kind<'a>(bump: &'a Bump, arity: usize) -> KindScheme<'a> {
+    let big: &Kind = bump.alloc(Kind::Base(BaseKind::Big));
+    let kind = (0..arity).fold(big, |result, _| &*bump.alloc(Kind::Arrow(big, result)));
+    KindScheme::mono(kind)
 }
