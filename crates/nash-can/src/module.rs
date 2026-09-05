@@ -24,9 +24,9 @@ use crate::warning::{Warning, WarningContext};
 use crate::{Error, Interface};
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Context<'a> {
+pub struct Context<'a, 'i> {
     pub package: Option<PackageName<'a>>,
-    pub interfaces: Option<&'a BTreeMap<&'a str, Interface<'a>>>,
+    pub interfaces: Option<&'i BTreeMap<&'a str, Interface<'a>>>,
 }
 
 #[derive(Debug)]
@@ -37,7 +37,7 @@ pub struct CanResult<'a> {
 }
 
 fn canonicalize_header<'a>(
-    context: Context<'a>,
+    context: Context<'a, '_>,
     module: &SourceModule<'a>,
 ) -> Result<ModuleName<'a>, Error<'a>> {
     let name = module.name.ok_or(Error::MissingModuleHeader)?;
@@ -50,7 +50,7 @@ fn canonicalize_header<'a>(
 
 pub fn canonicalize<'a>(
     bump: &'a Bump,
-    context: Context<'a>,
+    context: Context<'a, '_>,
     module: &SourceModule<'a>,
 ) -> Result<CanResult<'a>, Vec<Error<'a>>> {
     if let Some(tests) = module.tests {
@@ -1386,7 +1386,7 @@ mod tests {
     fn parse_and_canonicalize<'a>(
         bump: &'a Bump,
         input: &str,
-        context: Context<'a>,
+        context: Context<'a, '_>,
     ) -> Result<CanModule<'a>, Vec<Error<'a>>> {
         let src = bump.alloc_str(input);
         let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
@@ -2402,7 +2402,7 @@ mod tests {
     fn parse_and_canonicalize_with_warnings<'a>(
         bump: &'a Bump,
         input: &str,
-        context: Context<'a>,
+        context: Context<'a, '_>,
     ) -> Result<(CanModule<'a>, Vec<crate::Warning<'a>>), Vec<Error<'a>>> {
         let src = bump.alloc_str(input);
         let mut parser = nash_parse::Parser::new(bump, src.as_bytes());

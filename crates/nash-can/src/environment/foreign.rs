@@ -17,7 +17,7 @@ type RawTypeInfo<'a> = BTreeMap<&'a str, (Type<'a>, BTreeMap<&'a str, Ctor<'a>>)
 pub fn create_initial_env<'a>(
     bump: &'a Bump,
     home: ModuleName<'a>,
-    interfaces: Option<&'a BTreeMap<&'a str, Interface<'a>>>,
+    interfaces: Option<&BTreeMap<&'a str, Interface<'a>>>,
     imports: &'a [&'a SourceImport<'a>],
 ) -> Result<Env<'a>, Vec<Error<'a>>> {
     let mut env = Env {
@@ -469,10 +469,10 @@ fn make_union_ctor<'a>(
     }
 }
 
-fn find_interface<'a>(
-    interfaces: Option<&'a BTreeMap<&'a str, Interface<'a>>>,
+fn find_interface<'a, 'i>(
+    interfaces: Option<&'i BTreeMap<&'a str, Interface<'a>>>,
     import: &SourceImport<'a>,
-) -> Result<&'a Interface<'a>, Vec<Error<'a>>> {
+) -> Result<&'i Interface<'a>, Vec<Error<'a>>> {
     interfaces
         .and_then(|m| m.get(import.import.value))
         .ok_or_else(|| {

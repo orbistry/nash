@@ -28,7 +28,7 @@ pub(crate) fn info<'a>(
 
 pub(crate) fn tables<'a>(
     bump: &'a Bump,
-    interfaces: Option<&'a BTreeMap<&'a str, crate::Interface<'a>>>,
+    interfaces: Option<&BTreeMap<&'a str, crate::Interface<'a>>>,
     module: &nash_ast::Module<'a>,
     kind_env: &kinds::KindEnv<'a>,
 ) -> Result<crate::environment::Tables<'a>, Vec<Error<'a>>> {

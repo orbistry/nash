@@ -39,7 +39,7 @@ Prerequisites:
   [Contract with plans/07](#contract-with-plans07-codegenmd) below.
 
 Crates touched: `nash-ast`, `nash-can`, `nash-constrain`, `nash-solve`,
-`nash-driver`, plus `core/` (Nash source) in chunk 11.
+`nash-driver`, plus `core/` (Nash source) in chunk 12.
 
 Elm references: `elm/compiler/src/Type/Solve.hs` (`solve` on `CLet`,
 `generalize`, `introduce`, `makeCopy`, `makeCopyHelp`, `restore`,
@@ -1958,8 +1958,10 @@ Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expressi
 
 Change:
 
-1. Integer and string literals (and bytes literals once plan 01 parses
-   them) are typed through `FromInt`/`FromString`/`FromBytes`.
+1. Integer, string and bytes literals are typed through
+   `FromInt`/`FromString`/`FromBytes`. Plan 01 already parses bytes in
+   expressions and patterns. Add canonical bytes variants and remove both
+   canonicalizer gates as part of this conversion.
 2. `split` defaults ambiguous variables and reports ambiguity.
 3. Cycles of local-call context-slot dependencies containing an `Impl`
    wrapper are `PolymorphicRecursion` errors, including nested helpers.
@@ -2004,8 +2006,8 @@ constraints and must be removed or replaced with that path in this chunk.
 
 ```rust
 // expression.rs
-        CanExpr::Int(_) => Constraint::Foreign(region, "fromInt", type_::literal_annotation(bump, &[type_::from_int()]), expected),
-        CanExpr::Str(_) => Constraint::Foreign(region, "fromString", type_::literal_annotation(bump, &[type_::from_string()]), expected),
+        CanExpr::Int(_) => Constraint::Foreign(region, node, "fromInt", type_::literal_annotation(bump, &[type_::from_int()]), expected),
+        CanExpr::Str(_) => Constraint::Foreign(region, node, "fromString", type_::literal_annotation(bump, &[type_::from_string()]), expected),
 ```
 
 `Category::Number`/`Category::String` are kept for the error message, so
@@ -2016,41 +2018,30 @@ negate, [e])` after nash-can desugars it (add to chunk 10's desugaring list;
 until then `Negate` keeps a fresh flex var with a wanted `Num a`, which is
 the same code path).
 
-Pattern literals (`pattern.rs` `CanPattern::Int`/`Str` arms): a fresh flex
-var `v`, push `Constraint::Foreign(region, "literal", literal_annotation(bump, &[from_int(), eq_trait()]), Expected::NoExpectation(VarN(v)))`
+Pattern literals (`pattern.rs` `CanPattern::Int`/`Str`/`Bytes` arms): a fresh flex
+var `v`, push `Constraint::Foreign(region, NodeId::pattern(pattern), "literal", literal_annotation(bump, &[from_int(), eq_trait()]), Expected::NoExpectation(VarN(v)))`
 and `Constraint::Pattern(region, PCategory::Int, VarN(v), expectation)`.
+Use the matching literal trait and category for each syntax form. Emit one
+instance per original pattern node, with ordered `[FromX, Eq]` evidence; two
+independent instances at the same NodeId would overwrite each other.
 
-Defaulting in `split`, after the queue drains and before index assignment:
+Defaulting runs after generalization and resolution, before context reduction.
+The implemented `check_ambiguity` / `resolve_wanted` loop is authoritative:
 
-```rust
-        loop {
-            // drain queue as in chunk 6
-            let reachable = reachable_generalized(uf, locals);
-            let ambiguous: Vec<(Variable, Vec<PredId>)> = group_by_var(uf, &retained, |v| !reachable.contains(&v));
-            if ambiguous.is_empty() { break; }
-            for (var, ids) in ambiguous {
-                let literal_traits: Vec<_> = ids.iter().filter_map(|id| type_::literal_default(self.store.get(*id).trait_)).collect();
-                match literal_traits.as_slice() {
-                    [default] => {
-                        let target = self.type_to_variable(uf, NO_RANK, default);
-                        let unify::Answer::Ok(_) = unify::unify(self.bump, uf, var, target) else { unreachable!("flex var unifies with anything") };
-                        retained.retain(|id| !ids.contains(id));
-                        queue.extend(ids);            // now Ground: resolved by instance on the next pass
-                    }
-                    _ => {
-                        state = add_error(state, self.ambiguous(uf, binder, var, &ids));
-                        for id in &ids { self.detach(uf, *id); }
-                        retained.retain(|id| !ids.contains(id));
-                        uf.modify(var, |d| d.content = Content::Error);
-                    }
-                }
-            }
-        }
-```
-
-`reachable_generalized` walks the header variables' structures and
-collects flex variables with rank `NO_RANK`. `group_by_var` pairs each
-retained predicate with its young variables not in `reachable`.
+- Collect generalized variables absent from the full definition types; retain
+  outer captures and use all members of an untyped recursive group.
+- Deduplicate equal requirements. Only a unary, exact core literal predicate
+  whose argument is the ambiguous variable supplies a default. Repeated
+  requirements for the same literal trait count once.
+- When exactly one distinct literal trait supplies a default, unify the flex
+  variable with its real Builtin type at an active pool rank, never `NO_RANK`.
+- Retry the original wanted IDs with the enclosing givens, source provenance,
+  evidence slots and cumulative resolution budget intact. Resolution uses the
+  definition's inference rank so captured outer variables remain deferred.
+- If any default progresses, retry before diagnosing other hidden variables:
+  a newly selected impl may supply their literal requirements.
+- Only when no default progresses, report remaining ambiguity at the owning
+  definition. Preserve distinct variable names across the diagnostic group.
 
 Polymorphic recursion is checked after resolution and recursive-use backfill,
 before publishing `SolvedTypes`. Build a graph whose vertices are
@@ -2072,7 +2063,7 @@ Tests (existing `int_literal`, `number_cannot_be_string`, and every
 snapshot mentioning `number` are re-accepted after review):
 
 ```rust
-#[test] fn literal_defaults_to_int()        // main = show 1   with `trait Show`, `impl Show int`, `impl FromInt int` declared in the test (needs `int` in scope: plan 02; until then use `type int = int` + note)
+#[test] fn literal_defaults_to_int()        // main = show 1   with `trait Show`, `impl Show int`, `impl FromInt int` declared in the test (use the real Builtin int and canonicalized core Literal interface)
 #[test] fn literal_context_retained()       // one = 1 -> one : FromInt a => a
 #[test] fn literal_in_arithmetic()          // f x = add x 1 -> f : (FromInt a, Num a) => a -> a
 #[test] fn literal_pattern_wants_eq()       // isZero n = case n of 0 -> True; _ -> False -> (Eq a, FromInt a) => a -> Bool
@@ -2381,8 +2372,12 @@ Package identity now flows from discovery through `ModuleOrigins` into
 the same URI and package is deduplicated; conflicting package ownership is
 rejected. Logical source URLs remain the graph/cache keys. A real CLI workspace
 with `nash/core` Literal and an application verifies explicit literal-method
-defaulting; changing the package name leaves the use ambiguous. Arena retention
-and the remaining cross-module/core acceptance criteria are still unfinished.
+defaulting; changing the package name leaves the use ambiguous. Canonical nodes now live in the build arena; owned annotations and solved
+evidence remain together per module until the build ends. A regression checks
+original definition/use NodeIds and evidence binders after a dependent module
+compiles. The old interface-copy helper still has test callers; remove that
+superseded path and adapt those tests before closing the chunk. Remaining
+cross-module/core acceptance criteria are unfinished.
 
 Code:
 
@@ -2394,8 +2389,8 @@ Code:
 /// plan needs and keep those names.
 pub struct SolvedModule<'a> {
     pub module: &'a nash_ast::Module<'a>,
-    pub annotations: &'a nash_can::Annotations<'a>,
-    pub types: &'a nash_solve::SolvedTypes<'a>,
+    pub annotations: nash_can::Annotations<'a>,
+    pub types: nash_solve::SolvedTypes<'a>,
 }
 
 fn build_sync(sources) -> BuildResult {
@@ -2417,8 +2412,11 @@ fn build_sync(sources) -> BuildResult {
 instead of a per-module `Bump` (the per-module arena was only ever dropped
 at the end of the function; codegen needs the canonical AST and
 `SolvedTypes` to outlive it, and `NodeId`s are arena addresses, so the
-nodes must not move). `deep_copy_interface` then becomes a plain
-borrow and is deleted. Memory grows with the build, which is what
+nodes must not move). The driver no longer calls `deep_copy_interface`; its interfaces borrow the
+original arena data. Annotations and `SolvedTypes` own heap maps, so keep them
+in normally dropped `SolvedModule` values, not directly in a bump allocation
+(which would skip their destructors). The canonicalizer's interface lookup
+borrow has a separate lifetime from the arena references it returns. Memory grows with the build, which is what
 Elm's `Details`/`Artifacts` do too.
 
 `nash_solve::run(&bump, &mut uf, &constraint, &can_result.tables, &can_result.fields, Mode::Strict)`
@@ -2447,7 +2445,7 @@ Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,
 `core/Functor.nash`, `core/Applicative.nash`, `core/Monad.nash`,
 `core/Data.nash` (ToData/FromData), `core/Lift.nash`, `core/Literal.nash`,
 `core/Prelude.nash` (the `infix` table from docs/stdlib.md and the prelude
-impls), `core/Builtin.nash` (as far as plan `stdlib` has it),
+impls), `crates/nash-ast/src/primitives.rs` (synthetic Builtin prerequisite),
 `crates/nash-driver/src/compile.rs` (implicit imports),
 `crates/nash-constrain/src/type_.rs` (homes match the files). One module
 per trait is the lead's decision; docs/stdlib.md's single `Prelude`
@@ -2458,9 +2456,13 @@ impls for the little types (`int`, `string`, `bytes`, `bool`, `unit`,
 `list`, `pair`), the Big types (`Int`, `Bytes`, `List`, `Map`, `Data`),
 tuples, and `option`. Method bodies use `Builtin.*`. The driver adds the
 implicit imports (`import Eq exposing (Eq, eq)`, ...) like Elm's
-`Imports.defaults`. Requires plans 02 (little types) and stdlib for
-`Builtin`; until then the chunk ships the trait declarations with impls
-only for user-visible Big types and is completed when those land.
+`Imports.defaults`. `Builtin` has no Nash source: docs/stdlib.md specifies
+a synthetic interface from the Rust primitive and builtin tables. The current
+interface supplies type constructors but not the builtin value schemes needed
+by these method bodies. Implement or explicitly track that stdlib prerequisite;
+do not fabricate source bindings or count declaration-only modules and test
+fixtures as completion. Core impl bodies must use the specified real bindings.
+Code generation for those bindings remains Plan 07 work.
 
 Tests: a driver test compiling `core/` plus a `Main.nash` using `==`, `<`,
 `+`, `show`, a `do` block over `option`, and literal defaulting, with no

@@ -3,9 +3,9 @@
 //! Each module runs Elm's full pipeline: parse -> canonicalize ->
 //! constrain -> solve -> `Interface::from_module` with the solver's
 //! annotations. Modules compile in dependency order, and each solved
-//! module's interface is deep-copied into a build-wide arena so dependents
-//! canonicalize their imports against it — interfaces only ever exist for
-//! type-solved modules.
+//! module and solved evidence remain in the build scope. Canonical nodes
+//! live in a shared arena, so interfaces borrow them without moving the
+//! nodes addressed by solved evidence.
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -63,6 +63,16 @@ impl BuildResult {
     }
 }
 
+/// Canonical nodes and their solved schemes and use-site evidence.
+/// The maps are owned so their heap allocations are dropped with the build;
+/// canonical nodes and map values borrow the build arena.
+#[derive(Debug)]
+pub struct SolvedModule<'a> {
+    pub module: &'a nash_ast::Module<'a>,
+    pub annotations: nash_can::Annotations<'a>,
+    pub types: nash_solve::SolvedTypes<'a>,
+}
+
 /// Holds the output of compiling a single module.
 struct CompileOutput {
     uri: Url,
@@ -111,18 +121,19 @@ fn build_sync(
     let store = Bump::new();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
     let mut public_interfaces = HashMap::new();
+    let mut solved = BTreeMap::new();
 
     let mut results: HashMap<Url, ModuleResult> = HashMap::new();
     let mut all_warnings: Vec<String> = Vec::new();
 
     for (uri, package, source) in &sources {
-        let (output, interface) =
-            compile_module(uri, package.as_ref(), source, &store, &interfaces);
-        if let Some(interface) = interface {
+        let (output, compiled) = compile_module(uri, package.as_ref(), source, &store, &interfaces);
+        if let Some((interface, module)) = compiled {
             public_interfaces.insert(
                 uri.clone(),
                 crate::interface::Interface::from_canonical(&interface),
             );
+            solved.insert(interface.home.name, module);
             interfaces.insert(interface.home.name, interface);
         }
         all_warnings.extend(output.warnings);
@@ -161,18 +172,15 @@ async fn fetch_sources(
     results
 }
 
-/// Run one module through the full pipeline in its own arena:
-/// parse -> canonicalize -> constrain -> solve -> interface.
-///
-/// On success the module's interface is deep-copied into the build-wide
-/// `store` arena so it outlives this module's arena.
+/// Compile into the build arena, preserving the original canonical addresses.
+/// Owned solved maps return alongside the borrowing interface.
 fn compile_module<'s>(
     uri: &Url,
     package: Option<&nash_config::PackageName>,
     source: &Result<String, String>,
     store: &'s Bump,
     interfaces: &BTreeMap<&'s str, Interface<'s>>,
-) -> (CompileOutput, Option<Interface<'s>>) {
+) -> (CompileOutput, Option<(Interface<'s>, SolvedModule<'s>)>) {
     let failed = |message: String| {
         (
             CompileOutput {
@@ -189,9 +197,9 @@ fn compile_module<'s>(
         Err(e) => return failed(e.clone()),
     };
 
-    let bump = Bump::new();
+    let bump = store;
     let src: &str = bump.alloc_str(source);
-    let mut parser = nash_parse::Parser::new(&bump, src.as_bytes());
+    let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
 
     let module = match parser.module() {
         Ok(module) => module,
@@ -205,7 +213,7 @@ fn compile_module<'s>(
         }),
         interfaces: Some(interfaces),
     };
-    let can_result = match nash_can::canonicalize(&bump, context, &module) {
+    let can_result = match nash_can::canonicalize(bump, context, &module) {
         Ok(can_result) => can_result,
         Err(errors) => return failed(format!("{:?}", errors)),
     };
@@ -216,24 +224,30 @@ fn compile_module<'s>(
         .collect();
 
     let mut uf = nash_constrain::UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &can_result.module);
-    let annotations = match nash_solve::run(&bump, &mut uf, &constraint, &can_result.tables) {
-        Ok((annotations, _solved_types)) => annotations,
+    let constraint = nash_constrain::constrain(bump, &mut uf, &can_result.module);
+    let (annotations, types) = match nash_solve::run(bump, &mut uf, &constraint, &can_result.tables)
+    {
+        Ok(solved) => solved,
         Err(errors) => return failed(format!("{:?}", errors)),
     };
 
-    let interface = nash_can::from_module(&bump, &can_result.module, &annotations);
-    let stored = nash_can::deep_copy_interface(store, &interface);
+    let module = bump.alloc(can_result.module);
+    let interface = nash_can::from_module(bump, module, &annotations);
+    let solved = SolvedModule {
+        module,
+        annotations,
+        types,
+    };
 
     (
         CompileOutput {
             uri: uri.clone(),
             result: ModuleResult::Success {
-                decl_count: count_decls(can_result.module.decls),
+                decl_count: count_decls(module.decls),
             },
             warnings,
         },
-        Some(stored),
+        Some((interface, solved)),
     )
 }
 
@@ -322,6 +336,56 @@ mod tests {
 
     fn url(path: &str) -> Url {
         Url::parse(&format!("file:///{}", path)).unwrap()
+    }
+
+    #[test]
+    fn retained_module_nodes_match_solved_evidence_after_compilation() {
+        let store = Bump::new();
+        let mut interfaces = BTreeMap::new();
+        let (output, compiled) = compile_module(
+            &url("Base.nash"), None,
+            &Ok("module Base exposing (..)\ntrait Keep 'a where keep : 'a -> 'a\nidentity x = keep x\n".to_owned()),
+            &store, &interfaces,
+        );
+        assert!(matches!(output.result, ModuleResult::Success { .. }));
+        let (interface, base) = compiled.unwrap();
+        interfaces.insert(interface.home.name, interface);
+        let (output, compiled) = compile_module(
+            &url("Main.nash"),
+            None,
+            &Ok("module Main exposing (..)\nimport Base\nforward x = Base.identity x\n".to_owned()),
+            &store,
+            &interfaces,
+        );
+        assert!(
+            matches!(output.result, ModuleResult::Success { .. }),
+            "{:?}",
+            output.result
+        );
+        let (_, main) = compiled.unwrap();
+        for solved in [&base, &main] {
+            let nash_ast::Decls::Declare { definition, .. } = solved.module.decls else {
+                panic!("expected definition")
+            };
+            let nash_ast::Def::Def { name, body, .. } = definition else {
+                panic!("expected inferred definition")
+            };
+            let nash_ast::Expr::Call { function, .. } = body.value else {
+                panic!("expected call")
+            };
+            let scheme = &solved.types.schemes[&nash_ast::NodeId::def(name)];
+            assert!(std::ptr::eq(
+                scheme.annotation,
+                solved.annotations[name.value]
+            ));
+            let instance = &solved.types.instances[&nash_ast::NodeId::expr(function)];
+            let [nash_ast::Evidence::Given { binder, index }] = instance.evidence else {
+                panic!("expected retained trait evidence")
+            };
+            assert_eq!(*binder, scheme.binder);
+            assert_eq!(*index, 0);
+            assert_eq!(scheme.annotation.context[0].trait_.home.name, "Base");
+        }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
