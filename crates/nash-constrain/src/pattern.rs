@@ -7,7 +7,7 @@ use bumpalo::Bump;
 use nash_ast::{Pattern as CanPattern, PatternCtor};
 use nash_region::{Located, Region};
 
-use crate::error::{PCategory, PContext, PExpected};
+use crate::error::{Expected, PCategory, PContext, PExpected};
 use crate::instantiate;
 use crate::type_::{self, Constraint, Type, mk_flex_var, name_to_flex};
 use crate::union_find::{UnionFind, Variable};
@@ -161,27 +161,29 @@ pub fn add<'a>(
             state
         }
 
-        CanPattern::Int(_) => {
+        CanPattern::Int(_) | CanPattern::Str(_) | CanPattern::Bytes(_) => {
+            let (trait_name, category) = match pattern.value {
+                CanPattern::Int(_) => ("FromInt", PCategory::Int),
+                CanPattern::Bytes(_) => ("FromBytes", PCategory::Bytes),
+                _ => ("FromString", PCategory::Str),
+            };
             let mut state = state;
-            let int_con = Constraint::Pattern(
-                region,
-                PCategory::Int,
-                bump.alloc(type_::int()),
-                expectation,
-            );
-            state.rev_cons.push(int_con);
+            let var = mk_flex_var(uf);
+            let typ: &'a Type<'a> = bump.alloc(Type::VarN(var));
+            state.vars.push(var);
             state
-        }
-
-        CanPattern::Str(_) => {
-            let mut state = state;
-            let str_con = Constraint::Pattern(
+                .rev_cons
+                .push(Constraint::Pattern(region, category, typ, expectation));
+            state.rev_cons.push(Constraint::Foreign(
                 region,
-                PCategory::Str,
-                bump.alloc(type_::string()),
-                expectation,
-            );
-            state.rev_cons.push(str_con);
+                nash_ast::NodeId::pattern(pattern),
+                "literal",
+                type_::literal_annotation(
+                    bump,
+                    &[type_::literal_trait(trait_name), type_::eq_trait()],
+                ),
+                Expected::NoExpectation(typ),
+            ));
             state
         }
 

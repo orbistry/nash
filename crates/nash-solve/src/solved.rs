@@ -10,6 +10,7 @@ pub struct SolvedTypes<'a> {
     pub exprs: HashMap<NodeId, &'a Located<Type<'a>>>,
     pub patterns: HashMap<NodeId, &'a Located<Type<'a>>>,
     pub instances: HashMap<NodeId, Instance<'a>>,
+    /// Named definitions and aggregate let-destructuring patterns.
     pub schemes: HashMap<NodeId, Scheme<'a>>,
 }
 
@@ -24,6 +25,7 @@ pub struct Instance<'a> {
 #[derive(Debug)]
 pub struct Scheme<'a> {
     pub annotation: &'a Annotation<'a>,
-    /// First original definition name for an untyped recursive group.
+    /// Original definition name (first in an untyped recursive group),
+    /// or the root pattern of a generalized let-destructuring.
     pub binder: NodeId,
 }

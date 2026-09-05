@@ -227,6 +227,7 @@ pub enum Expr<'a> {
         annotation: &'a Annotation<'a>,
     },
     Str(&'a str),
+    Bytes(&'a [u8]),
     Int(i128),
     List(&'a [&'a Located<Expr<'a>>]),
     Negate(&'a Located<Expr<'a>>),
@@ -336,6 +337,7 @@ pub enum Pattern<'a> {
         value: bool,
     },
     Str(&'a str),
+    Bytes(&'a [u8]),
     Int(i128),
 }
 

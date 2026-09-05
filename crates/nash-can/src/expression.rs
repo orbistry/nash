@@ -96,12 +96,7 @@ pub fn canonicalize_expr<'a>(
     let region = expr.region;
     let can_expr = match &expr.value {
         SourceExpr::Str(s) => CanExpr::Str(s),
-        SourceExpr::Bytes(_) => {
-            return Err(vec![Error::Unsupported {
-                feature: "bytes literal",
-                region,
-            }]);
-        }
+        SourceExpr::Bytes(bytes) => CanExpr::Bytes(bytes),
         SourceExpr::Int(n) => CanExpr::Int(*n),
         SourceExpr::Assert(_)
         | SourceExpr::Fail(_)

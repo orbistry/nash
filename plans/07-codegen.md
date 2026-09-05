@@ -762,7 +762,7 @@ pub struct SolvedTypes<'a> {
     /// Every `VarLocal`-to-a-generalized-def, `VarTopLevel`, `VarForeign`,
     /// `VarOperator`, `VarMethod`, `Binop`, literal, and `<-` node.
     pub instances: HashMap<NodeId, Instance<'a>>,               // 03-traits.md fills
-    /// Every definition (top-level or local): its scheme.
+    /// Every named definition and generalized destructuring pattern: its scheme.
     pub schemes: HashMap<NodeId, Scheme<'a>>,                   // 03-traits.md fills
 }
 
@@ -779,6 +779,17 @@ pub struct Scheme<'a> {
     pub binder: NodeId,
 }
 ```
+
+A generalized let-destructuring owns one aggregate scheme keyed by
+`NodeId::pattern` of its original root pattern. Its type is the full RHS/pattern
+type, and its context and quantifier order are shared by all extracted names.
+A use of an extracted name instantiates the aggregate type, context and selected
+component together, then returns the component type. Its `Instance` contains
+all aggregate type arguments, including those absent from that component, and
+all aggregate evidence slots. Codegen associates that lexical name with its
+root pattern scheme and projection; evidence inside the RHS refers to the
+pattern binder. Tuple, record and alias patterns use the same rule. This
+preserves polymorphic destructuring without losing qualified constraints.
 
 `nash_ast::Evidence` is
 `Impl { impl_: ImplRef { home, key }, type_args, args } | Given { binder, index } | Super { of, index }`

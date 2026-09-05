@@ -540,7 +540,7 @@ module Main exposing (..)
 
 import Utils
 
-main = Utils.pong 1
+main = Utils.pong ()
 "#
             .to_string(),
         );
@@ -557,7 +557,7 @@ main = Utils.pong 1
         .await;
 
         assert_eq!(result.total, 2);
-        assert_eq!(result.success, 2);
+        assert_eq!(result.success, 2, "{result:?}");
         assert!(result.is_success());
     }
 }

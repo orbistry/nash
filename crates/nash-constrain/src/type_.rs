@@ -21,10 +21,35 @@ pub struct Pred<'a> {
     pub args: &'a [&'a Type<'a>],
 }
 
-/// Preserve the original name node and full type independently of lexical scope.
+/// Scheme identity is an original definition name or a destructuring pattern.
+#[derive(Clone, Copy, Debug)]
+pub enum Binder<'a> {
+    Named(&'a Located<&'a str>),
+    Pattern {
+        node: NodeId,
+        name: &'a Located<&'a str>,
+    },
+}
+
+impl<'a> Binder<'a> {
+    pub fn node(self) -> NodeId {
+        match self {
+            Self::Named(name) => NodeId::def(name),
+            Self::Pattern { node, .. } => node,
+        }
+    }
+
+    pub fn name(self) -> &'a Located<&'a str> {
+        match self {
+            Self::Named(name) | Self::Pattern { name, .. } => name,
+        }
+    }
+}
+
+/// Preserve the original scheme identity and full type independently of lexical scope.
 #[derive(Clone, Copy, Debug)]
 pub struct Definition<'a> {
-    pub name: &'a Located<&'a str>,
+    pub site: Binder<'a>,
     pub typ: &'a Type<'a>,
     /// `Some`, including an empty slice, distinguishes a declared scheme.
     pub context: Option<&'a [Pred<'a>]>,
@@ -64,7 +89,7 @@ pub enum Constraint<'a> {
         /// Assumed while checking the definition body, over its rigid variables.
         given: &'a [Pred<'a>],
         /// Evidence owner; the first untyped member for a recursive group.
-        binder: Option<&'a Located<&'a str>>,
+        binder: Option<Binder<'a>>,
         /// All definitions generalized here, even when no lexical name is bound.
         definitions: &'a [Definition<'a>],
         rigid_vars: &'a [Variable],
@@ -241,6 +266,43 @@ pub const fn char_home<'a>() -> ModuleName<'a> {
 }
 
 // PRIMITIVE TYPES
+
+pub const fn literal_trait(name: &str) -> QualifiedName<'_> {
+    QualifiedName {
+        home: ModuleName {
+            package: Some(nash_ast::primitives::CORE),
+            name: "Literal",
+        },
+        name,
+    }
+}
+
+pub const fn eq_trait<'a>() -> QualifiedName<'a> {
+    QualifiedName {
+        home: ModuleName {
+            package: Some(nash_ast::primitives::CORE),
+            name: "Eq",
+        },
+        name: "Eq",
+    }
+}
+
+/// One scheme and evidence ordering for a literal use, including pattern Eq.
+pub fn literal_annotation<'a>(
+    bump: &'a bumpalo::Bump,
+    traits: &[QualifiedName<'a>],
+) -> &'a Annotation<'a> {
+    let typ: &'a Located<nash_ast::Type<'a>> =
+        bump.alloc(Located::at_zero(nash_ast::Type::Var("a")));
+    bump.alloc(Annotation {
+        free_vars: &["a"],
+        context: bump.alloc_slice_fill_iter(traits.iter().map(|trait_| nash_ast::Pred {
+            trait_: *trait_,
+            args: bump.alloc_slice_copy(&[typ]),
+        })),
+        typ,
+    })
+}
 
 /// Only the compiler-known literal traits select a little default type.
 pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<Type<'static>> {

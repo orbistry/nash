@@ -79,7 +79,7 @@ struct Binding<'a> {
 }
 
 struct SchemeRecord<'a> {
-    name: &'a Located<&'a str>,
+    site: type_::Binder<'a>,
     binding: Binding<'a>,
     /// Captures may become generalized later in an enclosing definition.
     /// Freeze the variables owned by this scheme at its own boundary.
@@ -154,7 +154,7 @@ impl<'a> Solver<'a, '_> {
             let scheme = self
                 .schemes
                 .iter()
-                .find(|scheme| nash_ast::NodeId::def(scheme.name) == owner)
+                .find(|scheme| scheme.site.node() == owner)
                 .expect("body owner has a recorded scheme");
             match scheme.parent {
                 Some(parent) => {
@@ -199,7 +199,7 @@ impl<'a> Solver<'a, '_> {
         let binders: HashMap<_, _> = self
             .schemes
             .iter()
-            .map(|scheme| (nash_ast::NodeId::def(scheme.name), scheme.binder))
+            .map(|scheme| (scheme.site.node(), scheme.binder))
             .collect();
         let mut edges: HashMap<_, Vec<_>> = HashMap::new();
         let mut wrapped = Vec::new();
@@ -312,7 +312,7 @@ impl<'a> Solver<'a, '_> {
         let mut rendered_uses = HashMap::new();
         let mut scopes = Vec::new();
         for scheme in &self.schemes {
-            let root = self.scope(nash_ast::NodeId::def(scheme.name)).0;
+            let root = self.scope(scheme.site.node()).0;
             if !scopes.contains(&root) {
                 scopes.push(root);
             }
@@ -323,9 +323,9 @@ impl<'a> Solver<'a, '_> {
             let mut members: Vec<_> = self
                 .schemes
                 .iter()
-                .filter(|scheme| self.scope(nash_ast::NodeId::def(scheme.name)).0 == *scope)
+                .filter(|scheme| self.scope(scheme.site.node()).0 == *scope)
                 .collect();
-            members.sort_by_key(|scheme| self.scope(nash_ast::NodeId::def(scheme.name)).1);
+            members.sort_by_key(|scheme| self.scope(scheme.site.node()).1);
             let mut roots = Vec::new();
             for scheme in &members {
                 roots.push(scheme.binding.variable);
@@ -345,7 +345,7 @@ impl<'a> Solver<'a, '_> {
                     UseSource::Local { definition, .. } => self
                         .schemes
                         .iter()
-                        .find(|scheme| nash_ast::NodeId::def(scheme.name) == definition)
+                        .find(|scheme| scheme.site.node() == definition)
                         .unwrap()
                         .quantified
                         .as_slice(),
@@ -365,7 +365,7 @@ impl<'a> Solver<'a, '_> {
             }
             crate::annotation::prepare_scope(self.bump, uf, &roots);
             for scheme in members {
-                let id = nash_ast::NodeId::def(scheme.name);
+                let id = scheme.site.node();
                 let context: Vec<_> = scheme
                     .binding
                     .context
@@ -406,7 +406,7 @@ impl<'a> Solver<'a, '_> {
                     UseSource::Local { definition, .. } => self
                         .schemes
                         .iter()
-                        .find(|scheme| nash_ast::NodeId::def(scheme.name) == *definition)
+                        .find(|scheme| scheme.site.node() == *definition)
                         .unwrap()
                         .quantified
                         .clone(),
@@ -569,14 +569,14 @@ impl<'a> Solver<'a, '_> {
         state: State<'a>,
         constraint: &Constraint<'a>,
         given: &[type_::Pred<'a>],
-        binder: Option<&'a Located<&'a str>>,
+        binder: Option<type_::Binder<'a>>,
         annotated: bool,
     ) -> State<'a> {
         let depth = self.enter_givens(uf, rank, given, binder);
         let start = self.wanted.len();
         let owner_depth = self.owners.len();
         if let Some(binder) = binder {
-            self.owners.push(nash_ast::NodeId::def(binder));
+            self.owners.push(binder.node());
         }
         let mut state = self.solve(uf, env, rank, state, constraint);
         state = self.resolve_wanted(uf, rank, state, start, binder, annotated);
@@ -590,7 +590,7 @@ impl<'a> Solver<'a, '_> {
         uf: &mut UnionFind<'a>,
         rank: usize,
         given: &[type_::Pred<'a>],
-        binder: Option<&'a Located<&'a str>>,
+        binder: Option<type_::Binder<'a>>,
     ) -> usize {
         let depth = self.givens.len();
         if let Some(binder) = binder.filter(|_| !given.is_empty()) {
@@ -610,7 +610,7 @@ impl<'a> Solver<'a, '_> {
                 .collect();
             self.expand_givens(uf, rank, &mut predicates);
             self.givens.push(GivenFrame {
-                binder: nash_ast::NodeId::def(binder),
+                binder: binder.node(),
                 predicates,
             });
         }
@@ -623,7 +623,7 @@ impl<'a> Solver<'a, '_> {
         rank: usize,
         mut state: State<'a>,
         start: usize,
-        binder: Option<&'a Located<&'a str>>,
+        binder: Option<type_::Binder<'a>>,
         annotated: bool,
     ) -> State<'a> {
         let report_errors = state.errors.is_empty() && self.conversion_errors.is_empty();
@@ -675,7 +675,7 @@ impl<'a> Solver<'a, '_> {
                     name: site.name,
                     trait_: wanted.trait_,
                     args: self.bump.alloc_slice_copy(&args),
-                    binder,
+                    binder: binder.name(),
                 });
             } else if report_errors
                 && let Some(binder) = binder
@@ -686,10 +686,7 @@ impl<'a> Solver<'a, '_> {
                     .predicates
                     .use_site(id)
                     .expect("wanteds originate at uses");
-                let work = self
-                    .resolution_work
-                    .entry(nash_ast::NodeId::def(binder))
-                    .or_default();
+                let work = self.resolution_work.entry(binder.node()).or_default();
                 *work += 1;
                 if *work > 16_384 || resolution_depth >= 128 {
                     state.errors.push(Error::ImplResolutionLimit {
@@ -951,12 +948,17 @@ impl<'a> Solver<'a, '_> {
                             context: declared.get(name).copied().unwrap_or(&[]),
                             context_is_final: !declarations
                                 .iter()
-                                .any(|def| def.name.value == *name && def.context.is_none()),
+                                .any(|def| def.site.name().value == *name && def.context.is_none()),
                             definition: definitions
                                 .iter()
                                 .chain(declarations.iter())
-                                .find(|def| def.name.value == *name)
-                                .map(|def| nash_ast::NodeId::def(def.name)),
+                                .find(|def| def.site.name().value == *name)
+                                .map(|def| def.site.node())
+                                .or_else(|| {
+                                    binder
+                                        .filter(|b| matches!(b, type_::Binder::Pattern { .. }))
+                                        .map(type_::Binder::node)
+                                }),
                         });
                     }
                     let state2 = self.solve(uf, &new_env, rank, state1, body_con);
@@ -1004,8 +1006,9 @@ impl<'a> Solver<'a, '_> {
                     if state1.errors.is_empty() {
                         for rigid in rigid_vars.iter() {
                             if uf.get(*rigid).rank != NO_RANK {
-                                let owner =
-                                    binder.map(|name| (name.region, name.value)).or_else(|| {
+                                let owner = binder
+                                    .map(|name| (name.name().region, name.name().value))
+                                    .or_else(|| {
                                         header.first().map(|(name, typ)| (typ.region, *name))
                                     });
                                 state1.errors.push(Error::AnnotationVariableEscapes {
@@ -1022,12 +1025,17 @@ impl<'a> Solver<'a, '_> {
 
                     if state1.errors.is_empty()
                         && self.conversion_errors.is_empty()
-                        && let Some(binder) = binder
+                        && let Some(binder) = *binder
                     {
                         let depth = self.enter_givens(uf, rank, given, Some(binder));
                         loop {
-                            let (errors, defaulted) =
-                                self.check_ambiguity(uf, rank, wanted_start, definitions, binder);
+                            let (errors, defaulted) = self.check_ambiguity(
+                                uf,
+                                rank,
+                                wanted_start,
+                                definitions,
+                                binder.name(),
+                            );
                             state1.errors.extend(errors);
                             if !defaulted || !state1.errors.is_empty() {
                                 break;
@@ -1053,7 +1061,7 @@ impl<'a> Solver<'a, '_> {
                             uf,
                             rank,
                             wanted_start,
-                            nash_ast::NodeId::def(binder.expect("inferred definition binder")),
+                            binder.expect("inferred definition binder").node(),
                         )
                     } else {
                         &[]
@@ -1065,7 +1073,7 @@ impl<'a> Solver<'a, '_> {
                         new_env.entry(name).or_insert(Binding {
                             declared_quantifiers: if declarations
                                 .iter()
-                                .any(|def| def.name.value == *name && def.context.is_some())
+                                .any(|def| def.site.name().value == *name && def.context.is_some())
                             {
                                 rigid_vars
                             } else {
@@ -1077,8 +1085,13 @@ impl<'a> Solver<'a, '_> {
                             definition: definitions
                                 .iter()
                                 .chain(declarations.iter())
-                                .find(|def| def.name.value == *name)
-                                .map(|def| nash_ast::NodeId::def(def.name)),
+                                .find(|def| def.site.name().value == *name)
+                                .map(|def| def.site.node())
+                                .or_else(|| {
+                                    binder
+                                        .filter(|b| matches!(b, type_::Binder::Pattern { .. }))
+                                        .map(type_::Binder::node)
+                                }),
                         });
                     }
                     let temp_state = State {
@@ -1529,7 +1542,7 @@ impl<'a> Solver<'a, '_> {
         definitions: &[type_::Definition<'a>],
         declared: &BTreeMap<&'a str, &'a [type_::PredId]>,
         inferred: &'a [type_::PredId],
-        binder: Option<&'a Located<&'a str>>,
+        binder: Option<type_::Binder<'a>>,
     ) {
         for definition in definitions {
             if !self.conversion_errors.is_empty() {
@@ -1539,10 +1552,10 @@ impl<'a> Solver<'a, '_> {
                 declared_quantifiers: &[],
                 variable: self.type_to_variable(uf, rank, definition.typ),
                 context: declared
-                    .get(definition.name.value)
+                    .get(definition.site.name().value)
                     .copied()
                     .unwrap_or(inferred),
-                definition: Some(nash_ast::NodeId::def(definition.name)),
+                definition: Some(definition.site.node()),
                 context_is_final: true,
             };
             let mut pending = vec![binding.variable];
@@ -1554,10 +1567,10 @@ impl<'a> Solver<'a, '_> {
                 .filter(|var| uf.get(*var).rank == NO_RANK)
                 .collect();
             self.schemes.push(SchemeRecord {
-                name: definition.name,
+                site: definition.site,
                 binding,
                 quantified,
-                binder: nash_ast::NodeId::def(binder.unwrap_or(definition.name)),
+                binder: binder.unwrap_or(definition.site).node(),
                 parent: self.owners.last().copied(),
             });
         }
@@ -1571,7 +1584,7 @@ impl<'a> Solver<'a, '_> {
             let Some(scheme) = self
                 .schemes
                 .iter()
-                .find(|scheme| nash_ast::NodeId::def(scheme.name) == definition)
+                .find(|scheme| scheme.site.node() == definition)
             else {
                 self.recursive_uses.push(use_index);
                 continue;
@@ -1622,13 +1635,16 @@ impl<'a> Solver<'a, '_> {
                         args,
                         solution: None,
                         origin: Origin::Annotation {
-                            binder: nash_ast::NodeId::def(definition.name),
+                            binder: definition.site.node(),
                             index,
                         },
                     },
                 ));
             }
-            contexts.insert(definition.name.value, &*self.bump.alloc_slice_copy(&ids));
+            contexts.insert(
+                definition.site.name().value,
+                &*self.bump.alloc_slice_copy(&ids),
+            );
         }
         contexts
     }
@@ -1641,13 +1657,23 @@ impl<'a> Solver<'a, '_> {
         site: UseSite<'a>,
     ) -> Variable {
         let mut roots = vec![binding.variable];
+        if let Some(scheme) = self
+            .schemes
+            .iter()
+            .find(|scheme| Some(scheme.site.node()) == binding.definition)
+        {
+            // A destructured name instantiates its whole aggregate scheme,
+            // including quantifiers absent from this selected component.
+            roots.push(scheme.binding.variable);
+        }
+        let context_offset = roots.len();
         for id in binding.context {
             roots.extend_from_slice(&self.predicates.get(*id).args);
         }
         let (copies, pairs) =
             self.make_scheme_copies(uf, rank, &roots, binding.declared_quantifiers);
         let mut predicates = Vec::new();
-        let mut offset = 1;
+        let mut offset = context_offset;
         for (index, id) in binding.context.iter().enumerate() {
             let predicate = self.predicates.get(*id);
             let end = offset + predicate.args.len();
@@ -2369,12 +2395,12 @@ mod copy_tests {
         let local = solver
             .schemes
             .iter()
-            .find(|scheme| scheme.name.value == "local")
+            .find(|scheme| scheme.site.name().value == "local")
             .unwrap();
         let outer = solver
             .schemes
             .iter()
-            .find(|scheme| scheme.name.value == "outer")
+            .find(|scheme| scheme.site.name().value == "outer")
             .unwrap();
         assert_eq!(local.quantified.len(), 1);
         assert_eq!(outer.quantified.len(), 1);
@@ -2567,7 +2593,7 @@ mod copy_tests {
         let local = solver
             .schemes
             .iter()
-            .find(|scheme| scheme.name.value == "local")
+            .find(|scheme| scheme.site.name().value == "local")
             .unwrap();
         assert_ne!(
             local.binder, group_binder,

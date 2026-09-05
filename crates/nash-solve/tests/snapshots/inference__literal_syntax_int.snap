@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: render_annotations(&annotations)
+---
+fixed : int
+match : forall a. (FromInt a, Eq a) => a -> ()

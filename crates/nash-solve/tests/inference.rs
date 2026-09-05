@@ -10,12 +10,63 @@ use nash_constrain::UnionFind;
 use nash_constrain::error::Error;
 use nash_region::Located;
 
+fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can::Interface<'_>> {
+    let mut interfaces =
+        std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
+    let source = bump.alloc_str(indoc!(
+        "
+        module Literal exposing (..)
+        import Builtin exposing (..)
+        trait FromInt 'a where
+            fromInt : int -> 'a
+        trait FromString 'a where
+            fromString : string -> 'a
+        trait FromBytes 'a where
+            fromBytes : bytes -> 'a
+        impl FromInt int where
+            fromInt x = x
+        impl FromString string where
+            fromString x = x
+        impl FromBytes bytes where
+            fromBytes x = x
+    "
+    ));
+    let module = nash_parse::Parser::new(bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let can = nash_can::canonicalize(
+        bump,
+        Context {
+            package: Some(nash_ast::primitives::CORE),
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(bump, &mut uf, &can.module);
+    let (annotations, _) = nash_solve::run(bump, &mut uf, &constraint, &can.tables).unwrap();
+    interfaces.insert(
+        "Literal",
+        nash_can::from_module(bump, &can.module, &annotations),
+    );
+    interfaces
+}
+
 fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'a>>> {
     let src = bump.alloc_str(input);
     let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
     let module = parser.module().expect("expected successful parse");
-    let can_result = nash_can::canonicalize(bump, Context::default(), &module)
-        .expect("expected successful canonicalization");
+    let interfaces = literal_interfaces(bump);
+    let can_result = nash_can::canonicalize(
+        bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .expect("expected successful canonicalization");
 
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(bump, &mut uf, &can_result.module);
@@ -999,20 +1050,20 @@ fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
         else {
             panic!("each definition scope must have an evidence binder");
         };
-        assert!(std::ptr::eq(*binder, definitions[0].name));
+        assert!(std::ptr::eq(binder.name(), definitions[0].site.name()));
         for definition in *definitions {
             assert!(
                 original_names
                     .iter()
-                    .any(|name| std::ptr::eq(*name, definition.name))
+                    .any(|name| std::ptr::eq(*name, definition.site.name()))
             );
-            names.push(definition.name.value);
+            names.push(definition.site.name().value);
             assert!(
                 matches!(definition.typ, Type::FunN(..)),
                 "retain the full function type"
             );
         }
-        if binder.value == "f" || binder.value == "keep" {
+        if binder.name().value == "f" || binder.name().value == "keep" {
             assert_eq!(given.len(), 1);
             let Type::VarN(predicate_var) = given[0].args[0] else {
                 panic!("predicate variable")
@@ -1117,6 +1168,89 @@ fn string_literal() {
         greeting = "hello"
     "#
     );
+}
+
+#[test]
+fn literal_syntax_records_impls_and_pattern_givens() {
+    let bump = Bump::new();
+    let mut interfaces = literal_interfaces(&bump);
+    let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where eq : 'a -> 'a -> bool\n");
+    let eq_module = nash_parse::Parser::new(&bump, eq_source.as_bytes())
+        .module()
+        .unwrap();
+    let eq = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: Some(nash_ast::primitives::CORE),
+            interfaces: Some(&interfaces),
+        },
+        &eq_module,
+    )
+    .unwrap();
+    interfaces.insert(
+        "Eq",
+        nash_can::from_module(&bump, &eq.module, &Default::default()),
+    );
+    for (primitive, literal, trait_name) in [
+        ("int", "7", "FromInt"),
+        ("string", "\"nash\"", "FromString"),
+        ("bytes", "#\"00ff\"", "FromBytes"),
+    ] {
+        let input = bump.alloc_str(&format!("module Main exposing (..)\nimport Builtin exposing (..)\nfixed : {primitive}\nfixed = {literal}\nmatch value =\n    case value of\n        {literal} -> ()\n        _ -> ()\n"));
+        let parsed = nash_parse::Parser::new(&bump, input.as_bytes())
+            .module()
+            .unwrap();
+        let can = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
+        let (annotations, solved) =
+            nash_solve::run(&bump, &mut uf, &constraint, &can.tables).unwrap();
+        let mut decls = can.module.decls;
+        while let nash_ast::Decls::Declare { definition, next } = decls {
+            match definition {
+                nash_ast::Def::TypedDef { body, .. } => {
+                    let instance = &solved.instances[&nash_ast::NodeId::expr(body)];
+                    let [nash_ast::Evidence::Impl { impl_, .. }] = instance.evidence else {
+                        panic!("literal impl evidence")
+                    };
+                    assert_eq!(impl_.home.package, Some(nash_ast::primitives::CORE));
+                    assert_eq!(impl_.key.trait_.name, trait_name);
+                }
+                nash_ast::Def::Def { name, body, .. } => {
+                    let nash_ast::Expr::Case { branches, .. } = body.value else {
+                        panic!("literal pattern")
+                    };
+                    let instance =
+                        &solved.instances[&nash_ast::NodeId::pattern(branches[0].pattern)];
+                    assert_eq!(instance.evidence.len(), 2);
+                    let scheme = &solved.schemes[&nash_ast::NodeId::def(name)];
+                    for (evidence, expected) in instance.evidence.iter().zip([trait_name, "Eq"]) {
+                        let nash_ast::Evidence::Given { binder, index } = evidence else {
+                            panic!("pattern given")
+                        };
+                        assert_eq!(*binder, scheme.binder);
+                        assert_eq!(
+                            scheme.annotation.context[usize::from(*index)].trait_.name,
+                            expected
+                        );
+                    }
+                }
+            }
+            decls = next;
+        }
+        insta::assert_snapshot!(
+            format!("literal_syntax_{primitive}"),
+            render_annotations(&annotations)
+        );
+    }
 }
 
 #[test]
@@ -1266,6 +1400,82 @@ fn let_destructure() {
             in
             b
     "#
+    );
+}
+
+#[test]
+fn destructured_bindings_preserve_contexts_and_polymorphism() {
+    let bump = Bump::new();
+    let input = bump.alloc_str(indoc!(
+        r#"
+        module Main exposing (..)
+        main =
+            let
+                (identity, unused) = (\x -> x, \y -> y)
+            in
+            (identity (), identity (\x -> x))
+    "#
+    ));
+    let parsed = nash_parse::Parser::new(&bump, input.as_bytes())
+        .module()
+        .unwrap();
+    let can = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
+    let (polymorphic, solved) = nash_solve::run(&bump, &mut uf, &constraint, &can.tables)
+        .expect("destructured functions remain polymorphic");
+    assert!(polymorphic["main"].context.is_empty());
+    let nash_ast::Decls::Declare { definition, .. } = can.module.decls else {
+        panic!("main")
+    };
+    let nash_ast::Def::Def { body, .. } = definition else {
+        panic!("inferred main")
+    };
+    let nash_ast::Expr::LetDestruct { pattern, body, .. } = body.value else {
+        panic!("destructure")
+    };
+    let node = nash_ast::NodeId::pattern(pattern);
+    let scheme = &solved.schemes[&node];
+    assert_eq!(scheme.binder, node);
+    assert_eq!(
+        scheme.annotation.free_vars.len(),
+        2,
+        "both aggregate quantifiers are retained"
+    );
+    let nash_ast::Expr::Tuple { first, second, .. } = body.value else {
+        panic!("two uses")
+    };
+    for call in [first, second] {
+        let nash_ast::Expr::Call { function, .. } = call.value else {
+            panic!("identity call")
+        };
+        let instance = &solved.instances[&nash_ast::NodeId::expr(function)];
+        assert_eq!(
+            instance.type_args.len(),
+            2,
+            "even the unused component's quantifier is instantiated"
+        );
+        assert!(instance.evidence.is_empty());
+    }
+    let invalid = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        main =
+            let
+                (unused, value) = ((), 7)
+            in
+            value ()
+    "#
+        ),
+    )
+    .expect_err("using a destructured literal must preserve its FromInt requirement");
+    assert!(
+        invalid.iter().any(|error| matches!(error,
+            Error::MissingImpl { trait_, .. } if trait_.name == "FromInt"
+        )),
+        "{invalid:?}"
     );
 }
 
@@ -1473,8 +1683,8 @@ fn if_condition_must_be_bool() {
 }
 
 #[test]
-fn branch_mismatch() {
-    assert_inference_error_snapshot!(
+fn mixed_literal_branches_retain_both_traits() {
+    assert_inference_snapshot!(
         r#"
         module Main exposing (pick)
 
@@ -1522,7 +1732,7 @@ fn infinite_type() {
 }
 
 #[test]
-fn number_cannot_be_string() {
+fn string_literal_requires_an_impl_for_the_result_type() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (Msg(..), broken)
@@ -1547,7 +1757,8 @@ fn nested_operator_sections_apply() {
         .unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
     let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
-    let interfaces = std::collections::BTreeMap::from([("Operators", interface)]);
+    let mut interfaces = literal_interfaces(&bump);
+    interfaces.insert("Operators", interface);
     let input = indoc!(
         r#"
         module Main exposing (..)
@@ -1576,7 +1787,7 @@ fn nested_operator_sections_apply() {
     let (annotations, _) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
         .expect("nested sections infer");
     let rendered = render_annotations(&annotations);
-    assert!(rendered.contains("right : String"), "{rendered}");
+    assert!(rendered.contains("FromString a => a"), "{rendered}");
     assert!(rendered.contains("left : ()"), "{rendered}");
     insta::assert_snapshot!(rendered);
 }

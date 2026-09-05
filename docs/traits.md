@@ -372,7 +372,7 @@ pub struct SolvedTypes<'a> {
     /// Every use of a generalized name, method, operator, literal, or `<-`:
     /// the scheme's type variables and one evidence per context predicate.
     pub instances: HashMap<NodeId, Instance<'a>>,
-    /// Every definition, top-level or local, typed or inferred: its scheme.
+    /// Every named definition and generalized destructuring pattern: its scheme.
     pub schemes: HashMap<NodeId, Scheme<'a>>,
 }
 
@@ -392,6 +392,17 @@ Traits fill `instances` and `schemes`; the codegen plan fills `exprs` and
 `schemes`, never in an interface, so the driver retains every module's
 canonical AST and `SolvedTypes` in the build-wide arena (`SolvedModule`
 in [cli.md](cli.md)'s build pipeline) until codegen runs.
+
+A generalized let-destructuring owns one aggregate scheme keyed by
+`NodeId::pattern` of its original root pattern. Its type is the full RHS/pattern
+type, and its context and quantifier order are shared by all extracted names.
+A use of an extracted name instantiates the aggregate type, context and selected
+component together, then returns the component type. Its `Instance` contains
+all aggregate type arguments, including those absent from that component, and
+all aggregate evidence slots. Codegen associates that lexical name with its
+root pattern scheme and projection; evidence inside the RHS refers to the
+pattern binder. Tuple, record and alias patterns use the same rule. This
+preserves polymorphic destructuring without losing qualified constraints.
 
 ### Resolving outside the solver
 

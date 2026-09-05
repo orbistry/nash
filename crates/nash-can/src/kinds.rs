@@ -1145,6 +1145,7 @@ impl<'a> AnnotationChecker<'_, 'a> {
             | Expr::VarConstructor { .. }
             | Expr::VarOperator { .. }
             | Expr::Str(_)
+            | Expr::Bytes(_)
             | Expr::Int(_)
             | Expr::Unit
             | Expr::Accessor(_) => {}

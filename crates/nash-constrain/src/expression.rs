@@ -60,26 +60,27 @@ pub fn constrain<'a>(
             symbol, annotation, ..
         } => Constraint::Foreign(region, node, symbol, annotation, expected),
 
-        CanExpr::Str(_) => Constraint::Equal(
+        CanExpr::Str(_) => Constraint::Foreign(
             region,
-            Category::String,
-            bump.alloc(type_::string()),
+            node,
+            "fromString",
+            type_::literal_annotation(bump, &[type_::literal_trait("FromString")]),
             expected,
         ),
-
-        CanExpr::Int(_) => {
-            let var = mk_flex_number(uf);
-            exists(
-                bump,
-                bump.alloc_slice_copy(&[var]),
-                Constraint::Equal(
-                    region,
-                    Category::Number,
-                    bump.alloc(Type::VarN(var)),
-                    expected,
-                ),
-            )
-        }
+        CanExpr::Bytes(_) => Constraint::Foreign(
+            region,
+            node,
+            "fromBytes",
+            type_::literal_annotation(bump, &[type_::literal_trait("FromBytes")]),
+            expected,
+        ),
+        CanExpr::Int(_) => Constraint::Foreign(
+            region,
+            node,
+            "fromInt",
+            type_::literal_annotation(bump, &[type_::literal_trait("FromInt")]),
+            expected,
+        ),
 
         CanExpr::List(elements) => constrain_list(bump, uf, rtv, region, elements, expected),
 
@@ -882,11 +883,19 @@ fn constrain_destruct<'a>(
     cons.reverse();
     cons.push(expr_con);
 
+    let binder = type_::Binder::Pattern {
+        node: NodeId::pattern(pattern_ast),
+        name: bump.alloc(Located::at(region, "<destructure>")),
+    };
     Constraint::Let {
         declarations: &[],
         given: &[],
-        binder: None,
-        definitions: &[],
+        binder: Some(binder),
+        definitions: bump.alloc_slice_copy(&[Definition {
+            site: binder,
+            typ: pattern_type,
+            context: None,
+        }]),
         rigid_vars: &[],
         flex_vars: bump.alloc_slice_fill_iter(flex_vars),
         header: header_slice(bump, state.headers),
@@ -941,9 +950,9 @@ fn constrain_definition<'a>(
             Constraint::Let {
                 declarations: &[],
                 given: &[],
-                binder: Some(name),
+                binder: Some(type_::Binder::Named(name)),
                 definitions: bump.alloc_slice_copy(&[Definition {
-                    name,
+                    site: type_::Binder::Named(name),
                     typ: tipe,
                     context: None,
                 }]),
@@ -998,9 +1007,9 @@ fn constrain_definition<'a>(
             Constraint::Let {
                 declarations: &[],
                 given,
-                binder: Some(name),
+                binder: Some(type_::Binder::Named(name)),
                 definitions: bump.alloc_slice_copy(&[Definition {
-                    name,
+                    site: type_::Binder::Named(name),
                     typ: tipe,
                     context: Some(given),
                 }]),
@@ -1133,7 +1142,7 @@ pub fn constrain_recursive_defs<'a>(
                 flex_info.vars.extend(new_flex_vars);
                 flex_info.cons.push(def_con);
                 flex_info.definitions.push(Definition {
-                    name,
+                    site: type_::Binder::Named(name),
                     typ: tipe,
                     context: None,
                 });
@@ -1192,16 +1201,16 @@ pub fn constrain_recursive_defs<'a>(
                 vars.append(&mut rigid_info.vars);
                 rigid_info.vars = vars;
                 rigid_info.definitions.push(Definition {
-                    name,
+                    site: type_::Binder::Named(name),
                     typ: tipe,
                     context: Some(given),
                 });
                 rigid_info.cons.push(Constraint::Let {
                     declarations: &[],
                     given,
-                    binder: Some(name),
+                    binder: Some(type_::Binder::Named(name)),
                     definitions: bump.alloc_slice_copy(&[Definition {
-                        name,
+                        site: type_::Binder::Named(name),
                         typ: tipe,
                         context: Some(given),
                     }]),
@@ -1236,7 +1245,7 @@ pub fn constrain_recursive_defs<'a>(
         body_con: bump.alloc(Constraint::Let {
             declarations: &[],
             given: &[],
-            binder: flex_definitions.first().map(|def| def.name),
+            binder: flex_definitions.first().map(|def| def.site),
             definitions: flex_definitions,
             rigid_vars: &[],
             flex_vars: bump.alloc_slice_fill_iter(flex_info.vars),
@@ -1363,6 +1372,77 @@ fn constrain_typed_args<'a>(
 mod node_tests {
     use super::*;
     use nash_ast::{Annotation, ModuleName, QualifiedName};
+
+    #[test]
+    fn literals_and_patterns_keep_original_nodes_and_ordered_predicates() {
+        let bump = Bump::new();
+        for (expr, pattern, trait_name) in [
+            (CanExpr::Int(7), nash_ast::Pattern::Int(7), "FromInt"),
+            (
+                CanExpr::Bytes(&[0, 255]),
+                nash_ast::Pattern::Bytes(&[0, 255]),
+                "FromBytes",
+            ),
+            (
+                CanExpr::Str("nash"),
+                nash_ast::Pattern::Str("nash"),
+                "FromString",
+            ),
+        ] {
+            let expr = bump.alloc(Located::at_zero(expr));
+            let pattern = bump.alloc(Located::at_zero(pattern));
+            let mut uf = UnionFind::new();
+            let expected = bump.alloc(Type::VarN(mk_flex_var(&mut uf)));
+            let constraint = constrain(
+                &bump,
+                &mut uf,
+                &Rtv::new(),
+                expr,
+                Expected::NoExpectation(expected),
+            );
+            let Constraint::Foreign(_, node, _, annotation, _) = constraint else {
+                panic!("literal scheme")
+            };
+            assert_eq!(node, NodeId::expr(expr));
+            assert_eq!(annotation.context.len(), 1);
+            assert_eq!(annotation.context[0].trait_.name, trait_name);
+            assert_eq!(
+                annotation.context[0].trait_.home.package,
+                Some(nash_ast::primitives::CORE)
+            );
+            let state = pattern::add(
+                &bump,
+                &mut uf,
+                pattern,
+                PExpected::NoExpectation(expected),
+                pattern::empty_state(),
+            );
+            let annotations: Vec<_> = state
+                .rev_cons
+                .iter()
+                .filter_map(|c| match c {
+                    Constraint::Foreign(_, node, _, annotation, _) => {
+                        assert_eq!(*node, NodeId::pattern(pattern));
+                        Some(annotation)
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(annotations.len(), 1, "one evidence instance per pattern");
+            assert_eq!(
+                annotations[0]
+                    .context
+                    .iter()
+                    .map(|p| p.trait_.name)
+                    .collect::<Vec<_>>(),
+                [trait_name, "Eq"]
+            );
+            assert!(std::ptr::eq(
+                annotations[0].context[0].args[0],
+                annotations[0].context[1].args[0]
+            ));
+        }
+    }
 
     fn uses(constraint: &Constraint<'_>, nodes: &mut Vec<NodeId>) {
         match constraint {

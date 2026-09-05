@@ -81,7 +81,7 @@ pub struct SolvedTypes<'a> {
     /// Every `VarLocal`-to-a-generalized-def, `VarTopLevel`, `VarForeign`,
     /// `VarOperator`, `VarMethod`, `Binop`, literal, and `<-` node.
     pub instances: HashMap<NodeId, Instance<'a>>,               // this plan fills
-    /// Every definition (top-level or local, typed or inferred): its scheme.
+    /// Every named definition and generalized destructuring pattern: its scheme.
     pub schemes: HashMap<NodeId, Scheme<'a>>,                   // this plan fills
 }
 
@@ -101,6 +101,17 @@ pub struct Scheme<'a> {
     pub binder: NodeId,
 }
 ```
+
+A generalized let-destructuring owns one aggregate scheme keyed by
+`NodeId::pattern` of its original root pattern. Its type is the full RHS/pattern
+type, and its context and quantifier order are shared by all extracted names.
+A use of an extracted name instantiates the aggregate type, context and selected
+component together, then returns the component type. Its `Instance` contains
+all aggregate type arguments, including those absent from that component, and
+all aggregate evidence slots. Codegen associates that lexical name with its
+root pattern scheme and projection; evidence inside the RHS refers to the
+pattern binder. Tuple, record and alias patterns use the same rule. This
+preserves polymorphic destructuring without losing qualified constraints.
 
 Plan 07's `ImplRef { trait_name, impl_home, head, supers }` becomes
 `nash_ast::ImplRef { home, key }` plus the `Evidence` tree from chunk 1:
@@ -964,8 +975,8 @@ pub enum Constraint<'a> {
         /// The annotation's context over `rigid_vars`; assumed while solving `header_con`.
         given: &'a [Pred<'a>],
         /// The definition (or first definition of a recursive group) this
-        /// Let generalizes. `None` for `exists`, lambdas, patterns.
-        binder: Option<&'a Located<&'a str>>,
+        /// Let generalizes. `None` for `exists` and lambda argument scopes.
+        binder: Option<Binder<'a>>,
         /// Original name nodes and full types for every generalized member.
         /// Lexical headers cannot supply these identities and are empty for methods.
         definitions: &'a [Definition<'a>],
@@ -982,11 +993,13 @@ pub enum Constraint<'a> {
 - `constrain_recursive_defs` typed inner Let (line 1076): `given` from that def's context, `binder: Some(name)`.
 - `constrain_recursive_defs` outer flex Let (line 1100): `binder: Some(first untyped def's name)` (or `None` when there are none).
 
-`Definition { name: &'a Located<&'a str>, typ: &'a Type<'a> }` keeps the
-original canonical name node and full inference type. Each ordinary definition
+`Definition { site: Binder<'a>, typ: &'a Type<'a>, context: Option<&'a [Pred<'a>]> }`
+keeps the original scheme identity and full inference type. `Binder::Named`
+uses the canonical definition name; `Binder::Pattern` uses the original
+destructuring pattern NodeId and a separate located name for diagnostics. Each ordinary definition
 and method gets one entry; an untyped recursive group gets one per member in
 group order. Typed recursive members retain their entry on the inner Let that
-checks their annotation context. Pattern and scope-only Lets have no entries.
+checks their annotation context. A generalized destructuring Let gets one aggregate entry and pattern binder;\nlambda argument and existential scopes have no entries.
 The solver must use these entries for `SolvedTypes::schemes`, rather than
 reconstructing name nodes from lexical headers or recording only the binder.
 
@@ -1944,9 +1957,18 @@ outer captures. Diagnostics identify the innermost definition and deduplicate
 equal requirements. Defaulting now recognizes the three exact core literal
 traits and retries resolution with the same givens and limits. Real interfaces
 test explicit literal-method calls, including chained defaults and duplicate
-requirements; traits from another package remain ambiguous. Literal expression
-and pattern constraints still use the old path. Their conversion, core source
-modules and SuperType removal remain.
+requirements; traits from another package remain ambiguous. Literal expressions
+and patterns now produce trait predicates, including canonical bytes nodes.
+Focused acceptance checks verify concrete literal impl evidence and ordered
+FromX/Eq pattern givens at original nodes. Generalized let-destructuring now owns an aggregate scheme at the original
+pattern node. Uses copy its whole type and context, preserving polymorphism
+and quantifiers absent from the selected component. Regression tests reject
+a destructured literal used as a function and verify complete use-site type
+arguments. Workspace tests, strict Clippy and snapshot hygiene pass. A real
+three-module CLI workspace checks all three literal syntaxes, a bytes pattern
+and destructuring; applying a destructured integer as a function reports
+MissingImpl at the extracted-name use. Inference snapshots reflect literal traits.
+Core source modules and SuperType removal also remain.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,

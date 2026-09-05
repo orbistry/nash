@@ -181,6 +181,7 @@ pub enum PCategory<'a> {
     List,
     Ctor(&'a str),
     Int,
+    Bytes,
     Str,
     Bool,
 }

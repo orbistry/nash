@@ -1111,7 +1111,7 @@ fn collect_from_expr<'a>(
 ) {
     use nash_ast::Expr::*;
     match expr {
-        VarLocal(_) | Str(_) | Int(_) | Accessor(_) | Unit => {}
+        VarLocal(_) | Str(_) | Bytes(_) | Int(_) | Accessor(_) | Unit => {}
         VarTopLevel(q) => add_if_foreign(home, q.home, used),
         // Only the reference counts as a use: the annotation is data from
         // the origin module's solver, not something written here.
@@ -1231,7 +1231,7 @@ fn collect_from_pattern<'a>(
 ) {
     use nash_ast::Pattern::*;
     match pat {
-        Anything | Var(_) | Str(_) | Int(_) | Unit | Record(_) => {}
+        Anything | Var(_) | Str(_) | Bytes(_) | Int(_) | Unit | Record(_) => {}
         // `True`/`False` patterns only ever come from the module named
         // Basics (see `environment::Ctor::Bool`), so count it as used.
         Bool { .. } => {
@@ -4281,16 +4281,6 @@ mod tests {
         assert_module_error_snapshot!(
             "module Main exposing (..)\n\nid : Eq 'a => 'a -> 'a\nid x = x\n"
         );
-    }
-
-    #[test]
-    fn bytes_expression_unsupported() {
-        assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = #\"ff00\"\n");
-    }
-
-    #[test]
-    fn bytes_pattern_unsupported() {
-        assert_module_error_snapshot!("module Main exposing (..)\n\nf #\"00\" = 1\n");
     }
 
     #[test]
