@@ -6,7 +6,8 @@
 
 use bumpalo::Bump;
 use nash_ast::{
-    CaseBranch, Def as CanDef, Expr as CanExpr, FieldUpdate, FieldValue, IfBranch, TypedPattern,
+    CaseBranch, Def as CanDef, Expr as CanExpr, FieldUpdate, FieldValue, IfBranch, NodeId,
+    TypedPattern,
 };
 use nash_region::{Located, Region};
 
@@ -30,29 +31,32 @@ pub fn constrain<'a>(
     expected: Exp<'a>,
 ) -> Constraint<'a> {
     let region = expr.region;
+    let node = NodeId::expr(expr);
     match &expr.value {
-        CanExpr::VarLocal(name) => Constraint::Local(region, name, expected),
+        CanExpr::VarLocal(name) => Constraint::Local(region, node, name, expected),
 
-        CanExpr::VarTopLevel(reference) => Constraint::Local(region, reference.name, expected),
+        CanExpr::VarTopLevel(reference) => {
+            Constraint::Local(region, node, reference.name, expected)
+        }
 
         CanExpr::VarForeign {
             reference,
             annotation,
-        } => Constraint::Foreign(region, reference.name, annotation, expected),
+        } => Constraint::Foreign(region, node, reference.name, annotation, expected),
 
         CanExpr::VarMethod {
             method, annotation, ..
-        } => Constraint::Foreign(region, method, annotation, expected),
+        } => Constraint::Foreign(region, node, method, annotation, expected),
 
         CanExpr::VarConstructor {
             reference,
             annotation,
             ..
-        } => Constraint::Foreign(region, reference.name, annotation, expected),
+        } => Constraint::Foreign(region, node, reference.name, annotation, expected),
 
         CanExpr::VarOperator {
             symbol, annotation, ..
-        } => Constraint::Foreign(region, symbol, annotation, expected),
+        } => Constraint::Foreign(region, node, symbol, annotation, expected),
 
         CanExpr::Str(_) => Constraint::Equal(
             region,
@@ -102,7 +106,7 @@ pub fn constrain<'a>(
             right,
             ..
         } => constrain_binop(
-            bump, uf, rtv, region, symbol, annotation, left, right, expected,
+            bump, uf, rtv, region, node, symbol, annotation, left, right, expected,
         ),
 
         CanExpr::Lambda { parameters, body } => {
@@ -400,6 +404,7 @@ fn constrain_binop<'a>(
     uf: &mut UnionFind<'a>,
     rtv: &Rtv<'a>,
     region: Region,
+    node: NodeId,
     op: &'a str,
     annotation: &'a nash_ast::Annotation<'a>,
     left_expr: &Located<CanExpr<'a>>,
@@ -417,7 +422,13 @@ fn constrain_binop<'a>(
         bump.alloc(Type::FunN(right_type, answer_type)),
     ));
 
-    let op_con = Constraint::Foreign(region, op, annotation, Expected::NoExpectation(binop_type));
+    let op_con = Constraint::Foreign(
+        region,
+        node,
+        op,
+        annotation,
+        Expected::NoExpectation(binop_type),
+    );
 
     let left_con = constrain(
         bump,
@@ -1249,5 +1260,88 @@ fn constrain_typed_args<'a>(
         tipe,
         result_type,
         state,
+    }
+}
+
+#[cfg(test)]
+mod node_tests {
+    use super::*;
+    use nash_ast::{Annotation, ModuleName, QualifiedName};
+
+    fn uses(constraint: &Constraint<'_>, nodes: &mut Vec<NodeId>) {
+        match constraint {
+            Constraint::Local(_, node, ..) | Constraint::Foreign(_, node, ..) => nodes.push(*node),
+            Constraint::And(constraints) => {
+                for constraint in *constraints {
+                    uses(constraint, nodes);
+                }
+            }
+            Constraint::Let {
+                header_con,
+                body_con,
+                ..
+            } => {
+                uses(header_con, nodes);
+                uses(body_con, nodes);
+            }
+            _ => {}
+        }
+    }
+
+    #[test]
+    fn operator_and_method_uses_keep_distinct_node_identity_at_the_same_region() {
+        let bump = Bump::new();
+        let region = Region::zero();
+        let reference = QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Combine",
+        };
+        let annotation = bump.alloc(Annotation {
+            context: &[],
+            free_vars: &[],
+            typ: bump.alloc(Located::at(region, nash_ast::Type::Unit)),
+        });
+        let local = bump.alloc(Located::at(region, CanExpr::VarLocal("x")));
+        let method = bump.alloc(Located::at(
+            region,
+            CanExpr::VarMethod {
+                trait_: reference,
+                method: "combine",
+                annotation,
+            },
+        ));
+        let operator = bump.alloc(Located::at(
+            region,
+            CanExpr::Binop {
+                symbol: "+",
+                reference,
+                annotation,
+                left: local,
+                right: method,
+            },
+        ));
+        let mut uf = UnionFind::new();
+        let constraint = constrain(
+            &bump,
+            &mut uf,
+            &Rtv::new(),
+            operator,
+            Expected::NoExpectation(bump.alloc(Type::UnitN)),
+        );
+        let mut nodes = Vec::new();
+        uses(&constraint, &mut nodes);
+        assert_eq!(nodes.len(), 3);
+        for expression in [operator as &Located<CanExpr<'_>>, local, method] {
+            assert_eq!(
+                nodes
+                    .iter()
+                    .filter(|node| **node == NodeId::expr(expression))
+                    .count(),
+                1
+            );
+        }
     }
 }

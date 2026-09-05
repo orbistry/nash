@@ -897,8 +897,11 @@ and imported impls, and all listed errors have snapshots.
 Status: in progress. Default and impl method bodies now pass through the
 ordinary typed-definition constraints, with no module value header. Inference
 snapshots cover invalid default and specialized impl return types, and module
-helper visibility without exporting method bindings. Predicate metadata,
-definition identities, and given-context handling remain to be implemented.
+helper visibility without exporting method bindings. Local and foreign
+constraints carry expression identities, including the enclosing Binop node
+for operators; a same-region regression checks that these remain distinct.
+The solver does not yet record instances. Predicate metadata, definition
+identities, and given-context handling remain to be implemented.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/module.rs`, `crates/nash-constrain/src/pattern.rs`,

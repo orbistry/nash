@@ -118,7 +118,7 @@ impl<'a> Solver<'a> {
                 }
             }
 
-            Constraint::Local(region, name, expectation) => {
+            Constraint::Local(region, _node, name, expectation) => {
                 let local_var = *env
                     .get(name)
                     .expect("constraint generator only references bound locals");
@@ -144,7 +144,7 @@ impl<'a> Solver<'a> {
                 }
             }
 
-            Constraint::Foreign(region, name, annotation, expectation) => {
+            Constraint::Foreign(region, _node, name, annotation, expectation) => {
                 let actual =
                     self.src_type_to_variable(uf, rank, annotation.free_vars, annotation.typ);
                 let expected = self.expected_to_variable(uf, rank, expectation);

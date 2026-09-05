@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use nash_ast::{Annotation, ModuleName};
+use nash_ast::{Annotation, ModuleName, NodeId};
 use nash_region::{Located, Region};
 
 use crate::error::{Category, Expected, PCategory, PExpected};
@@ -26,9 +26,10 @@ pub enum Constraint<'a> {
         &'a Type<'a>,
         Expected<'a, &'a Type<'a>>,
     ),
-    Local(Region, &'a str, Expected<'a, &'a Type<'a>>),
+    Local(Region, NodeId, &'a str, Expected<'a, &'a Type<'a>>),
     Foreign(
         Region,
+        NodeId,
         &'a str,
         &'a Annotation<'a>,
         Expected<'a, &'a Type<'a>>,
