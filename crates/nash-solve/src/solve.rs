@@ -15,6 +15,7 @@ use nash_region::Located;
 
 use crate::annotation::{to_annotation, to_error_type};
 use crate::occurs;
+use crate::preds::{Predicate, Store, UseSite};
 use crate::unify;
 
 // RUN SOLVER
@@ -28,6 +29,8 @@ pub fn run<'a>(
         bump,
         pools: vec![Vec::new(); 8],
         copied: Vec::new(),
+        predicates: Store::default(),
+        wanted: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -77,6 +80,8 @@ struct Solver<'a> {
     bump: &'a Bump,
     pools: Vec<Vec<Variable>>,
     copied: Vec<(Variable, Variable)>,
+    predicates: Store<'a>,
+    wanted: Vec<(usize, type_::PredId)>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -146,9 +151,17 @@ impl<'a> Solver<'a> {
                 }
             }
 
-            Constraint::Foreign(region, _node, name, annotation, expectation) => {
-                let actual =
-                    self.src_type_to_variable(uf, rank, annotation.free_vars, annotation.typ);
+            Constraint::Foreign(region, node, name, annotation, expectation) => {
+                let actual = self.src_type_to_variable(
+                    uf,
+                    rank,
+                    UseSite {
+                        node: *node,
+                        region: *region,
+                        name,
+                    },
+                    annotation,
+                );
                 let expected = self.expected_to_variable(uf, rank, expectation);
                 match unify::unify(self.bump, uf, actual, expected) {
                     unify::Answer::Ok(vars) => {
@@ -539,11 +552,11 @@ impl<'a> Solver<'a> {
         &mut self,
         uf: &mut UnionFind<'a>,
         rank: usize,
-        free_vars: &[&'a str],
-        src_type: &Located<CanType<'a>>,
+        site: UseSite<'a>,
+        annotation: &nash_ast::Annotation<'a>,
     ) -> Variable {
         // Elm's freeVars is a `Map Name ()`, so creation is name-sorted.
-        let mut sorted_names: Vec<&'a str> = free_vars.to_vec();
+        let mut sorted_names: Vec<&'a str> = annotation.free_vars.to_vec();
         sorted_names.sort_unstable();
 
         let flex_vars: BTreeMap<&'a str, Variable> = sorted_names
@@ -565,7 +578,25 @@ impl<'a> Solver<'a> {
             .collect();
         self.pools[rank].extend(flex_vars.values().copied());
 
-        self.src_type_to_var(uf, rank, &flex_vars, src_type)
+        let typ = self.src_type_to_var(uf, rank, &flex_vars, annotation.typ);
+        for (index, predicate) in annotation.context.iter().enumerate() {
+            let args = predicate
+                .args
+                .iter()
+                .map(|arg| self.src_type_to_var(uf, rank, &flex_vars, arg))
+                .collect();
+            let id = self.predicates.push(
+                uf,
+                Predicate {
+                    trait_: predicate.trait_,
+                    args,
+                    site,
+                    index,
+                },
+            );
+            self.wanted.push((rank, id));
+        }
+        typ
     }
 
     fn src_type_to_var(
@@ -985,12 +1016,77 @@ mod copy_tests {
     use nash_constrain::type_::{PredId, make_descriptor};
 
     #[test]
+    fn foreign_context_uses_the_same_fresh_variables_as_its_type() {
+        use nash_ast::{Annotation, Expr, ModuleName, NodeId, Pred, QualifiedName};
+        let bump = Bump::new();
+        let mut solver = Solver {
+            bump: &bump,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            conversion_errors: Vec::new(),
+        };
+        let mut uf = UnionFind::new();
+        let a = bump.alloc(Located::at_zero(CanType::Var("a")));
+        let trait_ = QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Keep",
+        };
+        let annotation = Annotation {
+            free_vars: &["a"],
+            context: bump.alloc_slice_fill_iter([Pred {
+                trait_,
+                args: bump.alloc_slice_copy(&[&*a, &*a]),
+            }]),
+            typ: bump.alloc(Located::at_zero(CanType::Lambda { from: a, to: a })),
+        };
+        let sites = [
+            Located::at_zero(Expr::VarLocal("first")),
+            Located::at_zero(Expr::VarLocal("second")),
+        ];
+        let mut vars = Vec::new();
+        for site in &sites {
+            let site = UseSite {
+                node: NodeId::expr(site),
+                region: site.region,
+                name: "keep",
+            };
+            let typ = solver.src_type_to_variable(&mut uf, 2, site, &annotation);
+            let Content::Structure(FlatType::Fun1(arg, result)) = uf.get(typ).content else {
+                panic!("function type")
+            };
+            assert_eq!(arg, result);
+            let (rank, id) = *solver.wanted.last().unwrap();
+            let predicate = solver.predicates.get(id);
+            assert_eq!(rank, 2);
+            assert_eq!(predicate.trait_, trait_);
+            assert_eq!(predicate.args, [arg, arg]);
+            assert_eq!(predicate.site.node, site.node);
+            assert_eq!(predicate.index, 0);
+            assert_eq!(
+                uf.get(arg).preds,
+                [id],
+                "repeated arguments attach the ID once"
+            );
+            vars.push(arg);
+        }
+        assert_eq!(solver.wanted.len(), 2);
+        assert!(!uf.equivalent(vars[0], vars[1]));
+    }
+
+    #[test]
     fn scheme_roots_share_copies_but_separate_uses_do_not() {
         let bump = Bump::new();
         let mut solver = Solver {
             bump: &bump,
             pools: vec![Vec::new(); 8],
             copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();

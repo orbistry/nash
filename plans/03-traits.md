@@ -1169,8 +1169,12 @@ snapshot for headed and context-only arguments with a reserved variable name.
 Multi-root copying shares a copy map for all roots of one instantiation and
 restores all touched originals directly. Its regression covers repeated uses,
 generalized rigid variables, context-only roots, and retained outer variables.
-Wanted creation, scheme ownership, predicate copying, generalization, and the
-resulting solver API are not implemented yet. Do not mark this chunk complete
+Foreign and method annotation instantiation now creates wanted predicates
+with shared type variables, original use identity, context position, and rank.
+The predicate store attaches each ID once per argument equivalence class.
+The queue is not yet consumed by generalization or resolution. Local scheme
+ownership, predicate copying, generalization, and the resulting solver API
+are not implemented yet. Do not mark this chunk complete
 from the conversion and variable-copying tests alone.
 
 Code:
