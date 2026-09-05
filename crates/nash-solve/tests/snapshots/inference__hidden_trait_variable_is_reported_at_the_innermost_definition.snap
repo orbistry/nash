@@ -1,0 +1,38 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\nouter x =\n    let\n        hidden = discard (create ())\n    in\n        (x, hidden)\n"
+---
+[
+    AmbiguousType {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 9,
+            },
+            end: Position {
+                line: 7,
+                column: 15,
+            },
+        },
+        name: "hidden",
+        variable: FlexVar(
+            "a",
+        ),
+        predicates: [
+            AmbiguousPredicate {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Round",
+                },
+                args: [
+                    FlexVar(
+                        "a",
+                    ),
+                ],
+            },
+        ],
+    },
+]

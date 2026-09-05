@@ -891,14 +891,17 @@ impl<'a> Solver<'a, '_> {
             } => {
                 let wanted_start = self.wanted.len();
                 let annotated = definitions.iter().any(|def| def.context.is_some());
-                if rigid_vars.is_empty() && matches!(body_con, Constraint::True) {
+                if definitions.is_empty()
+                    && rigid_vars.is_empty()
+                    && matches!(body_con, Constraint::True)
+                {
                     self.introduce(uf, rank, flex_vars);
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
                     self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
                     state1
-                } else if rigid_vars.is_empty() && flex_vars.is_empty() {
+                } else if definitions.is_empty() && rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
@@ -987,6 +990,18 @@ impl<'a> Solver<'a, '_> {
                         }
                     }
 
+                    if state1.errors.is_empty()
+                        && self.conversion_errors.is_empty()
+                        && let Some(binder) = binder
+                    {
+                        state1.errors.extend(self.check_ambiguity(
+                            uf,
+                            rank,
+                            wanted_start,
+                            definitions,
+                            binder,
+                        ));
+                    }
                     let context = if !definitions.is_empty()
                         && definitions.iter().all(|def| def.context.is_none())
                     {
@@ -1490,37 +1505,10 @@ impl<'a> Solver<'a, '_> {
             for id in binding.context {
                 pending.extend(&self.predicates.get(*id).args);
             }
-            let mut seen = BTreeSet::new();
-            let mut quantified = Vec::new();
-            while let Some(var) = pending.pop() {
-                let var = uf.find(var);
-                if !seen.insert(var) {
-                    continue;
-                }
-                let desc = uf.get(var);
-                match &desc.content {
-                    Content::FlexVar(_)
-                    | Content::RigidVar(_)
-                    | Content::FlexSuper(..)
-                    | Content::RigidSuper(..)
-                        if desc.rank == NO_RANK =>
-                    {
-                        quantified.push(var)
-                    }
-                    Content::Structure(FlatType::App1(_, _, args)) => pending.extend(args),
-                    Content::Structure(FlatType::Fun1(a, b)) => pending.extend([a, b]),
-                    Content::Structure(FlatType::Tuple1(a, b, c)) => {
-                        pending.extend([a, b]);
-                        pending.extend(c);
-                    }
-                    Content::Structure(FlatType::Record1(fields, ext)) => {
-                        pending.extend(fields.values());
-                        pending.push(*ext);
-                    }
-                    Content::Alias { args, .. } => pending.extend(args.iter().map(|(_, var)| var)),
-                    _ => {}
-                }
-            }
+            let quantified = Self::type_variables(uf, pending)
+                .into_iter()
+                .filter(|var| uf.get(*var).rank == NO_RANK)
+                .collect();
             self.schemes.push(SchemeRecord {
                 name: definition.name,
                 binding,
@@ -1647,6 +1635,114 @@ impl<'a> Solver<'a, '_> {
         copies[0]
     }
 
+    fn check_ambiguity(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        start: usize,
+        definitions: &[type_::Definition<'a>],
+        binder: &'a Located<&'a str>,
+    ) -> Vec<Error<'a>> {
+        let roots: Vec<_> = definitions
+            .iter()
+            .map(|def| self.type_to_variable(uf, rank, def.typ))
+            .collect();
+        let reachable = Self::type_variables(uf, roots);
+        let mut ambiguous: BTreeMap<_, Vec<_>> = BTreeMap::new();
+        for (_, id) in &self.wanted[start..] {
+            let variables = Self::type_variables(uf, self.predicates.get(*id).args.clone());
+            for var in variables {
+                if uf.get(var).rank == NO_RANK && !reachable.contains(&var) {
+                    ambiguous.entry(var).or_default().push(*id);
+                }
+            }
+        }
+        if !ambiguous.is_empty() {
+            let mut roots: Vec<_> = reachable.iter().copied().collect();
+            for (var, ids) in &ambiguous {
+                roots.push(*var);
+                for id in ids {
+                    roots.extend(&self.predicates.get(*id).args);
+                }
+            }
+            crate::annotation::prepare_scope(self.bump, uf, &roots);
+        }
+        let mut errors = Vec::new();
+        let mut rejected = BTreeSet::new();
+        for (var, ids) in ambiguous {
+            let mut distinct = Vec::new();
+            for id in &ids {
+                let pred = self.predicates.get(*id);
+                if !distinct.iter().any(|other| {
+                    let other = self.predicates.get(*other);
+                    pred.trait_ == other.trait_
+                        && crate::preds::same_args(uf, &pred.args, &other.args)
+                }) {
+                    distinct.push(*id);
+                }
+            }
+            let predicates: Vec<_> = distinct
+                .iter()
+                .map(|id| {
+                    let pred = self.predicates.get(*id);
+                    let args: Vec<_> = pred
+                        .args
+                        .iter()
+                        .map(|arg| to_error_type(self.bump, uf, *arg))
+                        .collect();
+                    nash_constrain::error::AmbiguousPredicate {
+                        trait_: pred.trait_,
+                        args: self.bump.alloc_slice_copy(&args),
+                    }
+                })
+                .collect();
+            errors.push(Error::AmbiguousType {
+                region: binder.region,
+                name: binder.value,
+                variable: to_error_type(self.bump, uf, var),
+                predicates: self.bump.alloc_slice_fill_iter(predicates),
+            });
+            rejected.extend(ids);
+        }
+        for id in &rejected {
+            self.predicates.detach(uf, *id);
+        }
+        self.wanted.retain(|(_, id)| !rejected.contains(id));
+        errors
+    }
+
+    fn type_variables(uf: &mut UnionFind<'a>, mut pending: Vec<Variable>) -> BTreeSet<Variable> {
+        let mut seen = BTreeSet::new();
+        let mut variables = BTreeSet::new();
+        while let Some(var) = pending.pop() {
+            let var = uf.find(var);
+            if !seen.insert(var) {
+                continue;
+            }
+            match &uf.get(var).content {
+                Content::FlexVar(_)
+                | Content::RigidVar(_)
+                | Content::FlexSuper(..)
+                | Content::RigidSuper(..) => {
+                    variables.insert(var);
+                }
+                Content::Structure(FlatType::App1(_, _, args)) => pending.extend(args),
+                Content::Structure(FlatType::Fun1(a, b)) => pending.extend([a, b]),
+                Content::Structure(FlatType::Tuple1(a, b, c)) => {
+                    pending.extend([a, b]);
+                    pending.extend(c);
+                }
+                Content::Structure(FlatType::Record1(fields, ext)) => {
+                    pending.extend(fields.values());
+                    pending.push(*ext);
+                }
+                Content::Alias { args, .. } => pending.extend(args.iter().map(|(_, var)| var)),
+                _ => {}
+            }
+        }
+        variables
+    }
+
     fn retain_wanted(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -1657,38 +1753,9 @@ impl<'a> Solver<'a, '_> {
         let pending = self.wanted.split_off(start);
         let mut retained = Vec::new();
         for (_, id) in pending {
-            let mut seen = BTreeSet::new();
-            let mut stack = self.predicates.get(id).args.clone();
-            let mut generalized = false;
-            let mut outer = false;
-            while let Some(var) = stack.pop() {
-                if !seen.insert(uf.find(var)) {
-                    continue;
-                }
-                let desc = uf.get(var);
-                match &desc.content {
-                    Content::FlexVar(_)
-                    | Content::RigidVar(_)
-                    | Content::FlexSuper(..)
-                    | Content::RigidSuper(..) => {
-                        generalized |= desc.rank == NO_RANK;
-                        outer |= desc.rank != NO_RANK;
-                    }
-                    Content::Structure(FlatType::App1(_, _, args)) => stack.extend(args),
-                    Content::Structure(FlatType::Fun1(a, b)) => stack.extend([a, b]),
-                    Content::Structure(FlatType::Tuple1(a, b, c)) => {
-                        stack.extend([a, b]);
-                        stack.extend(c);
-                    }
-                    Content::Structure(FlatType::Record1(fields, ext)) => {
-                        stack.extend(fields.values());
-                        stack.push(*ext);
-                    }
-                    Content::Alias { args, .. } => stack.extend(args.iter().map(|(_, var)| var)),
-                    Content::Structure(FlatType::Unit1 | FlatType::EmptyRecord1)
-                    | Content::Error => {}
-                }
-            }
+            let variables = Self::type_variables(uf, self.predicates.get(id).args.clone());
+            let generalized = variables.iter().any(|var| uf.get(*var).rank == NO_RANK);
+            let outer = variables.iter().any(|var| uf.get(*var).rank != NO_RANK);
             if generalized || !outer {
                 retained.push(id);
             } else {

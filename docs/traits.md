@@ -302,6 +302,10 @@ context.
 A retained predicate is *ambiguous* when one of its generalized variables
 is not reachable from the definition's header type. `x = show 1` retains
 `FromInt 'a` and `Show 'a` but `'a` does not appear in `x : string`.
+Use the full types of all members when checking a shared untyped recursive
+context. An annotated body can introduce a hidden flexible variable too;
+check its pending requirements at the same boundary. Report the innermost
+definition and list equal requirements once.
 
 For each ambiguous variable, in order:
 

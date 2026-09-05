@@ -13,6 +13,12 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    AmbiguousType {
+        region: Region,
+        name: &'a str,
+        variable: &'a ErrorType<'a>,
+        predicates: &'a [AmbiguousPredicate<'a>],
+    },
     /// A cycle of evidence arguments adds an impl wrapper on each traversal.
     PolymorphicRecursion {
         region: Region,
@@ -73,6 +79,12 @@ pub enum Error<'a> {
         name: &'a str,
         overall_type: &'a ErrorType<'a>,
     },
+}
+
+#[derive(Debug)]
+pub struct AmbiguousPredicate<'a> {
+    pub trait_: nash_ast::QualifiedName<'a>,
+    pub args: &'a [&'a ErrorType<'a>],
 }
 
 // EXPRESSION EXPECTATIONS

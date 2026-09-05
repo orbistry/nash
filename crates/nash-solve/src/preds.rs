@@ -67,7 +67,11 @@ impl<'a> Store<'a> {
     pub fn solve(&mut self, uf: &mut UnionFind<'a>, id: PredId, solution: Solution<'a>) {
         let predicate = &mut self.predicates[id.0 as usize];
         predicate.solution = Some(solution);
-        for arg in &predicate.args {
+        self.detach(uf, id);
+    }
+
+    pub(crate) fn detach(&self, uf: &mut UnionFind<'a>, id: PredId) {
+        for arg in &self.get(id).args {
             uf.modify(*arg, |desc| desc.preds.retain(|pending| *pending != id));
         }
     }

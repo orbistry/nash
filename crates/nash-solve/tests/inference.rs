@@ -286,6 +286,84 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn ambiguous_predicates_keep_distinct_variable_names() {
+    let bump = Bump::new();
+    let errors = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        trait Source 'a where
+            create : () -> 'a
+        trait Sink 'a where
+            consume : 'a -> ()
+        value = (consume (create ()), consume (create ()))
+        "#
+        ),
+    )
+    .expect_err("both hidden variables are ambiguous");
+    let names: Vec<_> = errors
+        .iter()
+        .map(|error| {
+            let Error::AmbiguousType { variable, .. } = error else {
+                panic!("ambiguity error")
+            };
+            let nash_constrain::error_type::ErrorType::FlexVar(name) = variable else {
+                panic!("flexible variable")
+            };
+            *name
+        })
+        .collect();
+    assert_eq!(names.len(), 2);
+    assert_ne!(names[0], names[1]);
+    insta::assert_debug_snapshot!(errors);
+}
+
+#[test]
+fn hidden_trait_variable_is_reported_at_the_innermost_definition() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+            discard : 'a -> ()
+        outer x =
+            let
+                hidden = discard (create ())
+            in
+                (x, hidden)
+        "#
+    );
+}
+
+#[test]
+fn inferred_value_rejects_a_hidden_trait_variable() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+            discard : 'a -> ()
+        value = discard (create ())
+        "#
+    );
+}
+
+#[test]
+fn annotated_value_rejects_a_hidden_trait_variable() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+            discard : 'a -> ()
+        value : ()
+        value = discard (create ())
+        "#
+    );
+}
+
+#[test]
 fn recursive_evidence_growth_through_a_nested_helper_is_rejected() {
     assert_inference_error_snapshot!(
         r#"

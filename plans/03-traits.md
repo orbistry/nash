@@ -1940,8 +1940,11 @@ cycles of context-slot dependencies containing impl wrappers; unchanged givens, 
 unconstrained polymorphic recursion and nonrecursive method calls pass.
 Snapshot tests and a real CLI check verify the direct diagnostic.
 Nested helpers with closed evidence and separate context slots which reset to
-closed evidence pass. Literal traits, defaulting, ambiguity and SuperType
-removal remain.
+closed evidence pass. Non-literal ambiguity is checked after generalization
+and before context reduction, for inferred and annotated definitions. The
+check uses all full header types in an untyped recursive group and preserves
+outer captures. Diagnostics identify the innermost definition and deduplicate
+equal requirements. Literal traits, defaulting and SuperType removal remain.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,
