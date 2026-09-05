@@ -17,11 +17,14 @@ pub const fn builtin_home() -> ModuleName<'static> {
 const BIG: &Kind<'static> = &Kind::Base(BaseKind::Big);
 const CONST: &Kind<'static> = &Kind::Base(BaseKind::Const);
 const K0: &Kind<'static> = &Kind::Var(0);
+const K1: &Kind<'static> = &Kind::Var(1);
 
 const BIG_TO_BIG: &Kind<'static> = &Kind::Arrow(BIG, BIG);
 const BIG2_TO_BIG: &Kind<'static> = &Kind::Arrow(BIG, BIG_TO_BIG);
 const STORABLE_TO_CONST: &Kind<'static> = &Kind::Arrow(K0, CONST);
-const BIG2_TO_CONST: &Kind<'static> = &Kind::Arrow(BIG, &Kind::Arrow(BIG, CONST));
+// Only `mkPairData` builds pairs, so construction is restricted by the API,
+// not by kinds: `unConstrData` yields `pair int (list Data)`.
+const STORABLE2_TO_CONST: &Kind<'static> = &Kind::Arrow(K0, &Kind::Arrow(K1, CONST));
 
 pub struct Primitive {
     pub name: &'static str,
@@ -123,7 +126,10 @@ pub const PRIMITIVES: &[Primitive] = &[
     Primitive {
         name: "pair",
         arity: 2,
-        kind: mono(BIG2_TO_CONST),
+        kind: KindScheme {
+            bounds: &[KindSet::STORABLE, KindSet::STORABLE],
+            kind: STORABLE2_TO_CONST,
+        },
     },
 ];
 
@@ -164,11 +170,13 @@ mod tests {
             get("List").kind,
             Kind::Arrow(Kind::Base(BaseKind::Big), Kind::Base(BaseKind::Big))
         ));
+        let pair = get("pair");
+        assert_eq!(pair.bounds, &[KindSet::STORABLE, KindSet::STORABLE]);
         assert!(matches!(
-            get("pair").kind,
+            pair.kind,
             Kind::Arrow(
-                Kind::Base(BaseKind::Big),
-                Kind::Arrow(Kind::Base(BaseKind::Big), Kind::Base(BaseKind::Const))
+                Kind::Var(0),
+                Kind::Arrow(Kind::Var(1), Kind::Base(BaseKind::Const))
             )
         ));
         for name in ["Int", "Bytes", "Data"] {

@@ -71,14 +71,24 @@ round-trip test even when the added field is a `String`.
 - [x] Chunk 6: user parameter annotations. Tests cover Fix, Storable, base/arrow mismatches at annotation regions, separate bounded occurrences, narrowed alias applications, and constraints from all recursive-group uses. Formatting, strict Clippy, snapshot tests, workspace tests, and snapshot hygiene pass.
 - [x] Chunk 7: changeset, final acceptance audit, and SPEC. Final record-field error snapshots check context and source regions; an explicit Term annotation has a success snapshot. All final gates pass.
 
+### Pair kind correction
+
+The builtin `pair` has two independent Storable component bounds. This admits
+`unConstrData : Data -> pair int (list Data)` and the polymorphic `fstPair` and
+`sndPair` signatures. Only the builtin API restricts construction through
+`mkPairData : Data -> Data -> pair Data Data`; the kind does not encode that API
+restriction. Snapshots cover Big/Const combinations, Term rejection at either
+argument, and all four signatures. No plan 01 grammar change is needed.
+The correction has its own Sampo changeset: nash-ast minor and nash-can patch.
+
 ### Final verification
 
 - `cargo fmt --all`: pass.
 - `cargo clippy --all-targets --all-features -- -D warnings`: pass.
 - `cargo insta test`: pass; new snapshots reviewed before acceptance.
-- `cargo test`: 1,773 passed, 0 failed, 3 ignored.
+- `cargo test`: 1,777 passed, 0 failed, 3 ignored.
 - `cargo insta test --unreferenced reject`: pass; no unreferenced or pending snapshots.
-- The 48 source-level kind acceptance tests cover declarations, recursive groups,
+- The 52 source-level kind acceptance tests cover declarations, recursive groups,
   annotations, record fields, imported contracts, and copied interfaces. Driver
   tests cover cross-module builds, kind and bound fingerprints, cache round trips,
   and rejection of old cache formats. Solver tests retain the nested-section
@@ -534,7 +544,8 @@ const K0: &Kind<'static> = &Kind::Var(0);
 const BIG_TO_BIG: &Kind<'static> = &Kind::Arrow(BIG, BIG);
 const BIG2_TO_BIG: &Kind<'static> = &Kind::Arrow(BIG, BIG_TO_BIG);
 const STORABLE_TO_CONST: &Kind<'static> = &Kind::Arrow(K0, CONST);
-const BIG2_TO_CONST: &Kind<'static> = &Kind::Arrow(BIG, &Kind::Arrow(BIG, CONST));
+const K1: &Kind<'static> = &Kind::Var(1);
+const STORABLE2_TO_CONST: &Kind<'static> = &Kind::Arrow(K0, &Kind::Arrow(K1, CONST));
 
 pub struct Primitive {
     pub name: &'static str,
@@ -571,7 +582,7 @@ pub const PRIMITIVES: &[Primitive] = &[
         arity: 1,
         kind: KindScheme { bounds: &[KindSet::STORABLE], kind: STORABLE_TO_CONST },
     },
-    Primitive { name: "pair", arity: 2, kind: mono(BIG2_TO_CONST) },
+    Primitive { name: "pair", arity: 2, kind: KindScheme { bounds: &[KindSet::STORABLE, KindSet::STORABLE], kind: STORABLE2_TO_CONST } },
 ];
 ```
 
@@ -1077,7 +1088,7 @@ canonical module so the `kind` fields show in the Debug snapshot;
   `named_constructor_arity_remains_a_canonicalization_error` (`type alias x = int Int`, expected `BadArity`),
   `base_kinded_parameter_cannot_be_applied` (expected `KindTooManyArgs`),
   `kind_error_infinite` (`type bad 'f = Bad ('f 'f)`),
-  `kind_error_pair_needs_big` (`type alias p = pair int Int`),
+  `pair_requires_storable` (`type alias p = pair (option int) Int`),
   `kind_errors_all_reported` (two independent bad declarations give two
   errors).
 

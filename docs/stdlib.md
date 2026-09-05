@@ -525,7 +525,7 @@ Rules:
   compiled by the compiler with delays; `Builtin.ifThenElse` is the raw
   strict builtin.
 - Type variables are kind-restricted as UPLC requires: elements of
-  `list`/`array` are `Storable`; `pair` components are `Big`; `'a` in
+  `list`/`array` and components of `pair` are `Storable`; `'a` in
   `ifThenElse`, `chooseUnit`, `chooseList`, `chooseData`, `trace` is `Any`.
 - `Builtin.identity : 'a -> 'a` and `Builtin.error : unit -> 'a` are the
   only entries with no `DefaultFunction`; they lower to nothing and to

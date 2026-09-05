@@ -81,7 +81,7 @@ Element rules (kind checked, kind inferred):
 | `Map` | `Big -> Big -> Big` |
 | Big ADT / Big record | fields `Big` |
 | `list` | `Storable -> Const` where `Storable` = `Big` or `Const` (never `Term`) |
-| `pair` | `Big -> Big -> Const` (only `mkPairData` exists) |
+| `pair` | `Storable -> Storable -> Const` (only `mkPairData` constructs; `unConstrData` yields `pair int (list Data)`) |
 | `array` | `Storable -> Const` |
 | little ADT / tuple / little record | fields any kind |
 | `->` | `Term` |

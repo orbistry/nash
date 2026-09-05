@@ -113,8 +113,32 @@ fn infinite_kind() {
     assert_kind_error_snapshot!("type bad 'f = Bad ('f 'f)");
 }
 #[test]
-fn pair_requires_big() {
-    assert_kind_error_snapshot!("type alias p = pair int Int");
+fn pair_of_const_and_const() {
+    assert_kinds_snapshot!("type alias p = pair int (list Data)");
+}
+#[test]
+fn pair_of_const_and_big() {
+    assert_kinds_snapshot!(
+        "type alias p = pair int Data\ntype alias q = pair Data int\ntype alias r = pair Data Data"
+    );
+}
+#[test]
+fn pair_requires_storable() {
+    assert_kind_error_snapshot!(
+        "type option 'a = None | Some 'a\ntype alias p = pair (option int) Int"
+    );
+}
+#[test]
+fn pair_requires_storable_second_argument() {
+    assert_kind_error_snapshot!(
+        "type option 'a = None | Some 'a\ntype alias p = pair Int (option int)"
+    );
+}
+#[test]
+fn pair_builtin_signatures() {
+    assert_kinds_snapshot!(
+        "type alias unConstrData = Data -> pair int (list Data)\ntype alias fstPair 'a 'b = pair 'a 'b -> 'a\ntype alias sndPair 'a 'b = pair 'a 'b -> 'b\ntype alias mkPairData = Data -> Data -> pair Data Data"
+    );
 }
 #[test]
 fn independent_errors() {

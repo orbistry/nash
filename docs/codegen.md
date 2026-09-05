@@ -362,7 +362,7 @@ pass has usually already replaced the head with a variable.
 |---|---|---|---|---|
 | `int` `bytes` `string` `bool` `unit` | Const | constant | `Lit` | builtins |
 | `list 'a` (`'a` Storable) | Const | `list t` constant | `mkCons` / `Lit []` | `chooseList` `headList` `tailList` |
-| `pair 'a 'b` (Big elements) | Const | `pair data data` | `mkPairData` | `fstPair` `sndPair` |
+| `pair 'a 'b` (Storable components) | Const | `pair t1 t2` (each Big component becomes `data`; each Const component keeps its builtin type) | `mkPairData` constructs `pair Data Data`; `unConstrData` returns `pair int (list Data)` | `fstPair` `sndPair` |
 | `array 'a` | Const | `array t` | `listToArray` | `indexArray` `lengthOfArray` |
 | `bls_g1` `bls_g2` `bls_mlr` `value` | Const | constant | builtins | builtins |
 | `Int` | Big | `data (I n)` | `iData` | `unIData` |

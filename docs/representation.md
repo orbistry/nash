@@ -21,7 +21,7 @@ A `Const` value is a UPLC constant. Each Nash Const type maps to one
 | `bool` | `Boolean(bool)` | `Bool` | the only type `if` accepts |
 | `unit` | `Unit` | `Unit` | written `()` in types and values |
 | `list 'a` | `ProtoList(&Type, &[&Constant])` | `List(elem)` | `'a : Storable` |
-| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `Pair(a, b)` | `'a 'b : Big`, built only by `mkPairData` |
+| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `Pair(a, b)` | `'a 'b : Storable`; `mkPairData` constructs `pair Data Data`, while `unConstrData` returns `pair int (list Data)` |
 | `array 'a` | `ProtoArray(&Type, &[&Constant])` | `Array(elem)` | `'a : Storable` |
 | `bls_g1` | `Bls12_381G1Element` | `Bls12_381G1Element` | |
 | `bls_g2` | `Bls12_381G2Element` | `Bls12_381G2Element` | |

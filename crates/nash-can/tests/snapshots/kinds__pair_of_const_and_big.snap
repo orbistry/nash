@@ -1,0 +1,36 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias p = pair int Data\ntype alias q = pair Data int\ntype alias r = pair Data Data"
+---
+(
+    [],
+    [
+        (
+            "p",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Const,
+                ),
+            },
+        ),
+        (
+            "q",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Const,
+                ),
+            },
+        ),
+        (
+            "r",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Const,
+                ),
+            },
+        ),
+    ],
+)

@@ -1,0 +1,79 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias unConstrData = Data -> pair int (list Data)\ntype alias fstPair 'a 'b = pair 'a 'b -> 'a\ntype alias sndPair 'a 'b = pair 'a 'b -> 'b\ntype alias mkPairData = Data -> Data -> pair Data Data"
+---
+(
+    [],
+    [
+        (
+            "unConstrData",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+            },
+        ),
+        (
+            "fstPair",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Arrow(
+                        Var(
+                            1,
+                        ),
+                        Base(
+                            Term,
+                        ),
+                    ),
+                ),
+            },
+        ),
+        (
+            "sndPair",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Arrow(
+                        Var(
+                            1,
+                        ),
+                        Base(
+                            Term,
+                        ),
+                    ),
+                ),
+            },
+        ),
+        (
+            "mkPairData",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+            },
+        ),
+    ],
+)

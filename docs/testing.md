@@ -261,7 +261,7 @@ impl Monad fuzzer where
   count and the choices still to replay, next first.
 - `fuzzer 'a` is a **little** ADT with one constructor wrapping the
   function. The result tuple is a UPLC `constr 0 [prng, value]` because `pair`
-  only takes `Big` elements and `'a` is any kind. The wrapper exists because
+  only takes `Storable` components and `'a` is any kind. The wrapper exists because
   impls attach to nominal types, not to function aliases.
 - Choices are non-negative integers, one per primitive draw, as in
   MiniThesis. Aiken uses bytes; Nash uses `Int` so a primitive can draw a
@@ -480,7 +480,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
   `Applicative`, `Monad` for `fuzzer`; `@derive(Show)` from
   [macros.md](macros.md).
 - **Kinds.** `(Prng, 'a)` is a tuple (kind `Term`) because `pair` requires
-  `Big` elements; `list string` is a `Const` list of `Const` strings.
+  `Storable` components, while `'a` may be `Term`; `list string` is a `Const` list of `Const` strings.
 - **Codegen.** Each test program is a standalone UPLC program that inlines
   the module's dependency closure ([codegen.md](codegen.md)).
 - **Diagnostics.** Test-shape errors (`via` on a `test`, `once` on a `test`,

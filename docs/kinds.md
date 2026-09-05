@@ -43,7 +43,7 @@ Bounds are subsets of `{ Big, Const, Term, Arrow }`:
 | Bound | Members | Used for |
 |---|---|---|
 | `Any` | `Big`, `Const`, `Term` | fields of little ADTs, tuple components, function arguments and results |
-| `Storable` | `Big`, `Const` | elements of `list`, `array` |
+| `Storable` | `Big`, `Const` | elements of `list`, `array`, and components of `pair` |
 | `Little` | `Const`, `Term` | the body of a lowercase alias |
 | `All` | `Big`, `Const`, `Term`, `Arrow` | unannotated declaration parameters (may be higher-kinded) |
 
@@ -64,7 +64,7 @@ bound; binding it to an arrow requires `Arrow` in the bound.
 | `Map` | `Big -> Big -> Big` |
 | `int`, `bytes`, `string`, `bool`, `unit`, `bls_g1`, `bls_g2`, `bls_mlr`, `value` | `Const` |
 | `list`, `array` | `Storable -> Const` |
-| `pair` | `Big -> Big -> Const` (only `mkPairData` exists) |
+| `pair` | `Storable -> Storable -> Const` (values from `unConstrData`, `unMapData`; only `mkPairData : Data -> Data -> pair Data Data` constructs one, so the API, not the kind, restricts construction) |
 | `->` | `Any -> Any -> Term` |
 | tuple `( , )`, `( , , )` | `Any -> Any -> Term`, `Any -> Any -> Any -> Term` |
 | `()` (the unit type) | `Const` (it is `unit`) |
