@@ -21,6 +21,8 @@ pub fn create_initial_env<'a>(
     imports: &'a [&'a SourceImport<'a>],
 ) -> Result<Env<'a>, Vec<Error<'a>>> {
     let mut env = Env {
+        traits: BTreeMap::new(),
+        q_traits: BTreeMap::new(),
         home,
         vars: BTreeMap::new(),
         types: BTreeMap::new(),

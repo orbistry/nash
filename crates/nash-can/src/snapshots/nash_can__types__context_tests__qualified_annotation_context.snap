@@ -1,0 +1,81 @@
+---
+source: crates/nash-can/src/types.rs
+expression: result
+---
+Annotation {
+    context: [
+        Pred {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Equality",
+                },
+                name: "Eq",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 19,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+            ],
+        },
+    ],
+    free_vars: [
+        "a",
+    ],
+    typ: Located {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 23,
+            },
+            end: Position {
+                line: 3,
+                column: 31,
+            },
+        },
+        value: Lambda {
+            from: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 23,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 25,
+                    },
+                },
+                value: Var(
+                    "a",
+                ),
+            },
+            to: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 29,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 31,
+                    },
+                },
+                value: Var(
+                    "a",
+                ),
+            },
+        },
+    },
+}

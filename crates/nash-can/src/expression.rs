@@ -1125,13 +1125,7 @@ fn canonicalize_let_def<'a>(
             let (can_def_builder, arg_bindings): (DefBuilder<'a>, Bindings<'a>) = if let Some(ann) =
                 annotation
             {
-                if !ann.constraints.is_empty() {
-                    return Err(vec![Error::Unsupported {
-                        feature: "constraints",
-                        region: ann.constraints[0].region,
-                    }]);
-                }
-                let annotation_val = types::to_annotation(bump, env, ann.typ)?;
+                let annotation_val = types::to_annotation(bump, env, ann)?;
                 let mut bound: Vec<(&'a str, Region)> = Vec::new();
                 let (typed_args, result_type) =
                     gather_typed_args(bump, env, name.value, args, annotation_val.typ, &mut bound)?;
@@ -1141,6 +1135,7 @@ fn canonicalize_let_def<'a>(
                 )?;
                 (
                     DefBuilder::Typed {
+                        context: annotation_val.context,
                         annotation: annotation_val.typ,
                         free_vars: annotation_val.free_vars,
                         args: bump.alloc_slice_fill_iter(typed_args),
@@ -1184,12 +1179,13 @@ fn canonicalize_let_def<'a>(
             let has_args = !args.is_empty();
             let can_def: &'a CanDef<'a> = match can_def_builder {
                 DefBuilder::Typed {
+                    context,
                     annotation,
                     free_vars,
                     args,
                     typ,
                 } => bump.alloc(CanDef::TypedDef {
-                    context: &[],
+                    context,
                     annotation,
                     name,
                     free_vars,
@@ -1247,6 +1243,7 @@ fn canonicalize_let_def<'a>(
 
 enum DefBuilder<'a> {
     Typed {
+        context: &'a [nash_ast::Pred<'a>],
         annotation: &'a Located<nash_ast::Type<'a>>,
         free_vars: nash_ast::FreeVars<'a>,
         args: &'a [CanTypedPattern<'a>],

@@ -18,17 +18,60 @@ use crate::error::BadArityContext;
 pub fn to_annotation<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
-    source_type: &'a Located<SourceType<'a>>,
+    annotation: &'a nash_source::Annotation<'a>,
 ) -> Result<&'a Annotation<'a>, Vec<Error<'a>>> {
-    let typ = canonicalize_type(bump, env, source_type)?;
+    let typ = canonicalize_type(bump, env, annotation.typ)?;
+    let context = canonicalize_context(bump, env, annotation.constraints)?;
     let mut free_var_set: BTreeSet<&'a str> = BTreeSet::new();
     collect_free_vars(&typ.value, &mut free_var_set);
+    for predicate in context {
+        for argument in predicate.args {
+            let mut variables = BTreeSet::new();
+            collect_free_vars(&argument.value, &mut variables);
+            if let Some(name) = variables.difference(&free_var_set).next() {
+                return Err(vec![Error::ContextVarNotInType {
+                    region: argument.region,
+                    name,
+                }]);
+            }
+        }
+    }
     let free_vars: FreeVars<'a> = bump.alloc_slice_fill_iter(free_var_set);
     Ok(bump.alloc(Annotation {
-        context: &[],
+        context,
         free_vars,
         typ,
     }))
+}
+
+pub fn canonicalize_context<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    constraints: &'a [&'a Located<nash_source::Constraint<'a>>],
+) -> Result<&'a [nash_ast::Pred<'a>], Vec<Error<'a>>> {
+    accumulate::try_all_alloc(
+        bump,
+        constraints.iter().map(|constraint| {
+            let source = &constraint.value;
+            let info =
+                env.find_trait(bump, source.class.region, source.module, source.class.value)?;
+            if source.args.len() != info.parameters.len() {
+                return Err(vec![Error::TraitArity {
+                    region: constraint.region,
+                    name: info.name,
+                    expected: info.parameters.len(),
+                    actual: source.args.len(),
+                }]);
+            }
+            Ok(nash_ast::Pred {
+                trait_: QualifiedName {
+                    home: info.home,
+                    name: info.name,
+                },
+                args: canonicalize_type_arguments(bump, env, source.args)?,
+            })
+        }),
+    )
 }
 
 /// Canonicalize a source type using the environment.
@@ -459,6 +502,8 @@ mod tests {
     fn empty_env<'a>(bump: &'a Bump) -> Env<'a> {
         let _ = bump;
         Env {
+            traits: Default::default(),
+            q_traits: Default::default(),
             home: ModuleName {
                 package: None,
                 name: "Main",
@@ -580,7 +625,8 @@ mod tests {
             let bump = Bump::new();
             let env = $env_fn(&bump);
             let typ = parse_type(&bump, $input);
-            let result = to_annotation(&bump, &env, typ);
+            let annotation = bump.alloc(nash_source::Annotation { constraints: &[], typ });
+            let result = to_annotation(&bump, &env, annotation);
             insta::with_settings!({
                 description => $input,
                 omit_expression => true,
@@ -697,5 +743,79 @@ mod tests {
             }
             other => panic!("expected substituted lambda, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod context_tests {
+    use super::*;
+    use crate::environment::TraitInfo;
+    use nash_ast::{BaseKind, Kind, KindScheme, ModuleName};
+
+    fn source_annotation<'a>(bump: &'a Bump, annotation: &str) -> &'a nash_source::Annotation<'a> {
+        let source = bump.alloc_str(&format!(
+            "module Main exposing (..)\n\nf : {annotation}\nf x = x\n"
+        ));
+        let mut parser = nash_parse::Parser::new(bump, source.as_bytes());
+        parser.module().unwrap().values[0].value.annotation.unwrap()
+    }
+
+    fn trait_env(bump: &Bump) -> Env<'_> {
+        let mut env = environment::foreign::create_initial_env(
+            bump,
+            ModuleName {
+                package: None,
+                name: "Main",
+            },
+            None,
+            &[],
+        )
+        .unwrap();
+        let kind = bump.alloc(Kind::Arrow(
+            bump.alloc(Kind::Base(BaseKind::Big)),
+            bump.alloc(Kind::Base(BaseKind::Term)),
+        ));
+        let info = bump.alloc(TraitInfo {
+            home: ModuleName {
+                package: None,
+                name: "Equality",
+            },
+            name: "Eq",
+            parameters: &["a"],
+            kind: KindScheme::mono(kind),
+            supers: &[],
+            methods: &[],
+        });
+        env.traits.insert("Eq", Info::Specific(info.home, info));
+        env.q_traits
+            .entry("Equality")
+            .or_default()
+            .insert("Eq", Info::Specific(info.home, info));
+        env
+    }
+
+    #[test]
+    fn qualified_annotation_context() {
+        let bump = Bump::new();
+        let env = trait_env(&bump);
+        let annotation = source_annotation(&bump, "Equality.Eq 'a => 'a -> 'a");
+        let result = to_annotation(&bump, &env, annotation).unwrap();
+        insta::assert_debug_snapshot!(result);
+    }
+
+    #[test]
+    fn context_variable_absent_from_type() {
+        let bump = Bump::new();
+        let env = trait_env(&bump);
+        let annotation = source_annotation(&bump, "Eq 'b => 'a -> 'a");
+        insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
+    }
+
+    #[test]
+    fn context_trait_arity() {
+        let bump = Bump::new();
+        let env = trait_env(&bump);
+        let annotation = source_annotation(&bump, "Eq 'a 'b => 'a -> 'b");
+        insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
     }
 }

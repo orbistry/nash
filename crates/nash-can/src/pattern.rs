@@ -292,6 +292,8 @@ mod tests {
 
     fn empty_env<'a>(_bump: &'a Bump) -> Env<'a> {
         Env {
+            traits: Default::default(),
+            q_traits: Default::default(),
             home: ModuleName {
                 package: None,
                 name: "Main",

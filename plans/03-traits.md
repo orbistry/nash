@@ -312,6 +312,11 @@ changes have been reviewed.
 
 ## Chunk 2: contexts on annotations and trait declarations in nash-can
 
+Status: in progress. Annotation contexts resolve qualified and unqualified
+trait names, check arity and reject variables absent from the annotated
+type. Top-level and let definitions preserve the context. Source trait
+declarations, kind inference, defaults and interface imports remain.
+
 Files: `crates/nash-can/src/types.rs`, `crates/nash-can/src/environment.rs`,
 `crates/nash-can/src/environment/local.rs`, `crates/nash-can/src/environment/foreign.rs`,
 `crates/nash-can/src/module.rs`, `crates/nash-can/src/expression.rs`,
@@ -522,6 +527,14 @@ pub fn add_traits<'a>(
 }
 ```
 
+Trait kind lookup is separate from type kind lookup: the two namespaces
+must not overwrite each other. Infer trait kinds by SCCs over all superclass
+and method-context dependencies, using provisional shared kinds inside an
+SCC and instantiating completed schemes outside it. Generalize each trait
+parameter arrow chain together, after its SCC succeeds. Independently reject
+cycles in the superclass-only graph; mutually referring method contexts
+are not themselves superclass cycles.
+
 Two passes are needed because superclass predicates and method schemes
 mention traits: pass 1 inserts `TraitInfo` stubs with empty `supers` and
 `methods` so lookups resolve, pass 2 (in `canonicalize_traits`) fills them
@@ -678,7 +691,8 @@ its parameters. For each head, instantiate the named type's scheme and
 apply it once per head variable. `Infer::apply` returns a `Result`;
 convert application failures to `KindMismatch` at the impl head region,
 with `KindContext::ImplHead`. Unify the remaining kind with the matching
-trait parameter kind. Unit and tuple heads have kind `Term`. Report
+trait parameter kind. Unit heads have kind `Const`; tuple heads have kind
+`Term`, matching the existing type kind checker. Report
 unification failures with the same head context and generalized expected
 and actual kinds; do not unwrap either operation.
 

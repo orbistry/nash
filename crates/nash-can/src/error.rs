@@ -36,6 +36,28 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    NotFoundTrait {
+        region: Region,
+        prefix: Option<&'a str>,
+        name: &'a str,
+    },
+    AmbiguousTrait {
+        region: Region,
+        prefix: Option<&'a str>,
+        name: &'a str,
+        first_module: ModuleName<'a>,
+        other_modules: &'a [ModuleName<'a>],
+    },
+    TraitArity {
+        region: Region,
+        name: &'a str,
+        expected: usize,
+        actual: usize,
+    },
+    ContextVarNotInType {
+        region: Region,
+        name: &'a str,
+    },
     // --- Kind errors (docs/kinds.md) ---
     KindMismatch {
         region: Region,

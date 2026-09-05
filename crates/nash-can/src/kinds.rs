@@ -1093,6 +1093,7 @@ impl<'a> AnnotationChecker<'_, 'a> {
         match def {
             nash_ast::Def::Def { body, .. } => self.expression(&body.value),
             nash_ast::Def::TypedDef {
+                context,
                 name,
                 free_vars,
                 annotation,
@@ -1100,7 +1101,7 @@ impl<'a> AnnotationChecker<'_, 'a> {
                 ..
             } => {
                 let annotation = nash_ast::Annotation {
-                    context: &[],
+                    context,
                     free_vars,
                     typ: annotation,
                 };

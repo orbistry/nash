@@ -287,6 +287,7 @@ struct NodeOne<'a> {
 
 enum TopLevelDefBuilder<'a> {
     Typed {
+        context: &'a [nash_ast::Pred<'a>],
         annotation: &'a Located<nash_ast::Type<'a>>,
         free_vars: nash_ast::FreeVars<'a>,
         args: &'a [nash_ast::TypedPattern<'a>],
@@ -315,13 +316,7 @@ fn to_node_one<'a>(
     // and match it against the arguments before the body is touched, and
     // one duplicate scope spans all arguments either way.
     let (builder, arg_bindings) = if let Some(ann) = src.annotation {
-        if !ann.constraints.is_empty() {
-            return Err(vec![Error::Unsupported {
-                feature: "constraints",
-                region: ann.constraints[0].region,
-            }]);
-        }
-        let annotation = types::to_annotation(bump, env, ann.typ)?;
+        let annotation = types::to_annotation(bump, env, ann)?;
         let mut bound: Vec<(&'a str, Region)> = Vec::new();
         let (typed_args, result_type) = expression::gather_typed_args(
             bump,
@@ -335,6 +330,7 @@ fn to_node_one<'a>(
             pattern::detect_duplicates(DuplicatePatternContext::FuncArgs(src.name.value), bound)?;
         (
             TopLevelDefBuilder::Typed {
+                context: annotation.context,
                 annotation: annotation.typ,
                 free_vars: annotation.free_vars,
                 args: bump.alloc_slice_fill_iter(typed_args),
@@ -371,12 +367,13 @@ fn to_node_one<'a>(
 
     let def = match builder {
         TopLevelDefBuilder::Typed {
+            context,
             annotation,
             free_vars,
             args,
             typ,
         } => bump.alloc(nash_ast::Def::TypedDef {
-            context: &[],
+            context,
             annotation,
             name: src.name,
             free_vars,
@@ -1042,12 +1039,19 @@ fn collect_from_def<'a>(
             collect_from_expr(&body.value, home, used);
         }
         nash_ast::Def::TypedDef {
+            context,
             annotation,
             args,
             body,
             typ,
             ..
         } => {
+            for predicate in *context {
+                add_if_foreign(home, predicate.trait_.home, used);
+                for argument in predicate.args {
+                    collect_from_type(&argument.value, home, used);
+                }
+            }
             for arg in *args {
                 collect_from_pattern(&arg.pattern.value, home, used);
                 collect_from_type(&arg.typ.value, home, used);
@@ -4172,7 +4176,7 @@ mod tests {
     }
 
     #[test]
-    fn constraints_unsupported() {
+    fn unknown_trait_in_context() {
         assert_module_error_snapshot!(
             "module Main exposing (..)\n\nid : Eq 'a => 'a -> 'a\nid x = x\n"
         );

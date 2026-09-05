@@ -23,6 +23,23 @@ pub type Exposed<'a, T> = BTreeMap<&'a str, Info<'a, T>>;
 /// Module prefix -> name -> resolution (for `Module.name` lookups).
 pub type Qualified<'a, T> = BTreeMap<&'a str, BTreeMap<&'a str, Info<'a, T>>>;
 
+#[derive(Clone, Copy, Debug)]
+pub struct TraitInfo<'a> {
+    pub home: ModuleName<'a>,
+    pub name: &'a str,
+    pub parameters: &'a [&'a str],
+    pub kind: nash_ast::KindScheme<'a>,
+    pub supers: &'a [nash_ast::Pred<'a>],
+    pub methods: &'a [MethodInfo<'a>],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MethodInfo<'a> {
+    pub name: &'a str,
+    pub annotation: &'a nash_ast::Annotation<'a>,
+    pub has_default: bool,
+}
+
 /// A value variable in scope.
 #[derive(Clone, Debug)]
 pub enum Var<'a> {
@@ -159,6 +176,8 @@ pub struct Binop<'a> {
 /// Consumed by type, pattern, and expression canonicalization.
 #[derive(Clone)]
 pub struct Env<'a> {
+    pub traits: Exposed<'a, &'a TraitInfo<'a>>,
+    pub q_traits: Qualified<'a, &'a TraitInfo<'a>>,
     pub home: ModuleName<'a>,
     pub vars: BTreeMap<&'a str, Var<'a>>,
     pub types: Exposed<'a, Type<'a>>,
@@ -172,6 +191,37 @@ pub struct Env<'a> {
 }
 
 impl<'a> Env<'a> {
+    pub fn find_trait(
+        &self,
+        bump: &'a Bump,
+        region: Region,
+        prefix: Option<&'a str>,
+        name: &'a str,
+    ) -> Result<&'a TraitInfo<'a>, Vec<Error<'a>>> {
+        let found = match prefix {
+            Some(prefix) => self
+                .q_traits
+                .get(prefix)
+                .and_then(|traits| traits.get(name)),
+            None => self.traits.get(name),
+        };
+        match found {
+            Some(Info::Specific(_, info)) => Ok(info),
+            Some(Info::Ambiguous(first, others)) => Err(vec![Error::AmbiguousTrait {
+                region,
+                prefix,
+                name,
+                first_module: *first,
+                other_modules: bump.alloc_slice_copy(others),
+            }]),
+            None => Err(vec![Error::NotFoundTrait {
+                region,
+                prefix,
+                name,
+            }]),
+        }
+    }
+
     /// Insert into both the unqualified and self-qualified tables.
     /// Used by local.rs — local definitions overwrite imported ones.
     pub fn insert_local_type(&mut self, name: &'a str, typ: Type<'a>) {

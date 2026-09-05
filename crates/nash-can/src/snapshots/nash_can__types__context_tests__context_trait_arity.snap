@@ -1,0 +1,21 @@
+---
+source: crates/nash-can/src/types.rs
+expression: "to_annotation(&bump, &env, annotation).unwrap_err()"
+---
+[
+    TraitArity {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 5,
+            },
+            end: Position {
+                line: 3,
+                column: 13,
+            },
+        },
+        name: "Eq",
+        expected: 1,
+        actual: 2,
+    },
+]
