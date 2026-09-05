@@ -2376,11 +2376,13 @@ Files: `crates/nash-driver/src/compile.rs`, `crates/nash-can/src/interface.rs`,
 
 Change: the driver passes tables to the solver, keeps each module's
 `SolvedTypes` output for codegen, and imports traits/impls across modules.
-It must also propagate each source's package identity into `nash_can::Context`.
-The current `compile_module` supplies `package: None`; this prevents a real
-`nash/core` Literal module from receiving the identity required for defaulting.
-Preserve application modules without a package and associate package/workspace
-sources with their owning package before the CLI core/defaulting acceptance test.
+Package identity now flows from discovery through `ModuleOrigins` into
+`nash_can::Context`. Application modules retain `None`. Repeated discovery of
+the same URI and package is deduplicated; conflicting package ownership is
+rejected. Logical source URLs remain the graph/cache keys. A real CLI workspace
+with `nash/core` Literal and an application verifies explicit literal-method
+defaulting; changing the package name leaves the use ambiguous. Arena retention
+and the remaining cross-module/core acceptance criteria are still unfinished.
 
 Code:
 
@@ -2400,8 +2402,8 @@ fn build_sync(sources) -> BuildResult {
     let store = Bump::new();
     let mut interfaces: BTreeMap<&str, Interface<'_>> = BTreeMap::new();
     let mut solved: BTreeMap<&str, SolvedModule<'_>> = BTreeMap::new();
-    for (uri, source) in &sources {
-        let (output, compiled) = compile_module(uri, source, &store, &interfaces);
+    for (uri, package, source) in &sources {
+        let (output, compiled) = compile_module(uri, package.as_ref(), source, &store, &interfaces);
         if let Some((interface, module)) = compiled {
             interfaces.insert(interface.home.name, interface);
             solved.insert(interface.home.name, module);

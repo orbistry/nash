@@ -75,9 +75,21 @@ struct CompileOutput {
 /// The async part only fetches sources; the CPU-bound compilation runs on
 /// tokio's blocking pool (`spawn_blocking`) so no executor worker is ever
 /// stalled.
-pub async fn build(db: Arc<Mutex<Database>>, graph: &DepGraph) -> BuildResult {
+/// `origins` must contain every module in the graph, including applications.
+pub async fn build(
+    db: Arc<Mutex<Database>>,
+    graph: &DepGraph,
+    origins: &crate::ModuleOrigins,
+) -> BuildResult {
     let modules: Vec<&Url> = graph.levels().into_iter().flatten().collect();
-    let sources = fetch_sources(&db, &modules).await;
+    let sources = fetch_sources(&db, &modules)
+        .await
+        .into_iter()
+        .map(|(uri, source)| {
+            let package = origins[&uri].clone();
+            (uri, package, source)
+        })
+        .collect();
 
     tokio::task::spawn_blocking(move || build_sync(sources))
         .await
@@ -89,7 +101,13 @@ pub async fn build(db: Arc<Mutex<Database>>, graph: &DepGraph) -> BuildResult {
 ///
 /// Type checking is inherently dependency-ordered, so within-build
 /// compilation is sequential within a build.
-fn build_sync(sources: Vec<(Url, Result<String, String>)>) -> BuildResult {
+fn build_sync(
+    sources: Vec<(
+        Url,
+        Option<nash_config::PackageName>,
+        Result<String, String>,
+    )>,
+) -> BuildResult {
     let store = Bump::new();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
     let mut public_interfaces = HashMap::new();
@@ -97,8 +115,9 @@ fn build_sync(sources: Vec<(Url, Result<String, String>)>) -> BuildResult {
     let mut results: HashMap<Url, ModuleResult> = HashMap::new();
     let mut all_warnings: Vec<String> = Vec::new();
 
-    for (uri, source) in &sources {
-        let (output, interface) = compile_module(uri, source, &store, &interfaces);
+    for (uri, package, source) in &sources {
+        let (output, interface) =
+            compile_module(uri, package.as_ref(), source, &store, &interfaces);
         if let Some(interface) = interface {
             public_interfaces.insert(
                 uri.clone(),
@@ -149,6 +168,7 @@ async fn fetch_sources(
 /// `store` arena so it outlives this module's arena.
 fn compile_module<'s>(
     uri: &Url,
+    package: Option<&nash_config::PackageName>,
     source: &Result<String, String>,
     store: &'s Bump,
     interfaces: &BTreeMap<&'s str, Interface<'s>>,
@@ -179,7 +199,10 @@ fn compile_module<'s>(
     };
 
     let context = nash_can::Context {
-        package: None,
+        package: package.map(|package| nash_ast::PackageName {
+            author: bump.alloc_str(package.author()),
+            project: bump.alloc_str(package.project()),
+        }),
         interfaces: Some(interfaces),
     };
     let can_result = match nash_can::canonicalize(&bump, context, &module) {
@@ -338,7 +361,12 @@ mod tests {
         }
         let db = Arc::new(Mutex::new(Database::new(mem)));
         let graph = build_graph(db.clone(), &modules).await.unwrap();
-        let result = build(db, &graph).await;
+        let result = build(
+            db,
+            &graph,
+            &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+        )
+        .await;
         assert_eq!(result.total, 3);
         assert!(result.is_success(), "{result:?}");
         for uri in &modules {
@@ -361,7 +389,12 @@ mod tests {
         let db = Arc::new(Mutex::new(Database::new(mem)));
         let modules = vec![uri];
         let graph = build_graph(db.clone(), &modules).await.unwrap();
-        let result = build(db, &graph).await;
+        let result = build(
+            db,
+            &graph,
+            &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+        )
+        .await;
 
         assert_eq!(result.total, 1);
         assert_eq!(result.failed, 1);
@@ -397,7 +430,12 @@ main = Utils.helper "not a function argument"
         let modules = vec![url("Utils.nash"), url("Main.nash")];
 
         let graph = build_graph(db.clone(), &modules).await.unwrap();
-        let result = build(db, &graph).await;
+        let result = build(
+            db,
+            &graph,
+            &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+        )
+        .await;
 
         // Utils.helper is a number, not a function: Main gets a type
         // error against the imported annotation.
@@ -447,7 +485,12 @@ main = Utils.pong 1
         let modules = vec![url("Utils.nash"), url("Main.nash")];
 
         let graph = build_graph(db.clone(), &modules).await.unwrap();
-        let result = build(db, &graph).await;
+        let result = build(
+            db,
+            &graph,
+            &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+        )
+        .await;
 
         assert_eq!(result.total, 2);
         assert_eq!(result.success, 2);
@@ -468,7 +511,12 @@ mod kind_tests {
         mem.insert(main.clone(), consumer.to_owned());
         let db = Arc::new(Mutex::new(Database::new(mem)));
         let graph = build_graph(db.clone(), &[main, types]).await.unwrap();
-        build(db, &graph).await
+        build(
+            db,
+            &graph,
+            &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+        )
+        .await
     }
 
     #[tokio::test]

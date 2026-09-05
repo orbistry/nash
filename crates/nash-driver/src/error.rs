@@ -8,6 +8,12 @@ use url::Url;
 /// Main error type for driver operations.
 #[derive(Debug, Error, Diagnostic)]
 pub enum DriverError {
+    #[error("module {uri} belongs to both {first} and {second}")]
+    ConflictingModuleOwners {
+        uri: Box<Url>,
+        first: String,
+        second: String,
+    },
     #[error("file not found: {uri}")]
     FileNotFound { uri: Url },
 

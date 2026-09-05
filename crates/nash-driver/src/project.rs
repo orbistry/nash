@@ -3,6 +3,7 @@
 //! Handles loading `nash.jsonc` configuration files and discovering
 //! source files within projects.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use url::Url;
 
@@ -11,6 +12,9 @@ use nash_config::{Config, Workspace};
 use crate::database::Database;
 use crate::error::DriverError;
 use crate::source::path_to_uri;
+
+/// Source URIs and their owning packages; applications have no package name.
+pub type ModuleOrigins = BTreeMap<Url, Option<nash_config::PackageName>>;
 
 /// A loaded Nash project.
 #[derive(Debug)]
@@ -73,14 +77,31 @@ impl Project {
     }
 
     /// Discover all Nash source files in the project.
-    pub async fn discover_modules(&self, db: &Database) -> Result<Vec<Url>, DriverError> {
-        let mut modules = Vec::new();
+    pub async fn discover_modules(&self, db: &Database) -> Result<ModuleOrigins, DriverError> {
+        let mut modules = ModuleOrigins::new();
 
         for member in &self.members {
+            let package = match &member.config {
+                Config::Package(package) => Some(package.name.clone()),
+                _ => None,
+            };
             for source_dir in &member.source_dirs {
                 let base_uri = path_to_uri(source_dir)?;
-                let mut found = db.glob(&base_uri, "**/*.nash").await?;
-                modules.append(&mut found);
+                for uri in db.glob(&base_uri, "**/*.nash").await? {
+                    if let Some(owner) = modules.get(&uri) {
+                        if owner != &package {
+                            return Err(DriverError::ConflictingModuleOwners {
+                                uri: Box::new(uri),
+                                first: owner
+                                    .as_ref()
+                                    .map_or_else(|| "application".to_owned(), ToString::to_string),
+                                second: member.name(),
+                            });
+                        }
+                    } else {
+                        modules.insert(uri, package.clone());
+                    }
+                }
             }
         }
 
@@ -196,5 +217,102 @@ impl ProjectMember {
             Config::Application(_) => "application".to_string(),
             Config::Workspace(_) => "workspace".to_string(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{InMemorySource, ModuleResult, build, build_graph};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    #[tokio::test]
+    async fn workspace_literal_defaults_use_discovered_package_ownership() {
+        let core = nash_config::parse(
+            r#"{
+            "type": "package", "name": "nash/core", "version": "1.0.0",
+            "summary": "Core", "license": "MIT", "exposedModules": ["Literal"]
+        }"#,
+            "/work/core/nash.jsonc",
+        )
+        .unwrap();
+        let app = nash_config::parse(r#"{"type":"application"}"#, "/work/app/nash.jsonc").unwrap();
+        let mut project = Project {
+            root: PathBuf::from("/work"),
+            config: nash_config::parse(
+                r#"{"type":"workspace","members":["core","app"]}"#,
+                "/work/nash.jsonc",
+            )
+            .unwrap(),
+            members: vec![
+                make_member(Path::new("/work/core"), core.clone()),
+                make_member(Path::new("/work/app"), app),
+            ],
+        };
+        let literal = Url::parse("file:///work/core/src/Literal.nash").unwrap();
+        let main = Url::parse("file:///work/app/src/Main.nash").unwrap();
+        let mem = InMemorySource::new();
+        mem.insert(
+            literal.clone(),
+            indoc::indoc!(
+                r#"
+            module Literal exposing (..)
+            import Builtin exposing (..)
+            trait FromInt 'a where
+                fromInt : int -> 'a
+            impl FromInt int where
+                fromInt x = x
+        "#
+            )
+            .to_owned(),
+        );
+        mem.insert(
+            main.clone(),
+            indoc::indoc!(
+                r#"
+            module Main exposing (..)
+            import Builtin exposing (..)
+            import Literal exposing (fromInt)
+            trait Drop 'a where
+                drop : 'a -> ()
+            impl Drop int where
+                drop x = ()
+            value n = drop (fromInt n)
+        "#
+            )
+            .to_owned(),
+        );
+        let db = Arc::new(Mutex::new(Database::new(mem)));
+        // Repeated workspace membership must not duplicate modules.
+        project
+            .members
+            .push(make_member(Path::new("/work/core"), core));
+        let mut modules = project.discover_modules(&*db.lock().await).await.unwrap();
+        assert_eq!(modules.len(), 2);
+        assert_eq!(modules[&literal].as_ref().unwrap().to_string(), "nash/core");
+        assert_eq!(modules[&main], None);
+        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
+            .await
+            .unwrap();
+        assert_eq!(graph.order, [literal.clone(), main.clone()]);
+        let result = build(db.clone(), &graph, &modules).await;
+        assert!(result.is_success(), "{result:?}");
+        modules.insert(literal.clone(), Some("example/literals".parse().unwrap()));
+        let result = build(db.clone(), &graph, &modules).await;
+        assert!(
+            matches!(&result.modules[&main], ModuleResult::Failed { message } if message.contains("AmbiguousType"))
+        );
+        // An application can name a source directory outside its own root.
+        let overlap = nash_config::parse(
+            r#"{"type":"application","sourceDirectories":["/work/core/src"]}"#,
+            "/work/app/nash.jsonc",
+        )
+        .unwrap();
+        project
+            .members
+            .push(make_member(Path::new("/work/app"), overlap));
+        assert!(matches!(project.discover_modules(&*db.lock().await).await,
+            Err(DriverError::ConflictingModuleOwners { uri, .. }) if *uri == literal));
     }
 }

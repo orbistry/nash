@@ -29,10 +29,10 @@
 //!     let modules = project.discover_modules(&db.lock().await).await?;
 //!
 //!     // Build dependency graph
-//!     let graph = build_graph(db.clone(), &modules).await?;
+//!     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>()).await?;
 //!
 //!     // Compile everything
-//!     let result = build(db, &graph).await;
+//!     let result = build(db, &graph, &modules).await;
 //!
 //!     println!("Compiled {} modules ({} success, {} failed)",
 //!         result.total, result.success, result.failed);
@@ -55,5 +55,5 @@ pub use database::Database;
 pub use error::DriverError;
 pub use graph::DepGraph;
 pub use interface::{Export, Interface, InterfaceCache, ModuleMeta};
-pub use project::{Project, ProjectMember};
+pub use project::{ModuleOrigins, Project, ProjectMember};
 pub use source::{FileSource, FileSystemSource, InMemorySource, OverlaySource};

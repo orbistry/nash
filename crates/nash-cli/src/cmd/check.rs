@@ -36,12 +36,14 @@ impl Args {
         }
 
         eprintln!("Building dependency graph...");
-        let graph = build_graph(db.clone(), &modules).await.into_diagnostic()?;
+        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
+            .await
+            .into_diagnostic()?;
 
         eprintln!("Dependency order: {} modules", graph.order.len());
 
         eprintln!("Compiling...");
-        let result = build(db, &graph).await;
+        let result = build(db, &graph, &modules).await;
 
         eprintln!();
         if !result.warnings.is_empty() {
