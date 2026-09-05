@@ -242,7 +242,8 @@ Kinds allow a constructor to be applied to fewer arguments than its arity
 (`Functor List`, `wrap List Int`). Kind checking accepts such applications;
 where the surface grammar and the type solver accept them is decided in
 [traits.md](traits.md). Applying a base-kinded type to an argument
-(`int Int`) is a kind error.
+is invalid. Named-constructor arity checking can report `BadArity` before
+kind inference runs.
 
 ## Errors
 

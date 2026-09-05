@@ -1,0 +1,35 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias Vault = { amount : int }"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 31,
+            },
+            end: Position {
+                line: 5,
+                column: 34,
+            },
+        },
+        context: RecordField {
+            alias: "Vault",
+            field: "amount",
+            big: true,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+    },
+]

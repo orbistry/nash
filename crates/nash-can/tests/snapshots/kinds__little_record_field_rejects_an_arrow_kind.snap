@@ -1,0 +1,51 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias record 'f 'a = { applied : 'f 'a, head : 'f }"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 53,
+            },
+            end: Position {
+                line: 5,
+                column: 55,
+            },
+        },
+        context: RecordField {
+            alias: "record",
+            field: "head",
+            big: false,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    15,
+                ),
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Arrow(
+                Var(
+                    0,
+                ),
+                Var(
+                    1,
+                ),
+            ),
+        },
+    },
+]

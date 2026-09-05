@@ -51,7 +51,7 @@ verification first. The prerequisite fix is now verified.
    verified implementation chunk in a separate described `jj` change,
    then use `jj new` for the next chunk. Do not discard existing changes
    or rewrite unrelated history. Record completed chunks in this plan,
-   add the chunk 7 changeset, and tick SPEC only after all acceptance
+   audit the per-chunk changesets, and tick SPEC only after all acceptance
    criteria and workspace checks pass. Report test results and any
    remaining limitation explicitly.
 
@@ -69,7 +69,27 @@ round-trip test even when the added field is a `String`.
 - [x] Chunk 4: declaration inference. Source acceptance tests cover casing, SCCs, bounds, free application heads, alias substitution, and error recovery. Kind schemes also cross canonical interfaces so imported declarations can be checked. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 5: interfaces and value annotations. Checks retain original annotations across alias expansion and visit nested lets. Tests verify copied interfaces after source-arena drop, real cross-module builds, kind/bound fingerprint changes, versioned cache round trips, and old-format cache misses. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 6: user parameter annotations. Tests cover Fix, Storable, base/arrow mismatches at annotation regions, separate bounded occurrences, narrowed alias applications, and constraints from all recursive-group uses. Formatting, strict Clippy, snapshot tests, workspace tests, and snapshot hygiene pass.
-- [ ] Chunk 7: changeset, final acceptance audit, and SPEC.
+- [x] Chunk 7: changeset, final acceptance audit, and SPEC. Final record-field error snapshots check context and source regions; an explicit Term annotation has a success snapshot. All final gates pass.
+
+### Final verification
+
+- `cargo fmt --all`: pass.
+- `cargo clippy --all-targets --all-features -- -D warnings`: pass.
+- `cargo insta test`: pass; new snapshots reviewed before acceptance.
+- `cargo test`: 1,773 passed, 0 failed, 3 ignored.
+- `cargo insta test --unreferenced reject`: pass; no unreferenced or pending snapshots.
+- The 48 source-level kind acceptance tests cover declarations, recursive groups,
+  annotations, record fields, imported contracts, and copied interfaces. Driver
+  tests cover cross-module builds, kind and bound fingerprints, cache round trips,
+  and rejection of old cache formats. Solver tests retain the nested-section
+  regression and explicitly reject unsupported higher-kinded value applications.
+- Read-only agent audits found no blocking issue. Each implementation chunk has
+  its own verified, described jj change. The six per-chunk changesets cover all five changed
+  compiler crates and are included in their matching implementation changes.
+
+Higher-kinded value unification and value-use kind predicates remain in plan 03.
+Interface fingerprints are produced and tested; this plan does not introduce a
+new incremental build engine.
 
 ## Prerequisites
 
@@ -1054,7 +1074,8 @@ canonical module so the `kind` fields show in the Debug snapshot;
   (`type alias xs = list (option int)` with `option` declared),
   `kind_error_lowercase_alias_big_body` (`type alias id = Int`),
   `kind_error_uppercase_alias_little_body` (`type alias Count = int`),
-  `kind_error_too_many_args` (`type alias x = int Int`),
+  `named_constructor_arity_remains_a_canonicalization_error` (`type alias x = int Int`, expected `BadArity`),
+  `base_kinded_parameter_cannot_be_applied` (expected `KindTooManyArgs`),
   `kind_error_infinite` (`type bad 'f = Bad ('f 'f)`),
   `kind_error_pair_needs_big` (`type alias p = pair int Int`),
   `kind_errors_all_reported` (two independent bad declarations give two
@@ -1157,7 +1178,7 @@ expressions are checked in the same walk by recursing into
 - `module.rs`: `annotation_kind_ok` (`f : 'a -> list 'a -> list 'a`),
   `annotation_kind_error_list_of_little` (`f : list (option int) -> int`),
   `annotation_kind_error_arrow_arg_higher_kinded`
-  (`f : List -> int`, `List` unapplied in a value position),
+  (`f : ('f 'a, 'f) -> int`, a higher-kinded variable in a value position),
   `annotation_kind_var_app` (`f : 'f 'a -> 'f 'a`, ok), `let_annotation_kind_error`.
 - `interface_from_module_exports_kinds` (Debug snapshot shows `kind`).
 - `nash-driver`: `test_interface_fingerprint_changes_with_kind`.
@@ -1223,19 +1244,22 @@ at the annotation.
 
 ## Chunk 7: Changeset and SPEC
 
-**Files**: `.sampo/changesets/kinds.md`, `SPEC.md`.
+**Files**: `.sampo/changesets/`, `SPEC.md`.
 
-```markdown
----
-cargo/nash-ast: minor
-cargo/nash-can: minor
-cargo/nash-driver: patch
----
+Each implementation chunk includes its own changeset, following plan 01:
 
-Add kind inference (Big / Const / Term) over type declarations, kind
-schemes in interfaces, kind checking of value annotations, and user kind
-annotations on type parameters.
-```
+- Chunk 1: `kind-vocabulary.md` — nash-ast.
+- Chunk 2: `kind-unification.md` — nash-can.
+- Chunk 3: `builtin-kind-schemes.md` — nash-ast, nash-can.
+- Chunk 4: `declaration-kind-inference.md` — nash-ast, nash-can,
+  nash-constrain, nash-solve.
+- Chunk 5: `annotation-kind-contracts.md` — nash-ast, nash-can,
+  nash-constrain, nash-driver.
+- Chunk 6: `parameter-kind-annotations.md` — nash-can.
+
+Chunk 7 audits coverage and marks SPEC complete. It adds no duplicate release
+entry for verification-only work. Combined bump levels remain minor for
+nash-ast and nash-can, and patch for nash-constrain, nash-solve, and nash-driver.
 
 Grammar lives only in docs/syntax.md (the `kind` and `type_param` rules
 are plans/01's). SPEC.md: add a "Kinds" checklist under Canonicalization

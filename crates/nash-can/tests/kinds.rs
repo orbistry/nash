@@ -413,3 +413,18 @@ fn parameter_annotation_is_checked_after_all_recursive_uses() {
         "type Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)"
     );
 }
+
+#[test]
+fn big_record_field_rejects_const() {
+    assert_kind_error_snapshot!("type alias Vault = { amount : int }");
+}
+
+#[test]
+fn little_record_field_rejects_an_arrow_kind() {
+    assert_kind_error_snapshot!("type alias record 'f 'a = { applied : 'f 'a, head : 'f }");
+}
+
+#[test]
+fn kind_annotation_term() {
+    assert_kinds_snapshot!("type wrapper ('a : Term) = Wrap 'a");
+}

@@ -1,0 +1,23 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type wrapper ('a : Term) = Wrap 'a"
+---
+(
+    [
+        (
+            "wrapper",
+            KindScheme {
+                bounds: [],
+                kind: Arrow(
+                    Base(
+                        Term,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+            },
+        ),
+    ],
+    [],
+)
