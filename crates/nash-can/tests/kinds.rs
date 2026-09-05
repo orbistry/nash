@@ -364,3 +364,52 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
     assert!(matches!(errors.as_slice(), [Error::KindMismatch { .. }]));
     insta::assert_debug_snapshot!(errors);
 }
+
+#[test]
+fn kind_annotation_fix() {
+    assert_kinds_snapshot!("type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))");
+}
+
+#[test]
+fn kind_annotation_storable() {
+    assert_kinds_snapshot!("type alias xs ('a : Storable) = list 'a");
+}
+
+#[test]
+fn kind_annotation_base_mismatch() {
+    assert_kind_error_snapshot!("type Box ('a : Const) = Box 'a");
+}
+
+#[test]
+fn kind_annotation_arrow_mismatch() {
+    assert_kind_error_snapshot!("type wrap ('f : Big) 'a = Wrap ('f 'a)");
+}
+
+#[test]
+fn storable_annotation_occurrences_are_independent() {
+    assert_kinds_snapshot!("type wrap ('f : Storable -> Storable) 'a = Wrap ('f 'a)");
+}
+
+#[test]
+fn narrowed_function_alias_accepts_big_parameter() {
+    assert_kinds_snapshot!("type alias fn ('a : Big) = 'a -> 'a\nf : fn Int\nf x = x");
+}
+
+#[test]
+fn narrowed_function_alias_rejects_const_parameter() {
+    assert_kind_error_snapshot!("type alias fn ('a : Big) = 'a -> 'a\nf : fn int\nf x = x");
+}
+
+#[test]
+fn narrowed_function_alias_rejects_const_parameter_in_let() {
+    assert_kind_error_snapshot!(
+        "type alias fn ('a : Big) = 'a -> 'a\nf =\n    let\n        g : fn int\n        g x = x\n    in\n    g"
+    );
+}
+
+#[test]
+fn parameter_annotation_is_checked_after_all_recursive_uses() {
+    assert_kind_error_snapshot!(
+        "type Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)"
+    );
+}

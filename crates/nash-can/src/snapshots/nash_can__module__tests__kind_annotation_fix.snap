@@ -1,0 +1,166 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntype Fix ('f : Big -> Big) = Fix ('f (Fix 'f))\n"
+---
+Module {
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 4,
+                column: 1,
+            },
+        },
+    ),
+    decls: Empty,
+    unions: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 1,
+                },
+                end: Position {
+                    line: 4,
+                    column: 1,
+                },
+            },
+            value: Union {
+                kind: KindScheme {
+                    bounds: [],
+                    kind: Arrow(
+                        Arrow(
+                            Base(
+                                Big,
+                            ),
+                            Base(
+                                Big,
+                            ),
+                        ),
+                        Base(
+                            Big,
+                        ),
+                    ),
+                },
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 9,
+                        },
+                    },
+                    value: "Fix",
+                },
+                parameters: [
+                    "f",
+                ],
+                ctors: [
+                    Ctor {
+                        name: "Fix",
+                        index: 0,
+                        arity: 1,
+                        arguments: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 35,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 46,
+                                    },
+                                },
+                                value: App {
+                                    head: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 35,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 37,
+                                            },
+                                        },
+                                        value: Var(
+                                            "f",
+                                        ),
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 3,
+                                                    column: 39,
+                                                },
+                                                end: Position {
+                                                    line: 3,
+                                                    column: 45,
+                                                },
+                                            },
+                                            value: Named {
+                                                reference: QualifiedName {
+                                                    home: ModuleName {
+                                                        package: None,
+                                                        name: "Main",
+                                                    },
+                                                    name: "Fix",
+                                                },
+                                                args: [
+                                                    Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 3,
+                                                                column: 43,
+                                                            },
+                                                            end: Position {
+                                                                line: 3,
+                                                                column: 45,
+                                                            },
+                                                        },
+                                                        value: Var(
+                                                            "f",
+                                                        ),
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+                alternatives: 1,
+                options: Unbox,
+            },
+        },
+    ],
+    aliases: [],
+    binops: [],
+}

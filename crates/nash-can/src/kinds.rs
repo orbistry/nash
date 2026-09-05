@@ -758,6 +758,29 @@ fn infer_group<'a>(
         }
     }
 
+    // Apply annotations after every body in the recursive group has constrained usage.
+    for (decl, (scope, _)) in group.iter().zip(&scopes) {
+        let parameters = match decl {
+            Decl::Union(union) => union.source.value.arguments,
+            Decl::Alias(alias) => alias.source.value.arguments,
+        };
+        for parameter in parameters {
+            if let Some(annotation) = parameter.kind {
+                let expected = w.annotation_kind(annotation);
+                let actual = scope.params[parameter.name.value];
+                w.expect(
+                    annotation.region,
+                    KindContext::ParamAnnotation {
+                        type_name: decl.name().value,
+                        param: parameter.name.value,
+                    },
+                    expected,
+                    actual,
+                );
+            }
+        }
+    }
+
     if !w.errors.is_empty() {
         return Err(w.errors);
     }
@@ -768,6 +791,21 @@ fn infer_group<'a>(
 }
 
 impl<'e, 'a> Walker<'e, 'a> {
+    fn annotation_kind(&mut self, kind: &Located<nash_source::Kind<'_>>) -> &'a K<'a> {
+        use nash_source::Kind;
+        match &kind.value {
+            Kind::Big => self.bump.alloc(K::Base(BaseKind::Big)),
+            Kind::Const => self.bump.alloc(K::Base(BaseKind::Const)),
+            Kind::Term => self.bump.alloc(K::Base(BaseKind::Term)),
+            Kind::Storable => self.infer.fresh_k(KindSet::STORABLE),
+            Kind::Arrow { from, to } => {
+                let from = self.annotation_kind(from);
+                let to = self.annotation_kind(to);
+                self.bump.alloc(K::Arrow(from, to))
+            }
+        }
+    }
+
     fn infer_type(&mut self, scope: &Scope<'a>, typ: &'a Located<CanType<'a>>) -> &'a K<'a> {
         match &typ.value {
             CanType::Var(name) => scope.params[name],

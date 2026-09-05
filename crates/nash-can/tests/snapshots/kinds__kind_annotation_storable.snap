@@ -1,0 +1,27 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias xs ('a : Storable) = list 'a"
+---
+(
+    [],
+    [
+        (
+            "xs",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Const,
+                    ),
+                ),
+            },
+        ),
+    ],
+)

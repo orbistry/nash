@@ -1,0 +1,34 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Box ('a : Const) = Box 'a"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 16,
+            },
+            end: Position {
+                line: 5,
+                column: 21,
+            },
+        },
+        context: ParamAnnotation {
+            type_name: "Box",
+            param: "a",
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+    },
+]

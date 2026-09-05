@@ -1,0 +1,34 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 18,
+            },
+            end: Position {
+                line: 6,
+                column: 23,
+            },
+        },
+        context: ParamAnnotation {
+            type_name: "first",
+            param: "a",
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+    },
+]

@@ -1,0 +1,28 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))"
+---
+(
+    [
+        (
+            "Fix",
+            KindScheme {
+                bounds: [],
+                kind: Arrow(
+                    Arrow(
+                        Base(
+                            Big,
+                        ),
+                        Base(
+                            Big,
+                        ),
+                    ),
+                    Base(
+                        Big,
+                    ),
+                ),
+            },
+        ),
+    ],
+    [],
+)

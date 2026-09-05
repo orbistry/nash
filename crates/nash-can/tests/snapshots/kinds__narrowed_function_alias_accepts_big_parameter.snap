@@ -1,0 +1,23 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias fn ('a : Big) = 'a -> 'a\nf : fn Int\nf x = x"
+---
+(
+    [],
+    [
+        (
+            "fn",
+            KindScheme {
+                bounds: [],
+                kind: Arrow(
+                    Base(
+                        Big,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+            },
+        ),
+    ],
+)

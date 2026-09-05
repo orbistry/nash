@@ -1,0 +1,42 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type alias fn ('a : Big) = 'a -> 'a\nf =\n    let\n        g : fn int\n        g x = x\n    in\n    g"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 16,
+            },
+            end: Position {
+                line: 8,
+                column: 19,
+            },
+        },
+        context: TypeArg {
+            head: Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "fn",
+                },
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+        },
+    },
+]

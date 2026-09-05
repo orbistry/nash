@@ -68,7 +68,7 @@ round-trip test even when the added field is a `String`.
 - [x] Chunk 3: builtin kinds and environment. Tests verify all 17 primitive names, arities, representation bounds, and seeded lookup. Tests failed before implementation; formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 4: declaration inference. Source acceptance tests cover casing, SCCs, bounds, free application heads, alias substitution, and error recovery. Kind schemes also cross canonical interfaces so imported declarations can be checked. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 5: interfaces and value annotations. Checks retain original annotations across alias expansion and visit nested lets. Tests verify copied interfaces after source-arena drop, real cross-module builds, kind/bound fingerprint changes, versioned cache round trips, and old-format cache misses. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
-- [ ] Chunk 6: user parameter annotations.
+- [x] Chunk 6: user parameter annotations. Tests cover Fix, Storable, base/arrow mismatches at annotation regions, separate bounded occurrences, narrowed alias applications, and constraints from all recursive-group uses. Formatting, strict Clippy, snapshot tests, workspace tests, and snapshot hygiene pass.
 - [ ] Chunk 7: changeset, final acceptance audit, and SPEC.
 
 ## Prerequisites

@@ -8,8 +8,8 @@ use nash_ast::{
 use nash_region::{Located, Region};
 use nash_source::{
     Alias as SourceAlias, Ctor as SourceCtor, CtorArgs as SourceCtorArgs, Exposed, Exposing, Infix,
-    Module as SourceModule, Privacy, Type as SourceType, TypeParam as SourceTypeParam,
-    Union as SourceUnion, Value as SourceValue,
+    Module as SourceModule, Privacy, Type as SourceType, Union as SourceUnion,
+    Value as SourceValue,
 };
 
 use crate::accumulate;
@@ -426,18 +426,6 @@ fn canonicalize_unions<'a>(
     )
 }
 
-fn reject_kind_annotations<'a>(params: &[&SourceTypeParam<'a>]) -> Result<(), Vec<Error<'a>>> {
-    for param in params {
-        if let Some(kind) = param.kind {
-            return Err(vec![Error::Unsupported {
-                feature: "kind annotations",
-                region: kind.region,
-            }]);
-        }
-    }
-    Ok(())
-}
-
 fn ctor_arg_types<'a>(
     bump: &'a Bump,
     ctor: &'a SourceCtor<'a>,
@@ -462,7 +450,6 @@ fn canonicalize_union<'a>(
             region: attribute.name.region,
         }]);
     }
-    reject_kind_annotations(union.arguments)?;
     let parameters =
         bump.alloc_slice_fill_iter(union.arguments.iter().copied().map(|arg| arg.name.value));
     let ctors = canonicalize_ctors(bump, env, union.ctors)?;
@@ -603,7 +590,6 @@ fn canonicalize_single_alias<'a>(
             region: attribute.name.region,
         }]);
     }
-    reject_kind_annotations(alias.arguments)?;
     let parameters =
         bump.alloc_slice_fill_iter(alias.arguments.iter().copied().map(|arg| arg.name.value));
     let typ = types::canonicalize_type(bump, env, alias.typ)?;
@@ -4169,8 +4155,8 @@ mod tests {
     }
 
     #[test]
-    fn kind_annotation_unsupported() {
-        assert_module_error_snapshot!(
+    fn kind_annotation_fix() {
+        assert_module_snapshot!(
             "module Main exposing (..)\n\ntype Fix ('f : Big -> Big) = Fix ('f (Fix 'f))\n"
         );
     }

@@ -1,0 +1,46 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type wrap ('f : Big) 'a = Wrap ('f 'a)"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 17,
+            },
+            end: Position {
+                line: 5,
+                column: 20,
+            },
+        },
+        context: ParamAnnotation {
+            type_name: "wrap",
+            param: "f",
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    15,
+                ),
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Arrow(
+                Var(
+                    0,
+                ),
+                Var(
+                    1,
+                ),
+            ),
+        },
+    },
+]
