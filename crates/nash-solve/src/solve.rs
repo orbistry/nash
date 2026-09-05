@@ -27,6 +27,7 @@ pub fn run<'a>(
     let mut solver = Solver {
         bump,
         pools: vec![Vec::new(); 8],
+        copied: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -75,6 +76,7 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
 struct Solver<'a> {
     bump: &'a Bump,
     pools: Vec<Vec<Variable>>,
+    copied: Vec<(Variable, Variable)>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -690,9 +692,31 @@ impl<'a> Solver<'a> {
     // COPY
 
     fn make_copy(&mut self, uf: &mut UnionFind<'a>, rank: usize, var: Variable) -> Variable {
-        let copy = self.make_copy_help(uf, rank, var);
-        restore(uf, var);
-        copy
+        self.make_copies(uf, rank, &[var]).0[0]
+    }
+
+    /// Copy all roots of one scheme (type and context) together, retaining
+    /// sharing within the use and restoring every touched original afterward.
+    /// The pairs also identify generalized variables for instance type args.
+    fn make_copies(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        roots: &[Variable],
+    ) -> (Vec<Variable>, Vec<(Variable, Variable)>) {
+        debug_assert!(self.copied.is_empty());
+        let roots = roots
+            .iter()
+            .map(|root| self.make_copy_help(uf, rank, *root))
+            .collect();
+        let copied = std::mem::take(&mut self.copied);
+        for (original, _) in &copied {
+            uf.modify(*original, |desc| {
+                desc.copy = None;
+                desc.mark = NO_MARK;
+            });
+        }
+        (roots, copied)
     }
 
     fn make_copy_help(
@@ -721,6 +745,7 @@ impl<'a> Solver<'a> {
 
         let copy = uf.fresh(make_descriptor(desc.content.clone()));
         self.pools[max_rank].push(copy);
+        self.copied.push((variable, copy));
 
         // Link the original variable to the new variable. This lets us
         // avoid making multiple copies of the variable we are instantiating.
@@ -951,70 +976,56 @@ fn adjust_rank_content<'a>(
     }
 }
 
-// RESTORE
+#[cfg(test)]
+mod copy_tests {
+    use super::*;
+    use nash_constrain::type_::{PredId, make_descriptor};
 
-fn restore<'a>(uf: &mut UnionFind<'a>, variable: Variable) {
-    let desc = uf.get(variable).clone();
-    if desc.copy.is_some() {
-        uf.set(
-            variable,
-            Descriptor {
-                preds: desc.preds.clone(),
-                content: desc.content.clone(),
-                rank: NO_RANK,
-                mark: NO_MARK,
-                copy: None,
-            },
-        );
-        restore_content(uf, &desc.content);
-    }
-}
-
-fn restore_content<'a>(uf: &mut UnionFind<'a>, content: &Content<'a>) {
-    match content {
-        Content::FlexVar(_)
-        | Content::FlexSuper(_, _)
-        | Content::RigidVar(_)
-        | Content::RigidSuper(_, _)
-        | Content::Error => {}
-
-        Content::Structure(term) => match term {
-            FlatType::App1(_, _, args) => {
-                for arg in args {
-                    restore(uf, *arg);
-                }
-            }
-
-            FlatType::Fun1(arg, result) => {
-                restore(uf, *arg);
-                restore(uf, *result);
-            }
-
-            FlatType::EmptyRecord1 => {}
-
-            FlatType::Record1(fields, ext) => {
-                for field in fields.values() {
-                    restore(uf, *field);
-                }
-                restore(uf, *ext);
-            }
-
-            FlatType::Unit1 => {}
-
-            FlatType::Tuple1(a, b, maybe_c) => {
-                restore(uf, *a);
-                restore(uf, *b);
-                if let Some(c) = maybe_c {
-                    restore(uf, *c);
-                }
-            }
-        },
-
-        Content::Alias { args, real, .. } => {
-            for (_, arg) in args {
-                restore(uf, *arg);
-            }
-            restore(uf, *real);
+    #[test]
+    fn scheme_roots_share_copies_but_separate_uses_do_not() {
+        let bump = Bump::new();
+        let mut solver = Solver {
+            bump: &bump,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            conversion_errors: Vec::new(),
+        };
+        let mut uf = UnionFind::new();
+        let result = uf.fresh(make_descriptor(Content::RigidVar("a")));
+        let context_only = uf.fresh(make_descriptor(Content::FlexVar(Some("b"))));
+        let outer = uf.fresh(make_descriptor(Content::FlexVar(Some("outer"))));
+        uf.modify(outer, |desc| desc.rank = OUTERMOST_RANK);
+        uf.modify(context_only, |desc| desc.preds.push(PredId(0)));
+        let tuple = uf.fresh(make_descriptor(Content::Structure(FlatType::Tuple1(
+            result,
+            context_only,
+            Some(outer),
+        ))));
+        let roots = [result, tuple, context_only];
+        let (first, first_pairs) = solver.make_copies(&mut uf, 2, &roots);
+        let (second, second_pairs) = solver.make_copies(&mut uf, 2, &roots);
+        assert_eq!(first_pairs.len(), 3);
+        assert_eq!(second_pairs.len(), 3);
+        for copies in [&first, &second] {
+            let Content::Structure(FlatType::Tuple1(a, b, Some(c))) = uf.get(copies[1]).content
+            else {
+                panic!("copied context root");
+            };
+            assert_eq!(a, copies[0]);
+            assert_eq!(b, copies[2]);
+            assert_eq!(c, outer, "outer variables must stay shared");
+            assert!(matches!(uf.get(a).content, Content::FlexVar(Some("a"))));
         }
+        for (first, second) in first.iter().zip(&second) {
+            assert!(!uf.equivalent(*first, *second));
+        }
+        for original in roots {
+            assert!(uf.get(original).copy.is_none());
+        }
+        assert_eq!(uf.get(context_only).preds, [PredId(0)]);
+        assert!(
+            first_pairs.contains(&(result, first[0])),
+            "record rigid type-argument copies"
+        );
     }
 }

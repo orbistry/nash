@@ -1162,9 +1162,12 @@ Implementation audit (takes precedence over the sketches below):
 
 Status: annotation conversion accepts explicit contexts and has a regression
 snapshot for headed and context-only arguments with a reserved variable name.
-Wanted creation, scheme ownership, copying, generalization, and the resulting
-solver API are not implemented yet. Do not mark this chunk complete from the
-annotation conversion test alone.
+Multi-root copying shares a copy map for all roots of one instantiation and
+restores all touched originals directly. Its regression covers repeated uses,
+generalized rigid variables, context-only roots, and retained outer variables.
+Wanted creation, scheme ownership, predicate copying, generalization, and the
+resulting solver API are not implemented yet. Do not mark this chunk complete
+from the conversion and variable-copying tests alone.
 
 Code:
 
