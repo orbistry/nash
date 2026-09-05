@@ -286,6 +286,26 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn recursive_evidence_growth_through_a_nested_helper_is_rejected() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep 'a => Keep (List 'a) where
+            keep xs = xs
+        nest : Keep 'a => 'a -> ()
+        nest x =
+            let
+                helper : Keep 'b => 'b -> ()
+                helper y = nest [y]
+            in
+            helper x
+        "#
+    );
+}
+
+#[test]
 fn recursive_evidence_allows_unchanged_closed_and_unconstrained_calls() {
     assert_inference_snapshot!(
         r#"
@@ -304,6 +324,15 @@ fn recursive_evidence_allows_unchanged_closed_and_unconstrained_calls() {
         plain x = plain [x]
         wrap : Keep 'a => 'a -> List 'a
         wrap x = keep [x]
+        reset : (Keep 'a, Keep 'b) => 'a -> 'b -> ()
+        reset x y = reset [y] ()
+        nested : Keep 'a => 'a -> ()
+        nested x =
+            let
+                helper : Keep 'b => 'b -> ()
+                helper y = nested [y]
+            in
+            helper ()
         "#
     );
 }

@@ -327,11 +327,14 @@ Recursive groups follow Elm: untyped definitions in a group are monomorphic
 within the group and share one scheme (one context) after generalization.
 Typed definitions are instantiated polymorphically at recursive calls.
 
-**Polymorphic recursion under a trait constraint is an error.** If a
-recursive call to a definition of the current group resolves one of that
-definition's context predicates with evidence of the form `Impl { .., args
-}` where some argument is (or contains) a `Given` of the same group, the
-evidence grows on every unfolding and specialization cannot terminate.
+**Polymorphic recursion with growing evidence is an error.** Track each
+definition's context slots separately. A local call connects each callee
+slot to the `Given` slots used to construct its evidence. A dependency
+through `Impl` adds a wrapper; `Given` and superclass projections only
+forward evidence. Reject a dependency cycle containing an impl wrapper.
+This includes cycles through local helpers with their own declared contexts.
+Closed evidence breaks the dependency: an impl around another slot that is
+replaced with closed evidence on the next call does not grow indefinitely.
 Example:
 
 ```elm

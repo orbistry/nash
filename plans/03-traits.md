@@ -1935,15 +1935,13 @@ is deleted.
 ## Chunk 7: literal traits, defaulting, ambiguity, polymorphic recursion; remove supertypes
 
 Status: in progress. Declared recursive schemes now preserve quantifier
-ownership during body checking. Direct and mutual calls reject impl evidence
-containing a given from the same group; unchanged givens, closed evidence,
+ownership during body checking. Direct, mutual and nested-helper calls reject
+cycles of context-slot dependencies containing impl wrappers; unchanged givens, closed evidence,
 unconstrained polymorphic recursion and nonrecursive method calls pass.
 Snapshot tests and a real CLI check verify the direct diagnostic.
-The evidence-growth check remains incomplete across nested helpers: a helper
-with its own declared context can call the enclosing recursive definition
-with `Impl [Given helper]`, then receive `Given outer` at its own call.
-The CLI currently accepts this composition; resolve it before completing this
-chunk. Literal traits, defaulting, ambiguity and SuperType removal also remain.
+Nested helpers with closed evidence and separate context slots which reset to
+closed evidence pass. Literal traits, defaulting, ambiguity and SuperType
+removal remain.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,
@@ -1955,8 +1953,8 @@ Change:
 1. Integer and string literals (and bytes literals once plan 01 parses
    them) are typed through `FromInt`/`FromString`/`FromBytes`.
 2. `split` defaults ambiguous variables and reports ambiguity.
-3. Recursive calls whose evidence contains the group's own `Given` under an
-   `Impl` are `PolymorphicRecursion` errors.
+3. Cycles of local-call context-slot dependencies containing an `Impl`
+   wrapper are `PolymorphicRecursion` errors, including nested helpers.
 4. `SuperType`, `Content::FlexSuper`, `Content::RigidSuper`,
    `mk_flex_number`, `to_super`, `unify_flex_super*`, `combine_rigid_supers`,
    `atom_matches_super`, `comparable_occurs_check`, `unify_comparable_recursive`,
@@ -2046,22 +2044,15 @@ Defaulting in `split`, after the queue drains and before index assignment:
 collects flex variables with rank `NO_RANK`. `group_by_var` pairs each
 retained predicate with its young variables not in `reachable`.
 
-Polymorphic recursion, after resolution in `split`, only when `binder` is
-`Some`:
-
-```rust
-        for id in solved_this_split {
-            let pred = self.store.get(id);
-            let Origin::Use { region, name, .. } = pred.origin else { continue };
-            if !locals.iter().any(|(n, _)| *n == name) && binder.value != name { continue; }
-            if self.evidence_mentions_given(id, binder.region) {
-                state = add_error(state, Error::PolymorphicRecursion { region, binder, trait_: pred.trait_, args: .. });
-            }
-        }
-```
-
-`evidence_mentions_given` walks `Solution::Impl { subs }` recursively and
-returns true on a `Given`/`Super` whose binder is the current binder.
+Polymorphic recursion is checked after resolution and recursive-use backfill,
+before publishing `SolvedTypes`. Build a graph whose vertices are
+`(Scheme.binder, context_index)`. For each local call, connect each callee slot
+to the `Given` or `Super` slots referenced by its evidence. Mark a dependency
+when its path crosses `Solution::Impl`. Reject a marked edge when its
+source can reach its target; report the original call and context predicate.
+Closed impls add no edges. Foreign method uses do not introduce local-call
+slot dependencies. This replaces the syntactic recursive-group test, which
+missed evidence composition through local helpers and conflated distinct slots.
 
 Snapshot render: `render_annotation` already prints contexts; the
 `forall number. number` of `int_literal` becomes `forall a. FromInt a => a`.

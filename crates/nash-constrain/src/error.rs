@@ -13,7 +13,7 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
-    /// Recursive evidence adds an impl around a given from the same group.
+    /// A cycle of evidence arguments adds an impl wrapper on each traversal.
     PolymorphicRecursion {
         region: Region,
         name: &'a str,

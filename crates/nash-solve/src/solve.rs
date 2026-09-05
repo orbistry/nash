@@ -38,7 +38,6 @@ pub fn run<'a>(
         recursive_uses: Vec::new(),
         uses: Vec::new(),
         owners: Vec::new(),
-        recursive_groups: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -130,7 +129,6 @@ struct Solver<'a, 'tables> {
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
     owners: Vec<nash_ast::NodeId>,
-    recursive_groups: Vec<Vec<nash_ast::NodeId>>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -191,6 +189,67 @@ impl<'a> Solver<'a, '_> {
         }
     }
 
+    /// Track evidence arguments through local calls, including helpers which
+    /// introduce their own givens. A closed proof contributes no dependency.
+    fn growing_evidence(&self) -> BTreeSet<type_::PredId> {
+        use crate::preds::Solution;
+        use std::collections::{HashMap, HashSet};
+        let binders: HashMap<_, _> = self
+            .schemes
+            .iter()
+            .map(|scheme| (nash_ast::NodeId::def(scheme.name), scheme.binder))
+            .collect();
+        let mut edges: HashMap<_, Vec<_>> = HashMap::new();
+        let mut wrapped = Vec::new();
+        for use_ in &self.uses {
+            let UseSource::Local { definition, .. } = use_.source else {
+                continue;
+            };
+            let binder = binders[&definition];
+            for (index, root) in use_.predicates.iter().enumerate() {
+                let target = (binder, index);
+                let mut pending = vec![(*root, false)];
+                let mut seen = BTreeSet::new();
+                while let Some((id, under_impl)) = pending.pop() {
+                    if !seen.insert((id, under_impl)) {
+                        continue;
+                    }
+                    match &self.predicates.get(id).solution {
+                        Some(Solution::Impl { subs, .. }) => {
+                            pending.extend(subs.iter().map(|id| (*id, true)))
+                        }
+                        Some(
+                            Solution::Given { binder, index }
+                            | Solution::Super { binder, index, .. },
+                        ) => {
+                            let source = (*binder, *index);
+                            edges.entry(target).or_default().push(source);
+                            if under_impl {
+                                wrapped.push((target, source, *root));
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+        }
+        let mut growing = BTreeSet::new();
+        for (target, source, root) in wrapped {
+            let mut pending = vec![source];
+            let mut seen = HashSet::new();
+            while let Some(slot) = pending.pop() {
+                if slot == target {
+                    growing.insert(root);
+                    break;
+                }
+                if seen.insert(slot) {
+                    pending.extend(edges.get(&slot).into_iter().flatten().copied());
+                }
+            }
+        }
+        growing
+    }
+
     fn finish(
         &self,
         uf: &mut UnionFind<'a>,
@@ -198,68 +257,23 @@ impl<'a> Solver<'a, '_> {
     ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
         use crate::solved::{Instance, Scheme, SolvedTypes};
         use std::collections::HashMap;
+        let growing = self.growing_evidence();
         let mut errors = Vec::new();
         for use_ in &self.uses {
-            if let UseSource::Local { definition, .. } = use_.source
-                && let Some(group) = self
-                    .recursive_groups
-                    .iter()
-                    .find(|group| group.contains(&definition))
-            {
-                let mut owner = use_.owner;
-                let mut recursive = false;
-                while let Some(id) = owner {
-                    if group.contains(&id) {
-                        recursive = true;
-                        break;
-                    }
-                    owner = self
-                        .schemes
+            for root in &use_.predicates {
+                if growing.contains(root) {
+                    let pred = self.predicates.get(*root);
+                    let args: Vec<_> = pred
+                        .args
                         .iter()
-                        .find(|scheme| nash_ast::NodeId::def(scheme.name) == id)
-                        .and_then(|scheme| scheme.parent);
-                }
-                if recursive {
-                    for root in &use_.predicates {
-                        let pred = self.predicates.get(*root);
-                        let Some(crate::preds::Solution::Impl { subs, .. }) = &pred.solution else {
-                            continue;
-                        };
-                        let mut pending = subs.clone();
-                        let mut seen = BTreeSet::new();
-                        let mut grows = false;
-                        while let Some(id) = pending.pop() {
-                            if !seen.insert(id) {
-                                continue;
-                            }
-                            match &self.predicates.get(id).solution {
-                                Some(crate::preds::Solution::Impl { subs, .. }) => {
-                                    pending.extend(subs)
-                                }
-                                Some(
-                                    crate::preds::Solution::Given { binder, .. }
-                                    | crate::preds::Solution::Super { binder, .. },
-                                ) if group.contains(binder) => {
-                                    grows = true;
-                                    break;
-                                }
-                                _ => {}
-                            }
-                        }
-                        if grows {
-                            let args: Vec<_> = pred
-                                .args
-                                .iter()
-                                .map(|var| to_error_type(self.bump, uf, *var))
-                                .collect();
-                            errors.push(Error::PolymorphicRecursion {
-                                region: use_.site.region,
-                                name: use_.site.name,
-                                trait_: pred.trait_,
-                                args: self.bump.alloc_slice_copy(&args),
-                            });
-                        }
-                    }
+                        .map(|var| to_error_type(self.bump, uf, *var))
+                        .collect();
+                    errors.push(Error::PolymorphicRecursion {
+                        region: use_.site.region,
+                        name: use_.site.name,
+                        trait_: pred.trait_,
+                        args: self.bump.alloc_slice_copy(&args),
+                    });
                 }
             }
             let mut pending = use_.predicates.clone();
@@ -875,20 +889,6 @@ impl<'a> Solver<'a, '_> {
                 header_con,
                 body_con,
             } => {
-                if declarations.iter().any(|def| def.context.is_some()) {
-                    let mut group: Vec<_> = declarations
-                        .iter()
-                        .map(|def| nash_ast::NodeId::def(def.name))
-                        .collect();
-                    if let Constraint::Let { definitions, .. } = body_con {
-                        group.extend(
-                            definitions
-                                .iter()
-                                .map(|def| nash_ast::NodeId::def(def.name)),
-                        );
-                    }
-                    self.recursive_groups.push(group);
-                }
                 let wanted_start = self.wanted.len();
                 let annotated = definitions.iter().any(|def| def.context.is_some());
                 if rigid_vars.is_empty() && matches!(body_con, Constraint::True) {
@@ -2083,7 +2083,6 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
-            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2148,7 +2147,6 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
-            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2208,7 +2206,6 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
-            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2288,7 +2285,6 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
-            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2403,7 +2399,6 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
-            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2538,7 +2533,6 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
-            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
@@ -2614,7 +2608,6 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
-            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
