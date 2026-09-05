@@ -34,10 +34,12 @@ pub fn unify<'a>(bump: &'a Bump, uf: &mut UnionFind<'a>, v1: Variable, v2: Varia
         Err(()) => {
             let t1 = annotation::to_error_type(bump, uf, v1);
             let t2 = annotation::to_error_type(bump, uf, v2);
+            let preds = merged_predicates(uf, v1, v2);
             uf.union(
                 v1,
                 v2,
                 Descriptor {
+                    preds,
                     content: Content::Error,
                     rank: NO_RANK,
                     mark: NO_MARK,
@@ -71,11 +73,27 @@ fn reorient<'a>(context: &Context<'a>) -> Context<'a> {
 
 // MERGE
 
+fn merged_predicates(
+    uf: &mut UnionFind<'_>,
+    first: Variable,
+    second: Variable,
+) -> Vec<type_::PredId> {
+    // Read the current representatives: recursive unification may have
+    // changed them since the Context's descriptor snapshots were taken.
+    let mut preds = uf.get(first).preds.clone();
+    preds.extend_from_slice(&uf.get(second).preds);
+    preds.sort_unstable();
+    preds.dedup();
+    preds
+}
+
 fn merge<'a>(uf: &mut UnionFind<'a>, context: &Context<'a>, content: Content<'a>) -> UResult {
+    let preds = merged_predicates(uf, context.first, context.second);
     uf.union(
         context.first,
         context.second,
         Descriptor {
+            preds,
             content,
             rank: context.first_desc.rank.min(context.second_desc.rank),
             mark: NO_MARK,
@@ -92,6 +110,7 @@ fn fresh<'a>(
     content: Content<'a>,
 ) -> Variable {
     let var = uf.fresh(Descriptor {
+        preds: Vec::new(),
         content,
         rank: context.first_desc.rank.min(context.second_desc.rank),
         mark: NO_MARK,
@@ -376,6 +395,7 @@ fn unify_comparable_recursive<'a>(
 ) -> UResult {
     let rank = uf.get(var).rank;
     let comp_var = uf.fresh(Descriptor {
+        preds: Vec::new(),
         content: unnamed_flex_super(SuperType::Comparable),
         rank,
         mark: NO_MARK,
@@ -733,5 +753,44 @@ fn gather_fields<'a>(
                 };
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod predicate_tests {
+    use super::*;
+    use type_::PredId;
+
+    #[test]
+    fn merges_preserve_obligations_added_after_context_capture() {
+        let mut uf = UnionFind::new();
+        let a = type_::mk_flex_var(&mut uf);
+        let b = type_::mk_flex_var(&mut uf);
+        let c = type_::mk_flex_var(&mut uf);
+        uf.modify(a, |desc| desc.preds = vec![PredId(0), PredId(1)]);
+        uf.modify(b, |desc| desc.preds = vec![PredId(1)]);
+        uf.modify(c, |desc| desc.preds = vec![PredId(2)]);
+        let context = Context {
+            first: a,
+            first_desc: uf.get(a).clone(),
+            second: b,
+            second_desc: uf.get(b).clone(),
+        };
+        let bump = Bump::new();
+        assert!(matches!(unify(&bump, &mut uf, a, c), Answer::Ok(_)));
+        merge(&mut uf, &context, Content::Structure(FlatType::Unit1)).unwrap();
+        for var in [a, b, c] {
+            assert_eq!(uf.get(var).preds, [PredId(0), PredId(1), PredId(2)]);
+        }
+
+        let record = uf.fresh(type_::make_descriptor(Content::Structure(
+            FlatType::EmptyRecord1,
+        )));
+        uf.modify(record, |desc| desc.preds = vec![PredId(3)]);
+        assert!(matches!(unify(&bump, &mut uf, b, record), Answer::Err(..)));
+        assert_eq!(
+            uf.get(a).preds,
+            [PredId(0), PredId(1), PredId(2), PredId(3)]
+        );
     }
 }

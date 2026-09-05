@@ -903,8 +903,9 @@ for operators; a same-region regression checks that these remain distinct.
 Annotation contexts now share the definition's rigid variables. Definition
 metadata retains every original name node and full function type, including
 methods and mixed recursive groups. The solver does not yet consume these
-contexts or record instances. Descriptor predicate storage and qualified
-solving remain to be implemented.
+contexts or record instances. Descriptors now retain predicate IDs through
+unification, including merges after recursive descriptor changes and failures.
+Qualified solving and predicate-body copying remain to be implemented.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/module.rs`, `crates/nash-constrain/src/pattern.rs`,
@@ -918,8 +919,12 @@ behaviour changes yet: `preds` stays empty, `given` is ignored.
 Decision: predicates on the `Descriptor`, not a side table. `UnionFind::union`
 replaces the winner's descriptor wholesale (`union_find.rs:83`), so a side
 table keyed by `Variable` would need re-keying on every union and every
-path compression; a `Vec<PredId>` in the descriptor merges in `unify::merge`
-for free and is copied by `make_copy_help` exactly where Elm copies content.
+path compression. `unify::merge` explicitly combines and deduplicates the
+predicate IDs from the current representatives, since recursive unification
+can change them after the context descriptors were captured. Failed
+unification also preserves their IDs. Scheme copying preserves IDs on the
+original descriptor; chunk 5 must copy predicate bodies and attach the new
+IDs to copied variables, rather than sharing the original IDs between uses.
 The predicate bodies live in the solver (`Vec<Predicate>` indexed by
 `PredId`) because only the solver creates them.
 

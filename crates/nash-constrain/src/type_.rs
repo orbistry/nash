@@ -133,8 +133,14 @@ pub enum Type<'a> {
 
 // DESCRIPTORS
 
+/// Index into the solver's predicate store.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PredId(pub u32);
+
 #[derive(Clone, Debug)]
 pub struct Descriptor<'a> {
+    /// Pending predicates mentioning this equivalence class.
+    pub preds: Vec<PredId>,
     pub content: Content<'a>,
     pub rank: usize,
     pub mark: Mark,
@@ -167,6 +173,7 @@ pub enum SuperType {
 
 pub fn make_descriptor(content: Content<'_>) -> Descriptor<'_> {
     Descriptor {
+        preds: Vec::new(),
         content,
         rank: NO_RANK,
         mark: NO_MARK,

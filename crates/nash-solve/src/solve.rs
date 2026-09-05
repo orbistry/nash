@@ -518,6 +518,7 @@ impl<'a> Solver<'a> {
 
     fn register(&mut self, uf: &mut UnionFind<'a>, rank: usize, content: Content<'a>) -> Variable {
         let var = uf.fresh(Descriptor {
+            preds: Vec::new(),
             content,
             rank,
             mark: NO_MARK,
@@ -548,6 +549,7 @@ impl<'a> Solver<'a> {
                     None => Content::FlexVar(Some(name)),
                 };
                 let var = uf.fresh(Descriptor {
+                    preds: Vec::new(),
                     content,
                     rank,
                     mark: NO_MARK,
@@ -710,6 +712,7 @@ impl<'a> Solver<'a> {
         }
 
         let make_descriptor = |content: Content<'a>| Descriptor {
+            preds: Vec::new(),
             content,
             rank: max_rank,
             mark: NO_MARK,
@@ -726,6 +729,7 @@ impl<'a> Solver<'a> {
         uf.set(
             variable,
             Descriptor {
+                preds: desc.preds.clone(),
                 content: desc.content.clone(),
                 rank: desc.rank,
                 mark: NO_MARK,
@@ -955,6 +959,7 @@ fn restore<'a>(uf: &mut UnionFind<'a>, variable: Variable) {
         uf.set(
             variable,
             Descriptor {
+                preds: desc.preds.clone(),
                 content: desc.content.clone(),
                 rank: NO_RANK,
                 mark: NO_MARK,
