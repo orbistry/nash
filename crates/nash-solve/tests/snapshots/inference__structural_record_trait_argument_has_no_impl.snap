@@ -1,0 +1,41 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a 'b where\n    keep : 'a -> 'b -> 'a\nvalue x = keep x { item = () }\n"
+---
+[
+    MissingImpl {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 11,
+            },
+            end: Position {
+                line: 4,
+                column: 15,
+            },
+        },
+        name: "keep",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Keep",
+        },
+        args: [
+            FlexVar(
+                "a",
+            ),
+            Record {
+                fields: [
+                    (
+                        "item",
+                        Unit,
+                    ),
+                ],
+                ext: Closed,
+            },
+        ],
+        available: [],
+    },
+]

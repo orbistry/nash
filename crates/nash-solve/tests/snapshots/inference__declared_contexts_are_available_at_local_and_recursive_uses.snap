@@ -7,5 +7,5 @@ forward : forall a. Keep a => a -> a
 helper : forall a. Keep a => a -> a
 monomorphic : Keep () => ()
 recursive : forall a. Keep a => a -> a
-use : (Keep (), Keep ()) => ( (), () )
-useBox : (Keep (Container ()), Keep (Container String)) => ( (), String )
+use : ( (), () )
+useBox : ( (), Color )

@@ -13,6 +13,18 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    MissingImpl {
+        region: Region,
+        name: &'a str,
+        trait_: nash_ast::QualifiedName<'a>,
+        args: &'a [&'a ErrorType<'a>],
+        available: &'a [&'a [nash_ast::HeadCon<'a>]],
+    },
+    ImplResolutionLimit {
+        region: Region,
+        name: &'a str,
+        trait_: nash_ast::QualifiedName<'a>,
+    },
     /// A rigid trait argument needs a constraint in the owner's annotation.
     MissingConstraint {
         region: Region,

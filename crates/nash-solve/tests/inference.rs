@@ -266,9 +266,16 @@ fn declared_contexts_are_available_at_local_and_recursive_uses() {
         trait Keep 'a where
             keep : 'a -> 'a
         type Container 'a = Wrap 'a
+        impl Keep () where
+            keep x = x
+        type Color = Red
+        impl Keep Color where
+            keep x = x
+        impl Keep 'a => Keep (Container 'a) where
+            keep (Wrap x) = Wrap (keep x)
         boxed : Keep (Container 'a) => 'a -> 'a
         boxed x = x
-        useBox = (boxed (), boxed "hello")
+        useBox = (boxed (), boxed Red)
         forward : Keep 'a => 'a -> 'a
         forward x = x
         monomorphic : Keep () => ()
@@ -283,8 +290,8 @@ fn declared_contexts_are_available_at_local_and_recursive_uses() {
     for name in ["boxed", "forward", "monomorphic", "recursive", "helper"] {
         assert_eq!(annotations[name].context.len(), 1, "{name}");
     }
-    assert_eq!(annotations["use"].context.len(), 2);
-    assert_eq!(annotations["useBox"].context.len(), 2);
+    assert!(annotations["use"].context.is_empty());
+    assert!(annotations["useBox"].context.is_empty());
     insta::assert_snapshot!(render_annotations(&annotations));
 }
 
@@ -296,13 +303,18 @@ fn inferred_context_is_instantiated_independently_at_each_local_use() {
         module Main exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a
+        impl Keep () where
+            keep x = x
+        type Color = Red
+        impl Keep Color where
+            keep x = x
         forward x = keep x
-        pair = (forward (), forward "hello")
+        pair = (forward (), forward Red)
     "#
     );
     let annotations = infer(&bump, source).unwrap();
     assert_eq!(annotations["forward"].context.len(), 1);
-    assert_eq!(annotations["pair"].context.len(), 2);
+    assert!(annotations["pair"].context.is_empty());
     insta::assert_snapshot!(render_annotations(&annotations));
 }
 
@@ -330,12 +342,103 @@ fn nested_contexts_defer_outer_variables_and_keep_mixed_scheme_sharing() {
 }
 
 #[test]
+fn enclosing_given_waits_for_rank_propagation_through_case_branches() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Choice = First | Second
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep 'a => Keep (List 'a) where
+            keep xs = xs
+        f : Keep (List 'a) => List 'a -> List 'a
+        f = \xs ->
+            let
+                g y =
+                    case First of
+                        First -> keep [y]
+                        Second -> xs
+            in
+            case xs of
+                [] -> []
+                z :: rest -> g z
+    "#
+    );
+}
+
+#[test]
+fn impl_context_failure_reports_the_original_call() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Color = Red
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep () where
+            keep x = x
+        impl Keep 'a => Keep (List 'a) where
+            keep xs = xs
+        value = keep [Red]
+    "#
+    );
+}
+
+#[test]
+fn enclosing_given_wins_after_lambda_parameter_types_are_known() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep 'a => Keep (List 'a) where
+            keep xs = xs
+        direct : Keep (List 'a) => 'a -> List 'a
+        direct = \x -> keep [x]
+        nested : Keep (List 'a) => 'a -> List 'a
+        nested = \x ->
+            let
+                helper ignored = keep [x]
+            in
+            helper ()
+    "#
+    );
+}
+
+#[test]
+fn expanding_impl_context_stops_with_a_diagnostic() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep (List (List 'a)) => Keep (List 'a) where
+            keep xs = xs
+        value = keep [()]
+    "#
+    );
+}
+
+#[test]
+fn structural_record_trait_argument_has_no_impl() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a 'b where
+            keep : 'a -> 'b -> 'a
+        value x = keep x { item = () }
+    "#
+    );
+}
+
+#[test]
 fn inferred_context_preserves_constructed_arguments_and_recursive_groups() {
     assert_inference_snapshot!(
         r#"
         module Main exposing (..)
         trait Observe 'a where
             observe : 'a -> ()
+        impl Observe 'a => Observe (List 'a) where
+            observe xs = ()
         trait Keep 'a where
             keep : 'a -> 'a
         observeList x = observe [x]

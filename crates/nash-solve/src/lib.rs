@@ -10,6 +10,7 @@
 mod annotation;
 mod occurs;
 pub mod preds;
+mod resolve;
 mod solve;
 mod unify;
 

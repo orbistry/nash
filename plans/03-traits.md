@@ -1210,11 +1210,11 @@ helpers, and successful superclass givens. The CLI exits with status 1 and
 the same diagnostic. Constructor-headed requirements still need impl
 resolution; the core reflexive Lift rule still needs its Big kind proof.
 
-Complete missing-constraint classification, impl resolution,
+Complete missing-constraint classification,
 retained-evidence ownership, final scheme/instance recording, and the resulting
 solver API are not implemented yet.
-Ground predicates remain visible in inferred contexts
-until chunk 6 resolves them. Do not mark this chunk complete from the current
+Chunk 6 now resolves ordinary constructor-headed predicates, including impl
+contexts, before inference publishes a scheme. Do not mark this chunk complete from the current
 inference snapshots alone.
 
 Code:
@@ -1507,8 +1507,9 @@ defaulting):
 `head_of(uf, var) -> Option<HeadCon>` reads `Structure(App1(home, name, _))`
 as `Named`, `Unit1`/`Tuple1` as `Unit`/`Tuple(n)`, `Fun1` as `Fun`,
 `Alias { home, name, .. }` as `Named` (nominal records), `Record1`/`EmptyRecord1`
-as `None` for now (anonymous records disappear with the representation
-plan). `free_vars(uf, var)` walks the structure collecting flex and rigid
+as known unsupported heads that fail lookup, even when another argument has
+an unknown head. They must not be conflated with flexible variables.
+`free_vars(uf, var)` walks the structure collecting flex and rigid
 variables (a cycle-safe walk using the occurs mark like `variable_to_error_type`).
 
 Annotations with context (`annotation.rs`):
@@ -1628,6 +1629,29 @@ Done when: the snapshots above match the doc's inference rules
 ---
 
 ## Chunk 6: resolution, givens, superclasses, evidence
+
+Status: in progress. Definition boundaries resolve known nominal constructor,
+unit and tuple heads through the coherent table, check head argument counts,
+and instantiate impl contexts with shared variables. Unknown heads wait;
+functions and structural records report `MissingImpl`. `Solution::Impl`
+retains ordered type variables and child predicate IDs; `Origin::Sub` traces
+errors back to the original call. Pending children form inferred contexts.
+Givens take precedence. Synthetic scopes wait for surrounding equalities;
+captured outer flex variables wait for enclosing givens before impl selection.
+The outer-variable walk follows structure ranks before generalization propagates
+them to children, and excludes `NO_RANK` generalized variables. A case-branch
+regression verifies this against both inference and the CLI.
+Tests cover nested applications of the same impl, context reduction, missing
+child impls, given precedence through lambdas/local helpers, and expanding
+contexts. Resolution reports `ImplResolutionLimit` after 128 levels or 16,384
+expansions at a boundary. A real CLI project imports the trait and impls from
+another module and successfully checks `keep [[()]]`.
+Replacing the element with a type that has no impl reports `MissingImpl` at
+the importing module's call and exits with status 1.
+
+Final AST evidence and SolvedTypes publication, retained-context superclass
+reduction, the standalone canonical resolver, and kind-aware reflexive Lift
+resolution remain unfinished. No chunk completion is claimed here.
 
 Files: `crates/nash-solve/src/solve.rs`, new `crates/nash-solve/src/resolve.rs`,
 `crates/nash-solve/src/preds.rs`, `crates/nash-solve/src/lib.rs`.

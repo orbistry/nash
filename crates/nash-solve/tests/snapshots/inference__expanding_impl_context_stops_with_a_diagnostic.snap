@@ -1,0 +1,26 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (List (List 'a)) => Keep (List 'a) where\n    keep xs = xs\nvalue = keep [()]\n"
+---
+[
+    ImplResolutionLimit {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 9,
+            },
+            end: Position {
+                line: 6,
+                column: 13,
+            },
+        },
+        name: "keep",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Keep",
+        },
+    },
+]

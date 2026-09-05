@@ -1,7 +1,7 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntrait Observe 'a where\n    observe : 'a -> ()\ntrait Keep 'a where\n    keep : 'a -> 'a\nobserveList x = observe [x]\nfirst x = keep (second x)\nsecond x = first x\n"
+description: "Code:\n\nmodule Main exposing (..)\ntrait Observe 'a where\n    observe : 'a -> ()\nimpl Observe 'a => Observe (List 'a) where\n    observe xs = ()\ntrait Keep 'a where\n    keep : 'a -> 'a\nobserveList x = observe [x]\nfirst x = keep (second x)\nsecond x = first x\n"
 ---
 first : forall a b. Keep a => b -> a
-observeList : forall a. Observe (List a) => a -> ()
+observeList : forall a. Observe a => a -> ()
 second : forall a b. Keep a => b -> a

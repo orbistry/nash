@@ -1,7 +1,7 @@
 //! Port of Elm's `Type.Solve`: solve a constraint tree with rank-based
 //! generalization, producing an annotation per top-level value.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bumpalo::Bump;
 use nash_ast::Type as CanType;
@@ -195,9 +195,16 @@ impl<'a> Solver<'a, '_> {
         }
         let start = self.wanted.len();
         let mut state = self.solve(uf, env, rank, state, constraint);
-        let report_missing =
-            annotated && state.errors.is_empty() && self.conversion_errors.is_empty();
-        for (rank, id) in self.wanted.split_off(start) {
+        let report_errors = state.errors.is_empty() && self.conversion_errors.is_empty();
+        let report_missing = annotated && report_errors;
+        let mut queue: VecDeque<_> = self
+            .wanted
+            .split_off(start)
+            .into_iter()
+            .map(|(rank, id)| (rank, id, 0usize))
+            .collect();
+        let mut work = 0usize;
+        while let Some((wanted_rank, id, resolution_depth)) = queue.pop_front() {
             let wanted = self.predicates.get(id);
             let solution = self.givens.iter().rev().find_map(|frame| {
                 frame.predicates.iter().find_map(|given| {
@@ -208,9 +215,17 @@ impl<'a> Solver<'a, '_> {
             });
             if let Some((binder, index, path)) = solution {
                 self.predicates.solve_given(uf, id, binder, index, path);
+            } else if binder.is_none()
+                || (!self.givens.is_empty()
+                    && crate::resolve::has_outer_flex(uf, &wanted.args, rank))
+            {
+                // Synthetic existential scopes are not definition boundaries.
+                // Finish surrounding equalities before choosing an impl, and
+                // let enclosing givens see captured variables at their final type.
+                self.wanted.push((wanted_rank, id));
             } else if report_missing
                 && let Some(binder) = binder
-                && let Origin::Use { site, .. } = wanted.origin
+                && let Some(site) = self.predicates.use_site(id)
                 // Constructor-headed impls cannot discharge a bare rigid head.
                 // Core Lift also has a compiler rule; its Big proof belongs
                 // to kind-aware resolution, so leave that requirement pending.
@@ -232,8 +247,94 @@ impl<'a> Solver<'a, '_> {
                     args: self.bump.alloc_slice_copy(&args),
                     binder,
                 });
+            } else if report_errors
+                && !(wanted.trait_ == nash_ast::primitives::lift_trait()
+                    && self.tables.has_reflexive_lift())
+            {
+                let site = self
+                    .predicates
+                    .use_site(id)
+                    .expect("wanteds originate at uses");
+                work += 1;
+                if work > 16_384 || resolution_depth >= 128 {
+                    state.errors.push(Error::ImplResolutionLimit {
+                        region: site.region,
+                        name: site.name,
+                        trait_: wanted.trait_,
+                    });
+                    break;
+                }
+                match crate::resolve::select(
+                    self.bump,
+                    self.tables,
+                    uf,
+                    wanted.trait_,
+                    &wanted.args,
+                ) {
+                    crate::resolve::Selection::Deferred => self.wanted.push((wanted_rank, id)),
+                    crate::resolve::Selection::Missing => {
+                        let args: Vec<_> = wanted
+                            .args
+                            .iter()
+                            .map(|arg| to_error_type(self.bump, uf, *arg))
+                            .collect();
+                        let available: Vec<_> = self
+                            .tables
+                            .impls
+                            .keys()
+                            .filter(|key| key.trait_ == wanted.trait_)
+                            .map(|key| key.heads)
+                            .collect();
+                        state.errors.push(Error::MissingImpl {
+                            region: site.region,
+                            name: site.name,
+                            trait_: wanted.trait_,
+                            args: self.bump.alloc_slice_copy(&args),
+                            available: self.bump.alloc_slice_copy(&available),
+                        });
+                    }
+                    crate::resolve::Selection::Impl {
+                        info,
+                        key,
+                        substitution,
+                    } => {
+                        let type_vars = substitution.iter().map(|(_, var)| *var).collect();
+                        let vars = substitution.into_iter().collect();
+                        let mut subs = Vec::new();
+                        for (index, context) in info.context.iter().enumerate() {
+                            let args = context
+                                .args
+                                .iter()
+                                .map(|arg| self.src_type_to_var(uf, rank, &vars, arg))
+                                .collect();
+                            let sub = self.predicates.push(
+                                uf,
+                                Predicate {
+                                    trait_: context.trait_,
+                                    args,
+                                    origin: Origin::Sub { parent: id, index },
+                                    solution: None,
+                                },
+                            );
+                            subs.push(sub);
+                            queue.push_back((wanted_rank, sub, resolution_depth + 1));
+                        }
+                        self.predicates.solve(
+                            uf,
+                            id,
+                            crate::preds::Solution::Impl {
+                                impl_: nash_ast::ImplRef {
+                                    home: info.home,
+                                    key,
+                                },
+                                type_vars,
+                                subs,
+                            },
+                        );
+                    }
+                }
             } else {
-                self.wanted.push((rank, id));
+                self.wanted.push((wanted_rank, id));
             }
         }
         self.givens.truncate(depth);
@@ -1404,7 +1505,9 @@ mod copy_tests {
             },
             &constraint,
         );
-        assert!(result.errors.is_empty());
+        assert!(
+            matches!(&result.errors[..], [Error::MissingImpl { region, .. }] if region.start.line == 8)
+        );
         assert!(solver.conversion_errors.is_empty());
         assert!(solver.givens.is_empty());
         let uses: Vec<_> = solver
@@ -1422,7 +1525,93 @@ mod copy_tests {
         for (line, solved) in uses {
             assert_eq!(solved, line != 8, "only f and g have enclosing givens");
         }
-        assert_eq!(result.env["h"].context.len(), 1);
+        assert!(result.env["h"].context.is_empty());
+    }
+
+    #[test]
+    fn nested_impl_solutions_preserve_substitution_and_child_origins() {
+        let bump = Bump::new();
+        let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nvalue = keep [[()]]\n";
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical =
+            nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let mut solver = Solver {
+            bump: &bump,
+            tables: &canonical.tables,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            givens: Vec::new(),
+            conversion_errors: Vec::new(),
+        };
+        let result = solver.solve(
+            &mut uf,
+            &Env::new(),
+            OUTERMOST_RANK,
+            State {
+                env: Env::new(),
+                mark: NO_MARK.next(),
+                errors: Vec::new(),
+            },
+            &constraint,
+        );
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        assert!(result.env["value"].context.is_empty());
+        assert!(solver.wanted.is_empty());
+        let root = solver.predicates.iter().find(|pred| {
+            matches!(pred.origin, Origin::Use { site, .. } if site.region.start.line == 8)
+        }).unwrap();
+        let crate::preds::Solution::Impl {
+            impl_: outer,
+            type_vars,
+            subs,
+        } = root.solution.as_ref().unwrap()
+        else {
+            panic!("outer impl")
+        };
+        assert_eq!(type_vars.len(), 1);
+        assert!(matches!(
+            uf.get(type_vars[0]).content,
+            Content::Structure(FlatType::App1(_, "List", _))
+        ));
+        assert_eq!(subs.len(), 1);
+        let child = solver.predicates.get(subs[0]);
+        assert!(matches!(child.origin, Origin::Sub { index: 0, .. }));
+        assert_eq!(
+            solver
+                .predicates
+                .use_site(subs[0])
+                .unwrap()
+                .region
+                .start
+                .line,
+            8
+        );
+        let crate::preds::Solution::Impl {
+            impl_: inner,
+            type_vars,
+            subs,
+        } = child.solution.as_ref().unwrap()
+        else {
+            panic!("inner impl")
+        };
+        assert_eq!(
+            outer.key, inner.key,
+            "the same impl may recur at a smaller type"
+        );
+        assert!(matches!(
+            uf.get(type_vars[0]).content,
+            Content::Structure(FlatType::Unit1)
+        ));
+        assert_eq!(subs.len(), 1);
+        assert!(
+            matches!(solver.predicates.get(subs[0]).solution.as_ref(), Some(crate::preds::Solution::Impl { type_vars, subs, .. }) if type_vars.is_empty() && subs.is_empty())
+        );
     }
 
     #[test]

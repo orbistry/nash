@@ -278,6 +278,13 @@ gets `Eq 'a => 'a -> List 'a -> bool`). Typed definitions get the same
 treatment; the rigid variables make step 2 apply, and the annotation's
 context is the given set.
 
+Impl selection waits for the surrounding definition's type equalities.
+Captured outer variables must also be fixed before rejecting an enclosing
+given in favor of an impl. Impl contexts may expand indefinitely; resolution
+is bounded to 128 levels and 16,384 attempts per definition boundary. Exceeding
+either bound reports `ImplResolutionLimit` at the originating call. An
+exhausted search never counts as evidence that a constraint was satisfied.
+
 Elm's `SaveTheEnvironment` step is unchanged: top-level annotations are
 read back with `to_annotation`, which now also emits the retained
 predicates on the reached generalized variables as the annotation's

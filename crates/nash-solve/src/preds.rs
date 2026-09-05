@@ -19,6 +19,7 @@ pub struct UseSite<'a> {
 pub enum Origin<'a> {
     Use { site: UseSite<'a>, index: usize },
     Annotation { binder: NodeId, index: usize },
+    Sub { parent: PredId, index: usize },
 }
 
 #[derive(Clone, Debug)]
@@ -26,11 +27,16 @@ pub struct Predicate<'a> {
     pub trait_: QualifiedName<'a>,
     pub args: Vec<Variable>,
     pub origin: Origin<'a>,
-    pub solution: Option<Solution>,
+    pub solution: Option<Solution<'a>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Solution {
+pub enum Solution<'a> {
+    Impl {
+        impl_: nash_ast::ImplRef<'a>,
+        type_vars: Vec<Variable>,
+        subs: Vec<PredId>,
+    },
     Given {
         binder: NodeId,
         index: usize,
@@ -48,6 +54,23 @@ pub struct Store<'a> {
 }
 
 impl<'a> Store<'a> {
+    pub fn use_site(&self, mut id: PredId) -> Option<UseSite<'a>> {
+        loop {
+            match self.get(id).origin {
+                Origin::Use { site, .. } => return Some(site),
+                Origin::Sub { parent, .. } => id = parent,
+                Origin::Annotation { .. } => return None,
+            }
+        }
+    }
+
+    pub fn solve(&mut self, uf: &mut UnionFind<'a>, id: PredId, solution: Solution<'a>) {
+        let predicate = &mut self.predicates[id.0 as usize];
+        predicate.solution = Some(solution);
+        for arg in &predicate.args {
+            uf.modify(*arg, |desc| desc.preds.retain(|pending| *pending != id));
+        }
+    }
     pub fn iter(&self) -> impl Iterator<Item = &Predicate<'a>> {
         self.predicates.iter()
     }
@@ -59,19 +82,19 @@ impl<'a> Store<'a> {
         index: usize,
         path: Vec<usize>,
     ) {
-        let predicate = &mut self.predicates[id.0 as usize];
-        predicate.solution = Some(if path.is_empty() {
-            Solution::Given { binder, index }
-        } else {
-            Solution::Super {
-                binder,
-                index,
-                path,
-            }
-        });
-        for arg in &predicate.args {
-            uf.modify(*arg, |desc| desc.preds.retain(|pending| *pending != id));
-        }
+        self.solve(
+            uf,
+            id,
+            if path.is_empty() {
+                Solution::Given { binder, index }
+            } else {
+                Solution::Super {
+                    binder,
+                    index,
+                    path,
+                }
+            },
+        );
     }
     pub fn get(&self, id: PredId) -> &Predicate<'a> {
         &self.predicates[id.0 as usize]
