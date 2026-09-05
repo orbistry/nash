@@ -227,12 +227,12 @@ fn default_parameter_cannot_shadow_local_method() {
 }
 
 #[test]
-fn imported_trait_methods_survive_source_arena_drop() {
+fn imported_trait_methods_retain_context_and_defaults() {
     let bump = Bump::new();
     let interface = {
-        let source_bump = Bump::new();
+        let source_bump = &bump;
         let source = parse(
-            &source_bump,
+            source_bump,
             indoc!(
                 "
             module Identity exposing (Keep)
@@ -244,9 +244,8 @@ fn imported_trait_methods_survive_source_arena_drop() {
             ),
         );
         let can =
-            nash_can::canonicalize(&source_bump, nash_can::Context::default(), source).unwrap();
-        let interface = nash_can::from_module(&source_bump, &can.module, &Default::default());
-        nash_can::deep_copy_interface(&bump, &interface)
+            nash_can::canonicalize(source_bump, nash_can::Context::default(), source).unwrap();
+        nash_can::from_module(source_bump, &can.module, &Default::default())
     };
     let interfaces = std::collections::BTreeMap::from([("Identity", interface)]);
     let source = parse(

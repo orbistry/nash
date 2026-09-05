@@ -264,25 +264,24 @@ fn annotation_parameter_occurrences_share_kind_bounds() {
 }
 
 #[test]
-fn copied_kind_interfaces_survive_the_source_arena() {
+fn imported_interfaces_retain_higher_kinded_types() {
     use nash_ast::{Kind, Type};
     let destination = Bump::new();
-    let copied = {
-        let source_arena = Bump::new();
+    let interface = {
+        let source_arena = &destination;
         let source = source_arena.alloc_str("module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 'f 'a = Wrap ('f 'a)\ntype alias applied 'f 'a = 'f 'a\n");
-        let module = nash_parse::Parser::new(&source_arena, source.as_bytes())
+        let module = nash_parse::Parser::new(source_arena, source.as_bytes())
             .module()
             .unwrap();
-        let canonical = canonicalize(&source_arena, Context::default(), &module).unwrap();
-        let interface = nash_can::from_module(&source_arena, &canonical.module, &BTreeMap::new());
-        nash_can::deep_copy_interface(&destination, &interface)
+        let canonical = canonicalize(source_arena, Context::default(), &module).unwrap();
+        nash_can::from_module(source_arena, &canonical.module, &BTreeMap::new())
     };
     assert!(matches!(
-        copied.unions[0].kind.kind,
+        interface.unions[0].kind.kind,
         Kind::Arrow(Kind::Arrow(_, _), _)
     ));
-    assert!(matches!(copied.aliases[0].typ.value, Type::App { .. }));
-    let interfaces = BTreeMap::from([("Shapes", copied)]);
+    assert!(matches!(interface.aliases[0].typ.value, Type::App { .. }));
+    let interfaces = BTreeMap::from([("Shapes", interface)]);
     let source = destination.alloc_str("module Main exposing (..)\n\nimport Shapes exposing (type wrap)\n\ntype holder 'f 'a = Holder (wrap 'f 'a)\n");
     let module = nash_parse::Parser::new(&destination, source.as_bytes())
         .module()
@@ -296,7 +295,7 @@ fn copied_kind_interfaces_survive_the_source_arena() {
         &module,
     )
     .unwrap();
-    insta::assert_debug_snapshot!((copied, canonical.module.unions[0].value.kind));
+    insta::assert_debug_snapshot!((interface, canonical.module.unions[0].value.kind));
 }
 
 #[test]

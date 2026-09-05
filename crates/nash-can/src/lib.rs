@@ -17,8 +17,7 @@ pub use crate::entailment::Failure as EntailmentFailure;
 pub use crate::error::{BadArityContext, DuplicatePatternContext, Error, PossibleNames, VarKind};
 pub use crate::interface::{
     AliasVisibility, Annotations, Interface, InterfaceAlias, InterfaceBinop, InterfaceMethod,
-    InterfaceTrait, InterfaceUnion, InterfaceValue, UnionVisibility,
-    deep_copy as deep_copy_interface, from_module,
+    InterfaceTrait, InterfaceUnion, InterfaceValue, UnionVisibility, from_module,
 };
 pub use crate::module::{CanResult, Context, canonicalize};
 pub use crate::warning::{Warning, WarningContext};

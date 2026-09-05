@@ -501,12 +501,12 @@ fn global_overlap_between_core_modules() {
 }
 
 #[test]
-fn global_impl_metadata_survives_arena_drop_without_imports() {
+fn global_impl_metadata_is_available_without_imports() {
     let bump = Bump::new();
     let interface = {
-        let source_arena = Bump::new();
+        let source_arena = &bump;
         let result = canonicalize(
-            &source_arena,
+            source_arena,
             indoc!(
                 "
             module Instances exposing (Keep)
@@ -520,10 +520,7 @@ fn global_impl_metadata_survives_arena_drop_without_imports() {
             ),
         )
         .unwrap();
-        nash_can::deep_copy_interface(
-            &bump,
-            &nash_can::from_module(&source_arena, &result.module, &Default::default()),
-        )
+        nash_can::from_module(source_arena, &result.module, &Default::default())
     };
     let interfaces = std::collections::BTreeMap::from([("Instances", interface)]);
     let source = "module Main exposing (..)\n";

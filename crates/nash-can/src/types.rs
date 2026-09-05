@@ -594,10 +594,10 @@ mod tests {
     use crate::environment::{Env, Info, Type as EnvType};
 
     #[test]
-    fn copied_partial_alias_keeps_formal_parameters_bound() {
+    fn partial_alias_keeps_formal_parameters_bound() {
         let bump = Bump::new();
-        let copied = {
-            let source = Bump::new();
+        let interface = {
+            let source = &bump;
             let var = |name| &*source.alloc(Located::at_zero(CanType::Var(name)));
             let body = source.alloc(Located::at_zero(CanType::Lambda {
                 from: var("left"),
@@ -618,7 +618,7 @@ mod tests {
                 remaining: source.alloc_slice_fill_iter([&*source.alloc_str("right")]),
                 target: CanAliasType::Open(body),
             }));
-            let mut interface = crate::kinds::builtin_interface(&source);
+            let mut interface = crate::kinds::builtin_interface(source);
             interface.values = source.alloc_slice_fill_iter([crate::InterfaceValue {
                 name: "partial",
                 annotation: source.alloc(nash_ast::Annotation {
@@ -627,9 +627,9 @@ mod tests {
                     typ: partial,
                 }),
             }]);
-            crate::deep_copy_interface(&bump, &interface)
+            interface
         };
-        let partial = copied.values[0].annotation.typ;
+        let partial = interface.values[0].annotation.typ;
         assert!(std::ptr::eq(iterated_dealias(&bump, partial), partial));
         let unit = bump.alloc(Located::at_zero(CanType::Unit));
         let applied = apply_type(

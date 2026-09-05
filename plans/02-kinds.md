@@ -1126,8 +1126,9 @@ prelude lands (plans/04 chunk C1).
 
 1. `InterfaceUnion` and `InterfaceAlias` gain `pub kind: KindScheme<'a>`;
    `extract_unions`/`extract_aliases` copy it from the declaration;
-   `deep_copy` copies it (`copy_kind_scheme`). `KindEnv::from_interfaces`
-   reads it (the loop sketched in chunk 3).
+   `KindEnv::from_interfaces` reads it (the loop sketched in chunk 3).
+   Plan 03 retains the build arena, so interfaces borrow the original kind
+   schemes; the earlier interface-copy helpers are removed.
 2. Value annotations are kind-checked after `canonicalize_decls`
    (`module.rs:72`): walk `Decls` for `Def::TypedDef { typ, free_vars, .. }`
    and run `kinds::check_annotation`. The walk returns the kind of every
@@ -1141,24 +1142,6 @@ prelude lands (plans/04 chunk C1).
    fingerprints to skip compilation.
 
 **Code**:
-
-```rust
-// interface.rs
-fn copy_kind<'d>(dst: &'d Bump, k: &Kind<'_>) -> &'d Kind<'d> {
-    dst.alloc(match k {
-        Kind::Base(b) => Kind::Base(*b),
-        Kind::Var(i) => Kind::Var(*i),
-        Kind::Arrow(from, to) => Kind::Arrow(copy_kind(dst, from), copy_kind(dst, to)),
-    })
-}
-
-fn copy_kind_scheme<'d>(dst: &'d Bump, s: &KindScheme<'_>) -> KindScheme<'d> {
-    KindScheme {
-        bounds: dst.alloc_slice_copy(s.bounds),
-        kind: copy_kind(dst, s.kind),
-    }
-}
-```
 
 ```rust
 // kinds.rs

@@ -295,8 +295,7 @@ impl<'a> Head<'a> {
 
 Every existing `Annotation { free_vars, typ }` literal gains `context:
 &[]`; every `Def::TypedDef` literal gains `context: &[]`; `CanModule`
-literals gain `traits: &[], impls: &[]`. `interface.rs::copy_annotation`
-copies the context (add `copy_pred`). `nash-solve/tests/inference.rs::render_annotation`
+literals gain `traits: &[], impls: &[]`. Interfaces borrow contexts from the retained build arena. `nash-solve/tests/inference.rs::render_annotation`
 renders `(Eq a, Show b) => ` before the type when the context is non-empty
 (single predicate without parentheses), so later chunks' snapshots read
 like Nash source.
@@ -319,7 +318,7 @@ method resolution, superclass checks and SCC kind inference are implemented.
 Interfaces retain trait schemes and method metadata across arena copies;
 qualified and exposed imports respect visibility and diagnose ambiguity.
 Acceptance snapshots cover higher-kinded method contexts, independent method
-quantifiers, default-body checks, private metadata and source-arena disposal.
+quantifiers, default-body checks, private metadata and retained interface metadata.
 
 Files: `crates/nash-can/src/types.rs`, `crates/nash-can/src/environment.rs`,
 `crates/nash-can/src/environment/local.rs`, `crates/nash-can/src/environment/foreign.rs`,
@@ -511,7 +510,7 @@ built on `Walker::infer_type`. Share kind variables only for trait parameters
 for each method. Check superclass and method-context predicate arguments
 against the referenced trait schemes in the same inference engine. The
 result is stored as `nash_ast::Trait.kind` and `InterfaceTrait.kind`
-(deep-copied with plan 02's `copy_kind_scheme`). This runs in
+(borrowing the retained build arena). This runs in
 `canonicalize_traits`, which therefore executes after plan 02's
 `infer_declarations` so `KindEnv` already holds the module's types.
 
@@ -606,8 +605,7 @@ unknown-constraint test now checks `NotFoundTrait` as
 `unknown_trait_in_context`.
 
 Done when: a module with traits canonicalizes; methods resolve to
-`VarMethod`; exported traits appear in `Interface.traits`; `deep_copy`
-round-trips them.
+`VarMethod`; exported traits and method contexts remain available through imported interfaces.
 
 ---
 
@@ -857,8 +855,7 @@ add_union_types -> check_union_free_vars -> add_traits (stubs)
 
 `CanResult` gains `tables: Tables<'a>`. `Interface` gains
 `impls: &'a [ImplInfo<'a>]`, retaining every local impl regardless of exports.
-The interface and table share the same metadata type; interface copying
-copies all strings, heads and predicates into the destination arena.
+The interface and table share the same metadata type and borrow strings, heads and predicates from the retained build arena.
 
 Errors added: `BadInstanceHead { region, reason: BadHead }`,
 `OrphanImpl`, `OverlappingImpls`, `MissingSuperclass`, `MissingMethod`,
@@ -2375,9 +2372,9 @@ with `nash/core` Literal and an application verifies explicit literal-method
 defaulting; changing the package name leaves the use ambiguous. Canonical nodes now live in the build arena; owned annotations and solved
 evidence remain together per module until the build ends. A regression checks
 original definition/use NodeIds and evidence binders after a dependent module
-compiles. The old interface-copy helper still has test callers; remove that
-superseded path and adapt those tests before closing the chunk. Remaining
-cross-module/core acceptance criteria are unfinished.
+compiles. The superseded interface-copy helper is removed; its tests now
+exercise imported traits, impl metadata, higher-kinded types and partial aliases
+using the retained arena. Remaining cross-module/core acceptance criteria are unfinished.
 
 Code:
 
@@ -2412,7 +2409,7 @@ fn build_sync(sources) -> BuildResult {
 instead of a per-module `Bump` (the per-module arena was only ever dropped
 at the end of the function; codegen needs the canonical AST and
 `SolvedTypes` to outlive it, and `NodeId`s are arena addresses, so the
-nodes must not move). The driver no longer calls `deep_copy_interface`; its interfaces borrow the
+nodes must not move). The interface-copy path is deleted; interfaces borrow the
 original arena data. Annotations and `SolvedTypes` own heap maps, so keep them
 in normally dropped `SolvedModule` values, not directly in a bump allocation
 (which would skip their destructors). The canonicalizer's interface lookup
