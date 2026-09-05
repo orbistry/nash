@@ -1,5 +1,11 @@
 # nash-solve
 
+## 0.2.2 — 2026-09-05
+
+### Patch changes
+
+- Updated dependencies: nash-ast@0.4.0, nash-can@0.3.2, nash-constrain@0.2.2, nash-parse@0.3.0, nash-source@0.4.0
+
 ## 0.2.1 — 2026-08-15
 
 ### Patch changes

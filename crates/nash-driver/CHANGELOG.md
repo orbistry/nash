@@ -1,5 +1,13 @@
 # nash-driver
 
+## 0.2.2 — 2026-09-05
+
+### Patch changes
+
+- [9883ea8](https://github.com/orbistry/nash/commit/9883ea8e1c79bd9428df05e9b795a6b39f23d461) Add module-level unit and property test blocks. Resolve project roots before
+  discovering source files so relative `nash check` paths work. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.4.0, nash-can@0.3.2, nash-constrain@0.2.2, nash-parse@0.3.0, nash-solve@0.2.2, nash-source@0.4.0
+
 ## 0.2.1 — 2026-08-15
 
 ### Patch changes

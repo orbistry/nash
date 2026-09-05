@@ -1,5 +1,15 @@
 # nash-ast
 
+## 0.4.0 — 2026-09-05
+
+### Minor changes
+
+- [3e0c6af](https://github.com/orbistry/nash/commit/3e0c6af19cefbc12293a568466d77af4fa49e617) Add validator module headers. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-source@0.4.0
+
 ## 0.3.1 — 2026-08-15
 
 ### Patch changes
