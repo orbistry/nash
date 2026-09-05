@@ -1397,11 +1397,11 @@ Core::Cast { kind: CastKind::Lower, to, arg, .. } => /* the un* mirror */,
 ```
 
 Only the `core/` impls whose body is one builtin (`int`/`Int`,
-`bytes`/`Bytes`, `list 'a`/`List 'a` with Big elements, `Map`) and the
-built-in reflexive `impl Big 'a => Lift 'a 'a` use `Builtin.castLift` /
-`Builtin.castLower`. `Lift (list 'a) (List 'b)` given `Lift 'a 'b` is
+`bytes`/`Bytes`, `list 'a`/`List 'a` with Big elements, `Map`) use
+`Builtin.castLift` / `Builtin.castLower`. The compiler's `ReflexiveLift`
+evidence lowers directly to identity. `Lift (list 'a) (List 'b)` given `Lift 'a 'b` is
 written in Nash in `core/` as a map of `lift` followed by `castLift`; when
-`'a = 'b` is Big the element map is the reflexive cast, which plan 08
+`'a = 'b` is Big the element map is identity, which plan 08
 inlines and folds to the bare `listData`. `Lift option Option`,
 `Lift result Result` and `Lift ordering Ordering` are ordinary `core/`
 functions (see docs/representation.md's `Lift` table) and never become
@@ -1765,7 +1765,7 @@ pub struct MonoKey<'a> {
     pub name: QualifiedName<'a>,
     pub type_args: &'a [Ty<'a>],
     /// Ground: every `Given` substituted, every `Super` resolved, so only
-    /// `Evidence::Impl` trees remain.
+    /// `Evidence::Impl` trees and `ReflexiveLift` leaves remain.
     pub evidence: &'a [Evidence<'a>],
 }
 
@@ -1777,6 +1777,10 @@ pub struct Mono<'a> {
     /// keyed by the def's `Scheme.binder`.
     givens: HashMap<NodeId, &'a [Evidence<'a>]>,
 }
+
+// request_identity(typ, tys) interns a typed one-argument identity binding
+// in `bindings`; it does not look up a source definition or create an ImplKey.
+// `tys.ty` applies the current specialization's substitution to the evidence type.
 
 impl<'a> Mono<'a> {
     pub fn request(&mut self, build: &Build<'a>, name: QualifiedName<'a>, instance: &Instance<'a>, tys: &mut TyEnv<'a>) -> Name<'a> {
@@ -1794,16 +1798,17 @@ impl<'a> Mono<'a> {
 
     /// Substitute `Given`s with the current specialization's evidence and
     /// resolve `Super`s through the impl table; the solver guarantees every
-    /// remaining leaf is an `Impl`.
+    /// remaining leaf is an `Impl` or `ReflexiveLift`.
     fn ground(&self, build: &Build<'a>, evidence: &'a [Evidence<'a>]) -> &'a [Evidence<'a>] {
         build.arena.alloc_slice_fill_iter(evidence.iter().map(|e| self.ground_one(build, e)))
     }
 
     fn ground_one(&self, build: &Build<'a>, e: &Evidence<'a>) -> Evidence<'a> {
         match e {
+            Evidence::ReflexiveLift { typ } => Evidence::ReflexiveLift { typ },
             Evidence::Given { binder, index } => self.givens[binder][*index as usize].clone(),
             Evidence::Super { of, index } => {
-                let Evidence::Impl { impl_, .. } = self.ground_one(build, of) else { unreachable!("solver leaves only Impl") };
+                let Evidence::Impl { impl_, .. } = self.ground_one(build, of) else { unreachable!("core Lift has no superclasses") };
                 build.impls[&impl_].supers[*index as usize].clone()   // the impl's superclass evidence, itself an `Impl`
             }
             Evidence::Impl { impl_, type_args, args } => Evidence::Impl {
@@ -1819,7 +1824,11 @@ impl<'a> Mono<'a> {
     /// trait's default body with the same evidence.
     pub fn request_method(&mut self, build: &Build<'a>, trait_name: QualifiedName<'a>, method: &'a str, instance: &Instance<'a>, tys: &mut TyEnv<'a>) -> Name<'a> {
         let evidence = self.ground(build, instance.evidence);
-        let Evidence::Impl { impl_, type_args, args } = &evidence[0] else { unreachable!("ground evidence is Impl") };
+        if let Evidence::ReflexiveLift { typ } = &evidence[0] {
+            let typ = tys.ty(typ);
+            return self.request_identity(typ, tys);
+        }
+        let Evidence::Impl { impl_, type_args, args } = &evidence[0] else { unreachable!("ground method evidence") };
         let imp = build.impls[impl_];
         let def = imp.methods.get(method).copied().unwrap_or_else(|| build.trait_default(trait_name, method));
         let key = MonoKey {

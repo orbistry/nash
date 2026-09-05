@@ -30,6 +30,7 @@ pub(crate) fn tables<'a>(
     bump: &'a Bump,
     interfaces: Option<&'a BTreeMap<&'a str, crate::Interface<'a>>>,
     module: &nash_ast::Module<'a>,
+    kind_env: &kinds::KindEnv<'a>,
 ) -> Result<crate::environment::Tables<'a>, Vec<Error<'a>>> {
     use crate::environment::{MethodInfo, Tables};
     let mut tables = Tables::default();
@@ -92,7 +93,7 @@ pub(crate) fn tables<'a>(
         )?;
     }
     for impl_ in tables.impls.values().filter(|i| i.home == module.name) {
-        crate::entailment::check(bump, &tables, impl_)?;
+        crate::entailment::check(bump, &tables, kind_env, impl_)?;
     }
     Ok(tables)
 }

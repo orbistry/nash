@@ -146,7 +146,7 @@ pub fn canonicalize<'a>(
     }
 
     Ok(CanResult {
-        tables: crate::impls::tables(bump, context.interfaces, &can_module)?,
+        tables: crate::impls::tables(bump, context.interfaces, &can_module, &kind_env)?,
         module: can_module,
         warnings,
     })

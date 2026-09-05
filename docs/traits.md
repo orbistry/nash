@@ -119,8 +119,8 @@ both its trait and its head type are visible.
   function types, no repeated variables, no bare variable heads. This is
   the Haskell 98 instance shape. One exception is built into the compiler
   and exempt from these rules: the reflexive `impl Big 'a => Lift 'a 'a`
-  (every Big type lifts to itself), which the table holds as a compiler
-  provided impl and which no user may write. Aliases are allowed as heads
+  (every Big type lifts to itself), which is a compiler rule outside the
+  constructor-keyed impl table and which no user may write. Aliases are allowed as heads
   because Nash records are nominal (`impl Eq acc where ...`): the solver keeps an alias
   as `Content::Alias` (Elm behaviour, retained by
   [representation.md](representation.md)), so the resolver sees the alias
@@ -187,6 +187,16 @@ when it needs one that is missing.
   `P`'s key exists, and `Given ⊢ Q` for every `Q` in the impl's context
   instantiated at `P`'s arguments.
 
+After checking givens, resolution recognizes the compiler-owned reflexive
+rule only for package `nash/core`, module `Lift`, trait `Lift`. Both arguments
+must already be equal and their kind must be proven Big. Resolution must
+not unify unknown arguments or narrow a rigid variable's kind to select
+this rule. A same-named trait elsewhere receives no special behavior.
+Explicit impls that can overlap this rule are rejected: the same nominal
+constructor at the same application arity conflicts when corresponding
+argument kinds can unify and the resulting type can be Big. This check
+does not assume that different head variable names make impls disjoint.
+
 Superclass checking during canonicalization performs a bounded search.
 A predicate already active in the instance-resolution chain is a cycle,
 not a proof. Expanding flexible contexts are bounded too: each impl check
@@ -200,6 +210,7 @@ Evidence is the derivation:
 
 ```
 Evidence = Impl  { impl_: ImplRef, type_args: [Type], args: [Evidence] } -- by_instance; type_args = head vars
+         | ReflexiveLift { typ: Type }                -- compiler rule for equal Big types
          | Given { binder: NodeId, index: u16 }         -- i-th predicate of the scheme of definition `binder`
          | Super { of: Evidence, index: u16 }           -- i-th superclass of an evidence's trait
 ```

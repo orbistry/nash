@@ -109,8 +109,9 @@ head's variables in order, so `Mono::request_method` can instantiate the
 method body with them), and `supers` is replaced by `Evidence::Super`
 resolved through the impl table. `Mono::request_method` reads
 `instance.evidence[i]` as an `Evidence`, substitutes the current
-specialization's `Given`s, and expects an `Impl` afterwards (the solver
-guarantees every non-`Given` leaf is an `Impl`). `MonoKey.evidence` is the
+specialization's `Given`s, and dispatches to `Impl` or `ReflexiveLift`
+afterwards. The latter lowers `lift` and `lower` to identity without an
+impl-table lookup. `MonoKey.evidence` is the
 substituted, ground `&[Evidence]`; `Evidence` implements `PartialEq, Eq, Hash`
 for that purpose.
 
@@ -243,6 +244,7 @@ pub struct ImplRef<'a> {
 /// (plans/07 chunk 9 keys specializations by ground evidence, hence `Hash`).
 #[derive(Debug)]
 pub enum Evidence<'a> {
+    ReflexiveLift { typ: &'a Located<Type<'a>> },
     Impl {
         impl_: ImplRef<'a>,
         /// The impl head's variables, in head order, at this use.
@@ -617,13 +619,15 @@ are implemented. Global tables now retain local and interface impls and
 private trait metadata, with overlap checks across interfaces. Focused
 snapshots cover these paths. Superclass entailment now checks local impls
 after the global table is assembled, using givens, superclass closure and
-instance contexts with cycle and work limits. The compiler-owned reflexive
-Lift rule is still pending. Partial alias heads now retain unsupplied formal
+instance contexts with cycle and work limits. The exact core Lift identity
+now enables a separate reflexive rule for equal, proven-Big types, with
+coherence checks against explicit impls. Solver production of its evidence
+remains part of chunks 6 and 9. Partial alias heads now retain unsupplied formal
 parameters and normalize known applications without opening their bound
 bodies. Unresolved partial aliases remain at the higher-kinded inference
-boundary pending chunk 8's delayed alias applications. Do not
-mark this chunk complete before that contract and the remaining acceptance
-cases are verified.
+boundary pending chunk 8's delayed alias applications. Canonicalization
+and diagnostic acceptance tests pass. Keep the chunk open until its
+dependent solver cases in chunks 6, 8 and 9 are verified end to end.
 
 Files: `crates/nash-can/src/traits.rs`, `crates/nash-can/src/environment.rs`,
 `crates/nash-can/src/environment/local.rs`, `crates/nash-can/src/environment/foreign.rs`,
@@ -872,7 +876,16 @@ Tests (nash-can):
 - `impl_head_kind_mismatch`: `impl Functor Color` (a `Big` constructor for a `k1 -> k2` parameter) is `KindMismatch`.
 - `impl_tuple_head`: `impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where ...` in a module that defines `Eq` (orphan rule satisfied via the trait).
 - errors: `impl_orphan` (module imports both trait and type via `Context.interfaces` built in the test), `impl_overlap`, `impl_missing_method`, `impl_unknown_method`, `impl_missing_superclass`, `impl_bad_head_nested` (`impl Eq (List Int)`), `impl_bad_head_repeated` (`trait Foo 'a 'b where ...` + `impl Foo 'a 'a`; the reflexive `Lift 'a 'a` is compiler provided and exempt, see below), `impl_bad_head_bare_var`, `impl_context_var_not_in_head`.
-- `builtin_reflexive_lift`: with a core-like `trait Lift 'small 'big` in scope, `env.impls` contains the compiler-provided `impl Big 'a => Lift 'a 'a` (`ImplInfo { home: lift_home(), heads: [Head::Var("a"), Head::Var("a")], .. }`; `Head::Var` exists only for this entry and is never produced by `canonicalize_head`). `by_instance` matches it when both arguments are the same Big type; chunk 9 discharges its `Big 'a` kind predicate.
+- Reflexive Lift: exact package/module/trait identity activates the compiler
+  rule outside `Tables.impls`; no `Head::Var` is introduced. Static entailment
+  checks givens first, then already-equal types with a proven Big kind.
+  A copied kind inference state verifies that checking the candidate does
+  not narrow any shared impl kind variable. Constructor impls that can
+  overlap the rule report `ReflexiveLiftOverlap`. Tests cover exact identity,
+  Big versus Const, rigid Big versus broad bounds, and same-constructor
+  overlap with distinct head variable names. Solver resolution emits
+  `Evidence::ReflexiveLift { typ }` in chunks 6/9, after equality and kind
+  proof; unresolved candidates remain pending.
 
 Done when: impls canonicalize into `Module.impls`, the table holds local
 and imported impls, and all listed errors have snapshots.
@@ -2031,7 +2044,8 @@ exactly like a trait predicate with one argument, so it rides the same
 machinery: attached to the variable, instantiated with the scheme,
 classified at generalization. `'a : Storable` in `cons : 'a -> list 'a -> list 'a`
 then rejects `cons (Some 1) nil` at the call site, and the compiler
-provided reflexive `impl Big 'a => Lift 'a 'a` (chunk 3) carries `Big 'a`.
+provided reflexive Lift rule must discharge `Big 'a` before producing
+`Evidence::ReflexiveLift { typ }`.
 
 Code:
 
@@ -2094,7 +2108,7 @@ Tests (inference snapshots; need plan 02's `list` and `option`):
 #[test] fn kind_bound_inferred_from_use()   // cons x xs = ... `list` ops ... -> cons : forall (a : Storable) b. a -> list a -> list a
 #[test] fn kind_bound_checked_at_call()     // cons (Some 1) nil -> BadKind (option int is Term, not Storable)
 #[test] fn kind_bound_from_annotation()     // f : 'a -> list 'a; g = f (Some 1) -> BadKind
-#[test] fn reflexive_lift_big()             // impl Lift 'a 'a with Big 'a in core-like test module; lift on an Int is fine, on int is BadKind
+#[test] fn reflexive_lift_big()             // exact core Lift rule: equal Big types produce ReflexiveLift; Const types cannot use this rule
 ```
 
 Snapshot notation (plan 02 follows it): `render_annotation` writes a

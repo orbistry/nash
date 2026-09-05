@@ -59,6 +59,13 @@ pub struct Tables<'a> {
     pub impls: ImplTable<'a>,
 }
 
+impl Tables<'_> {
+    pub fn has_reflexive_lift(&self) -> bool {
+        self.traits
+            .contains_key(&nash_ast::primitives::lift_trait())
+    }
+}
+
 /// A value variable in scope.
 #[derive(Clone, Debug)]
 pub enum Var<'a> {

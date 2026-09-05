@@ -1,0 +1,145 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: results
+---
+[
+    Err(
+        [
+            ReflexiveLiftOverlap {
+                heads: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 11,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 16,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "Color",
+                            },
+                            args: [],
+                        },
+                    },
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 22,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "Color",
+                            },
+                            args: [],
+                        },
+                    },
+                ],
+            },
+        ],
+    ),
+    Err(
+        [
+            ReflexiveLiftOverlap {
+                heads: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 24,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "Container",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 22,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 24,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 27,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 39,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "Container",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 37,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 39,
+                                        },
+                                    },
+                                    value: Var(
+                                        "b",
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        ],
+    ),
+    Ok(
+        (),
+    ),
+]

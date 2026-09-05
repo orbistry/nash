@@ -36,6 +36,9 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    ReflexiveLiftOverlap {
+        heads: &'a [&'a Located<nash_ast::Type<'a>>],
+    },
     MissingSuperclass {
         region: Region,
         trait_: QualifiedName<'a>,

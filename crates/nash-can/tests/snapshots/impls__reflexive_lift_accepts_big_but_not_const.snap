@@ -1,0 +1,91 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: results
+---
+[
+    Ok(
+        (),
+    ),
+    Err(
+        [
+            MissingSuperclass {
+                region: Region {
+                    start: Position {
+                        line: 6,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 20,
+                    },
+                },
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "RoundTrip",
+                },
+                heads: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 6,
+                                column: 16,
+                            },
+                            end: Position {
+                                line: 6,
+                                column: 18,
+                            },
+                        },
+                        value: Unit,
+                    },
+                ],
+                superclass: Pred {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Lift",
+                        },
+                        name: "Lift",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 18,
+                                },
+                            },
+                            value: Unit,
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 18,
+                                },
+                            },
+                            value: Unit,
+                        },
+                    ],
+                },
+                index: 0,
+                reason: Missing,
+            },
+        ],
+    ),
+]

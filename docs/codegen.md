@@ -169,12 +169,15 @@ pub struct MonoKey<'a> {
 }
 ```
 
-`Evidence` is `nash_ast::Evidence::{Impl { impl_, type_args, args }, Given, Super}`
+`Evidence` is `nash_ast::Evidence::{Impl { impl_, type_args, args }, ReflexiveLift { typ }, Given, Super}`
 from [plans/03-traits.md](../plans/03-traits.md) ("Contract with
 plans/07-codegen.md"). Before a key is formed, every `Given` is replaced by
 the evidence of the enclosing specialization and every `Super` is resolved
-through the impl table, so a key holds only `Impl` trees; `Evidence`
-derives `Hash`/`Eq` for this.
+through the impl table, so a key holds `Impl` trees and `ReflexiveLift`
+leaves. Evidence equality and hashing ignore source locations in types.
+Specialization substitutes the type carried by `ReflexiveLift` too.
+Its `lift` and `lower` methods lower to a one-argument identity function;
+there is no source impl body or synthetic constructor key to look up.
 
 Starting from the roots (`main` for a validator, each test body for a test
 module, the `comptime` subterm for compile-time evaluation), the driver pops a

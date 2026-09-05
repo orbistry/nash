@@ -48,7 +48,7 @@ impl KindSet {
 }
 
 /// A kind after inference. `Var` indexes the enclosing `KindScheme`.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Kind<'a> {
     Base(BaseKind),
     Var(u16),
@@ -56,7 +56,7 @@ pub enum Kind<'a> {
 }
 
 /// `forall k0 .. kn. kind`, with one bound per variable.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KindScheme<'a> {
     pub bounds: &'a [KindSet],
     pub kind: &'a Kind<'a>,
@@ -523,6 +523,8 @@ pub struct ImplRef<'a> {
 /// (plans/07 chunk 9 keys specializations by ground evidence, hence `Hash`).
 #[derive(Debug)]
 pub enum Evidence<'a> {
+    /// The compiler-owned core Lift rule for an already-equal Big type.
+    ReflexiveLift { typ: &'a Located<Type<'a>> },
     Impl {
         impl_: ImplRef<'a>,
         /// The impl head's variables, in head order, at this use.
@@ -615,7 +617,7 @@ mod evidence_tests {
     use std::collections::HashSet;
 
     #[test]
-    fn impl_evidence_shares_types_across_source_locations() {
+    fn evidence_shares_types_across_source_locations() {
         let home = ModuleName {
             package: None,
             name: "Example",
@@ -675,5 +677,11 @@ mod evidence_tests {
         assert_ne!(a, c);
         let keys = HashSet::from([a, b, c]);
         assert_eq!(keys.len(), 2);
+        let a = Evidence::ReflexiveLift { typ: &first };
+        let b = Evidence::ReflexiveLift { typ: &second };
+        let c = Evidence::ReflexiveLift { typ: &other };
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        assert_eq!(HashSet::from([a, b, c]).len(), 2);
     }
 }

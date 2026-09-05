@@ -32,6 +32,7 @@ pub enum Mismatch<'a> {
     Infinite(KindVar),
 }
 
+#[derive(Clone)]
 pub struct Infer<'a> {
     bump: &'a Bump,
     nodes: Vec<Node<'a>>,
@@ -1365,15 +1366,91 @@ impl<'a> Walker<'_, 'a> {
     }
 }
 
-pub(crate) fn check_impl_heads<'a>(
+pub(crate) struct ImplKinds<'e, 'a> {
+    walker: Walker<'e, 'a>,
+    scope: Scope<'a>,
+}
+
+impl<'a> ImplKinds<'_, 'a> {
+    fn overlaps_reflexive_lift(&self, heads: &[&'a Located<CanType<'a>>]) -> bool {
+        fn named<'a>(
+            typ: &CanType<'a>,
+        ) -> Option<(QualifiedName<'a>, Vec<&'a Located<CanType<'a>>>)> {
+            match typ {
+                CanType::Named { reference, args } => Some((*reference, args.to_vec())),
+                CanType::Alias {
+                    reference,
+                    arguments,
+                    ..
+                } => Some((*reference, arguments.iter().map(|a| a.typ).collect())),
+                _ => None,
+            }
+        }
+        let [first, second] = heads else {
+            return false;
+        };
+        let (Some((a, aa)), Some((b, ba))) = (named(&first.value), named(&second.value)) else {
+            return false;
+        };
+        if a != b || aa.len() != ba.len() {
+            return false;
+        }
+        let mut query = Walker {
+            bump: self.walker.bump,
+            env: self.walker.env,
+            home: self.walker.home,
+            infer: self.walker.infer.clone(),
+            group: BTreeMap::new(),
+            errors: Vec::new(),
+        };
+        for (a, b) in aa.iter().zip(&ba) {
+            let a = query.infer_type(&self.scope, a);
+            let b = query.infer_type(&self.scope, b);
+            if query.infer.unify(a, b).is_err() {
+                return false;
+            }
+        }
+        let kind = query.infer_type(&self.scope, first);
+        let big = query.bump.alloc(K::Base(BaseKind::Big));
+        query.errors.is_empty() && query.infer.unify(kind, big).is_ok()
+    }
+    /// Prove Big without narrowing the universally quantified impl variables.
+    pub(crate) fn proves_big(&mut self, typ: &'a Located<CanType<'a>>) -> bool {
+        let mut root: &K = self.walker.bump.alloc(K::Base(BaseKind::Term));
+        for kind in self.scope.params.values().rev() {
+            root = self.walker.bump.alloc(K::Arrow(kind, root));
+        }
+        let before = self.walker.infer.generalize(root);
+        let mut query = Walker {
+            bump: self.walker.bump,
+            env: self.walker.env,
+            home: self.walker.home,
+            infer: self.walker.infer.clone(),
+            group: BTreeMap::new(),
+            errors: Vec::new(),
+        };
+        let kind = query.infer_type(&self.scope, typ);
+        if !query.errors.is_empty() || query.infer.generalize(root) != before {
+            return false;
+        }
+        let kind = query.infer.generalize(kind);
+        match kind.kind {
+            Kind::Base(BaseKind::Big) => true,
+            Kind::Var(index) => kind.bounds[*index as usize] == KindSet::BIG,
+            _ => false,
+        }
+    }
+}
+
+pub(crate) fn check_impl_heads<'e, 'a>(
     bump: &'a Bump,
-    env: &KindEnv<'a>,
+    env: &'e KindEnv<'a>,
     home: ModuleName<'a>,
     info: &crate::environment::TraitInfo<'a>,
     heads: &[&'a Located<CanType<'a>>],
     variables: &BTreeMap<&'a str, Region>,
     context: &[nash_ast::Pred<'a>],
-) -> Result<(), Vec<Error<'a>>> {
+) -> Result<ImplKinds<'e, 'a>, Vec<Error<'a>>> {
     let mut walker = Walker {
         bump,
         env,
@@ -1424,7 +1501,18 @@ pub(crate) fn check_impl_heads<'a>(
         walker.infer_predicate(&scope, predicate, &BTreeMap::new());
     }
     if walker.errors.is_empty() {
-        Ok(())
+        let checked = ImplKinds { walker, scope };
+        if (QualifiedName {
+            home: info.home,
+            name: info.name,
+        }) == nash_ast::primitives::lift_trait()
+            && checked.overlaps_reflexive_lift(heads)
+        {
+            return Err(vec![Error::ReflexiveLiftOverlap {
+                heads: bump.alloc_slice_copy(heads),
+            }]);
+        }
+        Ok(checked)
     } else {
         Err(walker.errors)
     }

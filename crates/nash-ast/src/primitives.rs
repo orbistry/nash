@@ -14,6 +14,16 @@ pub const fn builtin_home() -> ModuleName<'static> {
     }
 }
 
+pub const fn lift_trait() -> crate::QualifiedName<'static> {
+    crate::QualifiedName {
+        home: ModuleName {
+            package: Some(CORE),
+            name: "Lift",
+        },
+        name: "Lift",
+    }
+}
+
 const BIG: &Kind<'static> = &Kind::Base(BaseKind::Big);
 const CONST: &Kind<'static> = &Kind::Base(BaseKind::Const);
 const K0: &Kind<'static> = &Kind::Var(0);

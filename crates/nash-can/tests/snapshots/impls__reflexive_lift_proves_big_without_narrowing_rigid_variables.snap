@@ -1,0 +1,209 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: results
+---
+[
+    Ok(
+        (),
+    ),
+    Err(
+        [
+            MissingSuperclass {
+                region: Region {
+                    start: Position {
+                        line: 10,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 11,
+                        column: 14,
+                    },
+                },
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Top",
+                },
+                heads: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 10,
+                                column: 11,
+                            },
+                            end: Position {
+                                line: 10,
+                                column: 23,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "container",
+                            },
+                            vars: [
+                                "a",
+                            ],
+                        },
+                    },
+                ],
+                superclass: Pred {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Tag",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 10,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 10,
+                                    column: 23,
+                                },
+                            },
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Main",
+                                    },
+                                    name: "container",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 10,
+                                                column: 11,
+                                            },
+                                            end: Position {
+                                                line: 10,
+                                                column: 23,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                index: 0,
+                reason: Missing,
+            },
+        ],
+    ),
+    Err(
+        [
+            MissingSuperclass {
+                region: Region {
+                    start: Position {
+                        line: 10,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 11,
+                        column: 14,
+                    },
+                },
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Top",
+                },
+                heads: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 10,
+                                column: 11,
+                            },
+                            end: Position {
+                                line: 10,
+                                column: 23,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "container",
+                            },
+                            vars: [
+                                "a",
+                            ],
+                        },
+                    },
+                ],
+                superclass: Pred {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Tag",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 10,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 10,
+                                    column: 23,
+                                },
+                            },
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Main",
+                                    },
+                                    name: "container",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 10,
+                                                column: 11,
+                                            },
+                                            end: Position {
+                                                line: 10,
+                                                column: 23,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                index: 0,
+                reason: Missing,
+            },
+        ],
+    ),
+]

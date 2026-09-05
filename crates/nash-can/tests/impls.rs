@@ -2,6 +2,218 @@ use bumpalo::Bump;
 use indoc::indoc;
 
 #[test]
+fn impl_cannot_own_an_imported_trait_and_imported_heads() {
+    let bump = Bump::new();
+    let interfaces = std::collections::BTreeMap::from([
+        ("Lift", core_lift(&bump)),
+        ("Builtin", nash_can::kinds::builtin_interface(&bump)),
+    ]);
+    let source = indoc!(
+        "
+        module Main exposing (..)
+        import Lift exposing (Lift)
+        import Builtin exposing (List)
+        impl Lift (List 'a) (List 'b) where
+            lift x = x
+            lower x = x
+    "
+    );
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let result = nash_can::canonicalize(
+        &bump,
+        nash_can::Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap_err();
+    assert!(matches!(
+        result.as_slice(),
+        [nash_can::Error::OrphanImpl { .. }]
+    ));
+    insta::assert_debug_snapshot!(result);
+}
+
+#[test]
+fn impl_heads_reject_non_constructor_shapes() {
+    let bump = Bump::new();
+    let mut errors = Vec::new();
+    for head in [
+        "'a",
+        "(List (List 'a))",
+        "('a -> 'b)",
+        "{ value : 'a }",
+        "('f 'a)",
+    ] {
+        let source = format!(
+            "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep {head} where\n    keep x = x\n"
+        );
+        let result = canonicalize(&bump, &source).unwrap_err();
+        assert!(matches!(
+            result.as_slice(),
+            [nash_can::Error::BadInstanceHead { .. }]
+        ));
+        errors.push((head, result));
+    }
+    insta::assert_debug_snapshot!(errors);
+}
+
+#[test]
+fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
+    let bump = Bump::new();
+    let interfaces = std::collections::BTreeMap::from([("Lift", core_lift(&bump))]);
+    let mut results = Vec::new();
+    for (declaration, heads) in [
+        ("type Color = Red", "Color Color"),
+        (
+            "type Container 'a = Wrap 'a",
+            "(Container 'a) (Container 'b)",
+        ),
+        ("type color = Red", "color color"),
+    ] {
+        let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\n{declaration}\nimpl Lift {heads} where\n    lift x = x\n    lower x = x\n"));
+        let module = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        results.push(
+            nash_can::canonicalize(
+                &bump,
+                nash_can::Context {
+                    package: None,
+                    interfaces: Some(&interfaces),
+                },
+                &module,
+            )
+            .map(|_| ()),
+        );
+    }
+    assert!(matches!(
+        results[0].as_ref().unwrap_err().as_slice(),
+        [nash_can::Error::ReflexiveLiftOverlap { .. }]
+    ));
+    assert!(matches!(
+        results[1].as_ref().unwrap_err().as_slice(),
+        [nash_can::Error::ReflexiveLiftOverlap { .. }]
+    ));
+    assert!(results[2].is_ok());
+    insta::assert_debug_snapshot!(results);
+}
+
+fn core_lift<'a>(bump: &'a Bump) -> nash_can::Interface<'a> {
+    let module = nash_parse::Parser::new(bump, b"module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n").module().unwrap();
+    let result = nash_can::canonicalize(
+        bump,
+        nash_can::Context {
+            package: Some(nash_ast::primitives::CORE),
+            interfaces: None,
+        },
+        &module,
+    )
+    .unwrap();
+    nash_can::from_module(bump, &result.module, &Default::default())
+}
+
+#[test]
+fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
+    let bump = Bump::new();
+    let interfaces = std::collections::BTreeMap::from([("Lift", core_lift(&bump))]);
+    let mut results = Vec::new();
+    for (container, lifted) in [
+        ("Container", "'a"),
+        ("container", "'a"),
+        ("container", "(List 'a)"),
+    ] {
+        let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype {container} 'a = Wrap 'a\ntrait Tag 'a where\n    tag : 'a -> 'a\ntrait Tag 'a => Top 'a where\n    top : 'a -> 'a\nimpl Lift {lifted} {lifted} => Tag ({container} 'a) where\n    tag x = x\nimpl Top ({container} 'a) where\n    top x = x\n"));
+        let module = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        results.push(
+            nash_can::canonicalize(
+                &bump,
+                nash_can::Context {
+                    package: None,
+                    interfaces: Some(&interfaces),
+                },
+                &module,
+            )
+            .map(|_| ()),
+        );
+    }
+    assert!(results[0].is_ok());
+    assert!(results[1].is_err());
+    assert!(results[2].is_err());
+    insta::assert_debug_snapshot!(results);
+}
+
+#[test]
+fn reflexive_lift_accepts_big_but_not_const() {
+    let bump = Bump::new();
+    let interfaces = std::collections::BTreeMap::from([("Lift", core_lift(&bump))]);
+    let mut results = Vec::new();
+    for head in ["Color", "()"] {
+        let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntrait Lift 'a 'a => RoundTrip 'a where\n    roundTrip : 'a -> 'a\nimpl RoundTrip {head} where\n    roundTrip x = x\n"));
+        let module = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        results.push(
+            nash_can::canonicalize(
+                &bump,
+                nash_can::Context {
+                    package: None,
+                    interfaces: Some(&interfaces),
+                },
+                &module,
+            )
+            .map(|_| ()),
+        );
+    }
+    assert!(results[0].is_ok());
+    assert!(results[1].is_err());
+    insta::assert_debug_snapshot!(results);
+}
+
+#[test]
+fn reflexive_lift_requires_the_exact_core_trait_identity() {
+    let bump = Bump::new();
+    let mut enabled = Vec::new();
+    for (module_name, package) in [
+        ("Lift", Some(nash_ast::primitives::CORE)),
+        ("Lift", None),
+        ("Other", Some(nash_ast::primitives::CORE)),
+        (
+            "Lift",
+            Some(nash_ast::PackageName {
+                author: "someone",
+                project: "core",
+            }),
+        ),
+    ] {
+        let source = bump.alloc_str(&format!("module {module_name} exposing (..)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n"));
+        let module = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let result = nash_can::canonicalize(
+            &bump,
+            nash_can::Context {
+                package,
+                interfaces: None,
+            },
+            &module,
+        )
+        .unwrap();
+        enabled.push(result.tables.has_reflexive_lift());
+        assert!(
+            result.tables.impls.is_empty(),
+            "compiler rule is not a constructor impl"
+        );
+    }
+    assert_eq!(enabled, [true, false, false, false]);
+}
+
+#[test]
 fn partially_applied_alias_binds_remaining_method_arguments() {
     let bump = Bump::new();
     let result = canonicalize(

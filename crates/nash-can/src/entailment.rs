@@ -49,9 +49,55 @@ struct Resolver<'t, 'a> {
     bump: &'a Bump,
     tables: &'t Tables<'a>,
     remaining: usize,
+    kinds: crate::kinds::ImplKinds<'t, 'a>,
 }
 
 impl<'a> Resolver<'_, 'a> {
+    fn canonical(
+        &mut self,
+        term: &'a Term<'a>,
+        depth: usize,
+    ) -> Result<&'a Located<Type<'a>>, Failure> {
+        self.step(depth)?;
+        let mut args = Vec::new();
+        for arg in term.args {
+            args.push(self.canonical(arg, depth + 1)?);
+        }
+        let args = self.bump.alloc_slice_fill_iter(args);
+        let typ = match term.con {
+            Constructor::Named(reference) => Type::Named { reference, args },
+            Constructor::Var(name) if args.is_empty() => Type::Var(name),
+            Constructor::Var(name) => Type::App {
+                head: self.bump.alloc(Located::at_zero(Type::Var(name))),
+                args,
+            },
+            Constructor::Unit => Type::Unit,
+            Constructor::Tuple(_) => Type::Tuple {
+                first: args[0],
+                second: args[1],
+                rest: &args[2..],
+            },
+            Constructor::Function => Type::Lambda {
+                from: args[0],
+                to: args[1],
+            },
+            Constructor::Record { fields, ext } => Type::Record {
+                fields: self.bump.alloc_slice_fill_iter(
+                    fields
+                        .iter()
+                        .zip(args.iter())
+                        .enumerate()
+                        .map(|(index, (field, typ))| nash_ast::FieldType {
+                            index: index as u16,
+                            field,
+                            typ,
+                        }),
+                ),
+                ext,
+            },
+        };
+        Ok(self.bump.alloc(Located::at_zero(typ)))
+    }
     fn step(&mut self, depth: usize) -> Result<(), Failure> {
         if depth >= DEPTH_LIMIT || self.remaining == 0 {
             return Err(Failure::Limit);
@@ -205,6 +251,25 @@ impl<'a> Resolver<'_, 'a> {
                 return Ok(());
             }
         }
+        if self.tables.has_reflexive_lift()
+            && wanted.trait_ == nash_ast::primitives::lift_trait()
+            && wanted.args.len() == 2
+            && self.equal(
+                Predicate {
+                    trait_: wanted.trait_,
+                    args: &wanted.args[..1],
+                },
+                Predicate {
+                    trait_: wanted.trait_,
+                    args: &wanted.args[1..],
+                },
+            )?
+        {
+            let typ = self.canonical(wanted.args[0], 0)?;
+            if self.kinds.proves_big(typ) {
+                return Ok(());
+            }
+        }
         for pred in active.iter() {
             if self.equal(*pred, wanted)? {
                 return Err(Failure::Cycle);
@@ -249,17 +314,13 @@ impl<'a> Resolver<'_, 'a> {
 pub(crate) fn check<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
+    kind_env: &crate::kinds::KindEnv<'a>,
     impl_: &ImplInfo<'a>,
 ) -> Result<(), Vec<Error<'a>>> {
     let trait_ = tables.traits[&impl_.trait_];
     if trait_.supers.is_empty() {
         return Ok(());
     }
-    let mut resolver = Resolver {
-        bump,
-        tables,
-        remaining: WORK_LIMIT,
-    };
     let mut subst = BTreeMap::new();
     let mut canonical_subst = BTreeMap::new();
     for (parameter, head) in trait_.parameters.iter().zip(impl_.heads) {
@@ -293,6 +354,36 @@ pub(crate) fn check<'a>(
         };
         canonical_subst.insert(*parameter, &*bump.alloc(Located::at(head.region, typ)));
     }
+    let heads: Vec<_> = trait_
+        .parameters
+        .iter()
+        .map(|p| canonical_subst[p])
+        .collect();
+    let mut variables = BTreeMap::new();
+    for head in impl_.heads {
+        let vars = match &head.value {
+            Head::Named { vars, .. } | Head::Tuple(vars) => *vars,
+            Head::Unit => &[],
+        };
+        for var in vars {
+            variables.insert(*var, head.region);
+        }
+    }
+    let kinds = crate::kinds::check_impl_heads(
+        bump,
+        kind_env,
+        impl_.home,
+        trait_,
+        &heads,
+        &variables,
+        impl_.context,
+    )?;
+    let mut resolver = Resolver {
+        bump,
+        tables,
+        remaining: WORK_LIMIT,
+        kinds,
+    };
     let givens = resolver.givens(impl_.context);
     for (index, superclass) in trait_.supers.iter().enumerate() {
         let checked = (|| {
