@@ -58,7 +58,8 @@ pub enum Constraint<'a> {
     ),
     And(&'a [Constraint<'a>]),
     Let {
-        /// Annotated recursive bindings published before checking group bodies.
+        /// Recursive binding identities published before checking group bodies.
+        /// Annotated declarations also supply their final contexts immediately.
         declarations: &'a [Definition<'a>],
         /// Assumed while checking the definition body, over its rigid variables.
         given: &'a [Pred<'a>],

@@ -1229,8 +1229,15 @@ This includes local definitions and monomorphic methods through all three Let
 paths. Exported annotations use those records. The local-capture regression
 checks that `local y = (x, y)` quantifies only `y`, even after the enclosing
 definition generalizes `x`; scheme conversion excludes the captured variable
-from `free_vars`. Evidence-owner binders, ordered instance arguments, all-use
-recording (including early recursive calls), and scoped output naming still
+from `free_vars`. Definition records now also retain their evidence-owner
+binder separately from their own identity. Early untyped recursive headers
+carry original definition identities while their contexts are unfinished;
+their uses are queued and receive the final shared context after the whole
+group is generalized and reduced. The recursive evidence regression now
+checks calls inside the group as well as later instantiations, including an
+outer recursive call that stays pending while a local helper is checked. Typed recursive
+calls keep their declared contexts and do not receive duplicate slots.
+Ordered instance arguments, complete all-use recording, and scoped output naming still
 need to be connected before publishing the shared `SolvedTypes` result.
 Chunk 6 now resolves ordinary constructor-headed predicates, including impl
 contexts, before inference publishes a scheme. Do not mark this chunk complete from the current

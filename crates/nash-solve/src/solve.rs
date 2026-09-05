@@ -35,6 +35,7 @@ pub fn run<'a>(
         wanted: Vec::new(),
         givens: Vec::new(),
         schemes: Vec::new(),
+        recursive_uses: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -97,6 +98,7 @@ struct Binding<'a> {
     variable: Variable,
     context: &'a [type_::PredId],
     definition: Option<nash_ast::NodeId>,
+    context_is_final: bool,
 }
 
 struct SchemeRecord<'a> {
@@ -105,6 +107,12 @@ struct SchemeRecord<'a> {
     /// Captures may become generalized later in an enclosing definition.
     /// Freeze the variables owned by this scheme at its own boundary.
     quantified: Vec<Variable>,
+    binder: nash_ast::NodeId,
+}
+
+struct RecursiveUse<'a> {
+    definition: nash_ast::NodeId,
+    site: UseSite<'a>,
 }
 
 type Env<'a> = BTreeMap<&'a str, Binding<'a>>;
@@ -129,6 +137,7 @@ struct Solver<'a, 'tables> {
     wanted: Vec<(usize, type_::PredId)>,
     givens: Vec<GivenFrame<'a>>,
     schemes: Vec<SchemeRecord<'a>>,
+    recursive_uses: Vec<RecursiveUse<'a>>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -524,13 +533,13 @@ impl<'a> Solver<'a, '_> {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    self.record_definitions(uf, rank, definitions, &declared, &[]);
+                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
                     state1
                 } else if rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    self.record_definitions(uf, rank, definitions, &declared, &[]);
+                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
                         .map(|(name, loc_type)| {
@@ -543,6 +552,9 @@ impl<'a> Solver<'a, '_> {
                         new_env.entry(name).or_insert(Binding {
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(&[]),
+                            context_is_final: !declarations
+                                .iter()
+                                .any(|def| def.name.value == *name && def.context.is_none()),
                             definition: definitions
                                 .iter()
                                 .chain(declarations.iter())
@@ -625,11 +637,12 @@ impl<'a> Solver<'a, '_> {
                     };
 
                     let mut new_env = env.clone();
-                    self.record_definitions(uf, rank, definitions, &declared, context);
+                    self.record_definitions(uf, rank, definitions, &declared, context, *binder);
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(context),
+                            context_is_final: true,
                             definition: definitions
                                 .iter()
                                 .chain(declarations.iter())
@@ -1071,6 +1084,7 @@ impl<'a> Solver<'a, '_> {
         definitions: &[type_::Definition<'a>],
         declared: &BTreeMap<&'a str, &'a [type_::PredId]>,
         inferred: &'a [type_::PredId],
+        binder: Option<&'a Located<&'a str>>,
     ) {
         for definition in definitions {
             if !self.conversion_errors.is_empty() {
@@ -1083,6 +1097,7 @@ impl<'a> Solver<'a, '_> {
                     .copied()
                     .unwrap_or(inferred),
                 definition: Some(nash_ast::NodeId::def(definition.name)),
+                context_is_final: true,
             };
             let mut pending = vec![binding.variable];
             for id in binding.context {
@@ -1123,7 +1138,38 @@ impl<'a> Solver<'a, '_> {
                 name: definition.name,
                 binding,
                 quantified,
+                binder: nash_ast::NodeId::def(binder.unwrap_or(definition.name)),
             });
+        }
+        let pending = std::mem::take(&mut self.recursive_uses);
+        for use_ in pending {
+            let Some(scheme) = self
+                .schemes
+                .iter()
+                .find(|scheme| nash_ast::NodeId::def(scheme.name) == use_.definition)
+            else {
+                self.recursive_uses.push(use_);
+                continue;
+            };
+            for (index, id) in scheme.binding.context.iter().enumerate() {
+                let pred = self.predicates.get(*id);
+                let id = self.predicates.push(
+                    uf,
+                    Predicate {
+                        trait_: pred.trait_,
+                        args: pred.args.clone(),
+                        origin: Origin::Use {
+                            site: use_.site,
+                            index,
+                        },
+                        solution: None,
+                    },
+                );
+                // Untyped recursive calls use the group's monomorphic type
+                // variables and pass its final context through unchanged.
+                self.predicates
+                    .solve_given(uf, id, scheme.binder, index, Vec::new());
+            }
         }
     }
 
@@ -1171,6 +1217,14 @@ impl<'a> Solver<'a, '_> {
         binding: Binding<'a>,
         site: UseSite<'a>,
     ) -> Variable {
+        if !binding.context_is_final {
+            self.recursive_uses.push(RecursiveUse {
+                definition: binding
+                    .definition
+                    .expect("recursive header has definition identity"),
+                site,
+            });
+        }
         let mut roots = vec![binding.variable];
         for id in binding.context {
             roots.extend_from_slice(&self.predicates.get(*id).args);
@@ -1610,6 +1664,7 @@ mod copy_tests {
             wanted: Vec::new(),
             givens: Vec::new(),
             schemes: Vec::new(),
+            recursive_uses: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1671,6 +1726,7 @@ mod copy_tests {
             wanted: Vec::new(),
             givens: Vec::new(),
             schemes: Vec::new(),
+            recursive_uses: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1727,6 +1783,7 @@ mod copy_tests {
             wanted: Vec::new(),
             givens: Vec::new(),
             schemes: Vec::new(),
+            recursive_uses: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1803,6 +1860,7 @@ mod copy_tests {
             wanted: Vec::new(),
             givens: Vec::new(),
             schemes: Vec::new(),
+            recursive_uses: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1873,7 +1931,7 @@ mod copy_tests {
     #[test]
     fn retained_impl_children_and_recursive_uses_reference_final_context_slots() {
         let bump = Bump::new();
-        let source = "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (List 'a) where\n    base xs = xs\nf x = (base [g x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n";
+        let source = "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (List 'a) where\n    base xs = xs\nf x = (base [let local y = g y in local x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n";
         let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
             .module()
             .unwrap();
@@ -1914,6 +1972,7 @@ mod copy_tests {
             wanted: Vec::new(),
             givens: Vec::new(),
             schemes: Vec::new(),
+            recursive_uses: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -1930,6 +1989,16 @@ mod copy_tests {
         assert!(result.errors.is_empty(), "{:?}", result.errors);
         assert!(solver.wanted.is_empty());
         assert_eq!(result.env["f"].context, result.env["g"].context);
+        assert!(solver.recursive_uses.is_empty());
+        let local = solver
+            .schemes
+            .iter()
+            .find(|scheme| scheme.name.value == "local")
+            .unwrap();
+        assert_ne!(
+            local.binder, group_binder,
+            "the pending g call survives checking the local helper"
+        );
         assert_eq!(result.env["f"].context.len(), 1);
         assert_eq!(
             result.env["h"].context.len(),
@@ -1943,6 +2012,7 @@ mod copy_tests {
         );
         let mut children = 0;
         let mut h_uses = 0;
+        let mut recursive_uses = 0;
         for pred in solver.predicates.iter() {
             match &pred.origin {
                 Origin::Sub { parent, index } => {
@@ -1967,10 +2037,24 @@ mod copy_tests {
                         })
                     );
                 }
+                Origin::Use { site, .. } if matches!(site.name, "f" | "g") => {
+                    recursive_uses += 1;
+                    assert_eq!(
+                        pred.solution,
+                        Some(crate::preds::Solution::Given {
+                            binder: group_binder,
+                            index: 0,
+                        })
+                    );
+                }
                 _ => {}
             }
         }
         assert_eq!(children, 1);
+        assert_eq!(
+            recursive_uses, 2,
+            "recursive calls receive the final group context"
+        );
         assert_eq!(
             h_uses, 2,
             "each use copies the reduced scheme and receives its own evidence"
@@ -1990,6 +2074,7 @@ mod copy_tests {
             wanted: Vec::new(),
             givens: Vec::new(),
             schemes: Vec::new(),
+            recursive_uses: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
@@ -2062,6 +2147,7 @@ mod copy_tests {
             wanted: Vec::new(),
             givens: Vec::new(),
             schemes: Vec::new(),
+            recursive_uses: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();

@@ -1223,6 +1223,7 @@ pub fn constrain_recursive_defs<'a>(
     flex_info.cons.reverse();
 
     let flex_headers = header_slice(bump, flex_info.headers);
+    let flex_definitions = bump.alloc_slice_fill_iter(flex_info.definitions);
     Constraint::Let {
         declarations: bump.alloc_slice_fill_iter(rigid_info.definitions),
         given: &[],
@@ -1235,13 +1236,13 @@ pub fn constrain_recursive_defs<'a>(
         body_con: bump.alloc(Constraint::Let {
             declarations: &[],
             given: &[],
-            binder: flex_info.definitions.first().map(|def| def.name),
-            definitions: bump.alloc_slice_fill_iter(flex_info.definitions),
+            binder: flex_definitions.first().map(|def| def.name),
+            definitions: flex_definitions,
             rigid_vars: &[],
             flex_vars: bump.alloc_slice_fill_iter(flex_info.vars),
             header: flex_headers,
             header_con: bump.alloc(Constraint::Let {
-                declarations: &[],
+                declarations: flex_definitions,
                 given: &[],
                 binder: None,
                 definitions: &[],
