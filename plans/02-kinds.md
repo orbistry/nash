@@ -8,6 +8,59 @@ Haskell98-style inference over type declaration SCCs, the casing rule,
 optional user kind annotations, kind checking of value annotations, kinds
 in interfaces, and Elm-quality error data.
 
+Implement chunks 1–7 in order, using `docs/overview.md` and `docs/kinds.md`
+as the design authority and the current checkout as the implementation
+reference. Complete the plan 01 nested-section regression fix and its
+verification first. This is a written implementation goal; plan 02 has
+not started.
+
+### Testing and completion contract
+
+1. Before each behavior change, write a failing test for the intended
+   behavior. Use direct assertions for kind-set and inference-engine
+   invariants, and separate success/error snapshot macros for canonical
+   kinds and diagnostics. Cover bounds, occurs checks, fresh
+   instantiation, SCC inference, casing, records, higher-kinded parameters,
+   and user annotations, including error regions and contexts.
+2. Add source-level acceptance tests as each compiler path becomes usable.
+   Parse full Nash modules through the real canonicalization/kind pass;
+   assert the resulting kind schemes or specific kind errors. Include
+   positive and negative cases for `Big` fields, `Storable` containers,
+   little aliases, recursive groups, and top-level and let annotations.
+   A parse error, unrelated arity error, or `Unsupported` result does not
+   establish that kind checking rejected the input correctly.
+3. Extend the existing `nash-driver/src/compile.rs` in-memory build tests
+   for cross-module acceptance: export and import kinds, accept valid
+   imported aliases, and reject invalid uses with a kind error. Check
+   interface deep-copy and serialization round trips, and prove that a
+   kind or bound change changes the interface fingerprint. Use explicit
+   `Builtin` interfaces/imports until the implicit prelude exists.
+4. Test `'f 'a` at the canonicalization/kind boundary. Full higher-kinded
+   value unification and kind predicates at value instantiation remain
+   plan 03 work. Acceptance tests here are Rust compiler integration tests;
+   Nash `tests` block execution, UPLC behavior, and `nash test` belong to
+   later plans.
+5. Run focused tests while implementing. Review every new or changed
+   snapshot before accepting it with `cargo insta accept`; rerun the
+   affected tests afterward. At each completed chunk run
+   `cargo fmt --all`,
+   `cargo clippy --all-targets --all-features -- -D warnings`,
+   `cargo insta test`, and `cargo test`. At completion also run
+   `cargo insta test --unreferenced reject` and resolve all pending or stale
+   snapshots.
+6. Use `jj status` and `jj diff` to inspect and preserve work. Keep each
+   verified implementation chunk in a separate described `jj` change,
+   then use `jj new` for the next chunk. Do not discard existing changes
+   or rewrite unrelated history. Record completed chunks in this plan,
+   add the chunk 7 changeset, and tick SPEC only after all acceptance
+   criteria and workspace checks pass. Report test results and any
+   remaining limitation explicitly.
+
+Resolve stale sketches against the design before coding. In particular,
+the recursive-group test must itself obey the field casing rules, and a
+serialized interface schema change needs a compatibility decision and a
+round-trip test even when the added field is a `String`.
+
 ## Prerequisites
 
 - plans/01 (syntax): `'a` type variables, lowercase type names in
@@ -947,8 +1000,8 @@ canonical module so the `kind` fields show in the Debug snapshot;
 - `kind_higher_kinded_parameter`: `type wrap 'f 'a = Wrap ('f 'a)` —
   `'f : k0 -> k1`, `'a : k0`, with `k0` bounded `ALL` and `k1` bounded
   `ANY` (the field position); scheme `(k0 -> k1) -> k0 -> Term`.
-- `kind_mutual_union_alias`: `type Tree = Node forest` +
-  `type alias forest = list Tree` — both solved in one SCC.
+- `kind_mutual_union_alias`: `type Tree = Node (List Branch)` +
+  `type alias Branch = Tree` — both solved in one SCC, with Big fields.
 - `kind_alias_big_body`: `type alias Id = Int`.
 - `kind_alias_little_const_body`: `type alias count = int`.
 - `kind_big_record_alias`: `type alias Vault = { owner : Bytes, amount : Int }`.
