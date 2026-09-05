@@ -199,7 +199,7 @@ impl<'a> Solver<'a> {
 
             Constraint::Let {
                 given: _given,
-                binder: _binder,
+                binder,
                 definitions: _definitions,
                 rigid_vars,
                 flex_vars,
@@ -251,7 +251,7 @@ impl<'a> Solver<'a> {
                             (*name, Located::at(loc_type.region, var))
                         })
                         .collect();
-                    let state1 = self.solve(uf, env, next_rank, state, header_con);
+                    let mut state1 = self.solve(uf, env, next_rank, state, header_con);
 
                     let young_mark = state1.mark;
                     let visit_mark = young_mark.next();
@@ -262,8 +262,23 @@ impl<'a> Solver<'a> {
                     self.pools[next_rank] = Vec::new();
 
                     // check that things went well
-                    for rigid in rigid_vars.iter() {
-                        self.is_generic(uf, *rigid);
+                    if state1.errors.is_empty() {
+                        for rigid in rigid_vars.iter() {
+                            if uf.get(*rigid).rank != NO_RANK {
+                                let owner =
+                                    binder.map(|name| (name.region, name.value)).or_else(|| {
+                                        header.first().map(|(name, typ)| (typ.region, *name))
+                                    });
+                                state1.errors.push(Error::AnnotationVariableEscapes {
+                                    region: owner
+                                        .map_or_else(nash_region::Region::zero, |(region, _)| {
+                                            region
+                                        }),
+                                    name: owner.map(|(_, name)| name),
+                                    variable: to_error_type(self.bump, uf, *rigid),
+                                });
+                            }
+                        }
                     }
 
                     let mut new_env = env.clone();
@@ -282,18 +297,6 @@ impl<'a> Solver<'a> {
                     })
                 }
             }
-        }
-    }
-
-    /// Check that a variable has rank `NO_RANK`, meaning it generalized.
-    fn is_generic(&mut self, uf: &mut UnionFind<'a>, var: Variable) {
-        let rank = uf.get(var).rank;
-        if rank != NO_RANK {
-            let tipe = to_error_type(self.bump, uf, var);
-            panic!(
-                "You ran into a compiler bug. Here are some details for the developers:\n\n    \
-                 {tipe:?} [rank = {rank}]\n\nPlease create a minimal example and report it."
-            );
         }
     }
 

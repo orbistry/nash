@@ -821,6 +821,21 @@ fn rigid_vars_do_not_unify() {
 }
 
 #[test]
+fn local_annotation_cannot_generalize_an_outer_argument() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        outer x =
+            let
+                inner : 'a
+                inner = x
+            in
+            inner
+    "#
+    );
+}
+
+#[test]
 fn infinite_type() {
     assert_inference_error_snapshot!(
         r#"

@@ -13,6 +13,12 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    /// An annotation quantifies a variable fixed by an enclosing scope.
+    AnnotationVariableEscapes {
+        region: Region,
+        name: Option<&'a str>,
+        variable: &'a ErrorType<'a>,
+    },
     UnsupportedTypeApplication {
         region: Region,
     },

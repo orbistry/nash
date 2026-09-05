@@ -1155,6 +1155,10 @@ Implementation audit (takes precedence over the sketches below):
 - Classify free variables after rank adjustment. Binder-less Lets must defer
   outer obligations; mixed outer/young contexts must retain outer variables
   without freshening them. `NO_RANK` alone does not establish binder ownership.
+  A quantified annotation variable that remains at an outer rank is a source
+  type error, `AnnotationVariableEscapes`, rather than an internal compiler
+  panic. For example, `inner : 'a; inner = x` cannot quantify an outer `x`.
+  Do not report this secondary rank error after an existing body type error.
 - Reserve variable names across the full type and explicit context before
   assigning fresh names. `to_annotation_with_context` implements this
   conversion; scheme inference must supply its ordered context. Instance type

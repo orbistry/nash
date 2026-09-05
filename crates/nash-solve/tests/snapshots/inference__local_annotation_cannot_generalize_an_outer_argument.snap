@@ -1,0 +1,24 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nouter x =\n    let\n        inner : 'a\n        inner = x\n    in\n    inner\n"
+---
+[
+    AnnotationVariableEscapes {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 9,
+            },
+            end: Position {
+                line: 5,
+                column: 14,
+            },
+        },
+        name: Some(
+            "inner",
+        ),
+        variable: RigidVar(
+            "a",
+        ),
+    },
+]
