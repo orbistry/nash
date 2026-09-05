@@ -1934,6 +1934,17 @@ is deleted.
 
 ## Chunk 7: literal traits, defaulting, ambiguity, polymorphic recursion; remove supertypes
 
+Status: in progress. Declared recursive schemes now preserve quantifier
+ownership during body checking. Direct and mutual calls reject impl evidence
+containing a given from the same group; unchanged givens, closed evidence,
+unconstrained polymorphic recursion and nonrecursive method calls pass.
+Snapshot tests and a real CLI check verify the direct diagnostic.
+The evidence-growth check remains incomplete across nested helpers: a helper
+with its own declared context can call the enclosing recursive definition
+with `Impl [Given helper]`, then receive `Given outer` at its own call.
+The CLI currently accepts this composition; resolve it before completing this
+chunk. Literal traits, defaulting, ambiguity and SuperType removal also remain.
+
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,
 `crates/nash-solve/src/solve.rs`, `crates/nash-solve/src/resolve.rs`,

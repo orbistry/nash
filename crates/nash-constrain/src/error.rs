@@ -13,6 +13,13 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    /// Recursive evidence adds an impl around a given from the same group.
+    PolymorphicRecursion {
+        region: Region,
+        name: &'a str,
+        trait_: nash_ast::QualifiedName<'a>,
+        args: &'a [&'a ErrorType<'a>],
+    },
     /// Inference finished without a proof for this use-site requirement.
     UnresolvedConstraint {
         region: Region,

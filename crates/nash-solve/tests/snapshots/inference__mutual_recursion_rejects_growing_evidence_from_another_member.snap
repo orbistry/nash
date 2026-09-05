@@ -1,0 +1,45 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nleft : Keep 'a => 'a -> ()\nleft x = right [x]\nright : Keep 'a => 'a -> ()\nright x = left x\n"
+---
+[
+    PolymorphicRecursion {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 10,
+            },
+            end: Position {
+                line: 7,
+                column: 15,
+            },
+        },
+        name: "right",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Keep",
+        },
+        args: [
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "List",
+                args: [
+                    RigidVar(
+                        "a",
+                    ),
+                ],
+            },
+        ],
+    },
+]

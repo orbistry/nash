@@ -1,0 +1,8 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nsame : Keep 'a => 'a -> ()\nsame x = same x\nclosed : Keep 'a => 'a -> ()\nclosed x = closed ()\nplain : 'a -> ()\nplain x = plain [x]\nwrap : Keep 'a => 'a -> List 'a\nwrap x = keep [x]\n"
+---
+closed : forall a. Keep a => a -> ()
+plain : forall a. a -> ()
+same : forall a. Keep a => a -> ()
+wrap : forall a. Keep a => a -> List a

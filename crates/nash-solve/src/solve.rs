@@ -38,6 +38,7 @@ pub fn run<'a>(
         recursive_uses: Vec::new(),
         uses: Vec::new(),
         owners: Vec::new(),
+        recursive_groups: Vec::new(),
         conversion_errors: Vec::new(),
     };
 
@@ -72,6 +73,9 @@ struct Binding<'a> {
     context: &'a [type_::PredId],
     definition: Option<nash_ast::NodeId>,
     context_is_final: bool,
+    /// Early recursive annotations own these variables even while checking
+    /// their bodies temporarily changes the variables' ranks.
+    declared_quantifiers: &'a [Variable],
 }
 
 struct SchemeRecord<'a> {
@@ -126,6 +130,7 @@ struct Solver<'a, 'tables> {
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
     owners: Vec<nash_ast::NodeId>,
+    recursive_groups: Vec<Vec<nash_ast::NodeId>>,
     conversion_errors: Vec<Error<'a>>,
 }
 
@@ -195,6 +200,68 @@ impl<'a> Solver<'a, '_> {
         use std::collections::HashMap;
         let mut errors = Vec::new();
         for use_ in &self.uses {
+            if let UseSource::Local { definition, .. } = use_.source
+                && let Some(group) = self
+                    .recursive_groups
+                    .iter()
+                    .find(|group| group.contains(&definition))
+            {
+                let mut owner = use_.owner;
+                let mut recursive = false;
+                while let Some(id) = owner {
+                    if group.contains(&id) {
+                        recursive = true;
+                        break;
+                    }
+                    owner = self
+                        .schemes
+                        .iter()
+                        .find(|scheme| nash_ast::NodeId::def(scheme.name) == id)
+                        .and_then(|scheme| scheme.parent);
+                }
+                if recursive {
+                    for root in &use_.predicates {
+                        let pred = self.predicates.get(*root);
+                        let Some(crate::preds::Solution::Impl { subs, .. }) = &pred.solution else {
+                            continue;
+                        };
+                        let mut pending = subs.clone();
+                        let mut seen = BTreeSet::new();
+                        let mut grows = false;
+                        while let Some(id) = pending.pop() {
+                            if !seen.insert(id) {
+                                continue;
+                            }
+                            match &self.predicates.get(id).solution {
+                                Some(crate::preds::Solution::Impl { subs, .. }) => {
+                                    pending.extend(subs)
+                                }
+                                Some(
+                                    crate::preds::Solution::Given { binder, .. }
+                                    | crate::preds::Solution::Super { binder, .. },
+                                ) if group.contains(binder) => {
+                                    grows = true;
+                                    break;
+                                }
+                                _ => {}
+                            }
+                        }
+                        if grows {
+                            let args: Vec<_> = pred
+                                .args
+                                .iter()
+                                .map(|var| to_error_type(self.bump, uf, *var))
+                                .collect();
+                            errors.push(Error::PolymorphicRecursion {
+                                region: use_.site.region,
+                                name: use_.site.name,
+                                trait_: pred.trait_,
+                                args: self.bump.alloc_slice_copy(&args),
+                            });
+                        }
+                    }
+                }
+            }
             let mut pending = use_.predicates.clone();
             let mut seen = BTreeSet::new();
             while let Some(id) = pending.pop() {
@@ -808,6 +875,20 @@ impl<'a> Solver<'a, '_> {
                 header_con,
                 body_con,
             } => {
+                if declarations.iter().any(|def| def.context.is_some()) {
+                    let mut group: Vec<_> = declarations
+                        .iter()
+                        .map(|def| nash_ast::NodeId::def(def.name))
+                        .collect();
+                    if let Constraint::Let { definitions, .. } = body_con {
+                        group.extend(
+                            definitions
+                                .iter()
+                                .map(|def| nash_ast::NodeId::def(def.name)),
+                        );
+                    }
+                    self.recursive_groups.push(group);
+                }
                 let wanted_start = self.wanted.len();
                 let annotated = definitions.iter().any(|def| def.context.is_some());
                 if rigid_vars.is_empty() && matches!(body_con, Constraint::True) {
@@ -832,6 +913,7 @@ impl<'a> Solver<'a, '_> {
                     let mut new_env = env.clone();
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
+                            declared_quantifiers: &[],
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(&[]),
                             context_is_final: !declarations
@@ -922,6 +1004,14 @@ impl<'a> Solver<'a, '_> {
                     self.record_definitions(uf, rank, definitions, &declared, context, *binder);
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
+                            declared_quantifiers: if declarations
+                                .iter()
+                                .any(|def| def.name.value == *name && def.context.is_some())
+                            {
+                                rigid_vars
+                            } else {
+                                &[]
+                            },
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(context),
                             context_is_final: true,
@@ -1387,6 +1477,7 @@ impl<'a> Solver<'a, '_> {
                 return;
             }
             let binding = Binding {
+                declared_quantifiers: &[],
                 variable: self.type_to_variable(uf, rank, definition.typ),
                 context: declared
                     .get(definition.name.value)
@@ -1521,7 +1612,8 @@ impl<'a> Solver<'a, '_> {
         for id in binding.context {
             roots.extend_from_slice(&self.predicates.get(*id).args);
         }
-        let (copies, pairs) = self.make_copies(uf, rank, &roots);
+        let (copies, pairs) =
+            self.make_scheme_copies(uf, rank, &roots, binding.declared_quantifiers);
         let mut predicates = Vec::new();
         let mut offset = 1;
         for (index, id) in binding.context.iter().enumerate() {
@@ -1669,16 +1761,27 @@ impl<'a> Solver<'a, '_> {
     /// Copy all roots of one scheme (type and context) together, retaining
     /// sharing within the use and restoring every touched original afterward.
     /// The pairs also identify generalized variables for instance type args.
+    #[cfg(test)]
     fn make_copies(
         &mut self,
         uf: &mut UnionFind<'a>,
         rank: usize,
         roots: &[Variable],
     ) -> (Vec<Variable>, Vec<(Variable, Variable)>) {
+        self.make_scheme_copies(uf, rank, roots, &[])
+    }
+
+    fn make_scheme_copies(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        roots: &[Variable],
+        quantified: &[Variable],
+    ) -> (Vec<Variable>, Vec<(Variable, Variable)>) {
         debug_assert!(self.copied.is_empty());
         let roots = roots
             .iter()
-            .map(|root| self.make_copy_help(uf, rank, *root))
+            .map(|root| self.make_copy_help(uf, rank, *root, quantified))
             .collect();
         let copied = std::mem::take(&mut self.copied);
         for (original, _) in &copied {
@@ -1695,6 +1798,7 @@ impl<'a> Solver<'a, '_> {
         uf: &mut UnionFind<'a>,
         max_rank: usize,
         variable: Variable,
+        quantified: &[Variable],
     ) -> Variable {
         let desc = uf.get(variable).clone();
 
@@ -1702,7 +1806,7 @@ impl<'a> Solver<'a, '_> {
             return copy;
         }
 
-        if desc.rank != NO_RANK {
+        if desc.rank != NO_RANK && !quantified.iter().any(|var| uf.equivalent(*var, variable)) {
             return variable;
         }
 
@@ -1738,7 +1842,7 @@ impl<'a> Solver<'a, '_> {
         // work or crawl this variable again.
         match desc.content {
             Content::Structure(term) => {
-                let new_term = self.copy_flat_type(uf, max_rank, term);
+                let new_term = self.copy_flat_type(uf, max_rank, term, quantified);
                 uf.set(copy, make_descriptor(Content::Structure(new_term)));
                 copy
             }
@@ -1767,10 +1871,13 @@ impl<'a> Solver<'a, '_> {
                 let new_args: Vec<(&'a str, Variable)> = args
                     .iter()
                     .map(|(arg_name, arg_var)| {
-                        (*arg_name, self.make_copy_help(uf, max_rank, *arg_var))
+                        (
+                            *arg_name,
+                            self.make_copy_help(uf, max_rank, *arg_var, quantified),
+                        )
                     })
                     .collect();
-                let new_real = self.make_copy_help(uf, max_rank, real);
+                let new_real = self.make_copy_help(uf, max_rank, real, quantified);
                 uf.set(
                     copy,
                     make_descriptor(Content::Alias {
@@ -1792,19 +1899,20 @@ impl<'a> Solver<'a, '_> {
         uf: &mut UnionFind<'a>,
         max_rank: usize,
         flat_type: FlatType<'a>,
+        quantified: &[Variable],
     ) -> FlatType<'a> {
         match flat_type {
             FlatType::App1(home, name, args) => FlatType::App1(
                 home,
                 name,
                 args.iter()
-                    .map(|arg| self.make_copy_help(uf, max_rank, *arg))
+                    .map(|arg| self.make_copy_help(uf, max_rank, *arg, quantified))
                     .collect(),
             ),
 
             FlatType::Fun1(a, b) => {
-                let a_copy = self.make_copy_help(uf, max_rank, a);
-                let b_copy = self.make_copy_help(uf, max_rank, b);
+                let a_copy = self.make_copy_help(uf, max_rank, a, quantified);
+                let b_copy = self.make_copy_help(uf, max_rank, b, quantified);
                 FlatType::Fun1(a_copy, b_copy)
             }
 
@@ -1813,18 +1921,18 @@ impl<'a> Solver<'a, '_> {
             FlatType::Record1(fields, ext) => {
                 let field_copies: BTreeMap<&'a str, Variable> = fields
                     .iter()
-                    .map(|(name, var)| (*name, self.make_copy_help(uf, max_rank, *var)))
+                    .map(|(name, var)| (*name, self.make_copy_help(uf, max_rank, *var, quantified)))
                     .collect();
-                let ext_copy = self.make_copy_help(uf, max_rank, ext);
+                let ext_copy = self.make_copy_help(uf, max_rank, ext, quantified);
                 FlatType::Record1(field_copies, ext_copy)
             }
 
             FlatType::Unit1 => FlatType::Unit1,
 
             FlatType::Tuple1(a, b, maybe_c) => {
-                let a_copy = self.make_copy_help(uf, max_rank, a);
-                let b_copy = self.make_copy_help(uf, max_rank, b);
-                let c_copy = maybe_c.map(|c| self.make_copy_help(uf, max_rank, c));
+                let a_copy = self.make_copy_help(uf, max_rank, a, quantified);
+                let b_copy = self.make_copy_help(uf, max_rank, b, quantified);
+                let c_copy = maybe_c.map(|c| self.make_copy_help(uf, max_rank, c, quantified));
                 FlatType::Tuple1(a_copy, b_copy, c_copy)
             }
         }
@@ -1975,6 +2083,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2039,6 +2148,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2098,6 +2208,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2177,6 +2288,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2291,6 +2403,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let result = solver.solve(
@@ -2425,6 +2538,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
@@ -2500,6 +2614,7 @@ mod copy_tests {
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             owners: Vec::new(),
+            recursive_groups: Vec::new(),
             conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();

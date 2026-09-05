@@ -286,6 +286,61 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn recursive_evidence_allows_unchanged_closed_and_unconstrained_calls() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep () where
+            keep x = x
+        impl Keep 'a => Keep (List 'a) where
+            keep xs = xs
+        same : Keep 'a => 'a -> ()
+        same x = same x
+        closed : Keep 'a => 'a -> ()
+        closed x = closed ()
+        plain : 'a -> ()
+        plain x = plain [x]
+        wrap : Keep 'a => 'a -> List 'a
+        wrap x = keep [x]
+        "#
+    );
+}
+
+#[test]
+fn mutual_recursion_rejects_growing_evidence_from_another_member() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep 'a => Keep (List 'a) where
+            keep xs = xs
+        left : Keep 'a => 'a -> ()
+        left x = right [x]
+        right : Keep 'a => 'a -> ()
+        right x = left x
+        "#
+    );
+}
+
+#[test]
+fn recursive_impl_evidence_cannot_grow_from_its_own_given() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep 'a => Keep (List 'a) where
+            keep xs = xs
+        nest : Keep 'a => 'a -> ()
+        nest x = nest [x]
+        "#
+    );
+}
+
+#[test]
 fn annotated_body_requires_a_given_for_a_rigid_trait_argument() {
     assert_inference_error_snapshot!(
         r#"
