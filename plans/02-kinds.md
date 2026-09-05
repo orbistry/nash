@@ -64,7 +64,7 @@ round-trip test even when the added field is a `String`.
 
 - [x] Prerequisite: nested-section fix, regression snapshots, inference acceptance test.
 - [x] Chunk 1: kind vocabulary. Tests failed before implementation; bounds and result-kind tests pass. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
-- [ ] Chunk 2: kind inference engine.
+- [x] Chunk 2: kind inference engine. Seven tests cover bounds, links, occurs checks, arrows, sharing, and fresh instantiation; tests failed before implementation. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [ ] Chunk 3: builtin kinds and environment.
 - [ ] Chunk 4: declaration inference.
 - [ ] Chunk 5: interfaces and value annotations.

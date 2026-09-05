@@ -3,6 +3,7 @@ pub mod environment;
 mod error;
 pub mod expression;
 mod interface;
+pub mod kinds;
 mod module;
 pub mod pattern;
 mod scc;
