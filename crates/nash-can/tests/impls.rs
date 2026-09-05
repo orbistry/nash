@@ -2,6 +2,41 @@ use bumpalo::Bump;
 use indoc::indoc;
 
 #[test]
+fn partially_applied_alias_binds_remaining_method_arguments() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        type alias Pair 'left 'right = { first : 'left, second : 'right }
+        trait Keep 'f where
+            keep : 'f 'a -> 'f 'a
+        impl Keep (Pair 'a) where
+            keep x = x
+    "
+        ),
+    )
+    .unwrap();
+    let nash_ast::Def::TypedDef {
+        annotation,
+        free_vars,
+        ..
+    } = result.module.impls[0].value.methods[0]
+    else {
+        panic!("typed method")
+    };
+    let nash_ast::Type::Lambda { from, .. } = annotation.value else {
+        panic!("method arrow")
+    };
+    assert!(
+        matches!(from.value, nash_ast::Type::Alias { .. }),
+        "applied alias must normalize: {from:#?}"
+    );
+    insta::assert_debug_snapshot!((from, free_vars));
+}
+
+#[test]
 fn superclass_givens_preserve_nominal_alias_identity() {
     let bump = Bump::new();
     let mut results = Vec::new();

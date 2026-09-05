@@ -409,9 +409,11 @@ fn copy_type<'d>(dst: &'d Bump, t: &CanType<'_>) -> CanType<'d> {
         CanType::Alias {
             reference,
             arguments,
+            remaining,
             target,
         } => CanType::Alias {
             reference: copy_qualified_name(dst, reference),
+            remaining: dst.alloc_slice_fill_iter(remaining.iter().map(|p| copy_str(dst, p))),
             arguments: dst.alloc_slice_fill_iter(arguments.iter().map(|a| AliasArgument {
                 name: copy_str(dst, a.name),
                 typ: copy_located_type(dst, a.typ),

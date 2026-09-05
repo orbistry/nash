@@ -37,8 +37,13 @@ pub fn from_src_type<'a>(
         CanType::Alias {
             reference,
             arguments,
+            remaining,
             target,
         } => {
+            if !remaining.is_empty() {
+                // Plan 03 chunk 8 retains partial alias constructors until saturation.
+                return bump.alloc(Type::UnsupportedApplication(src_type.region));
+            }
             let targs = bump.alloc_slice_fill_iter(
                 arguments
                     .iter()

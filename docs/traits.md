@@ -125,6 +125,10 @@ both its trait and its head type are visible.
   as `Content::Alias` (Elm behaviour, retained by
   [representation.md](representation.md)), so the resolver sees the alias
   name as the head constructor.
+  A partially applied alias retains the unsupplied suffix of its formal
+  parameters. Applying it binds those parameters in declaration order;
+  the alias body stays closed over its formals until saturation. Supplied
+  caller variables are not captured by remaining formal names.
 - The context `C` may only mention the variables of the heads.
 - Kinds: each head's kind must instantiate the trait's kind scheme. `impl
   Functor List` instantiates `k1 -> k2` at `Big -> Big`; `impl Functor list`

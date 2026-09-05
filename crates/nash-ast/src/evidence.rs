@@ -67,15 +67,18 @@ fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
             Type::Alias {
                 reference: ar,
                 arguments: aa,
+                remaining: ap,
                 target: at,
             },
             Type::Alias {
                 reference: br,
                 arguments: ba,
+                remaining: bp,
                 target: bt,
             },
         ) => {
             ar == br
+                && ap == bp
                 && aa.len() == ba.len()
                 && aa
                     .iter()
@@ -136,9 +139,11 @@ fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
         Type::Alias {
             reference,
             arguments,
+            remaining,
             target,
         } => {
             reference.hash(state);
+            remaining.hash(state);
             arguments.len().hash(state);
             for a in *arguments {
                 a.name.hash(state);

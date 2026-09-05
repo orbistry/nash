@@ -1,0 +1,127 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: "(from, free_vars)"
+---
+(
+    Located {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 12,
+            },
+            end: Position {
+                line: 4,
+                column: 17,
+            },
+        },
+        value: Alias {
+            reference: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Pair",
+            },
+            arguments: [
+                AliasArgument {
+                    name: "left",
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 19,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                },
+                AliasArgument {
+                    name: "right",
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "$impl0",
+                        ),
+                    },
+                },
+            ],
+            remaining: [],
+            target: Open(
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 32,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 66,
+                        },
+                    },
+                    value: Record {
+                        fields: [
+                            FieldType {
+                                index: 0,
+                                field: "first",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 42,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 47,
+                                        },
+                                    },
+                                    value: Var(
+                                        "left",
+                                    ),
+                                },
+                            },
+                            FieldType {
+                                index: 1,
+                                field: "second",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 58,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 64,
+                                        },
+                                    },
+                                    value: Var(
+                                        "right",
+                                    ),
+                                },
+                            },
+                        ],
+                        ext: None,
+                    },
+                },
+            ),
+        },
+    },
+    [
+        "$impl0",
+        "a",
+    ],
+)

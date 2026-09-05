@@ -393,6 +393,8 @@ pub enum Type<'a> {
     Alias {
         reference: QualifiedName<'a>,
         arguments: &'a [AliasArgument<'a>],
+        /// Unsupplied suffix of the alias's bound parameters, in declaration order.
+        remaining: &'a [&'a str],
         target: AliasType<'a>,
     },
 }

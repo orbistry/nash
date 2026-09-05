@@ -308,6 +308,7 @@ fn canonicalize_env_type<'a>(
                 reference: QualifiedName { home, name },
                 arguments,
                 target: CanAliasType::Open(alias_typ),
+                remaining: &[],
             })
         }
         environment::Type::Union { arity, home } => {
@@ -418,6 +419,79 @@ pub fn dealias<'a>(
     }
 }
 
+/// Apply a known canonical head without opening an alias's bound body.
+fn apply_type<'a>(
+    bump: &'a Bump,
+    region: Region,
+    head: &'a Located<CanType<'a>>,
+    args: &'a [&'a Located<CanType<'a>>],
+) -> &'a Located<CanType<'a>> {
+    if args.is_empty() {
+        return head;
+    }
+    let typ = match &head.value {
+        CanType::App {
+            head,
+            args: existing,
+        } => {
+            let combined = bump
+                .alloc_slice_fill_iter(existing.iter().chain(args).copied().collect::<Vec<_>>());
+            return apply_type(bump, region, head, combined);
+        }
+        CanType::Named {
+            reference,
+            args: existing,
+        } => CanType::Named {
+            reference: *reference,
+            args: bump
+                .alloc_slice_fill_iter(existing.iter().chain(args).copied().collect::<Vec<_>>()),
+        },
+        CanType::Alias {
+            reference,
+            arguments,
+            remaining,
+            target,
+        } => {
+            let consumed = remaining.len().min(args.len());
+            let applied = bump.alloc(Located::at(
+                region,
+                CanType::Alias {
+                    reference: *reference,
+                    arguments: bump.alloc_slice_fill_iter(
+                        arguments
+                            .iter()
+                            .map(|a| CanAliasArgument {
+                                name: a.name,
+                                typ: a.typ,
+                            })
+                            .chain(
+                                remaining
+                                    .iter()
+                                    .zip(args)
+                                    .map(|(name, typ)| CanAliasArgument { name, typ }),
+                            )
+                            .collect::<Vec<_>>(),
+                    ),
+                    remaining: &remaining[consumed..],
+                    target: match target {
+                        CanAliasType::Open(t) => CanAliasType::Open(t),
+                        CanAliasType::Filled(t) => CanAliasType::Filled(t),
+                    },
+                },
+            ));
+            if consumed == args.len() {
+                return applied;
+            }
+            CanType::App {
+                head: applied,
+                args: &args[consumed..],
+            }
+        }
+        _ => CanType::App { head, args },
+    };
+    bump.alloc(Located::at(region, typ))
+}
+
 pub fn substitute_type<'a>(
     bump: &'a Bump,
     table: &BTreeMap<&'a str, &'a Located<CanType<'a>>>,
@@ -425,11 +499,12 @@ pub fn substitute_type<'a>(
 ) -> &'a Located<CanType<'a>> {
     let substituted = match &typ.value {
         CanType::Var(name) => return table.get(name).copied().unwrap_or(typ),
-        CanType::App { head, args } => CanType::App {
-            head: substitute_type(bump, table, head),
-            args: bump
-                .alloc_slice_fill_iter(args.iter().map(|arg| substitute_type(bump, table, arg))),
-        },
+        CanType::App { head, args } => {
+            let head = substitute_type(bump, table, head);
+            let args = bump
+                .alloc_slice_fill_iter(args.iter().map(|arg| substitute_type(bump, table, arg)));
+            return apply_type(bump, typ.region, head, args);
+        }
         CanType::Unit => return typ,
         CanType::Lambda { from, to } => CanType::Lambda {
             from: substitute_type(bump, table, from),
@@ -450,21 +525,22 @@ pub fn substitute_type<'a>(
             })),
             ext: *ext,
         },
-        // Like Elm, only the alias arguments are substituted; the target
-        // body is left alone (it closes over the argument names).
+        // Open bodies bind alias parameters; filled bodies contain caller variables.
         CanType::Alias {
             reference,
             arguments,
+            remaining,
             target,
         } => CanType::Alias {
             reference: *reference,
+            remaining,
             arguments: bump.alloc_slice_fill_iter(arguments.iter().map(|arg| CanAliasArgument {
                 name: arg.name,
                 typ: substitute_type(bump, table, arg.typ),
             })),
             target: match target {
                 CanAliasType::Open(t) => CanAliasType::Open(t),
-                CanAliasType::Filled(t) => CanAliasType::Filled(t),
+                CanAliasType::Filled(t) => CanAliasType::Filled(substitute_type(bump, table, t)),
             },
         },
         CanType::Tuple {
@@ -487,7 +563,10 @@ pub fn iterated_dealias<'a>(
 ) -> &'a Located<CanType<'a>> {
     match &typ.value {
         CanType::Alias {
-            arguments, target, ..
+            arguments,
+            target,
+            remaining: [],
+            ..
         } => iterated_dealias(bump, dealias(bump, arguments, target)),
         _ => typ,
     }
@@ -513,6 +592,86 @@ mod tests {
     use nash_ast::ModuleName;
 
     use crate::environment::{Env, Info, Type as EnvType};
+
+    #[test]
+    fn copied_partial_alias_keeps_formal_parameters_bound() {
+        let bump = Bump::new();
+        let copied = {
+            let source = Bump::new();
+            let var = |name| &*source.alloc(Located::at_zero(CanType::Var(name)));
+            let body = source.alloc(Located::at_zero(CanType::Lambda {
+                from: var("left"),
+                to: var("right"),
+            }));
+            let partial = source.alloc(Located::at_zero(CanType::Alias {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: source.alloc_str("Original"),
+                    },
+                    name: source.alloc_str("Arrow"),
+                },
+                arguments: source.alloc_slice_fill_iter([CanAliasArgument {
+                    name: "left",
+                    typ: var("right"),
+                }]),
+                remaining: source.alloc_slice_fill_iter([&*source.alloc_str("right")]),
+                target: CanAliasType::Open(body),
+            }));
+            let mut interface = crate::kinds::builtin_interface(&source);
+            interface.values = source.alloc_slice_fill_iter([crate::InterfaceValue {
+                name: "partial",
+                annotation: source.alloc(nash_ast::Annotation {
+                    free_vars: &["right"],
+                    context: &[],
+                    typ: partial,
+                }),
+            }]);
+            crate::deep_copy_interface(&bump, &interface)
+        };
+        let partial = copied.values[0].annotation.typ;
+        assert!(std::ptr::eq(iterated_dealias(&bump, partial), partial));
+        let unit = bump.alloc(Located::at_zero(CanType::Unit));
+        let applied = apply_type(
+            &bump,
+            Region::zero(),
+            partial,
+            bump.alloc_slice_copy(&[&*unit]),
+        );
+        let expanded = iterated_dealias(&bump, applied);
+        let CanType::Lambda { from, to } = &expanded.value else {
+            panic!("alias body")
+        };
+        assert!(matches!(from.value, CanType::Var("right")));
+        assert!(matches!(to.value, CanType::Unit));
+        let excess = apply_type(
+            &bump,
+            Region::zero(),
+            partial,
+            bump.alloc_slice_copy(&[&*unit, &*unit]),
+        );
+        assert!(matches!(&excess.value, CanType::App { args, .. } if args.len() == 1));
+        let CanType::Alias {
+            reference,
+            arguments,
+            ..
+        } = &applied.value
+        else {
+            panic!("saturated alias")
+        };
+        let filled = bump.alloc(Located::at_zero(CanType::Alias {
+            reference: *reference,
+            arguments,
+            remaining: &[],
+            target: CanAliasType::Filled(expanded),
+        }));
+        let replaced = substitute_type(&bump, &BTreeMap::from([("right", &*unit)]), filled);
+        let replaced = iterated_dealias(&bump, replaced);
+        assert!(
+            matches!(&replaced.value, CanType::Lambda { from, to } if matches!(from.value, CanType::Unit) && matches!(to.value, CanType::Unit))
+        );
+        insta::assert_debug_snapshot!((partial, applied, expanded));
+    }
 
     fn empty_env<'a>(bump: &'a Bump) -> Env<'a> {
         let _ = bump;
@@ -742,6 +901,7 @@ mod tests {
                 },
                 arguments,
                 target: CanAliasType::Open(body),
+                remaining: &[],
             },
         ));
         let dealiased = iterated_dealias(&bump, aliased);

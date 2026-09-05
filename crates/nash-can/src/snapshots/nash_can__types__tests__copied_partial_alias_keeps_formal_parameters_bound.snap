@@ -1,0 +1,242 @@
+---
+source: crates/nash-can/src/types.rs
+expression: "(partial, applied, expanded)"
+---
+(
+    Located {
+        region: Region {
+            start: Position {
+                line: 0,
+                column: 0,
+            },
+            end: Position {
+                line: 0,
+                column: 0,
+            },
+        },
+        value: Alias {
+            reference: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Original",
+                },
+                name: "Arrow",
+            },
+            arguments: [
+                AliasArgument {
+                    name: "left",
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "right",
+                        ),
+                    },
+                },
+            ],
+            remaining: [
+                "right",
+            ],
+            target: Open(
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Lambda {
+                        from: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "left",
+                            ),
+                        },
+                        to: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "right",
+                            ),
+                        },
+                    },
+                },
+            ),
+        },
+    },
+    Located {
+        region: Region {
+            start: Position {
+                line: 0,
+                column: 0,
+            },
+            end: Position {
+                line: 0,
+                column: 0,
+            },
+        },
+        value: Alias {
+            reference: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Original",
+                },
+                name: "Arrow",
+            },
+            arguments: [
+                AliasArgument {
+                    name: "left",
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "right",
+                        ),
+                    },
+                },
+                AliasArgument {
+                    name: "right",
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Unit,
+                    },
+                },
+            ],
+            remaining: [],
+            target: Open(
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Lambda {
+                        from: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "left",
+                            ),
+                        },
+                        to: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "right",
+                            ),
+                        },
+                    },
+                },
+            ),
+        },
+    },
+    Located {
+        region: Region {
+            start: Position {
+                line: 0,
+                column: 0,
+            },
+            end: Position {
+                line: 0,
+                column: 0,
+            },
+        },
+        value: Lambda {
+            from: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Var(
+                    "right",
+                ),
+            },
+            to: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Unit,
+            },
+        },
+    },
+)

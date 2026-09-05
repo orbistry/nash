@@ -104,6 +104,7 @@ Module {
                             },
                         },
                     ],
+                    remaining: [],
                     target: Open(
                         Located {
                             region: Region {

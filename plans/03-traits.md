@@ -618,9 +618,10 @@ private trait metadata, with overlap checks across interfaces. Focused
 snapshots cover these paths. Superclass entailment now checks local impls
 after the global table is assembled, using givens, superclass closure and
 instance contexts with cycle and work limits. The compiler-owned reflexive
-Lift rule is still pending. Partial alias
-heads must retain their unsupplied formal parameters through application;
-the existing constraint instantiator cannot yet expand them safely. Do not
+Lift rule is still pending. Partial alias heads now retain unsupplied formal
+parameters and normalize known applications without opening their bound
+bodies. Unresolved partial aliases remain at the higher-kinded inference
+boundary pending chunk 8's delayed alias applications. Do not
 mark this chunk complete before that contract and the remaining acceptance
 cases are verified.
 
@@ -1913,6 +1914,19 @@ Change: `'f 'a` in signatures. A variable applied to arguments is a new
 type form; unification decomposes it against constructor applications.
 Remove plan 02's explicit `UnsupportedApplication` inference boundary once
 the solver handles canonical applications end to end.
+
+Partial aliases: canonical `Type::Alias.remaining` is the unsupplied suffix
+of the alias's formal parameters. `arguments` followed by `remaining`
+preserves declaration order. `Open` bodies bind those formal names;
+`Filled` bodies contain caller variables and always have empty `remaining`.
+Canonical substitution consumes known applications into `Named.args` or
+`Alias.arguments`; applications whose heads remain variables stay `App`.
+The solver must also handle heads that become known only during unification:
+retain the nominal alias name, ordered parameters, supplied arguments and
+closed body until saturation, and add application decomposition against
+aliases alongside `App1`. Never eagerly expand an unsaturated alias body.
+Remove the temporary partial-alias checks in both canonical-to-constraint
+and canonical-to-solver conversion when this support lands.
 
 Code:
 

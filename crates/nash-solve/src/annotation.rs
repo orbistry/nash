@@ -84,6 +84,7 @@ fn variable_to_can_type<'a>(
             bump.alloc(Located::at_zero(CanType::Alias {
                 reference: QualifiedName { home, name },
                 arguments: can_args,
+                remaining: &[],
                 target: AliasType::Filled(can_type),
             }))
         }

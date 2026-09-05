@@ -644,8 +644,16 @@ impl<'a> Solver<'a> {
             CanType::Alias {
                 reference,
                 arguments,
+                remaining,
                 target,
             } => {
+                if !remaining.is_empty() {
+                    self.conversion_errors
+                        .push(Error::UnsupportedTypeApplication {
+                            region: src_type.region,
+                        });
+                    return self.register(uf, rank, Content::Error);
+                }
                 let arg_vars: Vec<(&'a str, Variable)> = arguments
                     .iter()
                     .map(|arg| (arg.name, self.src_type_to_var(uf, rank, flex_vars, arg.typ)))

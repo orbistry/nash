@@ -154,6 +154,9 @@ plans/03 (traits).
   substitution into both the head and arguments. Both solver conversion
   paths return `UnsupportedTypeApplication` when value inference needs
   plan 03 support; no application is erased or treated as a nominal type.
+  Plan 03 now normalizes applications whose heads become known during
+  substitution, including partial nominal aliases; unresolved heads retain
+  `App` and still need its later solver support.
 - Interface kind fields and deep copying landed with chunk 4, since even
   declaration-only inference must know the schemes of imported opaque
   types. Chunk 5 verifies their cross-module and serialization behavior.

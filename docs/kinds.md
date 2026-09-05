@@ -330,13 +330,16 @@ I cannot find a kind for `'f` in `type bad 'f = Bad ('f 'f)`:
 Wrong argument *count* against an exact arity is still Elm's `BadArity`
 error from `nash-can`.
 
-In plan 02, canonical variable applications retain a general `App` head
-and argument list, including during alias substitution and interface copying.
+Canonical variable applications retain a general `App` head and argument
+list. Plan 03 substitution normalizes a head that becomes known into a
+named or nominal alias application, preserving every argument. Partial
+aliases retain their remaining bound parameters through interface copying.
 Kind checking accepts these declarations. Value inference that needs
 higher-kinded application unification returns `UnsupportedTypeApplication`
 from both local and imported annotation conversion until plan 03 implements
-that unification. Named constructors still require exact arity during
-canonicalization; a base-bounded variable applied to arguments instead
+that unification. Named constructors still require exact arity in ordinary
+type annotations; impl heads may be partial and are checked by kind.
+A base-bounded variable applied to arguments instead
 reaches the kind-specific too-many-arguments error.
 
 ## Kinds in codegen

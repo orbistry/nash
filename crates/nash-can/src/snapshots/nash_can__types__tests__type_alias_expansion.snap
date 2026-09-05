@@ -41,6 +41,7 @@ Located {
                 },
             },
         ],
+        remaining: [],
         target: Open(
             Located {
                 region: Region {

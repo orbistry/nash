@@ -151,6 +151,7 @@ fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
             reference,
             arguments,
             target: _,
+            ..
         } => {
             let args: Vec<&Located<CanType<'_>>> =
                 arguments.iter().map(|argument| argument.typ).collect();

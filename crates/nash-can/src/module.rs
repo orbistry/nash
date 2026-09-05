@@ -1312,6 +1312,7 @@ fn collect_from_type<'a>(
             reference,
             arguments,
             target,
+            ..
         } => {
             add_if_foreign(home, reference.home, used);
             for a in *arguments {

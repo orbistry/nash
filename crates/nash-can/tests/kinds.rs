@@ -203,10 +203,11 @@ fn alias_substitution_preserves_application_head_and_argument() {
         },
     ]);
     let substituted = nash_can::types::dealias(&bump, args, &AliasType::Open(body));
-    let Type::App { head, args } = &substituted.value else {
-        panic!("application was lost");
+    let Type::Named { reference, args } = &substituted.value else {
+        panic!("known application was not normalized");
     };
-    assert!(std::ptr::eq(*head, list));
+    assert_eq!(reference.home, nash_ast::primitives::builtin_home());
+    assert_eq!(reference.name, "list");
     assert!(std::ptr::eq(args[0], unit));
     insta::assert_debug_snapshot!(substituted);
 }

@@ -152,6 +152,7 @@ pub fn make_record_ctor<'a>(
     let result: &'a Located<CanType<'a>> = bump.alloc(Located::at(
         Region::zero(),
         CanType::Alias {
+            remaining: &[],
             reference: nash_ast::QualifiedName {
                 home,
                 name: alias_name,

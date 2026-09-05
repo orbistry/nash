@@ -332,6 +332,7 @@ fn canonicalize_head<'a>(
                                     .map(|(name, typ)| AliasArgument { name, typ }),
                             ),
                             target: AliasType::Open(target),
+                            remaining: &parameters[vars.len()..],
                         },
                     )
                 }
