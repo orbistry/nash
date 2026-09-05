@@ -11,8 +11,7 @@ in interfaces, and Elm-quality error data.
 Implement chunks 1–7 in order, using `docs/overview.md` and `docs/kinds.md`
 as the design authority and the current checkout as the implementation
 reference. Complete the plan 01 nested-section regression fix and its
-verification first. This is a written implementation goal; plan 02 has
-not started.
+verification first. The prerequisite fix is now verified.
 
 ### Testing and completion contract
 
@@ -60,6 +59,17 @@ Resolve stale sketches against the design before coding. In particular,
 the recursive-group test must itself obey the field casing rules, and a
 serialized interface schema change needs a compatibility decision and a
 round-trip test even when the added field is a `String`.
+
+## Progress
+
+- [x] Prerequisite: nested-section fix, regression snapshots, inference acceptance test.
+- [x] Chunk 1: kind vocabulary. Tests failed before implementation; bounds and result-kind tests pass. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
+- [ ] Chunk 2: kind inference engine.
+- [ ] Chunk 3: builtin kinds and environment.
+- [ ] Chunk 4: declaration inference.
+- [ ] Chunk 5: interfaces and value annotations.
+- [ ] Chunk 6: user parameter annotations.
+- [ ] Chunk 7: changeset, final acceptance audit, and SPEC.
 
 ## Prerequisites
 
