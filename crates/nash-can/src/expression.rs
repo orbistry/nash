@@ -283,13 +283,18 @@ fn canonicalize_section<'a>(
     free_locals: &mut FreeLocals<'a>,
     warnings: &mut Vec<Warning<'a>>,
 ) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
-    const GENERATED: &str = "$section";
-    let parameter = &*bump.alloc(Located::at(region, SourcePattern::Var(GENERATED)));
+    let mut generated = "$section";
+    let mut suffix = 0;
+    while env.vars.contains_key(generated) {
+        suffix += 1;
+        generated = bump.alloc_str(&format!("$section{suffix}"));
+    }
+    let parameter = &*bump.alloc(Located::at(region, SourcePattern::Var(generated)));
     let missing = &*bump.alloc(Located::at(
         region,
         SourceExpr::Var {
             kind: VarType::LowVar,
-            name: GENERATED,
+            name: generated,
         },
     ));
     let (left, right) = match side {

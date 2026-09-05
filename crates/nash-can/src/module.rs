@@ -4139,6 +4139,42 @@ mod tests {
     }
 
     #[test]
+    fn nested_right_operator_sections() {
+        let input =
+            "module Main exposing (..)\n\nimport Basics exposing (..)\n\nsection = (+ ((+ 1) 2))\n";
+        let bump = Bump::new();
+        let interfaces = BTreeMap::from([("Basics", basics_with_binops_interface(&bump))]);
+        let result = parse_and_canonicalize(
+            &bump,
+            input,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+        )
+        .expect("expected successful canonicalization");
+        insta::assert_debug_snapshot!(result);
+    }
+
+    #[test]
+    fn nested_left_operator_sections() {
+        let input =
+            "module Main exposing (..)\n\nimport Basics exposing (..)\n\nsection = (((1 +) 2) +)\n";
+        let bump = Bump::new();
+        let interfaces = BTreeMap::from([("Basics", basics_with_binops_interface(&bump))]);
+        let result = parse_and_canonicalize(
+            &bump,
+            input,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+        )
+        .expect("expected successful canonicalization");
+        insta::assert_debug_snapshot!(result);
+    }
+
+    #[test]
     fn right_operator_section() {
         let input = "module Main exposing (..)\n\nimport Basics exposing (..)\n\nsection = (+ 5)\n";
         let bump = Bump::new();

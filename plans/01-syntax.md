@@ -10,35 +10,31 @@ partial operator sections, `validator module`, and the `tests` block. Remove
 Elm leftovers (`Char`, `Float`, ports, effects, shaders, record extension
 types).
 
-Status: implemented, with one verification gap. Chunks 0 through 12,
-including 6a, landed on 2026-09-04. The verification below must pass before
-this plan is complete.
+Status: complete. Chunks 0 through 12, including 6a, and the nested-section
+verification fix landed on 2026-09-04.
 
 ## Verification — 2026-09-04
 
-Checked the clean `jj` working copy at parent `e6f4a10a` against the chunk
-requirements, source code, snapshots, and all 13 feature changesets.
+The initial review found a nested-section binder collision. Permanent left
+and right nesting tests reproduced `Shadowing { name: "$section", .. }`
+before the fix. `canonicalize_section` now selects a generated binder that
+is absent from the enclosing scope. Reviewed canonical snapshots verify
+separate outer and inner bindings. The inference acceptance test imports
+an operator from another module, applies nested sections, and verifies
+unit and string results through parse, canonicalize, constrain, and solve.
 
-- `cargo fmt --all -- --check`: passed.
+After the fix:
+
+- `cargo fmt --all`: passed.
 - `cargo clippy --all-targets --all-features -- -D warnings`: passed.
-- `cargo test`: passed (1,701 tests; three ignored documentation tests).
+- `cargo test`: passed (1,704 tests; three ignored documentation tests).
 - `cargo insta test`: passed; no snapshots awaiting review.
 - `cargo insta test --unreferenced reject`: passed; no unreferenced snapshots.
-- Nested-section acceptance probe: **failed**. In the existing
-  `nash-can` `right_operator_section` test, replacing `(+ 5)` with
-  `(+ ((+ 1) 2))` produces `Error::Shadowing { name: "$section", .. }`.
-  The temporary test edit was restored after the probe.
 
-Chunk 6a is not complete for nested sections: `canonicalize_section` in
-`crates/nash-can/src/expression.rs` uses the same generated binder for every
-section. Give nested sections distinct binders, add permanent success
-snapshots for nested left and right sections, and add an inference
-acceptance test that applies the resulting function. Run the checks above
-again before restoring the completion checkbox in `SPEC.md`.
-
-These results verify surface syntax and the existing compiler tests. They
-do not claim execution support for syntax deliberately rejected with
-`Unsupported` until later plans.
+All 13 original feature changesets remain present. A patch changeset records
+the binder fix. These results verify surface syntax and the existing
+compiler pipeline, not execution support for features deliberately
+rejected with `Unsupported` until later plans.
 
 ## Prerequisites
 

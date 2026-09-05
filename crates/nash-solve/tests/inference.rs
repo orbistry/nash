@@ -581,3 +581,47 @@ fn number_cannot_be_string() {
     "#
     );
 }
+
+#[test]
+fn nested_operator_sections_apply() {
+    let bump = Bump::new();
+    let operators = "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n";
+    let annotations = infer(&bump, operators).expect("operator module infers");
+    let source = bump.alloc_str(operators);
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
+    let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
+    let interfaces = std::collections::BTreeMap::from([("Operators", interface)]);
+    let input = indoc!(
+        r#"
+        module Main exposing (..)
+
+        import Operators exposing (..)
+
+        right = (+ ((+ 1) 2)) "right"
+        left = (((() +) 2) +) "left"
+    "#
+    );
+    let source = bump.alloc_str(input);
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .expect("nested sections canonicalize");
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let annotations = nash_solve::run(&bump, &mut uf, &constraint).expect("nested sections infer");
+    let rendered = render_annotations(&annotations);
+    assert!(rendered.contains("right : String"), "{rendered}");
+    assert!(rendered.contains("left : ()"), "{rendered}");
+    insta::assert_snapshot!(rendered);
+}

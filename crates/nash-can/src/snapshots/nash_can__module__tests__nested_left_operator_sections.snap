@@ -1,0 +1,279 @@
+---
+source: crates/nash-can/src/module.rs
+expression: result
+---
+Module {
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 6,
+                column: 1,
+            },
+        },
+    ),
+    decls: Declare {
+        definition: Def {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 5,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 5,
+                        column: 8,
+                    },
+                },
+                value: "section",
+            },
+            args: [],
+            body: Located {
+                region: Region {
+                    start: Position {
+                        line: 5,
+                        column: 11,
+                    },
+                    end: Position {
+                        line: 5,
+                        column: 24,
+                    },
+                },
+                value: Lambda {
+                    parameters: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 24,
+                                },
+                            },
+                            value: Var(
+                                "$section",
+                            ),
+                        },
+                    ],
+                    body: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 13,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 24,
+                            },
+                        },
+                        value: Binop {
+                            symbol: "+",
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Basics",
+                                },
+                                name: "add",
+                            },
+                            annotation: Annotation {
+                                free_vars: [
+                                    "a",
+                                ],
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                            left: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 5,
+                                        column: 13,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        column: 20,
+                                    },
+                                },
+                                value: Call {
+                                    function: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 13,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 18,
+                                            },
+                                        },
+                                        value: Lambda {
+                                            parameters: [
+                                                Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 5,
+                                                            column: 13,
+                                                        },
+                                                        end: Position {
+                                                            line: 5,
+                                                            column: 18,
+                                                        },
+                                                    },
+                                                    value: Var(
+                                                        "$section1",
+                                                    ),
+                                                },
+                                            ],
+                                            body: Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 5,
+                                                        column: 14,
+                                                    },
+                                                    end: Position {
+                                                        line: 5,
+                                                        column: 18,
+                                                    },
+                                                },
+                                                value: Binop {
+                                                    symbol: "+",
+                                                    reference: QualifiedName {
+                                                        home: ModuleName {
+                                                            package: None,
+                                                            name: "Basics",
+                                                        },
+                                                        name: "add",
+                                                    },
+                                                    annotation: Annotation {
+                                                        free_vars: [
+                                                            "a",
+                                                        ],
+                                                        typ: Located {
+                                                            region: Region {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                            },
+                                                            value: Var(
+                                                                "a",
+                                                            ),
+                                                        },
+                                                    },
+                                                    left: Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 5,
+                                                                column: 14,
+                                                            },
+                                                            end: Position {
+                                                                line: 5,
+                                                                column: 15,
+                                                            },
+                                                        },
+                                                        value: Int(
+                                                            1,
+                                                        ),
+                                                    },
+                                                    right: Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 5,
+                                                                column: 13,
+                                                            },
+                                                            end: Position {
+                                                                line: 5,
+                                                                column: 18,
+                                                            },
+                                                        },
+                                                        value: VarLocal(
+                                                            "$section1",
+                                                        ),
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                    arguments: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 5,
+                                                    column: 19,
+                                                },
+                                                end: Position {
+                                                    line: 5,
+                                                    column: 20,
+                                                },
+                                            },
+                                            value: Int(
+                                                2,
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                            right: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 5,
+                                        column: 11,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        column: 24,
+                                    },
+                                },
+                                value: VarLocal(
+                                    "$section",
+                                ),
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        next: Empty,
+    },
+    unions: [],
+    aliases: [],
+    binops: [],
+}
