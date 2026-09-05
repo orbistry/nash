@@ -18,12 +18,38 @@ pub fn to_annotation<'a>(
     uf: &mut UnionFind<'a>,
     variable: Variable,
 ) -> &'a Annotation<'a> {
+    to_annotation_with_context(bump, uf, variable, &[])
+}
+
+/// Render an explicit scheme context in evidence order. Predicate arguments
+/// need not be reachable from the result type, so discover their names before
+/// assigning names to anonymous variables anywhere in the scheme.
+pub fn to_annotation_with_context<'a>(
+    bump: &'a Bump,
+    uf: &mut UnionFind<'a>,
+    variable: Variable,
+    context: &[(QualifiedName<'a>, &[Variable])],
+) -> &'a Annotation<'a> {
     let mut seen = BTreeSet::new();
-    let user_names = get_var_names(bump, uf, &mut seen, variable, BTreeMap::new());
+    let mut user_names = get_var_names(bump, uf, &mut seen, variable, BTreeMap::new());
+    for (_, args) in context {
+        for arg in *args {
+            user_names = get_var_names(bump, uf, &mut seen, *arg, user_names);
+        }
+    }
     let mut state = NameState::new(&user_names);
     let tipe = variable_to_can_type(bump, uf, &mut state, variable);
+    let context = bump.alloc_slice_fill_iter(context.iter().map(|(trait_, args)| {
+        nash_ast::Pred {
+            trait_: *trait_,
+            args: bump.alloc_slice_fill_iter(
+                args.iter()
+                    .map(|arg| variable_to_can_type(bump, uf, &mut state, *arg)),
+            ),
+        }
+    }));
     bump.alloc(Annotation {
-        context: &[],
+        context,
         free_vars: bump.alloc_slice_fill_iter(state.taken.keys().copied()),
         typ: tipe,
     })

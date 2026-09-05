@@ -12,6 +12,6 @@ mod occurs;
 mod solve;
 mod unify;
 
-pub use crate::annotation::{to_annotation, to_error_type};
+pub use crate::annotation::{to_annotation, to_annotation_with_context, to_error_type};
 pub use crate::solve::run;
 pub use crate::unify::{Answer, unify};

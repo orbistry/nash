@@ -1131,6 +1131,41 @@ predicate whose arguments are all headed is retained too (it becomes
 `Show (List a)` in the context) so that everything remains observable in
 snapshots. Chunk 6 replaces that branch.
 
+Implementation audit (takes precedence over the sketches below):
+
+- Keep each scheme's context explicitly, in evidence order. Discovering it
+  from descriptor IDs reachable through the result type loses predicates such
+  as `Eq Color => Bool`, constructed arguments such as `Show (List a)`, and
+  the shared context required for every untyped recursive member.
+- Preserve each wanted predicate's original use node and context slot.
+  Retention ownership is separate metadata; retaining a predicate supplies
+  `Given` evidence to that original use instead of overwriting its origin.
+- Process definition metadata and given frames in all Let branches, including
+  zero-quantifier definitions and monomorphic methods. The current fast paths
+  cannot bypass scheme processing merely because variable lists are empty.
+- Publish annotated recursive schemes when their lexical headers enter scope,
+  before checking any group body. Keep untyped recursive uses monomorphic
+  until the group generalizes. The later typed body-check Let alone cannot
+  supply declared contexts to earlier recursive uses.
+- Copy the full explicit context and type with one variable-copy map. Preserve
+  predicate attachments when replacing a copied descriptor's content. Reset
+  all touched variable and predicate copy markers, including context-only
+  variables not reachable through the result type. Record generalized rigid
+  variable copies now; the current solver already copies them to flex vars.
+- Classify free variables after rank adjustment. Binder-less Lets must defer
+  outer obligations; mixed outer/young contexts must retain outer variables
+  without freshening them. `NO_RANK` alone does not establish binder ownership.
+- Reserve variable names across the full type and explicit context before
+  assigning fresh names. `to_annotation_with_context` implements this
+  conversion; scheme inference must supply its ordered context. Instance type
+  arguments must follow the final annotation's `free_vars` order.
+
+Status: annotation conversion accepts explicit contexts and has a regression
+snapshot for headed and context-only arguments with a reserved variable name.
+Wanted creation, scheme ownership, copying, generalization, and the resulting
+solver API are not implemented yet. Do not mark this chunk complete from the
+annotation conversion test alone.
+
 Code:
 
 ```rust
@@ -1446,12 +1481,9 @@ by `PredId` equals sorting by retained index because `split` assigned
 indexes in `PredId` order. `to_error_type` is unchanged (chunk 6 renders
 predicates for errors separately).
 
-`header_names(locals)` needs the header's `Located<&str>` name nodes, so
-`Constraint::Let.header` entries become `(&'a Located<&'a str>, Located<&'a Type<'a>>)`;
-`singleton_header`/`header_slice` in `expression.rs` are the only
-producers (pattern headers get a synthetic name node allocated at the
-pattern's region). `NodeId::NONE` is `NodeId(0)`, used only for frames of
-binder-less Lets (which never have givens).
+Use `Constraint::Let.definitions` for original name identities and full types.
+Keep lexical headers unchanged. Binder-less scopes need no fabricated name
+node or sentinel `NodeId`; only create a given frame when there is an owner.
 
 `run` converts each `SchemeVars` to one `Scheme` per header (calling
 `to_annotation` on the header variable, which also names its generalized

@@ -213,6 +213,41 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
+    use nash_ast::{ModuleName, QualifiedName};
+    use nash_constrain::type_::{Content, FlatType, make_descriptor, mk_flex_var};
+    let bump = Bump::new();
+    let mut uf = UnionFind::new();
+    let home = ModuleName {
+        package: None,
+        name: "Main",
+    };
+    let result = mk_flex_var(&mut uf);
+    let context_only = uf.fresh(make_descriptor(Content::FlexVar(Some("a"))));
+    let list = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
+        home,
+        "List",
+        vec![result],
+    ))));
+    let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::Unit1)));
+    let context: &[(QualifiedName<'_>, &[nash_constrain::Variable])] = &[
+        (QualifiedName { home, name: "Show" }, &[list]),
+        (QualifiedName { home, name: "Keep" }, &[context_only]),
+        (
+            QualifiedName {
+                home,
+                name: "Ground",
+            },
+            &[unit],
+        ),
+    ];
+    let annotation = nash_solve::to_annotation_with_context(&bump, &mut uf, result, context);
+    assert_eq!(annotation.free_vars, ["a", "b"]);
+    assert!(matches!(annotation.typ.value, CanType::Var("b")));
+    insta::assert_snapshot!(render_annotation(annotation));
+}
+
+#[test]
 fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
     use nash_constrain::Constraint;
     use nash_constrain::type_::Type;
