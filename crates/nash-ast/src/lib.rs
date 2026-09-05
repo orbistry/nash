@@ -1,3 +1,5 @@
+pub mod primitives;
+
 use nash_region::{Located, Region};
 
 pub use nash_source::{Associativity, Docs, ModuleKind, Precedence};
@@ -76,19 +78,19 @@ impl<'a> KindScheme<'a> {
 
 pub type FreeVars<'a> = &'a [&'a str];
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PackageName<'a> {
     pub author: &'a str,
     pub project: &'a str,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModuleName<'a> {
     pub package: Option<PackageName<'a>>,
     pub name: &'a str,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QualifiedName<'a> {
     pub home: ModuleName<'a>,
     pub name: &'a str,

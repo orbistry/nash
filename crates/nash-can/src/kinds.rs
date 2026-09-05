@@ -355,3 +355,58 @@ mod tests {
         assert_eq!(infer.generalize(second).bounds, scheme.bounds);
     }
 }
+
+#[cfg(test)]
+mod environment_tests {
+    use super::*;
+
+    #[test]
+    fn builtin_list_has_storable_elements() {
+        let env = KindEnv::from_interfaces(None);
+        let scheme = env.scheme(nash_ast::QualifiedName {
+            home: nash_ast::primitives::builtin_home(),
+            name: "list",
+        });
+        assert_eq!(scheme.bounds, &[KindSet::STORABLE]);
+        assert!(matches!(
+            scheme.kind,
+            Kind::Arrow(Kind::Var(0), Kind::Base(BaseKind::Const))
+        ));
+    }
+}
+
+use nash_ast::{QualifiedName, primitives};
+use std::collections::BTreeMap;
+
+/// Kind schemes of every type constructor visible to the module.
+pub struct KindEnv<'a> {
+    schemes: BTreeMap<QualifiedName<'a>, KindScheme<'a>>,
+}
+
+impl<'a> KindEnv<'a> {
+    pub fn from_interfaces(_interfaces: Option<&BTreeMap<&'a str, crate::Interface<'a>>>) -> Self {
+        let mut schemes = BTreeMap::new();
+        for p in primitives::PRIMITIVES {
+            schemes.insert(
+                QualifiedName {
+                    home: primitives::builtin_home(),
+                    name: p.name,
+                },
+                p.kind,
+            );
+        }
+        KindEnv { schemes }
+    }
+
+    pub fn insert(&mut self, name: QualifiedName<'a>, scheme: KindScheme<'a>) {
+        self.schemes.insert(name, scheme);
+    }
+
+    /// Every `Type::Named` reference was resolved by `types.rs`, so absence is a bug.
+    pub fn scheme(&self, name: QualifiedName<'a>) -> KindScheme<'a> {
+        *self
+            .schemes
+            .get(&name)
+            .expect("kind env covers every resolved type")
+    }
+}
