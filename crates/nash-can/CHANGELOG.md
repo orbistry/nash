@@ -1,5 +1,21 @@
 # nash-can
 
+## 0.4.0 — 2026-09-05
+
+### Minor changes
+
+- [5875804](https://github.com/orbistry/nash/commit/5875804f6e6ea1ce8901ab43f44e1c5e3c4752cf) Infer kind schemes across recursive type declarations and preserve them through canonical interfaces. Check constructor and record fields, retain applied type variables, and report unsupported higher-kinded value unification explicitly until plan 03. — Thanks @MicroProofs!
+- [d69e330](https://github.com/orbistry/nash/commit/d69e330c1fc593ef4d2eadf97cac3b167e541f4f) Define kind schemes and representation bounds for builtin types and seed the canonical kind environment. — Thanks @MicroProofs!
+- [7d82f03](https://github.com/orbistry/nash/commit/7d82f034478f8e799aee9d15ee8c45f46189e2b4) Add bounded kind unification with occurs checks, fresh instantiation, and generalization. — Thanks @MicroProofs!
+- [4cf4ffb](https://github.com/orbistry/nash/commit/4cf4ffb84c582e1b6bdd63d3a6052823cc37a209) Enforce explicit Big, Const, Term, Storable, and arrow annotations on type parameters after recursive-group inference. Report mismatches at the parameter annotation. — Thanks @MicroProofs!
+- [00ebcaa](https://github.com/orbistry/nash/commit/00ebcaa31d4fe929c6bfd55f82cbaa6cd4d0fa6e) Check value annotations, including nested lets, while preserving original alias kind contracts. Include kind schemes and bounds in interface fingerprints and serialized interfaces. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [9c0692f](https://github.com/orbistry/nash/commit/9c0692f423aecce8e657185f9513f603a750689a) Serialize interface caches directly without a version marker or older-format handling. Use the nash/core Builtin.List identity consistently for annotations, literals, and patterns, removing the alternate List.List kind scheme and import replacement. — Thanks @MicroProofs!
+- [6bc70fe](https://github.com/orbistry/nash/commit/6bc70fe1ce74e01db54a38e58e1416f5083e0ec7) Relax the `pair` kind to `Storable -> Storable -> Const` so `unConstrData : Data -> pair int (list Data)` kind-checks; construction stays restricted to `mkPairData`. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.5.0
+
 ## 0.3.2 — 2026-09-05
 
 ### Patch changes

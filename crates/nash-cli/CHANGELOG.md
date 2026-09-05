@@ -1,5 +1,11 @@
 # nash-cli
 
+## 0.2.4 — 2026-09-05
+
+### Patch changes
+
+- Updated dependencies: nash-driver@0.2.3
+
 ## 0.2.3 — 2026-09-05
 
 ### Patch changes

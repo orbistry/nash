@@ -1,5 +1,15 @@
 # nash-ast
 
+## 0.5.0 — 2026-09-05
+
+### Minor changes
+
+- [5875804](https://github.com/orbistry/nash/commit/5875804f6e6ea1ce8901ab43f44e1c5e3c4752cf) Infer kind schemes across recursive type declarations and preserve them through canonical interfaces. Check constructor and record fields, retain applied type variables, and report unsupported higher-kinded value unification explicitly until plan 03. — Thanks @MicroProofs!
+- [d69e330](https://github.com/orbistry/nash/commit/d69e330c1fc593ef4d2eadf97cac3b167e541f4f) Define kind schemes and representation bounds for builtin types and seed the canonical kind environment. — Thanks @MicroProofs!
+- [6bc70fe](https://github.com/orbistry/nash/commit/6bc70fe1ce74e01db54a38e58e1416f5083e0ec7) Relax the `pair` kind to `Storable -> Storable -> Const` so `unConstrData : Data -> pair int (list Data)` kind-checks; construction stays restricted to `mkPairData`. — Thanks @MicroProofs!
+- [a15a3b7](https://github.com/orbistry/nash/commit/a15a3b72809888153a2ab531a24470890ff0c387) Add Big, Const, Term, arrow kinds, bounded kind sets, and quantified kind schemes. — Thanks @MicroProofs!
+- [00ebcaa](https://github.com/orbistry/nash/commit/00ebcaa31d4fe929c6bfd55f82cbaa6cd4d0fa6e) Check value annotations, including nested lets, while preserving original alias kind contracts. Include kind schemes and bounds in interface fingerprints and serialized interfaces. — Thanks @MicroProofs!
+
 ## 0.4.0 — 2026-09-05
 
 ### Minor changes
