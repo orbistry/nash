@@ -6,13 +6,27 @@
 
 use std::collections::BTreeMap;
 
-use nash_ast::{Annotation, ModuleName, NodeId};
+use nash_ast::{Annotation, ModuleName, NodeId, QualifiedName};
 use nash_region::{Located, Region};
 
 use crate::error::{Category, Expected, PCategory, PExpected};
 use crate::union_find::{UnionFind, Variable};
 
 // CONSTRAINTS
+
+/// An annotation predicate instantiated over the definition's rigid variables.
+#[derive(Clone, Copy, Debug)]
+pub struct Pred<'a> {
+    pub trait_: QualifiedName<'a>,
+    pub args: &'a [&'a Type<'a>],
+}
+
+/// Preserve the original name node and full type independently of lexical scope.
+#[derive(Clone, Copy, Debug)]
+pub struct Definition<'a> {
+    pub name: &'a Located<&'a str>,
+    pub typ: &'a Type<'a>,
+}
 
 /// Elm's `Type.Constraint`. Allocated in a bump arena, so collections are
 /// slices, not owned containers.
@@ -42,6 +56,12 @@ pub enum Constraint<'a> {
     ),
     And(&'a [Constraint<'a>]),
     Let {
+        /// Assumed while checking the definition body, over its rigid variables.
+        given: &'a [Pred<'a>],
+        /// Evidence owner; the first untyped member for a recursive group.
+        binder: Option<&'a Located<&'a str>>,
+        /// All definitions generalized here, even when no lexical name is bound.
+        definitions: &'a [Definition<'a>],
         rigid_vars: &'a [Variable],
         flex_vars: &'a [Variable],
         /// Name-sorted, mirroring Elm's `Map.Map Name (A.Located Type)`.
@@ -58,6 +78,9 @@ pub fn exists<'a>(
     constraint: Constraint<'a>,
 ) -> Constraint<'a> {
     Constraint::Let {
+        given: &[],
+        binder: None,
+        definitions: &[],
         rigid_vars: &[],
         flex_vars,
         header: &[],

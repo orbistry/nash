@@ -196,6 +196,9 @@ impl<'a> Solver<'a> {
                 .fold(state, |state, sub| self.solve(uf, env, rank, state, sub)),
 
             Constraint::Let {
+                given: _given,
+                binder: _binder,
+                definitions: _definitions,
                 rigid_vars,
                 flex_vars,
                 header,

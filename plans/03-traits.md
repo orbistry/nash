@@ -900,8 +900,11 @@ snapshots cover invalid default and specialized impl return types, and module
 helper visibility without exporting method bindings. Local and foreign
 constraints carry expression identities, including the enclosing Binop node
 for operators; a same-region regression checks that these remain distinct.
-The solver does not yet record instances. Predicate metadata, definition
-identities, and given-context handling remain to be implemented.
+Annotation contexts now share the definition's rigid variables. Definition
+metadata retains every original name node and full function type, including
+methods and mixed recursive groups. The solver does not yet consume these
+contexts or record instances. Descriptor predicate storage and qualified
+solving remain to be implemented.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/module.rs`, `crates/nash-constrain/src/pattern.rs`,
@@ -961,6 +964,9 @@ pub enum Constraint<'a> {
         /// The definition (or first definition of a recursive group) this
         /// Let generalizes. `None` for `exists`, lambdas, patterns.
         binder: Option<&'a Located<&'a str>>,
+        /// Original name nodes and full types for every generalized member.
+        /// Lexical headers cannot supply these identities and are empty for methods.
+        definitions: &'a [Definition<'a>],
     },
 }
 ```
@@ -973,6 +979,14 @@ pub enum Constraint<'a> {
 - `constrain_def` `Def::TypedDef` (line 927): `given: instantiate_context(bump, &new_rtv, context)`, `binder: Some(name)`.
 - `constrain_recursive_defs` typed inner Let (line 1076): `given` from that def's context, `binder: Some(name)`.
 - `constrain_recursive_defs` outer flex Let (line 1100): `binder: Some(first untyped def's name)` (or `None` when there are none).
+
+`Definition { name: &'a Located<&'a str>, typ: &'a Type<'a> }` keeps the
+original canonical name node and full inference type. Each ordinary definition
+and method gets one entry; an untyped recursive group gets one per member in
+group order. Typed recursive members retain their entry on the inner Let that
+checks their annotation context. Pattern and scope-only Lets have no entries.
+The solver must use these entries for `SolvedTypes::schemes`, rather than
+reconstructing name nodes from lexical headers or recording only the binder.
 
 ```rust
 // expression.rs

@@ -213,6 +213,139 @@ macro_rules! assert_inference_error_snapshot {
 // LITERALS AND SIMPLE VALUES
 
 #[test]
+fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
+    use nash_constrain::Constraint;
+    use nash_constrain::type_::Type;
+
+    fn definitions<'a, 'b>(constraint: &'b Constraint<'a>, found: &mut Vec<&'b Constraint<'a>>) {
+        match constraint {
+            Constraint::Let {
+                definitions: defs,
+                header_con,
+                body_con,
+                ..
+            } => {
+                if !defs.is_empty() {
+                    found.push(constraint);
+                }
+                definitions(header_con, found);
+                definitions(body_con, found);
+            }
+            Constraint::And(constraints) => {
+                for constraint in *constraints {
+                    definitions(constraint, found);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let bump = Bump::new();
+    let source = indoc!(
+        "
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+            keep x = x
+        f : Keep 'a => 'a -> 'a
+        f x = g x
+        g x = h x
+        h x = f x
+    "
+    );
+    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let mut original_names = Vec::new();
+    let mut decls = canonical.module.decls;
+    loop {
+        let (defs, next) = match decls {
+            nash_ast::Decls::Declare { definition, next } => (vec![*definition], next),
+            nash_ast::Decls::DeclareRec {
+                definition,
+                following,
+                next,
+            } => (
+                std::iter::once(*definition)
+                    .chain(following.iter().copied())
+                    .collect(),
+                next,
+            ),
+            nash_ast::Decls::Empty => break,
+        };
+        for def in defs {
+            let (nash_ast::Def::Def { name, .. } | nash_ast::Def::TypedDef { name, .. }) = def;
+            original_names.push(*name);
+        }
+        decls = next;
+    }
+    let nash_ast::Def::TypedDef { name, .. } =
+        canonical.module.traits[0].value.methods[0].default.unwrap()
+    else {
+        panic!("typed default")
+    };
+    original_names.push(*name);
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let mut found = Vec::new();
+    definitions(&constraint, &mut found);
+    let mut names = Vec::new();
+    for constraint in found {
+        let Constraint::Let {
+            given,
+            binder: Some(binder),
+            definitions,
+            header,
+            rigid_vars,
+            ..
+        } = constraint
+        else {
+            panic!("each definition scope must have an evidence binder");
+        };
+        assert!(std::ptr::eq(*binder, definitions[0].name));
+        for definition in *definitions {
+            assert!(
+                original_names
+                    .iter()
+                    .any(|name| std::ptr::eq(*name, definition.name))
+            );
+            names.push(definition.name.value);
+            assert!(
+                matches!(definition.typ, Type::FunN(..)),
+                "retain the full function type"
+            );
+        }
+        if binder.value == "f" || binder.value == "keep" {
+            assert_eq!(given.len(), 1);
+            let Type::VarN(predicate_var) = given[0].args[0] else {
+                panic!("predicate variable")
+            };
+            let Type::FunN(Type::VarN(argument), Type::VarN(result)) = definitions[0].typ else {
+                panic!("function type")
+            };
+            assert_eq!(predicate_var, argument);
+            assert_eq!(predicate_var, result);
+            assert!(rigid_vars.contains(predicate_var));
+            assert!(
+                header.is_empty(),
+                "methods and recursive typed bodies have no lexical header"
+            );
+        } else {
+            assert!(given.is_empty());
+            assert_eq!(
+                definitions.len(),
+                2,
+                "both untyped recursive members share the group binder"
+            );
+            assert_eq!(header.len(), 2);
+        }
+    }
+    names.sort_unstable();
+    assert_eq!(names, ["f", "g", "h", "keep"]);
+}
+
+#[test]
 fn trait_default_body_must_match_its_annotation() {
     assert_inference_error_snapshot!(
         r#"
