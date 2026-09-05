@@ -1358,10 +1358,7 @@ impl<'a> Solver<'a, '_> {
         let flex_vars: BTreeMap<&'a str, Variable> = sorted_names
             .into_iter()
             .map(|name| {
-                let content = match type_::to_super(name) {
-                    Some(super_type) => Content::FlexSuper(super_type, Some(name)),
-                    None => Content::FlexVar(Some(name)),
-                };
+                let content = Content::FlexVar(Some(name));
                 let var = uf.fresh(Descriptor {
                     preds: Vec::new(),
                     content,
@@ -1822,10 +1819,7 @@ impl<'a> Solver<'a, '_> {
                 continue;
             }
             match &uf.get(var).content {
-                Content::FlexVar(_)
-                | Content::RigidVar(_)
-                | Content::FlexSuper(..)
-                | Content::RigidSuper(..) => {
+                Content::FlexVar(_) | Content::RigidVar(_) => {
                     variables.insert(var);
                 }
                 Content::Structure(FlatType::App1(_, _, args)) => pending.extend(args),
@@ -2016,18 +2010,10 @@ impl<'a> Solver<'a, '_> {
                 copy
             }
 
-            Content::FlexVar(_) | Content::FlexSuper(_, _) => copy,
+            Content::FlexVar(_) => copy,
 
             Content::RigidVar(name) => {
                 uf.set(copy, make_descriptor(Content::FlexVar(Some(name))));
-                copy
-            }
-
-            Content::RigidSuper(super_type, name) => {
-                uf.set(
-                    copy,
-                    make_descriptor(Content::FlexSuper(super_type, Some(name))),
-                );
                 copy
             }
 
@@ -2174,11 +2160,7 @@ fn adjust_rank_content<'a>(
     content: &Content<'a>,
 ) -> usize {
     match content {
-        Content::FlexVar(_)
-        | Content::FlexSuper(_, _)
-        | Content::RigidVar(_)
-        | Content::RigidSuper(_, _)
-        | Content::Error => group_rank,
+        Content::FlexVar(_) | Content::RigidVar(_) | Content::Error => group_rank,
 
         Content::Structure(flat_type) => match flat_type {
             FlatType::App1(_, _, args) => args.iter().fold(OUTERMOST_RANK, |rank, arg| {

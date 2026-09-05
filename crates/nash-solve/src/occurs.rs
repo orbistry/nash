@@ -18,11 +18,7 @@ fn occurs_help(
 
     let content = uf.get(var).content.clone();
     match content {
-        Content::FlexVar(_)
-        | Content::FlexSuper(_, _)
-        | Content::RigidVar(_)
-        | Content::RigidSuper(_, _)
-        | Content::Error => found_cycle,
+        Content::FlexVar(_) | Content::RigidVar(_) | Content::Error => found_cycle,
 
         Content::Structure(term) => {
             seen.push(var);

@@ -18,7 +18,7 @@ pub(crate) fn has_outer_flex(uf: &mut UnionFind<'_>, args: &[Variable], rank: us
         let outer =
             inherited_outer || (desc.rank != nash_constrain::type_::NO_RANK && desc.rank < rank);
         match &desc.content {
-            Content::FlexVar(_) | Content::FlexSuper(..) if outer => return true,
+            Content::FlexVar(_) if outer => return true,
             Content::Structure(FlatType::App1(_, _, args)) => {
                 pending.extend(args.iter().map(|var| (*var, outer)))
             }

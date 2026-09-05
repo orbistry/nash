@@ -1968,7 +1968,9 @@ arguments. Workspace tests, strict Clippy and snapshot hygiene pass. A real
 three-module CLI workspace checks all three literal syntaxes, a bytes pattern
 and destructuring; applying a destructured integer as a function reports
 MissingImpl at the extracted-name use. Inference snapshots reflect literal traits.
-Core source modules and SuperType removal also remain.
+The SuperType variants, name-prefix rules, specialized unification and error
+rendering are removed. Negation now records the core Num method scheme at its
+original node; canonical desugaring remains chunk 10. Core source modules remain.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,
@@ -2092,7 +2094,7 @@ snapshot mentioning `number` are re-accepted after review):
 #[test] fn polymorphic_recursion_closed_is_ok() // wrap : Show 'a => 'a -> String; wrap x = wrap (show x) ... evidence Impl(Show string) has no Given
 ```
 
-Done when: no `SuperType` symbol remains in the workspace and all
+Done when: no `SuperType` machinery remains in Rust sources and all
 snapshots reflect literal traits.
 
 ---

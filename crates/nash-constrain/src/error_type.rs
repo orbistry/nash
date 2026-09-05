@@ -18,9 +18,7 @@ pub enum ErrorType<'a> {
     Infinite,
     Error,
     FlexVar(&'a str),
-    FlexSuper(Super, &'a str),
     RigidVar(&'a str),
-    RigidSuper(Super, &'a str),
     Type {
         home: ModuleName<'a>,
         name: &'a str,
@@ -44,14 +42,6 @@ pub enum ErrorType<'a> {
     },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Super {
-    Number,
-    Comparable,
-    Appendable,
-    CompAppend,
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum Extension<'a> {
     Closed,
@@ -64,26 +54,4 @@ pub fn iterated_dealias<'a>(tipe: &'a ErrorType<'a>) -> &'a ErrorType<'a> {
         ErrorType::Alias { real, .. } => iterated_dealias(real),
         _ => tipe,
     }
-}
-
-// IS TYPE?
-
-pub fn is_int(home: ModuleName<'_>, name: &str) -> bool {
-    home == crate::type_::basics() && name == "Int"
-}
-
-pub fn is_float(home: ModuleName<'_>, name: &str) -> bool {
-    home == crate::type_::basics() && name == "Float"
-}
-
-pub fn is_string(home: ModuleName<'_>, name: &str) -> bool {
-    home == crate::type_::string_home() && name == "String"
-}
-
-pub fn is_char(home: ModuleName<'_>, name: &str) -> bool {
-    home == crate::type_::char_home() && name == "Char"
-}
-
-pub fn is_list(home: ModuleName<'_>, name: &str) -> bool {
-    home == crate::type_::list_home() && name == "List"
 }

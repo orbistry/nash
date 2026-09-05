@@ -1160,6 +1160,70 @@ fn int_literal() {
 }
 
 #[test]
+fn type_variable_names_do_not_imply_constraints() {
+    let bump = Bump::new();
+    for name in [
+        "number",
+        "comparable",
+        "appendable",
+        "compappend",
+        "numberish",
+        "comparableish",
+        "appendableish",
+        "compappendish",
+    ] {
+        let source = format!(
+            "module Main exposing (..)\nidentity : '{name} -> '{name}\nidentity x = x\nmain = identity ()\n"
+        );
+        let annotations = infer(&bump, &source).expect("ordinary type variable accepts unit");
+        assert!(annotations["identity"].context.is_empty());
+        assert!(matches!(annotations["main"].typ.value, CanType::Unit));
+    }
+}
+
+#[test]
+fn negation_retains_num_evidence() {
+    let bump = Bump::new();
+    let source = bump.alloc_str("module Main exposing (..)\nflip x = -x\nnegative = -7\n");
+    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let can = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, &constraint, &can.tables).unwrap();
+    let [predicate] = annotations["flip"].context else {
+        panic!("Num constraint")
+    };
+    assert_eq!(
+        predicate.trait_.home.package,
+        Some(nash_ast::primitives::CORE)
+    );
+    assert_eq!(predicate.trait_.home.name, "Num");
+    assert_eq!(predicate.trait_.name, "Num");
+    let mut decls = can.module.decls;
+    while let nash_ast::Decls::Declare { definition, next } = decls {
+        let nash_ast::Def::Def { name, body, .. } = definition else {
+            panic!("inferred definition")
+        };
+        assert!(matches!(body.value, nash_ast::Expr::Negate(_)));
+        let instance = &solved.instances[&nash_ast::NodeId::expr(body)];
+        let [nash_ast::Evidence::Given { binder, index }] = instance.evidence else {
+            panic!("Num given")
+        };
+        let scheme = &solved.schemes[&nash_ast::NodeId::def(name)];
+        assert_eq!(*binder, scheme.binder);
+        assert_eq!(
+            scheme.annotation.context[usize::from(*index)].trait_.name,
+            "Num"
+        );
+        assert_eq!(instance.type_args.len(), 1);
+        decls = next;
+    }
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
+#[test]
 fn string_literal() {
     assert_inference_snapshot!(
         r#"

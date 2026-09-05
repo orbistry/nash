@@ -7,8 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use bumpalo::Bump;
 use nash_ast::{AliasArgument, AliasType, Annotation, FieldType, QualifiedName, Type as CanType};
 use nash_constrain::error_type::{self, ErrorType, Extension};
-use nash_constrain::type_::{OCCURS_MARK, SuperType};
-use nash_constrain::{Content, FlatType, Super, UnionFind, Variable};
+use nash_constrain::type_::OCCURS_MARK;
+use nash_constrain::{Content, FlatType, UnionFind, Variable};
 use nash_region::Located;
 
 // TO TYPE ANNOTATION
@@ -42,10 +42,7 @@ pub(crate) fn ordered_quantifiers<'a>(
     let mut named = BTreeMap::new();
     for var in quantified {
         let name = match uf.get(*var).content {
-            Content::FlexVar(Some(name))
-            | Content::FlexSuper(_, Some(name))
-            | Content::RigidVar(name)
-            | Content::RigidSuper(_, name) => name,
+            Content::FlexVar(Some(name)) | Content::RigidVar(name) => name,
             _ => continue,
         };
         named.insert(name, *var);
@@ -108,8 +105,8 @@ pub(crate) fn to_scheme_annotation<'a>(
     let names: BTreeSet<_> = quantified
         .iter()
         .filter_map(|var| match uf.get(*var).content {
-            Content::FlexVar(name) | Content::FlexSuper(_, name) => name,
-            Content::RigidVar(name) | Content::RigidSuper(_, name) => Some(name),
+            Content::FlexVar(name) => name,
+            Content::RigidVar(name) => Some(name),
             _ => None,
         })
         .collect();
@@ -149,23 +146,7 @@ fn variable_to_can_type<'a>(
             bump.alloc(Located::at_zero(CanType::Var(name)))
         }
 
-        Content::FlexSuper(super_type, maybe_name) => {
-            let name = match maybe_name {
-                Some(name) => name,
-                None => {
-                    let name = state.fresh_super_name(bump, super_type);
-                    uf.modify(variable, |desc| {
-                        desc.content = Content::FlexSuper(super_type, Some(name));
-                    });
-                    name
-                }
-            };
-            bump.alloc(Located::at_zero(CanType::Var(name)))
-        }
-
-        Content::RigidVar(name) | Content::RigidSuper(_, name) => {
-            bump.alloc(Located::at_zero(CanType::Var(name)))
-        }
+        Content::RigidVar(name) => bump.alloc(Located::at_zero(CanType::Var(name))),
 
         Content::Alias {
             home,
@@ -335,25 +316,7 @@ fn content_to_error_type<'a>(
             bump.alloc(ErrorType::FlexVar(name))
         }
 
-        Content::FlexSuper(super_type, maybe_name) => {
-            let name = match maybe_name {
-                Some(name) => name,
-                None => {
-                    let name = state.fresh_super_name(bump, super_type);
-                    uf.modify(variable, |desc| {
-                        desc.content = Content::FlexSuper(super_type, Some(name));
-                    });
-                    name
-                }
-            };
-            bump.alloc(ErrorType::FlexSuper(super_to_super(super_type), name))
-        }
-
         Content::RigidVar(name) => bump.alloc(ErrorType::RigidVar(name)),
-
-        Content::RigidSuper(super_type, name) => {
-            bump.alloc(ErrorType::RigidSuper(super_to_super(super_type), name))
-        }
 
         Content::Alias {
             home,
@@ -374,15 +337,6 @@ fn content_to_error_type<'a>(
         }
 
         Content::Error => bump.alloc(ErrorType::Error),
-    }
-}
-
-fn super_to_super(super_type: SuperType) -> Super {
-    match super_type {
-        SuperType::Number => Super::Number,
-        SuperType::Comparable => Super::Comparable,
-        SuperType::Appendable => Super::Appendable,
-        SuperType::CompAppend => Super::CompAppend,
     }
 }
 
@@ -489,10 +443,6 @@ fn union_error_fields<'a>(
 struct NameState<'a> {
     taken: BTreeMap<&'a str, ()>,
     normals: usize,
-    numbers: usize,
-    comparables: usize,
-    appendables: usize,
-    comp_appends: usize,
 }
 
 impl<'a> NameState<'a> {
@@ -500,10 +450,6 @@ impl<'a> NameState<'a> {
         NameState {
             taken: taken.keys().map(|name| (*name, ())).collect(),
             normals: 0,
-            numbers: 0,
-            comparables: 0,
-            appendables: 0,
-            comp_appends: 0,
         }
     }
 
@@ -514,25 +460,6 @@ impl<'a> NameState<'a> {
             if !self.taken.contains_key(name) {
                 self.taken.insert(name, ());
                 self.normals = index + 1;
-                return name;
-            }
-            index += 1;
-        }
-    }
-
-    fn fresh_super_name(&mut self, bump: &'a Bump, super_type: SuperType) -> &'a str {
-        let (prefix, counter): (&'static str, &mut usize) = match super_type {
-            SuperType::Number => ("number", &mut self.numbers),
-            SuperType::Comparable => ("comparable", &mut self.comparables),
-            SuperType::Appendable => ("appendable", &mut self.appendables),
-            SuperType::CompAppend => ("compappend", &mut self.comp_appends),
-        };
-        let mut index = *counter;
-        loop {
-            let name = from_type_variable(bump, prefix, index);
-            if !self.taken.contains_key(name) {
-                self.taken.insert(name, ());
-                *counter = index + 1;
                 return name;
             }
             index += 1;
@@ -603,28 +530,7 @@ fn get_var_names<'a>(
             ),
         },
 
-        Content::FlexSuper(super_type, maybe_name) => match maybe_name {
-            None => taken_names,
-            Some(name) => add_name(
-                bump,
-                uf,
-                name,
-                var,
-                move |n| Content::FlexSuper(super_type, Some(n)),
-                taken_names,
-            ),
-        },
-
         Content::RigidVar(name) => add_name(bump, uf, name, var, Content::RigidVar, taken_names),
-
-        Content::RigidSuper(super_type, name) => add_name(
-            bump,
-            uf,
-            name,
-            var,
-            move |n| Content::RigidSuper(super_type, n),
-            taken_names,
-        ),
 
         // Elm folds with `foldrM`, so children are visited right-to-left.
         Content::Alias { args, .. } => args.iter().rev().fold(taken_names, |taken, (_, arg)| {

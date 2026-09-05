@@ -9,15 +9,13 @@
 use std::collections::BTreeMap;
 
 use bumpalo::Bump;
-use nash_constrain::error_type::{self, ErrorType};
+use nash_constrain::error_type::ErrorType;
 use nash_constrain::type_::{
-    self, Content, Descriptor, FlatType, NO_MARK, NO_RANK, SuperType, unnamed_flex_super,
-    unnamed_flex_var,
+    self, Content, Descriptor, FlatType, NO_MARK, NO_RANK, unnamed_flex_var,
 };
 use nash_constrain::{UnionFind, Variable};
 
 use crate::annotation;
-use crate::occurs;
 
 // UNIFY
 
@@ -60,15 +58,6 @@ struct Context<'a> {
     first_desc: Descriptor<'a>,
     second: Variable,
     second_desc: Descriptor<'a>,
-}
-
-fn reorient<'a>(context: &Context<'a>) -> Context<'a> {
-    Context {
-        first: context.second,
-        first_desc: context.second_desc.clone(),
-        second: context.first,
-        second_desc: context.first_desc.clone(),
-    }
 }
 
 // MERGE
@@ -162,11 +151,7 @@ fn actually_unify<'a>(
     match context.first_desc.content.clone() {
         Content::FlexVar(_) => unify_flex(uf, &context),
 
-        Content::FlexSuper(super_type, _) => unify_flex_super(uf, vars, &context, super_type),
-
-        Content::RigidVar(_) => unify_rigid(uf, &context, None),
-
-        Content::RigidSuper(super_type, _) => unify_rigid(uf, &context, Some(super_type)),
+        Content::RigidVar(_) => unify_rigid(uf, &context),
 
         Content::Alias {
             home,
@@ -197,212 +182,23 @@ fn unify_flex<'a>(uf: &mut UnionFind<'a>, context: &Context<'a>) -> UResult {
             Some(_) => merge(uf, context, Content::FlexVar(maybe_name)),
         },
 
-        other @ (Content::FlexSuper(_, _)
-        | Content::RigidVar(_)
-        | Content::RigidSuper(_, _)
-        | Content::Alias { .. }
-        | Content::Structure(_)) => merge(uf, context, other),
+        other @ (Content::RigidVar(_) | Content::Alias { .. } | Content::Structure(_)) => {
+            merge(uf, context, other)
+        }
     }
 }
 
 // UNIFY RIGID VARIABLES
 
-fn unify_rigid<'a>(
-    uf: &mut UnionFind<'a>,
-    context: &Context<'a>,
-    maybe_super: Option<SuperType>,
-) -> UResult {
+fn unify_rigid<'a>(uf: &mut UnionFind<'a>, context: &Context<'a>) -> UResult {
     let content = context.first_desc.content.clone();
     match &context.second_desc.content {
         Content::FlexVar(_) => merge(uf, context, content),
 
-        Content::FlexSuper(other_super, _) => match maybe_super {
-            Some(super_type) => {
-                if combine_rigid_supers(super_type, *other_super) {
-                    merge(uf, context, content)
-                } else {
-                    Err(())
-                }
-            }
-            None => Err(()),
-        },
-
-        Content::RigidVar(_)
-        | Content::RigidSuper(_, _)
-        | Content::Alias { .. }
-        | Content::Structure(_) => Err(()),
+        Content::RigidVar(_) | Content::Alias { .. } | Content::Structure(_) => Err(()),
 
         Content::Error => merge(uf, context, Content::Error),
     }
-}
-
-// UNIFY SUPER VARIABLES
-
-fn unify_flex_super<'a>(
-    uf: &mut UnionFind<'a>,
-    vars: &mut Vec<Variable>,
-    context: &Context<'a>,
-    super_type: SuperType,
-) -> UResult {
-    use SuperType::*;
-
-    let content = context.first_desc.content.clone();
-    let other_content = context.second_desc.content.clone();
-    match other_content {
-        Content::Structure(flat_type) => {
-            unify_flex_super_structure(uf, vars, context, super_type, flat_type)
-        }
-
-        Content::RigidVar(_) => Err(()),
-
-        Content::RigidSuper(other_super, _) => {
-            if combine_rigid_supers(other_super, super_type) {
-                merge(uf, context, context.second_desc.content.clone())
-            } else {
-                Err(())
-            }
-        }
-
-        Content::FlexVar(_) => merge(uf, context, content),
-
-        Content::FlexSuper(other_super, _) => {
-            let other = context.second_desc.content.clone();
-            match super_type {
-                Number => match other_super {
-                    Number | Comparable => merge(uf, context, content),
-                    Appendable | CompAppend => Err(()),
-                },
-
-                Comparable => match other_super {
-                    Comparable | Number | CompAppend => merge(uf, context, other),
-                    Appendable => merge(uf, context, unnamed_flex_super(CompAppend)),
-                },
-
-                Appendable => match other_super {
-                    Appendable | CompAppend => merge(uf, context, other),
-                    Comparable => merge(uf, context, unnamed_flex_super(CompAppend)),
-                    Number => Err(()),
-                },
-
-                CompAppend => match other_super {
-                    Comparable | Appendable | CompAppend => merge(uf, context, content),
-                    Number => Err(()),
-                },
-            }
-        }
-
-        Content::Alias { real, .. } => sub_unify(uf, vars, context.first, real),
-
-        Content::Error => merge(uf, context, Content::Error),
-    }
-}
-
-fn combine_rigid_supers(rigid: SuperType, flex: SuperType) -> bool {
-    rigid == flex
-        || (rigid == SuperType::Number && flex == SuperType::Comparable)
-        || (rigid == SuperType::CompAppend
-            && (flex == SuperType::Comparable || flex == SuperType::Appendable))
-}
-
-fn atom_matches_super(super_type: SuperType, home: nash_ast::ModuleName<'_>, name: &str) -> bool {
-    match super_type {
-        SuperType::Number => is_number(home, name),
-
-        SuperType::Comparable => {
-            is_number(home, name)
-                || error_type::is_string(home, name)
-                || error_type::is_char(home, name)
-        }
-
-        SuperType::Appendable => error_type::is_string(home, name),
-
-        SuperType::CompAppend => error_type::is_string(home, name),
-    }
-}
-
-fn is_number(home: nash_ast::ModuleName<'_>, name: &str) -> bool {
-    home == type_::basics() && (name == "Int" || name == "Float")
-}
-
-fn unify_flex_super_structure<'a>(
-    uf: &mut UnionFind<'a>,
-    vars: &mut Vec<Variable>,
-    context: &Context<'a>,
-    super_type: SuperType,
-    flat_type: FlatType<'a>,
-) -> UResult {
-    use SuperType::*;
-
-    match &flat_type {
-        FlatType::App1(home, name, args) if args.is_empty() => {
-            if atom_matches_super(super_type, *home, name) {
-                merge(uf, context, Content::Structure(flat_type))
-            } else {
-                Err(())
-            }
-        }
-
-        FlatType::App1(home, name, args)
-            if args.len() == 1 && *home == type_::list_home() && *name == "List" =>
-        {
-            let variable = args[0];
-            match super_type {
-                Number => Err(()),
-
-                Appendable => merge(uf, context, Content::Structure(flat_type)),
-
-                Comparable | CompAppend => {
-                    comparable_occurs_check(uf, context)?;
-                    unify_comparable_recursive(uf, vars, variable)?;
-                    merge(uf, context, Content::Structure(flat_type))
-                }
-            }
-        }
-
-        FlatType::Tuple1(a, b, maybe_c) => match super_type {
-            Number | Appendable | CompAppend => Err(()),
-
-            Comparable => {
-                let (a, b, maybe_c) = (*a, *b, *maybe_c);
-                comparable_occurs_check(uf, context)?;
-                unify_comparable_recursive(uf, vars, a)?;
-                unify_comparable_recursive(uf, vars, b)?;
-                if let Some(c) = maybe_c {
-                    unify_comparable_recursive(uf, vars, c)?;
-                }
-                merge(uf, context, Content::Structure(flat_type))
-            }
-        },
-
-        _ => Err(()),
-    }
-}
-
-// TODO: is there some way to avoid doing this?
-// Do type classes require occurs checks?
-fn comparable_occurs_check<'a>(uf: &mut UnionFind<'a>, context: &Context<'a>) -> UResult {
-    if occurs::occurs(uf, context.second) {
-        Err(())
-    } else {
-        Ok(())
-    }
-}
-
-fn unify_comparable_recursive<'a>(
-    uf: &mut UnionFind<'a>,
-    vars: &mut Vec<Variable>,
-    var: Variable,
-) -> UResult {
-    let rank = uf.get(var).rank;
-    let comp_var = uf.fresh(Descriptor {
-        preds: Vec::new(),
-        content: unnamed_flex_super(SuperType::Comparable),
-        rank,
-        mark: NO_MARK,
-        copy: None,
-    });
-    vars.push(comp_var);
-    guarded_unify(uf, vars, comp_var, var)
 }
 
 // UNIFY ALIASES
@@ -429,9 +225,7 @@ fn unify_alias<'a>(
             },
         ),
 
-        Content::FlexSuper(_, _) | Content::RigidVar(_) | Content::RigidSuper(_, _) => {
-            sub_unify(uf, vars, real_var, context.second)
-        }
+        Content::RigidVar(_) => sub_unify(uf, vars, real_var, context.second),
 
         Content::Alias {
             home: other_home,
@@ -493,11 +287,7 @@ fn unify_structure<'a>(
     match context.second_desc.content.clone() {
         Content::FlexVar(_) => merge(uf, context, Content::Structure(flat_type)),
 
-        Content::FlexSuper(super_type, _) => {
-            unify_flex_super_structure(uf, vars, &reorient(context), super_type, flat_type)
-        }
-
-        Content::RigidVar(_) | Content::RigidSuper(_, _) => Err(()),
+        Content::RigidVar(_) => Err(()),
 
         Content::Alias { real, .. } => sub_unify(uf, vars, context.first, real),
 

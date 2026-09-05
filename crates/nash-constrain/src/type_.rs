@@ -181,9 +181,7 @@ pub struct Descriptor<'a> {
 #[derive(Clone, Debug)]
 pub enum Content<'a> {
     FlexVar(Option<&'a str>),
-    FlexSuper(SuperType, Option<&'a str>),
     RigidVar(&'a str),
-    RigidSuper(SuperType, &'a str),
     Structure(FlatType<'a>),
     Alias {
         home: ModuleName<'a>,
@@ -192,14 +190,6 @@ pub enum Content<'a> {
         real: Variable,
     },
     Error,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SuperType {
-    Number,
-    Comparable,
-    Appendable,
-    CompAppend,
 }
 
 pub fn make_descriptor(content: Content<'_>) -> Descriptor<'_> {
@@ -251,20 +241,6 @@ pub const fn list_home<'a>() -> ModuleName<'a> {
     nash_ast::primitives::builtin_home()
 }
 
-pub const fn string_home<'a>() -> ModuleName<'a> {
-    ModuleName {
-        package: None,
-        name: "String",
-    }
-}
-
-pub const fn char_home<'a>() -> ModuleName<'a> {
-    ModuleName {
-        package: None,
-        name: "Char",
-    }
-}
-
 // PRIMITIVE TYPES
 
 pub const fn literal_trait(name: &str) -> QualifiedName<'_> {
@@ -304,6 +280,28 @@ pub fn literal_annotation<'a>(
     })
 }
 
+/// The compiler-known unary method, `Num a => a -> a`.
+pub fn negate_annotation(bump: &bumpalo::Bump) -> &Annotation<'_> {
+    let scheme = literal_annotation(
+        bump,
+        &[QualifiedName {
+            home: ModuleName {
+                package: Some(nash_ast::primitives::CORE),
+                name: "Num",
+            },
+            name: "Num",
+        }],
+    );
+    bump.alloc(Annotation {
+        free_vars: scheme.free_vars,
+        context: scheme.context,
+        typ: bump.alloc(Located::at_zero(nash_ast::Type::Lambda {
+            from: scheme.typ,
+            to: scheme.typ,
+        })),
+    })
+}
+
 /// Only the compiler-known literal traits select a little default type.
 pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<Type<'static>> {
     if trait_.home.package != Some(nash_ast::primitives::CORE) || trait_.home.name != "Literal" {
@@ -322,30 +320,6 @@ pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<Type<'stat
     })
 }
 
-pub const fn int<'a>() -> Type<'a> {
-    Type::AppN {
-        home: basics(),
-        name: "Int",
-        args: &[],
-    }
-}
-
-pub const fn float<'a>() -> Type<'a> {
-    Type::AppN {
-        home: basics(),
-        name: "Float",
-        args: &[],
-    }
-}
-
-pub const fn string<'a>() -> Type<'a> {
-    Type::AppN {
-        home: string_home(),
-        name: "String",
-        args: &[],
-    }
-}
-
 pub const fn bool<'a>() -> Type<'a> {
     Type::AppN {
         home: basics(),
@@ -360,48 +334,16 @@ pub fn mk_flex_var<'a>(uf: &mut UnionFind<'a>) -> Variable {
     uf.fresh(make_descriptor(unnamed_flex_var()))
 }
 
-pub fn mk_flex_number<'a>(uf: &mut UnionFind<'a>) -> Variable {
-    uf.fresh(make_descriptor(unnamed_flex_super(SuperType::Number)))
-}
-
 pub const fn unnamed_flex_var<'a>() -> Content<'a> {
     Content::FlexVar(None)
-}
-
-pub const fn unnamed_flex_super<'a>(super_type: SuperType) -> Content<'a> {
-    Content::FlexSuper(super_type, None)
 }
 
 // MAKE NAMED VARIABLES
 
 pub fn name_to_flex<'a>(uf: &mut UnionFind<'a>, name: &'a str) -> Variable {
-    let content = match to_super(name) {
-        Some(super_type) => Content::FlexSuper(super_type, Some(name)),
-        None => Content::FlexVar(Some(name)),
-    };
-    uf.fresh(make_descriptor(content))
+    uf.fresh(make_descriptor(Content::FlexVar(Some(name))))
 }
 
 pub fn name_to_rigid<'a>(uf: &mut UnionFind<'a>, name: &'a str) -> Variable {
-    let content = match to_super(name) {
-        Some(super_type) => Content::RigidSuper(super_type, name),
-        None => Content::RigidVar(name),
-    };
-    uf.fresh(make_descriptor(content))
-}
-
-/// Elm's `Name.isNumberType` and friends: super powers come from the
-/// variable's name prefix.
-pub fn to_super(name: &str) -> Option<SuperType> {
-    if name.starts_with("number") {
-        Some(SuperType::Number)
-    } else if name.starts_with("comparable") {
-        Some(SuperType::Comparable)
-    } else if name.starts_with("appendable") {
-        Some(SuperType::Appendable)
-    } else if name.starts_with("compappend") {
-        Some(SuperType::CompAppend)
-    } else {
-        None
-    }
+    uf.fresh(make_descriptor(Content::RigidVar(name)))
 }

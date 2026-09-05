@@ -14,9 +14,7 @@ use nash_region::{Located, Region};
 use crate::error::{Category, Context, Expected, MaybeName, PContext, PExpected, SubContext};
 use crate::instantiate;
 use crate::pattern;
-use crate::type_::{
-    self, Constraint, Definition, Pred, Type, exists, mk_flex_number, mk_flex_var, name_to_rigid,
-};
+use crate::type_::{self, Constraint, Definition, Pred, Type, exists, mk_flex_var, name_to_rigid};
 use crate::union_find::{UnionFind, Variable};
 
 /// Elm's `RTV`: rigid type variables introduced by enclosing type
@@ -85,7 +83,7 @@ pub fn constrain<'a>(
         CanExpr::List(elements) => constrain_list(bump, uf, rtv, region, elements, expected),
 
         CanExpr::Negate(sub_expr) => {
-            let number_var = mk_flex_number(uf);
+            let number_var = mk_flex_var(uf);
             let number_type: &'a Type<'a> = bump.alloc(Type::VarN(number_var));
             let number_con = constrain(
                 bump,
@@ -94,11 +92,18 @@ pub fn constrain<'a>(
                 sub_expr,
                 Expected::FromContext(region, Context::Negate, number_type),
             );
+            let method_con = Constraint::Foreign(
+                region,
+                node,
+                "negate",
+                type_::negate_annotation(bump),
+                Expected::NoExpectation(bump.alloc(Type::FunN(number_type, number_type))),
+            );
             let negate_con = Constraint::Equal(region, Category::Number, number_type, expected);
             exists(
                 bump,
                 bump.alloc_slice_copy(&[number_var]),
-                c_and(bump, vec![number_con, negate_con]),
+                c_and(bump, vec![number_con, method_con, negate_con]),
             )
         }
 
