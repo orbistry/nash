@@ -400,21 +400,6 @@ impl<'a> KindEnv<'a> {
                 p.kind,
             );
         }
-        // Match the legacy List entry still seeded by canonicalization.
-        schemes.insert(
-            QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "List",
-                },
-                name: "List",
-            },
-            primitives::PRIMITIVES
-                .iter()
-                .find(|p| p.name == "List")
-                .unwrap()
-                .kind,
-        );
         for interface in interfaces.into_iter().flat_map(|m| m.values()) {
             for union in interface.unions {
                 schemes.insert(

@@ -487,10 +487,7 @@ mod tests {
             package: None,
             name: "Basics",
         };
-        let list_mod = ModuleName {
-            package: None,
-            name: "List",
-        };
+        let list_mod = nash_ast::primitives::builtin_home();
         let mut env = empty_env(bump);
         env.types.insert(
             "Int",

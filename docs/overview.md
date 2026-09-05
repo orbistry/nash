@@ -10,6 +10,12 @@ This document is the single source of truth for design decisions. Component
 docs in this folder expand on each area; `plans/` holds the implementation
 plans in execution order.
 
+## Development policy
+
+Nash has no compatibility commitments to earlier syntax, APIs, or cache formats.
+Implement the current design directly and remove superseded paths. Cache files
+are disposable; do not add version migrations or older-format readers.
+
 ## Status
 
 Done (ported from the Elm compiler, Haskell -> Rust):

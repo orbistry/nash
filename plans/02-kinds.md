@@ -57,8 +57,8 @@ verification first. The prerequisite fix is now verified.
 
 Resolve stale sketches against the design before coding. In particular,
 the recursive-group test must itself obey the field casing rules, and a
-serialized interface schema change needs a compatibility decision and a
-round-trip test even when the added field is a `String`.
+serialized interface schema change needs a round-trip test. Cache files are
+disposable; support only the current format.
 
 ## Progress
 
@@ -67,7 +67,7 @@ round-trip test even when the added field is a `String`.
 - [x] Chunk 2: kind inference engine. Seven tests cover bounds, links, occurs checks, arrows, sharing, and fresh instantiation; tests failed before implementation. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 3: builtin kinds and environment. Tests verify all 17 primitive names, arities, representation bounds, and seeded lookup. Tests failed before implementation; formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 4: declaration inference. Source acceptance tests cover casing, SCCs, bounds, free application heads, alias substitution, and error recovery. Kind schemes also cross canonical interfaces so imported declarations can be checked. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
-- [x] Chunk 5: interfaces and value annotations. Checks retain original annotations across alias expansion and visit nested lets. Tests verify copied interfaces after source-arena drop, real cross-module builds, kind/bound fingerprint changes, versioned cache round trips, and old-format cache misses. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
+- [x] Chunk 5: interfaces and value annotations. Checks retain original annotations across alias expansion and visit nested lets. Tests verify copied interfaces after source-arena drop, real cross-module builds, kind/bound fingerprint changes, current-format cache round trips. Formatting, strict Clippy, snapshot tests, and workspace tests pass.
 - [x] Chunk 6: user parameter annotations. Tests cover Fix, Storable, base/arrow mismatches at annotation regions, separate bounded occurrences, narrowed alias applications, and constraints from all recursive-group uses. Formatting, strict Clippy, snapshot tests, workspace tests, and snapshot hygiene pass.
 - [x] Chunk 7: changeset, final acceptance audit, and SPEC. Final record-field error snapshots check context and source regions; an explicit Term annotation has a success snapshot. All final gates pass.
 
@@ -86,13 +86,13 @@ The correction has its own Sampo changeset: nash-ast minor and nash-can patch.
 - `cargo fmt --all`: pass.
 - `cargo clippy --all-targets --all-features -- -D warnings`: pass.
 - `cargo insta test`: pass; new snapshots reviewed before acceptance.
-- `cargo test`: 1,777 passed, 0 failed, 3 ignored.
+- `cargo test`: 1,778 passed, 0 failed, 3 ignored.
 - `cargo insta test --unreferenced reject`: pass; no unreferenced or pending snapshots.
 - The 52 source-level kind acceptance tests cover declarations, recursive groups,
   annotations, record fields, imported contracts, and copied interfaces. Driver
-  tests cover cross-module builds, kind and bound fingerprints, cache round trips,
-  and rejection of old cache formats. Solver tests retain the nested-section
-  regression and explicitly reject unsupported higher-kinded value applications.
+  tests cover cross-module builds, kind and bound fingerprints, and cache round trips. Solver tests retain the nested-section
+  regression, verify that Builtin.List annotations match list literals and
+  patterns, and explicitly reject unsupported higher-kinded value applications.
 - Read-only agent audits found no blocking issue. Each implementation chunk has
   its own verified, described jj change. The six per-chunk changesets cover all five changed
   compiler crates and are included in their matching implementation changes.
@@ -112,7 +112,7 @@ new incremental build engine.
 ## Crates touched
 
 `nash-ast`, `nash-can`, `nash-driver`. `nash-constrain` and `nash-solve`
-receive only an explicit unsupported-application compatibility path;
+receive an explicit diagnostic for unsupported type applications;
 higher-kinded unification and kind predicates on value schemes belong to
 plans/03 (traits).
 
@@ -136,8 +136,9 @@ plans/03 (traits).
   reconstructed function type would lose stricter alias parameter kinds.
   Both top-level and let annotations use the retained original tree.
 - Driver results expose public interface metadata generated from actual
-  canonical interfaces. Serialized files use format 2 (`NASHI` magic), and
-  old files are cache misses. Fingerprints include kind-variable bounds;
+  canonical interfaces. Files directly serialize the current interface structure
+  with bincode, without a version marker or format migration. Fingerprints
+  include kind-variable bounds;
   this plan does not add a new persistent incremental build engine.
 
 - Canonical `Type::App { head, args }` preserves source `VarApp` and permits
@@ -156,9 +157,9 @@ plans/03 (traits).
   alias-only cycle check in addition to the combined kind SCC pass. Skip
   dependents of failed SCCs, continue independent groups, and report every
   alias result unification failure.
-- The explicit Builtin List import replaces only the legacy implicit List
-  binding. The legacy binding retains its own `Big -> Big` scheme until
-  the prelude migration.
+- Implicit List annotations, explicit Builtin imports, list literals, and list
+  patterns all use the same nash/core Builtin.List identity. There is no
+  alternate List.List kind registration or special import replacement.
 
 ## Design summary
 
@@ -1122,8 +1123,8 @@ prelude lands (plans/04 chunk C1).
 3. `nash-driver` fingerprint: `Export::Type` gains `kind: String` (the
    scheme rendered with `k0 -> Big` notation and explicit bounds).
    `Interface::from_canonical` builds this metadata from successful compiler
-   output, and `BuildResult.interfaces` exposes it. Interface files have a
-   versioned magic prefix; old unversioned files become cache misses. The
+   output, and `BuildResult.interfaces` exposes it. Interface files use direct
+   bincode serialization of the current structure. The
    current driver rebuilds all modules and does not yet use persistent
    fingerprints to skip compilation.
 

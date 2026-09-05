@@ -22,6 +22,45 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
     nash_solve::run(bump, &mut uf, &constraint)
 }
 
+#[test]
+fn builtin_list_annotations_match_literals_and_patterns() {
+    let bump = Bump::new();
+    let source = bump.alloc_str(indoc!(
+        r#"
+        module Main exposing (..)
+
+        import Builtin exposing (List)
+
+        empty : List 'a
+        empty = []
+
+        first : List 'a -> 'a
+        first xs =
+            case xs of
+                head :: tail -> head
+    "#
+    ));
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let interfaces =
+        std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let annotations = nash_solve::run(&bump, &mut uf, &constraint)
+        .expect("annotations, list literals, and patterns use the same builtin type");
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
 // RENDER INFERRED TYPES (Elm-style, for readable snapshots)
 
 #[derive(Clone, Copy, PartialEq)]

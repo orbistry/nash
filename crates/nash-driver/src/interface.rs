@@ -12,8 +12,6 @@ use std::time::SystemTime;
 
 use crate::error::DriverError;
 
-const INTERFACE_MAGIC: &[u8] = b"NASHI\0\x02\0";
-
 /// Module interface for incremental compilation.
 ///
 /// Contains the public exports of a module and a fingerprint
@@ -102,12 +100,7 @@ impl Interface {
             source,
         })?;
 
-        let payload = bytes.strip_prefix(INTERFACE_MAGIC).ok_or_else(|| {
-            DriverError::SerializeError(Box::new(bincode::ErrorKind::Custom(
-                "unsupported interface cache format".into(),
-            )))
-        })?;
-        bincode::deserialize(payload).map_err(DriverError::SerializeError)
+        bincode::deserialize(&bytes).map_err(DriverError::SerializeError)
     }
 
     /// Save the interface to a file.
@@ -120,8 +113,7 @@ impl Interface {
             })?;
         }
 
-        let mut bytes = INTERFACE_MAGIC.to_vec();
-        bytes.extend(bincode::serialize(self)?);
+        let bytes = bincode::serialize(self)?;
         std::fs::write(path, bytes).map_err(|source| DriverError::WriteError {
             path: path.to_path_buf(),
             source,
@@ -311,7 +303,7 @@ mod kind_tests {
     }
 
     #[test]
-    fn kind_interfaces_round_trip_and_old_cache_files_are_misses() {
+    fn kind_interfaces_round_trip() {
         let root = std::env::temp_dir().join(format!("nash-kind-interface-{}", std::process::id()));
         let cache = InterfaceCache::new(&root);
         let original = Interface::new(
@@ -323,24 +315,9 @@ mod kind_tests {
             }],
         );
         cache.save(&original).unwrap();
-        let loaded = cache.load("Kinds").expect("new format loads");
+        let loaded = cache.load("Kinds").expect("saved interface loads");
         assert_eq!(loaded.fingerprint, original.fingerprint);
         assert_eq!(loaded.exports, original.exports);
-        let legacy = Interface::new(
-            "Legacy".into(),
-            vec![Export::Value {
-                name: "value".into(),
-            }],
-        );
-        std::fs::write(
-            cache.cache_path("Legacy"),
-            bincode::serialize(&legacy).unwrap(),
-        )
-        .unwrap();
-        assert!(
-            cache.load("Legacy").is_none(),
-            "unversioned legacy format must rebuild"
-        );
         std::fs::remove_dir_all(root).unwrap();
     }
 }

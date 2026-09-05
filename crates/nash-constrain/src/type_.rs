@@ -175,8 +175,8 @@ impl Mark {
 
 // BUILT-IN MODULES
 //
-// Like `nash-can`'s Bool handling, built-in homes are package-less module
-// names pending a canonical core package (Elm keys these to `elm/core`).
+// List uses the canonical nash/core Builtin identity. Other primitive
+// representations are handled by the representation plan.
 
 pub const fn basics<'a>() -> ModuleName<'a> {
     ModuleName {
@@ -186,10 +186,7 @@ pub const fn basics<'a>() -> ModuleName<'a> {
 }
 
 pub const fn list_home<'a>() -> ModuleName<'a> {
-    ModuleName {
-        package: None,
-        name: "List",
-    }
+    nash_ast::primitives::builtin_home()
 }
 
 pub const fn string_home<'a>() -> ModuleName<'a> {

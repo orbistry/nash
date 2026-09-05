@@ -16,8 +16,13 @@ Located {
     value: Named {
         reference: QualifiedName {
             home: ModuleName {
-                package: None,
-                name: "List",
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
             },
             name: "List",
         },

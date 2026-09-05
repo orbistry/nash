@@ -31,11 +31,8 @@ pub fn create_initial_env<'a>(
         q_ctors: BTreeMap::new(),
     };
 
-    // Pre-seed List — always in scope for type annotations, like Elm's emptyTypes.
-    let list_home = ModuleName {
-        package: None,
-        name: "List",
-    };
+    // List annotations use the same builtin identity as literals and patterns.
+    let list_home = nash_ast::primitives::builtin_home();
     env.types.insert(
         "List",
         Info::Specific(
@@ -77,15 +74,6 @@ pub fn create_initial_env<'a>(
                 interface.home,
                 value.annotation,
             );
-        }
-
-        // Explicit builtin exposure replaces the legacy implicit List entry.
-        if interface.home == nash_ast::primitives::builtin_home()
-            && matches!(env.types.get("List"), Some(Info::Specific(home, _)) if *home == list_home)
-            && (matches!(import.exposing, Exposing::Open)
-                || matches!(&import.exposing, Exposing::Explicit(items) if items.iter().any(|item| matches!(item, nash_source::Exposed::Upper { name, .. } if name.value == "List"))))
-        {
-            env.types.remove("List");
         }
 
         // Unqualified exposure depends on the exposing clause.
@@ -427,7 +415,7 @@ mod tests {
         let env = create_initial_env(&bump, home, None, &[]).unwrap();
         match env.types.get("List") {
             Some(Info::Specific(module, Type::Union { arity: 1, .. })) => {
-                assert_eq!(module.name, "List");
+                assert_eq!(*module, nash_ast::primitives::builtin_home());
             }
             other => panic!("Expected Specific List Union with arity 1, got {other:?}"),
         }
