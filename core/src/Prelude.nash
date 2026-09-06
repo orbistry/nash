@@ -1,0 +1,89 @@
+module Prelude exposing (..)
+
+import Builtin exposing (type bool(..))
+import Bool exposing (and, or)
+import Eq exposing (Eq)
+import Ord exposing (Ord)
+import Ordering exposing (type ordering(..))
+import Show exposing (Show)
+import Num exposing (Num)
+import Integral exposing (Integral)
+import Semigroup exposing (Semigroup)
+
+infix left 0 (|>) = applyForward
+infix right 0 (<|) = applyBackward
+infix right 9 (<<) = composeLeft
+infix right 9 (>>) = composeRight
+infix right 2 (||) = or
+infix right 3 (&&) = and
+infix non 4 (==) = eq
+infix non 4 (/=) = neq
+infix non 4 (<) = lt
+infix non 4 (>) = gt
+infix non 4 (<=) = le
+infix non 4 (>=) = ge
+infix right 5 (++) = append
+infix right 5 (::) = prepend
+infix left 6 (+) = add
+infix left 6 (-) = sub
+infix left 7 (*) = mul
+infix left 7 (/) = div
+infix left 7 (%) = mod
+
+identity : 'a -> 'a
+identity x = x
+
+always : 'a -> 'b -> 'a
+always x _ = x
+
+applyForward : 'a -> ('a -> 'b) -> 'b
+applyForward x f = f x
+
+applyBackward : ('a -> 'b) -> 'a -> 'b
+applyBackward f x = f x
+
+composeLeft : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
+composeLeft g f x = g (f x)
+
+composeRight : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c
+composeRight f g x = g (f x)
+
+prepend : 'a -> list 'a -> list 'a
+prepend = Builtin.mkCons
+
+impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where
+    eq (a, b) (c, d) = if eq a c then eq b d else False
+
+impl (Eq 'a, Eq 'b, Eq 'c) => Eq ('a, 'b, 'c) where
+    eq (a, b, c) (d, e, f) =
+        if eq a d then if eq b e then eq c f else False
+        else False
+
+impl (Ord 'a, Ord 'b) => Ord ('a, 'b) where
+    compare (a, b) (c, d) =
+        case compare a c of
+            EQ -> compare b d
+            order -> order
+
+impl (Ord 'a, Ord 'b, Ord 'c) => Ord ('a, 'b, 'c) where
+    compare (a, b, c) (d, e, f) =
+        case compare a d of
+            EQ ->
+                case compare b e of
+                    EQ -> compare c f
+                    order -> order
+            order -> order
+
+impl (Show 'a, Show 'b) => Show ('a, 'b) where
+    show (a, b) =
+        Builtin.appendString "("
+            (Builtin.appendString (show a)
+                (Builtin.appendString ", " (Builtin.appendString (show b) ")")))
+
+impl (Show 'a, Show 'b, Show 'c) => Show ('a, 'b, 'c) where
+    show (a, b, c) =
+        Builtin.appendString "("
+            (Builtin.appendString (show a)
+                (Builtin.appendString ", "
+                    (Builtin.appendString (show b)
+                        (Builtin.appendString ", " (Builtin.appendString (show c) ")")))))

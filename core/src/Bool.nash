@@ -1,0 +1,17 @@
+module Bool exposing (Bool, not, and, or, xor)
+
+import Builtin
+
+type Bool = False | True
+
+not : bool -> bool
+not value = if value then Builtin.False else Builtin.True
+
+and : bool -> bool -> bool
+and a b = if a then b else Builtin.False
+
+or : bool -> bool -> bool
+or a b = if a then Builtin.True else b
+
+xor : bool -> bool -> bool
+xor a b = if a then not b else b

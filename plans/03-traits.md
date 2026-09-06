@@ -2442,6 +2442,7 @@ the full tests, and snapshot hygiene pass for negation. Operators now accept
 local and imported trait methods. Interfaces retain the checked method scheme
 and original method identity separately from the operator provider. The
 cross-module inference regression covers generic uses, concrete impl evidence,
+ordinary imported function schemes with empty evidence,
 sections, operator values, and a consumer importing only the operator provider.
 All five Main operator nodes and the transitive consumer retain evidence at
 their own NodeIds. A three-module CLI project compiles these uses; applying
@@ -2456,7 +2457,7 @@ The do pair example currently infers `a : Term` and `m : Term -> Any` under
 the shared-domain kind contract; the explicit expansion has the same bound.
 This exposes a design question about changing element kinds through an
 abstract constructor. Separately, the documented Applicative.apply requires
-containers of functions, incompatible with the promised Big List/Storable list
+containers of functions, incompatible with the promised Storable list
 instances. Both contract questions have been raised with the user; the shipping
 hierarchy is not validated by the reduced test fixture.
 
@@ -2660,7 +2661,7 @@ Ord provides int, bytes, bytewise string, bool, unit and lexicographic list
 impls, with lt/le/gt/ge/max/min defaults. The core acceptance module exercises
 every default and the Eq superclass through an Ord-given function. These are
 real source implementations using the builtin comparison and UTF-8 functions;
-the Big Ordering twin, Lift conversions, Big Ord impls and tuple impls remain
+the Big Ordering twin, Lift conversions, Big Ord impls and four-element tuple impls remain
 unfinished. Compilation does not establish runtime comparison results before
 Plan 07 code generation. This source-only step changes no Rust crate.
 The CLI checks nine modules and 32 declarations; comparing Data reports
@@ -2671,8 +2672,21 @@ implementations. Its decimal/hex helpers use checked builtin signatures, and
 string escaping preserves UTF-8 while escaping ASCII controls. The core CLI
 fixture covers empty collections, large signed integers, Unicode and nested
 Data map/pair evidence. Display formats and the required later runtime-output
-checks are specified in docs/stdlib.md. Big Show impls and tuple impls remain
+checks are specified in docs/stdlib.md. Big Show impls and four-element tuple impls remain
 unfinished; this source-only step changes no Rust crate.
+Bool now defines the Big Bool type and little not/and/or/xor functions.
+Its little constructor expressions use Builtin qualification. This exposed
+and fixed the parser retaining qualified uppercase expressions as one local
+name; existing single- and multi-module-prefix snapshots now retain VarQual.
+Prelude exports the implemented arithmetic, comparison, boolean, list and
+function-composition operators plus its ordinary helpers. Imported ordinary
+functions now retain their checked schemes as operator targets, verified
+alongside trait targets in the cross-module inference regression.
+Prelude also supplies real Eq/Ord/Show impls for pairs and triples. The core
+CLI checks 12 modules and 66 declarations with explicit Prelude imports.
+Four-element tuples, the higher-kinded operators and implicit imports remain
+unfinished. Bool conversions and runtime short-circuit lowering remain at
+their documented boundaries; compilation does not prove lazy evaluation.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

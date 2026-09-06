@@ -671,17 +671,19 @@ rejects programs that use builtins newer than the target's version
 ```elm
 module Bool exposing (Bool, not, and, or, xor)
 
+import Builtin
+
 type Bool = False | True
 
 not : bool -> bool
-not b = if b then False else True
+not b = if b then Builtin.False else Builtin.True
 
 -- special-cased: lazy in the second argument
 and : bool -> bool -> bool
-and a b = if a then b else False
+and a b = if a then b else Builtin.False
 
 or : bool -> bool -> bool
-or a b = if a then True else b
+or a b = if a then Builtin.True else b
 
 xor : bool -> bool -> bool
 xor a b = if a then not b else b
