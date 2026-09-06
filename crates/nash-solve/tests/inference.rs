@@ -220,7 +220,47 @@ fn render_annotation(annotation: &Annotation<'_>) -> String {
     if annotation.free_vars.is_empty() {
         tipe
     } else {
-        format!("forall {}. {}", annotation.free_vars.join(" "), tipe)
+        assert_eq!(annotation.free_vars.len(), annotation.kinds.kinds.len());
+        let variables = annotation.free_vars.iter().zip(annotation.kinds.kinds).map(|(name, kind)| {
+            if matches!(kind, nash_ast::Kind::Var(index) if annotation.kinds.bounds[usize::from(*index)] == nash_ast::KindSet::ALL) {
+                (*name).to_owned()
+            } else {
+                format!("({name} : {})", render_kind(kind, annotation.kinds.bounds))
+            }
+        }).collect::<Vec<_>>().join(" ");
+        format!("forall {variables}. {tipe}")
+    }
+}
+
+fn render_kind(kind: &nash_ast::Kind<'_>, bounds: &[nash_ast::KindSet]) -> String {
+    use nash_ast::{Kind, KindSet};
+    match kind {
+        Kind::Base(base) => format!("{base:?}"),
+        Kind::Arrow(from, to) => {
+            let from_text = render_kind(from, bounds);
+            let from_text = if matches!(from, Kind::Arrow(..)) {
+                format!("({from_text})")
+            } else {
+                from_text
+            };
+            format!("{from_text} -> {}", render_kind(to, bounds))
+        }
+        Kind::Var(index) => match bounds[usize::from(*index)] {
+            KindSet::ALL => "All".into(),
+            KindSet::ANY => "Any".into(),
+            KindSet::STORABLE => "Storable".into(),
+            KindSet::LITTLE => "Little".into(),
+            bound => [
+                (KindSet::BIG, "Big"),
+                (KindSet::CONST, "Const"),
+                (KindSet::TERM, "Term"),
+                (KindSet::ARROW, "Arrow"),
+            ]
+            .into_iter()
+            .filter_map(|(kind, name)| bound.contains(kind).then_some(name))
+            .collect::<Vec<_>>()
+            .join(" | "),
+        },
     }
 }
 
@@ -2067,7 +2107,7 @@ fn imported_values_retain_declared_and_inferred_kind_signatures() {
         module Source exposing (first, wrapper)
         import Builtin exposing (..)
         first : 'a -> list 'a -> 'a
-        first x xs = x
+        first x xs = wrapper x xs
         wrapper x xs = first x xs
     "
     ));
@@ -2136,7 +2176,10 @@ fn imported_values_retain_declared_and_inferred_kind_signatures() {
         ));
         results.push((name, errors));
     }
-    insta::assert_debug_snapshot!(results);
+    insta::assert_snapshot!(format!(
+        "{}\n{results:#?}",
+        render_annotations(&annotations)
+    ));
 }
 
 #[test]
@@ -2419,33 +2462,40 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
 #[test]
 fn imported_higher_kinded_value_preserves_application() {
     let bump = Bump::new();
-    let head = bump.alloc(Located::at_zero(CanType::Var("f")));
-    let arg = bump.alloc(Located::at_zero(CanType::Var("a")));
-    let typ = bump.alloc(Located::at_zero(CanType::App {
-        head,
-        args: bump.alloc_slice_copy(&[&*arg]),
-    }));
-    let annotation = bump.alloc(Annotation {
-        kinds: nash_ast::ValueKinds::unconstrained(&bump, 2),
-        context: &[],
-        free_vars: &["f", "a"],
-        typ,
-    });
-    let interface = nash_can::Interface {
-        impls: &[],
-        traits: &[],
-        home: nash_ast::ModuleName {
+    let module = nash_parse::Parser::new(
+        &bump,
+        b"module Higher exposing (value)\nvalue : 'f 'a -> 'f 'a\nvalue x = x\n",
+    )
+    .module()
+    .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
             package: None,
-            name: "Higher",
+            interfaces: None,
         },
-        values: bump.alloc_slice_copy(&[nash_can::InterfaceValue {
-            name: "value",
-            annotation,
-        }]),
-        unions: &[],
-        aliases: &[],
-        binops: &[],
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (producer, _) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let annotation = producer["value"];
+    let a = annotation
+        .free_vars
+        .iter()
+        .position(|name| *name == "a")
+        .unwrap();
+    let f = annotation
+        .free_vars
+        .iter()
+        .position(|name| *name == "f")
+        .unwrap();
+    let nash_ast::Kind::Arrow(domain, _) = annotation.kinds.kinds[f] else {
+        panic!("higher-kinded parameter")
     };
+    assert_eq!(*domain, annotation.kinds.kinds[a]);
+    let interface = nash_can::from_module(&bump, &canonical.module, &producer);
     let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
     let source =
         bump.alloc_str("module Main exposing (..)\n\nimport Higher\n\nvalue = Higher.value\n");
@@ -2474,5 +2524,7 @@ fn imported_higher_kinded_value_preserves_application() {
     let instance = &solved.instances[&nash_ast::NodeId::expr(body)];
     assert_eq!(instance.type_args.len(), 2);
     assert!(instance.evidence.is_empty());
+    assert_eq!(annotations["value"].free_vars, annotation.free_vars);
+    assert_eq!(annotations["value"].kinds, annotation.kinds);
     insta::assert_snapshot!(render_annotations(&annotations));
 }

@@ -2,5 +2,5 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
-flip : forall a. Num a => a -> a
-negative : forall a. (FromInt a, Num a) => a
+flip : forall (a : Any). Num a => a -> a
+negative : forall (a : Any). (FromInt a, Num a) => a

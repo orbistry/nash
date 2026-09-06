@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (main)\n\nmain =\n    let\n        ( a, b ) = ( 1, \"two\" )\n    in\n    b\n"
 ---
-main : forall a. FromString a => a
+main : forall (a : Any). FromString a => a

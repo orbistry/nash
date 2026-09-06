@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\ntrait Functor 'f => Applicative 'f where\n    pure : 'a -> 'f 'a\ntrait Applicative 'm => Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\nchain f g mx = bind (bind mx f) g\n"
 ---
-chain : forall a a1 b m. Monad m => (a -> m a1) -> (a1 -> m b) -> m a -> m b
+chain : forall (a : Any) (a1 : Any) (b : Any) (m : Any -> Any). Monad m => (a -> m a1) -> (a1 -> m b) -> m a -> m b

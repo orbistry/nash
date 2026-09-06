@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep x = helper x\nimpl Keep Color where\n    keep x = helper x\nhelper x = x\n"
 ---
-helper : forall a. a -> a
+helper : forall (a : Any). a -> a

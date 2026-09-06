@@ -3,4 +3,4 @@ source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
 fixed : string
-match : forall a. (FromString a, Eq a) => a -> ()
+match : forall (a : Any). (FromString a, Eq a) => a -> ()

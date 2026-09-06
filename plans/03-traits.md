@@ -2240,7 +2240,7 @@ type.
 
 ## Chunk 9: kind predicates on value schemes
 
-Status: in progress. The call-site regression now rejects the invalid
+Status: done. The call-site regression rejects the invalid
 `list (option ())` with `BadKind` at the use of `first`. Annotation
 kind checking now generalizes all free-variable kinds under one shared binder
 and preserves the annotation's free-variable order. Retaining those signatures
@@ -2268,9 +2268,19 @@ and the CLI accepts identity applied to a record. Reflexive Lift now checks
 exact core identity, existing type equality, and a non-narrowing Big proof at
 the active definition boundary. Solved output retains direct and nested
 reflexive evidence, while Const calls can select ordinary impls. Focused
-tests use an interface with the actual nash/core Lift identity; these do not
-establish the shipping core hierarchy or CLI stdlib prerequisites. The full
-chunk acceptance audit remains unfinished.
+tests use an interface with the actual nash/core Lift identity. A real CLI
+workspace with a nash/core package accepts concrete/rigid Big uses and an
+explicit Const impl, and rejects an unconstrained declaration. This establishes
+the compiler rule, not the shipping core hierarchy (chunk 11).
+
+The acceptance audit also replaced the hand-built imported HKT fixture with a
+checked producer, verifying shared arrow-domain/argument roots after import.
+The Storable interface fixture now has mutually recursive declared/inferred
+definitions and snapshots their successful signatures before rejecting both
+invalid imported calls. Inference snapshots display retained base bounds and
+arrow kinds. CLI cross-module checks accept these signatures and reject an
+invalid recursive wrapper call at its use. Formatting, strict Clippy, the full
+test suite, and snapshot hygiene pass.
 
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/module.rs`,
 `crates/nash-can/src/kinds.rs`, `crates/nash-constrain/src/type_.rs`,
@@ -2372,10 +2382,12 @@ Elm reference: none.
 Tests (inference snapshots; need plan 02's `list` and `option`):
 
 ```rust
-#[test] fn kind_bound_inferred_from_use()   // cons x xs = ... `list` ops ... -> cons : forall (a : Storable) b. a -> list a -> list a
-#[test] fn kind_bound_checked_at_call()     // cons (Some 1) nil -> BadKind (option int is Term, not Storable)
-#[test] fn kind_bound_from_annotation()     // f : 'a -> list 'a; g = f (Some 1) -> BadKind
-#[test] fn reflexive_lift_big()             // exact core Lift rule: equal Big types produce ReflexiveLift; Const types cannot use this rule
+#[test] fn kind_bound_is_enforced_at_an_inferred_call_site()
+#[test] fn inferred_wrapper_preserves_the_callees_kind_requirement()
+#[test] fn imported_values_retain_declared_and_inferred_kind_signatures()
+#[test] fn imported_higher_kinded_value_preserves_application()
+#[test] fn reflexive_lift_retains_big_evidence()
+#[test] fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity()
 ```
 
 Snapshot notation (plan 02 follows it): `render_annotation` writes a
@@ -2386,8 +2398,9 @@ bound variable as `(a : Storable)` inside the `forall`, an arrow kind as
 `forall (a : Storable) b. a -> list a -> list a` and
 `forall (f : Big -> Big) a. Functor f => f a -> f a`.
 
-Done when: the four snapshots pass and `Annotation.kinds` round-trips
-through interfaces.
+Done when: the bound, propagation, interface and Lift snapshots pass and
+`Annotation.kinds`, including shared higher-kinded roots, round-trips through
+interfaces. The tests above cover these requirements.
 
 ---
 

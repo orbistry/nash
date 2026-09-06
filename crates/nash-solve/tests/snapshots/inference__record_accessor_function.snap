@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (getName)\n\ngetName = .name\n"
 ---
-getName : forall a b. { b | name : a } -> a
+getName : forall (a : Any) b. { b | name : a } -> a

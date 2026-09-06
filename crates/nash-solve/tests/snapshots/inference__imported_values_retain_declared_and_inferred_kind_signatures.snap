@@ -1,7 +1,9 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: results
+expression: "format!(\"{}\\n{results:#?}\", render_annotations(&annotations))"
 ---
+first : forall (a : Storable). a -> list a -> a
+wrapper : forall (a : Storable). a -> list a -> a
 [
     (
         "first",

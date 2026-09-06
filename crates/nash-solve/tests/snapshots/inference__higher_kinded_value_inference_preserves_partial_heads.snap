@@ -2,5 +2,5 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\nidentityK : 'f 'a -> 'f 'a\nidentityK x = x\ntwo : 'g 'b 'a -> 'g 'b 'a\ntwo x = identityK x\n"
 ---
-identityK : forall a f. f a -> f a
-two : forall a b g. g b a -> g b a
+identityK : forall a (f : All -> Any). f a -> f a
+two : forall a b (g : All -> All -> Any). g b a -> g b a

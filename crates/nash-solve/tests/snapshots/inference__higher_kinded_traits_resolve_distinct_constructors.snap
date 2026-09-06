@@ -4,4 +4,4 @@ expression: render_annotations(&annotations)
 ---
 big : Box Color
 little : option ()
-twice : forall a f. Functor f => (a -> a) -> f a -> f a
+twice : forall (a : Any) (f : Any -> Any). Functor f => (a -> a) -> f a -> f a
