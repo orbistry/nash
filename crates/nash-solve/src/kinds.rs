@@ -97,6 +97,32 @@ impl<'a> State<'a> {
             let actual = self.infer_type(uf, env, *variable, &mut seen)?;
             self.unify(expected, actual)?;
         }
+        self.check_record_kinds(uf)
+    }
+
+    // Structural records do not yet identify a nominal carrier. Their kinds
+    // can participate in representation-independent uses, but cannot be narrowed
+    // or equated with a distinct carrier's kind until plan 04 supplies that
+    // identity. Check the whole binder to detect both restrictions and equality.
+    fn check_record_kinds(&mut self, uf: &mut UnionFind<'a>) -> Result<(), Error<'a>> {
+        let roots: Vec<_> = self
+            .roots
+            .iter()
+            .filter_map(|(variable, kind)| {
+                matches!(
+                    uf.get(*variable).content,
+                    Content::Structure(FlatType::Record1(..) | FlatType::EmptyRecord1)
+                )
+                .then_some(*kind)
+            })
+            .collect();
+        let signature = normalize(self.bump, self.infer.generalize_values(&roots));
+        if signature.bounds.len() != roots.len()
+            || signature.bounds.iter().any(|bound| *bound != KindSet::ANY)
+            || signature.kinds.iter().enumerate().any(|(index, kind)| !matches!(kind, Kind::Var(variable) if usize::from(*variable) == index))
+        {
+            return Err(Error::AnonymousRecord);
+        }
         Ok(())
     }
 
@@ -146,7 +172,9 @@ impl<'a> State<'a> {
             .iter()
             .map(|var| self.infer_type(uf, env, *var, &mut seen))
             .collect();
-        let signature = self.infer.generalize_values(&roots?);
+        let roots = roots?;
+        self.check_record_kinds(uf)?;
+        let signature = self.infer.generalize_values(&roots);
         Ok(normalize(self.bump, signature))
     }
 
@@ -202,9 +230,19 @@ impl<'a> State<'a> {
                 self.bump.alloc(K::Base(BaseKind::Term))
             }
             Content::Structure(FlatType::Unit1) => self.bump.alloc(K::Base(BaseKind::Const)),
-            Content::Structure(FlatType::Record1(..) | FlatType::EmptyRecord1) => {
-                return Err(Error::AnonymousRecord);
+            Content::Structure(FlatType::Record1(fields, extension)) => {
+                for field in fields.values() {
+                    self.value(uf, env, *field, seen)?;
+                }
+                if matches!(
+                    uf.get(extension).content,
+                    Content::Structure(FlatType::Record1(..))
+                ) {
+                    self.value(uf, env, extension, seen)?;
+                }
+                self.infer.fresh_k(KindSet::ANY)
             }
+            Content::Structure(FlatType::EmptyRecord1) => self.infer.fresh_k(KindSet::ANY),
         };
         self.unify(root, actual)?;
         Ok(root)
@@ -217,9 +255,46 @@ impl<'a> State<'a> {
         variable: Variable,
         seen: &mut BTreeSet<Variable>,
     ) -> Result<(), Error<'a>> {
+        // Plan 04 owns the representation of structural records. Their fields
+        // are values, but a row tail is not a value-kind variable. Do not invent
+        // a representation kind for the record carrier during value inference.
+        let representative = uf.find(variable);
+        match uf.get(variable).content.clone() {
+            Content::Structure(FlatType::Record1(fields, extension)) => {
+                if !seen.insert(representative) {
+                    return Ok(());
+                }
+                for field in fields.values() {
+                    self.value(uf, env, *field, seen)?;
+                }
+                if matches!(
+                    uf.get(extension).content,
+                    Content::Structure(FlatType::Record1(..))
+                ) {
+                    self.value(uf, env, extension, seen)?;
+                }
+                return Ok(());
+            }
+            Content::Structure(FlatType::EmptyRecord1) => return Ok(()),
+            _ => {}
+        }
         let kind = self.infer_type(uf, env, variable, seen)?;
         let any = self.infer.fresh_k(KindSet::ANY);
         self.unify(any, kind)?;
+        Ok(())
+    }
+
+    pub fn observe_value(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        env: &KindEnv<'a>,
+        variable: Variable,
+    ) -> Result<(), Error<'a>> {
+        let mut query = self.clone();
+        let mut seen = query.synchronize(uf, env)?;
+        query.value(uf, env, variable, &mut seen)?;
+        query.check_record_kinds(uf)?;
+        *self = query;
         Ok(())
     }
 
@@ -302,6 +377,65 @@ mod tests {
             bounds: bump.alloc_slice_copy(&[bound]),
             kinds: bump.alloc_slice_copy(&[&*bump.alloc(Kind::Var(0))]),
         }
+    }
+
+    #[test]
+    fn anonymous_carriers_allow_only_representation_independent_requirements() {
+        let bump = Bump::new();
+        let env = KindEnv::default();
+        let mut uf = UnionFind::new();
+        let first = uf.fresh(make_descriptor(Content::Structure(FlatType::EmptyRecord1)));
+        let second = uf.fresh(make_descriptor(Content::Structure(FlatType::EmptyRecord1)));
+        let mut state = State::new(&bump);
+        for bound in [KindSet::ALL, KindSet::ANY] {
+            state
+                .require(&mut uf, &env, bounded(&bump, bound), &[first])
+                .unwrap();
+        }
+        let before = state.generalize(&mut uf, &env, &[first]).unwrap();
+        for bound in [
+            KindSet::STORABLE,
+            KindSet::LITTLE,
+            KindSet::BIG,
+            KindSet::CONST,
+            KindSet::TERM,
+        ] {
+            assert!(matches!(
+                state.require(&mut uf, &env, bounded(&bump, bound), &[first]),
+                Err(Error::AnonymousRecord)
+            ));
+            assert_eq!(state.generalize(&mut uf, &env, &[first]).unwrap(), before);
+        }
+        let shared = ValueKinds {
+            bounds: &[KindSet::ANY],
+            kinds: &[&Kind::Var(0), &Kind::Var(0)],
+        };
+        state
+            .require(&mut uf, &env, shared, &[first, first])
+            .unwrap();
+        assert!(matches!(
+            state.require(&mut uf, &env, shared, &[first, second]),
+            Err(Error::AnonymousRecord)
+        ));
+        state
+            .require(&mut uf, &env, bounded(&bump, KindSet::ANY), &[second])
+            .unwrap();
+        uf.union(
+            first,
+            second,
+            make_descriptor(Content::Structure(FlatType::EmptyRecord1)),
+        );
+        state
+            .require(&mut uf, &env, shared, &[first, second])
+            .unwrap();
+        // A resolved nominal type no longer has an unknown record carrier.
+        uf.modify(first, |desc| {
+            desc.content =
+                Content::Structure(FlatType::App1(primitives::builtin_home(), "int", vec![]))
+        });
+        state
+            .require(&mut uf, &env, bounded(&bump, KindSet::CONST), &[first])
+            .unwrap();
     }
 
     #[test]

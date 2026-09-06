@@ -1360,7 +1360,8 @@ fn record_literal() {
         r#"
         module Main exposing (point)
 
-        point = { x = 1, y = 2 }
+        keep value = value
+        point = keep { x = 1, y = 2 }
     "#
     );
 }
@@ -2043,6 +2044,102 @@ fn kind_bound_is_enforced_at_an_inferred_call_site() {
 }
 
 #[test]
+fn inferred_wrapper_preserves_the_callees_kind_requirement() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        type option 'a = None | Some 'a
+        first : 'a -> list 'a -> 'a
+        first x xs = x
+        wrapper x xs = first x xs
+        bad xs = wrapper (Some ()) xs
+    "#
+    );
+}
+
+#[test]
+fn imported_values_retain_declared_and_inferred_kind_signatures() {
+    let bump = Bump::new();
+    let mut interfaces = literal_interfaces(&bump);
+    let source = bump.alloc_str(indoc!(
+        "
+        module Source exposing (first, wrapper)
+        import Builtin exposing (..)
+        first : 'a -> list 'a -> 'a
+        first x xs = x
+        wrapper x xs = first x xs
+    "
+    ));
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    assert_eq!(
+        annotations["first"].kinds.bounds,
+        &[nash_ast::KindSet::STORABLE]
+    );
+    assert_eq!(annotations["wrapper"].kinds, annotations["first"].kinds);
+    assert!(
+        solved
+            .schemes
+            .values()
+            .all(|scheme| scheme.annotation.kinds == annotations["first"].kinds)
+    );
+    interfaces.insert(
+        "Source",
+        nash_can::from_module(&bump, &canonical.module, &annotations),
+    );
+    let mut results = Vec::new();
+    for name in ["first", "wrapper"] {
+        let source = bump.alloc_str(&format!(
+            indoc!(
+                "
+        module Main exposing (..)
+        import Source exposing ({name})
+        type option 'a = Some 'a
+        bad xs = {name} (Some ()) xs
+    "
+            ),
+            name = name
+        ));
+        let module = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &module,
+        )
+        .unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap_err();
+        assert!(matches!(
+            errors.as_slice(),
+            [Error::BadKind { name: actual, .. }] if *actual == name
+        ));
+        results.push((name, errors));
+    }
+    insta::assert_debug_snapshot!(results);
+}
+
+#[test]
 fn higher_kinded_bind_chain_retains_its_monad_constraint() {
     assert_inference_snapshot!(
         r#"
@@ -2073,6 +2170,25 @@ fn nested_use_cannot_narrow_its_owners_declared_kind() {
                 helper ignored = ignore (first x)
             in
             helper ()
+    "#
+    );
+}
+
+#[test]
+fn declared_body_combines_kinds_of_hidden_variables() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias bigUse ('a : Big) = 'a -> ()
+        type alias termUse ('a : Term) = 'a -> ()
+        useBig : bigUse 'a
+        useBig x = ()
+        useTerm : termUse 'a
+        useTerm x = ()
+        loop x = loop x
+        discard x y = ()
+        bad : ()
+        bad = (\x -> discard (useBig x) (useTerm x)) (loop ())
     "#
     );
 }

@@ -30,10 +30,15 @@ description: "Code:\n\nmodule Main exposing (main)\n\nmain = if 1 then 2 else 3\
         args: [
             Type {
                 home: ModuleName {
-                    package: None,
-                    name: "Basics",
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
                 },
-                name: "Bool",
+                name: "bool",
                 args: [],
             },
         ],

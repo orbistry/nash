@@ -2252,9 +2252,20 @@ type-variable merges, and rigid entailment. Local declared uses and foreign
 uses retain instantiated kind roots and are checked before solved output is
 published. Uses prove their requirements against enclosing declared signatures,
 including captures through nested helpers, without narrowing those signatures.
-This final validation does not yet propagate kind constraints through inferred schemes.
-Connecting kind claims to generalization and retaining kinds in solved output
-remain unfinished.
+Inferred signatures now combine body requirements at generalization, retain
+captured roots internally, and participate in local instantiation. Declared and
+inferred signatures are retained in solved schemes and exported interfaces;
+local-wrapper and importing-module regressions verify enforcement. Final kind
+validation now combines requirements across each top-level body and nested
+definitions after seeding declared promises from outer to inner scopes. A
+snapshot and real CLI regression reject conflicting Big and Term requirements
+on a body-local variable absent from its declared signature. Generic structural
+record calls now preserve an unresolved carrier kind: Any/All uses are accepted,
+but narrowing the carrier or equating distinct carriers' kinds requires nominal
+record identity from plan 04. Field values are checked independently of row
+tails. Focused tests cover transactional rejection and type-variable merges,
+and the CLI accepts identity applied to a record. Reflexive Lift integration
+and the full chunk acceptance audit remain unfinished.
 
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/module.rs`,
 `crates/nash-can/src/kinds.rs`, `crates/nash-constrain/src/type_.rs`,

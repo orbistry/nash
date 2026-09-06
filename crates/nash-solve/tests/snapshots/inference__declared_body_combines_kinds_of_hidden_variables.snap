@@ -1,0 +1,38 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias bigUse ('a : Big) = 'a -> ()\ntype alias termUse ('a : Term) = 'a -> ()\nuseBig : bigUse 'a\nuseBig x = ()\nuseTerm : termUse 'a\nuseTerm x = ()\nloop x = loop x\ndiscard x y = ()\nbad : ()\nbad = (\\x -> discard (useBig x) (useTerm x)) (loop ())\n"
+---
+[
+    BadKind {
+        region: Region {
+            start: Position {
+                line: 11,
+                column: 34,
+            },
+            end: Position {
+                line: 11,
+                column: 41,
+            },
+        },
+        name: "useTerm",
+        args: [
+            FlexVar(
+                "a",
+            ),
+        ],
+        reason: Mismatch {
+            expected: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+            },
+            actual: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+            },
+        },
+    },
+]

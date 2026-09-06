@@ -279,13 +279,6 @@ impl Mark {
 // List uses the canonical nash/core Builtin identity. Other primitive
 // representations are handled by the representation plan.
 
-pub const fn basics<'a>() -> ModuleName<'a> {
-    ModuleName {
-        package: None,
-        name: "Basics",
-    }
-}
-
 pub const fn list_home<'a>() -> ModuleName<'a> {
     nash_ast::primitives::builtin_home()
 }
@@ -376,8 +369,8 @@ pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<Type<'stat
 
 pub const fn bool<'a>() -> Type<'a> {
     Type::AppN {
-        home: basics(),
-        name: "Bool",
+        home: nash_ast::primitives::builtin_home(),
+        name: "bool",
         args: &[],
     }
 }

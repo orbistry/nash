@@ -78,6 +78,7 @@ struct Binding<'a> {
 }
 
 struct SchemeRecord<'a> {
+    declared_kinds: bool,
     site: type_::Binder<'a>,
     binding: Binding<'a>,
     /// Captures may become generalized later in an enclosing definition.
@@ -251,28 +252,26 @@ impl<'a> Solver<'a, '_> {
         growing
     }
 
-    fn check_use_kinds(
+    fn declared_scope_kinds(
         &self,
         uf: &mut UnionFind<'a>,
-        use_: &UseRecord<'a>,
-        signature: type_::KindSignature<'a>,
-    ) -> Result<(), crate::kinds::Error<'a>> {
-        let mut scopes = Vec::new();
-        let mut owner = use_.owner;
-        while let Some(node) = owner {
-            let scheme = self
-                .schemes
-                .iter()
-                .find(|scheme| scheme.site.node() == node)
-                .expect("body owner has a recorded scheme");
-            if let Some(signature) = scheme.binding.kinds {
-                scopes.push(signature);
-            }
-            owner = scheme.parent;
-        }
+        scope: nash_ast::NodeId,
+    ) -> Result<(crate::kinds::State<'a>, Vec<Variable>), crate::kinds::Error<'a>> {
+        // Establish every promise before any body requirement can narrow it.
+        // Outer declarations come first because nested declarations can capture
+        // their variables. Sibling bodies share captures and must agree too.
+        let mut scopes: Vec<_> = self
+            .schemes
+            .iter()
+            .filter_map(|scheme| {
+                let (root, depth) = self.scope(scheme.site.node());
+                (root == scope && scheme.declared_kinds).then_some((depth, scheme.binding.kinds?))
+            })
+            .collect();
+        scopes.sort_by_key(|(depth, _)| *depth);
         let mut kinds = crate::kinds::State::new(self.bump);
         let mut rigid = Vec::new();
-        for declared in scopes.into_iter().rev() {
+        for (_, declared) in scopes {
             kinds.require_preserving(
                 uf,
                 &self.tables.kinds,
@@ -282,13 +281,7 @@ impl<'a> Solver<'a, '_> {
             )?;
             rigid.extend_from_slice(declared.variables);
         }
-        kinds.require_preserving(
-            uf,
-            &self.tables.kinds,
-            signature.kinds,
-            signature.variables,
-            &rigid,
-        )
+        Ok((kinds, rigid))
     }
 
     fn finish(
@@ -300,22 +293,68 @@ impl<'a> Solver<'a, '_> {
         use std::collections::HashMap;
         let growing = self.growing_evidence();
         let mut errors = Vec::new();
-        for use_ in &self.uses {
-            if let Some(signature) = use_.kinds
-                && let Err(reason) = self.check_use_kinds(uf, use_, signature)
-            {
-                errors.push(Error::BadKind {
-                    region: use_.site.region,
-                    name: use_.site.name,
-                    args: self.bump.alloc_slice_fill_iter(
-                        signature
-                            .variables
+        let mut kind_scopes = HashMap::new();
+        let mut failed_kind_scopes = Vec::new();
+        // Report originating requirements before their consequences at inferred
+        // helper calls in the same body. The latter add no useful diagnosis once
+        // that body's declared kind promise has already failed.
+        for inferred in [false, true] {
+            for use_ in &self.uses {
+                let is_inferred = match use_.source {
+                    UseSource::Foreign { .. } => false,
+                    UseSource::Local { definition, .. } => {
+                        !self
+                            .schemes
                             .iter()
-                            .map(|var| to_error_type(self.bump, uf, *var)),
-                    ),
-                    reason,
-                });
+                            .find(|scheme| scheme.site.node() == definition)
+                            .unwrap()
+                            .declared_kinds
+                    }
+                };
+                if is_inferred != inferred {
+                    continue;
+                }
+                let scope = self
+                    .scope(use_.owner.expect("use belongs to a definition"))
+                    .0;
+                if inferred && failed_kind_scopes.contains(&scope) {
+                    continue;
+                }
+                let Some(signature) = use_.kinds else {
+                    continue;
+                };
+                let checked = (|| {
+                    if let std::collections::hash_map::Entry::Vacant(entry) =
+                        kind_scopes.entry(scope)
+                    {
+                        entry.insert(self.declared_scope_kinds(uf, scope)?);
+                    }
+                    let (kinds, rigid) = kind_scopes.get_mut(&scope).unwrap();
+                    kinds.require_preserving(
+                        uf,
+                        &self.tables.kinds,
+                        signature.kinds,
+                        signature.variables,
+                        rigid,
+                    )
+                })();
+                if let Err(reason) = checked {
+                    failed_kind_scopes.push(scope);
+                    errors.push(Error::BadKind {
+                        region: use_.site.region,
+                        name: use_.site.name,
+                        args: self.bump.alloc_slice_fill_iter(
+                            signature
+                                .variables
+                                .iter()
+                                .map(|var| to_error_type(self.bump, uf, *var)),
+                        ),
+                        reason,
+                    });
+                }
             }
+        }
+        for use_ in &self.uses {
             for root in &use_.predicates {
                 if growing.contains(root) {
                     let pred = self.predicates.get(*root);
@@ -436,10 +475,35 @@ impl<'a> Solver<'a, '_> {
                     &context,
                     &scheme.quantified,
                 );
-                orders.insert(
-                    id,
-                    crate::annotation::ordered_quantifiers(uf, &scheme.quantified),
-                );
+                let order = crate::annotation::ordered_quantifiers(uf, &scheme.quantified);
+                let annotation = if let Some(signature) = scheme.binding.kinds {
+                    let mut kinds = crate::kinds::State::new(self.bump);
+                    let result = kinds
+                        .require(uf, &self.tables.kinds, signature.kinds, signature.variables)
+                        .and_then(|()| kinds.generalize(uf, &self.tables.kinds, &order));
+                    let kinds = result.map_err(|reason| {
+                        vec![Error::BadKind {
+                            region: scheme.site.name().region,
+                            name: scheme.site.name().value,
+                            args: self.bump.alloc_slice_fill_iter(
+                                signature
+                                    .variables
+                                    .iter()
+                                    .map(|var| to_error_type(self.bump, uf, *var)),
+                            ),
+                            reason,
+                        }]
+                    })?;
+                    self.bump.alloc(nash_ast::Annotation {
+                        kinds,
+                        context: annotation.context,
+                        free_vars: annotation.free_vars,
+                        typ: annotation.typ,
+                    })
+                } else {
+                    annotation
+                };
+                orders.insert(id, order);
                 solved.schemes.insert(
                     id,
                     Scheme {
@@ -978,15 +1042,33 @@ impl<'a> Solver<'a, '_> {
                 {
                     self.introduce(uf, rank, flex_vars);
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let state1 = self
+                    let mut state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
+                    if state1.errors.is_empty() {
+                        state1.errors.extend(self.record_definitions(
+                            uf,
+                            rank,
+                            definitions,
+                            &declared,
+                            &[],
+                            *binder,
+                        ));
+                    }
                     state1
                 } else if definitions.is_empty() && rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let state1 = self
+                    let mut state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
+                    if state1.errors.is_empty() {
+                        state1.errors.extend(self.record_definitions(
+                            uf,
+                            rank,
+                            definitions,
+                            &declared,
+                            &[],
+                            *binder,
+                        ));
+                    }
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
                         .map(|(name, loc_type)| {
@@ -1001,7 +1083,7 @@ impl<'a> Solver<'a, '_> {
                                 .iter()
                                 .chain(declarations.iter())
                                 .find(|def| def.site.name().value == *name)
-                                .and_then(|def| def.kinds),
+                                .and_then(|def| self.recorded_kinds(def)),
                             declared_quantifiers: &[],
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(&[]),
@@ -1126,14 +1208,23 @@ impl<'a> Solver<'a, '_> {
                     };
 
                     let mut new_env = env.clone();
-                    self.record_definitions(uf, rank, definitions, &declared, context, *binder);
+                    if state1.errors.is_empty() {
+                        state1.errors.extend(self.record_definitions(
+                            uf,
+                            rank,
+                            definitions,
+                            &declared,
+                            context,
+                            *binder,
+                        ));
+                    }
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
                             kinds: definitions
                                 .iter()
                                 .chain(declarations.iter())
                                 .find(|def| def.site.name().value == *name)
-                                .and_then(|def| def.kinds),
+                                .and_then(|def| self.recorded_kinds(def)),
                             declared_quantifiers: if declarations
                                 .iter()
                                 .any(|def| def.site.name().value == *name && def.context.is_some())
@@ -1505,6 +1596,92 @@ impl<'a> Solver<'a, '_> {
 
     // COPY
 
+    fn recorded_kinds(
+        &self,
+        definition: &type_::Definition<'a>,
+    ) -> Option<type_::KindSignature<'a>> {
+        definition.kinds.or_else(|| {
+            self.schemes
+                .iter()
+                .rev()
+                .find(|scheme| scheme.site.node() == definition.site.node())
+                .and_then(|scheme| scheme.binding.kinds)
+        })
+    }
+
+    fn use_belongs_to(&self, use_: &UseRecord<'a>, binder: nash_ast::NodeId) -> bool {
+        let mut owner = use_.owner;
+        while let Some(node) = owner {
+            if node == binder {
+                return true;
+            }
+            owner = self
+                .schemes
+                .iter()
+                .find(|scheme| scheme.site.node() == node)
+                .and_then(|scheme| scheme.parent);
+        }
+        false
+    }
+
+    fn infer_binding_kinds(
+        &self,
+        uf: &mut UnionFind<'a>,
+        binding: Binding<'a>,
+        site: type_::Binder<'a>,
+        owner: nash_ast::NodeId,
+    ) -> Result<type_::KindSignature<'a>, Vec<Error<'a>>> {
+        let mut kinds = crate::kinds::State::new(self.bump);
+        let mut roots = vec![binding.variable];
+        for id in binding.context {
+            roots.extend_from_slice(&self.predicates.get(*id).args);
+        }
+        for use_ in self
+            .uses
+            .iter()
+            .filter(|use_| self.use_belongs_to(use_, owner))
+        {
+            if let Some(signature) = use_.kinds {
+                kinds
+                    .require(uf, &self.tables.kinds, signature.kinds, signature.variables)
+                    .map_err(|reason| {
+                        vec![Error::BadKind {
+                            region: use_.site.region,
+                            name: use_.site.name,
+                            args: self.bump.alloc_slice_fill_iter(
+                                signature
+                                    .variables
+                                    .iter()
+                                    .map(|var| to_error_type(self.bump, uf, *var)),
+                            ),
+                            reason,
+                        }]
+                    })?;
+                roots.extend_from_slice(signature.variables);
+            }
+        }
+        let result = kinds
+            .observe_value(uf, &self.tables.kinds, binding.variable)
+            .and_then(|()| {
+                let variables: Vec<_> = Self::type_variables(uf, roots).into_iter().collect();
+                let signature = kinds.generalize(uf, &self.tables.kinds, &variables)?;
+                Ok(type_::KindSignature {
+                    kinds: signature,
+                    variables: self.bump.alloc_slice_fill_iter(variables),
+                })
+            });
+        result.map_err(|reason| {
+            vec![Error::BadKind {
+                region: site.name().region,
+                name: site.name().value,
+                args: self
+                    .bump
+                    .alloc_slice_copy(&[to_error_type(self.bump, uf, binding.variable)]),
+                reason,
+            }]
+        })
+    }
+
     fn record_definitions(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -1513,9 +1690,10 @@ impl<'a> Solver<'a, '_> {
         declared: &BTreeMap<&'a str, &'a [type_::PredId]>,
         inferred: &'a [type_::PredId],
         binder: Option<type_::Binder<'a>>,
-    ) {
+    ) -> Vec<Error<'a>> {
+        let mut errors = Vec::new();
         for definition in definitions {
-            let binding = Binding {
+            let mut binding = Binding {
                 kinds: definition.kinds,
                 declared_quantifiers: &[],
                 variable: self.type_to_variable(uf, rank, definition.typ),
@@ -1537,7 +1715,19 @@ impl<'a> Solver<'a, '_> {
                 .into_iter()
                 .filter(|var| uf.get(*var).rank == NO_RANK)
                 .collect();
+            if binding.kinds.is_none() {
+                match self.infer_binding_kinds(
+                    uf,
+                    binding,
+                    definition.site,
+                    binder.unwrap_or(definition.site).node(),
+                ) {
+                    Ok(kinds) => binding.kinds = Some(kinds),
+                    Err(error) => errors.extend(error),
+                }
+            }
             self.schemes.push(SchemeRecord {
+                declared_kinds: definition.kinds.is_some(),
                 site: definition.site,
                 binding,
                 quantified,
@@ -1560,6 +1750,7 @@ impl<'a> Solver<'a, '_> {
                 self.recursive_uses.push(use_index);
                 continue;
             };
+            self.uses[use_index].kinds = scheme.binding.kinds;
             for (index, id) in scheme.binding.context.iter().enumerate() {
                 let pred = self.predicates.get(*id);
                 let id = self.predicates.push(
@@ -1578,6 +1769,7 @@ impl<'a> Solver<'a, '_> {
                 self.uses[use_index].predicates.push(id);
             }
         }
+        errors
     }
 
     fn declared_contexts(
@@ -2441,7 +2633,7 @@ mod copy_tests {
     #[test]
     fn nested_impl_solutions_preserve_substitution_and_child_origins() {
         let bump = Bump::new();
-        let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nvalue = keep [[()]]\n";
+        let source = "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = x\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nvalue = keep [[Red]]\n";
         let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
             .module()
             .unwrap();
@@ -2478,7 +2670,7 @@ mod copy_tests {
         assert!(result.env["value"].context.is_empty());
         assert!(solver.wanted.is_empty());
         let root = solver.predicates.iter().find(|pred| {
-            matches!(pred.origin, Origin::Use { site, .. } if site.region.start.line == 8)
+            matches!(pred.origin, Origin::Use { site, .. } if site.region.start.line == 9 && site.name == "keep")
         }).unwrap();
         let crate::preds::Solution::Impl {
             impl_: outer,
@@ -2504,7 +2696,7 @@ mod copy_tests {
                 .region
                 .start
                 .line,
-            8
+            9
         );
         let crate::preds::Solution::Impl {
             impl_: inner,
@@ -2520,7 +2712,7 @@ mod copy_tests {
         );
         assert!(matches!(
             uf.get(type_vars[0]).content,
-            Content::Structure(FlatType::Unit1)
+            Content::Structure(FlatType::App1(_, "Color", _))
         ));
         assert_eq!(subs.len(), 1);
         assert!(

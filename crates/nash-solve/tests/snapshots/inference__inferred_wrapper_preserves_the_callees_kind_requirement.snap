@@ -1,0 +1,49 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nwrapper x xs = first x xs\nbad xs = wrapper (Some ()) xs\n"
+---
+[
+    BadKind {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 10,
+            },
+            end: Position {
+                line: 7,
+                column: 17,
+            },
+        },
+        name: "wrapper",
+        args: [
+            Type {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "option",
+                args: [
+                    Unit,
+                ],
+            },
+        ],
+        reason: Mismatch {
+            expected: KindScheme {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kind: Var(
+                    0,
+                ),
+            },
+            actual: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+            },
+        },
+    },
+]
