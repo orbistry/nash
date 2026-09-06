@@ -274,13 +274,28 @@ not repeated here. What each module adds beyond its trait:
 | `Show` | `int`, `bytes` (hex), `string`, `bool`, `unit`, `list 'a`, `pair`, `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Num`, `Integral` | `int`, `Int` |
 | `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
-| `Functor`, `Applicative`, `Monad` | `list` (`Functor` only for `pair 'k`). No impls for `List`: Big twins carry no function set |
+| `Functor` | `list`, `pair 'k`; each applied element must satisfy its constructor's kind bounds |
+| `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
 | `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
+
+### Later list-of-Big equality fast path
+
+The requested fast route for equality of builtin lists whose elements are
+Big is `equalsData (listData left) (listData right)`. Big is a kind bound on
+the element variable, not a type to which the Eq trait is applied. This
+operates on `list 'a` with `'a : Big`, not only the nominal Big List type.
+
+This is a later specialization requirement, not a second overlapping Eq
+impl added by Plan 03. The existing generic list Eq delegates to element Eq.
+Structural Data equality can differ from a user-defined element Eq method;
+the specialization policy must explicitly settle that semantic difference
+before enabling the fast route for every Big element type. Do not assume
+that a Big representation alone proves equivalence to custom Eq.
 
 `Show` uses these diagnostic text formats:
 

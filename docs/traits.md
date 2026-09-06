@@ -113,18 +113,16 @@ both its trait and its head type are visible.
 `impl C => T h1 .. hn where ...`:
 
 - `T` must resolve to a trait of arity `n`.
-- Each head `hi` is one of: a type constructor applied to distinct type
-  variables (`List 'a`, `int`, `Map 'k 'v`, `List` unapplied), the unit
-  type `()`, or a tuple of distinct type variables. No nested types, no
-  function types, no repeated variables, no bare variable heads. This is
-  the Haskell 98 instance shape. One exception is built into the compiler
-  and exempt from these rules: the reflexive `impl Big 'a => Lift 'a 'a`
-  (every Big type lifts to itself), which is a compiler rule outside the
-  constructor-keyed impl table and which no user may write. Aliases are allowed as heads
-  because Nash records are nominal (`impl Eq acc where ...`): the solver keeps an alias
-  as `Content::Alias` (Elm behaviour, retained by
-  [representation.md](representation.md)), so the resolver sees the alias
-  name as the head constructor.
+- Each head has an outer named constructor, unit, or tuple. Constructor
+  arguments are recursive type patterns, including concrete types and nested
+  applications: `list int`, `list (pair 'k 'v)`, and `List 'a` are legal.
+  Variables may recur across patterns; every occurrence denotes the same type.
+  Matching must preserve that equality. Bare variable heads and function heads
+  remain excluded; reflexive Big Lift remains a compiler-provided rule.
+  This rule applies uniformly to user and core impls, with no Map-specific
+  exception or enumeration of permitted nested shapes.
+  Aliases remain nominal: matching uses their qualified names and arguments,
+  not structural equality of their expanded bodies.
   A partially applied alias retains the unsupplied suffix of its formal
   parameters. Applying it binds those parameters in declaration order;
   the alias body stays closed over its formals until saturation. Supplied
@@ -141,6 +139,11 @@ both its trait and its head type are visible.
 - Kinds: each head's kind must instantiate the trait's kind scheme. `impl
   Functor List` instantiates `k1 -> k2` at `Big -> Big`; `impl Functor list`
   at `Storable -> Const`; `impl Functor option` at `Any -> Term`.
+  Different applications of an abstract constructor check their element
+  kinds independently against its domain bounds. For example, map over cons
+  may turn Const integers into Term tuples; map over builtin list may not
+  produce those tuples. Do not unify the actual input and output element
+  kinds merely because they use the same abstract constructor.
 - Every method without a default must be defined. Defining a name that is
   not a method of `T` is an error. Each method body is checked against the
   method scheme with `'p1 .. 'pn := h1 .. hn`, the head variables rigid, and
@@ -153,10 +156,11 @@ both its trait and its head type are visible.
 
 ### Coherence
 
-An impl is identified by its *key*: the trait and the constructor of each
-head, `(Ord, [int])`, `(Functor, [List])`, `(Lift, [int, Int])`. Because
-heads have Haskell 98 shape, two impls overlap if and only if their keys
-are equal.
+An impl's identity retains its trait, full recursive head patterns and kind
+requirements, with bound variables normalized independently of their spelling.
+Outer constructors may index candidates, but are not a complete impl identity
+or an overlap test. Matching substitutes through every nested argument and
+checks repeated variables, kind bounds and trait prerequisites.
 
 **Orphan rule.** An impl in module `M` is legal only if the trait `T` is
 defined in `M`, or at least one head constructor is defined in `M`. Unit and
@@ -165,7 +169,13 @@ heads that are always constructors. There are no uncovered type parameters
 to worry about because a head is never a bare variable, so Rust's extra
 ordering condition for multi-parameter traits is vacuous.
 
-**Overlap.** Two impls with the same key are an error. Check this across
+**Overlap.** Two impls overlap when their full head patterns can match a
+common well-kinded type assignment. Freshen their variables independently
+before checking this. Trait prerequisites do not establish disjointness merely
+because an impl is currently absent. Thus `SomeTrait (list int)` and
+`SomeTrait (list bytes)` are disjoint, while `SomeTrait (list 'a)` overlaps
+both. Overlap remains an error; declaration order does not select an impl.
+Check this across
 all build interfaces as well as within a module. In particular, separate
 modules in `nash/core` may both satisfy the orphan rule for unit or tuple
 heads; that ownership does not permit duplicate impls.

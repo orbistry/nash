@@ -7,6 +7,36 @@ so a trait defined in one module is usable from another.
 
 Prerequisites:
 
+### Approved correction: recursive impl patterns
+
+The user rejected the Haskell-98-only head restriction. The authoritative
+rules are now docs/traits.md: recursive constructor patterns, consistent
+substitution for repeated variables, and overlap checked by full-pattern
+unification with kinds. This supersedes the distinct_vars/outer-constructor
+key sketches below; they describe the current implementation, not the target.
+Do not add a Map-only exception.
+
+Reopen the affected acceptance of chunks 1, 3 and 6: canonical Head and impl
+identity must retain recursive structure; local/imported coherence must
+compare full patterns; inference and ground evidence resolution must share
+matching semantics and retain substitutions through nested patterns.
+Existing completion labels for those chunks are provisional until this
+correction lands. Add focused tests for disjoint concrete heads, generic vs
+specific overlap, repeated-variable consistency, nested kind rejection,
+cross-module overlap and the specified Map Lift impl. Remove superseded
+flat-key matching rather than retaining a second legacy path.
+
+The user also confirmed that builtin list has no Applicative or Monad impl;
+keep apply unchanged. Abstract map must allow different element kinds when
+each satisfies the constructor's bounds. These supersede the earlier open
+questions proposing liftA2 or a shared actual element kind.
+
+The requested later list-of-Big equality fast path is recorded in stdlib.md.
+Do not silently introduce overlapping Eq impls or change custom Eq semantics
+while implementing recursive head matching.
+
+### Existing prerequisites
+
 - [plans/01-syntax.md](01-syntax.md) chunks 2, 8, 9: the parser produces
   trait/impl declarations, `=>` contexts, and `do`. This plan consumes
   these `nash_source` types and does not touch the parser:
