@@ -2657,6 +2657,7 @@ fn do_infers_monad() {
             map : ('a -> 'b) -> 'f 'a -> 'f 'b
         trait Functor 'f => Applicative 'f where
             pure : 'a -> 'f 'a
+            apply : 'f ('a -> 'b) -> 'f 'a -> 'f 'b
         trait Applicative 'm => Monad 'm where
             bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b
     "#

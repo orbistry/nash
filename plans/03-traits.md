@@ -2520,7 +2520,7 @@ interfaces. The tests above cover these requirements.
 
 ## Chunk 10: `do` desugaring and operator methods
 
-Status: in progress. Do statements now reuse lambda/let canonicalization for
+Status: complete. Do statements now reuse lambda/let canonicalization for
 scoping and delayed free-variable tracking. Synthetic bind calls look up the
 checked exact nash/core Monad.Monad method independently of local value names
 and import aliases. Refutable patterns and unavailable core methods have
@@ -2558,7 +2558,15 @@ The application graph survives canonical kind inference, value schemes,
 instantiation and imports. Dependent results, partial captures and rigid
 annotations preserve their real kind relationships.
 Applicative.apply stays unchanged; builtin list has no Applicative or Monad
-impl. The shipping hierarchy is not validated by the reduced test fixture.
+impl. The do inference regression now includes the real Applicative.apply
+signature and still gives identical schemes for do and its explicit bind
+expansion, with distinct Given/Super evidence sites. The shipping core CLI
+fixture exercises option/result do and Prelude operators. A fresh two-module
+CLI application exports generic pairActions using do, then instantiates it
+at both option unit and result unit unit through the real core hierarchy;
+all 24 modules and 56 declarations compile. The earlier reduced-fixture and
+shared-kind questions are resolved. Chunk 12's default imports and remaining
+stdlib prerequisites are separate, unfinished acceptance items.
 
 Files: `crates/nash-can/src/expression.rs`, `crates/nash-can/src/environment/local.rs`,
 `crates/nash-can/src/error.rs`.
@@ -2992,9 +3000,10 @@ reports BadKind at toList. The spec records indexing, fold order and display
 format. Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass.
 This source-only step changes no Rust crate. Functor cons and default imports
 remain pending; actual sequence results remain Plan 07 execution checks.
-Remaining core modules, Big twin impls/conversions, implicit imports,
-and the full hierarchy acceptance example remain unfinished. The two contract
-questions recorded in Chunk 10 also remain open.
+Remaining core modules, implicit imports, and the full hierarchy acceptance
+example remain unfinished. The earlier Chunk 10 contract questions were
+resolved by independent application kinds and the unchanged apply signature;
+the current acceptance table above records the remaining requirements.
 The tuple prerequisite now preserves every component through canonical
 expressions, patterns, annotations, constraints, unification, generalization,
 instantiation, error types and impl evidence. Tuple arity follows the grammar
