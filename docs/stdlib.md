@@ -834,6 +834,11 @@ toList : cons 'a -> list 'a                       -- 'a : Storable, from `list`
 implies (kinds.md); `Eq (cons 'a)` and `Show (cons 'a)` impls are in
 `Cons` too.
 
+`indexedMap` starts at zero. `map2` stops at the shorter input. The folds
+pass the element before the accumulator; foldl traverses left to right and
+foldr associates from the right. Show renders `Cons [a, b]` (or `Cons []`),
+using each element's Show impl, so Term elements such as tuples are supported.
+
 ### `Pair`, `Array`
 
 ```elm

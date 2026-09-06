@@ -2854,6 +2854,16 @@ reports MissingImpl at append. Formatting, strict Clippy, 1,915 tests and
 snapshot hygiene pass. This source-only step changes no Rust crate.
 Runtime right-bias, duplicate preservation and monoid laws remain Plan 07
 execution requirements; Map Lift's nested-head conflict is unchanged.
+Cons now provides its Term-kind ADT, concrete mapping/indexing/zipping,
+folds, append, length, singleton, list conversions and contextual Eq/Show.
+It imports real trait modules explicitly; no higher-kinded placeholder is
+installed. Core CLI acceptance carries functions and tuples, applies the
+functions, checks both folds and unequal map2 lengths, and compiles 18 modules
+and 181 declarations. Converting a function-valued Cons to builtin list
+reports BadKind at toList. The spec records indexing, fold order and display
+format. Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass.
+This source-only step changes no Rust crate. Functor cons and default imports
+remain pending; actual sequence results remain Plan 07 execution checks.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

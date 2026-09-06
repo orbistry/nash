@@ -17,6 +17,19 @@ import Unit exposing (Unit)
 import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
+import Cons exposing (type cons(..))
+
+functions = Cons.singleton (\x -> x)
+appliedFunctions = Cons.map (\f -> f ()) functions
+termPairs = Cons.map (\x -> (x, x)) (Cons.fromList [1, 2])
+consEquality = eq appliedFunctions (Cons.singleton ())
+shownCons = show termPairs
+consIndices = Cons.indexedMap (\index value -> (index, value)) appliedFunctions
+consPaired = Cons.map2 (\a b -> (a, b)) (Cons.fromList [1, 2]) appliedFunctions
+consLength = Cons.length (Cons.append appliedFunctions Nil)
+consLeftFold = Cons.foldl (\item acc -> sub item acc) 0 (Cons.fromList [1, 2])
+consRightFold = Cons.foldr sub 0 (Cons.fromList [1, 2])
+consRoundTrip = Cons.toList (Cons.fromList [1, 2])
 
 emptyBigMap : Map Int Bytes
 emptyBigMap = empty

@@ -1,0 +1,82 @@
+module Cons exposing (type cons(..), map, indexedMap, map2, foldr, foldl, append, length, singleton, fromList, toList)
+
+import Builtin exposing (type bool(..))
+import Literal
+import Eq exposing (Eq)
+import Show exposing (Show)
+
+type cons 'a = Nil | Cons 'a (cons 'a)
+
+singleton : 'a -> cons 'a
+singleton value = Cons value Nil
+
+map : ('a -> 'b) -> cons 'a -> cons 'b
+map f values =
+    case values of
+        Nil -> Nil
+        Cons x xs -> Cons (f x) (map f xs)
+
+indexedMap : (int -> 'a -> 'b) -> cons 'a -> cons 'b
+indexedMap f values = indexedFrom 0 f values
+
+indexedFrom : int -> (int -> 'a -> 'b) -> cons 'a -> cons 'b
+indexedFrom index f values =
+    case values of
+        Nil -> Nil
+        Cons x xs -> Cons (f index x) (indexedFrom (Builtin.addInteger index 1) f xs)
+
+map2 : ('a -> 'b -> 'c) -> cons 'a -> cons 'b -> cons 'c
+map2 f left right =
+    case (left, right) of
+        (Cons x xs, Cons y ys) -> Cons (f x y) (map2 f xs ys)
+        _ -> Nil
+
+foldr : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
+foldr f acc values =
+    case values of
+        Nil -> acc
+        Cons x xs -> f x (foldr f acc xs)
+
+foldl : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
+foldl f acc values =
+    case values of
+        Nil -> acc
+        Cons x xs -> foldl f (f x acc) xs
+
+append : cons 'a -> cons 'a -> cons 'a
+append left right =
+    case left of
+        Nil -> right
+        Cons x xs -> Cons x (append xs right)
+
+length : cons 'a -> int
+length values = foldl (\_ count -> Builtin.addInteger count 1) 0 values
+
+fromList : list 'a -> cons 'a
+fromList values =
+    case values of
+        [] -> Nil
+        x :: xs -> Cons x (fromList xs)
+
+toList : cons 'a -> list 'a
+toList values =
+    case values of
+        Nil -> []
+        Cons x xs -> Builtin.mkCons x (toList xs)
+
+impl Eq 'a => Eq (cons 'a) where
+    eq left right =
+        case (left, right) of
+            (Nil, Nil) -> True
+            (Cons x xs, Cons y ys) -> if eq x y then eq xs ys else False
+            _ -> False
+
+impl Show 'a => Show (cons 'a) where
+    show values = Builtin.appendString "Cons [" (Builtin.appendString (showItems values) "]")
+
+showItems : Show 'a => cons 'a -> string
+showItems values =
+    case values of
+        Nil -> ""
+        Cons x Nil -> show x
+        Cons x xs -> Builtin.appendString (show x) (Builtin.appendString ", " (showItems xs))
