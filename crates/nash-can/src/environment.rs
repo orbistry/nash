@@ -452,6 +452,30 @@ impl<'a> Env<'a> {
 
 // --- Merge helpers (Elm's mergeInfo) ---
 
+/// Twins have matching type/constructor arities and constructor order. Their
+/// names differ only in the case of the initial ASCII letter.
+pub(super) fn twin_unions(
+    left: &str,
+    left_arity: usize,
+    left_ctors: &[&nash_ast::Ctor<'_>],
+    right: &str,
+    right_arity: usize,
+    right_ctors: &[&nash_ast::Ctor<'_>],
+) -> bool {
+    let (Some(a), Some(b)) = (left.as_bytes().first(), right.as_bytes().first()) else {
+        return false;
+    };
+    a != b
+        && a.eq_ignore_ascii_case(b)
+        && left.get(1..) == right.get(1..)
+        && left_arity == right_arity
+        && left_ctors.len() == right_ctors.len()
+        && left_ctors
+            .iter()
+            .zip(right_ctors)
+            .all(|(a, b)| a.name == b.name && a.arity == b.arity)
+}
+
 pub fn merge_exposed<'a, T: Clone>(
     table: &mut Exposed<'a, T>,
     name: &'a str,

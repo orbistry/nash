@@ -63,20 +63,59 @@ pub fn add_ctors<'a>(
     unions: &'a [&'a Located<CanUnion<'a>>],
     aliases: &'a [&'a Located<CanAlias<'a>>],
 ) -> Result<(), Vec<Error<'a>>> {
-    let union_ctors = source_unions
-        .iter()
-        .flat_map(|u| u.value.ctors.iter().map(|c| (c.name.value, c.name.region)));
-    let alias_ctors = aliases
-        .iter()
-        .filter(|a| matches!(&a.value.typ.value, CanType::Record { ext: None, .. }))
-        .map(|a| (a.value.name.value, a.value.name.region));
-    dups::detect(union_ctors.chain(alias_ctors), |name, first, second| {
-        Error::DuplicateCtor {
-            name,
-            first,
-            second,
+    let twins = |a: &CanUnion<'a>, b: &CanUnion<'a>| {
+        super::twin_unions(
+            a.name.value,
+            a.parameters.len(),
+            a.ctors,
+            b.name.value,
+            b.parameters.len(),
+            b.ctors,
+        )
+    };
+    let mut occurrences = std::collections::BTreeMap::<_, Vec<_>>::new();
+    for source in source_unions {
+        let union = unions
+            .iter()
+            .find(|union| union.value.name.value == source.value.name.value)
+            .expect("canonical union for source declaration");
+        for ctor in source.value.ctors {
+            occurrences
+                .entry(ctor.name.value)
+                .or_default()
+                .push((Some(&union.value), ctor.name.region));
         }
-    })?;
+    }
+    for alias in aliases {
+        if matches!(&alias.value.typ.value, CanType::Record { ext: None, .. }) {
+            occurrences
+                .entry(alias.value.name.value)
+                .or_default()
+                .push((None, alias.value.name.region));
+        }
+    }
+    let mut errors = Vec::new();
+    for (name, items) in occurrences {
+        let conflict = items.iter().enumerate().find_map(|(index, (a, first))| {
+            items[index + 1..].iter().find_map(|(b, second)| {
+                if matches!((a, b), (Some(a), Some(b)) if twins(a, b)) {
+                    None
+                } else {
+                    Some((*first, *second))
+                }
+            })
+        });
+        if let Some((first, second)) = conflict {
+            errors.push(Error::DuplicateCtor {
+                name,
+                first,
+                second,
+            });
+        }
+    }
+    if !errors.is_empty() {
+        return Err(errors);
+    }
 
     for union in unions {
         for ctor in union.value.ctors {
@@ -91,7 +130,16 @@ pub fn add_ctors<'a>(
                 options: union.value.options,
                 alternatives: union.value.alternatives,
             };
-            env.insert_local_ctor(ctor.name, info);
+            if unions.iter().any(|other| twins(&union.value, &other.value)) {
+                let table = if union.value.name.value.as_bytes()[0].is_ascii_lowercase() {
+                    &mut env.ctors
+                } else {
+                    env.q_ctors.entry(env.home.name).or_default()
+                };
+                table.insert(ctor.name, super::Info::Specific(env.home, info));
+            } else {
+                env.insert_local_ctor(ctor.name, info);
+            }
         }
     }
 

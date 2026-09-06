@@ -14,6 +14,32 @@ use crate::interface::Interface;
 /// privacy (`toPublicUnion` / `toPublicAlias`).
 type RawTypeInfo<'a> = BTreeMap<&'a str, (Type<'a>, BTreeMap<&'a str, Ctor<'a>>)>;
 
+/// Decide the twin namespace using full metadata, before export privacy can
+/// hide the other twin. The supplied ctor itself has already passed privacy.
+fn ctor_in_namespace(interface: &Interface<'_>, ctor: Ctor<'_>, qualified: bool) -> bool {
+    let Ctor::Union { type_name, .. } = ctor else {
+        return true;
+    };
+    let Some(union) = interface
+        .unions
+        .iter()
+        .find(|union| union.name == type_name)
+    else {
+        return true;
+    };
+    let paired = interface.unions.iter().any(|other| {
+        super::twin_unions(
+            union.name,
+            union.parameters.len(),
+            union.ctors,
+            other.name,
+            other.parameters.len(),
+            other.ctors,
+        )
+    });
+    !paired || qualified == type_name.as_bytes()[0].is_ascii_uppercase()
+}
+
 pub fn create_initial_env<'a>(
     bump: &'a Bump,
     home: ModuleName<'a>,
@@ -68,7 +94,9 @@ pub fn create_initial_env<'a>(
         for (name, (typ, ctors)) in &raw_type_info {
             merge_qualified(&mut env.q_types, prefix, name, interface.home, *typ);
             for (ctor_name, ctor) in ctors {
-                merge_qualified(&mut env.q_ctors, prefix, ctor_name, interface.home, *ctor);
+                if ctor_in_namespace(interface, *ctor, true) {
+                    merge_qualified(&mut env.q_ctors, prefix, ctor_name, interface.home, *ctor);
+                }
             }
         }
         for value in interface.values {
@@ -112,7 +140,9 @@ pub fn create_initial_env<'a>(
                 for (name, (typ, ctors)) in &raw_type_info {
                     merge_exposed(&mut env.types, name, interface.home, *typ);
                     for (ctor_name, ctor) in ctors {
-                        merge_exposed(&mut env.ctors, ctor_name, interface.home, *ctor);
+                        if ctor_in_namespace(interface, *ctor, false) {
+                            merge_exposed(&mut env.ctors, ctor_name, interface.home, *ctor);
+                        }
                     }
                 }
                 for value in interface.values {
@@ -304,7 +334,9 @@ fn add_explicit_exposing<'a>(
                             env.types
                                 .insert(name.value, Info::Specific(interface.home, *typ));
                             for (ctor_name, ctor) in ctors {
-                                merge_exposed(&mut env.ctors, ctor_name, interface.home, *ctor);
+                                if ctor_in_namespace(interface, *ctor, false) {
+                                    merge_exposed(&mut env.ctors, ctor_name, interface.home, *ctor);
+                                }
                             }
                         }
                         Some((Type::Alias { .. }, _)) => {

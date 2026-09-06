@@ -152,6 +152,25 @@ the Big constructors are always qualified by their type's module
 Big type names themselves (`Bool`, `Option`, ...) are in scope unqualified.
 Patterns follow the same rule: `case b of Bool.True -> ...`.
 
+This rule also applies to user-defined twins in one module. Their type names
+must differ only in the case of the initial letter (`status` and `Status`),
+with the same number of type parameters and the same constructor names,
+order and arities. Field types may differ across the representation boundary;
+pairing does not create conversions or impls.
+
+For a recognized pair, bare constructor names belong only to the little
+type, and module-qualified names belong only to the Big type. This includes
+self-qualification and import aliases, in both expressions and patterns.
+Declaration order and expected type do not affect lookup. Other duplicate
+constructors, including duplicates inside one declaration or a third type
+using a twin's constructor name, remain errors.
+
+Export privacy applies to each twin independently. A hidden constructor does
+not fall back to its visible twin. `import Status exposing (Status(..))`
+therefore makes the Big constructors available as `Status.Ready`, not bare
+`Ready`; expose `type status(..)` to make the little constructors bare.
+Ordinary types without a twin retain ordinary constructor lookup.
+
 `if c then a else b` requires `c : bool`. Branch on a `Bool` with `case`, or
 `lower` it first.
 

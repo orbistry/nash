@@ -1,0 +1,7 @@
+---
+source: crates/nash-can/tests/twins.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+exports=type status(..), Status; imports=..; S.Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 16 } }, prefix: Some("S"), name: "Ready", suggestions: PossibleNames { locals: ["Ready", "Waiting"], qualified: [] } }]
+exports=type status, Status(..); imports=..; Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 14 } }, prefix: None, name: "Ready", suggestions: PossibleNames { locals: [], qualified: [("S", ["Ready", "Waiting"])] } }]
+exports=..; imports=Status(..); Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 14 } }, prefix: None, name: "Ready", suggestions: PossibleNames { locals: [], qualified: [("S", ["Ready", "Waiting"])] } }]

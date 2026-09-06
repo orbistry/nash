@@ -1,0 +1,27 @@
+---
+source: crates/nash-can/tests/twins.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+type status = Ready
+type Other = Ready
+[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 14 }, end: Position { line: 3, column: 19 } } }]
+type status = Ready
+type Status = Ready
+type Other = Ready
+[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 4, column: 14 }, end: Position { line: 4, column: 19 } } }]
+type status = Ready | Ready
+type Status = Ready | Ready
+[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 2, column: 23 }, end: Position { line: 2, column: 28 } } }]
+type status = Ready | Waiting
+type Status = Waiting | Ready
+[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 25 }, end: Position { line: 3, column: 30 } } }, DuplicateCtor { name: "Waiting", first: Region { start: Position { line: 2, column: 23 }, end: Position { line: 2, column: 30 } }, second: Region { start: Position { line: 3, column: 15 }, end: Position { line: 3, column: 22 } } }]
+type status = Ready
+type Status 'a = Ready
+[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 18 }, end: Position { line: 3, column: 23 } } }]
+type status = Ready
+type Status = Ready Int
+[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 15 }, end: Position { line: 3, column: 20 } } }]
+type status = Ready
+type Status = Ready
+type alias Ready = { value : Int }
+[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 4, column: 12 }, end: Position { line: 4, column: 17 } } }]

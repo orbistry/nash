@@ -1438,6 +1438,55 @@ fn tuple_value() {
 }
 
 #[test]
+fn user_twins_preserve_local_imported_and_pattern_identity() {
+    let bump = Bump::new();
+    let mut interfaces = std::collections::BTreeMap::new();
+    for source in [
+        "module Status exposing (..)\ntype Status = Ready | Waiting\ntype status = Ready | Waiting\ntype payload 'a = Payload int 'a\ntype Payload 'a = Payload Int 'a\nsmallPayload x y = Payload x y\nbigPayload x y = Status.Payload x y\nreadSmall (Payload x y) = (x, y)\nreadBig (Status.Payload x y) = (x, y)\nlittle = Ready\nbig = Status.Ready\nlocalLittle x = case x of\n    Ready -> ()\n    Waiting -> ()\nlocalBig x = case x of\n    Status.Ready -> ()\n    Status.Waiting -> ()\n",
+        "module Main exposing (..)\nimport Status as S exposing (..)\nsmallPayload x y = Payload x y\nbigPayload x y = S.Payload x y\nreadSmall (Payload x y) = (x, y)\nreadBig (S.Payload x y) = (x, y)\nlittleUse = Ready\nbigUse = S.Ready\nlittlePattern x = case x of\n    Ready -> ()\n    Waiting -> ()\nbigPattern x = case x of\n    S.Ready -> ()\n    S.Waiting -> ()\n",
+    ] {
+        let source = bump.alloc_str(source);
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let (annotations, _) =
+            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+        insta::assert_snapshot!(
+            format!("user_twins_{}", canonical.module.name.name),
+            render_annotations(&annotations)
+        );
+        interfaces.insert(
+            canonical.module.name.name,
+            nash_can::from_module(&bump, &canonical.module, &annotations),
+        );
+    }
+}
+
+#[test]
+fn twin_constructor_does_not_follow_the_expected_type() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type status = Ready
+        type Status = Ready
+        wrong : Status
+        wrong = Ready
+    "#
+    );
+}
+
+#[test]
 fn tuple_tail_survives_patterns_annotations_and_instantiation() {
     assert_inference_snapshot!(
         r#"

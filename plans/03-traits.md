@@ -2759,14 +2759,21 @@ do not fabricate source bindings or count declaration-only modules and test
 fixtures as completion. Core impl bodies must use the specified real bindings.
 Code generation for those bindings remains Plan 07 work.
 
-Another verified prerequisite is constructor lookup for little/Big twins.
-A real CLI module containing `type option 'a = Some 'a | None` and
-`type Option 'a = Some 'a | None` exits with `DuplicateCtor` for both names,
-with both declarations' spans. `environment/local.rs::add_ctors` currently
-checks and inserts all constructors in a single local namespace. The stdlib
-contract requires unqualified little constructors and qualified Big twin
-constructors without selection by expected type; the real Option/Result/Ordering
-modules cannot satisfy that contract until this path and exported lookup agree.
+The user-approved twin lookup rule applies to core and user-defined types.
+Types in one module pair by initial-letter case, type parameter count, and
+constructor names/order/arities. Bare constructors select the little twin;
+module qualification (including import aliases) selects the Big twin.
+Local and imported lookup use separate routes and retain independent export
+privacy; a hidden twin never falls back to the other representation. A third
+colliding type, record alias or duplicate within a declaration remains an error.
+The original `DuplicateCtor` failure is covered by the local/imported inference
+regression; privacy and invalid pairings have focused canonicalizer coverage.
+Payload snapshots retain distinct int/Int fields and Any/Big parameter bounds.
+An expected Big type does not override bare-constructor lookup. The real
+two-module option/Option CLI acceptance compiles six declarations, including
+local constructors, aliased imports and both pattern forms. Existing core
+acceptance still compiles 12 modules and 66 declarations. Formatting, strict
+Clippy, 1,912 tests (three ignored doctests) and snapshot hygiene pass.
 
 Tests: a driver test compiling `core/` plus a `Main.nash` using `==`, `<`,
 `+`, `show`, a `do` block over `option`, and literal defaulting, with no

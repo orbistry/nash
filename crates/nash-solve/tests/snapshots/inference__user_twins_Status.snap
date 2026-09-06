@@ -1,0 +1,12 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: render_annotations(&annotations)
+---
+big : Status
+bigPayload : forall (a : Big). Int -> a -> Payload a
+little : status
+localBig : Status -> ()
+localLittle : status -> ()
+readBig : forall (a : Big). Payload a -> ( Int, a )
+readSmall : forall (a : Any). payload a -> ( int, a )
+smallPayload : forall (a : Any). int -> a -> payload a
