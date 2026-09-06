@@ -2174,6 +2174,131 @@ fn nested_use_cannot_narrow_its_owners_declared_kind() {
     );
 }
 
+fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
+    let module = nash_parse::Parser::new(bump, b"module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n").module().unwrap();
+    let canonical = nash_can::canonicalize(
+        bump,
+        Context {
+            package: core.then_some(nash_ast::primitives::CORE),
+            interfaces: None,
+        },
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(bump, &mut uf, &canonical.module);
+    let (annotations, _) = nash_solve::run(bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    nash_can::from_module(bump, &canonical.module, &annotations)
+}
+
+#[test]
+fn reflexive_lift_retains_big_evidence() {
+    let bump = Bump::new();
+    let interfaces = std::collections::BTreeMap::from([("Lift", lift_interface(&bump, true))]);
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        import Lift exposing (Lift)
+        type Color = Red
+        type alias bigIdentity ('a : Big) = 'a -> 'a
+        concrete : Color -> Color
+        concrete x = lift x
+        rigid : bigIdentity 'a
+        rigid x = lift x
+        same : 'a -> 'a -> 'a
+        same x y = x
+        inferred x = (rigid x, same x (lift x))
+        explicit : () -> ()
+        explicit x = lift x
+        type Box 'a = Box 'a
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Lift 'a 'a => Keep (Box 'a) where
+            keep x = x
+        nested = keep (Box Red)
+    "#
+    );
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    assert!(
+        ["concrete", "rigid", "inferred", "explicit", "nested"]
+            .iter()
+            .all(|name| annotations[name].context.is_empty())
+    );
+    let mut proofs: Vec<_> = solved
+        .instances
+        .values()
+        .flat_map(|instance| instance.evidence.iter())
+        .collect();
+    assert_eq!(proofs.len(), 5);
+    assert_eq!(
+        proofs
+            .iter()
+            .filter(|proof| matches!(proof, nash_ast::Evidence::ReflexiveLift { .. }))
+            .count(),
+        3
+    );
+    assert_eq!(
+        proofs
+            .iter()
+            .filter(|proof| matches!(proof, nash_ast::Evidence::Impl { .. }))
+            .count(),
+        2
+    );
+    assert!(proofs.iter().any(|proof| matches!(proof, nash_ast::Evidence::Impl { args, .. } if matches!(args, [nash_ast::Evidence::ReflexiveLift { .. }]))));
+    proofs.sort_by_key(|proof| format!("{proof:?}"));
+    insta::assert_debug_snapshot!(proofs);
+}
+
+#[test]
+fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
+    let bump = Bump::new();
+    let mut results = Vec::new();
+    for (core, annotation) in [
+        (true, "'a -> 'a"),
+        (true, "'a -> 'b"),
+        (false, "Color -> Color"),
+    ] {
+        let interfaces = std::collections::BTreeMap::from([("Lift", lift_interface(&bump, core))]);
+        let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : {annotation}\nbad x = lift x\n"));
+        let module = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &module,
+        )
+        .unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap_err();
+        assert!(matches!(
+            errors.as_slice(),
+            [Error::MissingConstraint { .. }] | [Error::MissingImpl { .. }]
+        ));
+        results.push((core, annotation, errors));
+    }
+    insta::assert_debug_snapshot!(results);
+}
+
 #[test]
 fn declared_body_combines_kinds_of_hidden_variables() {
     assert_inference_error_snapshot!(

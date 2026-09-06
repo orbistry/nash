@@ -2264,8 +2264,13 @@ record calls now preserve an unresolved carrier kind: Any/All uses are accepted,
 but narrowing the carrier or equating distinct carriers' kinds requires nominal
 record identity from plan 04. Field values are checked independently of row
 tails. Focused tests cover transactional rejection and type-variable merges,
-and the CLI accepts identity applied to a record. Reflexive Lift integration
-and the full chunk acceptance audit remain unfinished.
+and the CLI accepts identity applied to a record. Reflexive Lift now checks
+exact core identity, existing type equality, and a non-narrowing Big proof at
+the active definition boundary. Solved output retains direct and nested
+reflexive evidence, while Const calls can select ordinary impls. Focused
+tests use an interface with the actual nash/core Lift identity; these do not
+establish the shipping core hierarchy or CLI stdlib prerequisites. The full
+chunk acceptance audit remains unfinished.
 
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/module.rs`,
 `crates/nash-can/src/kinds.rs`, `crates/nash-constrain/src/type_.rs`,
@@ -2274,10 +2279,10 @@ Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/module.rs`,
 
 Change: plan 02's `check_annotation` returns the kind of every free
 variable of a value annotation and leaves enforcement at use sites to this
-plan (its open question "Kind predicates on values"). A kind bound behaves
-exactly like a trait predicate with one argument, so it rides the same
-machinery: attached to the variable, instantiated with the scheme,
-classified at generalization. `'a : Storable` in `cons : 'a -> list 'a -> list 'a`
+plan (its open question "Kind predicates on values"). Kind requirements are
+instantiated with the value scheme and retained at generalization, under a
+shared binder separate from dictionary predicates. `'a : Storable` in
+`cons : 'a -> list 'a -> list 'a`
 then rejects `cons (Some 1) nil` at the call site, and the compiler
 provided reflexive Lift rule must discharge `Big 'a` before producing
 `Evidence::ReflexiveLift { typ }`.
@@ -2302,7 +2307,7 @@ pub struct ValueKinds<'a> {
 ```
 
 `module.rs` stores `check_annotation`'s result into the `TypedDef`'s
-annotation (it currently discards it); `to_annotation` in `types.rs` fills
+annotation; `to_annotation` in `types.rs` fills
 `kinds` with one distinct `ALL` kind variable per free type variable and the kind
 pass overwrites it. All roots must be generalized and instantiated together:
 in `'f 'a`, the domain of `'f` shares the kind of `'a`. Independent unary
@@ -2317,41 +2322,32 @@ relationships to method-local variables. The canonicalizer regression
 `impl_method_retains_owner_kind_restriction` covers this with
 `Keep ('f : Big -> Term)` specialized to `option`.
 
-Solver: `Predicate` gains a second claim form.
+Solver: retain one complete signature with its corresponding type variables.
 
 ```rust
-pub enum Claim<'a> {
-    Trait(QualifiedName<'a>),
-    /// One root in a jointly instantiated value-kind group.
-    Kind { group: KindGroupId, index: usize },
+pub struct KindSignature<'a> {
+    pub kinds: ValueKinds<'a>,
+    pub variables: &'a [Variable],
 }
-// Predicate.trait_ becomes Predicate.claim; every `pred.trait_` read in
-// chunks 5-7 matches on `Claim::Trait` (kind claims never reach
-// `by_instance`/`by_given` for traits).
 ```
 
-`KindGroupId` identifies a solver-owned instantiation of the complete
-`ValueKinds` signature. Its roots share kind variables; constructing a separate
-fresh unary scheme for each claim is not equivalent.
+`Definition`, solver bindings, and use records carry these signatures. They
+remain separate from `Predicate`: kind constraints have shared roots and no
+dictionary slots. `kinds::State` uses plan 02's `Infer` over type union-find
+representatives. It instantiates constructor schemes at the supplied arity,
+reconciles merged roots, and reports `BadKind` with the originating use site.
+Before generalization, inferred bodies combine all use requirements and retain
+their captured roots. Final validation combines body requirements per outer
+definition after seeding all declared promises in scope order. A use cannot
+narrow a declared bound or introduce equality between independent declared
+kind roots. Export serializes the shared signature in final quantifier order.
 
-`src_type_to_variable` and `make_copy_help` instantiate kind claims like
-trait claims (`Origin::Use` with `index` counting from
-`annotation.context.len()` so evidence slots are unaffected; kind claims
-produce no evidence). The current solver has no `split`/`Class` function:
-discharge claims in `resolve_wanted`, before trait lookup, and retain them in
-`retain_wanted` at generalization. The classifications below describe behavior:
-
-- `Class::Ground`: `kind_of(uf, kind_env, var)` computes the kind of the
-  head structure with plan 02's `Infer` (`kind_env.scheme(head)` applied to
-  the argument count; tuples/functions are `TERM`; records are the alias's
-  scheme) and unifies with the claim; a mismatch is
-  `Error::BadKind { region, name, var_type: ErrorType, expected: KindScheme, actual: KindScheme }`.
-- `Class::Rigid`: prove the requirement from the enclosing annotation's shared
-  kind signature. Do not narrow a rigid kind to satisfy a use: an annotation
-  that promises `Any` cannot be restricted to `Storable`. Failure is `BadKind`.
-- `Class::Young`: retained; `to_annotation` writes it into `Annotation.kinds`
-  for that variable (intersecting bounds when several claims land on one var).
-- `Class::Outer`: deferred like trait claims.
+During trait resolution, active declaration signatures and the current body's
+requirements supply a non-narrowing Big proof for reflexive Lift. This check
+uses the explicit current binder even during defaulting retries. The rule
+requires the exact core trait identity and already-equal type arguments;
+otherwise normal given/impl resolution applies. `Solution::ReflexiveLift`
+retains the type until evidence serialization, including under impl arguments.
 
 `Scheme.annotation.kinds` therefore tells codegen (plan 07 `TyEnv`) the
 kind of every type argument without recomputing it.

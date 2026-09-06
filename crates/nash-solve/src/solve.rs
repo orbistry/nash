@@ -34,6 +34,7 @@ pub fn run<'a>(
         predicates: Store::default(),
         wanted: Vec::new(),
         givens: Vec::new(),
+        active_kinds: Vec::new(),
         schemes: Vec::new(),
         recursive_uses: Vec::new(),
         uses: Vec::new(),
@@ -127,6 +128,7 @@ struct Solver<'a, 'tables> {
     predicates: Store<'a>,
     wanted: Vec<(usize, type_::PredId)>,
     givens: Vec<GivenFrame<'a>>,
+    active_kinds: Vec<type_::KindSignature<'a>>,
     schemes: Vec<SchemeRecord<'a>>,
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
@@ -230,7 +232,7 @@ impl<'a> Solver<'a, '_> {
                                 wrapped.push((target, source, *root));
                             }
                         }
-                        None => {}
+                        Some(Solution::ReflexiveLift { .. }) | None => {}
                     }
                 }
             }
@@ -447,12 +449,15 @@ impl<'a> Solver<'a, '_> {
                 roots.extend(self.use_variables(uf, use_, quantified));
                 let mut pending = use_.predicates.clone();
                 while let Some(id) = pending.pop() {
-                    if let Some(crate::preds::Solution::Impl {
-                        type_vars, subs, ..
-                    }) = &self.predicates.get(id).solution
-                    {
-                        roots.extend(type_vars);
-                        pending.extend(subs);
+                    match &self.predicates.get(id).solution {
+                        Some(crate::preds::Solution::Impl {
+                            type_vars, subs, ..
+                        }) => {
+                            roots.extend(type_vars);
+                            pending.extend(subs);
+                        }
+                        Some(crate::preds::Solution::ReflexiveLift { typ }) => roots.push(*typ),
+                        _ => {}
                     }
                 }
             }
@@ -594,6 +599,9 @@ impl<'a> Solver<'a, '_> {
             .as_ref()
             .expect("validated use evidence")
         {
+            Solution::ReflexiveLift { typ } => Evidence::ReflexiveLift {
+                typ: crate::annotation::to_solved_type(self.bump, uf, *typ),
+            },
             Solution::Given { binder, index } => Evidence::Given {
                 binder: *binder,
                 index: u16::try_from(*index).expect("context slot fits evidence index"),
@@ -735,6 +743,55 @@ impl<'a> Solver<'a, '_> {
         depth
     }
 
+    /// Inspect existing kind information; a compiler rule must never introduce
+    /// the restriction it is supposed to prove. The explicit owner also works
+    /// on defaulting retries, after solve_header has popped its owner frame.
+    fn proves_big(
+        &self,
+        uf: &mut UnionFind<'a>,
+        owner: nash_ast::NodeId,
+        variable: Variable,
+    ) -> bool {
+        let mut kinds = crate::kinds::State::new(self.bump);
+        let mut rigid = Vec::new();
+        for signature in &self.active_kinds {
+            if kinds
+                .require_preserving(
+                    uf,
+                    &self.tables.kinds,
+                    signature.kinds,
+                    signature.variables,
+                    &rigid,
+                )
+                .is_err()
+            {
+                return false;
+            }
+            rigid.extend_from_slice(signature.variables);
+        }
+        for use_ in self
+            .uses
+            .iter()
+            .filter(|use_| self.use_belongs_to(use_, owner))
+        {
+            if let Some(signature) = use_.kinds
+                && kinds
+                    .require_preserving(
+                        uf,
+                        &self.tables.kinds,
+                        signature.kinds,
+                        signature.variables,
+                        &rigid,
+                    )
+                    .is_err()
+            {
+                return false;
+            }
+        }
+        matches!(kinds.generalize(uf, &self.tables.kinds, &[variable]), Ok(signature)
+            if matches!(signature.kinds, [nash_ast::Kind::Base(nash_ast::BaseKind::Big)]))
+    }
+
     fn resolve_wanted(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -771,14 +828,20 @@ impl<'a> Solver<'a, '_> {
                 // Finish surrounding equalities before choosing an impl, and
                 // let enclosing givens see captured variables at their final type.
                 self.wanted.push((wanted_rank, id));
+            } else if wanted.trait_ == nash_ast::primitives::lift_trait()
+                && self.tables.has_reflexive_lift()
+                && let [left, right] = wanted.args.as_slice()
+                && crate::preds::same_args(uf, &[*left], &[*right])
+                && let Some(owner) = binder
+                && self.proves_big(uf, owner.node(), *left)
+            {
+                let typ = *left;
+                self.predicates
+                    .solve(uf, id, crate::preds::Solution::ReflexiveLift { typ });
             } else if report_missing
                 && let Some(binder) = binder
                 && let Some(site) = self.predicates.use_site(id)
                 // Constructor-headed impls cannot discharge a bare rigid head.
-                // Core Lift also has a compiler rule; its Big proof belongs
-                // to kind-aware resolution, so leave that requirement pending.
-                && !(wanted.trait_ == nash_ast::primitives::lift_trait()
-                    && self.tables.has_reflexive_lift())
                 && wanted.args.iter().any(|arg| {
                     matches!(uf.get(*arg).content, Content::RigidVar(_))
                 })
@@ -795,11 +858,7 @@ impl<'a> Solver<'a, '_> {
                     args: self.bump.alloc_slice_copy(&args),
                     binder: binder.name(),
                 });
-            } else if report_errors
-                && let Some(binder) = binder
-                && !(wanted.trait_ == nash_ast::primitives::lift_trait()
-                    && self.tables.has_reflexive_lift())
-            {
+            } else if report_errors && let Some(binder) = binder {
                 let site = self
                     .predicates
                     .use_site(id)
@@ -1034,9 +1093,16 @@ impl<'a> Solver<'a, '_> {
                 header_con,
                 body_con,
             } => {
+                let kind_depth = self.active_kinds.len();
+                self.active_kinds.extend(
+                    declarations
+                        .iter()
+                        .chain(definitions.iter())
+                        .filter_map(|definition| definition.kinds),
+                );
                 let wanted_start = self.wanted.len();
                 let annotated = definitions.iter().any(|def| def.context.is_some());
-                if definitions.is_empty()
+                let result = if definitions.is_empty()
                     && rigid_vars.is_empty()
                     && matches!(body_con, Constraint::True)
                 {
@@ -1258,7 +1324,9 @@ impl<'a> Solver<'a, '_> {
                     locals.into_iter().fold(new_state, |state, (name, loc)| {
                         self.check_occurs(uf, state, name, loc)
                     })
-                }
+                };
+                self.active_kinds.truncate(kind_depth);
+                result
             }
         }
     }
@@ -2449,6 +2517,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            active_kinds: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
@@ -2512,6 +2581,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            active_kinds: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
@@ -2570,6 +2640,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            active_kinds: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
@@ -2649,6 +2720,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            active_kinds: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
@@ -2763,6 +2835,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            active_kinds: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
@@ -2897,6 +2970,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            active_kinds: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
@@ -2973,6 +3047,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
+            active_kinds: Vec::new(),
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),

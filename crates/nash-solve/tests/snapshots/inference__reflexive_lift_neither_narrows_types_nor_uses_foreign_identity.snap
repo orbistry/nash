@@ -1,0 +1,160 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: results
+---
+[
+    (
+        true,
+        "'a -> 'a",
+        [
+            MissingConstraint {
+                region: Region {
+                    start: Position {
+                        line: 5,
+                        column: 9,
+                    },
+                    end: Position {
+                        line: 5,
+                        column: 13,
+                    },
+                },
+                name: "lift",
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Lift",
+                    },
+                    name: "Lift",
+                },
+                args: [
+                    RigidVar(
+                        "a",
+                    ),
+                    RigidVar(
+                        "a",
+                    ),
+                ],
+                binder: Located {
+                    region: Region {
+                        start: Position {
+                            line: 5,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 5,
+                            column: 4,
+                        },
+                    },
+                    value: "bad",
+                },
+            },
+        ],
+    ),
+    (
+        true,
+        "'a -> 'b",
+        [
+            MissingConstraint {
+                region: Region {
+                    start: Position {
+                        line: 5,
+                        column: 9,
+                    },
+                    end: Position {
+                        line: 5,
+                        column: 13,
+                    },
+                },
+                name: "lift",
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Lift",
+                    },
+                    name: "Lift",
+                },
+                args: [
+                    RigidVar(
+                        "a",
+                    ),
+                    RigidVar(
+                        "b",
+                    ),
+                ],
+                binder: Located {
+                    region: Region {
+                        start: Position {
+                            line: 5,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 5,
+                            column: 4,
+                        },
+                    },
+                    value: "bad",
+                },
+            },
+        ],
+    ),
+    (
+        false,
+        "Color -> Color",
+        [
+            MissingImpl {
+                region: Region {
+                    start: Position {
+                        line: 5,
+                        column: 9,
+                    },
+                    end: Position {
+                        line: 5,
+                        column: 13,
+                    },
+                },
+                name: "lift",
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Lift",
+                    },
+                    name: "Lift",
+                },
+                args: [
+                    Type {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Color",
+                        args: [],
+                    },
+                    Type {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Color",
+                        args: [],
+                    },
+                ],
+                available: [
+                    [
+                        Unit,
+                        Unit,
+                    ],
+                ],
+            },
+        ],
+    ),
+]

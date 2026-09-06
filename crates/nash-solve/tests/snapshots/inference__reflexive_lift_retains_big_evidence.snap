@@ -1,0 +1,175 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: proofs
+---
+[
+    Impl {
+        impl_: ImplRef {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            key: ImplKey {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Keep",
+                },
+                heads: [
+                    Named(
+                        QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "Box",
+                        },
+                    ),
+                ],
+            },
+        },
+        type_args: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Color",
+                    },
+                    args: [],
+                },
+            },
+        ],
+        args: [
+            ReflexiveLift {
+                typ: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "Color",
+                        },
+                        args: [],
+                    },
+                },
+            },
+        ],
+    },
+    Impl {
+        impl_: ImplRef {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Lift",
+            },
+            key: ImplKey {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Lift",
+                    },
+                    name: "Lift",
+                },
+                heads: [
+                    Unit,
+                    Unit,
+                ],
+            },
+        },
+        type_args: [],
+        args: [],
+    },
+    ReflexiveLift {
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Color",
+                },
+                args: [],
+            },
+        },
+    },
+    ReflexiveLift {
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Var(
+                "a",
+            ),
+        },
+    },
+    ReflexiveLift {
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Var(
+                "small",
+            ),
+        },
+    },
+]

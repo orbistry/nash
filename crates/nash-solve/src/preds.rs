@@ -32,6 +32,9 @@ pub struct Predicate<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Solution<'a> {
+    ReflexiveLift {
+        typ: Variable,
+    },
     Impl {
         impl_: nash_ast::ImplRef<'a>,
         type_vars: Vec<Variable>,
