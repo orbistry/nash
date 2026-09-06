@@ -78,6 +78,17 @@ Module {
                             "a",
                             "b",
                         ],
+                        kinds: ValueKinds {
+                            bounds: [],
+                            kinds: [
+                                Base(
+                                    Big,
+                                ),
+                                Base(
+                                    Big,
+                                ),
+                            ],
+                        },
                         typ: Located {
                             region: Region {
                                 start: Position {

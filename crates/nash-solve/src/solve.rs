@@ -67,6 +67,7 @@ pub fn run<'a>(
 
 #[derive(Clone, Copy)]
 struct Binding<'a> {
+    kinds: Option<type_::KindSignature<'a>>,
     variable: Variable,
     context: &'a [type_::PredId],
     definition: Option<nash_ast::NodeId>,
@@ -97,6 +98,7 @@ enum UseSource {
 }
 
 struct UseRecord<'a> {
+    kinds: Option<type_::KindSignature<'a>>,
     site: UseSite<'a>,
     owner: Option<nash_ast::NodeId>,
     source: UseSource,
@@ -259,6 +261,24 @@ impl<'a> Solver<'a, '_> {
         let growing = self.growing_evidence();
         let mut errors = Vec::new();
         for use_ in &self.uses {
+            if let Some(signature) = use_.kinds {
+                let mut kinds = crate::kinds::State::new(self.bump);
+                if let Err(reason) =
+                    kinds.require(uf, &self.tables.kinds, signature.kinds, signature.variables)
+                {
+                    errors.push(Error::BadKind {
+                        region: use_.site.region,
+                        name: use_.site.name,
+                        args: self.bump.alloc_slice_fill_iter(
+                            signature
+                                .variables
+                                .iter()
+                                .map(|var| to_error_type(self.bump, uf, *var)),
+                        ),
+                        reason,
+                    });
+                }
+            }
             for root in &use_.predicates {
                 if growing.contains(root) {
                     let pred = self.predicates.get(*root);
@@ -940,6 +960,11 @@ impl<'a> Solver<'a, '_> {
                     let mut new_env = env.clone();
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
+                            kinds: definitions
+                                .iter()
+                                .chain(declarations.iter())
+                                .find(|def| def.site.name().value == *name)
+                                .and_then(|def| def.kinds),
                             declared_quantifiers: &[],
                             variable: loc.value,
                             context: declared.get(name).copied().unwrap_or(&[]),
@@ -1067,6 +1092,11 @@ impl<'a> Solver<'a, '_> {
                     self.record_definitions(uf, rank, definitions, &declared, context, *binder);
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
+                            kinds: definitions
+                                .iter()
+                                .chain(declarations.iter())
+                                .find(|def| def.site.name().value == *name)
+                                .and_then(|def| def.kinds),
                             declared_quantifiers: if declarations
                                 .iter()
                                 .any(|def| def.site.name().value == *name && def.context.is_some())
@@ -1400,6 +1430,12 @@ impl<'a> Solver<'a, '_> {
             predicates.push(id);
         }
         self.uses.push(UseRecord {
+            kinds: Some(type_::KindSignature {
+                kinds: annotation.kinds,
+                variables: self
+                    .bump
+                    .alloc_slice_fill_iter(annotation.free_vars.iter().map(|name| flex_vars[name])),
+            }),
             site,
             owner: self.owners.last().copied(),
             source: UseSource::Foreign {
@@ -1443,6 +1479,7 @@ impl<'a> Solver<'a, '_> {
     ) {
         for definition in definitions {
             let binding = Binding {
+                kinds: definition.kinds,
                 declared_quantifiers: &[],
                 variable: self.type_to_variable(uf, rank, definition.typ),
                 context: declared
@@ -1453,6 +1490,9 @@ impl<'a> Solver<'a, '_> {
                 context_is_final: true,
             };
             let mut pending = vec![binding.variable];
+            if let Some(kinds) = binding.kinds {
+                pending.extend_from_slice(kinds.variables);
+            }
             for id in binding.context {
                 pending.extend(&self.predicates.get(*id).args);
             }
@@ -1564,6 +1604,10 @@ impl<'a> Solver<'a, '_> {
         for id in binding.context {
             roots.extend_from_slice(&self.predicates.get(*id).args);
         }
+        let kind_offset = roots.len();
+        if let Some(kinds) = binding.kinds {
+            roots.extend_from_slice(kinds.variables);
+        }
         let (copies, pairs) =
             self.make_scheme_copies(uf, rank, &roots, binding.declared_quantifiers);
         let mut predicates = Vec::new();
@@ -1587,6 +1631,10 @@ impl<'a> Solver<'a, '_> {
                 self.recursive_uses.push(self.uses.len());
             }
             self.uses.push(UseRecord {
+                kinds: binding.kinds.map(|signature| type_::KindSignature {
+                    kinds: signature.kinds,
+                    variables: self.bump.alloc_slice_copy(&copies[kind_offset..]),
+                }),
                 site,
                 owner: self.owners.last().copied(),
                 source: UseSource::Local {
@@ -2636,6 +2684,7 @@ mod copy_tests {
             name: "Keep",
         };
         let annotation = Annotation {
+            kinds: nash_ast::ValueKinds::unconstrained(&bump, 1),
             free_vars: &["a"],
             context: bump.alloc_slice_fill_iter([Pred {
                 trait_,

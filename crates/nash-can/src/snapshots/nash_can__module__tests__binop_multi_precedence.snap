@@ -121,6 +121,18 @@ Module {
                         free_vars: [
                             "a",
                         ],
+                        kinds: ValueKinds {
+                            bounds: [
+                                KindSet(
+                                    15,
+                                ),
+                            ],
+                            kinds: [
+                                Var(
+                                    0,
+                                ),
+                            ],
+                        },
                         typ: Located {
                             region: Region {
                                 start: Position {
@@ -177,6 +189,18 @@ Module {
                                 free_vars: [
                                     "a",
                                 ],
+                                kinds: ValueKinds {
+                                    bounds: [
+                                        KindSet(
+                                            15,
+                                        ),
+                                    ],
+                                    kinds: [
+                                        Var(
+                                            0,
+                                        ),
+                                    ],
+                                },
                                 typ: Located {
                                     region: Region {
                                         start: Position {

@@ -287,6 +287,7 @@ mod tests {
 
     fn empty_env<'a>(_bump: &'a Bump) -> Env<'a> {
         Env {
+            kinds: crate::kinds::KindEnv::from_interfaces(None),
             traits: Default::default(),
             q_traits: Default::default(),
             home: ModuleName {

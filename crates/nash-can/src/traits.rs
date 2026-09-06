@@ -134,6 +134,7 @@ pub(crate) fn canonicalize<'a>(
             methods.push(Method {
                 name: method.name,
                 annotation: bump.alloc(Annotation {
+                    kinds: own.kinds,
                     free_vars: own.free_vars,
                     context,
                     typ: own.typ,
@@ -169,6 +170,27 @@ pub(crate) fn canonicalize<'a>(
         }
     }
     let schemes = kinds::infer_traits(bump, kind_env, env.home, &pre)?;
+    env.kinds = kind_env.clone();
+    for t in &mut pre {
+        let methods: Result<Vec<_>, Vec<Error<'a>>> = t
+            .methods
+            .iter()
+            .map(|method| {
+                Ok(Method {
+                    name: method.name,
+                    annotation: kinds::retain_annotation(
+                        bump,
+                        kind_env,
+                        env.home,
+                        method.name.value,
+                        method.annotation,
+                    )?,
+                    default: method.default,
+                })
+            })
+            .collect();
+        t.methods = bump.alloc_slice_fill_iter(methods?);
+    }
     // Install every method before any default body is canonicalized.
     for t in &pre {
         let reference = QualifiedName {

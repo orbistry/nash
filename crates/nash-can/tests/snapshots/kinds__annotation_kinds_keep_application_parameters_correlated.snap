@@ -1,0 +1,38 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: kinds
+---
+ValueKinds {
+    bounds: [
+        KindSet(
+            15,
+        ),
+        KindSet(
+            15,
+        ),
+        KindSet(
+            7,
+        ),
+    ],
+    kinds: [
+        Arrow(
+            Var(
+                0,
+            ),
+            Arrow(
+                Var(
+                    1,
+                ),
+                Var(
+                    2,
+                ),
+            ),
+        ),
+        Var(
+            1,
+        ),
+        Var(
+            0,
+        ),
+    ],
+}

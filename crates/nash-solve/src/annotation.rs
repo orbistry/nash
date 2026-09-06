@@ -87,6 +87,7 @@ pub fn to_annotation_with_context<'a>(
     }));
     bump.alloc(Annotation {
         context,
+        kinds: nash_ast::ValueKinds::unconstrained(bump, state.taken.len()),
         free_vars: bump.alloc_slice_fill_iter(state.taken.keys().copied()),
         typ: tipe,
     })
@@ -111,6 +112,14 @@ pub(crate) fn to_scheme_annotation<'a>(
         })
         .collect();
     bump.alloc(Annotation {
+        kinds: nash_ast::ValueKinds::unconstrained(
+            bump,
+            annotation
+                .free_vars
+                .iter()
+                .filter(|name| names.contains(*name))
+                .count(),
+        ),
         free_vars: bump.alloc_slice_fill_iter(
             annotation
                 .free_vars

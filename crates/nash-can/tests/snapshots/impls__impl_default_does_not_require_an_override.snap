@@ -4,6 +4,14 @@ expression: "result.module.impls[0].value.methods"
 ---
 [
     TypedDef {
+        kinds: ValueKinds {
+            bounds: [],
+            kinds: [
+                Base(
+                    Big,
+                ),
+            ],
+        },
         context: [],
         annotation: Located {
             region: Region {
@@ -247,6 +255,18 @@ expression: "result.module.impls[0].value.methods"
                             free_vars: [
                                 "a",
                             ],
+                            kinds: ValueKinds {
+                                bounds: [
+                                    KindSet(
+                                        7,
+                                    ),
+                                ],
+                                kinds: [
+                                    Var(
+                                        0,
+                                    ),
+                                ],
+                            },
                             typ: Located {
                                 region: Region {
                                     start: Position {

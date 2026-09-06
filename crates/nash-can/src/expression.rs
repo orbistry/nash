@@ -153,7 +153,7 @@ pub fn canonicalize_expr<'a>(
             name,
         } => {
             let ctor = env.find_ctor(bump, region, name)?;
-            to_var_ctor(bump, name, &ctor)
+            to_var_ctor(bump, env, name, &ctor)?
         }
 
         SourceExpr::VarQual {
@@ -168,7 +168,7 @@ pub fn canonicalize_expr<'a>(
             name,
         } => {
             let ctor = env.find_ctor_qual(bump, region, module, name)?;
-            to_var_ctor(bump, name, &ctor)
+            to_var_ctor(bump, env, name, &ctor)?
         }
 
         SourceExpr::List(exprs) => {
@@ -403,8 +403,13 @@ fn find_var_qual<'a>(
     }
 }
 
-fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr<'a> {
-    match ctor {
+fn to_var_ctor<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    name: &'a str,
+    ctor: &EnvCtor<'a>,
+) -> Result<CanExpr<'a>, Vec<Error<'a>>> {
+    Ok(match ctor {
         EnvCtor::Union {
             home,
             type_name,
@@ -443,11 +448,14 @@ fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr
                 ));
             }
             let annotation = bump.alloc(Annotation {
+                kinds: nash_ast::ValueKinds::unconstrained(bump, free_vars.len()),
                 context: &[],
                 free_vars,
                 typ,
             });
 
+            let annotation =
+                crate::kinds::retain_annotation(bump, &env.kinds, env.home, name, annotation)?;
             CanExpr::VarConstructor {
                 options: *options,
                 reference: ConstructorName {
@@ -461,6 +469,7 @@ fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr
         }
         EnvCtor::Bool { home, union, index } => {
             let annotation = bump.alloc(Annotation {
+                kinds: nash_ast::ValueKinds::unconstrained(bump, 0),
                 context: &[],
                 free_vars: &[],
                 typ: bump.alloc(Located::at(
@@ -499,10 +508,13 @@ fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr
             sorted_vars.dedup();
             let free_vars: FreeVars<'a> = bump.alloc_slice_fill_iter(sorted_vars);
             let annotation = bump.alloc(Annotation {
+                kinds: nash_ast::ValueKinds::unconstrained(bump, free_vars.len()),
                 context: &[],
                 free_vars,
                 typ,
             });
+            let annotation =
+                crate::kinds::retain_annotation(bump, &env.kinds, env.home, name, annotation)?;
 
             CanExpr::VarConstructor {
                 options: CtorOpts::Normal,
@@ -515,7 +527,7 @@ fn to_var_ctor<'a>(bump: &'a Bump, name: &'a str, ctor: &EnvCtor<'a>) -> CanExpr
                 annotation,
             }
         }
-    }
+    })
 }
 
 fn canonicalize_exprs<'a>(
@@ -1135,6 +1147,13 @@ fn canonicalize_let_def<'a>(
                 annotation
             {
                 let annotation_val = types::to_annotation(bump, env, ann)?;
+                let annotation_val = crate::kinds::retain_annotation(
+                    bump,
+                    &env.kinds,
+                    env.home,
+                    name.value,
+                    annotation_val,
+                )?;
                 let mut bound: Vec<(&'a str, Region)> = Vec::new();
                 let (typed_args, result_type) =
                     gather_typed_args(bump, env, name.value, args, annotation_val.typ, &mut bound)?;
@@ -1144,6 +1163,7 @@ fn canonicalize_let_def<'a>(
                 )?;
                 (
                     DefBuilder::Typed {
+                        kinds: annotation_val.kinds,
                         context: annotation_val.context,
                         annotation: annotation_val.typ,
                         free_vars: annotation_val.free_vars,
@@ -1188,12 +1208,14 @@ fn canonicalize_let_def<'a>(
             let has_args = !args.is_empty();
             let can_def: &'a CanDef<'a> = match can_def_builder {
                 DefBuilder::Typed {
+                    kinds,
                     context,
                     annotation,
                     free_vars,
                     args,
                     typ,
                 } => bump.alloc(CanDef::TypedDef {
+                    kinds,
                     context,
                     annotation,
                     name,
@@ -1252,6 +1274,7 @@ fn canonicalize_let_def<'a>(
 
 enum DefBuilder<'a> {
     Typed {
+        kinds: nash_ast::ValueKinds<'a>,
         context: &'a [nash_ast::Pred<'a>],
         annotation: &'a Located<nash_ast::Type<'a>>,
         free_vars: nash_ast::FreeVars<'a>,

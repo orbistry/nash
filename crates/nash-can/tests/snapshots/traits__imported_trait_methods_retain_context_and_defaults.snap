@@ -60,6 +60,18 @@ expression: "(interfaces[\"Identity\"].traits, references)"
                         free_vars: [
                             "a",
                         ],
+                        kinds: ValueKinds {
+                            bounds: [
+                                KindSet(
+                                    7,
+                                ),
+                            ],
+                            kinds: [
+                                Var(
+                                    0,
+                                ),
+                            ],
+                        },
                         typ: Located {
                             region: Region {
                                 start: Position {

@@ -900,6 +900,7 @@ fn constrain_destruct<'a>(
             site: binder,
             typ: pattern_type,
             context: None,
+            kinds: None,
         }]),
         rigid_vars: &[],
         flex_vars: bump.alloc_slice_fill_iter(flex_vars),
@@ -960,6 +961,7 @@ fn constrain_definition<'a>(
                     site: type_::Binder::Named(name),
                     typ: tipe,
                     context: None,
+                    kinds: None,
                 }]),
                 rigid_vars: &[],
                 flex_vars: bump.alloc_slice_fill_iter(vars),
@@ -984,6 +986,7 @@ fn constrain_definition<'a>(
         }
 
         CanDef::TypedDef {
+            kinds,
             name,
             free_vars,
             context,
@@ -1017,6 +1020,7 @@ fn constrain_definition<'a>(
                     site: type_::Binder::Named(name),
                     typ: tipe,
                     context: Some(given),
+                    kinds: Some(instantiate_kinds(bump, &new_rtv, free_vars, *kinds)),
                 }]),
                 rigid_vars: bump.alloc_slice_fill_iter(new_rigids.iter().map(|(_, var)| *var)),
                 flex_vars: &[],
@@ -1087,6 +1091,24 @@ fn instantiate_context<'a>(
     }))
 }
 
+fn instantiate_kinds<'a>(
+    bump: &'a Bump,
+    rtv: &Rtv<'a>,
+    free_vars: &[&'a str],
+    kinds: nash_ast::ValueKinds<'a>,
+) -> type_::KindSignature<'a> {
+    assert_eq!(free_vars.len(), kinds.kinds.len());
+    type_::KindSignature {
+        kinds,
+        variables: bump.alloc_slice_fill_iter(free_vars.iter().map(|name| {
+            let Type::VarN(var) = rtv[name] else {
+                unreachable!("annotation scope contains type variables")
+            };
+            *var
+        })),
+    }
+}
+
 // CONSTRAIN RECURSIVE DEFS
 
 struct Info<'a> {
@@ -1150,6 +1172,7 @@ pub fn constrain_recursive_defs<'a>(
                     site: type_::Binder::Named(name),
                     typ: tipe,
                     context: None,
+                    kinds: None,
                 });
                 flex_info
                     .headers
@@ -1157,6 +1180,7 @@ pub fn constrain_recursive_defs<'a>(
             }
 
             CanDef::TypedDef {
+                kinds,
                 name,
                 free_vars,
                 context,
@@ -1199,6 +1223,7 @@ pub fn constrain_recursive_defs<'a>(
                 };
 
                 let given = instantiate_context(bump, &new_rtv, context);
+                let kinds = Some(instantiate_kinds(bump, &new_rtv, free_vars, *kinds));
 
                 // Elm prepends each def's rigids: latest def first, names
                 // sorted within a def.
@@ -1206,6 +1231,7 @@ pub fn constrain_recursive_defs<'a>(
                 vars.append(&mut rigid_info.vars);
                 rigid_info.vars = vars;
                 rigid_info.definitions.push(Definition {
+                    kinds,
                     site: type_::Binder::Named(name),
                     typ: tipe,
                     context: Some(given),
@@ -1215,6 +1241,7 @@ pub fn constrain_recursive_defs<'a>(
                     given,
                     binder: Some(type_::Binder::Named(name)),
                     definitions: bump.alloc_slice_copy(&[Definition {
+                        kinds,
                         site: type_::Binder::Named(name),
                         typ: tipe,
                         context: Some(given),
@@ -1379,6 +1406,28 @@ mod node_tests {
     use nash_ast::{Annotation, ModuleName, QualifiedName};
 
     #[test]
+    fn declared_kinds_preserve_annotation_order_and_captured_variables() {
+        let bump = Bump::new();
+        let mut uf = UnionFind::new();
+        let captured = name_to_rigid(&mut uf, "captured");
+        let rtv = Rtv::from([("captured", &*bump.alloc(Type::VarN(captured)))]);
+        let names = ["z", "captured", "a"];
+        let kinds = nash_ast::ValueKinds::unconstrained(&bump, names.len());
+        let (rigids, scope) = make_rigids(&bump, &mut uf, &rtv, &names);
+        assert_eq!(
+            rigids.iter().map(|(name, _)| *name).collect::<Vec<_>>(),
+            ["a", "z"]
+        );
+        let signature = instantiate_kinds(&bump, &scope, &names, kinds);
+        assert_eq!(signature.variables, &[rigids[1].1, captured, rigids[0].1]);
+        let (_, other_scope) = make_rigids(&bump, &mut uf, &rtv, &names);
+        let other = instantiate_kinds(&bump, &other_scope, &names, kinds);
+        assert_eq!(other.variables[1], captured);
+        assert_ne!(other.variables[0], signature.variables[0]);
+        assert_ne!(other.variables[2], signature.variables[2]);
+    }
+
+    #[test]
     fn literals_and_patterns_keep_original_nodes_and_ordered_predicates() {
         let bump = Bump::new();
         for (expr, pattern, trait_name) in [
@@ -1481,6 +1530,7 @@ mod node_tests {
             name: "Combine",
         };
         let annotation = bump.alloc(Annotation {
+            kinds: nash_ast::ValueKinds::unconstrained(&bump, 0),
             context: &[],
             free_vars: &[],
             typ: bump.alloc(Located::at(region, nash_ast::Type::Unit)),

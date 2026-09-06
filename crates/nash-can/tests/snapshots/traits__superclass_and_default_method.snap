@@ -95,6 +95,18 @@ expression: "(&result.module.traits, &result.module.exports)"
                             free_vars: [
                                 "a",
                             ],
+                            kinds: ValueKinds {
+                                bounds: [
+                                    KindSet(
+                                        7,
+                                    ),
+                                ],
+                                kinds: [
+                                    Var(
+                                        0,
+                                    ),
+                                ],
+                            },
                             typ: Located {
                                 region: Region {
                                     start: Position {
@@ -304,6 +316,18 @@ expression: "(&result.module.traits, &result.module.exports)"
                             free_vars: [
                                 "a",
                             ],
+                            kinds: ValueKinds {
+                                bounds: [
+                                    KindSet(
+                                        7,
+                                    ),
+                                ],
+                                kinds: [
+                                    Var(
+                                        0,
+                                    ),
+                                ],
+                            },
                             typ: Located {
                                 region: Region {
                                     start: Position {
@@ -392,6 +416,18 @@ expression: "(&result.module.traits, &result.module.exports)"
                         },
                         default: Some(
                             TypedDef {
+                                kinds: ValueKinds {
+                                    bounds: [
+                                        KindSet(
+                                            7,
+                                        ),
+                                    ],
+                                    kinds: [
+                                        Var(
+                                            0,
+                                        ),
+                                    ],
+                                },
                                 context: [
                                     Pred {
                                         trait_: QualifiedName {
@@ -651,6 +687,18 @@ expression: "(&result.module.traits, &result.module.exports)"
                                                     free_vars: [
                                                         "a",
                                                     ],
+                                                    kinds: ValueKinds {
+                                                        bounds: [
+                                                            KindSet(
+                                                                7,
+                                                            ),
+                                                        ],
+                                                        kinds: [
+                                                            Var(
+                                                                0,
+                                                            ),
+                                                        ],
+                                                    },
                                                     typ: Located {
                                                         region: Region {
                                                             start: Position {

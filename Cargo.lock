@@ -1849,6 +1849,7 @@ dependencies = [
 name = "nash-ast"
 version = "0.5.0"
 dependencies = [
+ "bumpalo",
  "nash-region",
  "nash-source",
 ]

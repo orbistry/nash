@@ -85,6 +85,7 @@ pub fn canonicalize<'a>(
     let pre_unions = canonicalize_unions(bump, &env, module.unions)?;
     let mut kind_env = kinds::KindEnv::from_interfaces(context.interfaces);
     let schemes = kinds::infer_declarations(bump, &mut kind_env, home, &pre_unions, &pre_aliases)?;
+    env.kinds = kind_env.clone();
     let unions = bump.alloc_slice_fill_iter(pre_unions.iter().map(|u| {
         &*bump.alloc(Located::at(
             u.source.region,
@@ -280,6 +281,7 @@ struct NodeOne<'a> {
 
 enum TopLevelDefBuilder<'a> {
     Typed {
+        kinds: nash_ast::ValueKinds<'a>,
         context: &'a [nash_ast::Pred<'a>],
         annotation: &'a Located<nash_ast::Type<'a>>,
         free_vars: nash_ast::FreeVars<'a>,
@@ -316,6 +318,16 @@ fn to_node_one<'a>(
             .map(|ann| types::to_annotation(bump, env, ann))
             .transpose()?,
     };
+    let annotation = match (known_annotation, annotation) {
+        (None, Some(annotation)) => Some(kinds::retain_annotation(
+            bump,
+            &env.kinds,
+            env.home,
+            src.name.value,
+            annotation,
+        )?),
+        (_, annotation) => annotation,
+    };
     let (builder, arg_bindings) = if let Some(annotation) = annotation {
         let mut bound: Vec<(&'a str, Region)> = Vec::new();
         let (typed_args, result_type) = expression::gather_typed_args(
@@ -330,6 +342,7 @@ fn to_node_one<'a>(
             pattern::detect_duplicates(DuplicatePatternContext::FuncArgs(src.name.value), bound)?;
         (
             TopLevelDefBuilder::Typed {
+                kinds: annotation.kinds,
                 context: annotation.context,
                 annotation: annotation.typ,
                 free_vars: annotation.free_vars,
@@ -367,12 +380,14 @@ fn to_node_one<'a>(
 
     let def = match builder {
         TopLevelDefBuilder::Typed {
+            kinds,
             context,
             annotation,
             free_vars,
             args,
             typ,
         } => bump.alloc(nash_ast::Def::TypedDef {
+            kinds,
             context,
             annotation,
             name: src.name,
@@ -1451,6 +1466,7 @@ mod tests {
     fn test_annotation<'a>(bump: &'a Bump) -> &'a nash_ast::Annotation<'a> {
         bump.alloc(nash_ast::Annotation {
             context: &[],
+            kinds: nash_ast::ValueKinds::unconstrained(bump, 1),
             free_vars: bump.alloc_slice_fill_iter(["a"]),
             typ: var_type(bump, "a"),
         })

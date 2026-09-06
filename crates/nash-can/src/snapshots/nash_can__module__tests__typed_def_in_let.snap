@@ -63,6 +63,18 @@ Module {
                 },
                 value: Let {
                     definition: TypedDef {
+                        kinds: ValueKinds {
+                            bounds: [
+                                KindSet(
+                                    7,
+                                ),
+                            ],
+                            kinds: [
+                                Var(
+                                    0,
+                                ),
+                            ],
+                        },
                         context: [],
                         annotation: Located {
                             region: Region {

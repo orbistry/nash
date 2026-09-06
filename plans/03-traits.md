@@ -2240,6 +2240,21 @@ type.
 
 ## Chunk 9: kind predicates on value schemes
 
+Status: in progress. The call-site regression now rejects the invalid
+`list (option ())` with `BadKind` at the use of `first`. Annotation
+kind checking now generalizes all free-variable kinds under one shared binder
+and preserves the annotation's free-variable order. Retaining those signatures
+on canonical definitions, methods, specialized impl methods, and constructors
+is implemented. Declared signatures also reach constraints and solver binding
+records; their roots participate in copying and quantifier discovery. Solver
+kind graph inference now has focused coverage for shared application kinds,
+type-variable merges, and rigid entailment. Local declared uses and foreign
+uses retain instantiated kind roots and are checked before solved output is
+published. This final validation does not yet propagate kind constraints through
+inferred schemes or prove rigid requirements in their owning annotation scope.
+Connecting kind claims to generalization and retaining kinds in solved output
+remain unfinished.
+
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/module.rs`,
 `crates/nash-can/src/kinds.rs`, `crates/nash-constrain/src/type_.rs`,
 `crates/nash-solve/src/{preds.rs,solve.rs,resolve.rs,annotation.rs}`,
@@ -2263,50 +2278,86 @@ Code:
 pub struct Annotation<'a> {
     pub free_vars: FreeVars<'a>,
     pub context: &'a [Pred<'a>],
-    /// Kind of each free var, name-sorted like `free_vars`; `KindSet::ALL` when unconstrained.
-    pub kinds: &'a [KindScheme<'a>],
+    /// Kind roots aligned with `free_vars`, under one shared kind binder.
+    pub kinds: ValueKinds<'a>,
     pub typ: &'a Located<Type<'a>>,
+}
+
+pub struct ValueKinds<'a> {
+    pub bounds: &'a [KindSet],
+    pub kinds: &'a [&'a Kind<'a>],
 }
 ```
 
 `module.rs` stores `check_annotation`'s result into the `TypedDef`'s
 annotation (it currently discards it); `to_annotation` in `types.rs` fills
-`kinds` with `KindScheme { bounds: &[KindSet::ALL], kind: &Kind::Var(0) }` and the kind
-pass overwrites it. Method schemes and impl method schemes (chunks 2-3) get
+`kinds` with one distinct `ALL` kind variable per free type variable and the kind
+pass overwrites it. All roots must be generalized and instantiated together:
+in `'f 'a`, the domain of `'f` shares the kind of `'a`. Independent unary
+schemes lose this relation. Method schemes and impl method schemes (chunks 2-3) get
 their kinds from the trait's `Trait.kind` components and the head kinds.
+Check every method scheme after trait kinds are installed, including methods
+without defaults. Impl specialization must retain restrictions supplied by the
+owning trait when its predicate is removed, and follow type-variable renaming.
+Substitute the original shared method signature itself: rechecking a specialized
+owner predicate alone creates fresh constructor-kind instantiations and loses
+relationships to method-local variables. The canonicalizer regression
+`impl_method_retains_owner_kind_restriction` covers this with
+`Keep ('f : Big -> Term)` specialized to `option`.
 
 Solver: `Predicate` gains a second claim form.
 
 ```rust
 pub enum Claim<'a> {
     Trait(QualifiedName<'a>),
-    /// The single argument must have a kind matching the scheme.
-    Kind(KindScheme<'a>),
+    /// One root in a jointly instantiated value-kind group.
+    Kind { group: KindGroupId, index: usize },
 }
 // Predicate.trait_ becomes Predicate.claim; every `pred.trait_` read in
 // chunks 5-7 matches on `Claim::Trait` (kind claims never reach
 // `by_instance`/`by_given` for traits).
 ```
 
+`KindGroupId` identifies a solver-owned instantiation of the complete
+`ValueKinds` signature. Its roots share kind variables; constructing a separate
+fresh unary scheme for each claim is not equivalent.
+
 `src_type_to_variable` and `make_copy_help` instantiate kind claims like
 trait claims (`Origin::Use` with `index` counting from
 `annotation.context.len()` so evidence slots are unaffected; kind claims
-produce no evidence). In `split`:
+produce no evidence). The current solver has no `split`/`Class` function:
+discharge claims in `resolve_wanted`, before trait lookup, and retain them in
+`retain_wanted` at generalization. The classifications below describe behavior:
 
 - `Class::Ground`: `kind_of(uf, kind_env, var)` computes the kind of the
   head structure with plan 02's `Infer` (`kind_env.scheme(head)` applied to
   the argument count; tuples/functions are `TERM`; records are the alias's
   scheme) and unifies with the claim; a mismatch is
   `Error::BadKind { region, name, var_type: ErrorType, expected: KindScheme, actual: KindScheme }`.
-- `Class::Rigid`: unify with the enclosing annotation's kind for that
-  rigid variable (`GivenFrame` gains `kinds: Vec<(Variable, KindScheme)>`);
-  mismatch is `BadKind` too.
+- `Class::Rigid`: prove the requirement from the enclosing annotation's shared
+  kind signature. Do not narrow a rigid kind to satisfy a use: an annotation
+  that promises `Any` cannot be restricted to `Storable`. Failure is `BadKind`.
 - `Class::Young`: retained; `to_annotation` writes it into `Annotation.kinds`
-  for that variable (unioning bounds when several claims land on one var).
+  for that variable (intersecting bounds when several claims land on one var).
 - `Class::Outer`: deferred like trait claims.
 
 `Scheme.annotation.kinds` therefore tells codegen (plan 07 `TyEnv`) the
 kind of every type argument without recomputing it.
+
+Carry the declaration signature and its type variables through `Definition`
+in both typed-definition paths, including recursive declarations. Associate
+roots through the annotation's `free_vars` order, not the sorted rigid-variable
+allocation order. In `instantiate_binding`/`make_scheme_copies`, copy a shared
+kind group once per use alongside all quantified type and predicate roots;
+captured variables retain their existing restrictions. Respect frozen declared
+quantifiers while checking recursive bodies. Reconcile kind roots when type
+union-find representatives merge.
+
+Kind claims must bypass trait defaulting, superclass reduction, dictionary
+enumeration, and growing-evidence analysis. Recursive context completion must
+not mark a kind claim as dictionary `Given`. Serialize shared kind roots from
+the solver in `to_scheme_annotation`, preserving correlations in the final
+quantifier order. `Tables.kinds` supplies the actual constructor kind schemes.
 
 Elm reference: none.
 

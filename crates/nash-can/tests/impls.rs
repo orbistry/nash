@@ -741,12 +741,13 @@ fn impl_method_substitution_does_not_capture_head_variables() {
         annotation,
         free_vars,
         context,
+        kinds,
         ..
     } = result.module.impls[0].value.methods[0]
     else {
         panic!("typed method")
     };
-    insta::assert_debug_snapshot!((annotation, free_vars, context));
+    insta::assert_debug_snapshot!((annotation, free_vars, context, kinds));
 }
 
 #[test]
@@ -768,6 +769,47 @@ fn impl_unapplied_constructor() {
     )
     .unwrap();
     insta::assert_debug_snapshot!(result.module.impls[0].value.heads);
+}
+
+#[test]
+fn impl_method_retains_owner_kind_restriction() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+
+        type option 'a = None | Some 'a
+
+        trait Keep ('f : Big -> Term) where
+            keep : 'f 'a -> 'f 'a
+
+        impl Keep option where
+            keep value = value
+        "
+        ),
+    )
+    .unwrap();
+    let nash_ast::Def::TypedDef {
+        kinds,
+        free_vars,
+        context,
+        ..
+    } = result.module.impls[0].value.methods[0]
+    else {
+        panic!("typed method")
+    };
+    assert!(
+        context.is_empty(),
+        "owner dictionary is supplied by the impl"
+    );
+    assert_eq!(*free_vars, &["a"]);
+    assert_eq!(
+        kinds.kinds,
+        &[&nash_ast::Kind::Base(nash_ast::BaseKind::Big)]
+    );
+    assert!(kinds.bounds.is_empty());
 }
 
 #[test]

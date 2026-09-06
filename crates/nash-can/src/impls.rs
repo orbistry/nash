@@ -33,7 +33,10 @@ pub(crate) fn tables<'a>(
     kind_env: &kinds::KindEnv<'a>,
 ) -> Result<crate::environment::Tables<'a>, Vec<Error<'a>>> {
     use crate::environment::{MethodInfo, Tables};
-    let mut tables = Tables::default();
+    let mut tables = Tables {
+        kinds: kind_env.clone(),
+        ..Tables::default()
+    };
     // Resolution sees all build interfaces, independently of source import visibility.
     for interface in interfaces.into_iter().flat_map(|i| i.values()) {
         for trait_ in interface.traits {
@@ -227,12 +230,13 @@ pub(crate) fn canonicalize<'a>(
                 })?;
             let scheme = instantiate_method(
                 bump,
+                kind_env,
                 info,
-                method.annotation,
+                method,
                 &head_types,
                 context,
                 &variables,
-            );
+            )?;
             methods.push(module::canonicalize_typed_value(
                 bump, env, definition, scheme, warnings,
             )?);
@@ -392,12 +396,14 @@ fn canonicalize_head<'a>(
 
 fn instantiate_method<'a>(
     bump: &'a Bump,
+    kind_env: &kinds::KindEnv<'a>,
     info: &TraitInfo<'a>,
-    annotation: &'a Annotation<'a>,
+    method: &crate::environment::MethodInfo<'a>,
     heads: &[&'a Located<Type<'a>>],
     context: &'a [Pred<'a>],
     head_vars: &BTreeMap<&'a str, Region>,
-) -> &'a Annotation<'a> {
+) -> Result<&'a Annotation<'a>, Vec<Error<'a>>> {
+    let annotation = method.annotation;
     let mut substitution: BTreeMap<_, _> = info
         .parameters
         .iter()
@@ -449,9 +455,36 @@ fn instantiate_method<'a>(
             types::collect_free_vars(&arg.value, &mut free);
         }
     }
-    bump.alloc(Annotation {
+    let annotation = Annotation {
+        kinds: nash_ast::ValueKinds::unconstrained(bump, free.len()),
         free_vars: bump.alloc_slice_fill_iter(free),
         context: bump.alloc_slice_fill_iter(predicates),
         typ,
-    })
+    };
+    // Substitute the shared method kind signature too. Rechecking the owner
+    // predicate alone would freshly instantiate polymorphic constructor kinds
+    // and lose their relationship to the method-local variables.
+    let arguments: Vec<_> = method
+        .annotation
+        .free_vars
+        .iter()
+        .map(|var| {
+            substitution
+                .get(var)
+                .copied()
+                .unwrap_or_else(|| bump.alloc(Located::at_zero(Type::Var(var))))
+        })
+        .collect();
+    let kinds = kinds::check_annotation_specialization(
+        bump,
+        kind_env,
+        info.home,
+        method.name,
+        &annotation,
+        Some((method.annotation.kinds, &arguments)),
+    )?;
+    Ok(bump.alloc(Annotation {
+        kinds,
+        ..annotation
+    }))
 }

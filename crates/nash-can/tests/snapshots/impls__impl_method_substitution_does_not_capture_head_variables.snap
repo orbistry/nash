@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "(annotation, free_vars, context)"
+expression: "(annotation, free_vars, context, kinds)"
 ---
 (
     Located {
@@ -109,4 +109,19 @@ expression: "(annotation, free_vars, context)"
         "b",
     ],
     [],
+    ValueKinds {
+        bounds: [
+            KindSet(
+                7,
+            ),
+        ],
+        kinds: [
+            Var(
+                0,
+            ),
+            Base(
+                Big,
+            ),
+        ],
+    },
 )

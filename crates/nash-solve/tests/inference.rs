@@ -705,7 +705,7 @@ fn declared_contexts_are_available_at_local_and_recursive_uses() {
             keep (Wrap x) = Wrap (keep x)
         boxed : Keep (Container 'a) => 'a -> 'a
         boxed x = x
-        useBox = (boxed (), boxed Red)
+        useBox = (boxed (Wrap Red), boxed Red)
         forward : Keep 'a => 'a -> 'a
         forward x = x
         monomorphic : Keep () => ()
@@ -2025,6 +2025,20 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
 }
 
 #[test]
+fn kind_bound_is_enforced_at_an_inferred_call_site() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        type option 'a = None | Some 'a
+        first : 'a -> list 'a -> 'a
+        first x xs = x
+        bad xs = first (Some ()) xs
+    "#
+    );
+}
+
+#[test]
 fn higher_kinded_bind_chain_retains_its_monad_constraint() {
     assert_inference_snapshot!(
         r#"
@@ -2148,6 +2162,7 @@ fn imported_higher_kinded_value_preserves_application() {
         args: bump.alloc_slice_copy(&[&*arg]),
     }));
     let annotation = bump.alloc(Annotation {
+        kinds: nash_ast::ValueKinds::unconstrained(&bump, 2),
         context: &[],
         free_vars: &["f", "a"],
         typ,

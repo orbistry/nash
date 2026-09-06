@@ -77,6 +77,14 @@ Module {
                         free_vars: [
                             "a",
                         ],
+                        kinds: ValueKinds {
+                            bounds: [],
+                            kinds: [
+                                Base(
+                                    Big,
+                                ),
+                            ],
+                        },
                         typ: Located {
                             region: Region {
                                 start: Position {

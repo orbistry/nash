@@ -208,7 +208,11 @@ constructor's scheme, and the walk yields the kind of every free variable.
 (`'a : Storable` in `cons : 'a -> list 'a -> list 'a`) is stored on the
 value's type scheme as a kind predicate, next to trait predicates, and the
 qualified-type machinery of [traits.md](traits.md) (plans/03) discharges it
-at every instantiation. Plans/02 infers and reports the kinds; plans/03
+at every instantiation. All free-variable kinds share one binder: the domain
+of `'f` in `'f 'a` is the same kind variable as the kind of `'a`. Generalize
+and instantiate the entire group together, preserving free-variable order.
+Multiple bounds intersect; checking a rigid annotation proves a requirement
+without narrowing the annotation's promised kind. Plans/02 infers and reports the kinds; plans/03
 enforces them at use sites. Without that step plain HM unification would
 instantiate `'a` at `option int` with nothing to reject it, because
 declaration-level inference never sees instantiations.
@@ -333,11 +337,9 @@ error from `nash-can`.
 Canonical variable applications retain a general `App` head and argument
 list. Plan 03 substitution normalizes a head that becomes known into a
 named or nominal alias application, preserving every argument. Partial
-aliases retain their remaining bound parameters through interface copying.
-Kind checking accepts these declarations. Value inference that needs
-higher-kinded application unification returns `UnsupportedTypeApplication`
-from both local and imported annotation conversion until plan 03 implements
-that unification. Named constructors still require exact arity in ordinary
+aliases retain their remaining bound parameters in retained interfaces.
+Kind checking and higher-kinded value inference support these applications,
+including partial aliases and imported annotations. Named constructors still require exact arity in ordinary
 type annotations; impl heads may be partial and are checked by kind.
 A base-bounded variable applied to arguments instead
 reaches the kind-specific too-many-arguments error.

@@ -8,4 +8,4 @@ helper : forall a. Keep a => a -> a
 monomorphic : Keep () => ()
 recursive : forall a. Keep a => a -> a
 use : ( (), () )
-useBox : ( (), Color )
+useBox : ( Container Color, Color )

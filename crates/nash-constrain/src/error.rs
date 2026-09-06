@@ -13,6 +13,12 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    BadKind {
+        region: Region,
+        name: &'a str,
+        args: &'a [&'a ErrorType<'a>],
+        reason: KindProblem<'a>,
+    },
     AmbiguousType {
         region: Region,
         name: &'a str,
@@ -76,6 +82,20 @@ pub enum Error<'a> {
         name: &'a str,
         overall_type: &'a ErrorType<'a>,
     },
+}
+
+#[derive(Debug)]
+pub enum KindProblem<'a> {
+    Mismatch {
+        expected: nash_ast::KindScheme<'a>,
+        actual: nash_ast::KindScheme<'a>,
+    },
+    Infinite,
+    Rigid {
+        declared: nash_ast::ValueKinds<'a>,
+        required: nash_ast::ValueKinds<'a>,
+    },
+    AnonymousRecord,
 }
 
 #[derive(Debug)]

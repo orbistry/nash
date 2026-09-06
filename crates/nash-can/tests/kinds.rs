@@ -230,6 +230,33 @@ fn applied_head_is_a_free_variable() {
 #[test]
 fn annotation_storable_parameter() {
     assert_kinds_snapshot!("f : 'a -> list 'a -> list 'a\nf x xs = xs");
+    let bump = Bump::new();
+    let source = "module Main exposing (..)\nimport Builtin exposing (..)\nf : 'a -> list 'a -> list 'a\nf x xs = xs\n";
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
+    let result = canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    let nash_ast::Decls::Declare { definition, .. } = result.module.decls else {
+        panic!("expected f declaration")
+    };
+    let nash_ast::Def::TypedDef {
+        free_vars, kinds, ..
+    } = definition
+    else {
+        panic!("expected typed f")
+    };
+    assert_eq!(*free_vars, &["a"]);
+    assert_eq!(kinds.bounds, &[nash_ast::KindSet::STORABLE]);
+    assert_eq!(kinds.kinds, &[&nash_ast::Kind::Var(0)]);
 }
 
 #[test]
@@ -299,6 +326,71 @@ fn imported_interfaces_retain_higher_kinded_types() {
 }
 
 #[test]
+fn annotation_kinds_keep_application_parameters_correlated() {
+    use nash_ast::{Annotation, Kind, Type};
+    use nash_region::Located;
+    let bump = Bump::new();
+    let var = |name| &*bump.alloc(Located::at_zero(Type::Var(name)));
+    let application = bump.alloc(Located::at_zero(Type::App {
+        head: var("f"),
+        args: bump.alloc_slice_fill_iter([var("a"), var("b")]),
+    }));
+    let typ = bump.alloc(Located::at_zero(Type::Lambda {
+        from: application,
+        to: application,
+    }));
+    let annotation = Annotation {
+        kinds: nash_ast::ValueKinds::unconstrained(&bump, 3),
+        free_vars: &["f", "b", "a"],
+        context: &[],
+        typ,
+    };
+    let kinds = nash_can::kinds::check_annotation(
+        &bump,
+        &nash_can::kinds::KindEnv::from_interfaces(None),
+        nash_ast::ModuleName {
+            package: None,
+            name: "Main",
+        },
+        "identityK",
+        &annotation,
+    )
+    .unwrap();
+    let kind = |name| {
+        kinds.kinds[annotation
+            .free_vars
+            .iter()
+            .position(|var| *var == name)
+            .unwrap()]
+    };
+    let Kind::Arrow(a, tail) = kind("f") else {
+        panic!("constructor kind")
+    };
+    let Kind::Arrow(b, _) = tail else {
+        panic!("second constructor parameter")
+    };
+    assert_eq!(*a, kind("a"));
+    assert_eq!(*b, kind("b"));
+    assert_ne!(kind("a"), kind("b"));
+    let mut infer = nash_can::kinds::Infer::new(&bump);
+    let first = infer.instantiate_values(&kinds);
+    let second = infer.instantiate_values(&kinds);
+    let nash_can::kinds::K::Arrow(first_a, _) = first[0] else {
+        panic!("instantiated constructor")
+    };
+    let big = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Big));
+    let constant = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Const));
+    infer.unify(first_a, big).unwrap();
+    assert!(
+        infer.unify(first[2], constant).is_err(),
+        "the constructor domain and a share a kind"
+    );
+    infer.unify(first[1], constant).unwrap();
+    infer.unify(second[2], constant).unwrap();
+    insta::assert_debug_snapshot!(kinds);
+}
+
+#[test]
 fn annotation_returns_shared_storable_bound() {
     let bump = Bump::new();
     let interface = nash_can::kinds::builtin_interface(&bump);
@@ -317,6 +409,7 @@ fn annotation_returns_shared_storable_bound() {
         to: list,
     }));
     let annotation = nash_ast::Annotation {
+        kinds: nash_ast::ValueKinds::unconstrained(&bump, 1),
         context: &[],
         free_vars: &["a"],
         typ,
@@ -332,8 +425,8 @@ fn annotation_returns_shared_storable_bound() {
         &annotation,
     )
     .unwrap();
-    assert_eq!(kinds.len(), 1);
-    assert_eq!(kinds[0].1.bounds, &[nash_ast::KindSet::STORABLE]);
+    assert_eq!(kinds.kinds.len(), 1);
+    assert_eq!(kinds.bounds, &[nash_ast::KindSet::STORABLE]);
     insta::assert_debug_snapshot!(kinds);
 }
 

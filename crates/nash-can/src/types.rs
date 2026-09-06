@@ -38,6 +38,7 @@ pub fn to_annotation<'a>(
     }
     let free_vars: FreeVars<'a> = bump.alloc_slice_fill_iter(free_var_set);
     Ok(bump.alloc(Annotation {
+        kinds: nash_ast::ValueKinds::unconstrained(bump, free_vars.len()),
         context,
         free_vars,
         typ,
@@ -625,6 +626,7 @@ mod tests {
             interface.values = source.alloc_slice_fill_iter([crate::InterfaceValue {
                 name: "partial",
                 annotation: source.alloc(nash_ast::Annotation {
+                    kinds: nash_ast::ValueKinds::unconstrained(source, 1),
                     free_vars: &["right"],
                     context: &[],
                     typ: partial,
@@ -705,6 +707,7 @@ mod tests {
     fn empty_env<'a>(bump: &'a Bump) -> Env<'a> {
         let _ = bump;
         Env {
+            kinds: crate::kinds::KindEnv::from_interfaces(None),
             traits: Default::default(),
             q_traits: Default::default(),
             home: ModuleName {

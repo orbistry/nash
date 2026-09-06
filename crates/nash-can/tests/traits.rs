@@ -105,7 +105,7 @@ fn method_quantifiers_have_independent_kinds() {
     let variables: Vec<_> = trait_
         .methods
         .iter()
-        .map(|m| (m.name.value, m.annotation.free_vars))
+        .map(|m| (m.name.value, m.annotation.free_vars, m.annotation.kinds))
         .collect();
     insta::assert_debug_snapshot!((&trait_.kind, variables));
 }

@@ -55,6 +55,7 @@ pub type ImplTable<'a> = BTreeMap<nash_ast::ImplKey<'a>, &'a ImplInfo<'a>>;
 
 #[derive(Clone, Debug, Default)]
 pub struct Tables<'a> {
+    pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: BTreeMap<nash_ast::QualifiedName<'a>, &'a TraitInfo<'a>>,
     pub impls: ImplTable<'a>,
 }
@@ -214,6 +215,7 @@ pub struct Binop<'a> {
 /// Consumed by type, pattern, and expression canonicalization.
 #[derive(Clone)]
 pub struct Env<'a> {
+    pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: Exposed<'a, &'a TraitInfo<'a>>,
     pub q_traits: Qualified<'a, &'a TraitInfo<'a>>,
     pub home: ModuleName<'a>,

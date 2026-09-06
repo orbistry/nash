@@ -25,6 +25,21 @@ expression: "(&trait_.kind, variables)"
                 "a",
                 "b",
             ],
+            ValueKinds {
+                bounds: [
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kinds: [
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Big,
+                    ),
+                ],
+            },
         ),
         (
             "higher",
@@ -33,6 +48,35 @@ expression: "(&trait_.kind, variables)"
                 "b",
                 "c",
             ],
+            ValueKinds {
+                bounds: [
+                    KindSet(
+                        7,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kinds: [
+                    Var(
+                        0,
+                    ),
+                    Arrow(
+                        Var(
+                            1,
+                        ),
+                        Var(
+                            2,
+                        ),
+                    ),
+                    Var(
+                        1,
+                    ),
+                ],
+            },
         ),
     ],
 )

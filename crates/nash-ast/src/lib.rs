@@ -47,7 +47,7 @@ impl KindSet {
     }
 }
 
-/// A kind after inference. `Var` indexes the enclosing `KindScheme`.
+/// A kind after inference. `Var` indexes the enclosing `KindScheme` or `ValueKinds`.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Kind<'a> {
     Base(BaseKind),
@@ -60,6 +60,28 @@ pub enum Kind<'a> {
 pub struct KindScheme<'a> {
     pub bounds: &'a [KindSet],
     pub kind: &'a Kind<'a>,
+}
+
+/// Kinds of a value scheme's free type variables, under one shared kind binder.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ValueKinds<'a> {
+    pub bounds: &'a [KindSet],
+    /// Same order as `Annotation::free_vars`; every kind indexes `bounds`.
+    pub kinds: &'a [&'a Kind<'a>],
+}
+
+impl<'a> ValueKinds<'a> {
+    /// Fresh independent kind parameters before checking an annotation.
+    pub fn unconstrained(bump: &'a bumpalo::Bump, count: usize) -> Self {
+        Self {
+            bounds: bump.alloc_slice_fill_copy(count, KindSet::ALL),
+            kinds: bump.alloc_slice_fill_iter((0..count).map(|index| {
+                &*bump.alloc(Kind::Var(
+                    index.try_into().expect("too many kind parameters"),
+                ))
+            })),
+        }
+    }
 }
 
 impl<'a> KindScheme<'a> {
@@ -140,6 +162,7 @@ pub enum Def<'a> {
         body: &'a Located<Expr<'a>>,
     },
     TypedDef {
+        kinds: ValueKinds<'a>,
         context: &'a [Pred<'a>],
         /// The original annotation, before aliases and function arguments are split.
         annotation: &'a Located<Type<'a>>,
@@ -363,6 +386,7 @@ pub struct Annotation<'a> {
     /// Scheme context, in evidence order.
     pub context: &'a [Pred<'a>],
     pub free_vars: FreeVars<'a>,
+    pub kinds: ValueKinds<'a>,
     pub typ: &'a Located<Type<'a>>,
 }
 

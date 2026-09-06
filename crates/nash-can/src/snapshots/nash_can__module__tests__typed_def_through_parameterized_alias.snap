@@ -36,6 +36,14 @@ Module {
     ),
     decls: Declare {
         definition: TypedDef {
+            kinds: ValueKinds {
+                bounds: [],
+                kinds: [
+                    Base(
+                        Big,
+                    ),
+                ],
+            },
             context: [],
             annotation: Located {
                 region: Region {

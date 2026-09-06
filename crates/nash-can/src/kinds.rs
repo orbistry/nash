@@ -2,7 +2,7 @@
 //! See docs/kinds.md.
 
 use bumpalo::Bump;
-use nash_ast::{BaseKind, Kind, KindScheme, KindSet};
+use nash_ast::{BaseKind, Kind, KindScheme, KindSet, ValueKinds};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KindVar(u32);
@@ -168,6 +168,20 @@ impl<'a> Infer<'a> {
         self.instantiate_help(scheme.kind, &vars)
     }
 
+    /// Instantiate all roots with the same fresh kind variables.
+    pub fn instantiate_values(&mut self, kinds: &ValueKinds<'_>) -> Vec<&'a K<'a>> {
+        let vars: Vec<KindVar> = kinds
+            .bounds
+            .iter()
+            .map(|bound| self.fresh(*bound))
+            .collect();
+        kinds
+            .kinds
+            .iter()
+            .map(|kind| self.instantiate_help(kind, &vars))
+            .collect()
+    }
+
     fn instantiate_help(&mut self, kind: &Kind<'_>, vars: &[KindVar]) -> &'a K<'a> {
         match kind {
             Kind::Base(base) => self.bump.alloc(K::Base(*base)),
@@ -189,6 +203,21 @@ impl<'a> Infer<'a> {
                 .bump
                 .alloc_slice_fill_iter(vars.iter().map(|(_, b)| *b)),
             kind,
+        }
+    }
+
+    /// Generalize a value's kind roots together, preserving their correlations.
+    pub fn generalize_values(&mut self, kinds: &[&'a K<'a>]) -> ValueKinds<'a> {
+        let mut vars = Vec::new();
+        let kinds: Vec<_> = kinds
+            .iter()
+            .map(|kind| self.generalize_help(kind, &mut vars))
+            .collect();
+        ValueKinds {
+            bounds: self
+                .bump
+                .alloc_slice_fill_iter(vars.into_iter().map(|(_, bound)| bound)),
+            kinds: self.bump.alloc_slice_fill_iter(kinds),
         }
     }
 
@@ -385,9 +414,16 @@ use nash_region::{Located, Region};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Kind schemes of every type constructor visible to the module.
+#[derive(Clone, Debug)]
 pub struct KindEnv<'a> {
     trait_schemes: BTreeMap<QualifiedName<'a>, KindScheme<'a>>,
     schemes: BTreeMap<QualifiedName<'a>, KindScheme<'a>>,
+}
+
+impl Default for KindEnv<'_> {
+    fn default() -> Self {
+        Self::from_interfaces(None)
+    }
 }
 
 impl<'a> KindEnv<'a> {
@@ -1014,14 +1050,25 @@ pub(crate) fn test_big_kind<'a>(bump: &'a Bump, arity: usize) -> KindScheme<'a> 
     KindScheme::mono(kind)
 }
 
-/// Check a value annotation and return its free-variable kind schemes in name order.
+/// Check an annotation and return jointly generalized kinds in its free-variable order.
 pub fn check_annotation<'a>(
     bump: &'a Bump,
     env: &KindEnv<'a>,
     home: ModuleName<'a>,
     name: &'a str,
     annotation: &nash_ast::Annotation<'a>,
-) -> Result<Vec<(&'a str, KindScheme<'a>)>, Vec<Error<'a>>> {
+) -> Result<ValueKinds<'a>, Vec<Error<'a>>> {
+    check_annotation_specialization(bump, env, home, name, annotation, None)
+}
+
+pub(crate) fn check_annotation_specialization<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    home: ModuleName<'a>,
+    name: &'a str,
+    annotation: &nash_ast::Annotation<'a>,
+    specialization: Option<(ValueKinds<'a>, &[&'a Located<CanType<'a>>])>,
+) -> Result<ValueKinds<'a>, Vec<Error<'a>>> {
     let mut walker = Walker {
         bump,
         infer: Infer::new(bump),
@@ -1037,6 +1084,19 @@ pub fn check_annotation<'a>(
             .map(|name| (*name, walker.infer.fresh_k(KindSet::ALL)))
             .collect(),
     };
+    if let Some((kinds, types)) = specialization {
+        assert_eq!(kinds.kinds.len(), types.len());
+        let roots = walker.infer.instantiate_values(&kinds);
+        for (expected, typ) in roots.into_iter().zip(types) {
+            let actual = walker.infer_type(&scope, typ);
+            walker.expect(
+                typ.region,
+                KindContext::Annotation { name },
+                expected,
+                actual,
+            );
+        }
+    }
     for predicate in annotation.context {
         walker.infer_predicate(&scope, predicate, &BTreeMap::new());
     }
@@ -1051,11 +1111,28 @@ pub fn check_annotation<'a>(
     if !walker.errors.is_empty() {
         return Err(walker.errors);
     }
-    Ok(scope
-        .params
+    let roots: Vec<_> = annotation
+        .free_vars
         .iter()
-        .map(|(name, kind)| (*name, walker.infer.generalize(kind)))
-        .collect())
+        .map(|name| scope.params[name])
+        .collect();
+    Ok(walker.infer.generalize_values(&roots))
+}
+
+pub(crate) fn retain_annotation<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    home: ModuleName<'a>,
+    name: &'a str,
+    annotation: &nash_ast::Annotation<'a>,
+) -> Result<&'a nash_ast::Annotation<'a>, Vec<Error<'a>>> {
+    let kinds = check_annotation(bump, env, home, name, annotation)?;
+    Ok(bump.alloc(nash_ast::Annotation {
+        kinds,
+        free_vars: annotation.free_vars,
+        context: annotation.context,
+        typ: annotation.typ,
+    }))
 }
 
 pub(crate) fn check_decl_annotations<'a>(
@@ -1113,6 +1190,7 @@ impl<'a> AnnotationChecker<'_, 'a> {
         match def {
             nash_ast::Def::Def { body, .. } => self.expression(&body.value),
             nash_ast::Def::TypedDef {
+                kinds,
                 context,
                 name,
                 free_vars,
@@ -1121,6 +1199,7 @@ impl<'a> AnnotationChecker<'_, 'a> {
                 ..
             } => {
                 let annotation = nash_ast::Annotation {
+                    kinds: *kinds,
                     context,
                     free_vars,
                     typ: annotation,
