@@ -1,0 +1,31 @@
+module Option exposing (Option(..), type option(..), withDefault)
+
+import Builtin exposing (type bool(..))
+import Eq exposing (Eq)
+import Lift exposing (Lift)
+
+type option 'a = Some 'a | None
+type Option 'a = Some 'a | None
+
+withDefault : 'a -> option 'a -> 'a
+withDefault fallback value =
+    case value of
+        Some item -> item
+        None -> fallback
+
+impl Eq 'a => Eq (option 'a) where
+    eq a b =
+        case (a, b) of
+            (Some x, Some y) -> eq x y
+            (None, None) -> True
+            _ -> False
+
+impl Lift 'a 'b => Lift (option 'a) (Option 'b) where
+    lift value =
+        case value of
+            Some item -> Option.Some (lift item)
+            None -> Option.None
+    lower value =
+        case value of
+            Option.Some item -> Some (lower item)
+            Option.None -> None

@@ -2717,6 +2717,15 @@ need no casts. Runtime representation and round-trip checks remain Plan 07.
 The CLI rejects `Lift bool Unit` at the calling `lift`. Formatting, strict
 Clippy, 1,912 tests and snapshot hygiene pass. This source-only step changes
 no Rust crate.
+Option now declares its little/Big twins and implements withDefault,
+Eq for the little type, and contextual Lift in both directions. The impl
+rebuilds constructors and resolves payload evidence; no primitive casts are
+needed. Core CLI acceptance covers simple, nested and empty lifting/lowering,
+compiling 15 modules and 83 declarations. An invalid payload conversion from
+bool to Unit reports MissingImpl at the original outer `lift` call. Option's
+Functor/Applicative/Monad impls and remaining helpers are still pending;
+this does not complete the hierarchy. Formatting, strict Clippy, 1,912 tests
+and snapshot hygiene pass; no Rust crate changes in this source-only step.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

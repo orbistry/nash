@@ -14,6 +14,24 @@ import Bool exposing (not, xor)
 import Prelude exposing (..)
 import Lift exposing (Lift)
 import Unit exposing (Unit)
+import Option exposing (Option, type option(..))
+
+optionalEquality = eq (Some True) (Some False)
+optionalDefault = Option.withDefault True None
+liftedOption : Option Bool.Bool
+liftedOption = lift (Some True)
+loweredOption : option bool
+loweredOption = lower liftedOption
+nestedOption : Option (Option Bool.Bool)
+nestedOption = lift (Some (Some True))
+loweredNestedOption : option (option bool)
+loweredNestedOption = lower nestedOption
+emptyOption : Option Unit
+emptyOption = lift emptyLittleOption
+emptyLittleOption : option unit
+emptyLittleOption = None
+loweredEmptyOption : option unit
+loweredEmptyOption = lower emptyOption
 
 liftedBool : Bool.Bool
 liftedBool = lift True
