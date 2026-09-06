@@ -1,0 +1,33 @@
+module Lift exposing (Lift)
+
+import Builtin exposing (type bool(..))
+import Bool exposing (Bool)
+import Unit exposing (Unit)
+import Ordering exposing (Ordering, type ordering(..))
+
+trait Lift 'small 'big where
+    lift : 'small -> 'big
+    lower : 'big -> 'small
+
+impl Lift bool Bool where
+    lift value = if value then Bool.True else Bool.False
+    lower value =
+        case value of
+            Bool.True -> True
+            Bool.False -> False
+
+impl Lift unit Unit where
+    lift _ = Unit.Unit
+    lower _ = ()
+
+impl Lift ordering Ordering where
+    lift value =
+        case value of
+            LT -> Ordering.LT
+            EQ -> Ordering.EQ
+            GT -> Ordering.GT
+    lower value =
+        case value of
+            Ordering.LT -> LT
+            Ordering.EQ -> EQ
+            Ordering.GT -> GT

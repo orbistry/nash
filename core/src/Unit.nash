@@ -1,0 +1,3 @@
+module Unit exposing (Unit(..))
+
+type Unit = Unit

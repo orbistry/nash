@@ -1,4 +1,4 @@
-module Bool exposing (Bool, not, and, or, xor)
+module Bool exposing (Bool(..), not, and, or, xor)
 
 import Builtin
 

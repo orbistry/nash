@@ -2681,8 +2681,7 @@ Ord provides int, bytes, bytewise string, bool, unit and lexicographic list
 impls, with lt/le/gt/ge/max/min defaults. The core acceptance module exercises
 every default and the Eq superclass through an Ord-given function. These are
 real source implementations using the builtin comparison and UTF-8 functions;
-the Big Ordering twin, Lift conversions and Big Ord impls remain
-unfinished. Compilation does not establish runtime comparison results before
+Big Ord impls remain unfinished. Compilation does not establish runtime comparison results before
 Plan 07 code generation. This source-only step changes no Rust crate.
 The CLI checks nine modules and 32 declarations; comparing Data reports
 MissingImpl at `compare`. Formatting, strict Clippy, 1,901 tests and snapshot
@@ -2705,8 +2704,19 @@ alongside trait targets in the cross-module inference regression.
 Prelude also supplies real Eq/Ord/Show impls for tuples through four components. The core
 CLI checks 12 modules and 66 declarations with explicit Prelude imports.
 The higher-kinded operators and implicit imports remain
-unfinished. Bool conversions and runtime short-circuit lowering remain at
-their documented boundaries; compilation does not prove lazy evaluation.
+unfinished. Runtime short-circuit lowering remains at its documented
+boundary; compilation does not prove lazy evaluation.
+Lift now defines its real trait and constructor-based conversions for
+bool/Bool, unit/Unit and ordering/Ordering. Unit and the Big Ordering twin are
+declared in their type modules. Bool and Ordering export their Big constructors
+so closed imports can use them through module qualification. The core CLI
+acceptance checks both conversion directions and exact-core reflexive Lift on
+Bool, compiling 14 modules and 73 declarations. Primitive and container
+conversions still require the documented cast prerequisite; these three impls
+need no casts. Runtime representation and round-trip checks remain Plan 07.
+The CLI rejects `Lift bool Unit` at the calling `lift`. Formatting, strict
+Clippy, 1,912 tests and snapshot hygiene pass. This source-only step changes
+no Rust crate.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

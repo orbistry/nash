@@ -12,6 +12,23 @@ import Ordering exposing (type ordering(..))
 import Show exposing (Show)
 import Bool exposing (not, xor)
 import Prelude exposing (..)
+import Lift exposing (Lift)
+import Unit exposing (Unit)
+
+liftedBool : Bool.Bool
+liftedBool = lift True
+loweredBool : bool
+loweredBool = lower liftedBool
+liftedUnit : Unit
+liftedUnit = lift ()
+loweredUnit : unit
+loweredUnit = lower liftedUnit
+liftedOrdering : Ordering.Ordering
+liftedOrdering = lift LT
+loweredOrdering : ordering
+loweredOrdering = lower liftedOrdering
+reflexiveBool : Bool.Bool
+reflexiveBool = lift liftedBool
 
 integers = eq 1 2
 preludeOps = ((1 + 2) * 3, 1 == 1, [1] ++ [2])

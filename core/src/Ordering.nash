@@ -1,9 +1,11 @@
-module Ordering exposing (type ordering(..), invert, then_)
+module Ordering exposing (Ordering(..), type ordering(..), invert, then_)
 
 import Builtin exposing (type bool(..))
 import Eq exposing (Eq)
 
 type ordering = LT | EQ | GT
+
+type Ordering = LT | EQ | GT
 
 invert : ordering -> ordering
 invert order =
