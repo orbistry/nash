@@ -2,6 +2,7 @@ module Num exposing (Num)
 
 import Builtin
 import Literal
+import Lift exposing (Lift)
 
 trait Num 'a where
     add : 'a -> 'a -> 'a
@@ -14,3 +15,9 @@ impl Num int where
     sub = Builtin.subtractInteger
     mul = Builtin.multiplyInteger
     negate x = Builtin.subtractInteger 0 x
+
+impl Num Int where
+    add a b = lift (Builtin.addInteger (lower a) (lower b))
+    sub a b = lift (Builtin.subtractInteger (lower a) (lower b))
+    mul a b = lift (Builtin.multiplyInteger (lower a) (lower b))
+    negate value = lift (Builtin.subtractInteger 0 (lower value))

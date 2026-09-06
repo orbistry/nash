@@ -2774,6 +2774,13 @@ preserves generalized exported literals and checks retained evidence for
 discarded literals defaulting to int/bytes/string despite the extra candidates.
 Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. Literal
 conversion execution and compile-time UTF-8 folding remain later-plan checks.
+Num Int and Integral Int now lower operands through Lift, call the matching
+integer builtin, and lift the result. Core acceptance exercises all eight
+methods and Integral's Num superclass, compiling 17 modules and 120
+declarations. The CLI rejects mixed Int/int operands at the incompatible
+argument. Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass;
+this source-only step changes no Rust crate. Numeric results, negative
+division semantics and zero-divisor behavior remain Plan 07 execution checks.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

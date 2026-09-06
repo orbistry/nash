@@ -18,6 +18,13 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+bigArithmetic : (Int, Int, Int, Int)
+bigArithmetic = (add 7 3, sub 7 3, mul 7 3, -7)
+bigDivision : (Int, Int, Int, Int)
+bigDivision = (div (-7) 3, mod (-7) 3, quot (-7) 3, rem (-7) 3)
+bigSuperclass : Int
+bigSuperclass = twice 21
+
 integerLiteral : Int
 integerLiteral = 42
 bytesLiteral : Bytes

@@ -2,6 +2,7 @@ module Integral exposing (Integral)
 
 import Builtin
 import Num exposing (Num)
+import Lift exposing (Lift)
 
 trait Num 'a => Integral 'a where
     div : 'a -> 'a -> 'a
@@ -14,3 +15,9 @@ impl Integral int where
     mod = Builtin.modInteger
     quot = Builtin.quotientInteger
     rem = Builtin.remainderInteger
+
+impl Integral Int where
+    div a b = lift (Builtin.divideInteger (lower a) (lower b))
+    mod a b = lift (Builtin.modInteger (lower a) (lower b))
+    quot a b = lift (Builtin.quotientInteger (lower a) (lower b))
+    rem a b = lift (Builtin.remainderInteger (lower a) (lower b))
