@@ -1,16 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nnest : Keep 'a => 'a -> ()\nnest x =\n    let\n        helper : Keep 'b => 'b -> ()\n        helper y = nest [y]\n    in\n    helper x\n"
+description: "Code:\n\nmodule Main exposing (..)\ntype option 'a = Some 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (option 'a) where\n    keep xs = xs\nnest : Keep 'a => 'a -> ()\nnest x =\n    let\n        helper : Keep 'b => 'b -> ()\n        helper y = nest (Some y)\n    in\n    helper x\n"
 ---
 [
     PolymorphicRecursion {
         region: Region {
             start: Position {
-                line: 10,
+                line: 11,
                 column: 20,
             },
             end: Position {
-                line: 10,
+                line: 11,
                 column: 24,
             },
         },
@@ -25,15 +25,10 @@ description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep 
         args: [
             Type {
                 home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
+                    package: None,
+                    name: "Main",
                 },
-                name: "List",
+                name: "option",
                 args: [
                     RigidVar(
                         "b",

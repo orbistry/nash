@@ -251,6 +251,46 @@ impl<'a> Solver<'a, '_> {
         growing
     }
 
+    fn check_use_kinds(
+        &self,
+        uf: &mut UnionFind<'a>,
+        use_: &UseRecord<'a>,
+        signature: type_::KindSignature<'a>,
+    ) -> Result<(), crate::kinds::Error<'a>> {
+        let mut scopes = Vec::new();
+        let mut owner = use_.owner;
+        while let Some(node) = owner {
+            let scheme = self
+                .schemes
+                .iter()
+                .find(|scheme| scheme.site.node() == node)
+                .expect("body owner has a recorded scheme");
+            if let Some(signature) = scheme.binding.kinds {
+                scopes.push(signature);
+            }
+            owner = scheme.parent;
+        }
+        let mut kinds = crate::kinds::State::new(self.bump);
+        let mut rigid = Vec::new();
+        for declared in scopes.into_iter().rev() {
+            kinds.require_preserving(
+                uf,
+                &self.tables.kinds,
+                declared.kinds,
+                declared.variables,
+                &rigid,
+            )?;
+            rigid.extend_from_slice(declared.variables);
+        }
+        kinds.require_preserving(
+            uf,
+            &self.tables.kinds,
+            signature.kinds,
+            signature.variables,
+            &rigid,
+        )
+    }
+
     fn finish(
         &self,
         uf: &mut UnionFind<'a>,
@@ -261,23 +301,20 @@ impl<'a> Solver<'a, '_> {
         let growing = self.growing_evidence();
         let mut errors = Vec::new();
         for use_ in &self.uses {
-            if let Some(signature) = use_.kinds {
-                let mut kinds = crate::kinds::State::new(self.bump);
-                if let Err(reason) =
-                    kinds.require(uf, &self.tables.kinds, signature.kinds, signature.variables)
-                {
-                    errors.push(Error::BadKind {
-                        region: use_.site.region,
-                        name: use_.site.name,
-                        args: self.bump.alloc_slice_fill_iter(
-                            signature
-                                .variables
-                                .iter()
-                                .map(|var| to_error_type(self.bump, uf, *var)),
-                        ),
-                        reason,
-                    });
-                }
+            if let Some(signature) = use_.kinds
+                && let Err(reason) = self.check_use_kinds(uf, use_, signature)
+            {
+                errors.push(Error::BadKind {
+                    region: use_.site.region,
+                    name: use_.site.name,
+                    args: self.bump.alloc_slice_fill_iter(
+                        signature
+                            .variables
+                            .iter()
+                            .map(|var| to_error_type(self.bump, uf, *var)),
+                    ),
+                    reason,
+                });
             }
             for root in &use_.predicates {
                 if growing.contains(root) {

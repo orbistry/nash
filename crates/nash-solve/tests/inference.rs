@@ -563,15 +563,16 @@ fn recursive_evidence_growth_through_a_nested_helper_is_rejected() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        type option 'a = Some 'a
         trait Keep 'a where
             keep : 'a -> 'a
-        impl Keep 'a => Keep (List 'a) where
+        impl Keep 'a => Keep (option 'a) where
             keep xs = xs
         nest : Keep 'a => 'a -> ()
         nest x =
             let
                 helper : Keep 'b => 'b -> ()
-                helper y = nest [y]
+                helper y = nest (Some y)
             in
             helper x
         "#
@@ -583,27 +584,28 @@ fn recursive_evidence_allows_unchanged_closed_and_unconstrained_calls() {
     assert_inference_snapshot!(
         r#"
         module Main exposing (..)
+        type option 'a = Some 'a
         trait Keep 'a where
             keep : 'a -> 'a
         impl Keep () where
             keep x = x
-        impl Keep 'a => Keep (List 'a) where
+        impl Keep 'a => Keep (option 'a) where
             keep xs = xs
         same : Keep 'a => 'a -> ()
         same x = same x
         closed : Keep 'a => 'a -> ()
         closed x = closed ()
         plain : 'a -> ()
-        plain x = plain [x]
-        wrap : Keep 'a => 'a -> List 'a
-        wrap x = keep [x]
+        plain x = plain (Some x)
+        wrap : Keep 'a => 'a -> option 'a
+        wrap x = keep (Some x)
         reset : (Keep 'a, Keep 'b) => 'a -> 'b -> ()
-        reset x y = reset [y] ()
+        reset x y = reset (Some y) ()
         nested : Keep 'a => 'a -> ()
         nested x =
             let
                 helper : Keep 'b => 'b -> ()
-                helper y = nested [y]
+                helper y = nested (Some y)
             in
             helper ()
         "#
@@ -615,12 +617,13 @@ fn mutual_recursion_rejects_growing_evidence_from_another_member() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        type option 'a = Some 'a
         trait Keep 'a where
             keep : 'a -> 'a
-        impl Keep 'a => Keep (List 'a) where
+        impl Keep 'a => Keep (option 'a) where
             keep xs = xs
         left : Keep 'a => 'a -> ()
-        left x = right [x]
+        left x = right (Some x)
         right : Keep 'a => 'a -> ()
         right x = left x
         "#
@@ -632,12 +635,13 @@ fn recursive_impl_evidence_cannot_grow_from_its_own_given() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        type option 'a = Some 'a
         trait Keep 'a where
             keep : 'a -> 'a
-        impl Keep 'a => Keep (List 'a) where
+        impl Keep 'a => Keep (option 'a) where
             keep xs = xs
         nest : Keep 'a => 'a -> ()
-        nest x = nest [x]
+        nest x = nest (Some x)
         "#
     );
 }
@@ -2050,6 +2054,25 @@ fn higher_kinded_bind_chain_retains_its_monad_constraint() {
         trait Applicative 'm => Monad 'm where
             bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b
         chain f g mx = bind (bind mx f) g
+    "#
+    );
+}
+
+#[test]
+fn nested_use_cannot_narrow_its_owners_declared_kind() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        first : 'a -> list 'a -> 'a
+        first x xs = x
+        ignore value = ()
+        bad : 'a -> ()
+        bad x =
+            let
+                helper ignored = ignore (first x)
+            in
+            helper ()
     "#
     );
 }

@@ -2250,8 +2250,9 @@ records; their roots participate in copying and quantifier discovery. Solver
 kind graph inference now has focused coverage for shared application kinds,
 type-variable merges, and rigid entailment. Local declared uses and foreign
 uses retain instantiated kind roots and are checked before solved output is
-published. This final validation does not yet propagate kind constraints through
-inferred schemes or prove rigid requirements in their owning annotation scope.
+published. Uses prove their requirements against enclosing declared signatures,
+including captures through nested helpers, without narrowing those signatures.
+This final validation does not yet propagate kind constraints through inferred schemes.
 Connecting kind claims to generalization and retaining kinds in solved output
 remain unfinished.
 

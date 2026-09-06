@@ -1,0 +1,50 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nignore value = ()\nbad : 'a -> ()\nbad x =\n    let\n        helper ignored = ignore (first x)\n    in\n    helper ()\n"
+---
+[
+    BadKind {
+        region: Region {
+            start: Position {
+                line: 9,
+                column: 34,
+            },
+            end: Position {
+                line: 9,
+                column: 39,
+            },
+        },
+        name: "first",
+        args: [
+            RigidVar(
+                "a",
+            ),
+        ],
+        reason: Rigid {
+            declared: ValueKinds {
+                bounds: [
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kinds: [
+                    Var(
+                        0,
+                    ),
+                ],
+            },
+            required: ValueKinds {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kinds: [
+                    Var(
+                        0,
+                    ),
+                ],
+            },
+        },
+    },
+]
