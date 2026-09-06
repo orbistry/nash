@@ -2790,6 +2790,23 @@ methods and a superclass-constrained helper. Comparing List Int with List Bytes
 is rejected at the incompatible operand. Runtime comparison results remain
 Plan 07 checks. Formatting, strict Clippy, 1,915 tests and snapshot hygiene
 pass. This source-only step changes no Rust crate.
+List Lift now maps contextual element conversions and uses private typed
+wrapList/unwrapList bridges. The raw polymorphic cast sketch lost the element
+relationship and produced MissingConstraint; the bridges preserve the shared
+Big element parameter. Data now supplies ToData/FromData for List and Map.
+Core acceptance covers nested and reflexive list conversions plus nominal
+container Data conversions, compiling 17 modules and 139 declarations. An
+invalid bool-to-Int element conversion reports MissingImpl at the outer lift.
+Runtime conversion/validation remains Plan 07 work.
+Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
+source-only step changes no Rust crate.
+
+The documented Map Lift impl remains blocked by a spec conflict: its head
+`Lift (list (pair 'k 'v)) (Map 'k 'v)` has a nested constructor argument,
+which docs/traits.md forbids (only reflexive Lift is currently exempt).
+The real CLI reports BadInstanceHead/NonVariableArgument. No exception has
+been added: resolving this needs a head-policy decision and a representation
+that preserves the nested pattern through coherence and evidence resolution.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

@@ -43,3 +43,19 @@ impl Lift ordering Ordering where
             Ordering.LT -> LT
             Ordering.EQ -> EQ
             Ordering.GT -> GT
+
+mapList : ('a -> 'b) -> list 'a -> list 'b
+mapList f values =
+    case values of
+        [] -> []
+        x :: xs -> Builtin.mkCons (f x) (mapList f xs)
+
+impl Lift 'a 'b => Lift (list 'a) (List 'b) where
+    lift values = wrapList (mapList lift values)
+    lower values = mapList lower (unwrapList values)
+
+wrapList : list 'a -> List 'a
+wrapList = Builtin.castLift
+
+unwrapList : List 'a -> list 'a
+unwrapList = Builtin.castLower

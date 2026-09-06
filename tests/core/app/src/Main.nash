@@ -18,6 +18,25 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+bigList : List Int
+bigList = lift [1, 2]
+littleList : list int
+littleList = lower bigList
+reflexiveList : List Int
+reflexiveList = lift [integerLiteral]
+nestedBigLists : List (List Int)
+nestedBigLists = lift [[1], [2]]
+nestedLittleLists : list (list int)
+nestedLittleLists = lower nestedBigLists
+bigMap : Map Int Bytes
+bigMap = fromData (Map [])
+listData = toData bigList
+readList : List Int
+readList = fromData listData
+mapData = toData bigMap
+checkedMap : Map Int Bytes
+checkedMap = validateData mapData
+
 bigEquality = (eq integerLiteral bigInteger, eq bytesLiteral bigBytes)
 bigOrdering = (compare integerLiteral bigInteger, compare bytesLiteral bigBytes)
 bigOrderDefaults = (lt integerLiteral bigInteger, max bytesLiteral bigBytes)

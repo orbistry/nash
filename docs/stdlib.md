@@ -373,8 +373,15 @@ impl Lift string Bytes where
 -- walks the list; `lift : list Int -> List Int` picks the reflexive
 -- element impl and the optimizer removes the identity map, leaving `listData`
 impl Lift 'a 'b => Lift (list 'a) (List 'b) where
-    lift xs = Builtin.castLift (mapList lift xs)
-    lower xs = mapList lower (Builtin.castLower xs)
+    lift xs = wrapList (mapList lift xs)
+    lower xs = mapList lower (unwrapList xs)
+
+-- Private bridges preserve the element type across the intrinsic boundary.
+wrapList : list 'a -> List 'a
+wrapList = Builtin.castLift
+
+unwrapList : List 'a -> list 'a
+unwrapList = Builtin.castLower
 
 impl Lift (list (pair 'k 'v)) (Map 'k 'v) where
     lift = Builtin.castLift

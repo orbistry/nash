@@ -45,3 +45,17 @@ fields value =
     case value of
         Constr _ items -> Some items
         _ -> None
+
+impl ToData (List 'a) where
+    toData = Builtin.castToData
+
+impl FromData (List 'a) where
+    fromData = Builtin.castFromDataShallow
+    validateData = Builtin.castValidateData
+
+impl ToData (Map 'k 'v) where
+    toData = Builtin.castToData
+
+impl FromData (Map 'k 'v) where
+    fromData = Builtin.castFromDataShallow
+    validateData = Builtin.castValidateData
