@@ -78,6 +78,7 @@ impl<'a> Resolver<'_, 'a> {
     fn substitution_work(&mut self, typ: &Type<'a>, depth: usize) -> Result<(), Failure> {
         self.step(depth)?;
         match typ {
+            Type::Kinded { typ, .. } => self.substitution_work(&typ.value, depth + 1)?,
             Type::App { head, args } => {
                 self.substitution_work(&head.value, depth + 1)?;
                 for arg in *args {
@@ -135,6 +136,7 @@ impl<'a> Resolver<'_, 'a> {
     fn term(&mut self, typ: &Type<'a>, depth: usize) -> Result<Term<'a>, Failure> {
         self.step(depth)?;
         let (con, args) = match typ {
+            Type::Kinded { typ, .. } => return self.term(&typ.value, depth + 1),
             Type::Var(_) => return Err(Failure::NonGround),
             Type::App { head, args } => {
                 let mut head = self.term(&head.value, depth + 1)?;

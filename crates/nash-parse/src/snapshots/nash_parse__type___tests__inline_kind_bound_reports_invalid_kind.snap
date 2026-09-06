@@ -1,0 +1,17 @@
+---
+source: crates/nash-parse/src/type_.rs
+description: "Code:\n\nlist ('a : Wrong)"
+---
+Tuple(
+    Kind(
+        Name(
+            "Wrong",
+            1,
+            12,
+        ),
+        1,
+        12,
+    ),
+    1,
+    6,
+)

@@ -117,6 +117,9 @@ both its trait and its head type are visible.
   arguments are recursive type patterns, including concrete types and nested
   applications: `list int`, `list (pair 'k 'v)`, and `List 'a` are legal.
   Variables may recur across patterns; every occurrence denotes the same type.
+  Inline annotations constrain the shared variable kind, for example
+  `impl Eq (list ('a : Big))`. They remain part of the impl kind requirements
+  used by coherence, superclass checks and selection.
   Matching must preserve that equality. Bare variable heads and function heads
   remain excluded; reflexive Big Lift remains a compiler-provided rule.
   This rule applies uniformly to user and core impls, with no Map-specific

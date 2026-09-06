@@ -359,6 +359,10 @@ pub enum Pattern<'a> {
 
 #[derive(Debug)]
 pub enum Type<'a> {
+    Kinded {
+        typ: &'a Located<Type<'a>>,
+        kind: &'a Located<Kind<'a>>,
+    },
     Lambda {
         from: &'a Located<Type<'a>>,
         to: &'a Located<Type<'a>>,
@@ -389,13 +393,24 @@ pub enum Type<'a> {
     },
 }
 
+impl<'a> Type<'a> {
+    /// Inspect shape without discarding the annotation from the stored type.
+    pub fn unannotated(&self) -> &Self {
+        let mut typ = self;
+        while let Self::Kinded { typ: inner, .. } = typ {
+            typ = &inner.value;
+        }
+        typ
+    }
+}
+
 #[derive(Debug)]
 pub struct TypeParam<'a> {
     pub name: &'a Located<&'a str>,
     pub kind: Option<&'a Located<Kind<'a>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Kind<'a> {
     Big,
     Const,

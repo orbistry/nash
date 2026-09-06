@@ -2,6 +2,35 @@ use bumpalo::Bump;
 use indoc::indoc;
 
 #[test]
+fn inline_impl_bounds_are_retained_for_superclasses() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        trait Keep 'a => More 'a where
+            more : 'a -> 'a
+        impl Keep (list ('a : Big)) where
+            keep x = x
+        impl More (list ('a : Big)) where
+            more x = x
+    "
+        ),
+    )
+    .unwrap();
+    assert_eq!(result.tables.impls.len(), 2);
+    for info in result.tables.impls.values() {
+        assert_eq!(
+            info.kinds.kinds,
+            &[&nash_ast::Kind::Base(nash_ast::BaseKind::Big)]
+        );
+    }
+}
+
+#[test]
 fn recursive_overlap_combines_inferred_kind_bounds() {
     let bump = Bump::new();
     let mut keys = Vec::new();
@@ -88,7 +117,14 @@ fn impl_cannot_own_an_imported_trait_and_imported_heads() {
 fn impl_heads_reject_non_constructor_shapes() {
     let bump = Bump::new();
     let mut errors = Vec::new();
-    for head in ["'a", "('a -> 'b)", "{ value : 'a }", "('f 'a)"] {
+    for head in [
+        "'a",
+        "('a : Big)",
+        "('a -> 'b)",
+        "(('a -> 'b) : Term)",
+        "{ value : 'a }",
+        "('f 'a)",
+    ] {
         let source = format!(
             "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep {head} where\n    keep x = x\n"
         );

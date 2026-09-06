@@ -296,7 +296,7 @@ fn canonicalize_head<'a>(
     variables: &mut BTreeMap<&'a str, Region>,
     order: &mut Vec<&'a str>,
 ) -> Result<CanonicalHead<'a>, Vec<Error<'a>>> {
-    let reason = match typ.value {
+    let reason = match typ.value.unannotated() {
         SourceType::Var(_) => Some(BadHead::BareVariable),
         SourceType::Lambda { .. } => Some(BadHead::Function),
         SourceType::Record(_) => Some(BadHead::Record),
@@ -321,6 +321,7 @@ pub(crate) fn canonicalize_pattern<'a>(
     order: &mut Vec<&'a str>,
 ) -> Result<Head<'a>, Vec<Error<'a>>> {
     let head = match &typ.value {
+        Type::Kinded { typ, .. } => return canonicalize_pattern(bump, typ, variables, order),
         Type::Var(name) => {
             variables.entry(name).or_insert(typ.region);
             let index = match order.iter().position(|existing| existing == name) {

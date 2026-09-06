@@ -33,6 +33,11 @@ macro_rules! assert_kind_error_snapshot {
 }
 
 #[test]
+fn inline_kind_bounds_reject_contradictory_repeated_variables() {
+    assert_kind_error_snapshot!("type small 'a = Small (pair ('a : Big) ('a : Const))");
+}
+
+#[test]
 fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
     use nash_ast::{AliasType, Kind, KindScheme, KindSet, QualifiedName, Type};
     use nash_region::Located;

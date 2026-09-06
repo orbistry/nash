@@ -1051,6 +1051,7 @@ fn local_type_edges<'a>(
     edges: &mut Vec<&'a str>,
 ) {
     match typ {
+        CanType::Kinded { typ, .. } => local_type_edges(&typ.value, home, local, edges),
         CanType::Named { reference, args } => {
             if reference.home == home && local.contains(reference.name) {
                 edges.push(reference.name);
@@ -1193,12 +1194,7 @@ fn infer_group<'a>(
             }
             Decl::Alias(a) => {
                 let big = is_big_name(a.name.value);
-                let k = match &a.typ.value {
-                    CanType::Record { fields, .. } => {
-                        w.infer_record_body(scope, a.name.value, big, fields)
-                    }
-                    _ => w.infer_type(scope, a.typ),
-                };
+                let k = w.infer_alias_body(scope, a.name.value, big, a.typ);
                 w.expect(
                     a.typ.region,
                     KindContext::AliasCasing {
@@ -1259,6 +1255,25 @@ fn infer_group<'a>(
 }
 
 impl<'e, 'a> Walker<'e, 'a> {
+    fn infer_alias_body(
+        &mut self,
+        scope: &Scope<'a>,
+        name: &'a str,
+        big: bool,
+        typ: &'a Located<CanType<'a>>,
+    ) -> &'a K<'a> {
+        match &typ.value {
+            CanType::Kinded { typ: inner, kind } => {
+                let actual = self.infer_alias_body(scope, name, big, inner);
+                let expected = self.annotation_kind(kind);
+                self.expect(typ.region, KindContext::TypeAnnotation, expected, actual);
+                actual
+            }
+            CanType::Record { fields, .. } => self.infer_record_body(scope, name, big, fields),
+            _ => self.infer_type(scope, typ),
+        }
+    }
+
     fn annotation_kind(&mut self, kind: &Located<nash_source::Kind<'_>>) -> &'a K<'a> {
         use nash_source::Kind;
         match &kind.value {
@@ -1276,6 +1291,12 @@ impl<'e, 'a> Walker<'e, 'a> {
 
     fn infer_type(&mut self, scope: &Scope<'a>, typ: &'a Located<CanType<'a>>) -> &'a K<'a> {
         match &typ.value {
+            CanType::Kinded { typ: inner, kind } => {
+                let actual = self.infer_type(scope, inner);
+                let expected = self.annotation_kind(kind);
+                self.expect(typ.region, KindContext::TypeAnnotation, expected, actual);
+                actual
+            }
             CanType::Var(name) => scope.params[name],
             CanType::App { head, args } => {
                 let kind = self.infer_type(scope, head);
@@ -2094,6 +2115,27 @@ pub(crate) struct ImplKinds<'e, 'a> {
 }
 
 impl<'a> ImplKinds<'_, 'a> {
+    /// Reconstructed structural heads must retain the original inline bounds.
+    pub(crate) fn restore(
+        &mut self,
+        variables: &[&'a str],
+        signature: ValueKinds<'a>,
+        region: Region,
+    ) -> Result<(), Vec<Error<'a>>> {
+        assert_eq!(variables.len(), signature.kinds.len());
+        let expected = self.walker.infer.instantiate_values(&signature);
+        for (name, expected) in variables.iter().zip(expected) {
+            let actual = self.scope.params[name];
+            self.walker
+                .expect(region, KindContext::TypeAnnotation, expected, actual);
+        }
+        if self.walker.errors.is_empty() {
+            Ok(())
+        } else {
+            Err(std::mem::take(&mut self.walker.errors))
+        }
+    }
+
     pub(crate) fn proves_signature(
         &self,
         signature: ValueKinds<'a>,

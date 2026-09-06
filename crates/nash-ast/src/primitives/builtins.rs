@@ -67,6 +67,10 @@ macro_rules! builtin {
 
 const A: &Located<Type<'static>> = &Located::at_zero(Type::Var("a"));
 const B: &Located<Type<'static>> = &Located::at_zero(Type::Var("b"));
+const BIG_A: &Located<Type<'static>> = &Located::at_zero(Type::Kinded {
+    typ: A,
+    kind: &Located::at_zero(nash_source::Kind::Big),
+});
 const UNIT: &Located<Type<'static>> = &Located::at_zero(Type::Unit);
 const INT: &Located<Type<'static>> = &named("int", &[]);
 const BOOL: &Located<Type<'static>> = &named("bool", &[]);
@@ -337,8 +341,8 @@ pub const BUILTINS: &[Builtin] = &[
     builtin!(
         "listData",
         Plutus("ListData"),
-        [],
-        function!(&named("list", &[DATA]), DATA)
+        ["a"],
+        function!(&named("list", &[BIG_A]), DATA)
     ),
     builtin!("iData", Plutus("IData"), [], function!(INT, DATA)),
     builtin!("bData", Plutus("BData"), [], function!(BYTES, DATA)),

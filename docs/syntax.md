@@ -510,6 +510,7 @@ type_head      = type_var | type_named ;               (* new *)
 type_term      = type_var | type_named | type_tuple | type_record ;
 type_named     = upper_var | lower_var | qualified_upper ;   (* changed *)
 type_tuple     = '(' ')' | '(' type_expr ')'
+               | '(' type_expr ':' kind ')'
                | '(' type_expr ',' type_expr { ',' type_expr } ')' ;
 type_record    = '{' '}' | '{' type_field { ',' type_field } '}' ;  (* changed: no ext *)
 type_field     = lower_var ':' type_expr ;

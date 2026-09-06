@@ -1,0 +1,33 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type small 'a = Small (pair ('a : Big) ('a : Const))"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 40,
+            },
+            end: Position {
+                line: 5,
+                column: 52,
+            },
+        },
+        context: TypeAnnotation,
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+            applications: [],
+        },
+    },
+]

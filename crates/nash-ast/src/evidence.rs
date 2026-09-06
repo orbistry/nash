@@ -11,6 +11,8 @@ fn same_types(a: &[&Located<Type<'_>>], b: &[&Located<Type<'_>>]) -> bool {
 
 fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
     match (a, b) {
+        (Type::Kinded { typ, .. }, b) => same_type(&typ.value, b),
+        (a, Type::Kinded { typ, .. }) => same_type(a, &typ.value),
         (Type::Var(a), Type::Var(b)) => a == b,
         (Type::Unit, Type::Unit) => true,
         (Type::Lambda { from: af, to: at }, Type::Lambda { from: bf, to: bt }) => {
@@ -97,8 +99,12 @@ fn hash_types<H: Hasher>(types: &[&Located<Type<'_>>], state: &mut H) {
 }
 
 fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
+    if let Type::Kinded { typ, .. } = typ {
+        return hash_type(&typ.value, state);
+    }
     std::mem::discriminant(typ).hash(state);
     match typ {
+        Type::Kinded { .. } => unreachable!("kind annotation stripped"),
         Type::Var(name) => name.hash(state),
         Type::Unit => {}
         Type::Lambda { from, to } => {

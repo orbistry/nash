@@ -54,7 +54,7 @@ impl Ord bool where
 impl Ord unit where
     compare _ _ = EQ
 
-impl Ord 'a => Ord (list 'a) where
+impl (Ord 'a, Eq (list 'a)) => Ord (list 'a) where
     compare xs ys =
         if Builtin.nullList xs then
             if Builtin.nullList ys then EQ else LT

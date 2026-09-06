@@ -295,6 +295,10 @@ For builtin `list 'a` with `'a : Big`, the stdlib equality route is
 semantics, not an optimizer proof about arbitrary Eq bodies. The Const
 member of Storable uses element Eq. These cases must be disjoint under
 kind-aware coherence; do not retain an overlapping unrestricted list impl.
+`listData : list ('a : Big) -> Data` accepts those elements directly, since
+they already have the Data representation. Generic `Ord (list 'a)` retains
+both `Ord 'a` and `Eq (list 'a)` in its context; an unknown Storable kind
+does not select either list equality route during generic type checking.
 Map Data equality compares the encoded sequence of entries, including order
 and duplicates. It is not dictionary-style equality.
 
@@ -360,18 +364,17 @@ impl Eq bool where
 impl Eq unit where
     eq _ _ = True
 
-impl Eq 'a => Eq (list 'a) where
+impl Eq (list ('a : Big)) where
+    eq a b = Builtin.equalsData (Builtin.listData a) (Builtin.listData b)
+
+impl Eq 'a => Eq (list ('a : Const)) where
     eq xs ys =
         if Builtin.nullList xs then Builtin.nullList ys
         else if Builtin.nullList ys then False
         else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)
         else False
 
-impl Eq Data where
-    eq = Builtin.equalsData
-
-impl Eq Int where
-    eq a b = Builtin.equalsData (toData a) (toData b)
+-- Big Eq is compiler-provided; no explicit Data or Int impl is declared.
 ```
 
 ```elm
@@ -649,7 +652,7 @@ Rules:
 | `ChooseData` | `chooseData` | `Data -> 'a -> 'a -> 'a -> 'a -> 'a -> 'a` |
 | `ConstrData` | `constrData` | `int -> list Data -> Data` |
 | `MapData` | `mapData` | `list (pair Data Data) -> Data` |
-| `ListData` | `listData` | `list Data -> Data` |
+| `ListData` | `listData` | `list ('a : Big) -> Data` |
 | `IData` | `iData` | `int -> Data` |
 | `BData` | `bData` | `bytes -> Data` |
 | `UnConstrData` | `unConstrData` | `Data -> pair int (list Data)` |

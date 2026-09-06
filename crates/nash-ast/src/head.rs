@@ -38,9 +38,15 @@ fn canonical_view<'a>(
     mut typ: &'a Located<Type<'a>>,
 ) -> (CanonicalCon<'a>, Vec<&'a Located<Type<'a>>>) {
     let mut suffixes = Vec::new();
-    while let Type::App { head, args } = &typ.value {
-        suffixes.push(*args);
-        typ = head;
+    loop {
+        match &typ.value {
+            Type::App { head, args } => {
+                suffixes.push(*args);
+                typ = head;
+            }
+            Type::Kinded { typ: inner, .. } => typ = inner,
+            _ => break,
+        }
     }
     let (con, mut args) = match &typ.value {
         Type::Named { reference, args } => (
@@ -73,7 +79,7 @@ fn canonical_view<'a>(
             CanonicalCon::Record(fields.iter().map(|field| field.field).collect(), *ext),
             fields.iter().map(|field| field.typ).collect(),
         ),
-        Type::App { .. } => unreachable!("application head flattened"),
+        Type::App { .. } | Type::Kinded { .. } => unreachable!("application head flattened"),
     };
     for suffix in suffixes.into_iter().rev() {
         args.extend_from_slice(suffix);

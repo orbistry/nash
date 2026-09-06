@@ -22,6 +22,24 @@ expression: errors
         ],
     ),
     (
+        "('a : Big)",
+        [
+            BadInstanceHead {
+                region: Region {
+                    start: Position {
+                        line: 4,
+                        column: 11,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 21,
+                    },
+                },
+                reason: BareVariable,
+            },
+        ],
+    ),
+    (
         "('a -> 'b)",
         [
             BadInstanceHead {
@@ -33,6 +51,24 @@ expression: errors
                     end: Position {
                         line: 4,
                         column: 20,
+                    },
+                },
+                reason: Function,
+            },
+        ],
+    ),
+    (
+        "(('a -> 'b) : Term)",
+        [
+            BadInstanceHead {
+                region: Region {
+                    start: Position {
+                        line: 4,
+                        column: 11,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 30,
                     },
                 },
                 reason: Function,

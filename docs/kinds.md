@@ -24,6 +24,13 @@ has to be inspected at runtime to pick a representation.
 
 ## Kind language
 
+A type occurrence can carry a bound: `('a : Big)`, `('a : Const)`, or
+`('a : Storable)`. Parenthesized annotations apply to the enclosed type,
+including within recursive impl patterns: `list (pair ('a : Big) 'b)`.
+Occurrences of the same variable share one kind, so contradictory annotations
+are errors. Bounds survive aliases, method substitution and interfaces. They
+constrain types without changing their identity or runtime representation.
+
 ```ebnf
 kind       = kind_atom [ '->' kind ] ;
 kind_atom  = 'Big' | 'Const' | 'Term' | 'Storable' | '(' kind ')' ;

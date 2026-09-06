@@ -318,7 +318,25 @@ impl<'a> Parser<'a> {
                 Box::new(|p: &mut Parser<'a>| {
                     let (first, end) = p.type_tuple_entry()?;
                     p.check_indent(end.line, end.column, TTuple::IndentEnd)?;
-                    p.type_tuple_help(start, first)
+                    p.one_of(
+                        TTuple::End,
+                        vec![
+                            Box::new(|p: &mut Parser<'a>| {
+                                p.word1(b':', TTuple::End)?;
+                                p.chomp_and_check_indent(TTuple::Space, TTuple::IndentKind)?;
+                                let (kind, end) = p.specialize(
+                                    |bump, error, row, col| {
+                                        TTuple::Kind(bump.alloc(error), row, col)
+                                    },
+                                    |p| p.kind_expr(),
+                                )?;
+                                p.check_indent(end.line, end.column, TTuple::IndentEnd)?;
+                                p.word1(b')', TTuple::End)?;
+                                Ok(p.add_end(start, Type::Kinded { typ: first, kind }))
+                            }),
+                            Box::new(|p: &mut Parser<'a>| p.type_tuple_help(start, first)),
+                        ],
+                    )
                 }),
             ],
         )
@@ -801,6 +819,16 @@ mod tests {
     }
 
     // Type variables
+    #[test]
+    fn inline_kind_bound_in_nested_type() {
+        assert_type_snapshot!("list (pair ('a : Big) ('b : Storable))");
+    }
+
+    #[test]
+    fn inline_kind_bound_reports_invalid_kind() {
+        assert_type_error_snapshot!("list ('a : Wrong)");
+    }
+
     #[test]
     fn type_var_simple() {
         assert_type_snapshot!("'a");

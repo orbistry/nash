@@ -419,6 +419,10 @@ pub struct Annotation<'a> {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Type<'a> {
+    Kinded {
+        typ: &'a Located<Type<'a>>,
+        kind: &'a Located<nash_source::Kind<'a>>,
+    },
     Lambda {
         from: &'a Located<Type<'a>>,
         to: &'a Located<Type<'a>>,
@@ -461,6 +465,17 @@ pub enum AliasType<'a> {
         /// Body after substituting the supplied arguments.
         typ: &'a Located<Type<'a>>,
     },
+}
+
+impl<'a> Type<'a> {
+    /// Inspect shape without discarding the annotation from the stored type.
+    pub fn unannotated(&self) -> &Self {
+        let mut typ = self;
+        while let Self::Kinded { typ: inner, .. } = typ {
+            typ = &inner.value;
+        }
+        typ
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]

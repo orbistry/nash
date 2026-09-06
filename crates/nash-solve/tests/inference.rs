@@ -277,6 +277,7 @@ fn render_kind(kind: &nash_ast::Kind<'_>, bounds: &[nash_ast::KindSet]) -> Strin
 
 fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
     match &typ.value {
+        CanType::Kinded { typ, .. } => render_type(typ, ctx),
         CanType::Lambda { from, to } => {
             let rendered = format!(
                 "{} -> {}",
@@ -2172,6 +2173,45 @@ fn abstract_map_rejects_non_storable_builtin_list_results() {
                     [] -> []
                     x :: rest -> Builtin.mkCons (f x) (map f rest)
         bad = map (\x -> (x, x)) [()]
+    "#
+    );
+}
+
+#[test]
+fn inline_kind_bounds_survive_aliases_and_function_annotations() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias Record 'a = ({ field : ('a : Big) } : Big)
+        wrap : (('a : Big) -> Record 'a : Term)
+        wrap x = Record x
+        identity : ('a : Big) -> 'a
+        identity x = x
+        preserve : Record 'a -> Record 'a
+        preserve x = identity x
+    "#
+    );
+}
+
+#[test]
+fn inline_kind_bounds_reject_const_at_a_big_use() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        identity : ('a : Big) -> 'a
+        identity x = x
+        rejected = identity ()
+    "#
+    );
+}
+
+#[test]
+fn list_data_rejects_const_elements() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin
+        badList = Builtin.listData [()]
     "#
     );
 }

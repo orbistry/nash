@@ -234,7 +234,7 @@ fn build_raw_type_info<'a>(bump: &'a Bump, interface: &Interface<'a>) -> RawType
                 typ: public.typ,
             };
             let mut ctors = BTreeMap::new();
-            if let CanType::Record { fields, ext: None } = &public.typ.value {
+            if let CanType::Record { fields, ext: None } = public.typ.value.unannotated() {
                 ctors.insert(
                     public.name,
                     super::make_record_ctor(

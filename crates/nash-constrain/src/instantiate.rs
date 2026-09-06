@@ -17,6 +17,7 @@ pub fn from_src_type<'a>(
     src_type: &Located<CanType<'a>>,
 ) -> &'a Type<'a> {
     match &src_type.value {
+        CanType::Kinded { typ, .. } => from_src_type(bump, free_vars, typ),
         CanType::App { head, args } => bump.alloc(Type::AppVarN(
             from_src_type(bump, free_vars, head),
             bump.alloc_slice_fill_iter(args.iter().map(|arg| from_src_type(bump, free_vars, arg))),
@@ -266,6 +267,7 @@ pub fn canonical_to_variable<'a>(
     src_type: &Located<CanType<'a>>,
 ) -> Variable {
     match &src_type.value {
+        CanType::Kinded { typ, .. } => canonical_to_variable(uf, rank, variables, flex_vars, typ),
         CanType::App { head, args } => {
             let head = canonical_to_variable(uf, rank, variables, flex_vars, head);
             let args = args

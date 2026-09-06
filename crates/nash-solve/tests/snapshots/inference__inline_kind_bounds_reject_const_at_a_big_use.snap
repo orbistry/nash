@@ -1,0 +1,38 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nidentity : ('a : Big) -> 'a\nidentity x = x\nrejected = identity ()\n"
+---
+[
+    BadKind {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 12,
+            },
+            end: Position {
+                line: 4,
+                column: 20,
+            },
+        },
+        name: "identity",
+        args: [
+            Unit,
+        ],
+        reason: Mismatch {
+            expected: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Big,
+                ),
+                applications: [],
+            },
+            actual: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Const,
+                ),
+                applications: [],
+            },
+        },
+    },
+]

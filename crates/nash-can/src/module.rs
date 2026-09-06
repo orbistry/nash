@@ -507,7 +507,7 @@ fn canonicalize_ctors<'a>(
             if matches!(&ctor.arguments, SourceCtorArgs::Positional(_))
                 && let Some(record) = source_arguments
                     .iter()
-                    .find(|arg| matches!(arg.value, SourceType::Record(_)))
+                    .find(|arg| matches!(arg.value.unannotated(), SourceType::Record(_)))
             {
                 return Err(vec![Error::Unsupported {
                     feature: "anonymous record constructor arguments",
@@ -731,6 +731,7 @@ fn collect_type_edges<'a>(
     edges: &mut Vec<&'a str>,
 ) {
     match typ {
+        SourceType::Kinded { typ, .. } => collect_type_edges(&typ.value, alias_names, edges),
         SourceType::Lambda { from, to } => {
             collect_type_edges(&from.value, alias_names, edges);
             collect_type_edges(&to.value, alias_names, edges);
@@ -781,6 +782,7 @@ fn collect_type_edges<'a>(
 /// wins the region), and the record extension variable counts as free.
 fn collect_free_type_vars<'a>(typ: &Located<SourceType<'a>>, vars: &mut BTreeMap<&'a str, Region>) {
     match &typ.value {
+        SourceType::Kinded { typ, .. } => collect_free_type_vars(typ, vars),
         SourceType::Var(name) => {
             vars.insert(name, typ.region);
         }
@@ -1322,6 +1324,7 @@ fn collect_from_type<'a>(
 ) {
     use nash_ast::Type::*;
     match typ {
+        Kinded { typ, .. } => collect_from_type(&typ.value, home, used),
         App { head, args } => {
             collect_from_type(&head.value, home, used);
             for arg in *args {

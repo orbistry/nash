@@ -96,7 +96,8 @@ pub(crate) fn canonicalize<'a>(
         let supers = types::canonicalize_context(bump, env, t.supers)?;
         for predicate in supers {
             for argument in predicate.args {
-                if !matches!(&argument.value, Type::Var(name) if info.parameters.contains(name)) {
+                if !matches!(argument.value.unannotated(), Type::Var(name) if info.parameters.contains(name))
+                {
                     return Err(vec![Error::SuperclassBadArg {
                         region: argument.region,
                         trait_: t.name.value,

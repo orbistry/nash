@@ -521,6 +521,8 @@ pub enum TRecord<'a> {
 
 #[derive(Debug)]
 pub enum TTuple<'a> {
+    Kind(&'a Kind<'a>, Row, Col),
+    IndentKind(Row, Col),
     Open(Row, Col),
     End(Row, Col),
     Type(&'a Type<'a>, Row, Col),

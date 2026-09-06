@@ -35,8 +35,18 @@ rejection, imported nested overlap, and retained nested evidence. Record-row
 comparison normalizes extension fragments without binding inference variables.
 The core Map Lift impl now type-checks through this general path. Snapshot
 review, full tests and hygiene pass. Kind-disjoint coherence and selection now
-use the shared kind engine as described below; inline kind syntax and the
-builtin-list Eq split remain outstanding.
+use the shared kind engine as described below.
+
+Inline type bounds now use a retained `Kinded` node in source and canonical
+types. Kind checking consumes the bound; substitutions and interfaces retain
+it. Shape-only visitors look through it for record constructors, function
+arity and impl-head restrictions. Reconstructed superclass heads restore the
+original impl kind requirements. The core list Eq impls are disjoint: Big
+elements use `equalsData (listData a) (listData b)`, Const elements use element
+Eq. `listData` accepts Big elements directly. Generic list Ord retains
+`Eq (list 'a)` alongside `Ord 'a` so its superclass evidence stays explicit.
+The core CLI fixture checks both routes, including lists of user Big ADTs.
+This does not implement or validate Plan 07 runtime lowering.
 
 `kinds::impls_overlap` combines
 the structural equations with fresh copies of both retained kind schemes.
@@ -84,8 +94,8 @@ provide Eq from the proven Big kind. `StructuralEq` evidence retains the type,
 and the explicit core Big impls are removed. Snapshot tests cover user ADTs,
 nominal record aliases, generic Big containers, superclass obligations and
 exact core trait identity. The CLI core fixture checks both eq and neq for a
-user Big ADT. Disjoint builtin-list kind selection remains outstanding with
-the recursive impl-pattern work; backend lowering remains Plan 07.
+user Big ADT. Disjoint builtin-list kind selection is implemented with
+recursive impl patterns and inline bounds; backend lowering remains Plan 07.
 
 The concrete core Eq value impl now compares valueData results with
 equalsData. The runtime table has no equalsValue operation; inspection of
@@ -94,8 +104,8 @@ Core CLI acceptance constructs a negative ledger value and type-checks Eq,
 compiling 18 modules and 184 declarations. Formatting, strict Clippy, 1,915
 tests and snapshot hygiene pass. This source-only impl does not change Rust
 crates. Nash execution of that equality remains a Plan 07 check; the universal
-kind-partitioned little-list impls remain outstanding; the Big Eq rule landed
-in the subsequent step described above.
+kind-partitioned little-list impls and Big Eq rule landed in subsequent steps
+described above.
 
 ### Existing prerequisites
 
@@ -839,7 +849,7 @@ Overlap: compare full patterns for every impl of the same trait, freshening
 the two sets of variables and checking occurs. A unifiable pair is
 `Error::OverlappingImpls { key, first, second, first_home, second_home }`.
 Kind-disjointness must also be proved before accepting structurally overlapping
-patterns; this part remains outstanding.
+patterns; `kinds::impls_overlap` performs that check.
 Both regions include their defining module because either entry can come
 from an interface. The same insertion check handles local and imported impls.
 
@@ -2720,7 +2730,7 @@ declarations with explicit imports. Remaining requirements are:
 
 | Requirement | Current evidence / remaining work |
 |---|---|
-| Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift now uses recursive impl patterns; kind-partitioned list Eq remains outstanding. |
+| Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses disjoint Big/Const element bounds. |
 | Higher-kinded hierarchy and operators | Functor/Applicative/Monad core modules and their impls remain absent. Apply is unchanged; builtin list has no Applicative/Monad. Independent argument-kind checking now passes mixed-kind map, partial and imported application, and do acceptance tests. |
 | Core option do acceptance | Compiler do tests exist, but the shipping core hierarchy must support the required option example; substitute test declarations do not establish this. |
 | Default imports | Not implemented. Missing specified modules: Functor, Applicative, Monad, Cons, Derive, Debug, Int, Bytes, String, List, Pair, Array, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |

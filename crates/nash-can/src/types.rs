@@ -109,6 +109,10 @@ fn canonicalize_type_value<'a>(
     typ: &SourceType<'a>,
 ) -> Result<CanType<'a>, Vec<Error<'a>>> {
     Ok(match typ {
+        SourceType::Kinded { typ, kind } => CanType::Kinded {
+            typ: canonicalize_type(bump, env, typ)?,
+            kind,
+        },
         SourceType::Lambda { from, to } => {
             let (from, to) = accumulate::accumulate2(
                 canonicalize_type(bump, env, from),
@@ -358,6 +362,7 @@ fn canonicalize_field_type<'a>(
 
 pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
     match typ {
+        CanType::Kinded { typ, .. } => collect_free_vars(&typ.value, vars),
         CanType::App { head, args } => {
             collect_free_vars(&head.value, vars);
             for arg in *args {
@@ -501,6 +506,10 @@ pub fn substitute_type<'a>(
     typ: &'a Located<CanType<'a>>,
 ) -> &'a Located<CanType<'a>> {
     let substituted = match &typ.value {
+        CanType::Kinded { typ, kind } => CanType::Kinded {
+            typ: substitute_type(bump, table, typ),
+            kind,
+        },
         CanType::Var(name) => return table.get(name).copied().unwrap_or(typ),
         CanType::App { head, args } => {
             let head = substitute_type(bump, table, head);
@@ -568,6 +577,7 @@ pub fn iterated_dealias<'a>(
     typ: &'a Located<CanType<'a>>,
 ) -> &'a Located<CanType<'a>> {
     match &typ.value {
+        CanType::Kinded { typ, .. } => iterated_dealias(bump, typ),
         CanType::Alias {
             arguments,
             target,

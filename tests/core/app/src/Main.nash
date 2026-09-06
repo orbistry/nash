@@ -222,6 +222,7 @@ orderedEqual : Ord 'a => 'a -> 'a -> bool
 orderedEqual a b = if lt a b then False else eq a b
 units = eq () ()
 lists = eq [1, 2] [1, 2]
+bigElementLists = eq [Packet integerLiteral] [Packet bigInteger]
 pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)
 data = eq (I 1) (Constr 0 [I 1])
 

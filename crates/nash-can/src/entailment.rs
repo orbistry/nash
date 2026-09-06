@@ -114,6 +114,7 @@ impl<'a> Resolver<'_, 'a> {
     ) -> Result<&'a Term<'a>, Failure> {
         self.step(depth)?;
         let (con, args): (_, Vec<_>) = match &typ.value {
+            Type::Kinded { typ, .. } => return self.term(typ, subst, depth + 1),
             Type::Var(name) => {
                 if let Some(term) = subst.get(name) {
                     return Ok(term);
@@ -358,7 +359,7 @@ pub(crate) fn check<'a>(
         .iter()
         .map(|name| (*name, impl_.region))
         .collect();
-    let kinds = crate::kinds::check_impl_heads(
+    let mut kinds = crate::kinds::check_impl_heads(
         bump,
         kind_env,
         impl_.home,
@@ -367,6 +368,7 @@ pub(crate) fn check<'a>(
         &variables,
         impl_.context,
     )?;
+    kinds.restore(impl_.variables, impl_.kinds, impl_.region)?;
     let mut resolver = Resolver {
         bump,
         tables,

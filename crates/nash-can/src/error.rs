@@ -376,6 +376,7 @@ pub enum Error<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub enum KindContext<'a> {
+    TypeAnnotation,
     TypeArg {
         head: KindHead<'a>,
         index: u16,
