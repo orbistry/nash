@@ -1,0 +1,13 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: render_annotations(&annotations)
+---
+bigBytes : Bytes
+bigInteger : Int
+bytes : forall (a : Any). FromBytes a => a
+discardedBytes : ()
+discardedInteger : ()
+discardedString : ()
+integer : forall (a : Any). FromInt a => a
+string : forall (a : Any). FromString a => a
+utf8 : bytes

@@ -2766,6 +2766,14 @@ CLI negative case rejects Lift string Int at the calling lift. Formatting,
 strict Clippy, 1,914 tests and snapshot hygiene pass. These source-only changes
 do not change Rust crates. Runtime round trips, invalid UTF-8 and invalid Data
 checks remain Plan 07 execution requirements.
+Literal now supplies FromInt Int and FromBytes Bytes through castLift, plus
+the specified FromString bytes UTF-8 conversion. Core acceptance compiles 17
+modules and 117 declarations, selecting these impls with explicit annotations;
+the CLI rejects a bytes literal annotated Int. A focused inference snapshot
+preserves generalized exported literals and checks retained evidence for
+discarded literals defaulting to int/bytes/string despite the extra candidates.
+Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. Literal
+conversion execution and compile-time UTF-8 folding remain later-plan checks.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

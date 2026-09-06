@@ -18,6 +18,13 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+integerLiteral : Int
+integerLiteral = 42
+bytesLiteral : Bytes
+bytesLiteral = #"ff"
+utf8Literal : bytes
+utf8Literal = "Nash"
+
 bigInteger : Int
 bigInteger = lift 42
 littleInteger : int

@@ -277,7 +277,7 @@ not repeated here. What each module adds beyond its trait:
 | `Functor`, `Applicative`, `Monad` | `list` (`Functor` only for `pair 'k`). No impls for `List`: Big twins carry no function set |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
 | `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
-| `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromBytes bytes`, `FromBytes Bytes` |
+| `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.

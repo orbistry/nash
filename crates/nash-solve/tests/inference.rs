@@ -2991,3 +2991,98 @@ fn core_cast_schemes_preserve_nominal_source_and_target_types() {
     assert_eq!(solved.instances.len(), 5);
     insta::assert_snapshot!(render_annotations(&annotations));
 }
+
+#[test]
+fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
+    let bump = Bump::new();
+    let mut interfaces =
+        std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
+    for (name, source, package) in [
+        (
+            "Literal",
+            indoc!(
+                "
+            module Literal exposing (..)
+            import Builtin
+            trait FromInt 'a where
+                fromInt : int -> 'a
+            trait FromBytes 'a where
+                fromBytes : bytes -> 'a
+            trait FromString 'a where
+                fromString : string -> 'a
+            impl FromInt int where
+                fromInt = Builtin.identity
+            impl FromInt Int where
+                fromInt = Builtin.castLift
+            impl FromBytes bytes where
+                fromBytes = Builtin.identity
+            impl FromBytes Bytes where
+                fromBytes = Builtin.castLift
+            impl FromString string where
+                fromString = Builtin.identity
+            impl FromString bytes where
+                fromString = Builtin.encodeUtf8
+        "
+            ),
+            Some(nash_ast::primitives::CORE),
+        ),
+        (
+            "Main",
+            indoc!(
+                r#"
+            module Main exposing (..)
+            import Literal
+            integer = 42
+            bytes = #"ff"
+            string = "Nash"
+            discardedInteger = (\_ -> ()) 42
+            discardedBytes = (\_ -> ()) #"ff"
+            discardedString = (\_ -> ()) "Nash"
+            bigInteger : Int
+            bigInteger = 42
+            bigBytes : Bytes
+            bigBytes = #"ff"
+            utf8 : bytes
+            utf8 = "Nash"
+        "#
+            ),
+            None,
+        ),
+    ] {
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let (annotations, solved) =
+            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+        if name == "Main" {
+            for (trait_name, primitive) in [
+                ("FromInt", "int"),
+                ("FromBytes", "bytes"),
+                ("FromString", "string"),
+            ] {
+                assert!(solved.instances.values().flat_map(|instance| instance.evidence).any(|evidence| {
+                    matches!(evidence, nash_ast::Evidence::Impl { impl_, .. }
+                        if impl_.key.trait_.name == trait_name
+                        && matches!(impl_.key.heads, [nash_ast::HeadCon::Named(head)]
+                            if head.home == nash_ast::primitives::builtin_home() && head.name == primitive))
+                }), "discarded literal must default to {primitive}");
+            }
+            insta::assert_snapshot!(render_annotations(&annotations));
+        }
+        interfaces.insert(
+            name,
+            nash_can::from_module(&bump, &canonical.module, &annotations),
+        );
+    }
+}

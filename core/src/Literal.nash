@@ -19,3 +19,12 @@ impl FromString string where
 
 impl FromBytes bytes where
     fromBytes = Builtin.identity
+
+impl FromInt Int where
+    fromInt = Builtin.castLift
+
+impl FromBytes Bytes where
+    fromBytes = Builtin.castLift
+
+impl FromString bytes where
+    fromString = Builtin.encodeUtf8
