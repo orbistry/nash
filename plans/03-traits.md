@@ -2725,21 +2725,31 @@ reports the right errors.
 ### Current acceptance audit
 
 The progress entries below record individual steps, not completion of this
-chunk. At `26b8a5b5`, the real core CLI fixture compiles 17 modules and 158
+chunk. The real core CLI fixture now compiles 21 modules and 202
 declarations with explicit imports. Remaining requirements are:
 
 | Requirement | Current evidence / remaining work |
 |---|---|
 | Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses disjoint Big/Const element bounds. |
-| Higher-kinded hierarchy and operators | Functor/Applicative/Monad core modules and their impls remain absent. Apply is unchanged; builtin list has no Applicative/Monad. Independent argument-kind checking now passes mixed-kind map, partial and imported application, and do acceptance tests. |
-| Core option do acceptance | Compiler do tests exist, but the shipping core hierarchy must support the required option example; substitute test declarations do not establish this. |
-| Default imports | Not implemented. Missing specified modules: Functor, Applicative, Monad, Cons, Derive, Debug, Int, Bytes, String, List, Pair, Array, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |
+| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option/result; Applicative/Monad support option/result. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad. Pair Functor needs a construction decision; fuzzer needs the real Plan 11 implementation. |
+| Core option do acceptance | The real core fixture compiles option and result do blocks, operator calls, mixed-kind builtin list mapping and List Int to List Packet mapping. Runtime execution remains a backend prerequisite. |
+| Default imports | Not implemented. Missing specified modules: Derive, Debug, Int, Bytes, String, List, Pair, Array, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |
 | Overview example up to tests | Not currently executable: Cardano.Tx and deriving require later work; the sketch names nonexistent Builtin.compareInteger and undefined currentSlot/signedBy, as well as later field-access/validator features. This acceptance item is not proved by the core fixture. |
 | Final release verification | Refresh release/publish dry runs after the final implementation changes. Earlier checks are revision-specific and downstream publishing was blocked by unpublished bumped dependencies. |
 
 Cons and concrete type-module helpers can proceed independently. Resolving
 the hierarchy/head-policy decisions and default-import prerequisites remains
 necessary; SPEC.md must stay incomplete until the full acceptance is met.
+
+The shipping Functor/Applicative/Monad step passes formatting, strict Clippy,
+1,937 tests (three ignored doctests), and snapshot hygiene. The parser now
+accepts `$` in the documented operator alphabet; its `<$>` snapshot and the
+real Prelude calls cover declaration and use. The core CLI compiles 21
+modules and 202 declarations. A separate CLI workspace rejects list do with
+both missing Applicative and Monad diagnostics, and rejects list mapping to
+a tuple with BadKind at map. These checks establish type checking and
+evidence selection, not runtime behavior. Pair construction, Fuzz and default
+imports remain open requirements of the full chunk.
 
 Status: in progress. The synthetic Builtin interface now exports all 103
 specified value schemes: 101 symbolic DefaultFunction variants plus identity

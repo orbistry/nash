@@ -9,6 +9,9 @@ import Show exposing (Show)
 import Num exposing (Num)
 import Integral exposing (Integral)
 import Semigroup exposing (Semigroup)
+import Functor exposing (Functor)
+import Applicative exposing (Applicative)
+import Monad exposing (Monad)
 
 infix left 0 (|>) = applyForward
 infix right 0 (<|) = applyBackward
@@ -29,6 +32,9 @@ infix left 6 (-) = sub
 infix left 7 (*) = mul
 infix left 7 (/) = div
 infix left 7 (%) = mod
+infix left 1 (>>=) = bind
+infix left 4 (<$>) = map
+infix left 4 (<*>) = apply
 
 identity : 'a -> 'a
 identity x = x

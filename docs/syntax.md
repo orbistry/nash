@@ -48,7 +48,7 @@ Tabs are rejected everywhere (Elm rule).
 
 ### Operators
 
-Operator characters are `+ - / * = . < > : & | ^ ? % !`. The reserved
+Operator characters are `+ - / * = . < > : & | ^ ? % ! $`. The reserved
 operators `.`, `|`, `->`, `=`, `:`, `=>`, `<-` cannot be user operators
 (`=>` and `<-` are *new* reservations). `!` directly after an identifier and
 directly before `(` is a macro call, not an operator (see Macros).
@@ -477,7 +477,7 @@ type_var       = "'" lower_var ;                       (* new *)
 
 operator       = op_char { op_char } ;                 (* except . | -> = : => <- *)
 op_char        = '+' | '-' | '*' | '/' | '=' | '.' | '<' | '>' | ':' | '&'
-               | '|' | '^' | '?' | '%' | '!' ;
+               | '|' | '^' | '?' | '%' | '!' | '$' ;
 
 line_comment   = '--' { any_char - newline } ;
 block_comment  = '{-' { any_char | block_comment } '-}' ;

@@ -1,0 +1,7 @@
+module Applicative exposing (Applicative)
+
+import Functor exposing (Functor)
+
+trait Functor 'f => Applicative 'f where
+    pure : 'a -> 'f 'a
+    apply : 'f ('a -> 'b) -> 'f 'a -> 'f 'b

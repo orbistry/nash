@@ -274,7 +274,7 @@ not repeated here. What each module adds beyond its trait:
 | `Show` | `int`, `bytes` (hex), `string`, `bool`, `unit`, `list 'a`, `pair`, `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Num`, `Integral` | `int`, `Int` |
 | `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
-| `Functor` | `list`, `pair 'k`; each applied element must satisfy its constructor's kind bounds |
+| `Functor` | `list`, `List`, `pair 'k`; each applied element must satisfy its constructor's kind bounds. The pair impl requires resolution of the construction prerequisite below. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
 | `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
@@ -282,6 +282,15 @@ not repeated here. What each module adds beyond its trait:
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
+
+The shipping hierarchy provides Functor for `list`, `List`, `cons`, `option`
+and `result 'e`, and Applicative/Monad for `option` and `result 'e`.
+Big List mapping uses an explicitly typed little-list helper between Lift
+conversions, keeping the intermediate container unambiguous. Builtin list
+mapping can change element kinds within Storable; it cannot produce Term
+elements. The required `pair 'k` Functor remains unresolved: `mkPairData`
+constructs only `pair Data Data`, not the arbitrary pair needed by `map`.
+The `fuzzer` impls require the real Fuzz implementation from plan 11.
 
 ### Equality at the Big boundary
 

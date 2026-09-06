@@ -4,6 +4,7 @@ import Builtin exposing (type bool(..))
 import Literal
 import Eq exposing (Eq)
 import Show exposing (Show)
+import Functor
 
 type cons 'a = Nil | Cons 'a (cons 'a)
 
@@ -11,10 +12,13 @@ singleton : 'a -> cons 'a
 singleton value = Cons value Nil
 
 map : ('a -> 'b) -> cons 'a -> cons 'b
-map f values =
-    case values of
-        Nil -> Nil
-        Cons x xs -> Cons (f x) (map f xs)
+map = Functor.map
+
+impl Functor.Functor cons where
+    map f values =
+        case values of
+            Nil -> Nil
+            Cons x xs -> Cons (f x) (Functor.map f xs)
 
 indexedMap : (int -> 'a -> 'b) -> cons 'a -> cons 'b
 indexedMap f values = indexedFrom 0 f values

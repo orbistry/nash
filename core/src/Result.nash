@@ -3,9 +3,31 @@ module Result exposing (Result(..), type result(..), withDefault, mapError)
 import Builtin exposing (type bool(..))
 import Eq exposing (Eq)
 import Lift exposing (Lift)
+import Functor exposing (Functor)
+import Applicative exposing (Applicative)
+import Monad exposing (Monad)
 
 type result 'e 'a = Ok 'a | Err 'e
 type Result 'e 'a = Ok 'a | Err 'e
+
+impl Functor (result 'e) where
+    map f value =
+        case value of
+            Ok item -> Ok (f item)
+            Err error -> Err error
+
+impl Applicative (result 'e) where
+    pure = Ok
+    apply functions value =
+        case functions of
+            Ok f -> map f value
+            Err error -> Err error
+
+impl Monad (result 'e) where
+    bind value f =
+        case value of
+            Ok item -> f item
+            Err error -> Err error
 
 withDefault : 'a -> result 'e 'a -> 'a
 withDefault fallback value =

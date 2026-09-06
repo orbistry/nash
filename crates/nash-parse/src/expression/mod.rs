@@ -638,6 +638,11 @@ mod tests {
     }
 
     #[test]
+    fn binop_functor_map() {
+        assert_expression_snapshot!("f <$> xs");
+    }
+
+    #[test]
     fn binop_pipe_left() {
         assert_expression_snapshot!("c <| b <| a");
     }

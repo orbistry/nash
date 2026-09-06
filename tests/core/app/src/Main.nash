@@ -18,6 +18,34 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 import Cons exposing (type cons(..))
+import Functor exposing (Functor)
+import Applicative exposing (Applicative)
+import Monad exposing (Monad)
+
+mappedOption = map (\x -> (x, x)) (Some ())
+appliedOption = apply (Some (\x -> (x, x))) (Some ())
+optionDo = do
+    first <- Some ()
+    second <- Some (first, first)
+    pure (first, second)
+
+mappedBuiltinList = map Builtin.iData [1, 2]
+mappedOperator = (\x -> (x, x)) <$> Some ()
+appliedOperator = Some (\x -> (x, x)) <*> Some ()
+boundOperator = Some () >>= (\x -> Some (x, x))
+
+mappedResult : result unit (unit, unit)
+mappedResult = map (\x -> (x, x)) (Ok ())
+
+appliedResult : result unit (unit, unit)
+appliedResult = apply (Ok (\x -> (x, x))) (Ok ())
+
+resultDo : result unit (unit, unit)
+resultDo = do
+    item <- Ok ()
+    pure (item, item)
+
+mappedCons = map (\x -> (x, x)) (Cons.singleton ())
 
 type Packet = Packet Int
 automaticBigEq = (eq (Packet integerLiteral) (Packet bigInteger), neq (Packet integerLiteral) (Packet bigInteger))
@@ -223,6 +251,8 @@ orderedEqual a b = if lt a b then False else eq a b
 units = eq () ()
 lists = eq [1, 2] [1, 2]
 bigElementLists = eq [Packet integerLiteral] [Packet bigInteger]
+mappedBigList : List Packet
+mappedBigList = map Packet bigList
 pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)
 data = eq (I 1) (Constr 0 [I 1])
 

@@ -3,9 +3,31 @@ module Option exposing (Option(..), type option(..), withDefault)
 import Builtin exposing (type bool(..))
 import Eq exposing (Eq)
 import Lift exposing (Lift)
+import Functor exposing (Functor)
+import Applicative exposing (Applicative)
+import Monad exposing (Monad)
 
 type option 'a = Some 'a | None
 type Option 'a = Some 'a | None
+
+impl Functor option where
+    map f value =
+        case value of
+            Some item -> Some (f item)
+            None -> None
+
+impl Applicative option where
+    pure = Some
+    apply functions value =
+        case functions of
+            Some f -> map f value
+            None -> None
+
+impl Monad option where
+    bind value f =
+        case value of
+            Some item -> f item
+            None -> None
 
 withDefault : 'a -> option 'a -> 'a
 withDefault fallback value =

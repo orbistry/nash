@@ -15,7 +15,7 @@ impl<'a> Parser<'a> {
     /// operator :: (Row -> Col -> x) -> (BadOperator -> Row -> Col -> x) -> Parser x Name.Name
     /// ```
     ///
-    /// Valid operator characters: `+-/*=.<>:&|^?%!`
+    /// Valid operator characters: `+-/*=.<>:&|^?%!$`
     ///
     /// Reserved operators that cannot be parsed standalone:
     /// - `.` (dot)
@@ -75,7 +75,7 @@ impl<'a> Parser<'a> {
 
 /// Check if a byte is a valid operator character.
 ///
-/// Valid: `+-/*=.<>:&|^?%!`
+/// Valid: `+-/*=.<>:&|^?%!$`
 #[inline]
 pub fn is_binop_char(b: u8) -> bool {
     matches!(
@@ -94,6 +94,7 @@ pub fn is_binop_char(b: u8) -> bool {
             | b'?'
             | b'%'
             | b'!'
+            | b'$'
     )
 }
 
