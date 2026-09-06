@@ -595,6 +595,29 @@ fn unit_and_tuple_impls_belong_to_core() {
 }
 
 #[test]
+fn tuple_impl_keys_preserve_large_arities() {
+    let bump = Bump::new();
+    let variables = (0..258)
+        .map(|index| format!("'a{index}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let source = format!(
+        "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a, 'b) where\n    keep x = x\nimpl Keep ({variables}) where\n    keep x = x\n"
+    );
+    let canonical = canonicalize(&bump, &source).unwrap();
+    let arities = canonical
+        .tables
+        .impls
+        .keys()
+        .map(|key| match key.heads {
+            [nash_ast::HeadCon::Tuple(arity)] => *arity,
+            _ => panic!("tuple impl key"),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(arities, vec![2, 258]);
+}
+
+#[test]
 fn impl_duplicate_methods_preserve_both_locations() {
     let bump = Bump::new();
     let result = canonicalize(

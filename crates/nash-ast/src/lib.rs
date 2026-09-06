@@ -537,7 +537,7 @@ pub struct Impl<'a> {
 pub enum HeadCon<'a> {
     Named(QualifiedName<'a>),
     Unit,
-    Tuple(u8),
+    Tuple(usize),
     /// Function types never have impls; a wanted `Show (a -> b)` fails lookup.
     Fun,
 }
@@ -578,7 +578,7 @@ impl<'a> Head<'a> {
         match self {
             Head::Named { reference, .. } => HeadCon::Named(*reference),
             Head::Unit => HeadCon::Unit,
-            Head::Tuple(vars) => HeadCon::Tuple(vars.len() as u8),
+            Head::Tuple(vars) => HeadCon::Tuple(vars.len()),
         }
     }
 }

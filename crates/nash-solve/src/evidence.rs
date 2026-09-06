@@ -194,9 +194,7 @@ impl<'a> Resolver<'_, 'a> {
             .map(|term| match term.con {
                 Constructor::Named(name) => Ok(HeadCon::Named(name)),
                 Constructor::Unit => Ok(HeadCon::Unit),
-                Constructor::Tuple(arity) => u8::try_from(arity)
-                    .map(HeadCon::Tuple)
-                    .map_err(|_| error(Failure::MissingImpl)),
+                Constructor::Tuple(arity) => Ok(HeadCon::Tuple(arity)),
                 Constructor::Function | Constructor::Record(_) => Err(error(Failure::MissingImpl)),
             })
             .collect::<Result<Vec<_>, _>>()?;

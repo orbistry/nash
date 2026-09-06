@@ -280,7 +280,7 @@ impl<'a> Resolver<'_, 'a> {
             heads.push(match arg.con {
                 Constructor::Named(name) => HeadCon::Named(name),
                 Constructor::Unit => HeadCon::Unit,
-                Constructor::Tuple(n) => HeadCon::Tuple(n as u8),
+                Constructor::Tuple(n) => HeadCon::Tuple(n),
                 Constructor::Function => HeadCon::Fun,
                 Constructor::Var(_) | Constructor::Record { .. } => return Err(Failure::Missing),
             });

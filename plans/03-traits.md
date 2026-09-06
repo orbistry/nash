@@ -234,7 +234,7 @@ pub struct Impl<'a> {
 pub enum HeadCon<'a> {
     Named(QualifiedName<'a>),
     Unit,
-    Tuple(u8),
+    Tuple(usize),
     /// Function types never have impls; a wanted `Show (a -> b)` fails lookup.
     Fun,
 }
@@ -298,7 +298,7 @@ impl<'a> Head<'a> {
         match self {
             Head::Named { reference, .. } => HeadCon::Named(*reference),
             Head::Unit => HeadCon::Unit,
-            Head::Tuple(vars) => HeadCon::Tuple(vars.len() as u8),
+            Head::Tuple(vars) => HeadCon::Tuple(vars.len()),
         }
     }
 }
@@ -2694,6 +2694,10 @@ The promised four-element tuple impls also need canonical expression/pattern
 support: the current canonicalizer still reports TupleLargerThanThree for a
 four-element tuple expression. The numeric acceptance uses separate pairs;
 that does not count as satisfying the tuple prerequisite.
+Tuple impl keys now retain the full `usize` arity. A regression verifies that
+two-element and 258-element heads remain distinct instead of falsely
+overlapping after byte truncation. This fixes coherence keys only; the full
+tuple expression, pattern and inference prerequisite remains unfinished.
 
 Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,
 `core/Integral.nash`, `core/Semigroup.nash`, `core/Monoid.nash`,
