@@ -283,19 +283,29 @@ not repeated here. What each module adds beyond its trait:
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
 
-### Later list-of-Big equality fast path
+### Equality at the Big boundary
 
-The requested fast route for equality of builtin lists whose elements are
-Big is `equalsData (listData left) (listData right)`. Big is a kind bound on
-the element variable, not a type to which the Eq trait is applied. This
-operates on `list 'a` with `'a : Big`, not only the nominal Big List type.
+Every Big type uses structural Data equality. User Eq impls for Big types
+are forbidden; a custom Eq method cannot change equality of a Big value.
+The compiler supplies Eq for Big types, including user-defined ADTs and
+nominal aliases, through the shared kind/evidence contract.
 
-This is a later specialization requirement, not a second overlapping Eq
-impl added by Plan 03. The existing generic list Eq delegates to element Eq.
-Structural Data equality can differ from a user-defined element Eq method;
-the specialization policy must explicitly settle that semantic difference
-before enabling the fast route for every Big element type. Do not assume
-that a Big representation alone proves equivalence to custom Eq.
+For builtin `list 'a` with `'a : Big`, the stdlib equality route is
+`equalsData (listData left) (listData right)`. This is the specified
+semantics, not an optimizer proof about arbitrary Eq bodies. The Const
+member of Storable uses element Eq. These cases must be disjoint under
+kind-aware coherence; do not retain an overlapping unrestricted list impl.
+Map Data equality compares the encoded sequence of entries, including order
+and duplicates. It is not dictionary-style equality.
+
+Lowercase `value` is a dedicated Const ledger-value representation. Its Eq
+impl compares `valueData` results with `equalsData`. There is no
+`equalsValue` entry in the target builtin table. `valueContains` is a
+quantity containment operation and rejects negative amounts, so it must not
+be substituted for equality. `unionValue` adds asset quantities; it is not
+ordinary Map's right-biased union. Big `Cardano.Value` remains subject to
+structural Big equality; converting to lowercase value uses the dedicated
+validated `unValueData` boundary.
 
 `Show` uses these diagnostic text formats:
 

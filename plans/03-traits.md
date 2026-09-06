@@ -31,9 +31,26 @@ keep apply unchanged. Abstract map must allow different element kinds when
 each satisfies the constructor's bounds. These supersede the earlier open
 questions proposing liftA2 or a shared actual element kind.
 
-The requested later list-of-Big equality fast path is recorded in stdlib.md.
-Do not silently introduce overlapping Eq impls or change custom Eq semantics
-while implementing recursive head matching.
+The user has now settled Big Eq: structural equalsData is mandatory for
+every Big type and user Big Eq overrides are forbidden. Add a uniform
+compiler-owned Eq rule, retain evidence for codegen, and remove explicit
+core Big Eq impls when that rule lands. Builtin-list Eq must split into
+disjoint Big and Const element-kind cases; Big uses listData/equalsData,
+Const uses element Eq. No custom-body analysis or optimizer recognition.
+Test user Big Eq rejection, automatic Eq for user Big ADTs/aliases,
+nested structural equality, disjoint kind selection and overlap rejection.
+Lowercase value is Const: use its dedicated valueData operation for Eq,
+not valueContains (which rejects negative quantities). Cardano.Value and
+ordinary Map union must not be conflated with additive unionValue.
+
+The concrete core Eq value impl now compares valueData results with
+equalsData. The runtime table has no equalsValue operation; inspection of
+LedgerValue::value_contains confirms that it rejects negative quantities.
+Core CLI acceptance constructs a negative ledger value and type-checks Eq,
+compiling 18 modules and 184 declarations. Formatting, strict Clippy, 1,915
+tests and snapshot hygiene pass. This source-only impl does not change Rust
+crates. Nash execution of that equality remains a Plan 07 check; the universal
+Big Eq rule and kind-partitioned little-list impls are not implemented yet.
 
 ### Existing prerequisites
 

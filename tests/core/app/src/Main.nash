@@ -19,6 +19,10 @@ import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 import Cons exposing (type cons(..))
 
+ledgerValue = Builtin.unValueData (Map [])
+ledgerValueNegative = Builtin.insertCoin #"" #"" (-1) ledgerValue
+ledgerValueEquality = eq ledgerValueNegative ledgerValueNegative
+
 functions = Cons.singleton (\x -> x)
 appliedFunctions = Cons.map (\f -> f ()) functions
 termPairs = Cons.map (\x -> (x, x)) (Cons.fromList [1, 2])

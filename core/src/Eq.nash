@@ -50,3 +50,6 @@ impl Eq (List 'a) where
 
 impl Eq (Map 'k 'v) where
     eq a b = Builtin.equalsData (Builtin.castToData a) (Builtin.castToData b)
+
+impl Eq value where
+    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)

@@ -156,6 +156,16 @@ both its trait and its head type are visible.
 
 ### Coherence
 
+**Big equality.** The exact core Eq trait is compiler-provided for every
+Big type and always compares structural Data. User Eq impls for Big types
+are rejected, including nested user ADTs and nominal aliases. This is a
+uniform kind rule, not a list of special-cased type names. It supersedes
+any earlier assumption that Big types may override structural equality.
+Explicit core Big Eq impls in the current checkout are transitional and
+must be removed when this compiler rule lands; retain no duplicate path.
+The Big-element builtin-list Eq case likewise uses structural listData
+equality, while its disjoint Const-element case delegates to element Eq.
+
 An impl's identity retains its trait, full recursive head patterns and kind
 requirements, with bound variables normalized independently of their spelling.
 Outer constructors may index candidates, but are not a complete impl identity
