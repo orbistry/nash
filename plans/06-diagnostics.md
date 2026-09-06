@@ -8,6 +8,11 @@ and `Report` renders through miette (terminal), to Elm-shaped JSON, and to
 LSP diagnostics. Replace the driver's `format!("{:?}", errors)`
 placeholders.
 
+Collect as many safely recoverable independent errors as possible before
+rendering. Reporting a vector of errors is insufficient if inference or the
+driver suppressed independent errors before constructing it. Follow the
+collection and cascade-suppression contract in `docs/diagnostics.md`.
+
 ## Prerequisites
 
 - Plan 05 (`nash-nitpick`) for the pattern chunk.
@@ -20,6 +25,8 @@ placeholders.
 - `crates/nash-parse` (make `keyword::is_reserved` and
   `symbol::is_binop_char` public)
 - `crates/nash-driver`, `crates/nash-cli`, `crates/nash-language-server`
+- `crates/nash-can`, `crates/nash-solve`, `crates/nash-constrain` where
+  collection and recovery changes are needed; include their Sampo changesets.
 
 ## Reference
 
@@ -2354,6 +2361,45 @@ otherwise an `impl` skeleton.
 
 ## Chunk 14 — Driver, CLI, LSP wiring
 
+**Error collection is part of this chunk, not only rendering.** Audit the
+producer paths before wiring their outputs. The current solver uses global
+`state.errors.is_empty()` guards in predicate reporting, escape checking,
+ambiguity/defaulting and scheme-kind checking. These can hide independent
+errors. Replace them with recovery that tracks affected inference state and
+dependencies; merely removing the guards or resetting an error counter is not
+sound. Preserve existing poisoned-root suppression of dependent mismatches.
+The current driver continues modules but needs explicit failed-dependency
+handling; the CLI's HashMap iteration must not determine report order.
+
+Collect all safely recoverable root errors, mark invalid dependents as blocked,
+and render the complete ordered set after collection. A resource limit must
+produce an explicit truncation or limit diagnostic. Do not publish an interface
+or SolvedTypes from a failed solve.
+
+**Required acceptance tests for collection and UX:**
+
+- A module with independent ordinary mismatches, missing impls/constraints,
+  ambiguity and kind errors reports every independent root error, including
+  after reordering the declarations.
+- Repeated uses of one poisoned expression do not create a cascade, while an
+  unrelated sibling error still appears. Include shared inference variables
+  and recursive definitions so recovery is not tested only on disjoint trees.
+- Two independent failing modules both report. A dependent module is blocked
+  by the original failure without fabricated missing-import/type errors.
+- An impl-resolution cycle or work limit terminates the affected computation
+  while preserving collected errors and unrelated diagnostics.
+- Repeated CLI runs and shuffled module discovery have identical ordering:
+  canonical module path, primary span, then stable diagnostic tie-breakers.
+  Terminal snapshots, JSON and LSP assert the same problem set and spans.
+- A failed parse or canonicalization does not enter later phases with invalid
+  input. A failed solve exports neither an interface nor successful solved
+  output. Independent modules continue.
+
+Snapshot prose and labels for mixed errors, including expected/actual types,
+trait context, original call sites and source highlights. Test valid partial
+constructors separately from constructors incorrectly used as value types;
+the latter diagnostic must explain the missing type arguments or kind mismatch.
+
 **Files**
 
 - `crates/nash-driver/src/compile.rs`
@@ -2463,7 +2509,9 @@ compiler errors with Elm's prose through miette; add `--report=json`."
 
 **Done when** `nash check` on a project with a type error prints example
 1's layout, `--report=json` prints the Elm-shaped document, and the LSP
-publishes diagnostics with ranges that line up in an editor.
+publishes diagnostics with ranges that line up in an editor. All collection
+and UX acceptance tests above must also pass; one-error rendering fixtures do
+not establish completion.
 
 ---
 

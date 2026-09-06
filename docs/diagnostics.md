@@ -19,6 +19,34 @@ rest of the Rust-tooling world while reading like Elm.
 
 ## Concepts
 
+### Collect independent errors before rendering
+
+A check collects as many independent errors as it can safely establish, then
+renders the complete diagnostic set. One bad definition must not suppress
+unrelated type, kind, trait, or ambiguity errors elsewhere in the module or
+in independent modules. Do not stop merely because the error list is nonempty.
+
+Recovery must preserve sound inference state. Mark failed expressions and
+constraints so that their dependent uses do not generate misleading follow-on
+errors; continue at valid definition, constraint, and dependency boundaries.
+Do not remove suppression guards without replacing their dependency tracking.
+If parsing or canonicalization cannot produce valid input for the next phase,
+stop that module at that phase and continue independent modules. A failed
+module exports neither an interface nor successful solved output. Mark its
+dependents as blocked by the original failure instead of inventing missing
+imports or missing types.
+
+Resolution limits stop the affected computation and produce a diagnostic;
+they do not discard errors already collected or suppress independent work.
+Never silently truncate the result. Any resource limit on diagnostic collection
+must explicitly report that additional errors may remain.
+
+Order reports by canonical module path, primary source span, and stable
+diagnostic identifiers and tie-breakers. Hash iteration order, pointer values,
+and NodeId are not presentation order. Terminal, JSON, and LSP output expose
+the same problems and primary spans. Keep distinct root errors even when they
+share a region; deduplicate only diagnostics known to have the same cause.
+
 ### Report
 
 Elm's `Reporting.Report.Report` is a title, a region, suggestions, and a
@@ -400,7 +428,9 @@ pub fn to_reports(source: &Source, error: &ModuleError<'_>) -> Vec<Report>;
 - **Driver.** `ModuleResult::Failed { message: String }` becomes
   `Failed { error: ModuleError }` rendered before the arena drops:
   `nash_report::ModuleReports { name, path, source, reports }`. The
-  driver stops after the first failing phase per module, as now.
+  driver stops after the first failing phase per module when its output is
+  invalid, collects independent errors within that phase, and continues modules
+  whose prerequisites remain valid. Render after safe collection completes.
 - **Macros.** Expansion re-runs the phases on the expanded surface AST.
   Regions inside macro output point at the macro call site
   (`docs/macros.md`); reports need no special casing.
