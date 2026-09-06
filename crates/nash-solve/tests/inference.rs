@@ -2183,6 +2183,89 @@ fn imported_values_retain_declared_and_inferred_kind_signatures() {
 }
 
 #[test]
+fn do_infers_monad() {
+    let bump = Bump::new();
+    let source = indoc!(
+        r#"
+        module Monad exposing (..)
+        trait Functor 'f where
+            map : ('a -> 'b) -> 'f 'a -> 'f 'b
+        trait Functor 'f => Applicative 'f where
+            pure : 'a -> 'f 'a
+        trait Applicative 'm => Monad 'm where
+            bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b
+    "#
+    );
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: Some(nash_ast::primitives::CORE),
+            interfaces: None,
+        },
+        &module,
+    )
+    .unwrap();
+    let interfaces = std::collections::BTreeMap::from([(
+        "Monad",
+        nash_can::from_module(&bump, &canonical.module, &Default::default()),
+    )]);
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        import Monad exposing (..)
+        run m = do
+            x <- m
+            y <- m
+            pure (x, y)
+        expanded m = bind m (\x -> bind m (\y -> pure (x, y)))
+    "#
+    );
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    assert!(
+        matches!(annotations["run"].context, [pred] if pred.trait_ == nash_ast::primitives::monad_trait())
+    );
+    assert_eq!(
+        render_annotation(annotations["run"]),
+        render_annotation(annotations["expanded"])
+    );
+    assert_eq!(
+        solved
+            .instances
+            .values()
+            .filter(|instance| matches!(instance.evidence, [nash_ast::Evidence::Given { .. }]))
+            .count(),
+        4
+    );
+    assert_eq!(
+        solved
+            .instances
+            .values()
+            .filter(|instance| matches!(instance.evidence, [nash_ast::Evidence::Super { .. }]))
+            .count(),
+        2
+    );
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
+#[test]
 fn higher_kinded_bind_chain_retains_its_monad_constraint() {
     assert_inference_snapshot!(
         r#"

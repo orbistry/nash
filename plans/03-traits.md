@@ -2406,6 +2406,27 @@ interfaces. The tests above cover these requirements.
 
 ## Chunk 10: `do` desugaring and operator methods
 
+Status: in progress. Do statements now reuse lambda/let canonicalization for
+scoping and delayed free-variable tracking. Synthetic bind calls look up the
+checked exact nash/core Monad.Monad method independently of local value names
+and import aliases. Refutable patterns and unavailable core methods have
+specific errors; a bind RHS cannot see its new pattern. A single-expression
+block needs no bind method. Canonical snapshots cover mixed statements and
+scoping, and inference checks match explicit nested bind calls with distinct
+Given/Super evidence sites. Negation and operator-method integration remain.
+The real CLI accepts a concrete option block with bind, let, discard, and final
+expression statements, and reports RefutableBindPattern at an invalid `<-`
+pattern. The superseded Unsupported test was removed. Formatting, strict
+Clippy, the workspace tests, and snapshot hygiene pass for this step.
+
+The do pair example currently infers `a : Term` and `m : Term -> Any` under
+the shared-domain kind contract; the explicit expansion has the same bound.
+This exposes a design question about changing element kinds through an
+abstract constructor. Separately, the documented Applicative.apply requires
+containers of functions, incompatible with the promised Big List/Storable list
+instances. Both contract questions have been raised with the user; the shipping
+hierarchy is not validated by the reduced test fixture.
+
 Files: `crates/nash-can/src/expression.rs`, `crates/nash-can/src/environment/local.rs`,
 `crates/nash-can/src/error.rs`.
 
@@ -2443,9 +2464,10 @@ fn canonicalize_do<'a>(bump, env, stmts: &'a [&'a Located<Stmt<'a>>], last: &'a 
 Because each statement scopes the rest of the block, the straightforward
 implementation is recursive front-to-back (`canonicalize_do_from(index,
 env)`), not a reverse fold; the sketch above shows the produced shape.
-`env.method_annotation` looks `Monad.bind` up in `Tables.traits` (not the
-value namespace, so shadowing `bind` locally does not change `do`); a
-module that cannot see `Monad` at all gets `Error::DoWithoutMonad`.
+`env.method_annotation` searches exposed and qualified trait metadata by the
+exact nash/core Monad.Monad identity (not the value namespace, so shadowing
+`bind` locally does not change `do`). A sequencing statement without that
+method gets `Error::DoWithoutMonad`; a single final expression needs no method.
 
 `Negate(e)` becomes `Call(VarMethod { Num.negate }, [e])` at the same
 region; `Expr::Negate` and `Category::Negate`/`Context::Negate` are deleted

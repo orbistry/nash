@@ -230,6 +230,27 @@ pub struct Env<'a> {
 }
 
 impl<'a> Env<'a> {
+    /// Compiler-generated calls use trait identity, independent of value names
+    /// and import aliases in the source module.
+    pub fn method_annotation(
+        &self,
+        trait_: nash_ast::QualifiedName<'a>,
+        method: &str,
+    ) -> Option<&'a nash_ast::Annotation<'a>> {
+        self.traits
+            .values()
+            .chain(self.q_traits.values().flat_map(|traits| traits.values()))
+            .find_map(|info| match info {
+                Info::Specific(_, info) if info.home == trait_.home && info.name == trait_.name => {
+                    info.methods
+                        .iter()
+                        .find(|info| info.name == method)
+                        .map(|info| info.annotation)
+                }
+                _ => None,
+            })
+    }
+
     pub fn find_trait(
         &self,
         bump: &'a Bump,

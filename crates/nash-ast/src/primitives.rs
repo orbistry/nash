@@ -24,6 +24,16 @@ pub const fn lift_trait() -> crate::QualifiedName<'static> {
     }
 }
 
+pub const fn monad_trait() -> crate::QualifiedName<'static> {
+    crate::QualifiedName {
+        home: ModuleName {
+            package: Some(CORE),
+            name: "Monad",
+        },
+        name: "Monad",
+    }
+}
+
 const BIG: &Kind<'static> = &Kind::Base(BaseKind::Big);
 const CONST: &Kind<'static> = &Kind::Base(BaseKind::Const);
 const K0: &Kind<'static> = &Kind::Var(0);

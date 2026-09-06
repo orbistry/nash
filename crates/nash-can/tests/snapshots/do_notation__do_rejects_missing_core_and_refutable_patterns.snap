@@ -1,0 +1,78 @@
+---
+source: crates/nash-can/tests/do_notation.rs
+expression: results
+---
+[
+    [
+        DoWithoutMonad {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 5,
+                },
+                end: Position {
+                    line: 5,
+                    column: 11,
+                },
+            },
+        },
+    ],
+    [
+        RefutableBindPattern {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 5,
+                },
+                end: Position {
+                    line: 5,
+                    column: 12,
+                },
+            },
+        },
+    ],
+    [
+        RefutableBindPattern {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 5,
+                },
+                end: Position {
+                    line: 5,
+                    column: 16,
+                },
+            },
+        },
+    ],
+    [
+        NotFoundVar {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 10,
+                },
+                end: Position {
+                    line: 5,
+                    column: 11,
+                },
+            },
+            prefix: None,
+            name: "x",
+            suggestions: PossibleNames {
+                locals: [
+                    "m",
+                    "run",
+                ],
+                qualified: [
+                    (
+                        "Monad",
+                        [
+                            "bind",
+                        ],
+                    ),
+                ],
+            },
+        },
+    ],
+]

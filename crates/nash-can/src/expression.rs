@@ -108,11 +108,8 @@ pub fn canonicalize_expr<'a>(
                 region,
             }]);
         }
-        SourceExpr::Do { .. } => {
-            return Err(vec![Error::Unsupported {
-                feature: "do block",
-                region,
-            }]);
+        SourceExpr::Do { stmts, last } => {
+            return canonicalize_do(bump, env, stmts, last, region, free_locals, warnings);
         }
         SourceExpr::MacroCall { .. } => {
             return Err(vec![Error::Unsupported {
@@ -314,6 +311,93 @@ fn canonicalize_section<'a>(
         free_locals,
         warnings,
     )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn canonicalize_do<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    stmts: &'a [&'a Located<nash_source::Stmt<'a>>],
+    last: &'a Located<SourceExpr<'a>>,
+    region: Region,
+    free_locals: &mut FreeLocals<'a>,
+    warnings: &mut Vec<Warning<'a>>,
+) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
+    use nash_source::Stmt;
+    let Some((statement, rest)) = stmts.split_first() else {
+        return canonicalize_expr(bump, env, last, free_locals, warnings);
+    };
+    let body = bump.alloc(Located::at(region, SourceExpr::Do { stmts: rest, last }));
+    let (parameter, expression) = match &statement.value {
+        Stmt::Let(definitions) => {
+            return canonicalize_let(bump, env, definitions, body, region, free_locals, warnings);
+        }
+        Stmt::Bind { pattern, expr } => {
+            if !irrefutable(&pattern.value) {
+                return Err(vec![Error::RefutableBindPattern {
+                    region: pattern.region,
+                }]);
+            }
+            (*pattern, *expr)
+        }
+        Stmt::Expr(expr) => (
+            &*bump.alloc(Located::at(statement.region, SourcePattern::Anything)),
+            *expr,
+        ),
+    };
+    let trait_ = nash_ast::primitives::monad_trait();
+    let annotation = env.method_annotation(trait_, "bind").ok_or_else(|| {
+        vec![Error::DoWithoutMonad {
+            region: statement.region,
+        }]
+    })?;
+    // The RHS cannot see its own pattern. The lambda canonicalizer adds the
+    // pattern only for the remaining statements and accounts for delayed uses.
+    let value = canonicalize_expr(bump, env, expression, free_locals, warnings)?;
+    let lambda = canonicalize_lambda(
+        bump,
+        env,
+        bump.alloc_slice_copy(&[parameter]),
+        body,
+        statement.region,
+        free_locals,
+        warnings,
+    )?;
+    let bind = bump.alloc(Located::at(
+        statement.region,
+        CanExpr::VarMethod {
+            trait_,
+            method: "bind",
+            annotation,
+        },
+    ));
+    Ok(bump.alloc(Located::at(
+        region,
+        CanExpr::Call {
+            function: bind,
+            arguments: bump.alloc_slice_copy(&[value, lambda]),
+        },
+    )))
+}
+
+fn irrefutable(pattern: &SourcePattern<'_>) -> bool {
+    match pattern {
+        SourcePattern::Anything
+        | SourcePattern::Var(_)
+        | SourcePattern::Record(_)
+        | SourcePattern::Unit => true,
+        SourcePattern::Alias { pattern, .. } => irrefutable(&pattern.value),
+        SourcePattern::Tuple {
+            first,
+            second,
+            rest,
+        } => {
+            irrefutable(&first.value)
+                && irrefutable(&second.value)
+                && rest.iter().all(|pattern| irrefutable(&pattern.value))
+        }
+        _ => false,
+    }
 }
 
 fn find_var<'a>(

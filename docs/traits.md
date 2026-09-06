@@ -460,7 +460,8 @@ do { e }              =  e
 what is in scope. The `<-` pattern must be irrefutable (a variable, `_`, a
 tuple, or a record pattern); a refutable pattern is a canonicalization
 error since there is no `fail`. `pure` is not inserted. The synthetic
-`bind` use is keyed by the region of the `<-` statement for evidence.
+`bind` use has its own generated method `NodeId` for evidence; the statement
+region supplies diagnostics.
 
 ## Core trait hierarchy
 

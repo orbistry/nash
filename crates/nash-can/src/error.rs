@@ -36,6 +36,12 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    DoWithoutMonad {
+        region: Region,
+    },
+    RefutableBindPattern {
+        region: Region,
+    },
     ReflexiveLiftOverlap {
         heads: &'a [&'a Located<nash_ast::Type<'a>>],
     },
