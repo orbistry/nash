@@ -2513,6 +2513,17 @@ Done when: `do` blocks canonicalize and infer `Monad`; `Expr::Negate` is gone.
 
 ## Chunk 11: driver plumbing and cross-module tests
 
+Status: complete. The driver acceptance tests exercise both trait-owned and
+type-owned impls through direct consumers and a transitive wrapper. They build
+the real dependency graph from reversed source input and require every module
+interface to be present. A diagnostic snapshot checks orphan and same-module
+overlap failures at the impl module while the other modules succeed. The real
+CLI compiles the four-module fixture, then reports OrphanImpl and OverlappingImpls
+for the corresponding invalid additions. Existing tests retain original
+definition/use NodeIds and evidence binders across dependent compilation and
+verify source fetching preserves dependency order, including fetch errors.
+The core hierarchy and implicit core imports remain Chunk 12 work.
+
 Files: `crates/nash-driver/src/compile.rs`, `crates/nash-can/src/interface.rs`,
 `crates/nash-can/src/environment/foreign.rs`.
 
@@ -2528,7 +2539,7 @@ evidence remain together per module until the build ends. A regression checks
 original definition/use NodeIds and evidence binders after a dependent module
 compiles. The superseded interface-copy helper is removed; its tests now
 exercise imported traits, impl metadata, higher-kinded types and partial aliases
-using the retained arena. Remaining cross-module/core acceptance criteria are unfinished.
+using the retained arena.
 
 Code:
 
@@ -2578,14 +2589,16 @@ Elm reference: `Build.hs::compile` (`Compile.compile` returns
 
 Tests (`compile.rs` tests):
 
-- `test_trait_across_modules`: `Show.nash` defines `trait Show` and `impl Show Int`; `Main.nash` imports it and calls `show`.
-- `test_impl_in_type_module`: trait in `A`, type and impl in `B` (orphan rule satisfied by the type), use in `C` importing both.
-- `test_orphan_across_modules`: trait in `A`, type in `B`, impl in `C` fails with `OrphanImpl`.
-- `test_impl_visible_transitively`: `C` imports only `B` (which imports `A`) and uses `B`'s impl through a function from `B` whose scheme requires `Show`: resolution happens in `C`.
-- `test_overlap_same_module`.
+- `trait_impls_resolve_in_direct_and_transitive_consumers`: Methods defines
+  Keep and its unit impl; Types defines Token, its Keep impl, and a qualified
+  `forward` scheme. Main imports both modules and resolves both impls directly.
+  Transitive imports only Types and resolves both through `forward`.
+- `driver_reports_orphan_and_overlap_at_the_impl_module`: an impl of an
+  imported trait for an imported type fails with OrphanImpl; two local impls
+  of the same head fail with OverlappingImpls. Both diagnostics are snapshotted.
 
-Done when: all five pass and `nash check` on a two-module project with a
-trait reports the right errors.
+Done when: all five behaviors pass and `nash check` on the cross-module project
+reports the right errors.
 
 ---
 

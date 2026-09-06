@@ -563,6 +563,84 @@ main = Utils.pong ()
 }
 
 #[cfg(test)]
+mod trait_tests {
+    use super::*;
+    use crate::source::InMemorySource;
+
+    async fn compile_sources(sources: &[(&str, &str)]) -> BuildResult {
+        let mem = InMemorySource::new();
+        let mut modules = Vec::new();
+        for (name, source) in sources {
+            let uri = Url::parse(&format!("file:///{name}.nash")).unwrap();
+            mem.insert(uri.clone(), (*source).to_owned());
+            modules.push(uri);
+        }
+        let db = Arc::new(Mutex::new(Database::new(mem)));
+        let graph = build_graph(db.clone(), &modules).await.unwrap();
+        build(
+            db,
+            &graph,
+            &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn trait_impls_resolve_in_direct_and_transitive_consumers() {
+        let result = compile_sources(&[
+            ("Transitive", "module Transitive exposing (..)\nimport Types exposing (Token(..), forward)\nvalue = forward Token\nunit = forward ()\n"),
+            ("Main", "module Main exposing (..)\nimport Methods exposing (Keep)\nimport Types exposing (Token(..))\nvalue = keep Token\nunit = keep ()\n"),
+            ("Types", "module Types exposing (Token(..), forward)\nimport Methods exposing (Keep)\ntype Token = Token\nimpl Keep Token where\n    keep x = x\nforward x = keep x\n"),
+            ("Methods", "module Methods exposing (Keep)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\n"),
+        ]).await;
+        assert!(result.is_success(), "{result:?}");
+        assert_eq!(result.success, 4);
+        assert_eq!(result.interfaces.len(), 4);
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+    }
+
+    #[tokio::test]
+    async fn driver_reports_orphan_and_overlap_at_the_impl_module() {
+        let mut diagnostics = Vec::new();
+        for (case, bad, expected) in [
+            (
+                "orphan",
+                "module Bad exposing (..)\nimport Methods exposing (Keep)\nimport Types exposing (Token)\nimpl Keep Token where\n    keep x = x\n",
+                "OrphanImpl",
+            ),
+            (
+                "overlap",
+                "module Bad exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep () where\n    keep x = x\n",
+                "OverlappingImpls",
+            ),
+        ] {
+            let result = compile_sources(&[
+                ("Bad", bad),
+                (
+                    "Types",
+                    "module Types exposing (Token(..))\ntype Token = Token\n",
+                ),
+                (
+                    "Methods",
+                    "module Methods exposing (Keep)\ntrait Keep 'a where\n    keep : 'a -> 'a\n",
+                ),
+            ])
+            .await;
+            assert_eq!(result.success, 2, "{result:?}");
+            assert_eq!(result.failed, 1, "{result:?}");
+            let ModuleResult::Failed { message } =
+                &result.modules[&Url::parse("file:///Bad.nash").unwrap()]
+            else {
+                panic!("impl module must fail")
+            };
+            assert!(message.contains(expected), "{message}");
+            diagnostics.push(format!("{case}: {message}"));
+        }
+        insta::assert_snapshot!(diagnostics.join("\n"));
+    }
+}
+
+#[cfg(test)]
 mod kind_tests {
     use super::*;
     use crate::source::InMemorySource;

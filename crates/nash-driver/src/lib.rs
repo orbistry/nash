@@ -6,7 +6,7 @@
 //! - **Caching**: `Database` for managing source files and compilation results
 //! - **Project loading**: Parse `nash.jsonc` and discover source files
 //! - **Dependency graph**: Build and analyze module dependencies
-//! - **Parallel compilation**: Compile modules respecting dependency order
+//! - **Compilation**: Fetch sources concurrently, then compile in dependency order
 //! - **Incremental builds**: Interface-based caching for fast rebuilds
 //!
 //! # Example
