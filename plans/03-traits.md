@@ -2735,7 +2735,7 @@ declarations with explicit imports. Remaining requirements are:
 | Core option do acceptance | The real core fixture compiles option and result do blocks, operator calls, mixed-kind builtin list mapping and List Int to List Packet mapping. Runtime execution remains a backend prerequisite. |
 | Default imports | Not implemented. Missing specified modules: Derive, Debug, Int, Bytes, String, List, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |
 | Overview example up to tests | Not currently executable: Cardano.Tx and deriving require later work; the sketch names nonexistent Builtin.compareInteger and undefined currentSlot/signedBy, as well as later field-access/validator features. This acceptance item is not proved by the core fixture. |
-| Final release verification | Refresh release/publish dry runs after the final implementation changes. Earlier checks are revision-specific and downstream publishing was blocked by unpublished bumped dependencies. |
+| Final release verification | Refreshed at 1735e2f9 with Sampo 0.21.0. Release planning succeeds; all 28 internal dependency requirements match prepared versions. Publish dry-run verifies source, then ast is blocked by unpublished source 0.5.0. Repeat after any further crate changes; downstream package verification is not established. |
 
 Default-import integration also needs core source availability: the current
 driver discovers workspace sources, while Plan 12 chunk 1 owns embedded core
@@ -2753,6 +2753,30 @@ elements. Separate CLI failures retain both invalid Pair.make argument errors
 and reject a Term array element at its type annotation. Runtime bounds behavior
 still requires Plan 07 execution. These are source-only prerequisites and do
 not change Rust crate versions.
+
+### Contract and release audit at 1735e2f9
+
+The driver dependency-order fix `lqzsqvyw` (`e32dd1b6`) remains an ancestor.
+The build owns one arena, compiles modules sequentially in dependency order,
+and retains canonical modules and their owned solved maps through the build.
+`nash-ast::NodeId` is the shared address-based key, reexported by nash-solve;
+instances retain type arguments and evidence in scheme order. Existing driver
+regressions check stable node addresses, direct/transitive impl consumers,
+and orphan/overlap diagnostics. Rust sources contain no SuperType, FlexSuper,
+RigidSuper or unify_super. Full in-memory canonical interfaces carry trait
+and impl metadata; the unused disk-cache fingerprint is not proof of this
+contract and still needs later cache integration.
+
+A disposable Git snapshot ran Sampo 0.21.0 release --dry-run, then prepared
+the release locally and ran publish --dry-run. Planned versions are source
+0.5.0, ast 0.6.0, parse 0.4.0, can 0.5.0, constrain/solve/driver 0.3.0, and
+cli 0.2.5. Cargo metadata confirms all 28 internal requirements match the
+prepared package versions. Publishing orders source before ast, then parse,
+can, constrain, solve, driver and cli. Cargo packages and verifies source;
+ast cannot resolve source ^0.5.0 from crates.io because dry-run does not
+upload it. Nothing was published or pushed, and release mutations stayed in
+the disposable copy. This establishes release planning and dependency order,
+not full downstream registry package verification or completion of Plan 03.
 
 Cons and concrete type-module helpers can proceed independently. Resolving
 the hierarchy/head-policy decisions and default-import prerequisites remains
