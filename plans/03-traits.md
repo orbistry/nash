@@ -2816,6 +2816,14 @@ case missing Show for a Map value reports MissingImpl at the outer show call.
 Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
 source-only step changes no Rust crate; rendered strings remain Plan 07
 execution checks.
+Semigroup and Monoid now cover Big Bytes and List. Append operates on the
+underlying byte strings or Data lists and returns the original nominal type;
+empty uses the Big bytes literal impl or an empty Data list. Core acceptance
+checks both types and a Monoid-constrained helper, compiling 17 modules and
+148 declarations. The CLI rejects appending List Bytes to List Int.
+Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
+source-only step changes no Rust crate. Runtime append/identity laws remain
+Plan 07 checks; right-biased Map union is still pending.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

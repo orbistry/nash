@@ -19,3 +19,17 @@ impl Semigroup (list 'a) where
 
 impl Semigroup unit where
     append _ _ = ()
+
+impl Semigroup Bytes where
+    append a b =
+        Builtin.castLift
+            (Builtin.appendByteString
+                (Builtin.unBData (Builtin.castToData a))
+                (Builtin.unBData (Builtin.castToData b)))
+
+impl Semigroup (List 'a) where
+    append xs ys =
+        Builtin.castLift
+            (append
+                (Builtin.unListData (Builtin.castToData xs))
+                (Builtin.unListData (Builtin.castToData ys)))

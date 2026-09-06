@@ -1,6 +1,7 @@
 module Monoid exposing (Monoid)
 
 import Literal
+import Builtin
 import Semigroup exposing (Semigroup)
 
 trait Semigroup 'a => Monoid 'a where
@@ -17,3 +18,9 @@ impl Monoid (list 'a) where
 
 impl Monoid unit where
     empty = ()
+
+impl Monoid Bytes where
+    empty = #""
+
+impl Monoid (List 'a) where
+    empty = Builtin.castLift (Builtin.mkNilData ())

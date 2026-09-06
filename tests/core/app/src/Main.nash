@@ -18,6 +18,14 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+emptyBigBytes : Bytes
+emptyBigBytes = empty
+emptyBigList : List Int
+emptyBigList = empty
+appendedBigBytes = append bytesLiteral emptyBigBytes
+appendedBigList = append bigList emptyBigList
+bigListWithEmpty = withEmpty bigList
+
 shownBigPrimitives = (show integerLiteral, show bytesLiteral)
 shownBigContainers = (show bigList, show nestedBigLists, show bigMap)
 
