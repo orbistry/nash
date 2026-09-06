@@ -342,13 +342,17 @@ fn canonicalize_head<'a>(
                     )
                 }
             };
-            (
-                Head::Named {
-                    reference: QualifiedName { home, name },
-                    vars,
-                },
-                can_type,
-            )
+            if home == nash_ast::primitives::builtin_home() && *name == "unit" && vars.is_empty() {
+                (Head::Unit, Type::Unit)
+            } else {
+                (
+                    Head::Named {
+                        reference: QualifiedName { home, name },
+                        vars,
+                    },
+                    can_type,
+                )
+            }
         }
         SourceType::Unit => (Head::Unit, Type::Unit),
         SourceType::Tuple {

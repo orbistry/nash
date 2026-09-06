@@ -1,0 +1,48 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nbad xs = Builtin.mkCons (\\x -> x) xs\n"
+---
+[
+    BadKind {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 10,
+            },
+            end: Position {
+                line: 3,
+                column: 24,
+            },
+        },
+        name: "mkCons",
+        args: [
+            Lambda(
+                FlexVar(
+                    "a",
+                ),
+                FlexVar(
+                    "a",
+                ),
+                [],
+            ),
+        ],
+        reason: Mismatch {
+            expected: KindScheme {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kind: Var(
+                    0,
+                ),
+            },
+            actual: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+            },
+        },
+    },
+]

@@ -1,5 +1,8 @@
 //! Compiler-known types of the `nash/core` `Builtin` module.
 
+mod builtins;
+pub use builtins::{BUILTINS, Builtin, BuiltinLowering};
+
 use crate::{BaseKind, Kind, KindScheme, KindSet, ModuleName, PackageName};
 
 pub const CORE: PackageName<'static> = PackageName {

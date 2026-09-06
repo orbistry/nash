@@ -2604,6 +2604,18 @@ reports the right errors.
 
 ## Chunk 12: the core trait hierarchy in `core/`
 
+Status: in progress. The synthetic Builtin interface now exports all 103
+specified value schemes: 101 symbolic DefaultFunction variants plus identity
+and error. Static canonical type trees preserve the documented signatures;
+the existing kind checker derives their shared bounds. The table adds no
+runtime dependency to nash-ast. Inference snapshots and real CLI checks cover
+unConstrData projections, Storable list elements, Any choice results, and unit
+annotations/impls. A function element gets BadKind; unit and () impls overlap.
+Formatting, strict Clippy, 1,889 tests, and snapshot hygiene pass for this step.
+Core source modules, primitive constructors, twin conversions, implicit imports,
+and the hierarchy acceptance example remain unfinished. The two contract
+questions recorded in Chunk 10 also remain open.
+
 Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,
 `core/Integral.nash`, `core/Semigroup.nash`, `core/Monoid.nash`,
 `core/Functor.nash`, `core/Applicative.nash`, `core/Monad.nash`,
@@ -2622,8 +2634,9 @@ tuples, and `option`. Method bodies use `Builtin.*`. The driver adds the
 implicit imports (`import Eq exposing (Eq, eq)`, ...) like Elm's
 `Imports.defaults`. `Builtin` has no Nash source: docs/stdlib.md specifies
 a synthetic interface from the Rust primitive and builtin tables. The current
-interface supplies type constructors but not the builtin value schemes needed
-by these method bodies. Implement or explicitly track that stdlib prerequisite;
+interface now supplies type constructors and the builtin value schemes needed
+by these method bodies. Primitive constructor metadata and the specified twin
+conversions remain stdlib prerequisites;
 do not fabricate source bindings or count declaration-only modules and test
 fixtures as completion. Core impl bodies must use the specified real bindings.
 Code generation for those bindings remains Plan 07 work.

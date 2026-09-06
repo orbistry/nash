@@ -510,9 +510,14 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 `Builtin` is a synthetic module: it has no `.nash` source. Its interface
 is generated from the Rust tables in `crates/nash-ast/src/primitives.rs`:
 `PRIMITIVES` (the compiler-known types, plans/02 chunk 3) and `BUILTINS`,
-which maps each `DefaultFunction` variant
+which maps each `DefaultFunction` variant by its symbolic Rust name
 (`crates/nash-plutus/src/builtin/default_function.rs`) to a Nash name and
-type, plus the type constructors from plans/02's primitives table.
+type, plus the type constructors from plans/02's primitives table. The typed
+value table is in `primitives/builtins.rs`, re-exported by `primitives.rs`.
+The canonicalizer derives value-kind bounds from those types; the backend
+resolves the symbolic variant without making the AST depend on the runtime.
+The `unit` spelling and `()` both canonicalize to the same unit type,
+including in impl heads.
 `nash-can` resolves `Builtin.foo` to `VarForeign { home: Builtin }` and
 `nash-codegen` lowers that to `Core::Builtin` (plans/07 chunk 4),
 applying the variant's `force_count()` forces. `nash docs` renders the

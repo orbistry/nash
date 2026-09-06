@@ -1020,11 +1020,30 @@ pub enum KindHead<'a> {
 
 /// Explicit builtin interface for callers that have not installed the prelude.
 pub fn builtin_interface<'a>(bump: &'a Bump) -> crate::Interface<'a> {
+    let kinds = KindEnv::default();
     crate::Interface {
         impls: &[],
         traits: &[],
         home: primitives::builtin_home(),
-        values: &[],
+        values: bump.alloc_slice_fill_iter(primitives::BUILTINS.iter().map(|builtin| {
+            let annotation = nash_ast::Annotation {
+                free_vars: builtin.free_vars,
+                context: &[],
+                kinds: ValueKinds::unconstrained(bump, builtin.free_vars.len()),
+                typ: builtin.typ,
+            };
+            crate::interface::InterfaceValue {
+                name: builtin.name,
+                annotation: retain_annotation(
+                    bump,
+                    &kinds,
+                    primitives::builtin_home(),
+                    builtin.name,
+                    &annotation,
+                )
+                .expect("builtin value schemes are well-kinded"),
+            }
+        })),
         aliases: &[],
         binops: &[],
         unions: bump.alloc_slice_fill_iter(primitives::PRIMITIVES.iter().map(|p| {

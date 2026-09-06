@@ -2001,6 +2001,39 @@ fn operator_methods_preserve_provider_and_backing_method() {
 }
 
 #[test]
+fn builtin_value_schemes_preserve_container_bounds() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin exposing (type unit)
+        tag data = Builtin.fstPair (Builtin.unConstrData data)
+        fields data = Builtin.sndPair (Builtin.unConstrData data)
+        cons x xs = Builtin.mkCons x xs
+        choose flag x y = Builtin.ifThenElse flag x y
+        unit x = Builtin.chooseUnit () x
+        namedUnit : unit
+        namedUnit = ()
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep unit where
+            keep x = Builtin.chooseUnit x ()
+        kept = keep ()
+    "#
+    );
+}
+
+#[test]
+fn builtin_list_rejects_function_elements() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin
+        bad xs = Builtin.mkCons (\x -> x) xs
+    "#
+    );
+}
+
+#[test]
 fn nested_operator_sections_apply() {
     let bump = Bump::new();
     let operators = "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n";

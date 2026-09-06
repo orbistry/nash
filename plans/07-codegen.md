@@ -984,13 +984,14 @@ assert_eval_snapshot!("main = -5");
 **Files**
 
 - `crates/nash-codegen/src/builtins.rs` (new)
-- `core/Builtin.nash` (new; the stdlib module the prelude re-exports; the
-  stdlib plan owns its final shape)
+- `crates/nash-ast/src/primitives/builtins.rs` (the synthetic module's typed
+  value table; Builtin has no source file)
 
 **Change**
 
 `Builtin.addInteger` and friends canonicalize as `Expr::VarForeign` with
-`reference.home.name == "Builtin"`. Codegen maps the name to a
+`reference.home == nash_ast::primitives::builtin_home()`. Codegen maps the
+table's symbolic variant name to a
 `DefaultFunction` and emits `Core::Builtin` with as many arguments as the
 call site supplies (at most `arity()`; extra arguments become an outer
 `App`). A bare reference (`Builtin.addInteger` passed as a value) is a

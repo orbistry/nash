@@ -314,6 +314,9 @@ fn canonicalize_env_type<'a>(
         }
         environment::Type::Union { arity, home } => {
             check_arity(region, name, arity, args.len())?;
+            if home == nash_ast::primitives::builtin_home() && name == "unit" {
+                return Ok(CanType::Unit);
+            }
             Ok(CanType::Named {
                 reference: QualifiedName { home, name },
                 args: can_args,
