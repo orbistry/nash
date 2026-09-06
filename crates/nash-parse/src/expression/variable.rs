@@ -270,9 +270,13 @@ impl<'a> Parser<'a> {
                 return self.parse_qualified_lower(start_pos, row, col, to_error);
             } else {
                 // No more dots - this is qualified uppercase: Module.Type
-                let name = self.slice_from(start_pos);
-                return Ok(Expr::Var {
+                let (module, name) = self
+                    .slice_from(start_pos)
+                    .rsplit_once('.')
+                    .expect("qualified uppercase name has a module prefix");
+                return Ok(Expr::VarQual {
                     kind: VarType::CapVar,
+                    module,
                     name,
                 });
             }

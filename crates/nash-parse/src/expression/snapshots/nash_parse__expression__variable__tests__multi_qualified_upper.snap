@@ -13,8 +13,9 @@ Located {
             column: 10,
         },
     },
-    value: Var {
+    value: VarQual {
         kind: CapVar,
-        name: "A.B.C.Foo",
+        module: "A.B.C",
+        name: "Foo",
     },
 }
