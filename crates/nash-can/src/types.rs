@@ -294,7 +294,7 @@ fn canonicalize_env_type<'a>(
             parameters,
             typ: alias_typ,
         } => {
-            check_arity(region, name, arity, args.len())?;
+            check_max_arity(region, name, arity, args.len())?;
             let arguments = bump.alloc_slice_fill_iter(
                 parameters
                     .iter()
@@ -309,11 +309,11 @@ fn canonicalize_env_type<'a>(
                 reference: QualifiedName { home, name },
                 arguments,
                 target: CanAliasType::Open(alias_typ),
-                remaining: &[],
+                remaining: &parameters[args.len()..],
             })
         }
         environment::Type::Union { arity, home } => {
-            check_arity(region, name, arity, args.len())?;
+            check_max_arity(region, name, arity, args.len())?;
             if home == nash_ast::primitives::builtin_home() && name == "unit" {
                 return Ok(CanType::Unit);
             }
@@ -325,13 +325,15 @@ fn canonicalize_env_type<'a>(
     }
 }
 
-fn check_arity<'a>(
+fn check_max_arity<'a>(
     region: Region,
     name: &'a str,
     expected: usize,
     actual: usize,
 ) -> Result<(), Vec<Error<'a>>> {
-    if expected == actual {
+    // Partial constructors are valid arguments to higher-kinded parameters.
+    // The kind checker rejects them where a value type is required.
+    if actual <= expected {
         Ok(())
     } else {
         Err(vec![Error::BadArity {

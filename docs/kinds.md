@@ -246,7 +246,10 @@ Kinds allow a constructor to be applied to fewer arguments than its arity
 (`Functor List`, `wrap List Int`). Kind checking accepts such applications;
 where the surface grammar and the type solver accept them is decided in
 [traits.md](traits.md). Applying a base-kinded type to an argument
-is invalid. Named-constructor arity checking can report `BadArity` before
+is invalid. Named constructors and nominal aliases may be partial in type
+annotations when the enclosing parameter accepts their arrow kind. A
+constructor in a value-type position is rejected by kind checking. Supplying
+more arguments than a named constructor declares reports `BadArity` before
 kind inference runs.
 
 ## Errors
@@ -331,16 +334,17 @@ I cannot find a kind for `'f` in `type bad 'f = Bad ('f 'f)`:
        ^^^^^^^
 ```
 
-Wrong argument *count* against an exact arity is still Elm's `BadArity`
-error from `nash-can`.
+Too many arguments to a named constructor still produce Elm's `BadArity`
+error from `nash-can`. Fewer arguments retain an arrow kind, which must fit
+the enclosing type position.
 
 Canonical variable applications retain a general `App` head and argument
 list. Plan 03 substitution normalizes a head that becomes known into a
 named or nominal alias application, preserving every argument. Partial
 aliases retain their remaining bound parameters in retained interfaces.
 Kind checking and higher-kinded value inference support these applications,
-including partial aliases and imported annotations. Named constructors still require exact arity in ordinary
-type annotations; impl heads may be partial and are checked by kind.
+including partial aliases and imported annotations. Named constructors in
+ordinary type annotations and impl heads may be partial and are checked by kind.
 A base-bounded variable applied to arguments instead
 reaches the kind-specific too-many-arguments error.
 
@@ -377,8 +381,3 @@ field shapes. See [representation.md](representation.md) and
   rule because they map directly onto `chooseData` results.
 - **Interfaces**: an exported type's kind scheme is part of the interface
   and of the incremental-build fingerprint.
-
-## Open questions
-
-- Whether partial application of type constructors is accepted in value
-  annotations (not just impl heads) is left to traits.md.

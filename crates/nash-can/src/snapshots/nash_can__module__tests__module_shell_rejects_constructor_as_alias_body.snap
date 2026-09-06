@@ -1,0 +1,39 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (Wrapped, Maybe(..))\n\ntype alias Wrapped = Maybe\n\ntype Maybe 'a\n    = Just 'a\n    | Nothing\n"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 22,
+            },
+            end: Position {
+                line: 3,
+                column: 27,
+            },
+        },
+        context: AliasCasing {
+            alias: "Wrapped",
+            big: true,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Arrow(
+                Base(
+                    Big,
+                ),
+                Base(
+                    Big,
+                ),
+            ),
+        },
+    },
+]

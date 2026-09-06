@@ -226,6 +226,18 @@ fn base_kinded_parameter_cannot_be_applied() {
 }
 
 #[test]
+fn named_partial_constructors_in_higher_kinded_arguments() {
+    assert_kinds_snapshot!(
+        "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a 'b\ntype alias withList = box list\ntype alias withPair = box (pair int)\ntype alias withAlias = box (pairAlias int)"
+    );
+}
+
+#[test]
+fn partial_constructor_is_not_a_value_type() {
+    assert_kind_error_snapshot!("value : list\nvalue = ()\nother : pair int\nother = ()");
+}
+
+#[test]
 fn named_constructor_arity_remains_a_canonicalization_error() {
     let bump = Bump::new();
     let source = bump.alloc_str(

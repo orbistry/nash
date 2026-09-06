@@ -1856,7 +1856,7 @@ mod tests {
     }
 
     #[test]
-    fn module_shell_reports_bad_type_arity() {
+    fn module_shell_rejects_constructor_as_alias_body() {
         assert_module_error_snapshot!(
             r#"
             module Main exposing (Wrapped, Maybe(..))

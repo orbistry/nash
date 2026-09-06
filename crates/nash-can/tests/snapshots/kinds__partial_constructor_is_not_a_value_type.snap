@@ -1,0 +1,86 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "value : list\nvalue = ()\nother : pair int\nother = ()"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 9,
+            },
+            end: Position {
+                line: 5,
+                column: 13,
+            },
+        },
+        context: Annotation {
+            name: "value",
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    3,
+                ),
+            ],
+            kind: Arrow(
+                Var(
+                    0,
+                ),
+                Base(
+                    Const,
+                ),
+            ),
+        },
+    },
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 9,
+            },
+            end: Position {
+                line: 7,
+                column: 17,
+            },
+        },
+        context: Annotation {
+            name: "other",
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    3,
+                ),
+            ],
+            kind: Arrow(
+                Var(
+                    0,
+                ),
+                Base(
+                    Const,
+                ),
+            ),
+        },
+    },
+]

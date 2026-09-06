@@ -2102,7 +2102,7 @@ snapshots reflect literal traits.
 
 ## Chunk 8: higher-kinded traits (type-variable application)
 
-Status: in progress. Constructor and inferred partial alias applications convert, unify,
+Status: complete. Constructor and partial alias applications convert, unify,
 generalize and retain use-site evidence. Coverage checks distinct Functor
 impls, a qualified Monad bind chain, imported applications, rigid heads,
 partial variable heads, cyclic diagnostics, and imported alias impl evidence
@@ -2115,12 +2115,15 @@ are removed. Real CLI projects verify successful imported partial aliases and
 MissingImpl for another alias with the same record shape. Formatting, strict
 Clippy, all workspace tests and snapshot hygiene pass.
 
-Acceptance audit found a remaining source-annotation gap: an explicit nested
-partial constructor such as `box (pairAlias int)` is rejected by the old exact
-arity check in `types::canonicalize_env_type`, before kind checking. The same
-ground type can be inferred and resolves correctly through the standalone
-resolver. Supporting the explicit annotation remains required; the inferred
-case alone does not complete this chunk.
+Explicit nested constructors such as `box (pairAlias int)` now retain the
+unsupplied alias parameters and reach kind checking. Named constructors such
+as `list` and `pair int` follow the same rule. Overapplication remains BadArity;
+a partial constructor used as a value type reports its arrow-kind mismatch.
+The resolver acceptance test checks both inferred and explicit partial aliases.
+Workspace tests and a real two-module CLI check pass for explicit imported
+partial aliases. Invalid partial constructors in two independent value
+annotations produce both KindMismatch diagnostics with their original spans;
+the snapshot test retains both errors.
 
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/types.rs`,
 `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/instantiate.rs`,

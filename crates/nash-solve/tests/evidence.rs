@@ -131,6 +131,8 @@ fn ground_higher_kinded_context_keeps_partial_alias_and_head_order() {
         secondIdentity : pair string bytes -> pair string bytes
         secondIdentity x = x
         witness x y = (boxIt (pairIdentity x), secondIdentity y)
+        explicit : box (pairAlias int) -> box (pairAlias int)
+        explicit x = x
     "
         ),
     );
@@ -148,6 +150,10 @@ fn ground_higher_kinded_context_keeps_partial_alias_and_head_order() {
     else {
         panic!("ground result types")
     };
+    let explicit = input(&annotations, "explicit");
+    assert!(matches!(explicit.value, Type::Named { args: [partial], .. }
+        if matches!(&partial.value, Type::Alias { arguments, remaining, .. }
+            if arguments.len() == 1 && *remaining == ["b"])));
     let trait_ = *tables
         .traits
         .keys()
