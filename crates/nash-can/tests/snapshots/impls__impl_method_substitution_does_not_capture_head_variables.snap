@@ -123,5 +123,6 @@ expression: "(annotation, free_vars, context, kinds)"
                 Big,
             ),
         ],
+        applications: [],
     },
 )

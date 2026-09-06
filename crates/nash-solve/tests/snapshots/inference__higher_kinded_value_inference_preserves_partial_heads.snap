@@ -1,6 +1,7 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nidentityK : 'f 'a -> 'f 'a\nidentityK x = x\ntwo : 'g 'b 'a -> 'g 'b 'a\ntwo x = identityK x\n"
+description: "Code:\n\nmodule Main exposing (..)\nidentityK : 'f 'a -> 'f 'a\nidentityK x = x\ntwo : 'g 'b 'a -> 'g 'b 'a\ntwo x = identityK x\nreverse : 'f 'a -> 'f 'b -> ( 'f 'b, 'f 'a )\nreverse x y = (identityK y, identityK x)\n"
 ---
-identityK : forall a (f : All -> Any). f a -> f a
-two : forall a b (g : All -> All -> Any). g b a -> g b a
+identityK : forall a (f : Arrow). [KindApplication { head: Var(1), argument: Var(0), result: Var(2) }] => f a -> f a
+reverse : forall a b (f : Arrow). [KindApplication { head: Var(2), argument: Var(0), result: Var(3) }, KindApplication { head: Var(2), argument: Var(1), result: Var(4) }] => f a -> f b -> ( f b, f a )
+two : forall a b (g : Arrow). [KindApplication { head: Var(2), argument: Var(1), result: Var(3) }, KindApplication { head: Var(3), argument: Var(0), result: Var(4) }] => g b a -> g b a

@@ -204,6 +204,9 @@ fn render_annotations(annotations: &Annotations<'_>) -> String {
 
 fn render_annotation(annotation: &Annotation<'_>) -> String {
     let mut tipe = render_type(annotation.typ, Ctx::None);
+    if !annotation.kinds.applications.is_empty() {
+        tipe = format!("{:?} => {tipe}", annotation.kinds.applications);
+    }
     if !annotation.context.is_empty() {
         let predicates: Vec<_> = annotation
             .context
@@ -236,6 +239,14 @@ fn render_kind(kind: &nash_ast::Kind<'_>, bounds: &[nash_ast::KindSet]) -> Strin
     use nash_ast::{Kind, KindSet};
     match kind {
         Kind::Base(base) => format!("{base:?}"),
+        Kind::Constructor { scheme, arguments } => format!(
+            "({scheme:?})[{}]",
+            arguments
+                .iter()
+                .map(|kind| render_kind(kind, bounds))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         Kind::Arrow(from, to) => {
             let from_text = render_kind(from, bounds);
             let from_text = if matches!(from, Kind::Arrow(..)) {
@@ -2148,6 +2159,24 @@ fn builtin_list_rejects_function_elements() {
 }
 
 #[test]
+fn abstract_map_rejects_non_storable_builtin_list_results() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin
+        trait Functor 'f where
+            map : ('a -> 'b) -> 'f 'a -> 'f 'b
+        impl Functor list where
+            map f xs =
+                case xs of
+                    [] -> []
+                    x :: rest -> Builtin.mkCons (f x) (map f rest)
+        bad = map (\x -> (x, x)) [()]
+    "#
+    );
+}
+
+#[test]
 fn list_literal_rejects_function_elements() {
     assert_inference_error_snapshot!(
         r#"
@@ -2793,6 +2822,8 @@ fn higher_kinded_value_inference_preserves_partial_heads() {
         identityK x = x
         two : 'g 'b 'a -> 'g 'b 'a
         two x = identityK x
+        reverse : 'f 'a -> 'f 'b -> ( 'f 'b, 'f 'a )
+        reverse x y = (identityK y, identityK x)
     "#
     );
 }
@@ -2828,6 +2859,7 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
             map f (Box x) = Box (f x)
         twice f xs = map f (map f xs)
         little = map (\x -> x) (Some ())
+        changedKind = map (\x -> (x, x)) (Some ())
         big = map (\x -> x) (Box Red)
     "#
     );
@@ -2854,7 +2886,7 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
     while let nash_ast::Decls::Declare { definition, next } = decls {
         if let nash_ast::Def::Def { name, body, .. } = definition {
             let expected = match name.value {
-                "little" => Some("option"),
+                "little" | "changedKind" => Some("option"),
                 "big" => Some("Box"),
                 _ => None,
             };
@@ -2878,7 +2910,7 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
         }
         decls = next;
     }
-    assert_eq!(checked, 2);
+    assert_eq!(checked, 3);
     insta::assert_snapshot!(render_annotations(&annotations));
 }
 
@@ -2914,10 +2946,11 @@ fn imported_higher_kinded_value_preserves_application() {
         .iter()
         .position(|name| *name == "f")
         .unwrap();
-    let nash_ast::Kind::Arrow(domain, _) = annotation.kinds.kinds[f] else {
-        panic!("higher-kinded parameter")
+    let [application] = annotation.kinds.applications else {
+        panic!("retained higher-kinded application")
     };
-    assert_eq!(*domain, annotation.kinds.kinds[a]);
+    assert_eq!(application.head, annotation.kinds.kinds[f]);
+    assert_eq!(application.argument, annotation.kinds.kinds[a]);
     let interface = nash_can::from_module(&bump, &canonical.module, &producer);
     let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
     let source =

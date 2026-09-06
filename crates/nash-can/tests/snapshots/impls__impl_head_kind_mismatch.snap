@@ -27,26 +27,55 @@ expression: result.unwrap_err()
         expected: KindScheme {
             bounds: [
                 KindSet(
+                    8,
+                ),
+                KindSet(
+                    7,
+                ),
+                KindSet(
+                    7,
+                ),
+                KindSet(
                     7,
                 ),
                 KindSet(
                     7,
                 ),
             ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Var(
-                    1,
-                ),
+            kind: Var(
+                0,
             ),
+            applications: [
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        1,
+                    ),
+                    result: Var(
+                        2,
+                    ),
+                },
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        3,
+                    ),
+                    result: Var(
+                        4,
+                    ),
+                },
+            ],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
     },
 ]

@@ -203,13 +203,13 @@ impl<'a> State<'a> {
             } => {
                 let head = self
                     .infer
-                    .instantiate(&env.scheme(QualifiedName { home, name }));
+                    .constructor(env.scheme(QualifiedName { home, name }));
                 self.apply(uf, env, head, args.into_iter().map(|(_, var)| var), seen)?
             }
             Content::Structure(FlatType::App1(home, name, args)) => {
                 let head = self
                     .infer
-                    .instantiate(&env.scheme(QualifiedName { home, name }));
+                    .constructor(env.scheme(QualifiedName { home, name }));
                 self.apply(uf, env, head, args, seen)?
             }
             Content::Structure(FlatType::AppV1(head, args)) => {
@@ -327,6 +327,17 @@ fn normalize<'a>(bump: &'a Bump, signature: ValueKinds<'a>) -> ValueKinds<'a> {
     ) -> &'a Kind<'a> {
         match kind {
             Kind::Base(_) => kind,
+            Kind::Constructor { scheme, arguments } => {
+                let arguments = bump.alloc_slice_fill_iter(
+                    arguments
+                        .iter()
+                        .map(|kind| root(bump, kind, source, variables, bounds)),
+                );
+                bump.alloc(Kind::Constructor {
+                    scheme: *scheme,
+                    arguments,
+                })
+            }
             Kind::Arrow(from, to) => {
                 let from = root(bump, from, source, variables, bounds);
                 let to = root(bump, to, source, variables, bounds);
@@ -362,6 +373,31 @@ fn normalize<'a>(bump: &'a Bump, signature: ValueKinds<'a>) -> ValueKinds<'a> {
     );
     ValueKinds {
         kinds,
+        applications: bump.alloc_slice_fill_iter(signature.applications.iter().map(
+            |application| nash_ast::KindApplication {
+                head: root(
+                    bump,
+                    application.head,
+                    signature.bounds,
+                    &mut variables,
+                    &mut bounds,
+                ),
+                argument: root(
+                    bump,
+                    application.argument,
+                    signature.bounds,
+                    &mut variables,
+                    &mut bounds,
+                ),
+                result: root(
+                    bump,
+                    application.result,
+                    signature.bounds,
+                    &mut variables,
+                    &mut bounds,
+                ),
+            },
+        )),
         bounds: bump.alloc_slice_fill_iter(bounds),
     }
 }
@@ -374,6 +410,7 @@ mod tests {
 
     fn bounded<'a>(bump: &'a Bump, bound: KindSet) -> ValueKinds<'a> {
         ValueKinds {
+            applications: &[],
             bounds: bump.alloc_slice_copy(&[bound]),
             kinds: bump.alloc_slice_copy(&[&*bump.alloc(Kind::Var(0))]),
         }
@@ -407,6 +444,7 @@ mod tests {
             assert_eq!(state.generalize(&mut uf, &env, &[first]).unwrap(), before);
         }
         let shared = ValueKinds {
+            applications: &[],
             bounds: &[KindSet::ANY],
             kinds: &[&Kind::Var(0), &Kind::Var(0)],
         };
@@ -450,6 +488,7 @@ mod tests {
             .require(&mut uf, &env, bounded(&bump, KindSet::STORABLE), &[first])
             .unwrap();
         let term = ValueKinds {
+            applications: &[],
             bounds: &[],
             kinds: &[&Kind::Base(BaseKind::Term)],
         };
@@ -467,6 +506,7 @@ mod tests {
         let env = KindEnv::default();
         let mut uf = UnionFind::new();
         let signature = ValueKinds {
+            applications: &[],
             bounds: &[KindSet::ALL],
             kinds: &[
                 &Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Const)),
@@ -535,6 +575,7 @@ mod tests {
             Err(Error::Rigid { .. })
         ));
         let same = ValueKinds {
+            applications: &[],
             bounds: &[KindSet::ANY],
             kinds: &[&Kind::Var(0), &Kind::Var(0)],
         };
@@ -551,6 +592,7 @@ mod tests {
             .require(&mut uf, &env, bounded(&bump, KindSet::BIG), &[big])
             .unwrap();
         let concrete_big = ValueKinds {
+            applications: &[],
             bounds: &[],
             kinds: &[&Kind::Base(BaseKind::Big)],
         };
@@ -558,6 +600,7 @@ mod tests {
             .require_preserving(&mut uf, &env, concrete_big, &[big], &[a, b, big])
             .unwrap();
         let concrete_const = ValueKinds {
+            applications: &[],
             bounds: &[],
             kinds: &[&Kind::Base(BaseKind::Const)],
         };

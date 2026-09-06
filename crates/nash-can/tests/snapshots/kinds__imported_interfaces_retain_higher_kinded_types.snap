@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-expression: "(copied, canonical.module.unions[0].value.kind)"
+expression: "(interface, canonical.module.unions[0].value.kind)"
 ---
 (
     Interface {
@@ -16,6 +16,9 @@ expression: "(copied, canonical.module.unions[0].value.kind)"
                 kind: KindScheme {
                     bounds: [
                         KindSet(
+                            8,
+                        ),
+                        KindSet(
                             15,
                         ),
                         KindSet(
@@ -23,23 +26,31 @@ expression: "(copied, canonical.module.unions[0].value.kind)"
                         ),
                     ],
                     kind: Arrow(
-                        Arrow(
-                            Var(
-                                0,
-                            ),
-                            Var(
-                                1,
-                            ),
+                        Var(
+                            0,
                         ),
                         Arrow(
                             Var(
-                                0,
+                                1,
                             ),
                             Var(
-                                1,
+                                2,
                             ),
                         ),
                     ),
+                    applications: [
+                        KindApplication {
+                            head: Var(
+                                0,
+                            ),
+                            argument: Var(
+                                1,
+                            ),
+                            result: Var(
+                                2,
+                            ),
+                        },
+                    ],
                 },
                 name: "applied",
                 parameters: [
@@ -100,6 +111,9 @@ expression: "(copied, canonical.module.unions[0].value.kind)"
                 kind: KindScheme {
                     bounds: [
                         KindSet(
+                            8,
+                        ),
+                        KindSet(
                             15,
                         ),
                         KindSet(
@@ -107,23 +121,31 @@ expression: "(copied, canonical.module.unions[0].value.kind)"
                         ),
                     ],
                     kind: Arrow(
-                        Arrow(
-                            Var(
-                                0,
-                            ),
-                            Var(
-                                1,
-                            ),
+                        Var(
+                            0,
                         ),
                         Arrow(
                             Var(
-                                0,
+                                1,
                             ),
                             Base(
                                 Term,
                             ),
                         ),
                     ),
+                    applications: [
+                        KindApplication {
+                            head: Var(
+                                0,
+                            ),
+                            argument: Var(
+                                1,
+                            ),
+                            result: Var(
+                                2,
+                            ),
+                        },
+                    ],
                 },
                 name: "wrap",
                 parameters: [
@@ -195,29 +217,57 @@ expression: "(copied, canonical.module.unions[0].value.kind)"
     KindScheme {
         bounds: [
             KindSet(
+                8,
+            ),
+            KindSet(
                 15,
+            ),
+            KindSet(
+                15,
+            ),
+            KindSet(
+                7,
             ),
             KindSet(
                 7,
             ),
         ],
         kind: Arrow(
-            Arrow(
-                Var(
-                    0,
-                ),
-                Var(
-                    1,
-                ),
+            Var(
+                0,
             ),
             Arrow(
                 Var(
-                    0,
+                    1,
                 ),
                 Base(
                     Term,
                 ),
             ),
         ),
+        applications: [
+            KindApplication {
+                head: Var(
+                    0,
+                ),
+                argument: Var(
+                    2,
+                ),
+                result: Var(
+                    3,
+                ),
+            },
+            KindApplication {
+                head: Var(
+                    0,
+                ),
+                argument: Var(
+                    1,
+                ),
+                result: Var(
+                    4,
+                ),
+            },
+        ],
     },
 )

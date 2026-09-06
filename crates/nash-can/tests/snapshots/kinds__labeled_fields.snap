@@ -11,6 +11,7 @@ description: "type Datum = Datum { owner : Bytes, amount : Int }"
                 kind: Base(
                     Big,
                 ),
+                applications: [],
             },
         ),
     ],

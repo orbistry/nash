@@ -17,6 +17,7 @@ expression: "(&trait_.kind, variables)"
                 Term,
             ),
         ),
+        applications: [],
     },
     [
         (
@@ -39,6 +40,7 @@ expression: "(&trait_.kind, variables)"
                         Big,
                     ),
                 ],
+                applications: [],
             },
         ),
         (
@@ -54,6 +56,9 @@ expression: "(&trait_.kind, variables)"
                         7,
                     ),
                     KindSet(
+                        8,
+                    ),
+                    KindSet(
                         15,
                     ),
                     KindSet(
@@ -64,17 +69,25 @@ expression: "(&trait_.kind, variables)"
                     Var(
                         0,
                     ),
-                    Arrow(
-                        Var(
-                            1,
-                        ),
-                        Var(
-                            2,
-                        ),
-                    ),
                     Var(
                         1,
                     ),
+                    Var(
+                        2,
+                    ),
+                ],
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            1,
+                        ),
+                        argument: Var(
+                            2,
+                        ),
+                        result: Var(
+                            3,
+                        ),
+                    },
                 ],
             },
         ),

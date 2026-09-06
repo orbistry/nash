@@ -27,6 +27,7 @@ Interface {
                         Term,
                     ),
                 ),
+                applications: [],
             },
             name: "option",
             parameters: [

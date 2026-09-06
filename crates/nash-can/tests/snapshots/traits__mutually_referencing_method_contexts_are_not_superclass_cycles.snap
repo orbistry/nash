@@ -19,6 +19,7 @@ expression: schemes
                     Term,
                 ),
             ),
+            applications: [],
         },
     ),
     (
@@ -37,6 +38,7 @@ expression: schemes
                     Term,
                 ),
             ),
+            applications: [],
         },
     ),
 ]

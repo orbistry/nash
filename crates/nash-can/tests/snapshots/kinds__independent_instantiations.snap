@@ -20,6 +20,7 @@ description: "type option 'a = None | Some 'a\ntype both = Both (option Int) (op
                         Term,
                     ),
                 ),
+                applications: [],
             },
         ),
         (
@@ -29,6 +30,7 @@ description: "type option 'a = None | Some 'a\ntype both = Both (option Int) (op
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         ),
     ],

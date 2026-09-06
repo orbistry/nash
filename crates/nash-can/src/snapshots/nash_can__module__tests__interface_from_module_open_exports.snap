@@ -34,6 +34,7 @@ Interface {
                         ),
                     ),
                 ),
+                applications: [],
             },
             name: "pair",
             parameters: [
@@ -100,6 +101,7 @@ Interface {
                         Big,
                     ),
                 ),
+                applications: [],
             },
             name: "Maybe",
             parameters: [

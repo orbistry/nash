@@ -24,9 +24,13 @@ description: "f : ('f 'a, 'f) -> int\nf x = 1"
             kind: Var(
                 0,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [
+                KindSet(
+                    8,
+                ),
                 KindSet(
                     15,
                 ),
@@ -34,14 +38,22 @@ description: "f : ('f 'a, 'f) -> int\nf x = 1"
                     7,
                 ),
             ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Var(
-                    1,
-                ),
+            kind: Var(
+                0,
             ),
+            applications: [
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        1,
+                    ),
+                    result: Var(
+                        2,
+                    ),
+                },
+            ],
         },
     },
 ]

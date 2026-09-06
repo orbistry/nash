@@ -35,6 +35,7 @@ Internally a kind is:
 Kind ::= Big | Const | Term          -- base kinds
        | Kind -> Kind                -- kind arrow (right associative)
        | k                           -- kind variable, with a bound
+       | Constructor(scheme, args)   -- quantified constructor with captured arguments
 ```
 
 A kind variable carries a *bound*, which is the set of shapes it may take.
@@ -130,7 +131,7 @@ Labeled fields are not an anonymous record type.
 ```elm
 type option 'a = None | Some 'a          -- option : Any -> Term
 type thunk 'a = Thunk (unit -> 'a)       -- thunk : Any -> Term
-type wrap 'f 'a = Wrap ('f 'a)           -- wrap : forall k. (k -> Any) -> k -> Term
+type wrap 'f 'a = Wrap ('f 'a)           -- requires applying f to a to produce a value
 ```
 
 ### Aliases
@@ -157,20 +158,28 @@ the Const type `unit`.
 ### Traits
 
 `trait Functor 'f where map : ('a -> 'b) -> 'f 'a -> 'f 'b` gives `'f` a
-fresh `All` variable. Inference over the method signatures produces the
-trait's *kind scheme*: `Functor : forall k1 k2. (k1 -> k2)` with `k1`, `k2`
-bounded `Any`. Each `impl` instantiates the scheme against the impl head's
-kind and unifies:
+fresh `All` variable. Inference requires an arrow-capable constructor and
+retains separate application obligations for `'f 'a` and `'f 'b`. Both
+arguments and results must be values. Each impl supplies a constructor scheme;
+each application instantiates that scheme independently:
 
 | Impl head | Instantiation |
 |---|---|
-| `impl Functor List` | `k1 := Big, k2 := Big` |
-| `impl Functor list` | `k1 := Storable-var, k2 := Const` |
-| `impl Functor option` | `k1 := Any-var, k2 := Term` |
+| `impl Functor List` | Each argument must be Big; each result is Big. |
+| `impl Functor list` | Each argument must be Storable; each result is Const. |
+| `impl Functor option` | Each argument may have any base kind; each result is Term. |
 
 Method signatures of an impl are then kind-checked with the instantiated
 kinds. Kind variables in trait schemes have no surface syntax; they are
 always inferred. See [traits.md](traits.md).
+
+Internally, both declaration kind schemes and value kind schemes retain
+`Apply(head, argument, result)` obligations in their shared binder. A known
+constructor retains its own quantified scheme. Partial application retains
+that scheme and the supplied argument kinds: later applications instantiate
+the scheme and replay those arguments before checking the new argument.
+This preserves dependent results such as `forall k:Little. k -> k` and
+relationships between parameter positions without equating separate uses.
 
 ## Kind inference
 
@@ -208,9 +217,15 @@ constructor's scheme, and the walk yields the kind of every free variable.
 (`'a : Storable` in `cons : 'a -> list 'a -> list 'a`) is stored on the
 value's type scheme as a kind predicate, next to trait predicates, and the
 qualified-type machinery of [traits.md](traits.md) (plans/03) discharges it
-at every instantiation. All free-variable kinds share one binder: the domain
-of `'f` in `'f 'a` is the same kind variable as the kind of `'a`. Generalize
-and instantiate the entire group together, preserving free-variable order.
+at every instantiation. All free-variable kinds share one binder, but an
+abstract constructor's accepted argument kinds are not equated with the actual
+kind of each argument. For `'f 'a` and `'f 'b`, check each application against
+the bounds of `'f` independently. Thus mapping `option unit` to
+`option (unit, unit)` is legal: Const and Term both fit option's element bound.
+The corresponding builtin-list mapping is illegal because Term does not fit
+Storable. Repeated occurrences of the same type variable still share its kind.
+Generalize and instantiate the entire group together, preserving free-variable
+order and the application constraints, including across module interfaces.
 Multiple bounds intersect; checking a rigid annotation proves a requirement
 without narrowing the annotation's promised kind. Plans/02 infers and reports the kinds; plans/03
 enforces them at use sites. Without that step plain HM unification would

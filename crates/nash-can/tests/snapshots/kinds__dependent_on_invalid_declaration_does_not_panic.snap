@@ -24,12 +24,14 @@ description: "type Bad = Bad int\ntype Dependent = Dependent Bad"
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
     },
 ]

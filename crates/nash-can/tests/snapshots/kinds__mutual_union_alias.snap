@@ -11,6 +11,7 @@ description: "type Tree = Node (List Branch)\ntype alias Branch = Tree"
                 kind: Base(
                     Big,
                 ),
+                applications: [],
             },
         ),
     ],
@@ -22,6 +23,7 @@ description: "type Tree = Node (List Branch)\ntype alias Branch = Tree"
                 kind: Base(
                     Big,
                 ),
+                applications: [],
             },
         ),
     ],

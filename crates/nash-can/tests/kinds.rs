@@ -57,6 +57,7 @@ fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
     env.insert(
         unknown,
         KindScheme {
+            applications: &[],
             bounds: &[KindSet::ANY],
             kind: &Kind::Var(0),
         },
@@ -69,6 +70,7 @@ fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
     env.insert(
         alias_name,
         KindScheme {
+            applications: &[],
             bounds: &[],
             kind: &Kind::Base(nash_ast::BaseKind::Const),
         },
@@ -181,7 +183,7 @@ fn uppercase_alias_little_body() {
 }
 #[test]
 fn infinite_kind() {
-    assert_kind_error_snapshot!("type bad 'f = Bad ('f 'f)");
+    assert_kind_error_snapshot!("type bad 'f = Bad (bad bad)");
 }
 #[test]
 fn pair_of_const_and_const() {
@@ -390,10 +392,9 @@ fn imported_interfaces_retain_higher_kinded_types() {
         let canonical = canonicalize(source_arena, Context::default(), &module).unwrap();
         nash_can::from_module(source_arena, &canonical.module, &BTreeMap::new())
     };
-    assert!(matches!(
-        interface.unions[0].kind.kind,
-        Kind::Arrow(Kind::Arrow(_, _), _)
-    ));
+    let scheme = interface.unions[0].kind;
+    assert!(matches!(scheme.kind, Kind::Arrow(Kind::Var(_), _)));
+    assert_eq!(scheme.applications.len(), 1);
     assert!(matches!(interface.aliases[0].typ.value, Type::App { .. }));
     let interfaces = BTreeMap::from([("Shapes", interface)]);
     let source = destination.alloc_str("module Main exposing (..)\n\nimport Shapes exposing (type wrap)\n\ntype holder 'f 'a = Holder (wrap 'f 'a)\n");
@@ -414,7 +415,7 @@ fn imported_interfaces_retain_higher_kinded_types() {
 
 #[test]
 fn annotation_kinds_keep_application_parameters_correlated() {
-    use nash_ast::{Annotation, Kind, Type};
+    use nash_ast::{Annotation, Type};
     use nash_region::Located;
     let bump = Bump::new();
     let var = |name| &*bump.alloc(Located::at_zero(Type::Var(name)));
@@ -450,27 +451,28 @@ fn annotation_kinds_keep_application_parameters_correlated() {
             .position(|var| *var == name)
             .unwrap()]
     };
-    let Kind::Arrow(a, tail) = kind("f") else {
-        panic!("constructor kind")
+    let [first_application, second_application] = kinds.applications else {
+        panic!("two constructor applications")
     };
-    let Kind::Arrow(b, _) = tail else {
-        panic!("second constructor parameter")
-    };
-    assert_eq!(*a, kind("a"));
-    assert_eq!(*b, kind("b"));
+    assert_eq!(first_application.head, kind("f"));
+    assert_eq!(first_application.argument, kind("a"));
+    assert_eq!(first_application.result, second_application.head);
+    assert_eq!(second_application.argument, kind("b"));
     assert_ne!(kind("a"), kind("b"));
     let mut infer = nash_can::kinds::Infer::new(&bump);
     let first = infer.instantiate_values(&kinds);
     let second = infer.instantiate_values(&kinds);
-    let nash_can::kinds::K::Arrow(first_a, _) = first[0] else {
-        panic!("instantiated constructor")
-    };
     let big = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Big));
     let constant = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Const));
-    infer.unify(first_a, big).unwrap();
+    let term = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Term));
+    let concrete = bump.alloc(nash_can::kinds::K::Arrow(
+        big,
+        bump.alloc(nash_can::kinds::K::Arrow(constant, term)),
+    ));
+    infer.unify(first[0], concrete).unwrap();
     assert!(
         infer.unify(first[2], constant).is_err(),
-        "the constructor domain and a share a kind"
+        "a must satisfy the selected constructor's first domain"
     );
     infer.unify(first[1], constant).unwrap();
     infer.unify(second[2], constant).unwrap();

@@ -16,6 +16,7 @@ description: "type wrapper ('a : Term) = Wrap 'a"
                         Term,
                     ),
                 ),
+                applications: [],
             },
         ),
     ],

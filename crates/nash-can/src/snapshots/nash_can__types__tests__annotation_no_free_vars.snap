@@ -8,6 +8,7 @@ Annotation {
     kinds: ValueKinds {
         bounds: [],
         kinds: [],
+        applications: [],
     },
     typ: Located {
         region: Region {

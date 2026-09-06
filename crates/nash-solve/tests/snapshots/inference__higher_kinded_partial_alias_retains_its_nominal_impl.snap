@@ -3,7 +3,7 @@ source: crates/nash-solve/tests/inference.rs
 expression: "output.join(\"\\n\")"
 ---
 Higher:
-through : forall a (f : All -> Any). Keep f => f a -> f a
+through : forall a (f : Arrow). Keep f => [KindApplication { head: Var(1), argument: Var(2), result: Var(3) }, KindApplication { head: Var(1), argument: Var(0), result: Var(4) }] => f a -> f a
 Main:
 kept : Pair Color Color
 keptOther : Pair Mood Color

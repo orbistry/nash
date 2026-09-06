@@ -13,6 +13,7 @@ expression: "(can.module.traits[0].value.kind,\nnash_can::canonicalize(&bump, co
                 Term,
             ),
         ),
+        applications: [],
     },
     [
         NotFoundTrait {

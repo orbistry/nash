@@ -9,6 +9,9 @@ description: "type wrap 'f 'a = Wrap ('f 'a)"
             KindScheme {
                 bounds: [
                     KindSet(
+                        8,
+                    ),
+                    KindSet(
                         15,
                     ),
                     KindSet(
@@ -16,23 +19,31 @@ description: "type wrap 'f 'a = Wrap ('f 'a)"
                     ),
                 ],
                 kind: Arrow(
-                    Arrow(
-                        Var(
-                            0,
-                        ),
-                        Var(
-                            1,
-                        ),
+                    Var(
+                        0,
                     ),
                     Arrow(
                         Var(
-                            0,
+                            1,
                         ),
                         Base(
                             Term,
                         ),
                     ),
                 ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        argument: Var(
+                            1,
+                        ),
+                        result: Var(
+                            2,
+                        ),
+                    },
+                ],
             },
         ),
     ],

@@ -119,6 +119,7 @@ Module {
                                             0,
                                         ),
                                     ],
+                                    applications: [],
                                 },
                                 typ: Located {
                                     region: Region {

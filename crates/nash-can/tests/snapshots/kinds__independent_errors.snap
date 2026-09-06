@@ -24,12 +24,14 @@ description: "type Bad = Bad int\ntype Wrong = Wrong bytes"
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
     },
     KindMismatch {
@@ -53,12 +55,14 @@ description: "type Bad = Bad int\ntype Wrong = Wrong bytes"
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
     },
 ]

@@ -35,6 +35,7 @@ description: Just x
                                 Big,
                             ),
                         ),
+                        applications: [],
                     },
                     name: Located {
                         region: Region {

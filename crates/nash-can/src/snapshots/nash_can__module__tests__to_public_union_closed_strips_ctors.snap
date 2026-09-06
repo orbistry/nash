@@ -8,6 +8,7 @@ Some(
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         name: "Bool",
         parameters: [],

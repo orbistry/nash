@@ -12,6 +12,7 @@ description: type alias p = pair int (list Data)
                 kind: Base(
                     Const,
                 ),
+                applications: [],
             },
         ),
     ],

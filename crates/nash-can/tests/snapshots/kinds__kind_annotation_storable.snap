@@ -21,6 +21,7 @@ description: "type alias xs ('a : Storable) = list 'a"
                         Const,
                     ),
                 ),
+                applications: [],
             },
         ),
     ],

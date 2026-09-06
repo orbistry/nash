@@ -71,6 +71,7 @@ Module {
                             ),
                         ),
                     ),
+                    applications: [],
                 },
                 name: Located {
                     region: Region {

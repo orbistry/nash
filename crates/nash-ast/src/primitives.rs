@@ -138,7 +138,11 @@ const DATA_CTORS: &[&crate::Ctor<'static>] = &[
 ];
 
 const fn mono(kind: &'static Kind<'static>) -> KindScheme<'static> {
-    KindScheme { bounds: &[], kind }
+    KindScheme {
+        bounds: &[],
+        kind,
+        applications: &[],
+    }
 }
 
 pub const PRIMITIVES: &[Primitive] = &[
@@ -231,6 +235,7 @@ pub const PRIMITIVES: &[Primitive] = &[
         ctors: &[],
         arity: 1,
         kind: KindScheme {
+            applications: &[],
             bounds: &[KindSet::STORABLE],
             kind: STORABLE_TO_CONST,
         },
@@ -240,6 +245,7 @@ pub const PRIMITIVES: &[Primitive] = &[
         ctors: &[],
         arity: 1,
         kind: KindScheme {
+            applications: &[],
             bounds: &[KindSet::STORABLE],
             kind: STORABLE_TO_CONST,
         },
@@ -249,6 +255,7 @@ pub const PRIMITIVES: &[Primitive] = &[
         ctors: &[],
         arity: 2,
         kind: KindScheme {
+            applications: &[],
             bounds: &[KindSet::STORABLE, KindSet::STORABLE],
             kind: STORABLE2_TO_CONST,
         },

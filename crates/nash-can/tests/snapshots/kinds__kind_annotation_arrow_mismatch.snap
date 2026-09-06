@@ -23,9 +23,13 @@ description: "type wrap ('f : Big) 'a = Wrap ('f 'a)"
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [
+                KindSet(
+                    8,
+                ),
                 KindSet(
                     15,
                 ),
@@ -33,14 +37,22 @@ description: "type wrap ('f : Big) 'a = Wrap ('f 'a)"
                     7,
                 ),
             ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Var(
-                    1,
-                ),
+            kind: Var(
+                0,
             ),
+            applications: [
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        1,
+                    ),
+                    result: Var(
+                        2,
+                    ),
+                },
+            ],
         },
     },
 ]

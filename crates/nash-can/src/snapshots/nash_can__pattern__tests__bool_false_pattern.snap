@@ -21,6 +21,7 @@ description: "False"
                     kind: Base(
                         Const,
                     ),
+                    applications: [],
                 },
                 name: Located {
                     region: Region {

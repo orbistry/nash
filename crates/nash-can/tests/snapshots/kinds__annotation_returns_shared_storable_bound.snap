@@ -13,4 +13,5 @@ ValueKinds {
             0,
         ),
     ],
+    applications: [],
 }

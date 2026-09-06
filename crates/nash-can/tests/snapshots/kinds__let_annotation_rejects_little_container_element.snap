@@ -40,12 +40,14 @@ description: "type option 'a = None | Some 'a\nf =\n    let\n        g : list (o
             kind: Var(
                 0,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Term,
             ),
+            applications: [],
         },
     },
 ]

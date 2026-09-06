@@ -31,12 +31,14 @@ expression: "nash_can::canonicalize(&bump, nash_can::Context\n{ package: None, i
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
     },
 ]

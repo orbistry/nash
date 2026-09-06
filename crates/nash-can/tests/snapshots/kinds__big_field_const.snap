@@ -24,12 +24,14 @@ description: type Datum = Datum bytes
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
     },
 ]

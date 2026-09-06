@@ -314,13 +314,38 @@ fn render_kind_scheme(scheme: nash_ast::KindScheme<'_>) -> String {
         match kind {
             Kind::Base(base) => format!("{base:?}"),
             Kind::Var(index) => format!("k{index}"),
+            Kind::Constructor { scheme, arguments } => format!(
+                "({})[{}]",
+                render_kind_scheme(*scheme),
+                arguments
+                    .iter()
+                    .map(|kind| render(kind, false))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Kind::Arrow(from, to) => {
                 let text = format!("{} -> {}", render(from, true), render(to, false));
                 if argument { format!("({text})") } else { text }
             }
         }
     }
-    let body = render(scheme.kind, false);
+    let mut body = render(scheme.kind, false);
+    if !scheme.applications.is_empty() {
+        let applications = scheme
+            .applications
+            .iter()
+            .map(|app| {
+                format!(
+                    "Apply({}, {}, {})",
+                    render(app.head, false),
+                    render(app.argument, false),
+                    render(app.result, false)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        body = format!("{applications} => {body}");
+    }
     if scheme.bounds.is_empty() {
         return body;
     }

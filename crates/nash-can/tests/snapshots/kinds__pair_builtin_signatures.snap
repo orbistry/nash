@@ -12,6 +12,7 @@ description: "type alias unConstrData = Data -> pair int (list Data)\ntype alias
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         ),
         (
@@ -38,6 +39,7 @@ description: "type alias unConstrData = Data -> pair int (list Data)\ntype alias
                         ),
                     ),
                 ),
+                applications: [],
             },
         ),
         (
@@ -64,6 +66,7 @@ description: "type alias unConstrData = Data -> pair int (list Data)\ntype alias
                         ),
                     ),
                 ),
+                applications: [],
             },
         ),
         (
@@ -73,6 +76,7 @@ description: "type alias unConstrData = Data -> pair int (list Data)\ntype alias
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         ),
     ],

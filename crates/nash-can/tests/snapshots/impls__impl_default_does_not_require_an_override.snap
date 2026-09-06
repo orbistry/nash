@@ -11,6 +11,7 @@ expression: "result.module.impls[0].value.methods"
                     Big,
                 ),
             ],
+            applications: [],
         },
         context: [],
         annotation: Located {
@@ -266,6 +267,7 @@ expression: "result.module.impls[0].value.methods"
                                         0,
                                     ),
                                 ],
+                                applications: [],
                             },
                             typ: Located {
                                 region: Region {

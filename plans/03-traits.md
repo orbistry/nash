@@ -31,6 +31,17 @@ keep apply unchanged. Abstract map must allow different element kinds when
 each satisfies the constructor's bounds. These supersede the earlier open
 questions proposing liftA2 or a shared actual element kind.
 
+Independent applications are implemented in the shared kind engine.
+KindScheme and ValueKinds retain application obligations; known constructors
+retain quantified schemes and partial applications retain supplied argument
+kinds. This replaces the old abstract shared-arrow path. Obligations survive
+inference, rigid annotation checks, specialization and retained interfaces.
+Cross-module CLI checks accept the mixed-kind option map and reject the
+corresponding builtin-list call at map. Dependent results, partial captures,
+reversed use order, do expansion and constructor evidence are tested. Formatting,
+strict Clippy, all 1,920 tests (three ignored doctests), snapshot verification
+and hygiene pass. This does not complete the core higher-kinded hierarchy.
+
 The user has now settled Big Eq: structural equalsData is mandatory for
 every Big type and user Big Eq overrides are forbidden. Add a uniform
 compiler-owned Eq rule, retain evidence for codegen, and remove explicit
@@ -2529,13 +2540,16 @@ expression statements, and reports RefutableBindPattern at an invalid `<-`
 pattern. The superseded Unsupported test was removed. Formatting, strict
 Clippy, the workspace tests, and snapshot hygiene pass for this step.
 
-The do pair example currently infers `a : Term` and `m : Term -> Any` under
-the shared-domain kind contract; the explicit expansion has the same bound.
-This exposes a design question about changing element kinds through an
-abstract constructor. Separately, the documented Applicative.apply requires
-containers of functions, incompatible with the promised Storable list
-instances. Both contract questions have been raised with the user; the shipping
-hierarchy is not validated by the reduced test fixture.
+The do pair example and its explicit expansion now retain `a : Any` and a
+separate application obligation for the Term tuple result. The old forced
+`a : Term` restriction is removed. The existing higher-kinded constructor test
+accepts `map (\x -> (x, x)) (Some ())` and checks its option impl evidence.
+A corresponding builtin-list call rejects the Term result against Storable.
+The application graph survives canonical kind inference, value schemes,
+instantiation and imports. Dependent results, partial captures and rigid
+annotations preserve their real kind relationships.
+Applicative.apply stays unchanged; builtin list has no Applicative or Monad
+impl. The shipping hierarchy is not validated by the reduced test fixture.
 
 Files: `crates/nash-can/src/expression.rs`, `crates/nash-can/src/environment/local.rs`,
 `crates/nash-can/src/error.rs`.
@@ -2708,7 +2722,7 @@ declarations with explicit imports. Remaining requirements are:
 | Requirement | Current evidence / remaining work |
 |---|---|
 | Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift still conflicts with the nested-head restriction. |
-| Higher-kinded hierarchy and operators | Functor/Applicative/Monad core modules and their impls remain absent. The list-of-functions Applicative contract and abstract constructor element-kind question remain open. |
+| Higher-kinded hierarchy and operators | Functor/Applicative/Monad core modules and their impls remain absent. Apply is unchanged; builtin list has no Applicative/Monad. Independent argument-kind checking now passes mixed-kind map, partial and imported application, and do acceptance tests. |
 | Core option do acceptance | Compiler do tests exist, but the shipping core hierarchy must support the required option example; substitute test declarations do not establish this. |
 | Default imports | Not implemented. Missing specified modules: Functor, Applicative, Monad, Cons, Derive, Debug, Int, Bytes, String, List, Pair, Array, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |
 | Overview example up to tests | Not currently executable: Cardano.Tx and deriving require later work; the sketch names nonexistent Builtin.compareInteger and undefined currentSlot/signedBy, as well as later field-access/validator features. This acceptance item is not proved by the core fixture. |

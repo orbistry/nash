@@ -28,9 +28,13 @@ description: "type alias record 'f 'a = { applied : 'f 'a, head : 'f }"
             kind: Var(
                 0,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [
+                KindSet(
+                    8,
+                ),
                 KindSet(
                     15,
                 ),
@@ -38,14 +42,22 @@ description: "type alias record 'f 'a = { applied : 'f 'a, head : 'f }"
                     7,
                 ),
             ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Var(
-                    1,
-                ),
+            kind: Var(
+                0,
             ),
+            applications: [
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        1,
+                    ),
+                    result: Var(
+                        2,
+                    ),
+                },
+            ],
         },
     },
 ]

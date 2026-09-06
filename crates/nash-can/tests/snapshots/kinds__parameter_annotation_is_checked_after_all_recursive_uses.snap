@@ -23,12 +23,14 @@ description: "type Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
     },
 ]

@@ -5,34 +5,54 @@ expression: kinds
 ValueKinds {
     bounds: [
         KindSet(
+            8,
+        ),
+        KindSet(
             15,
         ),
         KindSet(
             15,
+        ),
+        KindSet(
+            8,
         ),
         KindSet(
             7,
         ),
     ],
     kinds: [
-        Arrow(
-            Var(
-                0,
-            ),
-            Arrow(
-                Var(
-                    1,
-                ),
-                Var(
-                    2,
-                ),
-            ),
+        Var(
+            0,
         ),
         Var(
             1,
         ),
         Var(
-            0,
+            2,
         ),
+    ],
+    applications: [
+        KindApplication {
+            head: Var(
+                0,
+            ),
+            argument: Var(
+                2,
+            ),
+            result: Var(
+                3,
+            ),
+        },
+        KindApplication {
+            head: Var(
+                3,
+            ),
+            argument: Var(
+                1,
+            ),
+            result: Var(
+                4,
+            ),
+        },
     ],
 }

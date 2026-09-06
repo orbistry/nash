@@ -110,6 +110,7 @@ Module {
                                                 Big,
                                             ),
                                         ),
+                                        applications: [],
                                     },
                                     name: Located {
                                         region: Region {
@@ -253,6 +254,7 @@ Module {
                             Big,
                         ),
                     ),
+                    applications: [],
                 },
                 name: Located {
                     region: Region {

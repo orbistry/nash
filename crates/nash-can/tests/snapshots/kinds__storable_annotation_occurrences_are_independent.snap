@@ -33,6 +33,7 @@ description: "type wrap ('f : Storable -> Storable) 'a = Wrap ('f 'a)"
                         ),
                     ),
                 ),
+                applications: [],
             },
         ),
     ],

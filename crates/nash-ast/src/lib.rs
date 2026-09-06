@@ -53,6 +53,12 @@ pub enum Kind<'a> {
     Base(BaseKind),
     Var(u16),
     Arrow(&'a Kind<'a>, &'a Kind<'a>),
+    /// A constructor scheme and arguments already supplied to it. The scheme
+    /// owns its binder; captured arguments use the enclosing binder.
+    Constructor {
+        scheme: KindScheme<'a>,
+        arguments: &'a [&'a Kind<'a>],
+    },
 }
 
 /// `forall k0 .. kn. kind`, with one bound per variable.
@@ -60,6 +66,16 @@ pub enum Kind<'a> {
 pub struct KindScheme<'a> {
     pub bounds: &'a [KindSet],
     pub kind: &'a Kind<'a>,
+    pub applications: &'a [KindApplication<'a>],
+}
+
+/// One use of a constructor, with all three kinds in the enclosing binder.
+/// Separate uses do not equate their argument kinds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KindApplication<'a> {
+    pub head: &'a Kind<'a>,
+    pub argument: &'a Kind<'a>,
+    pub result: &'a Kind<'a>,
 }
 
 /// Kinds of a value scheme's free type variables, under one shared kind binder.
@@ -68,12 +84,14 @@ pub struct ValueKinds<'a> {
     pub bounds: &'a [KindSet],
     /// Same order as `Annotation::free_vars`; every kind indexes `bounds`.
     pub kinds: &'a [&'a Kind<'a>],
+    pub applications: &'a [KindApplication<'a>],
 }
 
 impl<'a> ValueKinds<'a> {
     /// Fresh independent kind parameters before checking an annotation.
     pub fn unconstrained(bump: &'a bumpalo::Bump, count: usize) -> Self {
         Self {
+            applications: &[],
             bounds: bump.alloc_slice_fill_copy(count, KindSet::ALL),
             kinds: bump.alloc_slice_fill_iter((0..count).map(|index| {
                 &*bump.alloc(Kind::Var(
@@ -86,7 +104,11 @@ impl<'a> ValueKinds<'a> {
 
 impl<'a> KindScheme<'a> {
     pub fn mono(kind: &'a Kind<'a>) -> KindScheme<'a> {
-        KindScheme { bounds: &[], kind }
+        KindScheme {
+            bounds: &[],
+            kind,
+            applications: &[],
+        }
     }
 
     /// The result kind after all parameters are applied.
@@ -640,6 +662,7 @@ mod kind_tests {
         let var = Kind::Var(0);
         let higher = Kind::Arrow(&arrow, &var);
         let scheme = KindScheme {
+            applications: &[],
             bounds: &[KindSet::LITTLE],
             kind: &higher,
         };

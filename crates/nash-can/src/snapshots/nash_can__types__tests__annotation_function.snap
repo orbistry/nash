@@ -25,6 +25,7 @@ Annotation {
                 1,
             ),
         ],
+        applications: [],
     },
     typ: Located {
         region: Region {

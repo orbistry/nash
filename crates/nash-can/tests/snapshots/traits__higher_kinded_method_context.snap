@@ -9,6 +9,9 @@ expression: "(schemes, context)"
             KindScheme {
                 bounds: [
                     KindSet(
+                        8,
+                    ),
+                    KindSet(
                         7,
                     ),
                     KindSet(
@@ -16,18 +19,26 @@ expression: "(schemes, context)"
                     ),
                 ],
                 kind: Arrow(
-                    Arrow(
-                        Var(
-                            0,
-                        ),
-                        Var(
-                            1,
-                        ),
+                    Var(
+                        0,
                     ),
                     Base(
                         Term,
                     ),
                 ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        argument: Var(
+                            1,
+                        ),
+                        result: Var(
+                            2,
+                        ),
+                    },
+                ],
             },
         ),
         (
@@ -35,22 +46,101 @@ expression: "(schemes, context)"
             KindScheme {
                 bounds: [
                     KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                    KindSet(
                         7,
                     ),
                 ],
                 kind: Arrow(
-                    Arrow(
-                        Var(
-                            0,
-                        ),
-                        Var(
-                            0,
-                        ),
+                    Var(
+                        0,
                     ),
                     Base(
                         Term,
                     ),
                 ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        argument: Var(
+                            1,
+                        ),
+                        result: Var(
+                            2,
+                        ),
+                    },
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        argument: Var(
+                            3,
+                        ),
+                        result: Var(
+                            4,
+                        ),
+                    },
+                    KindApplication {
+                        head: Var(
+                            5,
+                        ),
+                        argument: Var(
+                            3,
+                        ),
+                        result: Var(
+                            6,
+                        ),
+                    },
+                    KindApplication {
+                        head: Var(
+                            5,
+                        ),
+                        argument: Var(
+                            4,
+                        ),
+                        result: Var(
+                            7,
+                        ),
+                    },
+                    KindApplication {
+                        head: Var(
+                            5,
+                        ),
+                        argument: Var(
+                            8,
+                        ),
+                        result: Var(
+                            9,
+                        ),
+                    },
+                ],
             },
         ),
     ],

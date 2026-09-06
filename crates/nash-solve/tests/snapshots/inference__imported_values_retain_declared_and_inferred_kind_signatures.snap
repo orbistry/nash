@@ -42,12 +42,14 @@ wrapper : forall (a : Storable). a -> list a -> a
                         kind: Var(
                             0,
                         ),
+                        applications: [],
                     },
                     actual: KindScheme {
                         bounds: [],
                         kind: Base(
                             Term,
                         ),
+                        applications: [],
                     },
                 },
             },
@@ -90,12 +92,14 @@ wrapper : forall (a : Storable). a -> list a -> a
                         kind: Var(
                             0,
                         ),
+                        applications: [],
                     },
                     actual: KindScheme {
                         bounds: [],
                         kind: Base(
                             Term,
                         ),
+                        applications: [],
                     },
                 },
             },

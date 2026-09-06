@@ -74,6 +74,7 @@ Module {
                                     0,
                                 ),
                             ],
+                            applications: [],
                         },
                         context: [],
                         annotation: Located {

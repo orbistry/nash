@@ -80,6 +80,7 @@ pub(crate) fn canonicalize<'a>(
             name: t.name.value,
             parameters,
             kind: KindScheme {
+                applications: &[],
                 bounds: bump.alloc_slice_fill_copy(parameters.len(), KindSet::ALL),
                 kind,
             },

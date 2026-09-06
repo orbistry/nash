@@ -23,12 +23,14 @@ description: "type Box ('a : Const) = Box 'a"
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
     },
 ]

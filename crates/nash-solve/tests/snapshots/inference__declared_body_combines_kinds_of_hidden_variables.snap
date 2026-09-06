@@ -26,12 +26,14 @@ description: "Code:\n\nmodule Main exposing (..)\ntype alias bigUse ('a : Big) =
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
             actual: KindScheme {
                 bounds: [],
                 kind: Base(
                     Big,
                 ),
+                applications: [],
             },
         },
     },

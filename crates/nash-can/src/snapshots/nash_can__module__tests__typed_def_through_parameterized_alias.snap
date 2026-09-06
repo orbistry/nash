@@ -43,6 +43,7 @@ Module {
                         Big,
                     ),
                 ],
+                applications: [],
             },
             context: [],
             annotation: Located {
@@ -328,6 +329,7 @@ Module {
                             Term,
                         ),
                     ),
+                    applications: [],
                 },
                 name: Located {
                     region: Region {

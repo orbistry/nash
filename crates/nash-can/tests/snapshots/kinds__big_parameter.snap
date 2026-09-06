@@ -16,6 +16,7 @@ description: "type Box 'a = Box 'a"
                         Big,
                     ),
                 ),
+                applications: [],
             },
         ),
     ],

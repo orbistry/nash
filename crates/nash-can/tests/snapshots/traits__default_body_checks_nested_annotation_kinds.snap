@@ -40,12 +40,14 @@ expression: "nash_can::canonicalize(&bump, nash_can::Context\n{ package: None, i
             kind: Var(
                 0,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Term,
             ),
+            applications: [],
         },
     },
 ]

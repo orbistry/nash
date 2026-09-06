@@ -46,6 +46,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                             Term,
                         ),
                     ),
+                    applications: [],
                 },
                 supers: [],
                 methods: [
@@ -106,6 +107,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                                         0,
                                     ),
                                 ],
+                                applications: [],
                             },
                             typ: Located {
                                 region: Region {
@@ -240,6 +242,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                             Term,
                         ),
                     ),
+                    applications: [],
                 },
                 supers: [
                     Pred {
@@ -327,6 +330,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                                         0,
                                     ),
                                 ],
+                                applications: [],
                             },
                             typ: Located {
                                 region: Region {
@@ -427,6 +431,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                                             0,
                                         ),
                                     ],
+                                    applications: [],
                                 },
                                 context: [
                                     Pred {
@@ -698,6 +703,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                                                                 0,
                                                             ),
                                                         ],
+                                                        applications: [],
                                                     },
                                                     typ: Located {
                                                         region: Region {

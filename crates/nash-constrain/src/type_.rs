@@ -311,6 +311,7 @@ pub fn literal_annotation<'a>(
         bump.alloc(Located::at_zero(nash_ast::Type::Var("a")));
     bump.alloc(Annotation {
         kinds: nash_ast::ValueKinds {
+            applications: &[],
             bounds: &[nash_ast::KindSet::ANY],
             kinds: &[&nash_ast::Kind::Var(0)],
         },

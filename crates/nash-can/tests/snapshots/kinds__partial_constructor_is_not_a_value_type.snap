@@ -26,21 +26,30 @@ description: "value : list\nvalue = ()\nother : pair int\nother = ()"
             kind: Var(
                 0,
             ),
+            applications: [],
         },
         actual: KindScheme {
-            bounds: [
-                KindSet(
-                    3,
-                ),
-            ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Base(
-                    Const,
-                ),
-            ),
+            bounds: [],
+            kind: Constructor {
+                scheme: KindScheme {
+                    bounds: [
+                        KindSet(
+                            3,
+                        ),
+                    ],
+                    kind: Arrow(
+                        Var(
+                            0,
+                        ),
+                        Base(
+                            Const,
+                        ),
+                    ),
+                    applications: [],
+                },
+                arguments: [],
+            },
+            applications: [],
         },
     },
     KindMismatch {
@@ -66,21 +75,42 @@ description: "value : list\nvalue = ()\nother : pair int\nother = ()"
             kind: Var(
                 0,
             ),
+            applications: [],
         },
         actual: KindScheme {
-            bounds: [
-                KindSet(
-                    3,
-                ),
-            ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Base(
-                    Const,
-                ),
-            ),
+            bounds: [],
+            kind: Constructor {
+                scheme: KindScheme {
+                    bounds: [
+                        KindSet(
+                            3,
+                        ),
+                        KindSet(
+                            3,
+                        ),
+                    ],
+                    kind: Arrow(
+                        Var(
+                            0,
+                        ),
+                        Arrow(
+                            Var(
+                                1,
+                            ),
+                            Base(
+                                Const,
+                            ),
+                        ),
+                    ),
+                    applications: [],
+                },
+                arguments: [
+                    Base(
+                        Const,
+                    ),
+                ],
+            },
+            applications: [],
         },
     },
 ]

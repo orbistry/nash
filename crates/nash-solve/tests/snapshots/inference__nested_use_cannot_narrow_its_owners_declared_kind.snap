@@ -32,6 +32,7 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                         0,
                     ),
                 ],
+                applications: [],
             },
             required: ValueKinds {
                 bounds: [
@@ -44,6 +45,7 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                         0,
                     ),
                 ],
+                applications: [],
             },
         },
     },

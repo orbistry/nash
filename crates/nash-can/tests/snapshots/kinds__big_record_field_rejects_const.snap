@@ -24,12 +24,14 @@ description: "type alias Vault = { amount : int }"
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Const,
             ),
+            applications: [],
         },
     },
 ]

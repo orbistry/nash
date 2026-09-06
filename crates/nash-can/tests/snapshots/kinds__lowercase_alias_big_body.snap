@@ -27,12 +27,14 @@ description: type alias id = Int
             kind: Var(
                 0,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
     },
 ]

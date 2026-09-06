@@ -9,22 +9,33 @@ description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a '
             KindScheme {
                 bounds: [
                     KindSet(
+                        8,
+                    ),
+                    KindSet(
                         7,
                     ),
                 ],
                 kind: Arrow(
-                    Arrow(
-                        Base(
-                            Const,
-                        ),
-                        Var(
-                            0,
-                        ),
+                    Var(
+                        0,
                     ),
                     Base(
                         Term,
                     ),
                 ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        argument: Base(
+                            Const,
+                        ),
+                        result: Var(
+                            1,
+                        ),
+                    },
+                ],
             },
         ),
     ],
@@ -53,6 +64,7 @@ description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a '
                         ),
                     ),
                 ),
+                applications: [],
             },
         ),
         (
@@ -62,6 +74,7 @@ description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a '
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         ),
         (
@@ -71,6 +84,7 @@ description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a '
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         ),
         (
@@ -80,6 +94,7 @@ description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a '
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         ),
     ],

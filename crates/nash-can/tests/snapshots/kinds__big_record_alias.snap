@@ -12,6 +12,7 @@ description: "type alias Vault = { owner : Bytes, amount : Int }"
                 kind: Base(
                     Big,
                 ),
+                applications: [],
             },
         ),
     ],

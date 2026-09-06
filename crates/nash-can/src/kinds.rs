@@ -2,7 +2,7 @@
 //! See docs/kinds.md.
 
 use bumpalo::Bump;
-use nash_ast::{BaseKind, Kind, KindScheme, KindSet, ValueKinds};
+use nash_ast::{BaseKind, Kind, KindApplication, KindScheme, KindSet, ValueKinds};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KindVar(u32);
@@ -13,6 +13,17 @@ pub enum K<'a> {
     Base(BaseKind),
     Var(KindVar),
     Arrow(&'a K<'a>, &'a K<'a>),
+    Constructor {
+        scheme: KindScheme<'a>,
+        arguments: &'a [&'a K<'a>],
+    },
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Application<'a> {
+    head: &'a K<'a>,
+    argument: &'a K<'a>,
+    result: &'a K<'a>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -36,6 +47,8 @@ pub enum Mismatch<'a> {
 pub struct Infer<'a> {
     bump: &'a Bump,
     nodes: Vec<Node<'a>>,
+    applications: Vec<Application<'a>>,
+    settling: bool,
 }
 
 impl<'a> Infer<'a> {
@@ -43,6 +56,8 @@ impl<'a> Infer<'a> {
         Infer {
             bump,
             nodes: Vec::new(),
+            applications: Vec::new(),
+            settling: false,
         }
     }
 
@@ -86,6 +101,18 @@ impl<'a> Infer<'a> {
     }
 
     pub fn unify(&mut self, expected: &'a K<'a>, actual: &'a K<'a>) -> Result<(), Mismatch<'a>> {
+        if self.settling {
+            return self.unify_inner(expected, actual);
+        }
+        self.settling = true;
+        let result = self
+            .unify_inner(expected, actual)
+            .and_then(|()| self.settle());
+        self.settling = false;
+        result
+    }
+
+    fn unify_inner(&mut self, expected: &'a K<'a>, actual: &'a K<'a>) -> Result<(), Mismatch<'a>> {
         let expected = self.head(expected);
         let actual = self.head(actual);
         match (expected, actual) {
@@ -105,6 +132,14 @@ impl<'a> Infer<'a> {
                 Ok(())
             }
             (K::Var(var), other) | (other, K::Var(var)) => self.bind(*var, other, expected, actual),
+            (K::Constructor { .. }, _) => {
+                let expected = self.open_constructor(expected)?;
+                self.unify(expected, actual)
+            }
+            (_, K::Constructor { .. }) => {
+                let actual = self.open_constructor(actual)?;
+                self.unify(expected, actual)
+            }
             (K::Base(a), K::Base(b)) if a == b => Ok(()),
             (K::Arrow(a1, r1), K::Arrow(a2, r2)) => {
                 self.unify(a1, a2)?;
@@ -126,7 +161,7 @@ impl<'a> Infer<'a> {
         };
         let allowed = match kind {
             K::Base(base) => bound.contains(KindSet::of(*base)),
-            K::Arrow(..) => bound.contains(KindSet::ARROW),
+            K::Arrow(..) | K::Constructor { .. } => bound.contains(KindSet::ARROW),
             K::Var(_) => unreachable!("var/var handled by unify"),
         };
         if !allowed {
@@ -144,6 +179,7 @@ impl<'a> Infer<'a> {
             K::Var(other) => *other == var,
             K::Base(_) => false,
             K::Arrow(from, to) => self.occurs(var, from) || self.occurs(var, to),
+            K::Constructor { arguments, .. } => arguments.iter().any(|kind| self.occurs(var, kind)),
         }
     }
 
@@ -152,19 +188,117 @@ impl<'a> Infer<'a> {
     pub fn apply(&mut self, kind: &'a K<'a>) -> Result<(&'a K<'a>, &'a K<'a>), Mismatch<'a>> {
         match self.head(kind) {
             K::Arrow(param, result) => Ok((param, result)),
+            K::Constructor { scheme, arguments } => {
+                let opened = self.open_constructor(kind)?;
+                let (parameter, result) = self.apply(opened)?;
+                let result = if matches!(self.head(result), K::Arrow(..)) {
+                    let mut captured = arguments.to_vec();
+                    captured.push(parameter);
+                    self.bump.alloc(K::Constructor {
+                        scheme: *scheme,
+                        arguments: self.bump.alloc_slice_fill_iter(captured),
+                    })
+                } else {
+                    result
+                };
+                Ok((parameter, result))
+            }
             head => {
                 let param = self.fresh_k(KindSet::ALL);
                 let result = self.fresh_k(KindSet::ALL);
-                let arrow = self.bump.alloc(K::Arrow(param, result));
+                let arrow = self.fresh_k(KindSet::ARROW);
                 self.unify(arrow, head)?;
+                self.applications.push(Application {
+                    head,
+                    argument: param,
+                    result,
+                });
                 Ok((param, result))
             }
         }
     }
 
+    fn settle(&mut self) -> Result<(), Mismatch<'a>> {
+        loop {
+            let pending = std::mem::take(&mut self.applications);
+            let mut progress = false;
+            let mut retained: Vec<Application<'a>> = Vec::new();
+            for application in pending {
+                if matches!(self.head(application.head), K::Var(_)) {
+                    if let Some(previous) = retained.iter().copied().find(|previous| {
+                        self.same_kind(previous.head, application.head)
+                            && self.same_kind(previous.argument, application.argument)
+                    }) {
+                        self.unify(previous.result, application.result)?;
+                        progress = true;
+                    } else {
+                        retained.push(application);
+                    }
+                    continue;
+                }
+                progress = true;
+                let (parameter, result) = self.apply(application.head)?;
+                self.unify(parameter, application.argument)?;
+                self.unify(result, application.result)?;
+            }
+            self.applications.extend(retained);
+            if !progress {
+                return Ok(());
+            }
+        }
+    }
+
+    fn same_kind(&mut self, left: &'a K<'a>, right: &'a K<'a>) -> bool {
+        match (self.head(left), self.head(right)) {
+            (K::Base(a), K::Base(b)) => a == b,
+            (K::Var(a), K::Var(b)) => a == b,
+            (K::Arrow(a, b), K::Arrow(c, d)) => self.same_kind(a, c) && self.same_kind(b, d),
+            (
+                K::Constructor {
+                    scheme: a,
+                    arguments: xs,
+                },
+                K::Constructor {
+                    scheme: b,
+                    arguments: ys,
+                },
+            ) => {
+                a == b
+                    && xs.len() == ys.len()
+                    && xs.iter().zip(*ys).all(|(x, y)| self.same_kind(x, y))
+            }
+            _ => false,
+        }
+    }
+
+    pub fn constructor(&mut self, scheme: KindScheme<'a>) -> &'a K<'a> {
+        if matches!(scheme.kind, Kind::Arrow(..)) {
+            self.bump.alloc(K::Constructor {
+                scheme,
+                arguments: &[],
+            })
+        } else {
+            self.instantiate(&scheme)
+        }
+    }
+
+    fn open_constructor(&mut self, kind: &'a K<'a>) -> Result<&'a K<'a>, Mismatch<'a>> {
+        let K::Constructor { scheme, arguments } = self.head(kind) else {
+            return Ok(kind);
+        };
+        let mut opened = self.instantiate(scheme);
+        for argument in *arguments {
+            let (parameter, result) = self.apply(opened)?;
+            self.unify(parameter, argument)?;
+            opened = result;
+        }
+        Ok(opened)
+    }
+
     /// Instantiate a scheme with fresh variables carrying the scheme's bounds.
     pub fn instantiate(&mut self, scheme: &KindScheme<'_>) -> &'a K<'a> {
         let vars: Vec<KindVar> = scheme.bounds.iter().map(|b| self.fresh(*b)).collect();
+        self.instantiate_applications(scheme.applications, &vars);
         self.instantiate_help(scheme.kind, &vars)
     }
 
@@ -175,11 +309,25 @@ impl<'a> Infer<'a> {
             .iter()
             .map(|bound| self.fresh(*bound))
             .collect();
+        self.instantiate_applications(kinds.applications, &vars);
         kinds
             .kinds
             .iter()
             .map(|kind| self.instantiate_help(kind, &vars))
             .collect()
+    }
+
+    fn instantiate_applications(&mut self, applications: &[KindApplication<'_>], vars: &[KindVar]) {
+        for application in applications {
+            let head = self.instantiate_help(application.head, vars);
+            let argument = self.instantiate_help(application.argument, vars);
+            let result = self.instantiate_help(application.result, vars);
+            self.applications.push(Application {
+                head,
+                argument,
+                result,
+            });
+        }
     }
 
     fn instantiate_help(&mut self, kind: &Kind<'_>, vars: &[KindVar]) -> &'a K<'a> {
@@ -191,6 +339,22 @@ impl<'a> Infer<'a> {
                 let to = self.instantiate_help(to, vars);
                 self.bump.alloc(K::Arrow(from, to))
             }
+            Kind::Constructor { scheme, arguments } => {
+                // The nested scheme has its own binder. Reallocate it through
+                // an independent inference context rather than substituting
+                // its variables with the enclosing value's variables.
+                let mut nested = Infer::new(self.bump);
+                let root = nested.instantiate(scheme);
+                let scheme = nested.generalize(root);
+                let arguments: Vec<_> = arguments
+                    .iter()
+                    .map(|kind| self.instantiate_help(kind, vars))
+                    .collect();
+                self.bump.alloc(K::Constructor {
+                    scheme,
+                    arguments: self.bump.alloc_slice_fill_iter(arguments),
+                })
+            }
         }
     }
 
@@ -198,7 +362,9 @@ impl<'a> Infer<'a> {
     pub fn generalize(&mut self, kind: &'a K<'a>) -> KindScheme<'a> {
         let mut vars: Vec<(KindVar, KindSet)> = Vec::new();
         let kind = self.generalize_help(kind, &mut vars);
+        let applications = self.generalize_applications(&mut vars);
         KindScheme {
+            applications,
             bounds: self
                 .bump
                 .alloc_slice_fill_iter(vars.iter().map(|(_, b)| *b)),
@@ -213,12 +379,70 @@ impl<'a> Infer<'a> {
             .iter()
             .map(|kind| self.generalize_help(kind, &mut vars))
             .collect();
+        let applications = self.generalize_applications(&mut vars);
         ValueKinds {
+            applications,
             bounds: self
                 .bump
                 .alloc_slice_fill_iter(vars.into_iter().map(|(_, bound)| bound)),
             kinds: self.bump.alloc_slice_fill_iter(kinds),
         }
+    }
+
+    fn generalize_applications(
+        &mut self,
+        vars: &mut Vec<(KindVar, KindSet)>,
+    ) -> &'a [KindApplication<'a>] {
+        // Retain the connected application graph, including intermediate
+        // results of partial applications that are not free type variables.
+        let mut pending = self.applications.clone();
+        let mut applications = Vec::new();
+        loop {
+            let before = pending.len();
+            let mut remaining = Vec::new();
+            for application in pending {
+                if self.application_reaches(application, vars) {
+                    applications.push(KindApplication {
+                        head: self.generalize_help(application.head, vars),
+                        argument: self.generalize_help(application.argument, vars),
+                        result: self.generalize_help(application.result, vars),
+                    });
+                } else {
+                    remaining.push(application);
+                }
+            }
+            pending = remaining;
+            if pending.len() == before {
+                break;
+            }
+        }
+        self.bump.alloc_slice_fill_iter(applications)
+    }
+
+    fn application_reaches(
+        &mut self,
+        application: Application<'a>,
+        vars: &[(KindVar, KindSet)],
+    ) -> bool {
+        fn reaches(infer: &mut Infer<'_>, kind: &K<'_>, vars: &[(KindVar, KindSet)]) -> bool {
+            match kind {
+                K::Base(_) => false,
+                K::Var(var) => {
+                    let var = infer.find(*var);
+                    match infer.nodes[var.0 as usize] {
+                        Node::Bound(kind) => reaches(infer, kind, vars),
+                        _ => vars.iter().any(|(known, _)| *known == var),
+                    }
+                }
+                K::Arrow(from, to) => reaches(infer, from, vars) || reaches(infer, to, vars),
+                K::Constructor { arguments, .. } => {
+                    arguments.iter().any(|kind| reaches(infer, kind, vars))
+                }
+            }
+        }
+        reaches(self, application.head, vars)
+            || reaches(self, application.argument, vars)
+            || reaches(self, application.result, vars)
     }
 
     fn generalize_help(
@@ -250,6 +474,16 @@ impl<'a> Infer<'a> {
                 let to = self.generalize_help(to, vars);
                 self.bump.alloc(Kind::Arrow(from, to))
             }
+            K::Constructor { scheme, arguments } => {
+                let arguments: Vec<_> = arguments
+                    .iter()
+                    .map(|kind| self.generalize_help(kind, vars))
+                    .collect();
+                self.bump.alloc(Kind::Constructor {
+                    scheme: *scheme,
+                    arguments: self.bump.alloc_slice_fill_iter(arguments),
+                })
+            }
         }
     }
 
@@ -269,6 +503,111 @@ impl<'a> Infer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn constructor_applications_preserve_bounds_and_captured_arguments() {
+        let bump = Bump::new();
+        for (bound, accepted) in [(KindSet::ANY, true), (KindSet::STORABLE, false)] {
+            let mut infer = Infer::new(&bump);
+            let head = infer.fresh_k(KindSet::ALL);
+            for base in [BaseKind::Const, BaseKind::Term] {
+                let (parameter, _) = infer.apply(head).unwrap();
+                infer.unify(parameter, bump.alloc(K::Base(base))).unwrap();
+            }
+            let scheme = KindScheme {
+                bounds: bump.alloc_slice_copy(&[bound]),
+                kind: &Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Term)),
+                applications: &[],
+            };
+            let constructor = infer.constructor(scheme);
+            assert_eq!(infer.unify(head, constructor).is_ok(), accepted);
+        }
+
+        let mut infer = Infer::new(&bump);
+        let identity = infer.constructor(KindScheme {
+            bounds: &[KindSet::LITTLE],
+            kind: &Kind::Arrow(&Kind::Var(0), &Kind::Var(0)),
+            applications: &[],
+        });
+        for base in [BaseKind::Const, BaseKind::Term] {
+            let (parameter, result) = infer.apply(identity).unwrap();
+            infer.unify(parameter, bump.alloc(K::Base(base))).unwrap();
+            assert_eq!(infer.generalize(result).kind, &Kind::Base(base));
+        }
+
+        for tied in [false, true] {
+            let mut infer = Infer::new(&bump);
+            let second = bump.alloc(Kind::Var(if tied { 0 } else { 1 }));
+            let scheme = KindScheme {
+                bounds: &[KindSet::ANY, KindSet::ANY],
+                kind: bump.alloc(Kind::Arrow(
+                    &Kind::Var(0),
+                    bump.alloc(Kind::Arrow(second, &Kind::Base(BaseKind::Term))),
+                )),
+                applications: &[],
+            };
+            let constructor = infer.constructor(scheme);
+            let (first, partial) = infer.apply(constructor).unwrap();
+            infer
+                .unify(first, bump.alloc(K::Base(BaseKind::Const)))
+                .unwrap();
+            let (second, _) = infer.apply(partial).unwrap();
+            assert_eq!(
+                infer
+                    .unify(second, bump.alloc(K::Base(BaseKind::Term)))
+                    .is_ok(),
+                !tied
+            );
+        }
+    }
+
+    #[test]
+    fn value_kind_applications_retain_the_connected_binder() {
+        let bump = Bump::new();
+        // The intermediate partial application is not a free type variable.
+        let signature = ValueKinds {
+            bounds: &[
+                KindSet::ARROW,
+                KindSet::ANY,
+                KindSet::ARROW,
+                KindSet::ANY,
+                KindSet::ANY,
+            ],
+            kinds: &[&Kind::Var(0), &Kind::Var(1), &Kind::Var(3), &Kind::Var(4)],
+            applications: &[
+                KindApplication {
+                    head: &Kind::Var(0),
+                    argument: &Kind::Var(1),
+                    result: &Kind::Var(2),
+                },
+                KindApplication {
+                    head: &Kind::Var(2),
+                    argument: &Kind::Var(3),
+                    result: &Kind::Var(4),
+                },
+            ],
+        };
+        let mut infer = Infer::new(&bump);
+        let first = infer.instantiate_values(&signature);
+        let second = infer.instantiate_values(&signature);
+        infer
+            .unify(second[1], bump.alloc(K::Base(BaseKind::Const)))
+            .unwrap();
+        let retained = infer.generalize_values(&first);
+        assert_eq!(retained.applications.len(), 2);
+        assert_eq!(retained.bounds.len(), 5);
+        assert_eq!(retained.applications[0].head, retained.kinds[0]);
+        assert_eq!(retained.applications[0].argument, retained.kinds[1]);
+        assert_eq!(
+            retained.applications[0].result,
+            retained.applications[1].head
+        );
+        assert_eq!(retained.applications[1].argument, retained.kinds[2]);
+        assert_eq!(retained.applications[1].result, retained.kinds[3]);
+        let mut imported = Infer::new(&bump);
+        let roots = imported.instantiate_values(&retained);
+        assert_eq!(imported.generalize_values(&roots), retained);
+    }
 
     #[test]
     fn base_unification() {
@@ -340,10 +679,12 @@ mod tests {
         infer
             .unify(result, bump.alloc(K::Base(BaseKind::Term)))
             .unwrap();
-        assert!(matches!(
-            infer.generalize(all).kind,
-            Kind::Arrow(Kind::Base(BaseKind::Big), Kind::Base(BaseKind::Term))
-        ));
+        let scheme = infer.generalize(all);
+        assert_eq!(scheme.bounds, &[KindSet::ARROW]);
+        assert_eq!(scheme.applications.len(), 1);
+        assert_eq!(scheme.applications[0].head, scheme.kind);
+        assert_eq!(scheme.applications[0].argument, &Kind::Base(BaseKind::Big));
+        assert_eq!(scheme.applications[0].result, &Kind::Base(BaseKind::Term));
     }
 
     #[test]
@@ -917,7 +1258,7 @@ impl<'e, 'a> Walker<'e, 'a> {
             return kind;
         }
         let scheme = self.env.scheme(reference);
-        self.infer.instantiate(&scheme)
+        self.infer.constructor(scheme)
     }
 
     fn apply_args(
@@ -1000,7 +1341,7 @@ impl<'e, 'a> Walker<'e, 'a> {
     ) {
         match self.infer.unify(expected, actual) {
             Ok(()) => {}
-            Err(Mismatch::Shapes { .. }) => {
+            Err(Mismatch::Shapes { expected, actual }) => {
                 let expected = self.render(expected);
                 let actual = self.render(actual);
                 self.errors.push(Error::KindMismatch {

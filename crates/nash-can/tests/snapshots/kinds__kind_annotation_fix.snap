@@ -21,6 +21,7 @@ description: "type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))"
                         Big,
                     ),
                 ),
+                applications: [],
             },
         ),
     ],

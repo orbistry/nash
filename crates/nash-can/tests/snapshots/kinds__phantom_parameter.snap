@@ -20,6 +20,7 @@ description: "type Tag 'a = Tag Int"
                         Big,
                     ),
                 ),
+                applications: [],
             },
         ),
     ],

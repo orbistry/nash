@@ -12,6 +12,7 @@ description: "type alias acc = { total : int, seen : list Int }"
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         ),
     ],

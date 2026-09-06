@@ -37,12 +37,14 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                 kind: Var(
                     0,
                 ),
+                applications: [],
             },
             actual: KindScheme {
                 bounds: [],
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         },
     },

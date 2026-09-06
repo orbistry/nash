@@ -12,6 +12,7 @@ description: type alias Id = Int
                 kind: Base(
                     Big,
                 ),
+                applications: [],
             },
         ),
     ],

@@ -60,6 +60,7 @@ Module {
                     kind: Base(
                         Big,
                     ),
+                    applications: [],
                 },
                 name: Located {
                     region: Region {

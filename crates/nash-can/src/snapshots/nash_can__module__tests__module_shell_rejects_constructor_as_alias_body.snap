@@ -23,6 +23,7 @@ description: "Code:\n\nmodule Main exposing (Wrapped, Maybe(..))\n\ntype alias W
             kind: Base(
                 Big,
             ),
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],
@@ -34,6 +35,7 @@ description: "Code:\n\nmodule Main exposing (Wrapped, Maybe(..))\n\ntype alias W
                     Big,
                 ),
             ),
+            applications: [],
         },
     },
 ]

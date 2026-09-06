@@ -179,6 +179,27 @@ Declare {
                                             7,
                                         ),
                                         KindSet(
+                                            15,
+                                        ),
+                                        KindSet(
+                                            8,
+                                        ),
+                                        KindSet(
+                                            7,
+                                        ),
+                                        KindSet(
+                                            7,
+                                        ),
+                                        KindSet(
+                                            15,
+                                        ),
+                                        KindSet(
+                                            7,
+                                        ),
+                                        KindSet(
+                                            7,
+                                        ),
+                                        KindSet(
                                             7,
                                         ),
                                     ],
@@ -187,16 +208,57 @@ Declare {
                                             0,
                                         ),
                                         Var(
-                                            0,
+                                            1,
                                         ),
-                                        Arrow(
-                                            Var(
+                                        Var(
+                                            2,
+                                        ),
+                                    ],
+                                    applications: [
+                                        KindApplication {
+                                            head: Var(
+                                                2,
+                                            ),
+                                            argument: Var(
+                                                3,
+                                            ),
+                                            result: Var(
+                                                4,
+                                            ),
+                                        },
+                                        KindApplication {
+                                            head: Var(
+                                                2,
+                                            ),
+                                            argument: Var(
+                                                5,
+                                            ),
+                                            result: Var(
+                                                6,
+                                            ),
+                                        },
+                                        KindApplication {
+                                            head: Var(
+                                                2,
+                                            ),
+                                            argument: Var(
                                                 0,
                                             ),
-                                            Var(
+                                            result: Var(
+                                                7,
+                                            ),
+                                        },
+                                        KindApplication {
+                                            head: Var(
+                                                2,
+                                            ),
+                                            argument: Var(
                                                 1,
                                             ),
-                                        ),
+                                            result: Var(
+                                                8,
+                                            ),
+                                        },
                                     ],
                                 },
                                 typ: Located {
@@ -627,6 +689,27 @@ Declare {
                                                                         7,
                                                                     ),
                                                                     KindSet(
+                                                                        15,
+                                                                    ),
+                                                                    KindSet(
+                                                                        8,
+                                                                    ),
+                                                                    KindSet(
+                                                                        7,
+                                                                    ),
+                                                                    KindSet(
+                                                                        7,
+                                                                    ),
+                                                                    KindSet(
+                                                                        15,
+                                                                    ),
+                                                                    KindSet(
+                                                                        7,
+                                                                    ),
+                                                                    KindSet(
+                                                                        7,
+                                                                    ),
+                                                                    KindSet(
                                                                         7,
                                                                     ),
                                                                 ],
@@ -635,16 +718,57 @@ Declare {
                                                                         0,
                                                                     ),
                                                                     Var(
-                                                                        0,
+                                                                        1,
                                                                     ),
-                                                                    Arrow(
-                                                                        Var(
+                                                                    Var(
+                                                                        2,
+                                                                    ),
+                                                                ],
+                                                                applications: [
+                                                                    KindApplication {
+                                                                        head: Var(
+                                                                            2,
+                                                                        ),
+                                                                        argument: Var(
+                                                                            3,
+                                                                        ),
+                                                                        result: Var(
+                                                                            4,
+                                                                        ),
+                                                                    },
+                                                                    KindApplication {
+                                                                        head: Var(
+                                                                            2,
+                                                                        ),
+                                                                        argument: Var(
+                                                                            5,
+                                                                        ),
+                                                                        result: Var(
+                                                                            6,
+                                                                        ),
+                                                                    },
+                                                                    KindApplication {
+                                                                        head: Var(
+                                                                            2,
+                                                                        ),
+                                                                        argument: Var(
                                                                             0,
                                                                         ),
-                                                                        Var(
+                                                                        result: Var(
+                                                                            7,
+                                                                        ),
+                                                                    },
+                                                                    KindApplication {
+                                                                        head: Var(
+                                                                            2,
+                                                                        ),
+                                                                        argument: Var(
                                                                             1,
                                                                         ),
-                                                                    ),
+                                                                        result: Var(
+                                                                            8,
+                                                                        ),
+                                                                    },
                                                                 ],
                                                             },
                                                             typ: Located {

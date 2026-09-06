@@ -12,6 +12,7 @@ description: type alias count = int
                 kind: Base(
                     Const,
                 ),
+                applications: [],
             },
         ),
     ],

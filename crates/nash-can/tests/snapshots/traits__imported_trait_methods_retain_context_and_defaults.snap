@@ -23,6 +23,7 @@ expression: "(interfaces[\"Identity\"].traits, references)"
                         Term,
                     ),
                 ),
+                applications: [],
             },
             supers: [],
             methods: [
@@ -71,6 +72,7 @@ expression: "(interfaces[\"Identity\"].traits, references)"
                                     0,
                                 ),
                             ],
+                            applications: [],
                         },
                         typ: Located {
                             region: Region {

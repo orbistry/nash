@@ -36,12 +36,14 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nbad xs = Built
                 kind: Var(
                     0,
                 ),
+                applications: [],
             },
             actual: KindScheme {
                 bounds: [],
                 kind: Base(
                     Term,
                 ),
+                applications: [],
             },
         },
     },

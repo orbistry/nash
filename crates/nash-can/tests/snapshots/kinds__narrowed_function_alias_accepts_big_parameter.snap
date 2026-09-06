@@ -17,6 +17,7 @@ description: "type alias fn ('a : Big) = 'a -> 'a\nf : fn Int\nf x = x"
                         Term,
                     ),
                 ),
+                applications: [],
             },
         ),
     ],
