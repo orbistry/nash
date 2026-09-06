@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/src/solve.rs
+expression: lines
+---
+keep@9:9 : [nash/core/Builtin.list[nash/core/Builtin.list[Main.Color[]]]] [Impl Main.Keep [nash/core/Builtin.list] [nash/core/Builtin.list[Main.Color[]]] [Impl Main.Keep [nash/core/Builtin.list] [Main.Color[]] [Impl Main.Keep [Main.Color] [] []]]]
+Red@9:16 : [] []

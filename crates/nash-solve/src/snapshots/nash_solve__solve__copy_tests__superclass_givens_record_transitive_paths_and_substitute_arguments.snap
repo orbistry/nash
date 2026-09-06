@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/src/solve.rs
+expression: lines
+---
+eq@12:7 : [a] [Super 0 (Super 0 (Given f@12:1#0))]
+eq@14:9 : [b] [Super 0 (Given g@14:1#0)]
+eq@16:7 : [a] [Given h@16:1#1]

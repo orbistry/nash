@@ -2503,6 +2503,121 @@ mod copy_tests {
     use super::*;
     use nash_constrain::type_::{PredId, make_descriptor};
 
+    fn evidence_name(name: nash_ast::QualifiedName<'_>) -> String {
+        let package = name
+            .home
+            .package
+            .map(|package| format!("{}/{}/", package.author, package.project))
+            .unwrap_or_default();
+        format!("{package}{}.{}", name.home.name, name.name)
+    }
+
+    fn evidence_type(typ: &nash_region::Located<nash_ast::Type<'_>>) -> String {
+        match &typ.value {
+            nash_ast::Type::Var(name) => name.to_string(),
+            nash_ast::Type::Unit => "()".into(),
+            nash_ast::Type::Named { reference, args } => {
+                let args = args
+                    .iter()
+                    .map(|arg| evidence_type(arg))
+                    .collect::<Vec<_>>();
+                format!("{}[{}]", evidence_name(*reference), args.join(", "))
+            }
+            other => format!("{other:?}"),
+        }
+    }
+
+    fn render_evidence(solver: &Solver<'_, '_>, evidence: &nash_ast::Evidence<'_>) -> String {
+        use nash_ast::Evidence;
+        match evidence {
+            Evidence::Given { binder, index } => {
+                let owner = solver
+                    .schemes
+                    .iter()
+                    .find(|scheme| scheme.site.node() == *binder)
+                    .expect("evidence owner must be a retained definition");
+                format!(
+                    "Given {}@{}:{}#{index}",
+                    owner.site.name().value,
+                    owner.site.name().region.start.line,
+                    owner.site.name().region.start.column
+                )
+            }
+            Evidence::Super { of, index } => {
+                format!("Super {index} ({})", render_evidence(solver, of))
+            }
+            Evidence::ReflexiveLift { typ } => format!("ReflexiveLift {}", evidence_type(typ)),
+            Evidence::Impl {
+                impl_,
+                type_args,
+                args,
+            } => format!(
+                "Impl {} [{}] [{}] [{}]",
+                evidence_name(impl_.key.trait_),
+                impl_
+                    .key
+                    .heads
+                    .iter()
+                    .map(|head| match head {
+                        nash_ast::HeadCon::Named(name) => evidence_name(*name),
+                        other => format!("{other:?}"),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                type_args
+                    .iter()
+                    .map(|typ| evidence_type(typ))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                args.iter()
+                    .map(|arg| render_evidence(solver, arg))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            ),
+        }
+    }
+
+    macro_rules! assert_evidence_snapshot {
+        ($solver:expr, $solved:expr) => {{
+            let solver = &$solver;
+            let solved = &$solved;
+            let mut uses = solver.uses.iter().collect::<Vec<_>>();
+            uses.sort_by_key(|use_| {
+                (
+                    use_.site.region.start.line,
+                    use_.site.region.start.column,
+                    use_.site.name,
+                )
+            });
+            let lines = uses
+                .into_iter()
+                .map(|use_| {
+                    let instance = &solved.instances[&use_.site.node];
+                    format!(
+                        "{}@{}:{} : [{}] [{}]",
+                        use_.site.name,
+                        use_.site.region.start.line,
+                        use_.site.region.start.column,
+                        instance
+                            .type_args
+                            .iter()
+                            .map(|typ| evidence_type(typ))
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                        instance
+                            .evidence
+                            .iter()
+                            .map(|evidence| render_evidence(solver, evidence))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            insta::assert_snapshot!(lines);
+        }};
+    }
+
     #[test]
     fn superclass_givens_record_transitive_paths_and_substitute_arguments() {
         let bump = Bump::new();
@@ -2565,6 +2680,8 @@ mod copy_tests {
                 .any(|solution| matches!(solution, crate::preds::Solution::Given { index: 1, .. })),
             "explicit Eq evidence precedes its superclass projection"
         );
+        let (_, solved) = solver.finish(&mut uf, &result.env).unwrap();
+        assert_evidence_snapshot!(solver, solved);
     }
 
     #[test]
@@ -2796,6 +2913,8 @@ mod copy_tests {
         assert!(
             matches!(solver.predicates.get(subs[0]).solution.as_ref(), Some(crate::preds::Solution::Impl { type_vars, subs, .. }) if type_vars.is_empty() && subs.is_empty())
         );
+        let (_, solved) = solver.finish(&mut uf, &result.env).unwrap();
+        assert_evidence_snapshot!(solver, solved);
     }
 
     #[test]
@@ -2962,6 +3081,7 @@ mod copy_tests {
                     if *binder == group_binder));
             }
         }
+        assert_evidence_snapshot!(solver, solved);
     }
 
     #[test]

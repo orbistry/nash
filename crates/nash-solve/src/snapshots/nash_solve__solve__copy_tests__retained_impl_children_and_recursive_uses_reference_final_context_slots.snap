@@ -1,0 +1,11 @@
+---
+source: crates/nash-solve/src/solve.rs
+expression: lines
+---
+base@10:8 : [nash/core/Builtin.list[a]] [Impl Main.Base [nash/core/Builtin.list] [a] [Super 0 (Super 0 (Given g@11:1#0))]]
+g@10:28 : [a] [Given g@11:1#0]
+local@10:35 : [] []
+top@10:45 : [a] [Given g@11:1#0]
+f@11:12 : [a] [Given g@11:1#0]
+f@13:8 : [a] [Given h@13:1#0]
+f@13:13 : [a] [Given h@13:1#0]

@@ -1682,7 +1682,7 @@ Done when: the snapshots above match the doc's inference rules
 
 ## Chunk 6: resolution, givens, superclasses, evidence
 
-Status: in progress. Definition boundaries resolve known nominal constructor,
+Status: complete. Definition boundaries resolve known nominal constructor,
 unit and tuple heads through the coherent table, check head argument counts,
 and instantiate impl contexts with shared variables. Unknown heads wait;
 functions and structural records report `MissingImpl`. `Solution::Impl`
@@ -1711,7 +1711,14 @@ rejection of foreign trait identities. The standalone canonical resolver now
 returns nested impl evidence and reflexive Lift evidence, rejects open types,
 and bounds recursive contexts and structural work. Its acceptance tests use
 solved types, including an inferred partial alias in a higher-kinded context.
-Final acceptance review remains; no chunk completion is claimed here.
+The completion audit maps the required ground, nested-context, retained-child
+and superclass evidence cases to three existing solver tests. Their
+`assert_evidence_snapshot!` calls now snapshot published `SolvedTypes::instances`
+with source names/locations, ordered type arguments, exact package identities
+and final context owners instead of arena addresses. Existing inference
+snapshots cover reduction, default and impl method bodies, multi-parameter
+selection, missing impls and missing constraints. The temporary ground-retention
+test is absent. Lenient macro solving remains a Plan 11 integration.
 
 Files: `crates/nash-solve/src/solve.rs`, new `crates/nash-solve/src/resolve.rs`,
 `crates/nash-solve/src/preds.rs`, `crates/nash-solve/src/lib.rs`.
@@ -1940,10 +1947,13 @@ Tests:
 #[test] fn error_missing_impl_in_impl_context() // impl Eq (List 'a) without context, body uses eq on elements -> MissingConstraint
 ```
 
-Add an `assert_evidence_snapshot!` macro rendering `SolvedTypes::instances`
+The `assert_evidence_snapshot!` macro renders `SolvedTypes::instances`
 as `<name>@<region> : [type args] [Impl Eq List [Impl Eq Color]]` lines
-(the name and region come from the node's `Located<Expr>`), used by the
-first four.
+(the name and region come from the canonical node's recorded use site).
+`nested_impl_solutions_preserve_substitution_and_child_origins` covers ground
+and nested impls; `retained_impl_children_and_recursive_uses_reference_final_context_slots`
+covers retained child evidence; `superclass_givens_record_transitive_paths_and_substitute_arguments`
+covers projected and direct givens. These reuse existing acceptance cases.
 
 Done when: all listed snapshots exist, `ground_pred_retained_until_chunk_6`
 is deleted.
