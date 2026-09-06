@@ -2824,6 +2824,17 @@ checks both types and a Monoid-constrained helper, compiling 17 modules and
 Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
 source-only step changes no Rust crate. Runtime append/identity laws remain
 Plan 07 checks; right-biased Map union is still pending.
+Map now has right-biased Semigroup and Monoid impls requiring Eq for keys.
+Typed private bridges preserve key/value types. Union filters left entries
+whose keys occur on the right, then appends the right entries, preserving
+surviving order and duplicates. The stdlib spec records this behavior and
+the key context; values need no Eq constraint. Core acceptance checks
+overlapping keys, duplicate right keys, empty and a key-only constrained
+generic merge, compiling 17 modules and 158 declarations. Missing key Eq
+reports MissingImpl at append. Formatting, strict Clippy, 1,915 tests and
+snapshot hygiene pass. This source-only step changes no Rust crate.
+Runtime right-bias, duplicate preservation and monoid laws remain Plan 07
+execution requirements; Map Lift's nested-head conflict is unchanged.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

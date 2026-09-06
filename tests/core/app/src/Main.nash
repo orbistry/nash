@@ -18,6 +18,17 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+emptyBigMap : Map Int Bytes
+emptyBigMap = empty
+leftMap : Map Int Bytes
+leftMap = fromData (Map [Builtin.mkPairData (I 1) (B #"aa"), Builtin.mkPairData (I 2) (B #"bb")])
+rightMap : Map Int Bytes
+rightMap = fromData (Map [Builtin.mkPairData (I 2) (B #"cc"), Builtin.mkPairData (I 2) (B #"dd")])
+combinedMap = append leftMap rightMap
+mapWithEmpty = withEmpty leftMap
+mergeMaps : Eq 'k => Map 'k 'v -> Map 'k 'v -> Map 'k 'v
+mergeMaps = append
+
 emptyBigBytes : Bytes
 emptyBigBytes = empty
 emptyBigList : List Int

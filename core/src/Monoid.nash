@@ -2,6 +2,7 @@ module Monoid exposing (Monoid)
 
 import Literal
 import Builtin
+import Eq exposing (Eq)
 import Semigroup exposing (Semigroup)
 
 trait Semigroup 'a => Monoid 'a where
@@ -24,3 +25,6 @@ impl Monoid Bytes where
 
 impl Monoid (List 'a) where
     empty = Builtin.castLift (Builtin.mkNilData ())
+
+impl Eq 'k => Monoid (Map 'k 'v) where
+    empty = Builtin.castLift (Builtin.mkNilPairData ())

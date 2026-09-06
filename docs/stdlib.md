@@ -854,6 +854,13 @@ get : array 'a -> int -> option 'a
 `Map 'k 'v` is an association list in `Data.Map` encoding, keys and
 values Big, insertion-ordered, no dedup on construction:
 
+The Semigroup impl requires `Eq 'k`. Right-biased union removes each left
+entry whose key equals any right key, then appends the right entries. It
+preserves the order and duplicates of surviving left entries and all right
+entries. The Monoid impl has the same key constraint through its superclass;
+its identity is the empty map. Thus appending empty does not deduplicate a
+map. Key comparison uses the key's Eq impl, as do the Map lookup helpers.
+
 ```elm
 module Map exposing (..)
 
