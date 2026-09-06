@@ -243,10 +243,10 @@ Rules:
 Defined only for Big types:
 
 ```elm
-trait ToData 'a where
+trait ToData ('a : Big) where
     toData : 'a -> Data
 
-trait FromData 'a where
+trait FromData ('a : Big) where
     fromData     : Data -> 'a
     validateData : Data -> 'a
 ```

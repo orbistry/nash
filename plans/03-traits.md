@@ -2734,6 +2734,15 @@ the destination payload types reports both missing payload Lift impls at the
 original call. Formatting, strict Clippy, 1,912 tests and snapshot hygiene
 pass. Higher-kinded Result impls remain pending; runtime round trips still
 depend on Plan 07. This source-only step changes no Rust crate.
+Data now defines Big-bounded ToData/FromData traits, their identity impls for
+Data itself, and serialise/tag/fields. The core CLI checks constructor and
+non-constructor helper inputs and all three identity methods, compiling 17
+modules and 104 declarations. Separate CLI checks reject toData on unit and
+on nominal Int without an impl. The stdlib sketch now agrees with the
+representation spec: validateData returns the validated value and traps on
+failure; other Big conversions require typed casts, not polymorphic identity.
+Formatting, strict Clippy, 1,912 tests and snapshot hygiene pass. These are
+source-only changes; runtime helper results await Plan 07.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

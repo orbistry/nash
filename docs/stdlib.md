@@ -391,12 +391,12 @@ module Data exposing (ToData, FromData, serialise, tag, fields)
 
 import Builtin
 
-trait ToData 'a where
+trait ToData ('a : Big) where
     toData : 'a -> Data
 
-trait FromData 'a where
+trait FromData ('a : Big) where
     fromData : Data -> 'a
-    validateData : Data -> option 'a
+    validateData : Data -> 'a
 
 -- Every Big value is Data at runtime; the impls give the retag a type.
 impl ToData Data where
@@ -404,17 +404,7 @@ impl ToData Data where
 
 impl FromData Data where
     fromData = Builtin.identity
-    validateData d = Some d
-
-impl ToData Int where
-    toData = Builtin.identity
-
-impl FromData Int where
-    fromData = Builtin.identity
-    validateData d =
-        case d of
-            I _ -> Some (fromData d)
-            _ -> None
+    validateData = Builtin.identity
 
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
@@ -434,6 +424,11 @@ fields d =
 
 `Data` fields in patterns are little (`Constr int (list Data)`), as data.md
 specifies, so no `lower` is needed on `t` and `fs`.
+The Data identity impl is already well typed. Other Big types remain nominally
+distinct from Data: their impls require the typed casts specified in codegen.md,
+not `Builtin.identity` across different types. `validateData` returns the
+validated value and traps on invalid structure; Data.Decode provides the
+non-failing decoder API.
 
 ## Twin modules
 

@@ -1,0 +1,33 @@
+module Data exposing (ToData, FromData, serialise, tag, fields)
+
+import Builtin exposing (Data(..))
+import Option exposing (type option(..))
+
+trait ToData ('a : Big) where
+    toData : 'a -> Data
+
+trait FromData ('a : Big) where
+    fromData : Data -> 'a
+    validateData : Data -> 'a
+
+impl ToData Data where
+    toData value = value
+
+impl FromData Data where
+    fromData value = value
+    validateData value = value
+
+serialise : Data -> bytes
+serialise = Builtin.serialiseData
+
+tag : Data -> option int
+tag value =
+    case value of
+        Constr index _ -> Some index
+        _ -> None
+
+fields : Data -> option (list Data)
+fields value =
+    case value of
+        Constr _ items -> Some items
+        _ -> None

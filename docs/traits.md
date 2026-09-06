@@ -522,10 +522,10 @@ trait Functor 'f => Applicative 'f where       -- map is (<$>)
 trait Applicative 'm => Monad 'm where
     bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b      -- (>>=), `do`
 
-trait ToData 'a where                           -- Big types only (kind checked)
+trait ToData ('a : Big) where
     toData : 'a -> Data
 
-trait FromData 'a where
+trait FromData ('a : Big) where
     fromData : Data -> 'a                       -- shallow: reinterprets the constant
     validateData : Data -> 'a                   -- full structural check; traps on bad data
 

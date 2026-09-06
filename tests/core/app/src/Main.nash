@@ -16,6 +16,17 @@ import Lift exposing (Lift)
 import Unit exposing (Unit)
 import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
+import Data exposing (ToData, FromData)
+
+wireData = Constr 0 [I 1, B #"ff"]
+dataIdentity = toData wireData
+readData : Data
+readData = fromData wireData
+checkedData : Data
+checkedData = validateData wireData
+dataTags = (Data.tag wireData, Data.tag (I 1))
+dataFields = (Data.fields wireData, Data.fields (I 1))
+serialisedData = Data.serialise wireData
 
 okResult : result unit bool
 okResult = Ok True
