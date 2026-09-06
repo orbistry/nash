@@ -305,6 +305,9 @@ impl<'a> Resolver<'_, 'a> {
             )
             .map_err(|_| Failure::Limit)?
             {
+                if !self.kinds.proves_signature(info.kinds, &arguments) {
+                    continue;
+                }
                 selected = Some((*info, arguments));
                 break;
             }

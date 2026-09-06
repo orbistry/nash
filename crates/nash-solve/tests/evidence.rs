@@ -32,6 +32,62 @@ fn input<'a>(annotations: &Annotations<'a>, name: &str) -> &'a Located<Type<'a>>
 }
 
 #[test]
+fn kind_disjoint_impls_select_matching_evidence() {
+    let bump = Bump::new();
+    let (tables, annotations) = fixture(
+        &bump,
+        indoc::indoc!(
+            r#"
+        module Main exposing (..)
+        type Token = Token
+        trait BigBound ('a : Big) where
+            big : 'a -> 'a
+        trait ConstBound ('a : Const) where
+            little : 'a -> 'a
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl BigBound Token where
+            big x = x
+        impl ConstBound int where
+            little x = x
+        impl BigBound 'a => Keep (list (pair 'a 'a)) where
+            keep x = x
+        impl ConstBound 'a => Keep (list (pair 'a 'a)) where
+            keep x = x
+        large : list (pair Token Token) -> list (pair Token Token)
+        large x = keep x
+        small : list (pair int int) -> list (pair int int)
+        small x = keep x
+        generic xs = keep xs
+    "#
+        ),
+    );
+    let trait_ = *tables
+        .traits
+        .keys()
+        .find(|name| name.name == "Keep")
+        .unwrap();
+    for (name, bound) in [("large", "BigBound"), ("small", "ConstBound")] {
+        let predicate = Pred {
+            trait_,
+            args: bump.alloc_slice_copy(&[input(&annotations, name)]),
+        };
+        let Evidence::Impl { args, .. } = resolve(&bump, &tables, &predicate).unwrap() else {
+            panic!("impl evidence")
+        };
+        let [Evidence::Impl { impl_, .. }] = args else {
+            panic!("one bound proof")
+        };
+        assert_eq!(impl_.key.trait_.name, bound);
+    }
+    assert_eq!(
+        annotations["generic"].context.len(),
+        1,
+        "unresolved calls retain their predicate"
+    );
+}
+
+#[test]
 fn recursive_patterns_preserve_repeated_variables_and_inner_evidence() {
     let bump = Bump::new();
     let (tables, annotations) = fixture(

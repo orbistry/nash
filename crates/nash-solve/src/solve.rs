@@ -753,12 +753,11 @@ impl<'a> Solver<'a, '_> {
     /// Inspect existing kind information; a compiler rule must never introduce
     /// the restriction it is supposed to prove. The explicit owner also works
     /// on defaulting retries, after solve_header has popped its owner frame.
-    fn proves_big(
+    fn use_kinds(
         &self,
         uf: &mut UnionFind<'a>,
         owner: nash_ast::NodeId,
-        variable: Variable,
-    ) -> bool {
+    ) -> Option<crate::kinds::State<'a>> {
         let mut kinds = crate::kinds::State::new(self.bump);
         let mut rigid = Vec::new();
         for signature in &self.active_kinds {
@@ -772,7 +771,7 @@ impl<'a> Solver<'a, '_> {
                 )
                 .is_err()
             {
-                return false;
+                return None;
             }
             rigid.extend_from_slice(signature.variables);
         }
@@ -792,9 +791,21 @@ impl<'a> Solver<'a, '_> {
                     )
                     .is_err()
             {
-                return false;
+                return None;
             }
         }
+        Some(kinds)
+    }
+
+    fn proves_big(
+        &self,
+        uf: &mut UnionFind<'a>,
+        owner: nash_ast::NodeId,
+        variable: Variable,
+    ) -> bool {
+        let Some(mut kinds) = self.use_kinds(uf, owner) else {
+            return false;
+        };
         matches!(kinds.generalize(uf, &self.tables.kinds, &[variable]), Ok(signature)
             if matches!(signature.kinds, [nash_ast::Kind::Base(nash_ast::BaseKind::Big)]))
     }
@@ -889,8 +900,9 @@ impl<'a> Solver<'a, '_> {
                     });
                     break;
                 }
+                let candidate_kinds = self.use_kinds(uf, binder.node());
                 match crate::resolve::select(
-                    self.bump,
+                    candidate_kinds.as_ref(),
                     self.tables,
                     uf,
                     wanted.trait_,

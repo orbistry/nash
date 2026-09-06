@@ -2,6 +2,53 @@ use bumpalo::Bump;
 use indoc::indoc;
 
 #[test]
+fn recursive_overlap_combines_inferred_kind_bounds() {
+    let bump = Bump::new();
+    let mut keys = Vec::new();
+    let mut environments = Vec::new();
+    for bound in ["Big", "Const", "Storable"] {
+        let source = bump.alloc_str(&format!(
+            "module Main exposing (..)\ntrait Bound ('a : {bound}) where\n    bound : 'a -> 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Bound 'a => Keep (list (pair 'a 'a)) where\n    keep x = x\n"
+        ));
+        let result = canonicalize(&bump, source).unwrap();
+        keys.push(*result.tables.impls.keys().next().unwrap());
+        environments.push(result.tables.kinds);
+    }
+    let overlap = |a, b| {
+        nash_can::kinds::impls_overlap(&bump, &environments[0], keys[a], keys[b], &mut 16_384)
+            .unwrap()
+    };
+    assert!(!overlap(0, 1), "Big and Const inner variables are disjoint");
+    assert!(overlap(0, 2), "Storable includes Big");
+    assert!(overlap(1, 2), "Storable includes Const");
+    assert!(
+        overlap(0, 0),
+        "fresh binders do not make equal impls disjoint"
+    );
+    let mut budget = 16_384;
+    assert!(
+        nash_can::kinds::impls_overlap(&bump, &environments[0], keys[0], keys[0], &mut budget,)
+            .unwrap()
+    );
+    let mut exact_budget = 16_384 - budget;
+    assert!(exact_budget > 0);
+    assert!(
+        nash_can::kinds::impls_overlap(
+            &bump,
+            &environments[0],
+            keys[0],
+            keys[0],
+            &mut exact_budget,
+        )
+        .unwrap()
+    );
+    assert_eq!(exact_budget, 0);
+    assert!(
+        nash_can::kinds::impls_overlap(&bump, &environments[0], keys[0], keys[0], &mut 0,).is_err()
+    );
+}
+
+#[test]
 fn impl_cannot_own_an_imported_trait_and_imported_heads() {
     let bump = Bump::new();
     let interfaces = std::collections::BTreeMap::from([

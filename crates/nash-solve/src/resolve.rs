@@ -1,6 +1,5 @@
 //! Coherent impl selection from known inference heads. Never binds a variable
 //! to make an impl match; unresolved heads must wait for type inference.
-use bumpalo::Bump;
 use nash_ast::{HeadCon, ImplKey, QualifiedName};
 use nash_can::environment::{ImplInfo, Tables};
 use nash_constrain::{Content, FlatType, UnionFind, Variable};
@@ -256,7 +255,7 @@ impl<'a> nash_ast::head::Types<'a> for InferenceTypes<'_, 'a> {
 }
 
 pub(crate) fn select<'a>(
-    _bump: &'a Bump,
+    kinds: Option<&crate::kinds::State<'a>>,
     tables: &Tables<'a>,
     uf: &mut UnionFind<'a>,
     trait_: QualifiedName<'a>,
@@ -291,6 +290,18 @@ pub(crate) fn select<'a>(
             Ok(Match::No) => {}
             Ok(Match::Deferred) => deferred = true,
             Ok(Match::Yes(arguments)) => {
+                let Some(kinds) = kinds else {
+                    deferred = true;
+                    continue;
+                };
+                match kinds.matches(types.0, &tables.kinds, info.kinds, &arguments) {
+                    Match::No => continue,
+                    Match::Deferred => {
+                        deferred = true;
+                        continue;
+                    }
+                    Match::Yes(()) => {}
+                }
                 selected = Some(Selection::Impl {
                     info,
                     key: *key,

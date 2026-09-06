@@ -148,6 +148,47 @@ impl<'a> State<'a> {
         Ok(())
     }
 
+    /// Check an impl candidate without imposing its bounds on the wanted.
+    pub(crate) fn matches(
+        &self,
+        uf: &mut UnionFind<'a>,
+        env: &KindEnv<'a>,
+        signature: ValueKinds<'a>,
+        variables: &[Variable],
+    ) -> nash_ast::head::Match<()> {
+        use nash_ast::head::Match;
+        let mut query = self.clone();
+        if query.generalize_mut(uf, env, variables).is_err() {
+            return Match::Deferred;
+        }
+        // Include every known root: a bound can introduce equalities between
+        // captured kinds as well as narrow an individual variable.
+        let roots: Vec<_> = query.roots.keys().copied().collect();
+        let Ok(before) = query.generalize_mut(uf, env, &roots) else {
+            return Match::Deferred;
+        };
+        let baseline = query.clone();
+        match query.require_mut(uf, env, signature, variables) {
+            Err(Error::AnonymousRecord) => Match::Deferred,
+            Err(_) => Match::No,
+            Ok(()) => match query.generalize_mut(uf, env, &roots) {
+                Ok(after) if before == after => Match::Yes(()),
+                _ => {
+                    let actual: Vec<_> = variables
+                        .iter()
+                        .map(|v| baseline.roots[&uf.find(*v)])
+                        .collect();
+                    let protected: Vec<_> = roots.iter().map(|v| baseline.roots[v]).collect();
+                    if baseline.infer.proves_values(signature, &actual, &protected) {
+                        Match::Yes(())
+                    } else {
+                        Match::Deferred
+                    }
+                }
+            },
+        }
+    }
+
     /// Serialize roots under one binder, in the caller's quantifier order.
     pub fn generalize(
         &mut self,
@@ -414,6 +455,45 @@ mod tests {
             bounds: bump.alloc_slice_copy(&[bound]),
             kinds: bump.alloc_slice_copy(&[&*bump.alloc(Kind::Var(0))]),
         }
+    }
+
+    #[test]
+    fn candidate_kind_bounds_are_proved_without_narrowing() {
+        use nash_ast::head::Match;
+        let bump = Bump::new();
+        let env = KindEnv::default();
+        let mut uf = UnionFind::new();
+        let variable = uf.fresh(make_descriptor(Content::FlexVar(None)));
+        let mut state = State::new(&bump);
+        state
+            .require(
+                &mut uf,
+                &env,
+                bounded(&bump, KindSet::STORABLE),
+                &[variable],
+            )
+            .unwrap();
+        let before = state.generalize(&mut uf, &env, &[variable]).unwrap();
+        assert!(matches!(
+            state.matches(&mut uf, &env, bounded(&bump, KindSet::BIG), &[variable]),
+            Match::Deferred
+        ));
+        assert_eq!(
+            state.generalize(&mut uf, &env, &[variable]).unwrap(),
+            before
+        );
+        state
+            .require(&mut uf, &env, bounded(&bump, KindSet::BIG), &[variable])
+            .unwrap();
+        assert!(matches!(
+            state.matches(&mut uf, &env, bounded(&bump, KindSet::BIG), &[variable]),
+            Match::Yes(())
+        ));
+        assert!(matches!(
+            state.matches(&mut uf, &env, bounded(&bump, KindSet::CONST), &[variable]),
+            Match::No
+        ));
+        assert!(matches!(uf.get(variable).content, Content::FlexVar(_)));
     }
 
     #[test]

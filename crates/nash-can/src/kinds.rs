@@ -302,6 +302,64 @@ impl<'a> Infer<'a> {
         self.instantiate_help(scheme.kind, &vars)
     }
 
+    /// Prove a signature without changing the protected binder. Existential
+    /// application witnesses may reuse existing facts, but may not narrow them.
+    pub fn proves_values(
+        &self,
+        signature: ValueKinds<'a>,
+        actual: &[&'a K<'a>],
+        protected: &[&'a K<'a>],
+    ) -> bool {
+        assert_eq!(signature.kinds.len(), actual.len());
+        let mut query = self.clone();
+        let expected = query.instantiate_values(&signature);
+        for (expected, actual) in expected.into_iter().zip(actual) {
+            if query.unify(expected, actual).is_err() {
+                return false;
+            }
+        }
+        self.proves_extension(query, protected)
+    }
+
+    fn proves_extension(&self, query: Self, protected: &[&'a K<'a>]) -> bool {
+        let mut original = self.clone();
+        let before = original.generalize_values(protected);
+        let facts = original.applications.clone();
+        // Include obligations created while opening constructor schemes during
+        // unification, as well as those directly retained in the signature.
+        let obligations = query.applications.clone();
+        let mut pending = vec![(query, 0)];
+        let mut remaining = 16_384;
+        while let Some((mut query, index)) = pending.pop() {
+            if nash_ast::head::step(&mut remaining).is_err() {
+                return false;
+            }
+            if query.generalize_values(protected) == before {
+                return true;
+            }
+            let Some(wanted) = obligations.get(index) else {
+                continue;
+            };
+            if !matches!(query.head(wanted.head), K::Var(_)) {
+                pending.push((query, index + 1));
+                continue;
+            }
+            for fact in &facts {
+                if nash_ast::head::step(&mut remaining).is_err() {
+                    return false;
+                }
+                let mut candidate = query.clone();
+                if candidate.unify(wanted.head, fact.head).is_ok()
+                    && candidate.unify(wanted.argument, fact.argument).is_ok()
+                    && candidate.unify(wanted.result, fact.result).is_ok()
+                {
+                    pending.push((candidate, index + 1));
+                }
+            }
+        }
+        false
+    }
+
     /// Instantiate all roots with the same fresh kind variables.
     pub fn instantiate_values(&mut self, kinds: &ValueKinds<'_>) -> Vec<&'a K<'a>> {
         let vars: Vec<KindVar> = kinds
@@ -503,6 +561,35 @@ impl<'a> Infer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn kind_proofs_reuse_existential_witnesses_without_restricting_them() {
+        let bump = Bump::new();
+        let signature = ValueKinds {
+            bounds: &[KindSet::ARROW, KindSet::ANY],
+            kinds: &[&Kind::Var(0)],
+            applications: &[KindApplication {
+                head: &Kind::Var(0),
+                argument: &Kind::Var(1),
+                result: &Kind::Base(BaseKind::Big),
+            }],
+        };
+        let mut infer = Infer::new(&bump);
+        let roots = infer.instantiate_values(&signature);
+        let before = infer.generalize_values(&roots);
+        assert!(infer.proves_values(signature, &roots, &roots));
+        let specialized = ValueKinds {
+            bounds: &[KindSet::ARROW],
+            kinds: &[&Kind::Var(0)],
+            applications: &[KindApplication {
+                head: &Kind::Var(0),
+                argument: &Kind::Base(BaseKind::Const),
+                result: &Kind::Base(BaseKind::Big),
+            }],
+        };
+        assert!(!infer.proves_values(specialized, &roots, &roots));
+        assert_eq!(infer.generalize_values(&roots), before);
+    }
 
     #[test]
     fn constructor_applications_preserve_bounds_and_captured_arguments() {
@@ -1879,12 +1966,167 @@ pub fn proves_ground_big<'a>(
     }
 }
 
+/// Coherence query with fresh kind binders for both recursive impl patterns.
+/// Trait contexts contribute their inferred kinds, but do not otherwise prove
+/// disjointness. This query never changes either retained impl scheme.
+pub fn impls_overlap<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    left: nash_ast::ImplKey<'a>,
+    right: nash_ast::ImplKey<'a>,
+    remaining: &mut usize,
+) -> Result<bool, nash_ast::head::Limit> {
+    if left.trait_ != right.trait_ {
+        return Ok(false);
+    }
+    fn pattern_kind<'a>(
+        bump: &'a Bump,
+        env: &KindEnv<'a>,
+        infer: &mut Infer<'a>,
+        roots: &[&'a K<'a>],
+        pattern: &nash_ast::Head<'a>,
+        remaining: &mut usize,
+        exhausted: &mut bool,
+    ) -> Option<&'a K<'a>> {
+        if nash_ast::head::step(remaining).is_err() {
+            *exhausted = true;
+            return None;
+        }
+        match pattern {
+            nash_ast::Head::Var(index) => Some(roots[usize::from(*index)]),
+            nash_ast::Head::Named { reference, args } => {
+                let mut kind = infer.constructor(env.scheme(*reference));
+                for arg in *args {
+                    let actual = pattern_kind(bump, env, infer, roots, arg, remaining, exhausted)?;
+                    let (expected, result) = infer.apply(kind).ok()?;
+                    infer.unify(expected, actual).ok()?;
+                    kind = result;
+                }
+                Some(kind)
+            }
+            nash_ast::Head::Unit => Some(bump.alloc(K::Base(BaseKind::Const))),
+            nash_ast::Head::Tuple(_) | nash_ast::Head::Function(..) => {
+                Some(bump.alloc(K::Base(BaseKind::Term)))
+            }
+        }
+    }
+    let mut infer = Infer::new(bump);
+    let roots = [
+        infer.instantiate_values(&left.kinds),
+        infer.instantiate_values(&right.kinds),
+    ];
+    let initial = *remaining;
+    let mut kind_work = initial;
+    let mut exhausted = false;
+    let overlap = nash_ast::head::overlaps(
+        left.heads,
+        right.heads,
+        remaining,
+        |a_side, a, b_side, b| {
+            let Some(a) = pattern_kind(
+                bump,
+                env,
+                &mut infer,
+                &roots[usize::from(a_side)],
+                a,
+                &mut kind_work,
+                &mut exhausted,
+            ) else {
+                return false;
+            };
+            let Some(b) = pattern_kind(
+                bump,
+                env,
+                &mut infer,
+                &roots[usize::from(b_side)],
+                b,
+                &mut kind_work,
+                &mut exhausted,
+            ) else {
+                return false;
+            };
+            infer.unify(a, b).is_ok()
+        },
+    )?;
+    *remaining = remaining
+        .checked_sub(initial - kind_work)
+        .ok_or(nash_ast::head::Limit)?;
+    if exhausted {
+        return Err(nash_ast::head::Limit);
+    }
+    Ok(overlap && infer.settle().is_ok())
+}
+
+/// Prove an impl's kind requirements at closed canonical type arguments.
+pub fn proves_ground_signature<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    signature: ValueKinds<'a>,
+    types: &[&'a Located<CanType<'a>>],
+) -> bool {
+    let mut variables = BTreeSet::new();
+    for typ in types {
+        crate::types::collect_free_vars(&typ.value, &mut variables);
+    }
+    if !variables.is_empty() {
+        return false;
+    }
+    ImplKinds {
+        walker: Walker {
+            bump,
+            env,
+            home: nash_ast::primitives::builtin_home(),
+            infer: Infer::new(bump),
+            group: BTreeMap::new(),
+            errors: Vec::new(),
+            inferred_records: Some(Vec::new()),
+        },
+        scope: Scope {
+            params: BTreeMap::new(),
+        },
+    }
+    .proves_signature(signature, types)
+}
+
 pub(crate) struct ImplKinds<'e, 'a> {
     walker: Walker<'e, 'a>,
     scope: Scope<'a>,
 }
 
 impl<'a> ImplKinds<'_, 'a> {
+    pub(crate) fn proves_signature(
+        &self,
+        signature: ValueKinds<'a>,
+        types: &[&'a Located<CanType<'a>>],
+    ) -> bool {
+        assert_eq!(signature.kinds.len(), types.len());
+        let mut query = Walker {
+            bump: self.walker.bump,
+            env: self.walker.env,
+            home: self.walker.home,
+            infer: self.walker.infer.clone(),
+            group: BTreeMap::new(),
+            errors: Vec::new(),
+            inferred_records: Some(Vec::new()),
+        };
+        let mut roots: Vec<_> = self.scope.params.values().copied().collect();
+        let actual: Vec<_> = types
+            .iter()
+            .map(|typ| query.infer_type(&self.scope, typ))
+            .collect();
+        if !query.errors.is_empty()
+            || !self
+                .walker
+                .infer
+                .proves_extension(query.infer.clone(), &roots)
+        {
+            return false;
+        }
+        roots.extend_from_slice(&actual);
+        roots.extend(query.inferred_records.as_ref().unwrap());
+        query.infer.proves_values(signature, &actual, &roots)
+    }
+
     pub(crate) fn generalize(&mut self, variables: &[&str]) -> ValueKinds<'a> {
         let roots: Vec<_> = variables
             .iter()

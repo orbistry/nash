@@ -34,8 +34,21 @@ Focused tests cover concrete disjoint heads, repeated-variable deferral and
 rejection, imported nested overlap, and retained nested evidence. Record-row
 comparison normalizes extension fragments without binding inference variables.
 The core Map Lift impl now type-checks through this general path. Snapshot
-review, full tests and hygiene pass. Kind-disjoint coherence and selection
-remain outstanding; structural overlap is currently conservative.
+review, full tests and hygiene pass. Kind-disjoint coherence and selection now
+use the shared kind engine as described below; inline kind syntax and the
+builtin-list Eq split remain outstanding.
+
+`kinds::impls_overlap` combines
+the structural equations with fresh copies of both retained kind schemes.
+The focused test distinguishes nested Big/Const patterns from overlapping
+Storable patterns and checks pattern-work accounting. Table insertion uses
+this query; inference, canonical entailment and ground selection prove the
+candidate's kind bounds without narrowing callers. Existing application
+witnesses may satisfy equivalent existential kind obligations; the complete
+protected kind graph must remain unchanged. Ground resolution uses an explicit
+work stack so expanding contexts reach the limit diagnostic safely. The CLI
+accepts imported Big/Const impls and rejects an overlapping unrestricted impl.
+Full tests, strict Clippy, core CLI and snapshot hygiene pass for this step.
 
 The user also confirmed that builtin list has no Applicative or Monad impl;
 keep apply unchanged. Abstract map must allow different element kinds when

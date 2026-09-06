@@ -58,6 +58,20 @@ struct Resolver<'t, 'a> {
     remaining: usize,
 }
 
+enum Resolution<'a> {
+    Complete(Evidence<'a>),
+    Impl {
+        impl_: ImplRef<'a>,
+        type_args: &'a [&'a Located<Type<'a>>],
+        children: Vec<Pred<'a>>,
+    },
+}
+
+enum Work<'a> {
+    Resolve(Pred<'a>, usize),
+    Assemble(ImplRef<'a>, &'a [&'a Located<Type<'a>>], usize),
+}
+
 impl<'a> Resolver<'_, 'a> {
     // Charge every node that substitute_type will copy before allocating the
     // result. Open alias bodies are retained; filled bodies are traversed.
@@ -168,6 +182,46 @@ impl<'a> Resolver<'_, 'a> {
     }
 
     fn resolve(&mut self, pred: &Pred<'a>, depth: usize) -> Result<Evidence<'a>, Error<'a>> {
+        let mut pending = vec![Work::Resolve(
+            Pred {
+                trait_: pred.trait_,
+                args: pred.args,
+            },
+            depth,
+        )];
+        let mut evidence = Vec::new();
+        while let Some(work) = pending.pop() {
+            match work {
+                Work::Resolve(pred, depth) => match self.resolve_step(&pred, depth)? {
+                    Resolution::Complete(proof) => evidence.push(proof),
+                    Resolution::Impl {
+                        impl_,
+                        type_args,
+                        children,
+                    } => {
+                        pending.push(Work::Assemble(impl_, type_args, children.len()));
+                        pending.extend(
+                            children
+                                .into_iter()
+                                .rev()
+                                .map(|pred| Work::Resolve(pred, depth + 1)),
+                        );
+                    }
+                },
+                Work::Assemble(impl_, type_args, count) => {
+                    let children = evidence.split_off(evidence.len() - count);
+                    evidence.push(Evidence::Impl {
+                        impl_,
+                        type_args,
+                        args: self.bump.alloc_slice_fill_iter(children),
+                    });
+                }
+            }
+        }
+        Ok(evidence.pop().expect("root evidence"))
+    }
+
+    fn resolve_step(&mut self, pred: &Pred<'a>, depth: usize) -> Result<Resolution<'a>, Error<'a>> {
         let error = |reason| Error {
             trait_: pred.trait_,
             args: pred.args,
@@ -185,14 +239,18 @@ impl<'a> Resolver<'_, 'a> {
             && pred.args.len() == 1
             && nash_can::kinds::proves_ground_big(self.bump, &self.tables.kinds, pred.args[0])
         {
-            return Ok(Evidence::StructuralEq { typ: pred.args[0] });
+            return Ok(Resolution::Complete(Evidence::StructuralEq {
+                typ: pred.args[0],
+            }));
         }
         if pred.trait_ == nash_ast::primitives::lift_trait()
             && self.tables.has_reflexive_lift()
             && matches!(terms.as_slice(), [first, second] if first == second)
             && nash_can::kinds::proves_ground_big(self.bump, &self.tables.kinds, pred.args[0])
         {
-            return Ok(Evidence::ReflexiveLift { typ: pred.args[0] });
+            return Ok(Resolution::Complete(Evidence::ReflexiveLift {
+                typ: pred.args[0],
+            }));
         }
         let mut selected = None;
         for (key, info) in self
@@ -210,6 +268,14 @@ impl<'a> Resolver<'_, 'a> {
             )
             .map_err(|_| error(Failure::Limit))?
             {
+                if !nash_can::kinds::proves_ground_signature(
+                    self.bump,
+                    &self.tables.kinds,
+                    info.kinds,
+                    &arguments,
+                ) {
+                    continue;
+                }
                 selected = Some((*key, *info, arguments));
                 break;
             }
@@ -232,21 +298,18 @@ impl<'a> Resolver<'_, 'a> {
                     .iter()
                     .map(|arg| nash_can::types::substitute_type(self.bump, &substitution, arg)),
             );
-            children.push(self.resolve(
-                &Pred {
-                    trait_: context.trait_,
-                    args,
-                },
-                depth + 1,
-            )?);
+            children.push(Pred {
+                trait_: context.trait_,
+                args,
+            });
         }
-        Ok(Evidence::Impl {
+        Ok(Resolution::Impl {
             impl_: ImplRef {
                 home: info.home,
                 key,
             },
             type_args: self.bump.alloc_slice_copy(&type_args),
-            args: self.bump.alloc_slice_fill_iter(children),
+            children,
         })
     }
 }

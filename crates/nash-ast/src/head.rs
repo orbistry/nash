@@ -208,14 +208,15 @@ fn resolve<'p, 'a>(
     Ok(term)
 }
 
-/// Freshen both binders and unify full patterns. Context predicates do not
-/// establish disjointness; callers can additionally compare kind constraints.
-pub fn overlaps(
-    left: &[Head<'_>],
-    right: &[Head<'_>],
+/// Check kind compatibility for each equation as structural unification runs.
+/// The boolean identifies the fresh binder: false is left, true is right.
+pub fn overlaps<'a>(
+    left: &[Head<'a>],
+    right: &[Head<'a>],
     remaining: &mut usize,
+    compatible: impl FnMut(bool, &Head<'a>, bool, &Head<'a>) -> bool,
 ) -> Result<bool, Limit> {
-    unifiable(left, right, remaining, true)
+    unifiable(left, right, remaining, true, compatible)
 }
 
 /// Equality within one impl preserves variables shared between its heads.
@@ -224,14 +225,15 @@ pub fn can_equal(
     right: &[Head<'_>],
     remaining: &mut usize,
 ) -> Result<bool, Limit> {
-    unifiable(left, right, remaining, false)
+    unifiable(left, right, remaining, false, |_, _, _, _| true)
 }
 
-fn unifiable(
-    left: &[Head<'_>],
-    right: &[Head<'_>],
+fn unifiable<'a>(
+    left: &[Head<'a>],
+    right: &[Head<'a>],
     remaining: &mut usize,
     freshen: bool,
+    mut compatible: impl FnMut(bool, &Head<'a>, bool, &Head<'a>) -> bool,
 ) -> Result<bool, Limit> {
     if left.len() != right.len() {
         return Ok(false);
@@ -257,6 +259,9 @@ fn unifiable(
         step(remaining)?;
         let left = resolve(left, &substitution, remaining)?;
         let right = resolve(right, &substitution, remaining)?;
+        if !compatible(left.side, left.pattern, right.side, right.pattern) {
+            return Ok(false);
+        }
         if let Head::Var(index) = left.pattern {
             let variable = (left.side, *index);
             if matches!(right.pattern, Head::Var(other) if variable == (right.side, *other)) {
