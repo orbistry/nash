@@ -1,0 +1,12 @@
+module Pair exposing (fst, snd, make)
+
+import Builtin
+
+fst : pair 'a 'b -> 'a
+fst = Builtin.fstPair
+
+snd : pair 'a 'b -> 'b
+snd = Builtin.sndPair
+
+make : Data -> Data -> pair Data Data
+make = Builtin.mkPairData

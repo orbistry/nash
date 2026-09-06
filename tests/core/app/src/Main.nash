@@ -21,6 +21,17 @@ import Cons exposing (type cons(..))
 import Functor exposing (Functor)
 import Applicative exposing (Applicative)
 import Monad exposing (Monad)
+import Pair
+import Array
+
+projectedPair = Pair.snd (Builtin.unConstrData (Constr 0 [I 1]))
+madePair = Pair.fst (Pair.make (I 1) (B #"ff"))
+arrayValues = Array.fromList [1, 2]
+arrayQueries = (Array.length arrayValues, Array.at arrayValues 1, Array.get arrayValues (-1), Array.get arrayValues 2)
+bigArray : array Packet
+bigArray = Array.fromList [Packet integerLiteral]
+bigArrayResult : option Packet
+bigArrayResult = Array.get bigArray 0
 
 mappedOption = map (\x -> (x, x)) (Some ())
 appliedOption = apply (Some (\x -> (x, x))) (Some ())

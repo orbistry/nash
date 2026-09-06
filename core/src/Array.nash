@@ -1,0 +1,20 @@
+module Array exposing (fromList, length, at, get)
+
+import Builtin
+import Literal
+import Option exposing (type option(..))
+
+fromList : list 'a -> array 'a
+fromList = Builtin.listToArray
+
+length : array 'a -> int
+length = Builtin.lengthOfArray
+
+at : array 'a -> int -> 'a
+at = Builtin.indexArray
+
+get : array 'a -> int -> option 'a
+get values index =
+    if Builtin.lessThanInteger index 0 then None
+    else if Builtin.lessThanInteger index (length values) then Some (at values index)
+    else None

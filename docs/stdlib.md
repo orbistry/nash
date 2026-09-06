@@ -290,7 +290,7 @@ conversions, keeping the intermediate container unambiguous. Builtin list
 mapping can change element kinds within Storable; it cannot produce Term
 elements. The required `pair 'k` Functor remains unresolved: `mkPairData`
 constructs only `pair Data Data`, not the arbitrary pair needed by `map`.
-The `fuzzer` impls require the real Fuzz implementation from plan 11.
+The `fuzzer` impls require the real Fuzz implementation from plan 10.
 
 ### Equality at the Big boundary
 
@@ -890,6 +890,12 @@ length : array 'a -> int
 at : array 'a -> int -> 'a                 -- errors out of bounds
 get : array 'a -> int -> option 'a
 ```
+
+`Array.get` returns None for a negative index or an index at least the
+array length; otherwise it returns Some of the indexed element. Both array
+conversion and access retain the element's Storable bound. Pair projections
+accept all Storable component types, while Pair.make only constructs Data
+pairs, matching the target builtin.
 
 ### `Map`
 
