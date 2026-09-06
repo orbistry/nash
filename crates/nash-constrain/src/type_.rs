@@ -287,10 +287,7 @@ pub const fn list_home<'a>() -> ModuleName<'a> {
 
 pub const fn literal_trait(name: &str) -> QualifiedName<'_> {
     QualifiedName {
-        home: ModuleName {
-            package: Some(nash_ast::primitives::CORE),
-            name: "Literal",
-        },
+        home: nash_ast::primitives::literal_home(),
         name,
     }
 }

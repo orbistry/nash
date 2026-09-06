@@ -3,24 +3,27 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Foo, Foo)\n\ntype alias Foo = Int\n"
 ---
 [
-    NotFoundType {
-        region: Region {
+    ExportDuplicate {
+        name: "Foo",
+        first: Region {
             start: Position {
-                line: 3,
-                column: 18,
+                line: 1,
+                column: 23,
             },
             end: Position {
-                line: 3,
-                column: 21,
+                line: 1,
+                column: 26,
             },
         },
-        prefix: None,
-        name: "Int",
-        suggestions: PossibleNames {
-            locals: [
-                "List",
-            ],
-            qualified: [],
+        second: Region {
+            start: Position {
+                line: 1,
+                column: 28,
+            },
+            end: Position {
+                line: 1,
+                column: 31,
+            },
         },
     },
 ]

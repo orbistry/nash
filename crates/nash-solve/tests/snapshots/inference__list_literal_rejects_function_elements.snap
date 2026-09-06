@@ -1,0 +1,62 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nbad = [\\x -> x]\n"
+---
+[
+    BadKind {
+        region: Region {
+            start: Position {
+                line: 2,
+                column: 1,
+            },
+            end: Position {
+                line: 2,
+                column: 4,
+            },
+        },
+        name: "bad",
+        args: [
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "list",
+                args: [
+                    Lambda(
+                        FlexVar(
+                            "a",
+                        ),
+                        FlexVar(
+                            "a",
+                        ),
+                        [],
+                    ),
+                ],
+            },
+        ],
+        reason: Mismatch {
+            expected: KindScheme {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kind: Var(
+                    0,
+                ),
+            },
+            actual: KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+            },
+        },
+    },
+]

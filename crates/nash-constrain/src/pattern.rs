@@ -85,7 +85,7 @@ pub fn add<'a>(
             let entry_type: &'a Type<'a> = bump.alloc(Type::VarN(entry_var));
             let list_type: &'a Type<'a> = bump.alloc(Type::AppN {
                 home: type_::list_home(),
-                name: "List",
+                name: "list",
                 args: bump.alloc_slice_copy(&[entry_type]),
             });
 
@@ -110,7 +110,7 @@ pub fn add<'a>(
             let entry_type: &'a Type<'a> = bump.alloc(Type::VarN(entry_var));
             let list_type: &'a Type<'a> = bump.alloc(Type::AppN {
                 home: type_::list_home(),
-                name: "List",
+                name: "list",
                 args: bump.alloc_slice_copy(&[entry_type]),
             });
 

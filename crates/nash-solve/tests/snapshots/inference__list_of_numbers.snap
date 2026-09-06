@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (numbers)\n\nnumbers = [ 1, 2, 3 ]\n"
 ---
-numbers : forall (a : Big). FromInt a => List a
+numbers : forall (a : Storable). FromInt a => list a

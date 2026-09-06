@@ -17,6 +17,13 @@ pub const fn builtin_home() -> ModuleName<'static> {
     }
 }
 
+pub const fn literal_home() -> ModuleName<'static> {
+    ModuleName {
+        package: Some(CORE),
+        name: "Literal",
+    }
+}
+
 pub const fn lift_trait() -> crate::QualifiedName<'static> {
     crate::QualifiedName {
         home: ModuleName {

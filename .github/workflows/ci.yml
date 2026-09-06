@@ -24,3 +24,5 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Tests
         run: cargo test
+      - name: Core acceptance
+        run: cargo run -p nash-cli -- check tests/core

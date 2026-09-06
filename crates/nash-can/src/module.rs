@@ -1141,7 +1141,10 @@ fn collect_from_expr<'a>(
 ) {
     use nash_ast::Expr::*;
     match expr {
-        VarLocal(_) | Str(_) | Bytes(_) | Int(_) | Accessor(_) | Unit => {}
+        VarLocal(_) | Accessor(_) | Unit => {}
+        Str(_) | Bytes(_) | Int(_) => {
+            add_if_foreign(home, nash_ast::primitives::literal_home(), used);
+        }
         VarTopLevel(q) => add_if_foreign(home, q.home, used),
         // Only the reference counts as a use: the annotation is data from
         // the origin module's solver, not something written here.
@@ -1260,7 +1263,18 @@ fn collect_from_pattern<'a>(
 ) {
     use nash_ast::Pattern::*;
     match pat {
-        Anything | Var(_) | Str(_) | Bytes(_) | Int(_) | Unit | Record(_) => {}
+        Anything | Var(_) | Unit | Record(_) => {}
+        Str(_) | Bytes(_) | Int(_) => {
+            add_if_foreign(home, nash_ast::primitives::literal_home(), used);
+            add_if_foreign(
+                home,
+                nash_ast::ModuleName {
+                    package: Some(nash_ast::primitives::CORE),
+                    name: "Eq",
+                },
+                used,
+            );
+        }
         // Only the exact builtin bool type produces this pattern form.
         Bool { .. } => {
             add_if_foreign(home, nash_ast::primitives::builtin_home(), used);

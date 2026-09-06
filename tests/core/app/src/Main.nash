@@ -1,0 +1,14 @@
+module Main exposing (..)
+
+import Builtin exposing (type bool(..), Data(..))
+import Eq exposing (Eq)
+import Literal
+
+integers = eq 1 2
+strings = neq "one" "two"
+bytes = eq #"cafe" #"cafe"
+booleans = eq True False
+units = eq () ()
+lists = eq [1, 2] [1, 2]
+pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)
+data = eq (I 1) (Constr 0 [I 1])

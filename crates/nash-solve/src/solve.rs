@@ -2704,7 +2704,7 @@ mod copy_tests {
     #[test]
     fn nested_impl_solutions_preserve_substitution_and_child_origins() {
         let bump = Bump::new();
-        let source = "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = x\nimpl Keep 'a => Keep (List 'a) where\n    keep xs = xs\nvalue = keep [[Red]]\n";
+        let source = "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = x\nimpl Keep 'a => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [[Red]]\n";
         let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
             .module()
             .unwrap();
@@ -2755,7 +2755,7 @@ mod copy_tests {
         assert_eq!(type_vars.len(), 1);
         assert!(matches!(
             uf.get(type_vars[0]).content,
-            Content::Structure(FlatType::App1(_, "List", _))
+            Content::Structure(FlatType::App1(_, "list", _))
         ));
         assert_eq!(subs.len(), 1);
         let child = solver.predicates.get(subs[0]);
@@ -2795,7 +2795,7 @@ mod copy_tests {
     #[test]
     fn retained_impl_children_and_recursive_uses_reference_final_context_slots() {
         let bump = Bump::new();
-        let source = "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (List 'a) where\n    base xs = xs\nf x = (base [let local y = g y in local x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n";
+        let source = "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (list 'a) where\n    base xs = xs\nf x = (base [let local y = g y in local x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n";
         let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
             .module()
             .unwrap();

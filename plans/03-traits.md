@@ -2619,8 +2619,18 @@ both local and imported Basics.Bool special cases are removed. Inference and
 CLI checks cover bool conditions/patterns and every Data constructor, retaining
 the specified little field types. A source-defined Basics.Bool remains an
 ordinary union, pattern-only imports count as used, and the CLI rejects I ().
-Core source modules, twin conversions, implicit imports,
-and the hierarchy acceptance example remain unfinished. The two contract
+The first real core sources are now in core/src: Eq for int, bytes, string,
+bool, unit, list, pair, and Data; Literal for the three little literal types.
+Their method bodies use the real builtin interface. The tests/core application
+checks those impls, the neq default, recursive list/pair evidence, and literal
+defaulting through the CLI in CI. This exposed and fixed list syntax still
+using Big List: literals and patterns now use little list with Storable
+elements. Existing list/evidence snapshots were corrected, and a function
+element is rejected. All compiler-known types are seeded in scope as specified;
+literal uses count their core trait imports. Formatting, strict Clippy, 1,893
+tests, snapshot hygiene, and the three-module CLI acceptance pass.
+Remaining core modules, Big twin impls/conversions, implicit imports,
+and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.
 
 Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,

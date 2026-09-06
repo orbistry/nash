@@ -1,0 +1,21 @@
+module Literal exposing (FromInt, FromString, FromBytes)
+
+import Builtin exposing (..)
+
+trait FromInt 'a where
+    fromInt : int -> 'a
+
+trait FromString 'a where
+    fromString : string -> 'a
+
+trait FromBytes 'a where
+    fromBytes : bytes -> 'a
+
+impl FromInt int where
+    fromInt = Builtin.identity
+
+impl FromString string where
+    fromString = Builtin.identity
+
+impl FromBytes bytes where
+    fromBytes = Builtin.identity

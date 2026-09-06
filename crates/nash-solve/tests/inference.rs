@@ -153,12 +153,12 @@ fn builtin_list_annotations_match_literals_and_patterns() {
         r#"
         module Main exposing (..)
 
-        import Builtin exposing (List)
+        import Builtin exposing (type list)
 
-        empty : List 'a
+        empty : list 'a
         empty = []
 
-        first : List 'a -> 'a
+        first : list 'a -> 'a
         first xs =
             case xs of
                 head :: tail -> head
@@ -869,9 +869,9 @@ fn enclosing_given_waits_for_rank_propagation_through_case_branches() {
         type Choice = First | Second
         trait Keep 'a where
             keep : 'a -> 'a
-        impl Keep 'a => Keep (List 'a) where
+        impl Keep 'a => Keep (list 'a) where
             keep xs = xs
-        f : Keep (List 'a) => List 'a -> List 'a
+        f : Keep (list 'a) => list 'a -> list 'a
         f = \xs ->
             let
                 g y =
@@ -896,7 +896,7 @@ fn impl_context_failure_reports_the_original_call() {
             keep : 'a -> 'a
         impl Keep () where
             keep x = x
-        impl Keep 'a => Keep (List 'a) where
+        impl Keep 'a => Keep (list 'a) where
             keep xs = xs
         value = keep [Red]
     "#
@@ -910,11 +910,11 @@ fn enclosing_given_wins_after_lambda_parameter_types_are_known() {
         module Main exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a
-        impl Keep 'a => Keep (List 'a) where
+        impl Keep 'a => Keep (list 'a) where
             keep xs = xs
-        direct : Keep (List 'a) => 'a -> List 'a
+        direct : Keep (list 'a) => 'a -> list 'a
         direct = \x -> keep [x]
-        nested : Keep (List 'a) => 'a -> List 'a
+        nested : Keep (list 'a) => 'a -> list 'a
         nested = \x ->
             let
                 helper ignored = keep [x]
@@ -931,7 +931,7 @@ fn expanding_impl_context_stops_with_a_diagnostic() {
         module Main exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a
-        impl Keep (List (List 'a)) => Keep (List 'a) where
+        impl Keep (list (list 'a)) => Keep (list 'a) where
             keep xs = xs
         value = keep [()]
     "#
@@ -957,7 +957,7 @@ fn inferred_context_preserves_constructed_arguments_and_recursive_groups() {
         module Main exposing (..)
         trait Observe 'a where
             observe : 'a -> ()
-        impl Observe 'a => Observe (List 'a) where
+        impl Observe 'a => Observe (list 'a) where
             observe xs = ()
         trait Keep 'a where
             keep : 'a -> 'a
@@ -2029,6 +2029,16 @@ fn builtin_list_rejects_function_elements() {
         module Main exposing (..)
         import Builtin
         bad xs = Builtin.mkCons (\x -> x) xs
+    "#
+    );
+}
+
+#[test]
+fn list_literal_rejects_function_elements() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad = [\x -> x]
     "#
     );
 }

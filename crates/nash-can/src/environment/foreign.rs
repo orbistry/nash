@@ -34,18 +34,20 @@ pub fn create_initial_env<'a>(
         q_ctors: BTreeMap::new(),
     };
 
-    // List annotations use the same builtin identity as literals and patterns.
-    let list_home = nash_ast::primitives::builtin_home();
-    env.types.insert(
-        "List",
-        Info::Specific(
-            list_home,
-            Type::Union {
-                arity: 1,
-                home: list_home,
-            },
-        ),
-    );
+    // Compiler-known types are always in scope, independently of value imports.
+    let builtin_home = nash_ast::primitives::builtin_home();
+    for primitive in nash_ast::primitives::PRIMITIVES {
+        env.types.insert(
+            primitive.name,
+            Info::Specific(
+                builtin_home,
+                Type::Union {
+                    arity: primitive.arity,
+                    home: builtin_home,
+                },
+            ),
+        );
+    }
 
     let mut errors = Vec::new();
 
@@ -527,18 +529,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_is_pre_seeded() {
+    fn primitive_types_are_pre_seeded() {
         let bump = Bump::new();
         let home = ModuleName {
             package: None,
             name: "Test",
         };
         let env = create_initial_env(&bump, home, None, &[]).unwrap();
-        match env.types.get("List") {
-            Some(Info::Specific(module, Type::Union { arity: 1, .. })) => {
-                assert_eq!(*module, nash_ast::primitives::builtin_home());
+        for primitive in nash_ast::primitives::PRIMITIVES {
+            match env.types.get(primitive.name) {
+                Some(Info::Specific(module, Type::Union { arity, .. })) => {
+                    assert_eq!(*module, nash_ast::primitives::builtin_home());
+                    assert_eq!(*arity, primitive.arity);
+                }
+                other => panic!("Expected primitive {}, got {other:?}", primitive.name),
             }
-            other => panic!("Expected Specific List Union with arity 1, got {other:?}"),
         }
     }
 }

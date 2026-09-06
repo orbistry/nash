@@ -1,0 +1,9 @@
+{
+    "type": "package",
+    "name": "nash/core",
+    "version": "0.1.0",
+    "summary": "Nash standard library",
+    "license": "Apache-2.0",
+    "exposedModules": ["Eq", "Literal"],
+    "dependencies": {}
+}
