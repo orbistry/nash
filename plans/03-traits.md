@@ -2807,6 +2807,15 @@ which docs/traits.md forbids (only reflexive Lift is currently exempt).
 The real CLI reports BadInstanceHead/NonVariableArgument. No exception has
 been added: resolving this needs a head-policy decision and a representation
 that preserves the nested pattern through coherence and evidence resolution.
+Show now covers Int, Bytes, List and Map. Primitive impls extract little
+representations; typed container bridges preserve contextual Show evidence
+for elements, keys and values. The stdlib spec makes nominal Map's
+`Map [(key, value)]` display explicit. Core acceptance covers primitives,
+nested Big lists and Map, compiling 17 modules and 143 declarations. A CLI
+case missing Show for a Map value reports MissingImpl at the outer show call.
+Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
+source-only step changes no Rust crate; rendered strings remain Plan 07
+execution checks.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

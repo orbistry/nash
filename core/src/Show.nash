@@ -103,3 +103,21 @@ impl Show Data where
             List values -> Builtin.appendString "List " (show values)
             I integer -> Builtin.appendString "I " (show integer)
             B bytes -> Builtin.appendString "B " (show bytes)
+
+impl Show Int where
+    show value = show (Builtin.unIData (Builtin.castToData value))
+
+impl Show Bytes where
+    show value = show (Builtin.unBData (Builtin.castToData value))
+
+impl Show 'a => Show (List 'a) where
+    show value = show (unwrapList value)
+
+unwrapList : List 'a -> list 'a
+unwrapList = Builtin.castLower
+
+impl (Show 'k, Show 'v) => Show (Map 'k 'v) where
+    show value = Builtin.appendString "Map " (show (unwrapMap value))
+
+unwrapMap : Map 'k 'v -> list (pair 'k 'v)
+unwrapMap = Builtin.castLower

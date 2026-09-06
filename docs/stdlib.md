@@ -291,6 +291,10 @@ twin types (`option`, `Option`, ...) are in the twin's module.
   Unicode escapes. Other Unicode text is preserved.
 - Booleans render as `True` or `False`; unit renders as `()`.
 - Lists use `[a, b]`; builtin pairs use `(a, b)`, recursively showing elements.
+- Big Int and Bytes use the same decimal and hexadecimal formats as their
+  little twins. Big List uses `[a, b]` and requires Show for its element type.
+  Big Map uses `Map [(key, value)]` and requires Show for both key and value
+  types. These containers show their typed elements, not erased Data fields.
 - Tuples through four components use `(a, b, ...)`, recursively showing each
   component with a comma and space between components.
 - Data uses `Constr tag [fields]`, `Map [(key, value)]`, `List [values]`,

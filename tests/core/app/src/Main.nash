@@ -18,6 +18,9 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+shownBigPrimitives = (show integerLiteral, show bytesLiteral)
+shownBigContainers = (show bigList, show nestedBigLists, show bigMap)
+
 bigList : List Int
 bigList = lift [1, 2]
 littleList : list int
