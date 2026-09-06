@@ -2743,6 +2743,20 @@ representation spec: validateData returns the validated value and traps on
 failure; other Big conversions require typed casts, not polymorphic identity.
 Formatting, strict Clippy, 1,912 tests and snapshot hygiene pass. These are
 source-only changes; runtime helper results await Plan 07.
+The frontend cast prerequisite now follows the existing Plan 07 contract:
+Builtin.castToData, castFromDataShallow, castValidateData, castLift and castLower
+have independent source/target variables and symbolic lowering operations.
+Only exact nash/core may name them, including qualified, aliased, wildcard and
+explicit imports. Canonicalizer snapshots check every route and package-name
+near misses; an inference snapshot preserves all five nominal signatures.
+Core cast generation, validation checkers and execution remain Plan 07.
+The stdlib Lift sketch now uses these bindings instead of assigning Data-valued
+UPLC builtins to nominal Int/Bytes/List/Map conversions. Actual cast-dependent
+core impls remain to be written.
+The real CLI compiles a core cast module and application wrapper (two modules,
+six declarations), and rejects an application explicitly importing a cast.
+Existing core acceptance remains 17 modules and 104 declarations. Formatting,
+strict Clippy, 1,914 tests and snapshot hygiene pass (three ignored doctests).
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

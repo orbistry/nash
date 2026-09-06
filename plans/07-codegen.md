@@ -1335,6 +1335,11 @@ introduces through a small set of intrinsics the stdlib can name:
 `Builtin.castLift`, `Builtin.castLower`, each typed `'a -> 'b` and only
 usable inside `core/`.
 
+Plan 03 supplies these frontend schemes, symbolic builtin lowering operations,
+and exact `nash/core` package visibility so the core trait impls can type-check.
+This chunk consumes those bindings; it still owns typed Core casts, validation
+checkers, lowering and execution tests.
+
 **Code**
 
 `checkers.rs`:

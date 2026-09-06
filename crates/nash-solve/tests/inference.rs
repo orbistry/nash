@@ -2951,3 +2951,43 @@ fn imported_higher_kinded_value_preserves_application() {
     assert_eq!(annotations["value"].kinds, annotation.kinds);
     insta::assert_snapshot!(render_annotations(&annotations));
 }
+
+#[test]
+fn core_cast_schemes_preserve_nominal_source_and_target_types() {
+    let bump = Bump::new();
+    let source = indoc!(
+        "
+        module Casts exposing (..)
+        import Builtin
+        lift : int -> Int
+        lift = Builtin.castLift
+        lower : Int -> int
+        lower = Builtin.castLower
+        erase : Int -> Data
+        erase = Builtin.castToData
+        shallow : Data -> Int
+        shallow = Builtin.castFromDataShallow
+        validate : Data -> Int
+        validate = Builtin.castValidateData
+    "
+    );
+    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let interfaces = literal_interfaces(&bump);
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: Some(nash_ast::primitives::CORE),
+            interfaces: Some(&interfaces),
+        },
+        &parsed,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    assert_eq!(solved.instances.len(), 5);
+    insta::assert_snapshot!(render_annotations(&annotations));
+}

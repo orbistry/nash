@@ -355,17 +355,17 @@ trait Lift 'small 'big where
     lower : 'big -> 'small
 
 impl Lift int Int where
-    lift = Builtin.iData
-    lower = Builtin.unIData
+    lift = Builtin.castLift
+    lower = Builtin.castLower
 
 impl Lift bytes Bytes where
-    lift = Builtin.bData
-    lower = Builtin.unBData
+    lift = Builtin.castLift
+    lower = Builtin.castLower
 
 -- text: `string` is the little twin of `Bytes` holding UTF-8
 impl Lift string Bytes where
-    lift s = Builtin.bData (Builtin.encodeUtf8 s)
-    lower b = Builtin.decodeUtf8 (Builtin.unBData b)
+    lift s = Builtin.castLift (Builtin.encodeUtf8 s)
+    lower b = Builtin.decodeUtf8 (Builtin.castLower b)
 
 -- The reflexive `impl Big 'a => Lift 'a 'a` (identity both ways) is
 -- compiler-provided (traits.md "Impl declarations"); it is not written here.
@@ -373,12 +373,12 @@ impl Lift string Bytes where
 -- walks the list; `lift : list Int -> List Int` picks the reflexive
 -- element impl and the optimizer removes the identity map, leaving `listData`
 impl Lift 'a 'b => Lift (list 'a) (List 'b) where
-    lift xs = Builtin.listData (mapList lift xs)
-    lower xs = mapList lower (Builtin.unListData xs)
+    lift xs = Builtin.castLift (mapList lift xs)
+    lower xs = mapList lower (Builtin.castLower xs)
 
 impl Lift (list (pair 'k 'v)) (Map 'k 'v) where
-    lift = Builtin.mapData
-    lower = Builtin.unMapData
+    lift = Builtin.castLift
+    lower = Builtin.castLower
 ```
 
 This is representation.md's impl table. There is no overlap: `list 'a` is
@@ -548,9 +548,16 @@ Rules:
 - Type variables are kind-restricted as UPLC requires: elements of
   `list`/`array` and components of `pair` are `Storable`; `'a` in
   `ifThenElse`, `chooseUnit`, `chooseList`, `chooseData`, `trace` is `Any`.
-- `Builtin.identity : 'a -> 'a` and `Builtin.error : unit -> 'a` are the
-  only entries with no `DefaultFunction`; they lower to nothing and to
-  the UPLC `error` term.
+- `Builtin.identity : 'a -> 'a` and `Builtin.error : unit -> 'a` lower to
+  nothing and to the UPLC `error` term.
+- `Builtin.castToData`, `castFromDataShallow`, `castValidateData`, `castLift`,
+  and `castLower` each have scheme `forall a b. a -> b`. Only the exact
+  `nash/core` package can import these intrinsics, through any import route.
+  Their symbolic operations are retained for typed Cast lowering in Plan 07;
+  they are not UPLC DefaultFunction entries. Plan 03 supplies the frontend
+  bindings needed by the core impl bodies; code generation and validation
+  checkers remain Plan 07 work. These bindings do not make distinct nominal
+  types unify.
 
 | DefaultFunction | Nash name | Type |
 |---|---|---|

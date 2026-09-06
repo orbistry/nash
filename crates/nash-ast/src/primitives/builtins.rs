@@ -11,6 +11,25 @@ pub enum BuiltinLowering {
     Plutus(&'static str),
     Identity,
     Error,
+    /// Core-only representation intrinsics; lowered to typed casts in Plan 07.
+    CastToData,
+    CastFromDataShallow,
+    CastValidateData,
+    CastLift,
+    CastLower,
+}
+
+impl BuiltinLowering {
+    pub fn is_core_only(self) -> bool {
+        matches!(
+            self,
+            Self::CastToData
+                | Self::CastFromDataShallow
+                | Self::CastValidateData
+                | Self::CastLift
+                | Self::CastLower
+        )
+    }
 }
 
 pub struct Builtin {
@@ -628,4 +647,19 @@ pub const BUILTINS: &[Builtin] = &[
     ),
     builtin!("identity", Identity, ["a"], function!(A, A)),
     builtin!("error", Error, ["a"], function!(UNIT, A)),
+    builtin!("castToData", CastToData, ["a", "b"], function!(A, B)),
+    builtin!(
+        "castFromDataShallow",
+        CastFromDataShallow,
+        ["a", "b"],
+        function!(A, B)
+    ),
+    builtin!(
+        "castValidateData",
+        CastValidateData,
+        ["a", "b"],
+        function!(A, B)
+    ),
+    builtin!("castLift", CastLift, ["a", "b"], function!(A, B)),
+    builtin!("castLower", CastLower, ["a", "b"], function!(A, B)),
 ];
