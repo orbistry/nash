@@ -2726,6 +2726,14 @@ bool to Unit reports MissingImpl at the original outer `lift` call. Option's
 Functor/Applicative/Monad impls and remaining helpers are still pending;
 this does not complete the hierarchy. Formatting, strict Clippy, 1,912 tests
 and snapshot hygiene pass; no Rust crate changes in this source-only step.
+Result now declares both twins and supplies withDefault, mapError, Eq and
+contextual Lift for separate error/success payloads. Core CLI acceptance uses
+result unit bool and Result Unit Bool, checking Ok and Err in both directions,
+then the helpers and Eq. It compiles 16 modules and 94 declarations. Swapping
+the destination payload types reports both missing payload Lift impls at the
+original call. Formatting, strict Clippy, 1,912 tests and snapshot hygiene
+pass. Higher-kinded Result impls remain pending; runtime round trips still
+depend on Plan 07. This source-only step changes no Rust crate.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

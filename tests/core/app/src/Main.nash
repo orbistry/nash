@@ -15,6 +15,23 @@ import Prelude exposing (..)
 import Lift exposing (Lift)
 import Unit exposing (Unit)
 import Option exposing (Option, type option(..))
+import Result exposing (Result, type result(..))
+
+okResult : result unit bool
+okResult = Ok True
+errResult : result unit bool
+errResult = Err ()
+liftedOk : Result Unit Bool.Bool
+liftedOk = lift okResult
+liftedErr : Result Unit Bool.Bool
+liftedErr = lift errResult
+loweredOk : result unit bool
+loweredOk = lower liftedOk
+loweredErr : result unit bool
+loweredErr = lower liftedErr
+resultDefault = Result.withDefault False errResult
+resultMappedError = Result.mapError (\_ -> True) errResult
+resultEquality = (eq okResult errResult, eq errResult errResult)
 
 optionalEquality = eq (Some True) (Some False)
 optionalDefault = Option.withDefault True None

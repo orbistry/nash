@@ -1,0 +1,37 @@
+module Result exposing (Result(..), type result(..), withDefault, mapError)
+
+import Builtin exposing (type bool(..))
+import Eq exposing (Eq)
+import Lift exposing (Lift)
+
+type result 'e 'a = Ok 'a | Err 'e
+type Result 'e 'a = Ok 'a | Err 'e
+
+withDefault : 'a -> result 'e 'a -> 'a
+withDefault fallback value =
+    case value of
+        Ok item -> item
+        Err _ -> fallback
+
+mapError : ('e -> 'f) -> result 'e 'a -> result 'f 'a
+mapError change value =
+    case value of
+        Ok item -> Ok item
+        Err error -> Err (change error)
+
+impl (Eq 'e, Eq 'a) => Eq (result 'e 'a) where
+    eq a b =
+        case (a, b) of
+            (Ok x, Ok y) -> eq x y
+            (Err x, Err y) -> eq x y
+            _ -> False
+
+impl (Lift 'e 'f, Lift 'a 'b) => Lift (result 'e 'a) (Result 'f 'b) where
+    lift value =
+        case value of
+            Ok item -> Result.Ok (lift item)
+            Err error -> Result.Err (lift error)
+    lower value =
+        case value of
+            Result.Ok item -> Ok (lower item)
+            Result.Err error -> Err (lower error)
