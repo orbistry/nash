@@ -52,7 +52,13 @@ Interface {
             precedence: Precedence(
                 6,
             ),
-            function: "apR",
+            function: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "apR",
+            },
         },
     ],
 }

@@ -111,15 +111,15 @@ pub fn canonicalize<'a>(
         ))
     }));
     environment::local::add_ctors(bump, &mut env, module.unions, unions, aliases)?;
-    environment::local::check_binops(&env, module.binops)?;
 
     let mut warnings = Vec::new();
     let traits = crate::traits::canonicalize(bump, &mut env, &mut kind_env, module, &mut warnings)?;
+    environment::local::check_binops(&env, module.binops)?;
     let impls = crate::impls::canonicalize(bump, &env, &kind_env, module.impls, &mut warnings)?;
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
     kinds::check_decl_annotations(bump, &kind_env, home, decls)?;
     kinds::check_trait_method_annotations(bump, &kind_env, home, traits, impls)?;
-    let binops = canonicalize_binops(bump, module.binops);
+    let binops = canonicalize_binops(bump, &env, module.binops);
     let exports = canonicalize_exports(bump, module)?;
 
     let can_module = CanModule {
@@ -992,16 +992,28 @@ fn type_suggestions<'a>(
 
 fn canonicalize_binops<'a>(
     bump: &'a Bump,
+    env: &Env<'a>,
     binops: &'a [&'a Located<Infix<'a>>],
 ) -> &'a [&'a Located<CanBinop<'a>>] {
     bump.alloc_slice_fill_iter(binops.iter().copied().map(|binop| {
+        let (home, annotation) = match env.vars.get(binop.value.name) {
+            Some(environment::Var::TopLevel(_)) => (env.home, None),
+            Some(environment::Var::Method {
+                trait_, annotation, ..
+            }) => (trait_.home, Some(*annotation)),
+            _ => unreachable!("check_binops validates every backing function"),
+        };
         &*bump.alloc(Located::at(
             binop.region,
             CanBinop {
                 symbol: binop.value.op,
                 associativity: binop.value.associativity,
                 precedence: binop.value.precedence,
-                function: binop.value.name,
+                function: nash_ast::QualifiedName {
+                    home,
+                    name: binop.value.name,
+                },
+                annotation,
             },
         ))
     }))
@@ -1012,6 +1024,9 @@ fn canonicalize_binops<'a>(
 fn collect_used_modules<'a>(module: &CanModule<'a>) -> BTreeSet<&'a str> {
     let mut used = BTreeSet::new();
     let home = module.name;
+    for binop in module.binops {
+        add_if_foreign(home, binop.value.function.home, &mut used);
+    }
     collect_from_decls(module.decls, home, &mut used);
     for impl_ in module.impls {
         add_if_foreign(home, impl_.value.trait_.home, &mut used);
@@ -1140,16 +1155,16 @@ fn collect_from_expr<'a>(
             add_if_foreign(home, reference.home, used);
             collect_from_type(&annotation.typ.value, home, used);
         }
-        VarOperator { reference, .. } => {
-            add_if_foreign(home, reference.home, used);
+        VarOperator { operator_home, .. } => {
+            add_if_foreign(home, *operator_home, used);
         }
         Binop {
-            reference,
+            operator_home,
             left,
             right,
             ..
         } => {
-            add_if_foreign(home, reference.home, used);
+            add_if_foreign(home, *operator_home, used);
             collect_from_expr(&left.value, home, used);
             collect_from_expr(&right.value, home, used);
         }
@@ -3019,35 +3034,65 @@ mod tests {
                     annotation: test_annotation(bump),
                     associativity: Associativity::Left,
                     precedence: Precedence(6),
-                    function: "add",
+                    function: nash_ast::QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Basics",
+                        },
+                        name: "add",
+                    },
                 },
                 InterfaceBinop {
                     symbol: "-",
                     annotation: test_annotation(bump),
                     associativity: Associativity::Left,
                     precedence: Precedence(6),
-                    function: "sub",
+                    function: nash_ast::QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Basics",
+                        },
+                        name: "sub",
+                    },
                 },
                 InterfaceBinop {
                     symbol: "*",
                     annotation: test_annotation(bump),
                     associativity: Associativity::Left,
                     precedence: Precedence(7),
-                    function: "mul",
+                    function: nash_ast::QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Basics",
+                        },
+                        name: "mul",
+                    },
                 },
                 InterfaceBinop {
                     symbol: "|>",
                     annotation: test_annotation(bump),
                     associativity: Associativity::Left,
                     precedence: Precedence(0),
-                    function: "apR",
+                    function: nash_ast::QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Basics",
+                        },
+                        name: "apR",
+                    },
                 },
                 InterfaceBinop {
                     symbol: "<|",
                     annotation: test_annotation(bump),
                     associativity: Associativity::Right,
                     precedence: Precedence(0),
-                    function: "apL",
+                    function: nash_ast::QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Basics",
+                        },
+                        name: "apL",
+                    },
                 },
             ]),
         }
@@ -3575,7 +3620,13 @@ mod tests {
                 annotation: test_annotation(&bump),
                 associativity: Associativity::Left,
                 precedence: Precedence(6),
-                function: "myAdd",
+                function: nash_ast::QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "MyMath",
+                    },
+                    name: "myAdd",
+                },
             }]),
         };
         let interfaces = BTreeMap::from([("Basics", basics), ("MyMath", mymath)]);
@@ -3623,7 +3674,13 @@ mod tests {
                 annotation: test_annotation(&bump),
                 associativity: Associativity::None,
                 precedence: Precedence(4),
-                function: "eq",
+                function: nash_ast::QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Basics",
+                    },
+                    name: "eq",
+                },
             }]),
         };
         let interfaces = BTreeMap::from([("Basics", basics)]);

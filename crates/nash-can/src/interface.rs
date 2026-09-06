@@ -78,14 +78,16 @@ pub struct InterfaceAlias<'a> {
 }
 
 /// Mirrors Elm's `I.Binop op annotation associativity precedence`: the
-/// annotation is the underlying function's, from the solver.
+/// annotation is the underlying function's solved scheme or the trait
+/// method's checked scheme. The function retains its defining module even
+/// when another module declares the operator.
 #[derive(Clone, Copy, Debug)]
 pub struct InterfaceBinop<'a> {
     pub symbol: &'a str,
     pub annotation: &'a Annotation<'a>,
     pub associativity: Associativity,
     pub precedence: Precedence,
-    pub function: &'a str,
+    pub function: nash_ast::QualifiedName<'a>,
 }
 
 /// Type annotations for every top-level value of a module, as produced by
@@ -269,12 +271,12 @@ fn extract_binops<'a>(
             .iter()
             .filter_map(|binop| {
                 if is_exported_binop(exports, binop.value.symbol) {
-                    // Elm's `toOp` uses `annotations ! name`: the operator's
-                    // function must be a solved top-level value.
-                    let annotation = annotations
-                        .get(binop.value.function)
-                        .copied()
-                        .expect("solver annotations cover every operator function");
+                    let annotation = binop.value.annotation.unwrap_or_else(|| {
+                        annotations
+                            .get(binop.value.function.name)
+                            .copied()
+                            .expect("solver annotations cover every local operator function")
+                    });
                     Some(InterfaceBinop {
                         symbol: binop.value.symbol,
                         annotation,

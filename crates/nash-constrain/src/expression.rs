@@ -1523,6 +1523,7 @@ mod node_tests {
             region,
             CanExpr::Binop {
                 symbol: "+",
+                operator_home: reference.home,
                 reference,
                 annotation,
                 left: local,

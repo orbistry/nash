@@ -126,7 +126,14 @@ Module {
                 precedence: Precedence(
                     4,
                 ),
-                function: "eq",
+                function: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "eq",
+                },
+                annotation: None,
             },
         },
     ],

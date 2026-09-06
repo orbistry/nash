@@ -1,0 +1,12 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: "output.join(\"\\n\")"
+---
+Main:
+left : ()
+operator : forall (a : Any). Select a => a -> a -> a
+pick : forall (a : Any). Select a => a -> a -> a
+right : ()
+section : () -> ()
+OnlyOperators:
+value : ()

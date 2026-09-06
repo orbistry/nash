@@ -167,7 +167,10 @@ pub fn check_binops<'a>(
 
     let mut errors = Vec::new();
     for binop in binops {
-        if !matches!(env.vars.get(binop.value.name), Some(Var::TopLevel(_))) {
+        if !matches!(
+            env.vars.get(binop.value.name),
+            Some(Var::TopLevel(_) | Var::Method { .. })
+        ) {
             errors.push(Error::BinopFunctionNotFound {
                 region: binop.region,
                 op: binop.value.op,

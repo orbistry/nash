@@ -2420,7 +2420,15 @@ the syntax. Canonical Negate, the fabricated annotation, and the dedicated
 constraint/error paths are removed. A real CLI workspace accepts imported
 core Num calls with a concrete impl; changing only the package identity rejects
 the same prefix expressions with NegateWithoutNum. Formatting, strict Clippy,
-the full tests, and snapshot hygiene pass. Operator-method integration remains.
+the full tests, and snapshot hygiene pass for negation. Operators now accept
+local and imported trait methods. Interfaces retain the checked method scheme
+and original method identity separately from the operator provider. The
+cross-module inference regression covers generic uses, concrete impl evidence,
+sections, operator values, and a consumer importing only the operator provider.
+All five Main operator nodes and the transitive consumer retain evidence at
+their own NodeIds. A three-module CLI project compiles these uses; applying
+the same operator to tuples reports MissingImpl for Methods.Select at the
+operator expression, with the available unit impl listed.
 The real CLI accepts a concrete option block with bind, let, discard, and final
 expression statements, and reports RefutableBindPattern at an invalid `<-`
 pattern. The superseded Unsupported test was removed. Formatting, strict
@@ -2481,9 +2489,13 @@ region; `Expr::Negate` and `Category::Negate`/`Context::Negate` are deleted
 from `nash-ast`/`nash-constrain` (Elm keeps them only because `number` is
 magic).
 
-`check_binops` (`local.rs:150`): accept `Var::Method` as the operator's
-function. `interface.rs::extract_binops` takes the method's annotation
-from the trait instead of `annotations` when the function is a method.
+`check_binops` runs after trait canonicalization and accepts `Var::Method`
+as the operator's function, including exposed imported methods. Canonical
+binops retain the qualified backing function and its checked method scheme;
+`interface.rs::extract_binops` uses that scheme directly, and only looks up
+local ordinary functions in the solver's `annotations`. Imported operator
+uses retain their provider separately for import accounting. Trait identity
+and evidence continue to refer to the original defining module.
 
 Elm reference: `Canonicalize/Expression.hs::canonicalize` (`Src.Negate`),
 `Canonicalize/Environment/Local.hs::addVars`.

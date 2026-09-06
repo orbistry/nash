@@ -109,6 +109,10 @@ Module {
                 },
                 value: Binop {
                     symbol: "+",
+                    operator_home: ModuleName {
+                        package: None,
+                        name: "Basics",
+                    },
                     reference: QualifiedName {
                         home: ModuleName {
                             package: None,
@@ -177,6 +181,10 @@ Module {
                         },
                         value: Binop {
                             symbol: "*",
+                            operator_home: ModuleName {
+                                package: None,
+                                name: "Basics",
+                            },
                             reference: QualifiedName {
                                 home: ModuleName {
                                     package: None,

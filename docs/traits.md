@@ -552,7 +552,10 @@ Notes:
   (`infix non 4 (==) = eq`, `infix left 6 (+) = add`, `infix left 7 (/) = div`,
   `infix left 1 (>>=) = bind`, ...; the full table is in
   [stdlib.md](stdlib.md)). An operator whose function is a method
-  canonicalizes to a `Binop` whose annotation is the method scheme.
+  canonicalizes to a `Binop` whose annotation is the checked method scheme.
+  Interfaces retain the backing method's defining module independently of
+  the module that declares the operator. Operator values and sections use
+  the same scheme; each operator node owns its solved evidence.
 - Kinds: `ToData`/`FromData` parameters are `Big`; `Lift` pairs a `Const`
   or `Term` type with a `Big` type; `Functor`/`Applicative`/`Monad` are
   kind-polymorphic (`List`, `list`, `option`, `fuzzer`).

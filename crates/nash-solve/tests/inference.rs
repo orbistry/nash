@@ -1897,6 +1897,110 @@ fn string_literal_requires_an_impl_for_the_result_type() {
 }
 
 #[test]
+fn operator_methods_preserve_provider_and_backing_method() {
+    let bump = Bump::new();
+    let mut interfaces = std::collections::BTreeMap::new();
+    let sources = [
+        (
+            "Methods",
+            "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select () where\n    select x _ = x\n",
+        ),
+        (
+            "Operators",
+            "module Operators exposing ((<*>))\nimport Methods exposing (Select)\ninfix left 5 (<*>) = select\n",
+        ),
+        (
+            "Main",
+            "module Main exposing (..)\nimport Methods exposing ((<+>))\nimport Operators exposing ((<*>))\npick x y = x <*> y\nleft = () <+> ()\nright = () <*> ()\nsection = (() <*>)\noperator = (<*>)\n",
+        ),
+        (
+            "OnlyOperators",
+            "module OnlyOperators exposing (..)\nimport Operators exposing ((<*>))\nvalue = () <*> ()\n",
+        ),
+    ];
+    let mut output = Vec::new();
+    for (name, source) in sources {
+        let module = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &module,
+        )
+        .unwrap();
+        assert!(
+            canonical.warnings.is_empty(),
+            "{name}: {:?}",
+            canonical.warnings
+        );
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let (annotations, solved) =
+            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+        let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
+        for binop in interface.binops {
+            assert_eq!(binop.function.home.name, "Methods");
+            assert_eq!(binop.function.name, "select");
+            assert_eq!(binop.annotation.context[0].trait_.home.name, "Methods");
+        }
+        if name == "Main" || name == "OnlyOperators" {
+            let mut decls = canonical.module.decls;
+            let mut checked = 0;
+            while let nash_ast::Decls::Declare { definition, next } = decls {
+                let nash_ast::Def::Def { name, body, .. } = definition else {
+                    panic!("inferred operator use")
+                };
+                let body = if let nash_ast::Expr::Lambda { body, .. } = body.value {
+                    body
+                } else {
+                    body
+                };
+                let (operator_home, reference) = match body.value {
+                    nash_ast::Expr::Binop {
+                        operator_home,
+                        reference,
+                        ..
+                    }
+                    | nash_ast::Expr::VarOperator {
+                        operator_home,
+                        reference,
+                        ..
+                    } => (operator_home, reference),
+                    _ => panic!("operator use or section body"),
+                };
+                assert_eq!(reference.home.name, "Methods");
+                assert_eq!(reference.name, "select");
+                assert_eq!(
+                    operator_home.name,
+                    if name.value == "left" {
+                        "Methods"
+                    } else {
+                        "Operators"
+                    }
+                );
+                assert_eq!(
+                    solved.instances[&nash_ast::NodeId::expr(body)]
+                        .evidence
+                        .len(),
+                    1
+                );
+                checked += 1;
+                decls = next;
+            }
+            assert_eq!(checked, if name == "Main" { 5 } else { 1 });
+            assert_eq!(solved.instances.values().filter(|instance| matches!(instance.evidence, [nash_ast::Evidence::Impl { impl_, .. }] if impl_.home.name == "Methods" && impl_.key.trait_.name == "Select")).count(), if name == "Main" { 3 } else { 1 });
+            output.push(format!("{name}:\n{}", render_annotations(&annotations)));
+        }
+        interfaces.insert(name, interface);
+    }
+    insta::assert_snapshot!(output.join("\n"));
+}
+
+#[test]
 fn nested_operator_sections_apply() {
     let bump = Bump::new();
     let operators = "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n";

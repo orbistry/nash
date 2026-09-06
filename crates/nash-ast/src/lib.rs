@@ -211,7 +211,10 @@ pub struct Binop<'a> {
     pub symbol: &'a str,
     pub associativity: Associativity,
     pub precedence: Precedence,
-    pub function: &'a str,
+    pub function: QualifiedName<'a>,
+    /// Checked method scheme; local functions receive their solved scheme
+    /// when the module interface is built.
+    pub annotation: Option<&'a Annotation<'a>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -246,6 +249,7 @@ pub enum Expr<'a> {
     /// Mirrors Elm's `Can.VarOperator op home name annotation`.
     VarOperator {
         symbol: &'a str,
+        operator_home: ModuleName<'a>,
         reference: QualifiedName<'a>,
         annotation: &'a Annotation<'a>,
     },
@@ -256,6 +260,7 @@ pub enum Expr<'a> {
     /// Mirrors Elm's `Can.Binop op home name annotation left right`.
     Binop {
         symbol: &'a str,
+        operator_home: ModuleName<'a>,
         reference: QualifiedName<'a>,
         annotation: &'a Annotation<'a>,
         left: &'a Located<Expr<'a>>,

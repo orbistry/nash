@@ -196,14 +196,14 @@ pub fn make_record_ctor<'a>(
 /// `Env.Binop op home name annotation associativity precedence`.
 ///
 /// Like Elm, only IMPORTED operators are in scope: the defining module's
-/// own `infix` declarations do not enter its env (their annotations only
-/// exist once that module has been solved), so a module calls the
-/// operator's underlying function directly, as Elm core modules do.
+/// own `infix` declarations do not enter its env, so a module calls the
+/// underlying function or method directly. Local function annotations
+/// become available after solving; trait method schemes are checked earlier.
 #[derive(Clone, Copy, Debug)]
 pub struct Binop<'a> {
     pub symbol: &'a str,
     pub home: ModuleName<'a>,
-    pub function: &'a str,
+    pub function: nash_ast::QualifiedName<'a>,
     pub annotation: &'a nash_ast::Annotation<'a>,
     pub associativity: Associativity,
     pub precedence: Precedence,

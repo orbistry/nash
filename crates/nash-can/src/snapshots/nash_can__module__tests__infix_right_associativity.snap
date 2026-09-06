@@ -157,7 +157,14 @@ Module {
                 precedence: Precedence(
                     0,
                 ),
-                function: "apL",
+                function: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "apL",
+                },
+                annotation: None,
             },
         },
     ],

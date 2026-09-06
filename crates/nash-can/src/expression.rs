@@ -176,10 +176,8 @@ pub fn canonicalize_expr<'a>(
             let binop = env.find_binop(bump, region, symbol)?;
             CanExpr::VarOperator {
                 symbol,
-                reference: QualifiedName {
-                    home: binop.home,
-                    name: binop.function,
-                },
+                operator_home: binop.home,
+                reference: binop.function,
                 annotation: binop.annotation,
             }
         }
@@ -872,7 +870,7 @@ fn canonicalize_update<'a>(
 struct ResolvedOp<'a> {
     symbol: &'a str,
     home: ModuleName<'a>,
-    function: &'a str,
+    function: QualifiedName<'a>,
     annotation: &'a Annotation<'a>,
     associativity: nash_ast::Associativity,
     precedence: nash_ast::Precedence,
@@ -979,10 +977,8 @@ fn build_tree_rec<'a>(
         Region::span_across(&left.region, &right.region),
         CanExpr::Binop {
             symbol: op.symbol,
-            reference: QualifiedName {
-                home: op.home,
-                name: op.function,
-            },
+            operator_home: op.home,
+            reference: op.function,
             annotation: op.annotation,
             left,
             right,
