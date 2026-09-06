@@ -161,7 +161,7 @@ pub fn check_binops<'a>(
     for binop in binops {
         if !matches!(
             env.vars.get(binop.value.name),
-            Some(Var::TopLevel(_) | Var::Method { .. })
+            Some(Var::TopLevel(_) | Var::Method { .. } | Var::Foreign(..))
         ) {
             errors.push(Error::BinopFunctionNotFound {
                 region: binop.region,

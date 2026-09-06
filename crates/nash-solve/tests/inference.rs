@@ -1916,11 +1916,11 @@ fn operator_methods_preserve_provider_and_backing_method() {
     let sources = [
         (
             "Methods",
-            "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select () where\n    select x _ = x\n",
+            "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select () where\n    select x _ = x\nplain : 'a -> 'a -> 'a\nplain x _ = x\n",
         ),
         (
             "Operators",
-            "module Operators exposing ((<*>))\nimport Methods exposing (Select)\ninfix left 5 (<*>) = select\n",
+            "module Operators exposing ((<*>), (<|>))\nimport Methods exposing (Select, plain)\ninfix left 5 (<*>) = select\ninfix left 5 (<|>) = plain\n",
         ),
         (
             "Main",
@@ -1928,7 +1928,7 @@ fn operator_methods_preserve_provider_and_backing_method() {
         ),
         (
             "OnlyOperators",
-            "module OnlyOperators exposing (..)\nimport Operators exposing ((<*>))\nvalue = () <*> ()\n",
+            "module OnlyOperators exposing (..)\nimport Operators exposing ((<*>), (<|>))\nvalue = () <*> ()\nordinary = () <|> ()\n",
         ),
     ];
     let mut output = Vec::new();
@@ -1957,8 +1957,13 @@ fn operator_methods_preserve_provider_and_backing_method() {
         let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
         for binop in interface.binops {
             assert_eq!(binop.function.home.name, "Methods");
-            assert_eq!(binop.function.name, "select");
-            assert_eq!(binop.annotation.context[0].trait_.home.name, "Methods");
+            if binop.symbol == "<|>" {
+                assert_eq!(binop.function.name, "plain");
+                assert!(binop.annotation.context.is_empty());
+            } else {
+                assert_eq!(binop.function.name, "select");
+                assert_eq!(binop.annotation.context[0].trait_.home.name, "Methods");
+            }
         }
         if name == "Main" || name == "OnlyOperators" {
             let mut decls = canonical.module.decls;
@@ -1986,7 +1991,8 @@ fn operator_methods_preserve_provider_and_backing_method() {
                     _ => panic!("operator use or section body"),
                 };
                 assert_eq!(reference.home.name, "Methods");
-                assert_eq!(reference.name, "select");
+                let ordinary = name.value == "ordinary";
+                assert_eq!(reference.name, if ordinary { "plain" } else { "select" });
                 assert_eq!(
                     operator_home.name,
                     if name.value == "left" {
@@ -1999,12 +2005,12 @@ fn operator_methods_preserve_provider_and_backing_method() {
                     solved.instances[&nash_ast::NodeId::expr(body)]
                         .evidence
                         .len(),
-                    1
+                    if ordinary { 0 } else { 1 }
                 );
                 checked += 1;
                 decls = next;
             }
-            assert_eq!(checked, if name == "Main" { 5 } else { 1 });
+            assert_eq!(checked, if name == "Main" { 5 } else { 2 });
             assert_eq!(solved.instances.values().filter(|instance| matches!(instance.evidence, [nash_ast::Evidence::Impl { impl_, .. }] if impl_.home.name == "Methods" && impl_.key.trait_.name == "Select")).count(), if name == "Main" { 3 } else { 1 });
             output.push(format!("{name}:\n{}", render_annotations(&annotations)));
         }

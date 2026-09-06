@@ -9,4 +9,5 @@ pick : forall (a : Any). Select a => a -> a -> a
 right : ()
 section : () -> ()
 OnlyOperators:
+ordinary : ()
 value : ()

@@ -212,7 +212,7 @@ pub struct Binop<'a> {
     pub associativity: Associativity,
     pub precedence: Precedence,
     pub function: QualifiedName<'a>,
-    /// Checked method scheme; local functions receive their solved scheme
+    /// Checked method or imported value scheme; local functions receive their solved scheme
     /// when the module interface is built.
     pub annotation: Option<&'a Annotation<'a>>,
 }

@@ -998,6 +998,7 @@ fn canonicalize_binops<'a>(
     bump.alloc_slice_fill_iter(binops.iter().copied().map(|binop| {
         let (home, annotation) = match env.vars.get(binop.value.name) {
             Some(environment::Var::TopLevel(_)) => (env.home, None),
+            Some(environment::Var::Foreign(home, annotation)) => (*home, Some(*annotation)),
             Some(environment::Var::Method {
                 trait_, annotation, ..
             }) => (trait_.home, Some(*annotation)),
