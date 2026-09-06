@@ -7,11 +7,25 @@ import Num exposing (Num)
 import Integral exposing (Integral)
 import Semigroup exposing (Semigroup)
 import Monoid exposing (Monoid)
+import Ord exposing (Ord)
+import Ordering exposing (type ordering(..))
 
 integers = eq 1 2
 strings = neq "one" "two"
 bytes = eq #"cafe" #"cafe"
 booleans = eq True False
+integerOrder = compare 1 2
+byteOrder = compare #"00" #"ff"
+stringOrder = compare "a" "b"
+boolOrder = compare False True
+unitOrder = compare () ()
+listOrder = compare [1, 2] [1, 3]
+orderingEqual = eq (Ordering.invert LT) GT
+orderingThen = Ordering.then_ EQ LT
+orderDefaults = ((lt 1 2, le 1 2, gt 2 1), (ge 2 1, max 1 2, min 1 2))
+
+orderedEqual : Ord 'a => 'a -> 'a -> bool
+orderedEqual a b = if lt a b then False else eq a b
 units = eq () ()
 lists = eq [1, 2] [1, 2]
 pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)

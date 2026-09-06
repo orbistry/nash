@@ -1,0 +1,65 @@
+module Ord exposing (Ord)
+
+import Builtin exposing (type bool(..))
+import Eq exposing (Eq)
+import Ordering exposing (type ordering(..))
+
+trait Eq 'a => Ord 'a where
+    compare : 'a -> 'a -> ordering
+
+    lt : 'a -> 'a -> bool
+    lt a b =
+        case compare a b of
+            LT -> True
+            _ -> False
+
+    le : 'a -> 'a -> bool
+    le a b =
+        case compare a b of
+            GT -> False
+            _ -> True
+
+    gt : 'a -> 'a -> bool
+    gt a b = lt b a
+
+    ge : 'a -> 'a -> bool
+    ge a b = le b a
+
+    max : 'a -> 'a -> 'a
+    max a b = if lt a b then b else a
+
+    min : 'a -> 'a -> 'a
+    min a b = if lt a b then a else b
+
+impl Ord int where
+    compare a b =
+        if Builtin.lessThanInteger a b then LT
+        else if Builtin.equalsInteger a b then EQ
+        else GT
+
+impl Ord bytes where
+    compare a b =
+        if Builtin.lessThanByteString a b then LT
+        else if Builtin.equalsByteString a b then EQ
+        else GT
+
+impl Ord string where
+    compare a b = compare (Builtin.encodeUtf8 a) (Builtin.encodeUtf8 b)
+
+impl Ord bool where
+    compare a b =
+        if a then if b then EQ else GT
+        else if b then LT else EQ
+
+impl Ord unit where
+    compare _ _ = EQ
+
+impl Ord 'a => Ord (list 'a) where
+    compare xs ys =
+        if Builtin.nullList xs then
+            if Builtin.nullList ys then EQ else LT
+        else if Builtin.nullList ys then GT
+        else
+            case compare (Builtin.headList xs) (Builtin.headList ys) of
+                EQ -> compare (Builtin.tailList xs) (Builtin.tailList ys)
+                order -> order

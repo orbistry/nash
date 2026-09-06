@@ -2648,6 +2648,17 @@ and concrete empty values. The CLI rejects Num on bool with MissingImpl.
 These checks establish compilation and evidence resolution; executing the
 operations still depends on code generation. No Rust crate changed in this
 source-only step.
+Ordering now defines the little `ordering` type, invert/then_ and its Eq impl.
+Ord provides int, bytes, bytewise string, bool, unit and lexicographic list
+impls, with lt/le/gt/ge/max/min defaults. The core acceptance module exercises
+every default and the Eq superclass through an Ord-given function. These are
+real source implementations using the builtin comparison and UTF-8 functions;
+the Big Ordering twin, Lift conversions, Big Ord impls and tuple impls remain
+unfinished. Compilation does not establish runtime comparison results before
+Plan 07 code generation. This source-only step changes no Rust crate.
+The CLI checks nine modules and 32 declarations; comparing Data reports
+MissingImpl at `compare`. Formatting, strict Clippy, 1,901 tests and snapshot
+hygiene pass for this step.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.
