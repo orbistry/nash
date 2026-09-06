@@ -1962,7 +1962,7 @@ is deleted.
 
 ## Chunk 7: literal traits, defaulting, ambiguity, polymorphic recursion; remove supertypes
 
-Status: in progress. Declared recursive schemes now preserve quantifier
+Status: complete. Declared recursive schemes now preserve quantifier
 ownership during body checking. Direct, mutual and nested-helper calls reject
 cycles of context-slot dependencies containing impl wrappers; unchanged givens, closed evidence,
 unconstrained polymorphic recursion and nonrecursive method calls pass.
@@ -1993,6 +1993,12 @@ are implemented; the remaining hierarchy belongs to chunk 12.
 `two_literal_traits_do_not_choose_an_arbitrary_default` verifies that FromInt
 and FromString on the same hidden variable report AmbiguousType with both
 requirements, rather than selecting either default.
+The completion audit verified all three defaults and ordered pattern evidence,
+duplicate/chained default retries with enclosing givens, rejection of foreign
+literal identities, hidden-variable ambiguity and direct/mutual/nested
+recursive evidence growth. Existing negation coverage checks combined Num and
+FromInt constraints. All 95 inference tests pass; a Rust-source search finds
+none of the superseded SuperType variants or specialized helpers.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,
@@ -2752,6 +2758,15 @@ twin conversions remain a stdlib prerequisite;
 do not fabricate source bindings or count declaration-only modules and test
 fixtures as completion. Core impl bodies must use the specified real bindings.
 Code generation for those bindings remains Plan 07 work.
+
+Another verified prerequisite is constructor lookup for little/Big twins.
+A real CLI module containing `type option 'a = Some 'a | None` and
+`type Option 'a = Some 'a | None` exits with `DuplicateCtor` for both names,
+with both declarations' spans. `environment/local.rs::add_ctors` currently
+checks and inserts all constructors in a single local namespace. The stdlib
+contract requires unqualified little constructors and qualified Big twin
+constructors without selection by expected type; the real Option/Result/Ordering
+modules cannot satisfy that contract until this path and exported lookup agree.
 
 Tests: a driver test compiling `core/` plus a `Main.nash` using `==`, `<`,
 `+`, `show`, a `do` block over `option`, and literal defaulting, with no
