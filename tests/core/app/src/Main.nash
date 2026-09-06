@@ -3,6 +3,10 @@ module Main exposing (..)
 import Builtin exposing (type bool(..), Data(..))
 import Eq exposing (Eq)
 import Literal
+import Num exposing (Num)
+import Integral exposing (Integral)
+import Semigroup exposing (Semigroup)
+import Monoid exposing (Monoid)
 
 integers = eq 1 2
 strings = neq "one" "two"
@@ -12,3 +16,25 @@ units = eq () ()
 lists = eq [1, 2] [1, 2]
 pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)
 data = eq (I 1) (Constr 0 [I 1])
+
+negative = -1
+arithmetic = add (mul 2 3) (sub 5 4)
+division = (div (-7) 3, mod (-7) 3)
+quotient = (quot (-7) 3, rem (-7) 3)
+
+twice : Integral 'a => 'a -> 'a
+twice x = add x x
+
+withEmpty : Monoid 'a => 'a -> 'a
+withEmpty x = append empty x
+
+emptyString : string
+emptyString = empty
+emptyBytes : bytes
+emptyBytes = empty
+emptyList : list int
+emptyList = empty
+emptyUnit : unit
+emptyUnit = empty
+combined = append [1, 2] [3]
+text = withEmpty "text"

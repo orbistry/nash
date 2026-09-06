@@ -2629,9 +2629,21 @@ elements. Existing list/evidence snapshots were corrected, and a function
 element is rejected. All compiler-known types are seeded in scope as specified;
 literal uses count their core trait imports. Formatting, strict Clippy, 1,893
 tests, snapshot hygiene, and the three-module CLI acceptance pass.
+Num and Integral now provide the little int methods with the specified
+divide/mod versus quotient/remainder builtin mappings. Semigroup and Monoid
+provide bytes, string, list, and unit impls. The seven-module CLI acceptance
+checks prefix negation, arithmetic, superclass method use, generic append/empty,
+and concrete empty values. The CLI rejects Num on bool with MissingImpl.
+These checks establish compilation and evidence resolution; executing the
+operations still depends on code generation. No Rust crate changed in this
+source-only step.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.
+The promised four-element tuple impls also need canonical expression/pattern
+support: the current canonicalizer still reports TupleLargerThanThree for a
+four-element tuple expression. The numeric acceptance uses separate pairs;
+that does not count as satisfying the tuple prerequisite.
 
 Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,
 `core/Integral.nash`, `core/Semigroup.nash`, `core/Monoid.nash`,

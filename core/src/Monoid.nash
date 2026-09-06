@@ -1,0 +1,19 @@
+module Monoid exposing (Monoid)
+
+import Literal
+import Semigroup exposing (Semigroup)
+
+trait Semigroup 'a => Monoid 'a where
+    empty : 'a
+
+impl Monoid bytes where
+    empty = #""
+
+impl Monoid string where
+    empty = ""
+
+impl Monoid (list 'a) where
+    empty = []
+
+impl Monoid unit where
+    empty = ()

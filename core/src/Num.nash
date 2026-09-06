@@ -1,0 +1,16 @@
+module Num exposing (Num)
+
+import Builtin
+import Literal
+
+trait Num 'a where
+    add : 'a -> 'a -> 'a
+    sub : 'a -> 'a -> 'a
+    mul : 'a -> 'a -> 'a
+    negate : 'a -> 'a
+
+impl Num int where
+    add = Builtin.addInteger
+    sub = Builtin.subtractInteger
+    mul = Builtin.multiplyInteger
+    negate x = Builtin.subtractInteger 0 x

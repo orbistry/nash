@@ -1,0 +1,16 @@
+module Integral exposing (Integral)
+
+import Builtin
+import Num exposing (Num)
+
+trait Num 'a => Integral 'a where
+    div : 'a -> 'a -> 'a
+    mod : 'a -> 'a -> 'a
+    quot : 'a -> 'a -> 'a
+    rem : 'a -> 'a -> 'a
+
+impl Integral int where
+    div = Builtin.divideInteger
+    mod = Builtin.modInteger
+    quot = Builtin.quotientInteger
+    rem = Builtin.remainderInteger

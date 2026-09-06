@@ -1,0 +1,21 @@
+module Semigroup exposing (Semigroup)
+
+import Builtin
+
+trait Semigroup 'a where
+    append : 'a -> 'a -> 'a
+
+impl Semigroup bytes where
+    append = Builtin.appendByteString
+
+impl Semigroup string where
+    append = Builtin.appendString
+
+impl Semigroup (list 'a) where
+    append xs ys =
+        case xs of
+            [] -> ys
+            head :: tail -> Builtin.mkCons head (append tail ys)
+
+impl Semigroup unit where
+    append _ _ = ()
