@@ -1052,10 +1052,22 @@ pub fn builtin_interface<'a>(bump: &'a Bump) -> crate::Interface<'a> {
                 parameters: bump.alloc_slice_fill_iter(
                     (0..p.arity).map(|i| &*bump.alloc_str(&format!("p{i}"))),
                 ),
-                ctors: &[],
-                alternatives: 0,
-                options: nash_ast::CtorOpts::Enum,
-                visibility: crate::interface::UnionVisibility::Closed,
+                ctors: p.ctors,
+                alternatives: p
+                    .ctors
+                    .len()
+                    .try_into()
+                    .expect("primitive constructor count"),
+                options: if p.ctors.iter().all(|ctor| ctor.arguments.is_empty()) {
+                    nash_ast::CtorOpts::Enum
+                } else {
+                    nash_ast::CtorOpts::Normal
+                },
+                visibility: if p.ctors.is_empty() {
+                    crate::interface::UnionVisibility::Closed
+                } else {
+                    crate::interface::UnionVisibility::Open
+                },
                 kind: p.kind,
             }
         })),

@@ -450,7 +450,7 @@ fn make_union_ctor<'a>(
     can_union: &'a nash_ast::Union<'a>,
     ctor: &nash_ast::Ctor<'a>,
 ) -> Ctor<'a> {
-    if home.name == "Basics" && union_name == "Bool" {
+    if home == nash_ast::primitives::builtin_home() && union_name == "bool" {
         return Ctor::Bool {
             home,
             union: can_union,

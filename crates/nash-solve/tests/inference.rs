@@ -2034,6 +2034,44 @@ fn builtin_list_rejects_function_elements() {
 }
 
 #[test]
+fn builtin_constructors_match_conditions_and_data_fields() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin exposing (type bool(..), Data(..))
+        choice flag = if flag then True else False
+        invert flag =
+            case flag of
+                False -> True
+                True -> False
+        rewrap data =
+            case data of
+                Constr tag fields -> Constr tag fields
+                Map pairs -> Map pairs
+                List values -> List values
+                I n -> I n
+                B payload -> B payload
+        integer n = I n
+        bytes b = B b
+    "#
+    );
+}
+
+#[test]
+fn source_basics_bool_is_an_ordinary_union() {
+    assert_inference_snapshot!(
+        r#"
+        module Basics exposing (..)
+        type Bool = False | True
+        invert flag =
+            case flag of
+                False -> True
+                True -> False
+    "#
+    );
+}
+
+#[test]
 fn nested_operator_sections_apply() {
     let bump = Bump::new();
     let operators = "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n";

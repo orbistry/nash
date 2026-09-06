@@ -403,57 +403,21 @@ mod tests {
     }
 
     fn env_with_bool<'a>(bump: &'a Bump) -> Env<'a> {
-        let home = ModuleName {
-            package: None,
-            name: "Basics",
-        };
-        let mut env = empty_env(bump);
-
-        let true_ctor = bump.alloc(nash_ast::Ctor {
-            name: "True",
-            index: 0,
-            arity: 0,
-            arguments: &[],
-        });
-        let false_ctor = bump.alloc(nash_ast::Ctor {
-            name: "False",
-            index: 1,
-            arity: 0,
-            arguments: &[],
-        });
-        let bool_union: &Union = bump.alloc(Union {
-            kind: nash_ast::KindScheme::mono(&nash_ast::Kind::Base(nash_ast::BaseKind::Big)),
-            name: bump.alloc(Located::at(Region::zero(), "Bool")),
-            parameters: &[],
-            ctors: bump.alloc_slice_fill_iter([&*true_ctor, &*false_ctor]),
-            alternatives: 2,
-            options: CtorOpts::Enum,
-        });
-
-        env.ctors.insert(
-            "True",
-            Info::Specific(
-                home,
-                Ctor::Bool {
-                    home,
-                    union: bool_union,
-                    index: 0,
-                },
-            ),
-        );
-        env.ctors.insert(
-            "False",
-            Info::Specific(
-                home,
-                Ctor::Bool {
-                    home,
-                    union: bool_union,
-                    index: 1,
-                },
-            ),
-        );
-
-        env
+        let module = nash_parse::Parser::new(
+            bump,
+            b"module Main exposing (..)\nimport Builtin exposing (type bool(..))\n",
+        )
+        .module()
+        .unwrap();
+        let interfaces =
+            std::collections::BTreeMap::from([("Builtin", crate::kinds::builtin_interface(bump))]);
+        crate::environment::foreign::create_initial_env(
+            bump,
+            empty_env(bump).home,
+            Some(&interfaces),
+            module.imports,
+        )
+        .unwrap()
     }
 
     fn parse_pattern<'a>(bump: &'a Bump, input: &str) -> &'a Located<SourcePattern<'a>> {

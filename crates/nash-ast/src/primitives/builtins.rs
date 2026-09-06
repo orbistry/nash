@@ -20,7 +20,7 @@ pub struct Builtin {
     pub lowering: BuiltinLowering,
 }
 
-const fn named(
+pub(super) const fn named(
     name: &'static str,
     args: &'static [&'static Located<Type<'static>>],
 ) -> Located<Type<'static>> {

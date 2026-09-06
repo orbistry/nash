@@ -19,7 +19,7 @@ description: "False"
                 kind: KindScheme {
                     bounds: [],
                     kind: Base(
-                        Big,
+                        Const,
                     ),
                 },
                 name: Located {
@@ -33,18 +33,18 @@ description: "False"
                             column: 0,
                         },
                     },
-                    value: "Bool",
+                    value: "bool",
                 },
                 parameters: [],
                 ctors: [
                     Ctor {
-                        name: "True",
+                        name: "False",
                         index: 0,
                         arity: 0,
                         arguments: [],
                     },
                     Ctor {
-                        name: "False",
+                        name: "True",
                         index: 1,
                         arity: 0,
                         arguments: [],

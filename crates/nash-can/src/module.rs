@@ -1261,10 +1261,9 @@ fn collect_from_pattern<'a>(
     use nash_ast::Pattern::*;
     match pat {
         Anything | Var(_) | Str(_) | Bytes(_) | Int(_) | Unit | Record(_) => {}
-        // `True`/`False` patterns only ever come from the module named
-        // Basics (see `environment::Ctor::Bool`), so count it as used.
+        // Only the exact builtin bool type produces this pattern form.
         Bool { .. } => {
-            used.insert("Basics");
+            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
         }
         Constructor(ctor) => {
             add_if_foreign(home, ctor.reference.home, used);
@@ -2139,6 +2138,26 @@ mod tests {
     }
 
     // === to_public tests ===
+
+    #[test]
+    fn builtin_bool_patterns_count_as_import_uses() {
+        let bump = Bump::new();
+        let module = nash_parse::Parser::new(
+            &bump,
+            b"module Main exposing (..)\nimport Builtin exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
+        ).module().unwrap();
+        let interfaces = BTreeMap::from([("Builtin", crate::kinds::builtin_interface(&bump))]);
+        let result = canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &module,
+        )
+        .unwrap();
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+    }
 
     #[test]
     fn to_public_union_open_passes_through() {

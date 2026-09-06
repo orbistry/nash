@@ -63,7 +63,62 @@ pub struct Primitive {
     pub name: &'static str,
     pub arity: usize,
     pub kind: KindScheme<'static>,
+    pub ctors: &'static [&'static crate::Ctor<'static>],
 }
+
+const BOOL_CTORS: &[&crate::Ctor<'static>] = &[
+    &crate::Ctor {
+        name: "False",
+        index: 0,
+        arity: 0,
+        arguments: &[],
+    },
+    &crate::Ctor {
+        name: "True",
+        index: 1,
+        arity: 0,
+        arguments: &[],
+    },
+];
+
+const DATA_TYPE: &nash_region::Located<crate::Type<'static>> = &builtins::named("Data", &[]);
+const DATA_LIST: &nash_region::Located<crate::Type<'static>> =
+    &builtins::named("list", &[DATA_TYPE]);
+const DATA_CTORS: &[&crate::Ctor<'static>] = &[
+    &crate::Ctor {
+        name: "Constr",
+        index: 0,
+        arity: 2,
+        arguments: &[&builtins::named("int", &[]), DATA_LIST],
+    },
+    &crate::Ctor {
+        name: "Map",
+        index: 1,
+        arity: 1,
+        arguments: &[&builtins::named(
+            "list",
+            &[&builtins::named("pair", &[DATA_TYPE, DATA_TYPE])],
+        )],
+    },
+    &crate::Ctor {
+        name: "List",
+        index: 2,
+        arity: 1,
+        arguments: &[DATA_LIST],
+    },
+    &crate::Ctor {
+        name: "I",
+        index: 3,
+        arity: 1,
+        arguments: &[&builtins::named("int", &[])],
+    },
+    &crate::Ctor {
+        name: "B",
+        index: 4,
+        arity: 1,
+        arguments: &[&builtins::named("bytes", &[])],
+    },
+];
 
 const fn mono(kind: &'static Kind<'static>) -> KindScheme<'static> {
     KindScheme { bounds: &[], kind }
@@ -72,76 +127,91 @@ const fn mono(kind: &'static Kind<'static>) -> KindScheme<'static> {
 pub const PRIMITIVES: &[Primitive] = &[
     Primitive {
         name: "Data",
+        ctors: DATA_CTORS,
         arity: 0,
         kind: mono(BIG),
     },
     Primitive {
         name: "Int",
+        ctors: &[],
         arity: 0,
         kind: mono(BIG),
     },
     Primitive {
         name: "Bytes",
+        ctors: &[],
         arity: 0,
         kind: mono(BIG),
     },
     Primitive {
         name: "List",
+        ctors: &[],
         arity: 1,
         kind: mono(BIG_TO_BIG),
     },
     Primitive {
         name: "Map",
+        ctors: &[],
         arity: 2,
         kind: mono(BIG2_TO_BIG),
     },
     Primitive {
         name: "int",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "bytes",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "string",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "bool",
+        ctors: BOOL_CTORS,
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "unit",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "bls_g1",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "bls_g2",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "bls_mlr",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "value",
+        ctors: &[],
         arity: 0,
         kind: mono(CONST),
     },
     Primitive {
         name: "list",
+        ctors: &[],
         arity: 1,
         kind: KindScheme {
             bounds: &[KindSet::STORABLE],
@@ -150,6 +220,7 @@ pub const PRIMITIVES: &[Primitive] = &[
     },
     Primitive {
         name: "array",
+        ctors: &[],
         arity: 1,
         kind: KindScheme {
             bounds: &[KindSet::STORABLE],
@@ -158,6 +229,7 @@ pub const PRIMITIVES: &[Primitive] = &[
     },
     Primitive {
         name: "pair",
+        ctors: &[],
         arity: 2,
         kind: KindScheme {
             bounds: &[KindSet::STORABLE, KindSet::STORABLE],

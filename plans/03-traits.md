@@ -2612,7 +2612,14 @@ runtime dependency to nash-ast. Inference snapshots and real CLI checks cover
 unConstrData projections, Storable list elements, Any choice results, and unit
 annotations/impls. A function element gets BadKind; unit and () impls overlap.
 Formatting, strict Clippy, 1,889 tests, and snapshot hygiene pass for this step.
-Core source modules, primitive constructors, twin conversions, implicit imports,
+The real bool and Data constructor metadata is also present. Existing bool
+pattern snapshots now use the synthetic interface, with Const kind and
+False/True indices 0/1. Canonicalization recognizes only exact core bool;
+both local and imported Basics.Bool special cases are removed. Inference and
+CLI checks cover bool conditions/patterns and every Data constructor, retaining
+the specified little field types. A source-defined Basics.Bool remains an
+ordinary union, pattern-only imports count as used, and the CLI rejects I ().
+Core source modules, twin conversions, implicit imports,
 and the hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.
 
@@ -2635,8 +2642,8 @@ implicit imports (`import Eq exposing (Eq, eq)`, ...) like Elm's
 `Imports.defaults`. `Builtin` has no Nash source: docs/stdlib.md specifies
 a synthetic interface from the Rust primitive and builtin tables. The current
 interface now supplies type constructors and the builtin value schemes needed
-by these method bodies. Primitive constructor metadata and the specified twin
-conversions remain stdlib prerequisites;
+by these method bodies, including bool/Data constructor metadata. The specified
+twin conversions remain a stdlib prerequisite;
 do not fabricate source bindings or count declaration-only modules and test
 fixtures as completion. Core impl bodies must use the specified real bindings.
 Code generation for those bindings remains Plan 07 work.

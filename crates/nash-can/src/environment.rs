@@ -121,7 +121,7 @@ pub enum Ctor<'a> {
         options: CtorOpts,
         alternatives: u16,
     },
-    /// Built-in Bool constructor (True or False from Basics).
+    /// Builtin.bool constructor (False or True from nash/core).
     /// Separated from `Union` so pattern/expression canonicalization can
     /// emit `CanPattern::Bool` / synthesize the annotation without string checks.
     Bool {
