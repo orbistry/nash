@@ -1676,7 +1676,16 @@ pub(crate) fn check_impl_heads<'e, 'a>(
         walker.infer_predicate(&scope, predicate, &BTreeMap::new());
     }
     if walker.errors.is_empty() {
-        let checked = ImplKinds { walker, scope };
+        let mut checked = ImplKinds { walker, scope };
+        if (QualifiedName {
+            home: info.home,
+            name: info.name,
+        }) == nash_ast::primitives::eq_trait()
+            && let [head] = heads
+            && checked.proves_big(head)
+        {
+            return Err(vec![Error::StructuralEqOverride { head }]);
+        }
         if (QualifiedName {
             home: info.home,
             name: info.name,

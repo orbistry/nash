@@ -45,6 +45,9 @@ pub enum Error<'a> {
     RefutableBindPattern {
         region: Region,
     },
+    StructuralEqOverride {
+        head: &'a Located<nash_ast::Type<'a>>,
+    },
     ReflexiveLiftOverlap {
         heads: &'a [&'a Located<nash_ast::Type<'a>>],
     },

@@ -232,7 +232,8 @@ impl<'a> Solver<'a, '_> {
                                 wrapped.push((target, source, *root));
                             }
                         }
-                        Some(Solution::ReflexiveLift { .. }) | None => {}
+                        Some(Solution::ReflexiveLift { .. } | Solution::StructuralEq { .. })
+                        | None => {}
                     }
                 }
             }
@@ -456,7 +457,10 @@ impl<'a> Solver<'a, '_> {
                             roots.extend(type_vars);
                             pending.extend(subs);
                         }
-                        Some(crate::preds::Solution::ReflexiveLift { typ }) => roots.push(*typ),
+                        Some(
+                            crate::preds::Solution::ReflexiveLift { typ }
+                            | crate::preds::Solution::StructuralEq { typ },
+                        ) => roots.push(*typ),
                         _ => {}
                     }
                 }
@@ -599,6 +603,9 @@ impl<'a> Solver<'a, '_> {
             .as_ref()
             .expect("validated use evidence")
         {
+            Solution::StructuralEq { typ } => Evidence::StructuralEq {
+                typ: crate::annotation::to_solved_type(self.bump, uf, *typ),
+            },
             Solution::ReflexiveLift { typ } => Evidence::ReflexiveLift {
                 typ: crate::annotation::to_solved_type(self.bump, uf, *typ),
             },
@@ -828,6 +835,15 @@ impl<'a> Solver<'a, '_> {
                 // Finish surrounding equalities before choosing an impl, and
                 // let enclosing givens see captured variables at their final type.
                 self.wanted.push((wanted_rank, id));
+            } else if wanted.trait_ == nash_ast::primitives::eq_trait()
+                && self.tables.has_structural_eq()
+                && let [typ] = wanted.args.as_slice()
+                && let Some(owner) = binder
+                && self.proves_big(uf, owner.node(), *typ)
+            {
+                let typ = *typ;
+                self.predicates
+                    .solve(uf, id, crate::preds::Solution::StructuralEq { typ });
             } else if wanted.trait_ == nash_ast::primitives::lift_trait()
                 && self.tables.has_reflexive_lift()
                 && let [left, right] = wanted.args.as_slice()
@@ -2546,6 +2562,7 @@ mod copy_tests {
             Evidence::Super { of, index } => {
                 format!("Super {index} ({})", render_evidence(solver, of))
             }
+            Evidence::StructuralEq { typ } => format!("StructuralEq {}", evidence_type(typ)),
             Evidence::ReflexiveLift { typ } => format!("ReflexiveLift {}", evidence_type(typ)),
             Evidence::Impl {
                 impl_,

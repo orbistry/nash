@@ -24,6 +24,16 @@ pub const fn literal_home() -> ModuleName<'static> {
     }
 }
 
+pub const fn eq_trait() -> crate::QualifiedName<'static> {
+    crate::QualifiedName {
+        home: ModuleName {
+            package: Some(CORE),
+            name: "Eq",
+        },
+        name: "Eq",
+    }
+}
+
 pub const fn lift_trait() -> crate::QualifiedName<'static> {
     crate::QualifiedName {
         home: ModuleName {

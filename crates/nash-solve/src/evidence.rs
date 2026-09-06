@@ -182,6 +182,13 @@ impl<'a> Resolver<'_, 'a> {
             .map(|arg| self.term(&arg.value, 0))
             .collect::<Result<Vec<_>, _>>()
             .map_err(error)?;
+        if pred.trait_ == nash_ast::primitives::eq_trait()
+            && self.tables.has_structural_eq()
+            && pred.args.len() == 1
+            && nash_can::kinds::proves_ground_big(self.bump, &self.tables.kinds, pred.args[0])
+        {
+            return Ok(Evidence::StructuralEq { typ: pred.args[0] });
+        }
         if pred.trait_ == nash_ast::primitives::lift_trait()
             && self.tables.has_reflexive_lift()
             && matches!(terms.as_slice(), [first, second] if first == second)

@@ -19,6 +19,9 @@ import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 import Cons exposing (type cons(..))
 
+type Packet = Packet Int
+automaticBigEq = (eq (Packet integerLiteral) (Packet bigInteger), neq (Packet integerLiteral) (Packet bigInteger))
+
 ledgerValue = Builtin.unValueData (Map [])
 ledgerValueNegative = Builtin.insertCoin #"" #"" (-1) ledgerValue
 ledgerValueEquality = eq ledgerValueNegative ledgerValueNegative

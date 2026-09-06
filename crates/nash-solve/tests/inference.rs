@@ -3086,3 +3086,100 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
         );
     }
 }
+
+#[test]
+fn big_equality_is_automatic_and_retains_structural_evidence() {
+    let bump = Bump::new();
+    let mut interfaces =
+        std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
+    for (name, source, package) in [
+        (
+            "Eq",
+            indoc!(
+                "
+            module Eq exposing (Eq)
+            trait Eq 'a where
+                eq : 'a -> 'a -> bool
+        "
+            ),
+            Some(nash_ast::primitives::CORE),
+        ),
+        (
+            "Main",
+            indoc!(
+                "
+            module Main exposing (..)
+            import Eq exposing (Eq)
+            type Token = Token Int
+            type alias Box = { token : Token }
+            same : Token -> Token -> bool
+            same = eq
+            sameBox : Box -> Box -> bool
+            sameBox = eq
+            sameList : List 'a -> List 'a -> bool
+            sameList = eq
+            trait Eq 'a => Compare 'a where
+                compare : 'a -> 'a -> bool
+            impl Compare Token where
+                compare = eq
+        "
+            ),
+            None,
+        ),
+    ] {
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let (annotations, solved) =
+            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+        if name == "Main" {
+            let mut evidence: Vec<_> = solved
+                .instances
+                .values()
+                .flat_map(|i| i.evidence)
+                .filter_map(|e| {
+                    if let nash_ast::Evidence::StructuralEq { typ } = e {
+                        Some(render_type(typ, Ctx::None))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            evidence.sort();
+            assert!(evidence.len() >= 3);
+            for name in ["same", "sameBox"] {
+                let CanType::Lambda { from, .. } = annotations[name].typ.value else {
+                    panic!("function annotation")
+                };
+                let pred = nash_ast::Pred {
+                    trait_: nash_ast::primitives::eq_trait(),
+                    args: bump.alloc_slice_copy(&[from]),
+                };
+                assert!(matches!(
+                    nash_solve::evidence::resolve(&bump, &canonical.tables, &pred).unwrap(),
+                    nash_ast::Evidence::StructuralEq { .. }
+                ));
+            }
+            insta::assert_snapshot!(format!(
+                "{}\nStructural evidence: {}",
+                render_annotations(&annotations),
+                evidence.join(", ")
+            ));
+        }
+        interfaces.insert(
+            name,
+            nash_can::from_module(&bump, &canonical.module, &annotations),
+        );
+    }
+}

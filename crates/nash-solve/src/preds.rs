@@ -32,6 +32,9 @@ pub struct Predicate<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Solution<'a> {
+    StructuralEq {
+        typ: Variable,
+    },
     ReflexiveLift {
         typ: Variable,
     },

@@ -1782,7 +1782,7 @@ pub struct MonoKey<'a> {
     pub name: QualifiedName<'a>,
     pub type_args: &'a [Ty<'a>],
     /// Ground: every `Given` substituted, every `Super` resolved, so only
-    /// `Evidence::Impl` trees and `ReflexiveLift` leaves remain.
+    /// `Evidence::Impl` trees and compiler-owned `ReflexiveLift` / `StructuralEq` leaves remain.
     pub evidence: &'a [Evidence<'a>],
 }
 
@@ -1815,7 +1815,7 @@ impl<'a> Mono<'a> {
 
     /// Substitute `Given`s with the current specialization's evidence and
     /// resolve `Super`s through the impl table; the solver guarantees every
-    /// remaining leaf is an `Impl` or `ReflexiveLift`.
+    /// remaining leaf is an `Impl`, `ReflexiveLift`, or `StructuralEq`.
     fn ground(&self, build: &Build<'a>, evidence: &'a [Evidence<'a>]) -> &'a [Evidence<'a>] {
         build.arena.alloc_slice_fill_iter(evidence.iter().map(|e| self.ground_one(build, e)))
     }
@@ -1823,6 +1823,7 @@ impl<'a> Mono<'a> {
     fn ground_one(&self, build: &Build<'a>, e: &Evidence<'a>) -> Evidence<'a> {
         match e {
             Evidence::ReflexiveLift { typ } => Evidence::ReflexiveLift { typ },
+            Evidence::StructuralEq { typ } => Evidence::StructuralEq { typ },
             Evidence::Given { binder, index } => self.givens[binder][*index as usize].clone(),
             Evidence::Super { of, index } => {
                 let Evidence::Impl { impl_, .. } = self.ground_one(build, of) else { unreachable!("core Lift has no superclasses") };
@@ -1844,6 +1845,10 @@ impl<'a> Mono<'a> {
         if let Evidence::ReflexiveLift { typ } = &evidence[0] {
             let typ = tys.ty(typ);
             return self.request_identity(typ, tys);
+        }
+        if let Evidence::StructuralEq { typ } = &evidence[0] {
+            let typ = tys.ty(typ);
+            return self.request_structural_eq(method, typ, tys);
         }
         let Evidence::Impl { impl_, type_args, args } = &evidence[0] else { unreachable!("ground method evidence") };
         let imp = build.impls[impl_];
@@ -1874,6 +1879,13 @@ impl<'a> Mono<'a> {
 /// `List.map#int#Int`, `compare#Ord#list#int`; sanitized to a valid UPLC name.
 fn variant_name<'a>(arena: &'a Arena, key: &MonoKey<'a>) -> &'a str;
 ```
+
+`request_structural_eq` is the compiler-owned core Eq dispatch: `eq` compares
+the two Big Data representations with `equalsData`; `neq` negates that same
+comparison, preserving the core default's behavior. Substitute the retained
+`StructuralEq.typ` through `TyEnv` before requesting a specialization and
+include the resulting type in its identity. This evidence has no impl-table
+entry or superclass path. No inspection of user method bodies is involved.
 
 `Module::bindings` are ordered by first request, which is a valid
 dependency order only if a binding never references an instance requested

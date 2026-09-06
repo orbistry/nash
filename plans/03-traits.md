@@ -43,6 +43,15 @@ Lowercase value is Const: use its dedicated valueData operation for Eq,
 not valueContains (which rejects negative quantities). Cardano.Value and
 ordinary Map union must not be conflated with additive unionValue.
 
+The uniform Big Eq compiler rule is implemented: canonicalization rejects
+explicit Big overrides; superclass entailment, inference and ground resolution
+provide Eq from the proven Big kind. `StructuralEq` evidence retains the type,
+and the explicit core Big impls are removed. Snapshot tests cover user ADTs,
+nominal record aliases, generic Big containers, superclass obligations and
+exact core trait identity. The CLI core fixture checks both eq and neq for a
+user Big ADT. Disjoint builtin-list kind selection remains outstanding with
+the recursive impl-pattern work; backend lowering remains Plan 07.
+
 The concrete core Eq value impl now compares valueData results with
 equalsData. The runtime table has no equalsValue operation; inspection of
 LedgerValue::value_contains confirms that it rejects negative quantities.

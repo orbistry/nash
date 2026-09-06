@@ -1,0 +1,6 @@
+---
+source: crates/nash-can/tests/structural_eq.rs
+expression: "errors.join(\"\\n\")"
+---
+Token: [StructuralEqOverride { head: Located { region: Region { start: Position { line: 6, column: 9 }, end: Position { line: 6, column: 14 } }, value: Named { reference: QualifiedName { home: ModuleName { package: None, name: "Main" }, name: "Token" }, args: [] } } }]
+Box: [StructuralEqOverride { head: Located { region: Region { start: Position { line: 6, column: 9 }, end: Position { line: 6, column: 12 } }, value: Alias { reference: QualifiedName { home: ModuleName { package: None, name: "Main" }, name: "Box" }, arguments: [], remaining: [], target: Open(Located { region: Region { start: Position { line: 5, column: 18 }, end: Position { line: 5, column: 32 } }, value: Record { fields: [FieldType { index: 0, field: "item", typ: Located { region: Region { start: Position { line: 5, column: 27 }, end: Position { line: 5, column: 30 } }, value: Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "Int" }, args: [] } } }], ext: None } }) } } }]

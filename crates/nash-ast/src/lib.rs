@@ -560,6 +560,8 @@ pub struct ImplRef<'a> {
 pub enum Evidence<'a> {
     /// The compiler-owned core Lift rule for an already-equal Big type.
     ReflexiveLift { typ: &'a Located<Type<'a>> },
+    /// Compiler-owned structural equality for any Big type.
+    StructuralEq { typ: &'a Located<Type<'a>> },
     Impl {
         impl_: ImplRef<'a>,
         /// The impl head's variables, in head order, at this use.

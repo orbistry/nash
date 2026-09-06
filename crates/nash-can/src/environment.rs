@@ -61,6 +61,10 @@ pub struct Tables<'a> {
 }
 
 impl Tables<'_> {
+    pub fn has_structural_eq(&self) -> bool {
+        self.traits.contains_key(&nash_ast::primitives::eq_trait())
+    }
+
     pub fn has_reflexive_lift(&self) -> bool {
         self.traits
             .contains_key(&nash_ast::primitives::lift_trait())

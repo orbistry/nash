@@ -151,7 +151,8 @@ fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
 impl PartialEq for Evidence<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::ReflexiveLift { typ: a }, Self::ReflexiveLift { typ: b }) => {
+            (Self::ReflexiveLift { typ: a }, Self::ReflexiveLift { typ: b })
+            | (Self::StructuralEq { typ: a }, Self::StructuralEq { typ: b }) => {
                 same_type(&a.value, &b.value)
             }
             (
@@ -190,7 +191,9 @@ impl Hash for Evidence<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::mem::discriminant(self).hash(state);
         match self {
-            Self::ReflexiveLift { typ } => hash_type(&typ.value, state),
+            Self::ReflexiveLift { typ } | Self::StructuralEq { typ } => {
+                hash_type(&typ.value, state)
+            }
             Self::Impl {
                 impl_,
                 type_args,

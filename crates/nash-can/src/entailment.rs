@@ -251,6 +251,15 @@ impl<'a> Resolver<'_, 'a> {
                 return Ok(());
             }
         }
+        if self.tables.has_structural_eq()
+            && wanted.trait_ == nash_ast::primitives::eq_trait()
+            && wanted.args.len() == 1
+        {
+            let typ = self.canonical(wanted.args[0], 0)?;
+            if self.kinds.proves_big(typ) {
+                return Ok(());
+            }
+        }
         if self.tables.has_reflexive_lift()
             && wanted.trait_ == nash_ast::primitives::lift_trait()
             && wanted.args.len() == 2
