@@ -67,16 +67,7 @@ pub fn add<'a>(
             first,
             second,
             rest,
-        } => add_tuple(
-            bump,
-            uf,
-            region,
-            first,
-            second,
-            rest.first().copied(),
-            expectation,
-            state,
-        ),
+        } => add_tuple(bump, uf, region, first, second, rest, expectation, state),
 
         CanPattern::Constructor(ctor) => add_ctor(bump, uf, region, ctor, expectation, state),
 
@@ -230,7 +221,7 @@ fn add_tuple<'a>(
     region: Region,
     a: &Located<CanPattern<'a>>,
     b: &Located<CanPattern<'a>>,
-    maybe_c: Option<&Located<CanPattern<'a>>>,
+    rest: &[&Located<CanPattern<'a>>],
     expectation: PExpected<'a, &'a Type<'a>>,
     state: State<'a>,
 ) -> State<'a> {
@@ -239,46 +230,24 @@ fn add_tuple<'a>(
     let a_type: &'a Type<'a> = bump.alloc(Type::VarN(a_var));
     let b_type: &'a Type<'a> = bump.alloc(Type::VarN(b_var));
 
-    match maybe_c {
-        None => {
-            let state = simple_add(bump, uf, a, a_type, state);
-            let mut state = simple_add(bump, uf, b, b_type, state);
-
-            let tuple_con = Constraint::Pattern(
-                region,
-                PCategory::Tuple,
-                bump.alloc(Type::TupleN(a_type, b_type, None)),
-                expectation,
-            );
-
-            state.vars.push(a_var);
-            state.vars.push(b_var);
-            state.rev_cons.push(tuple_con);
-            state
-        }
-
-        Some(c) => {
-            let c_var = mk_flex_var(uf);
-            let c_type: &'a Type<'a> = bump.alloc(Type::VarN(c_var));
-
-            let state = simple_add(bump, uf, a, a_type, state);
-            let state = simple_add(bump, uf, b, b_type, state);
-            let mut state = simple_add(bump, uf, c, c_type, state);
-
-            let tuple_con = Constraint::Pattern(
-                region,
-                PCategory::Tuple,
-                bump.alloc(Type::TupleN(a_type, b_type, Some(c_type))),
-                expectation,
-            );
-
-            state.vars.push(a_var);
-            state.vars.push(b_var);
-            state.vars.push(c_var);
-            state.rev_cons.push(tuple_con);
-            state
-        }
+    let state = simple_add(bump, uf, a, a_type, state);
+    let mut state = simple_add(bump, uf, b, b_type, state);
+    state.vars.extend([a_var, b_var]);
+    let mut types = Vec::with_capacity(rest.len());
+    for item in rest {
+        let var = mk_flex_var(uf);
+        let tipe: &'a Type<'a> = bump.alloc(Type::VarN(var));
+        state = simple_add(bump, uf, item, tipe, state);
+        state.vars.push(var);
+        types.push(tipe);
     }
+    state.rev_cons.push(Constraint::Pattern(
+        region,
+        PCategory::Tuple,
+        bump.alloc(Type::TupleN(a_type, b_type, bump.alloc_slice_copy(&types))),
+        expectation,
+    ));
+    state
 }
 
 fn simple_add<'a>(

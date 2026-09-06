@@ -48,11 +48,11 @@ fn occurs_help(
 
                 FlatType::Unit1 => found_cycle,
 
-                FlatType::Tuple1(a, b, maybe_c) => {
-                    let acc = match maybe_c {
-                        None => found_cycle,
-                        Some(c) => occurs_help(uf, seen, c, found_cycle),
-                    };
+                FlatType::Tuple1(a, b, rest) => {
+                    let acc = rest
+                        .into_iter()
+                        .rev()
+                        .fold(found_cycle, |acc, c| occurs_help(uf, seen, c, acc));
                     let acc = occurs_help(uf, seen, b, acc);
                     occurs_help(uf, seen, a, acc)
                 }

@@ -1,0 +1,41 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nvalue : (unit, unit, unit, unit)\nvalue = ((), (), (), (), ())\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 3,
+                column: 9,
+            },
+            end: Position {
+                line: 3,
+                column: 29,
+            },
+        },
+        Tuple,
+        Tuple(
+            Unit,
+            Unit,
+            [
+                Unit,
+                Unit,
+                Unit,
+            ],
+        ),
+        FromAnnotation(
+            "value",
+            0,
+            TypedBody,
+            Tuple(
+                Unit,
+                Unit,
+                [
+                    Unit,
+                    Unit,
+                ],
+            ),
+        ),
+    ),
+]

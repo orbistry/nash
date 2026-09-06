@@ -2772,7 +2772,7 @@ mod tests {
 
     #[test]
     fn tuple_four_in_expr() {
-        assert_module_error_snapshot!(
+        assert_module_snapshot!(
             r#"
             module Main exposing (..)
 

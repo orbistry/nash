@@ -161,9 +161,6 @@ fn canonicalize_type_value<'a>(
             second,
             rest,
         } => {
-            if rest.len() > 1 {
-                return Err(vec![Error::TupleLargerThanThree { region }]);
-            }
             let (first, second, rest) = accumulate::accumulate3(
                 canonicalize_type(bump, env, first),
                 canonicalize_type(bump, env, second),
@@ -873,8 +870,8 @@ mod tests {
     }
 
     #[test]
-    fn type_tuple_four_errors() {
-        assert_type_error_snapshot!("( 'a, 'b, 'c, 'd )", empty_env);
+    fn type_tuple_four() {
+        assert_type_snapshot!("( 'a, 'b, 'c, 'd )", empty_env);
     }
 
     #[test]

@@ -1,0 +1,33 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nloop x = x ((), (), (), x)\n"
+---
+[
+    InfiniteType {
+        region: Region {
+            start: Position {
+                line: 2,
+                column: 6,
+            },
+            end: Position {
+                line: 2,
+                column: 7,
+            },
+        },
+        name: "x",
+        overall_type: Lambda(
+            Tuple(
+                Unit,
+                Unit,
+                [
+                    Unit,
+                    Infinite,
+                ],
+            ),
+            FlexVar(
+                "a",
+            ),
+            [],
+        ),
+    },
+]

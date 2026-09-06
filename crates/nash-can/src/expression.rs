@@ -261,16 +261,11 @@ pub fn canonicalize_expr<'a>(
             first,
             second,
             rest,
-        } => {
-            if rest.len() > 1 {
-                return Err(vec![Error::TupleLargerThanThree { region }]);
-            }
-            CanExpr::Tuple {
-                first: canonicalize_expr(bump, env, first, free_locals, warnings)?,
-                second: canonicalize_expr(bump, env, second, free_locals, warnings)?,
-                rest: canonicalize_exprs(bump, env, rest, free_locals, warnings)?,
-            }
-        }
+        } => CanExpr::Tuple {
+            first: canonicalize_expr(bump, env, first, free_locals, warnings)?,
+            second: canonicalize_expr(bump, env, second, free_locals, warnings)?,
+            rest: canonicalize_exprs(bump, env, rest, free_locals, warnings)?,
+        },
     };
     Ok(bump.alloc(Located::at(region, can_expr)))
 }

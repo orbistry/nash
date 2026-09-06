@@ -141,7 +141,7 @@ pub enum FlatType<'a> {
     EmptyRecord1,
     Record1(BTreeMap<&'a str, Variable>, Variable),
     Unit1,
-    Tuple1(Variable, Variable, Option<Variable>),
+    Tuple1(Variable, Variable, Vec<Variable>),
 }
 
 /// Elm's `Type.Type`: the language the constraint generator writes types in.
@@ -176,7 +176,7 @@ pub enum Type<'a> {
         ext: &'a Type<'a>,
     },
     UnitN,
-    TupleN(&'a Type<'a>, &'a Type<'a>, Option<&'a Type<'a>>),
+    TupleN(&'a Type<'a>, &'a Type<'a>, &'a [&'a Type<'a>]),
 }
 
 /// Flatten application spines whose heads inference has already determined.

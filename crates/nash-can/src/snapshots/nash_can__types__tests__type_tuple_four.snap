@@ -1,0 +1,80 @@
+---
+source: crates/nash-can/src/types.rs
+description: "( 'a, 'b, 'c, 'd )"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 19,
+        },
+    },
+    value: Tuple {
+        first: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 3,
+                },
+                end: Position {
+                    line: 1,
+                    column: 5,
+                },
+            },
+            value: Var(
+                "a",
+            ),
+        },
+        second: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 7,
+                },
+                end: Position {
+                    line: 1,
+                    column: 9,
+                },
+            },
+            value: Var(
+                "b",
+            ),
+        },
+        rest: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 11,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 13,
+                    },
+                },
+                value: Var(
+                    "c",
+                ),
+            },
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 15,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 17,
+                    },
+                },
+                value: Var(
+                    "d",
+                ),
+            },
+        ],
+    },
+}

@@ -2690,14 +2690,22 @@ their documented boundaries; compilation does not prove lazy evaluation.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.
-The promised four-element tuple impls also need canonical expression/pattern
-support: the current canonicalizer still reports TupleLargerThanThree for a
-four-element tuple expression. The numeric acceptance uses separate pairs;
-that does not count as satisfying the tuple prerequisite.
+The tuple prerequisite now preserves every component through canonical
+expressions, patterns, annotations, constraints, unification, generalization,
+instantiation, error types and impl evidence. Tuple arity follows the grammar
+(two or more components); four is the promised core impl coverage, not a
+language limit. Regression coverage checks fourth-component mismatches,
+unequal arities, a cycle through the fourth component, shared copies in the
+tail, and a fifth-component impl prerequisite. The four-element core impls
+themselves remain unfinished.
+A real two-module CLI acceptance imports the tuple impl and a polymorphic
+five-component function, preserving a function-valued fourth component.
+It compiles three declarations. Annotating that fourth component as unit
+instead exits with a type error retaining all five components. Formatting,
+strict Clippy and 1,908 tests pass (three ignored doctests).
 Tuple impl keys now retain the full `usize` arity. A regression verifies that
 two-element and 258-element heads remain distinct instead of falsely
-overlapping after byte truncation. This fixes coherence keys only; the full
-tuple expression, pattern and inference prerequisite remains unfinished.
+overlapping after byte truncation.
 
 Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,
 `core/Integral.nash`, `core/Semigroup.nash`, `core/Monoid.nash`,

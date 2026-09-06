@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\n\nrotate (a, b, c, d, e) = (e, a, b, c, d)\nkeep : ('a, 'b, 'c, 'd, 'e) -> ('a, 'b, 'c, 'd, 'e)\nkeep value = value\nresult = (keep ((), (), (), 1, \"tail\"), rotate ((), (), (), \"four\", 5))\n"
+---
+keep : forall (a : Any) (b : Any) (c : Any) (d : Any) (e : Any). ( a, b, c, d, e ) -> ( a, b, c, d, e )
+result : forall (a : Any) (a1 : Any) (d : Any) (e : Any). (FromInt d, FromString e, FromString a, FromInt a1) => ( ( (), (), (), d, e ), ( a1, (), (), (), a ) )
+rotate : forall (a : Any) (b : Any) (c : Any) (d : Any) (e : Any). ( a, b, c, d, e ) -> ( e, a, b, c, d )

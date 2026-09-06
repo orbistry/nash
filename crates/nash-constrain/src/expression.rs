@@ -209,16 +209,7 @@ pub fn constrain<'a>(
             first,
             second,
             rest,
-        } => constrain_tuple(
-            bump,
-            uf,
-            rtv,
-            region,
-            first,
-            second,
-            rest.first().copied(),
-            expected,
-        ),
+        } => constrain_tuple(bump, uf, rtv, region, first, second, rest, expected),
     }
 }
 
@@ -785,7 +776,7 @@ fn constrain_tuple<'a>(
     region: Region,
     a: &Located<CanExpr<'a>>,
     b: &Located<CanExpr<'a>>,
-    maybe_c: Option<&Located<CanExpr<'a>>>,
+    rest: &[&Located<CanExpr<'a>>],
     expected: Exp<'a>,
 ) -> Constraint<'a> {
     let a_var = mk_flex_var(uf);
@@ -796,33 +787,30 @@ fn constrain_tuple<'a>(
     let a_con = constrain(bump, uf, rtv, a, Expected::NoExpectation(a_type));
     let b_con = constrain(bump, uf, rtv, b, Expected::NoExpectation(b_type));
 
-    match maybe_c {
-        None => {
-            let tuple_type: &'a Type<'a> = bump.alloc(Type::TupleN(a_type, b_type, None));
-            let tuple_con = Constraint::Equal(region, Category::Tuple, tuple_type, expected);
-            exists(
-                bump,
-                bump.alloc_slice_copy(&[a_var, b_var]),
-                c_and(bump, vec![a_con, b_con, tuple_con]),
-            )
-        }
-
-        Some(c) => {
-            let c_var = mk_flex_var(uf);
-            let c_type: &'a Type<'a> = bump.alloc(Type::VarN(c_var));
-
-            let c_con = constrain(bump, uf, rtv, c, Expected::NoExpectation(c_type));
-
-            let tuple_type: &'a Type<'a> = bump.alloc(Type::TupleN(a_type, b_type, Some(c_type)));
-            let tuple_con = Constraint::Equal(region, Category::Tuple, tuple_type, expected);
-
-            exists(
-                bump,
-                bump.alloc_slice_copy(&[a_var, b_var, c_var]),
-                c_and(bump, vec![a_con, b_con, c_con, tuple_con]),
-            )
-        }
+    let mut vars = vec![a_var, b_var];
+    let mut cons = vec![a_con, b_con];
+    let mut types = Vec::with_capacity(rest.len());
+    for item in rest {
+        let var = mk_flex_var(uf);
+        let tipe: &'a Type<'a> = bump.alloc(Type::VarN(var));
+        vars.push(var);
+        types.push(tipe);
+        cons.push(constrain(
+            bump,
+            uf,
+            rtv,
+            item,
+            Expected::NoExpectation(tipe),
+        ));
     }
+    let tuple_type = bump.alloc(Type::TupleN(a_type, b_type, bump.alloc_slice_copy(&types)));
+    cons.push(Constraint::Equal(
+        region,
+        Category::Tuple,
+        tuple_type,
+        expected,
+    ));
+    exists(bump, bump.alloc_slice_copy(&vars), c_and(bump, cons))
 }
 
 // CONSTRAIN DESTRUCTURES

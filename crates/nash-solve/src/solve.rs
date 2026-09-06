@@ -1551,10 +1551,13 @@ impl<'a> Solver<'a, '_> {
 
             Type::UnitN => self.register(uf, rank, Content::Structure(FlatType::Unit1)),
 
-            Type::TupleN(a, b, maybe_c) => {
+            Type::TupleN(a, b, rest) => {
                 let a_var = self.type_to_variable(uf, rank, a);
                 let b_var = self.type_to_variable(uf, rank, b);
-                let c_var = maybe_c.map(|c| self.type_to_variable(uf, rank, c));
+                let c_var = rest
+                    .iter()
+                    .map(|c| self.type_to_variable(uf, rank, c))
+                    .collect();
                 self.register(
                     uf,
                     rank,
@@ -2363,10 +2366,13 @@ impl<'a> Solver<'a, '_> {
 
             FlatType::Unit1 => FlatType::Unit1,
 
-            FlatType::Tuple1(a, b, maybe_c) => {
+            FlatType::Tuple1(a, b, rest) => {
                 let a_copy = self.make_copy_help(uf, max_rank, a, quantified);
                 let b_copy = self.make_copy_help(uf, max_rank, b, quantified);
-                let c_copy = maybe_c.map(|c| self.make_copy_help(uf, max_rank, c, quantified));
+                let c_copy = rest
+                    .into_iter()
+                    .map(|c| self.make_copy_help(uf, max_rank, c, quantified))
+                    .collect();
                 FlatType::Tuple1(a_copy, b_copy, c_copy)
             }
         }
@@ -2471,14 +2477,13 @@ fn adjust_rank_content<'a>(
             // THEORY: a unit never needs to get generalized
             FlatType::Unit1 => OUTERMOST_RANK,
 
-            FlatType::Tuple1(a, b, maybe_c) => {
+            FlatType::Tuple1(a, b, rest) => {
                 let a_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *a);
                 let b_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *b);
                 let ab_rank = a_rank.max(b_rank);
-                match maybe_c {
-                    None => ab_rank,
-                    Some(c) => ab_rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *c)),
-                }
+                rest.iter().fold(ab_rank, |rank, c| {
+                    rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *c))
+                })
             }
         },
 
@@ -2680,10 +2685,11 @@ mod copy_tests {
         else {
             panic!("local function")
         };
-        let Content::Structure(FlatType::Tuple1(capture, value, None)) = uf.get(result).content
+        let Content::Structure(FlatType::Tuple1(capture, value, ref rest)) = uf.get(result).content
         else {
             panic!("local result")
         };
+        assert!(rest.is_empty());
         assert!(uf.equivalent(arg, local.quantified[0]));
         assert!(uf.equivalent(value, local.quantified[0]));
         assert!(uf.equivalent(capture, outer.quantified[0]));
@@ -3063,7 +3069,7 @@ mod copy_tests {
         let tuple = uf.fresh(make_descriptor(Content::Structure(FlatType::Tuple1(
             result,
             context_only,
-            Some(outer),
+            vec![result, context_only, outer],
         ))));
         let roots = [result, tuple, context_only];
         let (first, first_pairs) = solver.make_copies(&mut uf, 2, &roots);
@@ -3071,13 +3077,17 @@ mod copy_tests {
         assert_eq!(first_pairs.len(), 3);
         assert_eq!(second_pairs.len(), 3);
         for copies in [&first, &second] {
-            let Content::Structure(FlatType::Tuple1(a, b, Some(c))) = uf.get(copies[1]).content
+            let Content::Structure(FlatType::Tuple1(a, b, ref rest)) = uf.get(copies[1]).content
             else {
                 panic!("copied context root");
             };
             assert_eq!(a, copies[0]);
             assert_eq!(b, copies[2]);
-            assert_eq!(c, outer, "outer variables must stay shared");
+            assert_eq!(
+                rest,
+                &[copies[0], copies[2], outer],
+                "tail copies must preserve sharing and outer variables"
+            );
             assert!(matches!(uf.get(a).content, Content::FlexVar(Some("a"))));
         }
         for (first, second) in first.iter().zip(&second) {

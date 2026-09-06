@@ -283,13 +283,13 @@ fn term_to_can_type<'a>(
 
         FlatType::Unit1 => bump.alloc(Located::at_zero(CanType::Unit)),
 
-        FlatType::Tuple1(a, b, maybe_c) => {
+        FlatType::Tuple1(a, b, rest) => {
             let first = variable_to_can_type(bump, uf, state, a);
             let second = variable_to_can_type(bump, uf, state, b);
-            let rest: &'a [_] = match maybe_c {
-                None => &[],
-                Some(c) => bump.alloc_slice_copy(&[variable_to_can_type(bump, uf, state, c)]),
-            };
+            let rest = bump.alloc_slice_fill_iter(
+                rest.into_iter()
+                    .map(|c| variable_to_can_type(bump, uf, state, c)),
+            );
             bump.alloc(Located::at_zero(CanType::Tuple {
                 first,
                 second,
@@ -494,10 +494,13 @@ fn term_to_error_type<'a>(
 
         FlatType::Unit1 => bump.alloc(ErrorType::Unit),
 
-        FlatType::Tuple1(a, b, maybe_c) => {
+        FlatType::Tuple1(a, b, rest) => {
             let first = variable_to_error_type(bump, uf, state, a);
             let second = variable_to_error_type(bump, uf, state, b);
-            let third = maybe_c.map(|c| variable_to_error_type(bump, uf, state, c));
+            let third = bump.alloc_slice_fill_iter(
+                rest.into_iter()
+                    .map(|c| variable_to_error_type(bump, uf, state, c)),
+            );
             bump.alloc(ErrorType::Tuple(first, second, third))
         }
     }
@@ -648,13 +651,10 @@ fn get_var_names<'a>(
 
             FlatType::Unit1 => taken_names,
 
-            FlatType::Tuple1(a, b, None) => {
-                let taken = get_var_names(bump, uf, seen, b, taken_names);
-                get_var_names(bump, uf, seen, a, taken)
-            }
-
-            FlatType::Tuple1(a, b, Some(c)) => {
-                let taken = get_var_names(bump, uf, seen, c, taken_names);
+            FlatType::Tuple1(a, b, rest) => {
+                let taken = rest.into_iter().rev().fold(taken_names, |taken, c| {
+                    get_var_names(bump, uf, seen, c, taken)
+                });
                 let taken = get_var_names(bump, uf, seen, b, taken);
                 get_var_names(bump, uf, seen, a, taken)
             }

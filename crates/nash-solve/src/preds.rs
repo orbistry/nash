@@ -211,7 +211,7 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
             (
                 Content::Structure(FlatType::Tuple1(a, b, c)),
                 Content::Structure(FlatType::Tuple1(d, e, f)),
-            ) if c.is_some() == f.is_some() => {
+            ) if c.len() == f.len() => {
                 pending.extend([(a, d), (b, e)]);
                 pending.extend(c.into_iter().zip(f));
             }

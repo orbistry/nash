@@ -224,7 +224,7 @@ impl<'a> State<'a> {
             Content::Structure(FlatType::Tuple1(first, second, third)) => {
                 self.value(uf, env, first, seen)?;
                 self.value(uf, env, second, seen)?;
-                if let Some(third) = third {
+                for third in third {
                     self.value(uf, env, third, seen)?;
                 }
                 self.bump.alloc(K::Base(BaseKind::Term))

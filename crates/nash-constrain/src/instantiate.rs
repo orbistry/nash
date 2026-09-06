@@ -89,8 +89,9 @@ pub fn from_src_type<'a>(
         } => bump.alloc(Type::TupleN(
             from_src_type(bump, free_vars, first),
             from_src_type(bump, free_vars, second),
-            rest.first()
-                .map(|third| from_src_type(bump, free_vars, third)),
+            bump.alloc_slice_fill_iter(
+                rest.iter().map(|item| from_src_type(bump, free_vars, item)),
+            ),
         )),
 
         CanType::Unit => bump.alloc(Type::UnitN),
@@ -345,8 +346,9 @@ pub fn canonical_to_variable<'a>(
             let a_var = canonical_to_variable(uf, rank, variables, flex_vars, first);
             let b_var = canonical_to_variable(uf, rank, variables, flex_vars, second);
             let c_var = rest
-                .first()
-                .map(|third| canonical_to_variable(uf, rank, variables, flex_vars, third));
+                .iter()
+                .map(|item| canonical_to_variable(uf, rank, variables, flex_vars, item))
+                .collect();
             register(
                 uf,
                 rank,

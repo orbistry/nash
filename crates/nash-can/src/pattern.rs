@@ -104,20 +104,10 @@ pub fn canonicalize<'a>(
             second,
             rest,
         } => {
-            // Like Elm's `PTuple <$> a <*> b <*> canonicalizeTuple`, the
-            // element errors and the tuple-size error accumulate together.
-            let size_check: Result<(), Vec<Error<'a>>> = if rest.len() > 1 {
-                Err(vec![Error::TupleLargerThanThree {
-                    region: pattern.region,
-                }])
-            } else {
-                Ok(())
-            };
-            let (first, second, rest, ()) = crate::accumulate::accumulate4(
+            let (first, second, rest) = crate::accumulate::accumulate3(
                 canonicalize(bump, env, first, bindings),
                 canonicalize(bump, env, second, bindings),
                 canonicalize_list(bump, env, rest, bindings),
-                size_check,
             )?;
             CanPattern::Tuple {
                 first,
@@ -538,7 +528,7 @@ mod tests {
 
     #[test]
     fn tuple_four() {
-        assert_pattern_error_snapshot!("( a, b, c, d )", empty_env);
+        assert_pattern_snapshot!("( a, b, c, d )", empty_env);
     }
 
     #[test]

@@ -103,8 +103,8 @@ pub(crate) fn select<'a>(
             ),
             Content::Structure(FlatType::Unit1) => (HeadCon::Unit, Vec::new()),
             Content::Structure(FlatType::Tuple1(a, b, c)) => (
-                HeadCon::Tuple(if c.is_some() { 3 } else { 2 }),
-                [*a, *b].into_iter().chain(*c).collect(),
+                HeadCon::Tuple(2 + c.len()),
+                [*a, *b].into_iter().chain(c.iter().copied()).collect(),
             ),
             Content::Structure(
                 FlatType::Fun1(..) | FlatType::Record1(..) | FlatType::EmptyRecord1,
@@ -156,7 +156,7 @@ mod tests {
         child_desc.rank = 3;
         let child = uf.fresh(child_desc);
         let mut outer_desc =
-            make_descriptor(Content::Structure(FlatType::Tuple1(child, child, None)));
+            make_descriptor(Content::Structure(FlatType::Tuple1(child, child, vec![])));
         outer_desc.rank = 2;
         let outer = uf.fresh(outer_desc);
         assert!(has_outer_flex(&mut uf, &[outer], 3));

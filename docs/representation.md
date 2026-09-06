@@ -83,7 +83,7 @@ lambda.
 |---|---|
 | user `type foo = C0 ... \| C1 ... \| ...` | `constr i [fields...]`, `i` the constructor's declaration index |
 | a little constructor with labeled fields `type foo = Foo { a : ..., b : ... }` | `constr i [a, b]`, flat |
-| tuples `( a, b )`, `( a, b, c )` | `constr 0 [a, b]`, `constr 0 [a, b, c]` |
+| tuples `( a, b, ... )` with two or more components | `constr 0 [a, b, ...]`, preserving every component in order |
 | `type alias foo = { f0 : ..., f1 : ... }` | `constr 0 [f0, f1, ...]` in field declaration order |
 | `'a -> 'b` | `lam` |
 

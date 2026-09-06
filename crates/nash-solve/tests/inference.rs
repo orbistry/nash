@@ -1438,6 +1438,52 @@ fn tuple_value() {
 }
 
 #[test]
+fn tuple_tail_survives_patterns_annotations_and_instantiation() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+
+        rotate (a, b, c, d, e) = (e, a, b, c, d)
+        keep : ('a, 'b, 'c, 'd, 'e) -> ('a, 'b, 'c, 'd, 'e)
+        keep value = value
+        result = (keep ((), (), (), 1, "tail"), rotate ((), (), (), "four", 5))
+    "#
+    );
+}
+
+#[test]
+fn tuple_fourth_component_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        value : (unit, unit, unit, unit)
+        value = ((), (), (), \x -> x)
+    "#
+    );
+}
+
+#[test]
+fn tuple_arity_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        value : (unit, unit, unit, unit)
+        value = ((), (), (), (), ())
+    "#
+    );
+}
+
+#[test]
+fn tuple_tail_occurs_check() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        loop x = x ((), (), (), x)
+    "#
+    );
+}
+
+#[test]
 fn list_of_numbers() {
     assert_inference_snapshot!(
         r#"

@@ -2,8 +2,8 @@
 source: crates/nash-can/src/pattern.rs
 description: "( a, b, c, d )"
 ---
-[
-    TupleLargerThanThree {
+(
+    Located {
         region: Region {
             start: Position {
                 line: 1,
@@ -14,5 +14,111 @@ description: "( a, b, c, d )"
                 column: 15,
             },
         },
+        value: Tuple {
+            first: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 3,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 4,
+                    },
+                },
+                value: Var(
+                    "a",
+                ),
+            },
+            second: Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 7,
+                    },
+                },
+                value: Var(
+                    "b",
+                ),
+            },
+            rest: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                    },
+                    value: Var(
+                        "c",
+                    ),
+                },
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 13,
+                        },
+                    },
+                    value: Var(
+                        "d",
+                    ),
+                },
+            ],
+        },
     },
-]
+    {
+        "a": Region {
+            start: Position {
+                line: 1,
+                column: 3,
+            },
+            end: Position {
+                line: 1,
+                column: 4,
+            },
+        },
+        "b": Region {
+            start: Position {
+                line: 1,
+                column: 6,
+            },
+            end: Position {
+                line: 1,
+                column: 7,
+            },
+        },
+        "c": Region {
+            start: Position {
+                line: 1,
+                column: 9,
+            },
+            end: Position {
+                line: 1,
+                column: 10,
+            },
+        },
+        "d": Region {
+            start: Position {
+                line: 1,
+                column: 12,
+            },
+            end: Position {
+                line: 1,
+                column: 13,
+            },
+        },
+    },
+)

@@ -509,24 +509,16 @@ fn unify_structure<'a>(
                 unify_record(uf, vars, context, structure1, structure2)
             }
 
-            (FlatType::Tuple1(a, b, None), FlatType::Tuple1(x, y, None)) => {
+            (FlatType::Tuple1(a, b, rest), FlatType::Tuple1(x, y, other))
+                if rest.len() == other.len() =>
+            {
                 sub_unify(uf, vars, a, x)?;
                 sub_unify(uf, vars, b, y)?;
+                unify_args(uf, vars, &rest, &other)?;
                 merge(
                     uf,
                     context,
-                    Content::Structure(FlatType::Tuple1(x, y, None)),
-                )
-            }
-
-            (FlatType::Tuple1(a, b, Some(c)), FlatType::Tuple1(x, y, Some(z))) => {
-                sub_unify(uf, vars, a, x)?;
-                sub_unify(uf, vars, b, y)?;
-                sub_unify(uf, vars, c, z)?;
-                merge(
-                    uf,
-                    context,
-                    Content::Structure(FlatType::Tuple1(x, y, Some(z))),
+                    Content::Structure(FlatType::Tuple1(x, y, other)),
                 )
             }
 

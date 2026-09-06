@@ -50,10 +50,10 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
             keep x = x
         witness : list (bag int) -> list (bag int)
         witness x = x
-        impl Keep ('a, 'b) where
+        impl Keep 'e => Keep ('a, 'b, 'c, 'd, 'e) where
             keep x = x
-        tuple : (int, bytes) -> (int, bytes)
-        tuple x = x
+        tuple : (int, bytes, string, bool, int) -> (int, bytes, string, bool, int)
+        tuple x = keep x
     "
         ),
     );
@@ -94,14 +94,20 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
     let Evidence::Impl {
         impl_,
         type_args,
-        args: [],
+        args,
     } = resolve(&bump, &tables, &tuple).unwrap()
     else {
         panic!("tuple impl")
     };
-    assert_eq!(impl_.key.heads, &[nash_ast::HeadCon::Tuple(2)]);
-    assert_eq!(type_args.len(), 2);
-    for (typ, expected) in type_args.iter().zip(["int", "bytes"]) {
+    assert_eq!(impl_.key.heads, &[nash_ast::HeadCon::Tuple(5)]);
+    assert_eq!(type_args.len(), 5);
+    assert!(
+        matches!(args, [Evidence::Impl { impl_, type_args: [], args: [] }] if matches!(impl_.key.heads, [nash_ast::HeadCon::Named(name)] if name.name == "int"))
+    );
+    for (typ, expected) in type_args
+        .iter()
+        .zip(["int", "bytes", "string", "bool", "int"])
+    {
         assert!(matches!(typ.value, Type::Named { reference, .. } if reference.name == expected));
     }
 }

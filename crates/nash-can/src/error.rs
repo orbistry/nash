@@ -302,9 +302,6 @@ pub enum Error<'a> {
         first: Region,
         second: Region,
     },
-    TupleLargerThanThree {
-        region: Region,
-    },
 
     // --- Expression canonicalization errors ---
     NotFoundVar {

@@ -33,7 +33,7 @@ pub enum ErrorType<'a> {
     Tuple(
         &'a ErrorType<'a>,
         &'a ErrorType<'a>,
-        Option<&'a ErrorType<'a>>,
+        &'a [&'a ErrorType<'a>],
     ),
     Alias {
         home: ModuleName<'a>,
