@@ -1230,16 +1230,6 @@ impl<'a> Solver<'a, '_> {
         rank: usize,
         tipe: &Type<'a>,
     ) -> Variable {
-        self.type_to_var(uf, rank, &BTreeMap::new(), tipe)
-    }
-
-    fn type_to_var(
-        &mut self,
-        uf: &mut UnionFind<'a>,
-        rank: usize,
-        alias_dict: &BTreeMap<&'a str, Variable>,
-        tipe: &Type<'a>,
-    ) -> Variable {
         match tipe {
             Type::UnsupportedApplication(region) => {
                 self.conversion_errors
@@ -1248,10 +1238,19 @@ impl<'a> Solver<'a, '_> {
             }
             Type::VarN(var) => *var,
 
+            Type::AppVarN(head, args) => {
+                let head = self.type_to_variable(uf, rank, head);
+                let args = args
+                    .iter()
+                    .map(|arg| self.type_to_variable(uf, rank, arg))
+                    .collect();
+                self.register(uf, rank, Content::Structure(FlatType::AppV1(head, args)))
+            }
+
             Type::AppN { home, name, args } => {
                 let arg_vars: Vec<Variable> = args
                     .iter()
-                    .map(|arg| self.type_to_var(uf, rank, alias_dict, arg))
+                    .map(|arg| self.type_to_variable(uf, rank, arg))
                     .collect();
                 self.register(
                     uf,
@@ -1261,8 +1260,8 @@ impl<'a> Solver<'a, '_> {
             }
 
             Type::FunN(a, b) => {
-                let a_var = self.type_to_var(uf, rank, alias_dict, a);
-                let b_var = self.type_to_var(uf, rank, alias_dict, b);
+                let a_var = self.type_to_variable(uf, rank, a);
+                let b_var = self.type_to_variable(uf, rank, b);
                 self.register(uf, rank, Content::Structure(FlatType::Fun1(a_var, b_var)))
             }
 
@@ -1275,11 +1274,10 @@ impl<'a> Solver<'a, '_> {
                 let arg_vars: Vec<(&'a str, Variable)> = args
                     .iter()
                     .map(|(arg_name, arg_type)| {
-                        (*arg_name, self.type_to_var(uf, rank, alias_dict, arg_type))
+                        (*arg_name, self.type_to_variable(uf, rank, arg_type))
                     })
                     .collect();
-                let new_dict: BTreeMap<&'a str, Variable> = arg_vars.iter().copied().collect();
-                let alias_var = self.type_to_var(uf, rank, &new_dict, real);
+                let alias_var = self.type_to_variable(uf, rank, real);
                 self.register(
                     uf,
                     rank,
@@ -1292,18 +1290,12 @@ impl<'a> Solver<'a, '_> {
                 )
             }
 
-            Type::PlaceHolder(name) => *alias_dict
-                .get(name)
-                .expect("alias placeholders only reference alias arguments"),
-
             Type::RecordN { fields, ext } => {
                 let field_vars: BTreeMap<&'a str, Variable> = fields
                     .iter()
-                    .map(|(name, field_type)| {
-                        (*name, self.type_to_var(uf, rank, alias_dict, field_type))
-                    })
+                    .map(|(name, field_type)| (*name, self.type_to_variable(uf, rank, field_type)))
                     .collect();
-                let ext_var = self.type_to_var(uf, rank, alias_dict, ext);
+                let ext_var = self.type_to_variable(uf, rank, ext);
                 self.register(
                     uf,
                     rank,
@@ -1318,9 +1310,9 @@ impl<'a> Solver<'a, '_> {
             Type::UnitN => self.register(uf, rank, Content::Structure(FlatType::Unit1)),
 
             Type::TupleN(a, b, maybe_c) => {
-                let a_var = self.type_to_var(uf, rank, alias_dict, a);
-                let b_var = self.type_to_var(uf, rank, alias_dict, b);
-                let c_var = maybe_c.map(|c| self.type_to_var(uf, rank, alias_dict, c));
+                let a_var = self.type_to_variable(uf, rank, a);
+                let b_var = self.type_to_variable(uf, rank, b);
+                let c_var = maybe_c.map(|c| self.type_to_variable(uf, rank, c));
                 self.register(
                     uf,
                     rank,
@@ -1414,12 +1406,13 @@ impl<'a> Solver<'a, '_> {
         src_type: &Located<CanType<'a>>,
     ) -> Variable {
         match &src_type.value {
-            CanType::App { .. } => {
-                self.conversion_errors
-                    .push(Error::UnsupportedTypeApplication {
-                        region: src_type.region,
-                    });
-                self.register(uf, rank, Content::Error)
+            CanType::App { head, args } => {
+                let head = self.src_type_to_var(uf, rank, flex_vars, head);
+                let args = args
+                    .iter()
+                    .map(|arg| self.src_type_to_var(uf, rank, flex_vars, arg))
+                    .collect();
+                self.register(uf, rank, Content::Structure(FlatType::AppV1(head, args)))
             }
             CanType::Lambda { from, to } => {
                 let arg_var = self.src_type_to_var(uf, rank, flex_vars, from);
@@ -1823,6 +1816,10 @@ impl<'a> Solver<'a, '_> {
                     variables.insert(var);
                 }
                 Content::Structure(FlatType::App1(_, _, args)) => pending.extend(args),
+                Content::Structure(FlatType::AppV1(head, args)) => {
+                    pending.push(*head);
+                    pending.extend(args);
+                }
                 Content::Structure(FlatType::Fun1(a, b)) => pending.extend([a, b]),
                 Content::Structure(FlatType::Tuple1(a, b, c)) => {
                     pending.extend([a, b]);
@@ -2057,6 +2054,12 @@ impl<'a> Solver<'a, '_> {
         quantified: &[Variable],
     ) -> FlatType<'a> {
         match flat_type {
+            FlatType::AppV1(head, args) => FlatType::AppV1(
+                self.make_copy_help(uf, max_rank, head, quantified),
+                args.iter()
+                    .map(|arg| self.make_copy_help(uf, max_rank, *arg, quantified))
+                    .collect(),
+            ),
             FlatType::App1(home, name, args) => FlatType::App1(
                 home,
                 name,
@@ -2163,6 +2166,12 @@ fn adjust_rank_content<'a>(
         Content::FlexVar(_) | Content::RigidVar(_) | Content::Error => group_rank,
 
         Content::Structure(flat_type) => match flat_type {
+            FlatType::AppV1(head, args) => {
+                let head_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *head);
+                args.iter().fold(head_rank, |rank, arg| {
+                    rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *arg))
+                })
+            }
             FlatType::App1(_, _, args) => args.iter().fold(OUTERMOST_RANK, |rank, arg| {
                 rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *arg))
             }),

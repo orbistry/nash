@@ -140,9 +140,24 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
         if a == b || !seen.insert((a, b)) {
             continue;
         }
-        let a_content = uf.get(a).content.clone();
-        let b_content = uf.get(b).content.clone();
+        fn normalize<'a>(uf: &mut UnionFind<'a>, var: Variable) -> Content<'a> {
+            match uf.get(var).content.clone() {
+                Content::Structure(flat) => {
+                    Content::Structure(nash_constrain::type_::normalize_application(uf, flat))
+                }
+                content => content,
+            }
+        }
+        let a_content = normalize(uf, a);
+        let b_content = normalize(uf, b);
         match (a_content, b_content) {
+            (
+                Content::Structure(FlatType::AppV1(a, aa)),
+                Content::Structure(FlatType::AppV1(b, ab)),
+            ) if aa.len() == ab.len() => {
+                pending.push((a, b));
+                pending.extend(aa.into_iter().zip(ab));
+            }
             (
                 Content::Structure(FlatType::App1(ha, na, aa)),
                 Content::Structure(FlatType::App1(hb, nb, ab)),
@@ -259,6 +274,42 @@ mod tests {
         assert!(same_args(&mut uf, &[wrapped_empty], &[empty]));
         assert!(!same_args(&mut uf, &[nested], &[y]));
         assert!(!uf.equivalent(nested, flat));
+    }
+
+    #[test]
+    fn application_matching_waits_for_known_heads() {
+        let mut uf = UnionFind::new();
+        let head = uf.fresh(make_descriptor(Content::FlexVar(None)));
+        let a = uf.fresh(make_descriptor(Content::RigidVar("a")));
+        let home = nash_ast::ModuleName {
+            package: None,
+            name: "Main",
+        };
+        let application = uf.fresh(make_descriptor(Content::Structure(FlatType::AppV1(
+            head,
+            vec![a],
+        ))));
+        let known = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
+            home,
+            "Box",
+            vec![a],
+        ))));
+        assert!(!same_args(&mut uf, &[application], &[known]));
+        assert!(matches!(uf.get(head).content, Content::FlexVar(None)));
+        uf.modify(head, |desc| {
+            desc.content = Content::Structure(FlatType::App1(home, "Box", vec![]))
+        });
+        assert!(same_args(&mut uf, &[application], &[known]));
+        let other_home = nash_ast::ModuleName {
+            package: None,
+            name: "Other",
+        };
+        let other = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
+            other_home,
+            "Box",
+            vec![a],
+        ))));
+        assert!(!same_args(&mut uf, &[application], &[other]));
     }
 
     #[test]

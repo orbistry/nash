@@ -17,7 +17,10 @@ pub fn from_src_type<'a>(
     src_type: &Located<CanType<'a>>,
 ) -> &'a Type<'a> {
     match &src_type.value {
-        CanType::App { .. } => bump.alloc(Type::UnsupportedApplication(src_type.region)),
+        CanType::App { head, args } => bump.alloc(Type::AppVarN(
+            from_src_type(bump, free_vars, head),
+            bump.alloc_slice_fill_iter(args.iter().map(|arg| from_src_type(bump, free_vars, arg))),
+        )),
         CanType::Lambda { from, to } => bump.alloc(Type::FunN(
             from_src_type(bump, free_vars, from),
             from_src_type(bump, free_vars, to),

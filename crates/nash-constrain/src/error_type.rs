@@ -10,6 +10,7 @@ use nash_ast::ModuleName;
 /// Elm's `Type.Error.Type`. Bump-allocated; maps become name-sorted slices.
 #[derive(Clone, Copy, Debug)]
 pub enum ErrorType<'a> {
+    VarApp(&'a ErrorType<'a>, &'a [&'a ErrorType<'a>]),
     Lambda(
         &'a ErrorType<'a>,
         &'a ErrorType<'a>,

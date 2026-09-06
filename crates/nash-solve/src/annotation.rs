@@ -178,7 +178,14 @@ fn term_to_can_type<'a>(
     state: &mut NameState<'a>,
     term: FlatType<'a>,
 ) -> &'a Located<CanType<'a>> {
-    match term {
+    match nash_constrain::type_::normalize_application(uf, term) {
+        FlatType::AppV1(head, args) => bump.alloc(Located::at_zero(CanType::App {
+            head: variable_to_can_type(bump, uf, state, head),
+            args: bump.alloc_slice_fill_iter(
+                args.iter()
+                    .map(|arg| variable_to_can_type(bump, uf, state, *arg)),
+            ),
+        })),
         FlatType::App1(home, name, args) => bump.alloc(Located::at_zero(CanType::Named {
             reference: QualifiedName { home, name },
             args: bump.alloc_slice_fill_iter(
@@ -346,7 +353,14 @@ fn term_to_error_type<'a>(
     state: &mut NameState<'a>,
     term: FlatType<'a>,
 ) -> &'a ErrorType<'a> {
-    match term {
+    match nash_constrain::type_::normalize_application(uf, term) {
+        FlatType::AppV1(head, args) => bump.alloc(ErrorType::VarApp(
+            variable_to_error_type(bump, uf, state, head),
+            bump.alloc_slice_fill_iter(
+                args.iter()
+                    .map(|arg| variable_to_error_type(bump, uf, state, *arg)),
+            ),
+        )),
         FlatType::App1(home, name, args) => bump.alloc(ErrorType::Type {
             home,
             name,
@@ -538,6 +552,12 @@ fn get_var_names<'a>(
         }),
 
         Content::Structure(flat_type) => match flat_type {
+            FlatType::AppV1(head, args) => {
+                let taken = args.iter().rev().fold(taken_names, |taken, arg| {
+                    get_var_names(bump, uf, seen, *arg, taken)
+                });
+                get_var_names(bump, uf, seen, head, taken)
+            }
             FlatType::App1(_, _, args) => args.iter().rev().fold(taken_names, |taken, arg| {
                 get_var_names(bump, uf, seen, *arg, taken)
             }),

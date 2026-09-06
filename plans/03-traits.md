@@ -2101,13 +2101,21 @@ snapshots reflect literal traits.
 
 ## Chunk 8: higher-kinded traits (type-variable application)
 
+Status: in progress. Nominal constructor applications now convert, unify,
+generalize and retain use-site evidence. Focused coverage checks distinct
+Functor impls, imported applications, rigid heads, partial variable heads,
+and cyclic application diagnostics. Partial alias inference remains gated;
+this chunk is not complete until nominal aliases survive application and
+saturation with capture-safe substitution.
+
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/types.rs`,
 `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/instantiate.rs`,
 `crates/nash-solve/src/{solve.rs,unify.rs,annotation.rs,occurs.rs}`,
 `crates/nash-can/src/interface.rs`.
 
 Ownership: plan 02 provides canonical `nash_ast::Type::App { head, args }`,
-including substitution and interface copying. Keep that representation.
+including substitution. Interfaces now borrow retained canonical types from
+the build arena. Keep that representation.
 This plan adds solver-side `nash_constrain::Type::AppVarN` and
 `FlatType::AppV1` and owns everything that *unifies* or *walks* them: the arms in `unify.rs`, `solve.rs`,
 `annotation.rs`, `occurs.rs`, `instantiate.rs`. The impl head kind check
@@ -2194,7 +2202,7 @@ args), `restore_content`, `copy_flat_type`, `occurs`, `get_var_names`,
 has that constructor as head; otherwise `None`), `actual_args` (append).
 `instantiate::from_src_type` and `src_type_to_var` map `CanType::App`
 to `AppVarN`/`AppV1`. `types.rs::canonicalize_type_value` maps
-`SourceType::VarApp`. `interface.rs::copy_type` copies it.
+`SourceType::VarApp`. Interfaces retain these canonical nodes in the build arena.
 
 Elm reference: none for `AppV1` (Elm is first-order). `Type/Unify.hs::unifyStructure`
 for the arm shape; `unifyArgs` for pairwise unification with continued

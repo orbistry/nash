@@ -23,6 +23,11 @@ fn occurs_help(
         Content::Structure(term) => {
             seen.push(var);
             let result = match term {
+                FlatType::AppV1(head, args) => {
+                    let acc = occurs_help(uf, seen, head, found_cycle);
+                    args.iter()
+                        .fold(acc, |acc, arg| occurs_help(uf, seen, *arg, acc))
+                }
                 FlatType::App1(_, _, args) => args
                     .iter()
                     .fold(found_cycle, |acc, arg| occurs_help(uf, seen, *arg, acc)),

@@ -127,6 +127,7 @@ pub fn exists<'a>(
 #[derive(Clone, Debug)]
 pub enum FlatType<'a> {
     App1(ModuleName<'a>, &'a str, Vec<Variable>),
+    AppV1(Variable, Vec<Variable>),
     Fun1(Variable, Variable),
     EmptyRecord1,
     Record1(BTreeMap<&'a str, Variable>, Variable),
@@ -138,7 +139,7 @@ pub enum FlatType<'a> {
 #[derive(Clone, Copy, Debug)]
 pub enum Type<'a> {
     UnsupportedApplication(Region),
-    PlaceHolder(&'a str),
+    AppVarN(&'a Type<'a>, &'a [&'a Type<'a>]),
     AliasN {
         home: ModuleName<'a>,
         name: &'a str,
@@ -160,6 +161,30 @@ pub enum Type<'a> {
     },
     UnitN,
     TupleN(&'a Type<'a>, &'a Type<'a>, Option<&'a Type<'a>>),
+}
+
+/// Flatten application spines whose heads inference has already determined.
+/// This does not bind unknown heads or expand aliases.
+pub fn normalize_application<'a>(uf: &mut UnionFind<'a>, term: FlatType<'a>) -> FlatType<'a> {
+    let FlatType::AppV1(mut head, mut args) = term else {
+        return term;
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    while seen.insert(uf.find(head)) {
+        match uf.get(head).content.clone() {
+            Content::Structure(FlatType::App1(home, name, mut prefix)) => {
+                prefix.extend(args);
+                return FlatType::App1(home, name, prefix);
+            }
+            Content::Structure(FlatType::AppV1(inner, mut prefix)) => {
+                prefix.extend(args);
+                head = inner;
+                args = prefix;
+            }
+            _ => break,
+        }
+    }
+    FlatType::AppV1(head, args)
 }
 
 // DESCRIPTORS

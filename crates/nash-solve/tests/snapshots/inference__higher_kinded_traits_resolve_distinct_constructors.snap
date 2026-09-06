@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: render_annotations(&annotations)
+---
+big : Box Color
+little : option ()
+twice : forall a f. Functor f => (a -> a) -> f a -> f a

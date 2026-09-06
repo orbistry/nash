@@ -19,6 +19,10 @@ pub(crate) fn has_outer_flex(uf: &mut UnionFind<'_>, args: &[Variable], rank: us
             inherited_outer || (desc.rank != nash_constrain::type_::NO_RANK && desc.rank < rank);
         match &desc.content {
             Content::FlexVar(_) if outer => return true,
+            Content::Structure(FlatType::AppV1(head, args)) => {
+                pending.push((*head, outer));
+                pending.extend(args.iter().map(|var| (*var, outer)));
+            }
             Content::Structure(FlatType::App1(_, _, args)) => {
                 pending.extend(args.iter().map(|var| (*var, outer)))
             }
@@ -61,7 +65,14 @@ pub(crate) fn select<'a>(
     let mut arguments = Vec::new();
     let mut unknown = false;
     for arg in args {
-        let (head, args) = match &uf.get(*arg).content {
+        let content = uf.get(*arg).content.clone();
+        let content = match content {
+            Content::Structure(flat) => {
+                Content::Structure(nash_constrain::type_::normalize_application(uf, flat))
+            }
+            content => content,
+        };
+        let (head, args) = match &content {
             Content::Structure(FlatType::App1(home, name, args)) => (
                 HeadCon::Named(QualifiedName { home: *home, name }),
                 args.clone(),

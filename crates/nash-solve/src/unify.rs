@@ -291,7 +291,55 @@ fn unify_structure<'a>(
 
         Content::Alias { real, .. } => sub_unify(uf, vars, context.first, real),
 
-        Content::Structure(other_flat_type) => match (flat_type, other_flat_type) {
+        Content::Structure(other_flat_type) => match (
+            nash_constrain::type_::normalize_application(uf, flat_type),
+            nash_constrain::type_::normalize_application(uf, other_flat_type),
+        ) {
+            (FlatType::AppV1(f, xs), FlatType::AppV1(g, ys)) => {
+                let (short, long, short_head, long_head) = if xs.len() <= ys.len() {
+                    (xs, ys, f, g)
+                } else {
+                    (ys, xs, g, f)
+                };
+                let extra = long.len() - short.len();
+                if extra == 0 {
+                    sub_unify(uf, vars, short_head, long_head)?;
+                } else {
+                    let partial = fresh(
+                        uf,
+                        vars,
+                        context,
+                        Content::Structure(FlatType::AppV1(long_head, long[..extra].to_vec())),
+                    );
+                    sub_unify(uf, vars, short_head, partial)?;
+                }
+                unify_args(uf, vars, &short, &long[extra..])?;
+                merge(
+                    uf,
+                    context,
+                    Content::Structure(FlatType::AppV1(long_head, long)),
+                )
+            }
+            (FlatType::AppV1(head, args), FlatType::App1(home, name, known))
+            | (FlatType::App1(home, name, known), FlatType::AppV1(head, args)) => {
+                if args.len() > known.len() {
+                    return Err(());
+                }
+                let split = known.len() - args.len();
+                let partial = fresh(
+                    uf,
+                    vars,
+                    context,
+                    Content::Structure(FlatType::App1(home, name, known[..split].to_vec())),
+                );
+                sub_unify(uf, vars, head, partial)?;
+                unify_args(uf, vars, &args, &known[split..])?;
+                merge(
+                    uf,
+                    context,
+                    Content::Structure(FlatType::App1(home, name, known)),
+                )
+            }
             (
                 FlatType::App1(home, name, args),
                 FlatType::App1(other_home, other_name, other_args),
@@ -550,6 +598,59 @@ fn gather_fields<'a>(
 mod predicate_tests {
     use super::*;
     use type_::PredId;
+
+    #[test]
+    fn application_head_and_argument_cycles_are_detected_and_rendered() {
+        for head_cycle in [true, false] {
+            let bump = Bump::new();
+            let mut uf = UnionFind::new();
+            let f = type_::mk_flex_var(&mut uf);
+            let a = type_::mk_flex_var(&mut uf);
+            let b = type_::mk_flex_var(&mut uf);
+            let left = uf.fresh(type_::make_descriptor(Content::Structure(FlatType::AppV1(
+                f,
+                vec![a],
+            ))));
+            let right_args = if head_cycle {
+                vec![b, a]
+            } else {
+                let nested = uf.fresh(type_::make_descriptor(Content::Structure(FlatType::App1(
+                    nash_ast::ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    "Box",
+                    vec![a],
+                ))));
+                vec![nested]
+            };
+            let right = uf.fresh(type_::make_descriptor(Content::Structure(FlatType::AppV1(
+                f, right_args,
+            ))));
+            assert!(matches!(unify(&bump, &mut uf, left, right), Answer::Ok(_)));
+            assert!(crate::occurs::occurs(&mut uf, left));
+            let error = annotation::to_error_type(&bump, &mut uf, left);
+            assert!(format!("{error:?}").contains("Infinite"));
+        }
+    }
+
+    #[test]
+    fn linked_application_heads_terminate_during_normalization() {
+        let bump = Bump::new();
+        let mut uf = UnionFind::new();
+        let f = type_::mk_flex_var(&mut uf);
+        let g = type_::mk_flex_var(&mut uf);
+        let a = type_::mk_flex_var(&mut uf);
+        uf.modify(f, |desc| {
+            desc.content = Content::Structure(FlatType::AppV1(g, vec![a]))
+        });
+        uf.modify(g, |desc| {
+            desc.content = Content::Structure(FlatType::AppV1(f, vec![a]))
+        });
+        assert!(crate::occurs::occurs(&mut uf, f));
+        let error = annotation::to_error_type(&bump, &mut uf, f);
+        assert!(format!("{error:?}").contains("Infinite"));
+    }
 
     #[test]
     fn merges_preserve_obligations_added_after_context_capture() {

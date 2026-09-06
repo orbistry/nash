@@ -1,0 +1,48 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype Box 'a = Box 'a\nwrong : 'f 'a -> Box 'a\nwrong x = x\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 4,
+                column: 11,
+            },
+            end: Position {
+                line: 4,
+                column: 12,
+            },
+        },
+        Local(
+            "x",
+        ),
+        VarApp(
+            RigidVar(
+                "f",
+            ),
+            [
+                RigidVar(
+                    "a",
+                ),
+            ],
+        ),
+        FromAnnotation(
+            "wrong",
+            1,
+            TypedBody,
+            Type {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Box",
+                args: [
+                    RigidVar(
+                        "a",
+                    ),
+                ],
+            },
+        ),
+    ),
+]

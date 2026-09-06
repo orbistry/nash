@@ -1857,23 +1857,105 @@ fn nested_operator_sections_apply() {
 }
 
 #[test]
-fn higher_kinded_value_inference_is_explicitly_deferred() {
-    let bump = Bump::new();
-    let errors = infer(
-        &bump,
-        "module Main exposing (..)\n\nf : 'f 'a -> 'f 'a\nf x = x\n",
-    )
-    .expect_err("higher-kinded value unification belongs to plan 03");
-    assert!(
-        errors
-            .iter()
-            .any(|error| matches!(error, Error::UnsupportedTypeApplication { .. }))
+fn higher_kinded_value_inference_preserves_partial_heads() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        identityK : 'f 'a -> 'f 'a
+        identityK x = x
+        two : 'g 'b 'a -> 'g 'b 'a
+        two x = identityK x
+    "#
     );
-    insta::assert_debug_snapshot!(errors);
 }
 
 #[test]
-fn imported_higher_kinded_value_inference_is_explicitly_deferred() {
+fn higher_kinded_rigid_heads_cannot_specialize() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Box 'a = Box 'a
+        wrong : 'f 'a -> Box 'a
+        wrong x = x
+    "#
+    );
+}
+
+#[test]
+fn higher_kinded_traits_resolve_distinct_constructors() {
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        type option 'a = None | Some 'a
+        type Box 'a = Box 'a
+        type Color = Red | Blue
+        trait Functor 'f where
+            map : ('a -> 'b) -> 'f 'a -> 'f 'b
+        impl Functor option where
+            map f xs =
+                case xs of
+                    None -> None
+                    Some x -> Some (f x)
+        impl Functor Box where
+            map f (Box x) = Box (f x)
+        twice f xs = map f (map f xs)
+        little = map (\x -> x) (Some ())
+        big = map (\x -> x) (Box Red)
+    "#
+    );
+    let bump = Bump::new();
+    let source = bump.alloc_str(source);
+    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: None,
+        },
+        &parsed,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let mut decls = canonical.module.decls;
+    let mut checked = 0;
+    while let nash_ast::Decls::Declare { definition, next } = decls {
+        if let nash_ast::Def::Def { name, body, .. } = definition {
+            let expected = match name.value {
+                "little" => Some("option"),
+                "big" => Some("Box"),
+                _ => None,
+            };
+            if let Some(expected) = expected {
+                let nash_ast::Expr::Call { function, .. } = body.value else {
+                    panic!("map call")
+                };
+                let instance = &solved.instances[&nash_ast::NodeId::expr(function)];
+                let [nash_ast::Evidence::Impl { impl_, args, .. }] = instance.evidence else {
+                    panic!("resolved Functor evidence")
+                };
+                assert_eq!(impl_.key.trait_.name, "Functor");
+                let [nash_ast::HeadCon::Named(head)] = impl_.key.heads else {
+                    panic!("nominal constructor")
+                };
+                assert_eq!(head.name, expected);
+                assert!(args.is_empty());
+                assert!(instance.type_args.iter().any(|arg| matches!(&arg.value, CanType::Named { reference, args } if reference.name == expected && args.is_empty())));
+                checked += 1;
+            }
+        }
+        decls = next;
+    }
+    assert_eq!(checked, 2);
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
+#[test]
+fn imported_higher_kinded_value_preserves_application() {
     let bump = Bump::new();
     let head = bump.alloc(Located::at_zero(CanType::Var("f")));
     let arg = bump.alloc(Located::at_zero(CanType::Var("a")));
@@ -1918,12 +2000,16 @@ fn imported_higher_kinded_value_inference_is_explicitly_deferred() {
     .unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
-        .expect_err("imported HKT must not silently become a value type");
-    assert!(
-        errors
-            .iter()
-            .any(|error| matches!(error, Error::UnsupportedTypeApplication { .. }))
-    );
-    insta::assert_debug_snapshot!(errors);
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
+        .expect("imported higher-kinded applications infer");
+    let nash_ast::Decls::Declare { definition, .. } = canonical.module.decls else {
+        panic!("value declaration")
+    };
+    let nash_ast::Def::Def { body, .. } = definition else {
+        panic!("value definition")
+    };
+    let instance = &solved.instances[&nash_ast::NodeId::expr(body)];
+    assert_eq!(instance.type_args.len(), 2);
+    assert!(instance.evidence.is_empty());
+    insta::assert_snapshot!(render_annotations(&annotations));
 }
