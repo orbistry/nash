@@ -1,0 +1,26 @@
+---
+source: crates/nash-solve/tests/evidence.rs
+expression: results
+---
+[
+    (
+        "missing",
+        MissingImpl,
+    ),
+    (
+        "open",
+        NonGround,
+    ),
+    (
+        "growing",
+        Limit,
+    ),
+    (
+        "cycle",
+        Limit,
+    ),
+    (
+        "function",
+        MissingImpl,
+    ),
+]

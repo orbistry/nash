@@ -33,6 +33,81 @@ macro_rules! assert_kind_error_snapshot {
 }
 
 #[test]
+fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
+    use nash_ast::{AliasType, Kind, KindScheme, KindSet, QualifiedName, Type};
+    use nash_region::Located;
+    let bump = Bump::new();
+    let mut env = nash_can::kinds::KindEnv::default();
+    let home = nash_ast::primitives::builtin_home();
+    let named = |name, args| {
+        &*bump.alloc(Located::at_zero(Type::Named {
+            reference: QualifiedName { home, name },
+            args,
+        }))
+    };
+    let big = named("Int", &[]);
+    let small = named("int", &[]);
+    let list = named("list", &[]);
+    let big_list = named("List", bump.alloc_slice_copy(&[big]));
+    let invalid_big_list = named("List", bump.alloc_slice_copy(&[small]));
+    let unknown = QualifiedName {
+        home,
+        name: "UnknownKind",
+    };
+    env.insert(
+        unknown,
+        KindScheme {
+            bounds: &[KindSet::ANY],
+            kind: &Kind::Var(0),
+        },
+    );
+    let unknown = named("UnknownKind", &[]);
+    let alias_name = QualifiedName {
+        home,
+        name: "Alias",
+    };
+    env.insert(
+        alias_name,
+        KindScheme {
+            bounds: &[],
+            kind: &Kind::Base(nash_ast::BaseKind::Const),
+        },
+    );
+    // Representation bodies do not determine a nominal alias's kind.
+    let alias = bump.alloc(Located::at_zero(Type::Alias {
+        reference: alias_name,
+        arguments: &[],
+        remaining: &[],
+        target: AliasType::Open(big),
+    }));
+    let variable = bump.alloc(Located::at_zero(Type::Var("a")));
+    for (typ, expected) in [
+        (big, true),
+        (small, false),
+        (list, false),
+        (big_list, true),
+        (invalid_big_list, false),
+        (unknown, false),
+        (alias, false),
+        (variable, false),
+    ] {
+        assert_eq!(
+            nash_can::kinds::proves_ground_big(&bump, &env, typ),
+            expected,
+            "{typ:?}"
+        );
+    }
+    assert_eq!(
+        env.scheme(QualifiedName {
+            home,
+            name: "UnknownKind"
+        })
+        .bounds,
+        &[KindSet::ANY]
+    );
+}
+
+#[test]
 fn big_union() {
     assert_kinds_snapshot!("type Box = Box Int");
 }

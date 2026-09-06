@@ -8,6 +8,7 @@
 //! together with definition schemes and use-site instances in [`SolvedTypes`].
 
 mod annotation;
+pub mod evidence;
 pub mod kinds;
 mod occurs;
 pub mod preds;

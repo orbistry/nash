@@ -54,6 +54,13 @@ pub(crate) enum Selection<'a> {
     },
 }
 
+pub(crate) fn head_vars<'a>(head: &Head<'a>) -> &'a [&'a str] {
+    match head {
+        Head::Named { vars, .. } | Head::Tuple(vars) => vars,
+        Head::Unit => &[],
+    }
+}
+
 pub(crate) fn select<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
@@ -122,10 +129,7 @@ pub(crate) fn select<'a>(
     };
     let mut substitution = Vec::new();
     for (head, args) in info.heads.iter().zip(arguments) {
-        let vars = match &head.value {
-            Head::Named { vars, .. } | Head::Tuple(vars) => *vars,
-            Head::Unit => &[],
-        };
+        let vars = head_vars(&head.value);
         // Higher-kinded heads may be partially applied. Matching the constructor
         // alone must not silently discard supplied or unsupplied arguments.
         if vars.len() != args.len() {

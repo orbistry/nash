@@ -425,13 +425,19 @@ pub fn resolve<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
     pred: &Pred<'a>,          // args are ground `Located<Type>`s: no `Type::Var`
-) -> Result<Evidence<'a>, MissingImpl<'a>>
+) -> Result<Evidence<'a>, nash_solve::evidence::Error<'a>>
 ```
 
 It is the same `by_instance` walk without unification variables: match
 each argument's head constructor against the impl table, instantiate the
 impl's context at the argument's type arguments, recurse. A ground
-predicate never needs `Given`, so the result is a closed `Impl` tree.
+predicate never needs `Given`, so the result is a closed tree of `Impl` and
+exact-core `ReflexiveLift` evidence. Reflexive Lift requires nominally equal
+arguments with an already-proven Big kind; it does not select a kind.
+Failures distinguish `MissingImpl`, `NonGround`, and `Limit`, retaining the
+failed predicate. Resolution and type traversal share a 16,384-step work
+budget, with a depth limit of 128. Context substitution is charged before
+allocation. Callers supply well-kinded canonical types and complete tables.
 
 Codegen never looks at types to specialize. It walks a definition with a
 substitution `Given { binder, index } -> Evidence` for the definition's

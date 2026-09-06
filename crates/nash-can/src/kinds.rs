@@ -686,6 +686,9 @@ struct Walker<'e, 'a> {
     group: BTreeMap<&'a str, &'a K<'a>>,
     home: ModuleName<'a>,
     errors: Vec<Error<'a>>,
+    /// Post-solve queries can see inferred record carriers. Their representation
+    /// stays unknown until plan 04; none may acquire a narrower kind here.
+    inferred_records: Option<Vec<&'a K<'a>>>,
 }
 
 fn infer_group<'a>(
@@ -701,6 +704,7 @@ fn infer_group<'a>(
         group: BTreeMap::new(),
         home,
         errors: Vec::new(),
+        inferred_records: None,
     };
 
     // Monomorphic kinds first, so recursive references resolve.
@@ -887,6 +891,14 @@ impl<'e, 'a> Walker<'e, 'a> {
                 self.bump.alloc(K::Base(BaseKind::Term))
             }
             CanType::Unit => self.bump.alloc(K::Base(BaseKind::Const)),
+            CanType::Record { fields, .. } if self.inferred_records.is_some() => {
+                for field in *fields {
+                    self.expect_any(scope, field.typ);
+                }
+                let kind = self.infer.fresh_k(KindSet::ANY);
+                self.inferred_records.as_mut().unwrap().push(kind);
+                kind
+            }
             CanType::Record { .. } => {
                 // Only legal as an alias body (plans/04 chunk A1); handled by infer_record_body.
                 self.errors.push(Error::Unsupported {
@@ -1107,6 +1119,7 @@ pub(crate) fn check_annotation_specialization<'a>(
         group: BTreeMap::new(),
         home,
         errors: Vec::new(),
+        inferred_records: None,
     };
     let scope = Scope {
         params: annotation
@@ -1377,6 +1390,7 @@ pub(crate) fn infer_traits<'a>(
             home,
             group: BTreeMap::new(),
             errors: Vec::new(),
+            inferred_records: None,
         };
         let mut trait_kinds = BTreeMap::new();
         let mut scopes = Vec::new();
@@ -1477,6 +1491,53 @@ impl<'a> Walker<'_, 'a> {
     }
 }
 
+/// Prove that a ground canonical type already has kind Big, without choosing
+/// Big for a polymorphic kind. Used by post-solve reflexive Lift resolution.
+/// The environment must cover every resolved type identity in `typ`.
+pub fn proves_ground_big<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    typ: &'a Located<CanType<'a>>,
+) -> bool {
+    let mut variables = BTreeSet::new();
+    crate::types::collect_free_vars(&typ.value, &mut variables);
+    if !variables.is_empty() {
+        return false;
+    }
+    let mut walker = Walker {
+        bump,
+        env,
+        home: nash_ast::primitives::builtin_home(),
+        infer: Infer::new(bump),
+        group: BTreeMap::new(),
+        errors: Vec::new(),
+        inferred_records: Some(Vec::new()),
+    };
+    let scope = Scope {
+        params: BTreeMap::new(),
+    };
+    let kind = walker.infer_type(&scope, typ);
+    if !walker.errors.is_empty() {
+        return false;
+    }
+    let records = walker
+        .infer
+        .generalize_values(walker.inferred_records.as_ref().unwrap());
+    let mut distinct = BTreeSet::new();
+    for kind in records.kinds {
+        if !matches!(kind, Kind::Var(index) if records.bounds[*index as usize] == KindSet::ANY && distinct.insert(*index))
+        {
+            return false;
+        }
+    }
+    let scheme = walker.infer.generalize(kind);
+    match scheme.kind {
+        Kind::Base(BaseKind::Big) => true,
+        Kind::Var(index) => scheme.bounds[*index as usize] == KindSet::BIG,
+        _ => false,
+    }
+}
+
 pub(crate) struct ImplKinds<'e, 'a> {
     walker: Walker<'e, 'a>,
     scope: Scope<'a>,
@@ -1513,6 +1574,7 @@ impl<'a> ImplKinds<'_, 'a> {
             infer: self.walker.infer.clone(),
             group: BTreeMap::new(),
             errors: Vec::new(),
+            inferred_records: None,
         };
         for (a, b) in aa.iter().zip(&ba) {
             let a = query.infer_type(&self.scope, a);
@@ -1539,6 +1601,7 @@ impl<'a> ImplKinds<'_, 'a> {
             infer: self.walker.infer.clone(),
             group: BTreeMap::new(),
             errors: Vec::new(),
+            inferred_records: None,
         };
         let kind = query.infer_type(&self.scope, typ);
         if !query.errors.is_empty() || query.infer.generalize(root) != before {
@@ -1569,6 +1632,7 @@ pub(crate) fn check_impl_heads<'e, 'a>(
         infer: Infer::new(bump),
         group: BTreeMap::new(),
         errors: Vec::new(),
+        inferred_records: None,
     };
     let scope = Scope {
         params: variables

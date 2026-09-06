@@ -1698,8 +1698,11 @@ parameters with distinct variables, and impl-child evidence in recursive groups.
 
 Final evidence publication through NodeId/SolvedTypes and kind-aware reflexive
 Lift resolution are implemented and tested, including nested evidence and
-rejection of foreign trait identities. The standalone canonical resolver
-remains unfinished. No chunk completion is claimed here.
+rejection of foreign trait identities. The standalone canonical resolver now
+returns nested impl evidence and reflexive Lift evidence, rejects open types,
+and bounds recursive contexts and structural work. Its acceptance tests use
+solved types, including an inferred partial alias in a higher-kinded context.
+Final acceptance review remains; no chunk completion is claimed here.
 
 Files: `crates/nash-solve/src/solve.rs`, new `crates/nash-solve/src/resolve.rs`,
 `crates/nash-solve/src/preds.rs`, `crates/nash-solve/src/lib.rs`.
@@ -1852,11 +1855,12 @@ new `crates/nash-solve/src/evidence.rs`:
 ```rust
 //! Impl resolution for fully ground predicates, outside the solver loop.
 
-/// A predicate over ground canonical types with no impl.
+/// Failure resolving a canonical predicate outside the inference loop.
 #[derive(Debug)]
-pub struct MissingImpl<'a> {
+pub struct Error<'a> {
     pub trait_: QualifiedName<'a>,
     pub args: &'a [&'a Located<CanType<'a>>],
+    pub reason: Failure, // MissingImpl | NonGround | Limit
 }
 
 /// Resolve `pred` against the impl table. `pred.args` must contain no
@@ -1865,31 +1869,21 @@ pub fn resolve<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
     pred: &CanPred<'a>,
-) -> Result<Evidence<'a>, MissingImpl<'a>> {
-    let heads: Vec<HeadCon<'a>> = pred.args.iter().map(|t| head_con_of_type(t)).collect();
-    let key = ImplKey { trait_: pred.trait_, heads: bump.alloc_slice_copy(&heads) };
-    let Some(info) = tables.impls.get(&key).copied() else {
-        return Err(MissingImpl { trait_: pred.trait_, args: pred.args });
-    };
-    let subst: BTreeMap<&'a str, &'a Located<CanType<'a>>> = info.heads.iter().zip(pred.args)
-        .flat_map(|(head, arg)| head_vars(&head.value).into_iter().zip(type_args_of(arg)))
-        .collect();
-    let type_args = bump.alloc_slice_fill_iter(info.heads.iter().flat_map(|h| head_vars(&h.value)).map(|v| subst[v]));
-    let args = bump.alloc_slice_fill_iter(info.context.iter().map(|ctx| {
-        resolve(bump, tables, &substitute_pred(bump, &subst, ctx))
-    }).collect::<Result<Vec<_>, _>>()?);
-    Ok(Evidence::Impl { impl_: ImplRef { home: info.home, key }, type_args, args })
-}
+) -> Result<Evidence<'a>, Error<'a>>;
 ```
 
-`head_con_of_type` reads `Named`/`Alias` (nominal), `Unit`, `Tuple`,
-`Lambda` (`Fun`); `type_args_of` returns the arguments of a `Named` or
-`Alias`, the components of a tuple; `substitute_pred` is chunk 3's
-(moved from nash-can `traits.rs` to `nash_can::types` so both crates use
-it). The in-solver `by_instance` and this function share `head_vars` and
-the key construction; they differ only in unification variables versus
-canonical types, which is why the canonical version is not written in
-terms of the solver.
+The resolver flattens applications while preserving `Named`/`Alias` nominal
+identity, and handles `Unit` and `Tuple` heads. Functions and structural records
+have no impl heads. Impl variables and original canonical type arguments stay
+in head order. The in-solver selector shares `head_vars`; context substitution
+uses `nash_can::types::substitute_type`, retaining alias binders.
+An exact-core Lift predicate on nominally equal, already-Big arguments produces
+`ReflexiveLift`. The kind proof reuses canonical kind inference and permits
+inferred record carriers only while their representation stays unrestricted.
+Recursive resolution and structural traversal share 16,384 work steps and
+depth 128; substitution is charged before allocation. Callers provide
+well-kinded canonical types and complete metadata. This API has no givens and
+does not create inference variables.
 
 Lenient mode (for plans/11 macro expansion rounds): `nash_solve::run`
 takes `nash_can::Mode` (`Strict` | `Lenient`, defined by plans/11 chunk 2
@@ -2108,7 +2102,7 @@ snapshots reflect literal traits.
 
 ## Chunk 8: higher-kinded traits (type-variable application)
 
-Status: complete. Constructor and partial alias applications convert, unify,
+Status: in progress. Constructor and inferred partial alias applications convert, unify,
 generalize and retain use-site evidence. Coverage checks distinct Functor
 impls, a qualified Monad bind chain, imported applications, rigid heads,
 partial variable heads, cyclic diagnostics, and imported alias impl evidence
@@ -2120,6 +2114,13 @@ ignore open-versus-filled body representation. The temporary conversion gates
 are removed. Real CLI projects verify successful imported partial aliases and
 MissingImpl for another alias with the same record shape. Formatting, strict
 Clippy, all workspace tests and snapshot hygiene pass.
+
+Acceptance audit found a remaining source-annotation gap: an explicit nested
+partial constructor such as `box (pairAlias int)` is rejected by the old exact
+arity check in `types::canonicalize_env_type`, before kind checking. The same
+ground type can be inferred and resolves correctly through the standalone
+resolver. Supporting the explicit annotation remains required; the inferred
+case alone does not complete this chunk.
 
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/types.rs`,
 `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/instantiate.rs`,
