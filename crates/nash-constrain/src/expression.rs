@@ -82,31 +82,6 @@ pub fn constrain<'a>(
 
         CanExpr::List(elements) => constrain_list(bump, uf, rtv, region, elements, expected),
 
-        CanExpr::Negate(sub_expr) => {
-            let number_var = mk_flex_var(uf);
-            let number_type: &'a Type<'a> = bump.alloc(Type::VarN(number_var));
-            let number_con = constrain(
-                bump,
-                uf,
-                rtv,
-                sub_expr,
-                Expected::FromContext(region, Context::Negate, number_type),
-            );
-            let method_con = Constraint::Foreign(
-                region,
-                node,
-                "negate",
-                type_::negate_annotation(bump),
-                Expected::NoExpectation(bump.alloc(Type::FunN(number_type, number_type))),
-            );
-            let negate_con = Constraint::Equal(region, Category::Number, number_type, expected);
-            exists(
-                bump,
-                bump.alloc_slice_copy(&[number_var]),
-                c_and(bump, vec![number_con, method_con, negate_con]),
-            )
-        }
-
         CanExpr::Binop {
             symbol,
             annotation,

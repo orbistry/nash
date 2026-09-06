@@ -2413,7 +2413,14 @@ and import aliases. Refutable patterns and unavailable core methods have
 specific errors; a bind RHS cannot see its new pattern. A single-expression
 block needs no bind method. Canonical snapshots cover mixed statements and
 scoping, and inference checks match explicit nested bind calls with distinct
-Given/Super evidence sites. Negation and operator-method integration remain.
+Given/Super evidence sites. Negation now lowers to an ordinary checked core
+Num.negate method call. Its generated method node owns evidence, local
+`negate` values do not override it, and same-named non-core traits cannot enable
+the syntax. Canonical Negate, the fabricated annotation, and the dedicated
+constraint/error paths are removed. A real CLI workspace accepts imported
+core Num calls with a concrete impl; changing only the package identity rejects
+the same prefix expressions with NegateWithoutNum. Formatting, strict Clippy,
+the full tests, and snapshot hygiene pass. Operator-method integration remains.
 The real CLI accepts a concrete option block with bind, let, discard, and final
 expression statements, and reports RefutableBindPattern at an invalid `<-`
 pattern. The superseded Unsupported test was removed. Formatting, strict

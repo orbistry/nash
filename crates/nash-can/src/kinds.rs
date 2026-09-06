@@ -1228,9 +1228,9 @@ impl<'a> AnnotationChecker<'_, 'a> {
             | Expr::Int(_)
             | Expr::Unit
             | Expr::Accessor(_) => {}
-            Expr::Negate(expr)
-            | Expr::Lambda { body: expr, .. }
-            | Expr::Access { record: expr, .. } => self.expression(&expr.value),
+            Expr::Lambda { body: expr, .. } | Expr::Access { record: expr, .. } => {
+                self.expression(&expr.value)
+            }
             Expr::List(items) => {
                 for item in *items {
                     self.expression(&item.value);

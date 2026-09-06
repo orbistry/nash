@@ -1158,7 +1158,6 @@ fn collect_from_expr<'a>(
                 collect_from_expr(&item.value, home, used);
             }
         }
-        Negate(e) => collect_from_expr(&e.value, home, used),
         Lambda { parameters, body } => {
             for p in *parameters {
                 collect_from_pattern(&p.value, home, used);
@@ -2585,11 +2584,13 @@ mod tests {
     }
 
     #[test]
-    fn negate_expr() {
-        assert_module_snapshot!(
+    fn negation_requires_core_num() {
+        assert_module_error_snapshot!(
             r#"
             module Main exposing (..)
 
+            trait Num 'a where
+                negate : 'a -> 'a
             f x = -x
         "#
         );

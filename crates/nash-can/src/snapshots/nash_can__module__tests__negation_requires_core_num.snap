@@ -1,0 +1,18 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\ntrait Num 'a where\n    negate : 'a -> 'a\nf x = -x\n"
+---
+[
+    NegateWithoutNum {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 7,
+            },
+            end: Position {
+                line: 5,
+                column: 9,
+            },
+        },
+    },
+]

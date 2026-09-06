@@ -1228,11 +1228,39 @@ fn type_variable_names_do_not_imply_constraints() {
 #[test]
 fn negation_retains_num_evidence() {
     let bump = Bump::new();
-    let source = bump.alloc_str("module Main exposing (..)\nflip x = -x\nnegative = -7\n");
+    let mut interfaces = literal_interfaces(&bump);
+    let num = nash_parse::Parser::new(
+        &bump,
+        b"module Num exposing (Num)\ntrait Num 'a where\n    negate : 'a -> 'a\n",
+    )
+    .module()
+    .unwrap();
+    let num = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: Some(nash_ast::primitives::CORE),
+            interfaces: None,
+        },
+        &num,
+    )
+    .unwrap();
+    interfaces.insert(
+        "Num",
+        nash_can::from_module(&bump, &num.module, &Default::default()),
+    );
+    let source = bump.alloc_str("module Main exposing (..)\nimport Num as N\nimport Literal exposing (..)\nnegate x = x\nflip x = -x\nnegative = -7\n");
     let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
         .module()
         .unwrap();
-    let can = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let can = nash_can::canonicalize(
+        &bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &parsed,
+    )
+    .unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
     let (annotations, solved) = nash_solve::run(&bump, &mut uf, &constraint, &can.tables).unwrap();
@@ -1250,8 +1278,21 @@ fn negation_retains_num_evidence() {
         let nash_ast::Def::Def { name, body, .. } = definition else {
             panic!("inferred definition")
         };
-        assert!(matches!(body.value, nash_ast::Expr::Negate(_)));
-        let instance = &solved.instances[&nash_ast::NodeId::expr(body)];
+        if name.value == "negate" {
+            decls = next;
+            continue;
+        }
+        let nash_ast::Expr::Call {
+            function,
+            arguments: [_],
+        } = body.value
+        else {
+            panic!("ordinary method call")
+        };
+        assert!(
+            matches!(function.value, nash_ast::Expr::VarMethod { trait_, method: "negate", .. } if trait_ == predicate.trait_)
+        );
+        let instance = &solved.instances[&nash_ast::NodeId::expr(function)];
         let [nash_ast::Evidence::Given { binder, index }] = instance.evidence else {
             panic!("Num given")
         };

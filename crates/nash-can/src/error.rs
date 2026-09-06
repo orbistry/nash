@@ -36,6 +36,9 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    NegateWithoutNum {
+        region: Region,
+    },
     DoWithoutMonad {
         region: Region,
     },

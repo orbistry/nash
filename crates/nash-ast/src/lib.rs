@@ -253,7 +253,6 @@ pub enum Expr<'a> {
     Bytes(&'a [u8]),
     Int(i128),
     List(&'a [&'a Located<Expr<'a>>]),
-    Negate(&'a Located<Expr<'a>>),
     /// Mirrors Elm's `Can.Binop op home name annotation left right`.
     Binop {
         symbol: &'a str,

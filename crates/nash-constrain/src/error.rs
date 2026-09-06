@@ -117,7 +117,6 @@ pub enum Expected<'a, T> {
 #[derive(Clone, Copy, Debug)]
 pub enum Context<'a> {
     ListEntry(usize),
-    Negate,
     OpLeft(&'a str),
     OpRight(&'a str),
     IfCondition,
@@ -156,7 +155,6 @@ pub enum MaybeName<'a> {
 #[derive(Clone, Copy, Debug)]
 pub enum Category<'a> {
     List,
-    Number,
     String,
     If,
     Case,

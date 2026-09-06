@@ -185,7 +185,23 @@ pub fn canonicalize_expr<'a>(
         }
 
         SourceExpr::Negate(inner) => {
-            CanExpr::Negate(canonicalize_expr(bump, env, inner, free_locals, warnings)?)
+            let trait_ = nash_ast::primitives::num_trait();
+            let annotation = env
+                .method_annotation(trait_, "negate")
+                .ok_or_else(|| vec![Error::NegateWithoutNum { region }])?;
+            let function = bump.alloc(Located::at(
+                region,
+                CanExpr::VarMethod {
+                    trait_,
+                    method: "negate",
+                    annotation,
+                },
+            ));
+            let argument = canonicalize_expr(bump, env, inner, free_locals, warnings)?;
+            CanExpr::Call {
+                function,
+                arguments: bump.alloc_slice_copy(&[argument]),
+            }
         }
 
         SourceExpr::BinOps { operands, last } => {

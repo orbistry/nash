@@ -326,29 +326,6 @@ pub fn literal_annotation<'a>(
     })
 }
 
-/// The compiler-known unary method, `Num a => a -> a`.
-pub fn negate_annotation(bump: &bumpalo::Bump) -> &Annotation<'_> {
-    let scheme = literal_annotation(
-        bump,
-        &[QualifiedName {
-            home: ModuleName {
-                package: Some(nash_ast::primitives::CORE),
-                name: "Num",
-            },
-            name: "Num",
-        }],
-    );
-    bump.alloc(Annotation {
-        kinds: scheme.kinds,
-        free_vars: scheme.free_vars,
-        context: scheme.context,
-        typ: bump.alloc(Located::at_zero(nash_ast::Type::Lambda {
-            from: scheme.typ,
-            to: scheme.typ,
-        })),
-    })
-}
-
 /// Only the compiler-known literal traits select a little default type.
 pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<Type<'static>> {
     if trait_.home.package != Some(nash_ast::primitives::CORE) || trait_.home.name != "Literal" {

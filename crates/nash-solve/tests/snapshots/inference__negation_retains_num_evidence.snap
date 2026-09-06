@@ -3,4 +3,5 @@ source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
 flip : forall (a : Any). Num a => a -> a
-negative : forall (a : Any). (FromInt a, Num a) => a
+negate : forall (a : Any). a -> a
+negative : forall (a : Any). (Num a, FromInt a) => a

@@ -471,9 +471,11 @@ Decision: shipped in `nash/core` as one module per trait (`Eq`, `Ord`,
 `Literal` for the three literal traits), all imported implicitly with the
 trait and its methods exposed (like Elm's default imports of `Basics`).
 `Prelude` holds the `infix` declarations that bind operators to methods and
-the impls for the prelude types. The compiler knows five homes by name:
+the impls for the prelude types. The compiler recognizes these core identities:
 `Literal.FromInt`, `Literal.FromString`, `Literal.FromBytes`, `Eq.Eq`
-(literal patterns), and `Monad.Monad` (`do`). The declarations match
+(literal patterns), `Num.Num` (prefix negation), `Monad.Monad` (`do`), and
+`Lift.Lift` (reflexive Big evidence). Negation uses the checked `Num.negate`
+method annotation, independent of lexical values named `negate`. The declarations match
 [stdlib.md](stdlib.md):
 
 ```elm
