@@ -2666,6 +2666,13 @@ Plan 07 code generation. This source-only step changes no Rust crate.
 The CLI checks nine modules and 32 declarations; comparing Data reports
 MissingImpl at `compare`. Formatting, strict Clippy, 1,901 tests and snapshot
 hygiene pass for this step.
+Show now provides real int, bytes, string, bool, unit, list, pair and Data
+implementations. Its decimal/hex helpers use checked builtin signatures, and
+string escaping preserves UTF-8 while escaping ASCII controls. The core CLI
+fixture covers empty collections, large signed integers, Unicode and nested
+Data map/pair evidence. Display formats and the required later runtime-output
+checks are specified in docs/stdlib.md. Big Show impls and tuple impls remain
+unfinished; this source-only step changes no Rust crate.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

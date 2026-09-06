@@ -4,6 +4,6 @@
     "version": "0.1.0",
     "summary": "Nash standard library",
     "license": "Apache-2.0",
-    "exposedModules": ["Eq", "Literal", "Num", "Integral", "Semigroup", "Monoid", "Ordering", "Ord"],
+    "exposedModules": ["Eq", "Literal", "Num", "Integral", "Semigroup", "Monoid", "Ordering", "Ord", "Show"],
     "dependencies": {}
 }

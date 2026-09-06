@@ -282,6 +282,24 @@ not repeated here. What each module adds beyond its trait:
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
 
+`Show` uses these diagnostic text formats:
+
+- Integers use decimal digits, with a leading minus for negative values.
+- Bytes use lowercase hexadecimal inside Nash's `#"..."` literal syntax.
+- Strings are quoted. Quotes, backslashes, newline, carriage return and tab
+  use their Nash escapes; other ASCII controls below U+0020 use four-digit
+  Unicode escapes. Other Unicode text is preserved.
+- Booleans render as `True` or `False`; unit renders as `()`.
+- Lists use `[a, b]`; builtin pairs use `(a, b)`, recursively showing elements.
+- Data uses `Constr tag [fields]`, `Map [(key, value)]`, `List [values]`,
+  `I integer`, or `B bytes`, recursively using the formats above.
+
+These are display formats, not a promise that arbitrary shown values can be
+parsed back into their original nominal types. Plan 07 execution acceptance
+must verify the actual strings, including zero and negative integers, empty
+bytes/lists, leading-zero hex bytes, escaped controls, multibyte Unicode and
+nested Data maps. Plan 03 compilation only verifies types and trait evidence.
+
 Examples of the bodies (`Eq.nash`, `Lift.nash`, `Data.nash`):
 
 ```elm

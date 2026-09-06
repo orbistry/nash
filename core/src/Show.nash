@@ -1,0 +1,105 @@
+module Show exposing (Show)
+
+import Builtin exposing (Data(..), type bool(..))
+import Literal
+
+trait Show 'a where
+    show : 'a -> string
+
+impl Show int where
+    show n =
+        if Builtin.lessThanInteger n 0 then
+            Builtin.appendString "-" (Builtin.decodeUtf8 (decimal (Builtin.subtractInteger 0 n)))
+        else Builtin.decodeUtf8 (decimal n)
+
+decimal : int -> bytes
+decimal n =
+    if Builtin.lessThanInteger n 10 then
+        Builtin.consByteString (Builtin.addInteger 48 n) #""
+    else
+        Builtin.appendByteString
+            (decimal (Builtin.quotientInteger n 10))
+            (Builtin.consByteString (Builtin.addInteger 48 (Builtin.remainderInteger n 10)) #"")
+
+impl Show bytes where
+    show value =
+        Builtin.appendString "#\"" (Builtin.appendString (Builtin.decodeUtf8 (hex value 0)) "\"")
+
+hexByte : int -> bytes
+hexByte byte =
+    let
+        digits = #"30313233343536373839616263646566"
+        high = Builtin.indexByteString digits (Builtin.quotientInteger byte 16)
+        low = Builtin.indexByteString digits (Builtin.remainderInteger byte 16)
+    in
+    Builtin.consByteString high (Builtin.consByteString low #"")
+
+hex : bytes -> int -> bytes
+hex value index =
+    if Builtin.lessThanInteger index (Builtin.lengthOfByteString value) then
+        Builtin.appendByteString
+            (hexByte (Builtin.indexByteString value index))
+            (hex value (Builtin.addInteger index 1))
+    else #""
+
+impl Show string where
+    show value =
+        Builtin.decodeUtf8
+            (Builtin.appendByteString #"22"
+                (Builtin.appendByteString (escaped (Builtin.encodeUtf8 value) 0) #"22"))
+
+escaped : bytes -> int -> bytes
+escaped value index =
+    if Builtin.lessThanInteger index (Builtin.lengthOfByteString value) then
+        let
+            byte = Builtin.indexByteString value index
+            rest = escaped value (Builtin.addInteger index 1)
+            prefix =
+                if Builtin.equalsInteger byte 34 then #"5c22"
+                else if Builtin.equalsInteger byte 92 then #"5c5c"
+                else if Builtin.equalsInteger byte 10 then #"5c6e"
+                else if Builtin.equalsInteger byte 13 then #"5c72"
+                else if Builtin.equalsInteger byte 9 then #"5c74"
+                else if Builtin.lessThanInteger byte 32 then
+                    Builtin.appendByteString #"5c757b3030" (Builtin.appendByteString (hexByte byte) #"7d")
+                else Builtin.consByteString byte #""
+        in
+        Builtin.appendByteString prefix rest
+    else #""
+
+impl Show bool where
+    show value = if value then "True" else "False"
+
+impl Show unit where
+    show _ = "()"
+
+impl Show 'a => Show (list 'a) where
+    show values = Builtin.appendString "[" (Builtin.appendString (showItems values) "]")
+
+showItems : Show 'a => list 'a -> string
+showItems values =
+    if Builtin.nullList values then ""
+    else
+        let
+            first = show (Builtin.headList values)
+            rest = Builtin.tailList values
+        in
+        if Builtin.nullList rest then first
+        else Builtin.appendString first (Builtin.appendString ", " (showItems rest))
+
+impl (Show 'a, Show 'b) => Show (pair 'a 'b) where
+    show value =
+        Builtin.appendString "("
+            (Builtin.appendString (show (Builtin.fstPair value))
+                (Builtin.appendString ", " (Builtin.appendString (show (Builtin.sndPair value)) ")")))
+
+impl Show Data where
+    show value =
+        case value of
+            Constr tag fields ->
+                Builtin.appendString "Constr "
+                    (Builtin.appendString (show tag) (Builtin.appendString " " (show fields)))
+            Map entries -> Builtin.appendString "Map " (show entries)
+            List values -> Builtin.appendString "List " (show values)
+            I integer -> Builtin.appendString "I " (show integer)
+            B bytes -> Builtin.appendString "B " (show bytes)
