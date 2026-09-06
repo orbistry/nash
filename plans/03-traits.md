@@ -2661,7 +2661,7 @@ Ord provides int, bytes, bytewise string, bool, unit and lexicographic list
 impls, with lt/le/gt/ge/max/min defaults. The core acceptance module exercises
 every default and the Eq superclass through an Ord-given function. These are
 real source implementations using the builtin comparison and UTF-8 functions;
-the Big Ordering twin, Lift conversions, Big Ord impls and four-element tuple impls remain
+the Big Ordering twin, Lift conversions and Big Ord impls remain
 unfinished. Compilation does not establish runtime comparison results before
 Plan 07 code generation. This source-only step changes no Rust crate.
 The CLI checks nine modules and 32 declarations; comparing Data reports
@@ -2672,7 +2672,7 @@ implementations. Its decimal/hex helpers use checked builtin signatures, and
 string escaping preserves UTF-8 while escaping ASCII controls. The core CLI
 fixture covers empty collections, large signed integers, Unicode and nested
 Data map/pair evidence. Display formats and the required later runtime-output
-checks are specified in docs/stdlib.md. Big Show impls and four-element tuple impls remain
+checks are specified in docs/stdlib.md. Big Show impls remain
 unfinished; this source-only step changes no Rust crate.
 Bool now defines the Big Bool type and little not/and/or/xor functions.
 Its little constructor expressions use Builtin qualification. This exposed
@@ -2682,9 +2682,9 @@ Prelude exports the implemented arithmetic, comparison, boolean, list and
 function-composition operators plus its ordinary helpers. Imported ordinary
 functions now retain their checked schemes as operator targets, verified
 alongside trait targets in the cross-module inference regression.
-Prelude also supplies real Eq/Ord/Show impls for pairs and triples. The core
+Prelude also supplies real Eq/Ord/Show impls for tuples through four components. The core
 CLI checks 12 modules and 66 declarations with explicit Prelude imports.
-Four-element tuples, the higher-kinded operators and implicit imports remain
+The higher-kinded operators and implicit imports remain
 unfinished. Bool conversions and runtime short-circuit lowering remain at
 their documented boundaries; compilation does not prove lazy evaluation.
 Remaining core modules, Big twin impls/conversions, implicit imports,
@@ -2697,7 +2697,14 @@ instantiation, error types and impl evidence. Tuple arity follows the grammar
 language limit. Regression coverage checks fourth-component mismatches,
 unequal arities, a cycle through the fourth component, shared copies in the
 tail, and a fifth-component impl prerequisite. The four-element core impls
-themselves remain unfinished.
+now compare all fields, use lexicographic ordering and show every component.
+The core CLI acceptance covers heterogeneous four-component Eq/Ord/Show uses,
+including comparisons whose first three components agree. It compiles 12
+modules and 66 declarations. Runtime comparison and string results await
+Plan 07. A function in the fourth slot reports MissingImpl Show at the
+calling `show`, confirming that the final component constraint is enforced.
+Formatting, strict Clippy and 1,908 tests pass. This source-only addition
+changes no Rust crate.
 A real two-module CLI acceptance imports the tuple impl and a polymorphic
 five-component function, preserving a function-valued fourth component.
 It compiles three declarations. Annotating that fourth component as unit

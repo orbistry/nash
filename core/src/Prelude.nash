@@ -59,6 +59,14 @@ impl (Eq 'a, Eq 'b, Eq 'c) => Eq ('a, 'b, 'c) where
         if eq a d then if eq b e then eq c f else False
         else False
 
+impl (Eq 'a, Eq 'b, Eq 'c, Eq 'd) => Eq ('a, 'b, 'c, 'd) where
+    eq (a, b, c, d) (e, f, g, h) =
+        if eq a e then
+            if eq b f then
+                if eq c g then eq d h else False
+            else False
+        else False
+
 impl (Ord 'a, Ord 'b) => Ord ('a, 'b) where
     compare (a, b) (c, d) =
         case compare a c of
@@ -71,6 +79,18 @@ impl (Ord 'a, Ord 'b, Ord 'c) => Ord ('a, 'b, 'c) where
             EQ ->
                 case compare b e of
                     EQ -> compare c f
+                    order -> order
+            order -> order
+
+impl (Ord 'a, Ord 'b, Ord 'c, Ord 'd) => Ord ('a, 'b, 'c, 'd) where
+    compare (a, b, c, d) (e, f, g, h) =
+        case compare a e of
+            EQ ->
+                case compare b f of
+                    EQ ->
+                        case compare c g of
+                            EQ -> compare d h
+                            order -> order
                     order -> order
             order -> order
 
@@ -87,3 +107,13 @@ impl (Show 'a, Show 'b, Show 'c) => Show ('a, 'b, 'c) where
                 (Builtin.appendString ", "
                     (Builtin.appendString (show b)
                         (Builtin.appendString ", " (Builtin.appendString (show c) ")")))))
+
+impl (Show 'a, Show 'b, Show 'c, Show 'd) => Show ('a, 'b, 'c, 'd) where
+    show (a, b, c, d) =
+        Builtin.appendString "("
+            (Builtin.appendString (show a)
+                (Builtin.appendString ", "
+                    (Builtin.appendString (show b)
+                        (Builtin.appendString ", "
+                            (Builtin.appendString (show c)
+                                (Builtin.appendString ", " (Builtin.appendString (show d) ")")))))))

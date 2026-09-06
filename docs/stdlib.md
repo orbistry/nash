@@ -291,6 +291,8 @@ twin types (`option`, `Option`, ...) are in the twin's module.
   Unicode escapes. Other Unicode text is preserved.
 - Booleans render as `True` or `False`; unit renders as `()`.
 - Lists use `[a, b]`; builtin pairs use `(a, b)`, recursively showing elements.
+- Tuples through four components use `(a, b, ...)`, recursively showing each
+  component with a comma and space between components.
 - Data uses `Constr tag [fields]`, `Map [(key, value)]`, `List [values]`,
   `I integer`, or `B bytes`, recursively using the formats above.
 
@@ -298,7 +300,8 @@ These are display formats, not a promise that arbitrary shown values can be
 parsed back into their original nominal types. Plan 07 execution acceptance
 must verify the actual strings, including zero and negative integers, empty
 bytes/lists, leading-zero hex bytes, escaped controls, multibyte Unicode and
-nested Data maps. Plan 03 compilation only verifies types and trait evidence.
+nested Data maps and heterogeneous four-component tuples. Plan 03 compilation
+only verifies types and trait evidence.
 
 Examples of the bodies (`Eq.nash`, `Lift.nash`, `Data.nash`):
 
