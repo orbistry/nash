@@ -622,7 +622,7 @@ Done when: a module with traits canonicalizes; methods resolve to
 
 ## Chunk 3: impl declarations and the impl table
 
-Status: in progress. Local impl heads, capture-safe method substitution,
+Status: complete. Local impl heads, capture-safe method substitution,
 head/context kind checks, method checks, and local orphan/overlap checks
 are implemented. Global tables now retain local and interface impls and
 private trait metadata, with overlap checks across interfaces. Focused
@@ -630,13 +630,17 @@ snapshots cover these paths. Superclass entailment now checks local impls
 after the global table is assembled, using givens, superclass closure and
 instance contexts with cycle and work limits. The exact core Lift identity
 now enables a separate reflexive rule for equal, proven-Big types, with
-coherence checks against explicit impls. Solver production of its evidence
-remains part of chunks 6 and 9. Partial alias heads now retain unsupplied formal
+coherence checks against explicit impls. Solver and standalone resolution
+produce its evidence after checking nominal equality and the retained kind.
+Partial alias heads retain unsupplied formal
 parameters and normalize known applications without opening their bound
-bodies. Unresolved partial aliases remain at the higher-kinded inference
-boundary pending chunk 8's delayed alias applications. Canonicalization
-and diagnostic acceptance tests pass. Keep the chunk open until its
-dependent solver cases in chunks 6, 8 and 9 are verified end to end.
+bodies. The higher-kinded inference and interface regressions verify their
+nominal identity end to end, including independent prefix arguments. The
+ground resolver checks partial-alias context substitution and ordered head
+arguments. Canonicalization snapshots cover duplicate methods with both
+locations and overapplied named/alias heads, alongside orphan, overlap,
+missing method and superclass errors. The dependent solver cases in chunks
+6, 8 and 9 now have acceptance evidence.
 
 Files: `crates/nash-can/src/traits.rs`, `crates/nash-can/src/environment.rs`,
 `crates/nash-can/src/environment/local.rs`, `crates/nash-can/src/environment/foreign.rs`,
@@ -716,10 +720,9 @@ fn canonicalize_head<'a>(
 
 `find_type_reference` is the existing `find_type` (`types.rs:166`) returning
 the `QualifiedName` for a union or alias without applying it (an alias head
-is nominal; no dealiasing). It does not call `check_arity` (`types.rs:268`):
-a head may be partially applied (`impl Functor List`), which is what plan
-02's open question about relaxing `check_arity` refers to; the kind check
-below is the arity check for heads.
+is nominal; no dealiasing). A head may be partially applied
+(`impl Functor List`); its remaining kind must match the trait parameter.
+Ordinary type annotations also permit partial constructors after chunk 8.
 
 Kind check of heads, in `canonicalize_impl` once heads are known (uses
 plan 02's engine directly, so it lives in nash-can rather than
@@ -728,8 +731,8 @@ nash-constrain):
 Instantiate the trait scheme once, preserving shared kind variables across
 its parameters. For each head, instantiate the named type's scheme and
 apply it once per head variable. `Infer::apply` returns a `Result`;
-convert application failures to `KindMismatch` at the impl head region,
-with `KindContext::ImplHead`. Unify the remaining kind with the matching
+report overapplication as `KindTooManyArgs` at the impl head region,
+preserving plan 02's constructor-application diagnostic. Unify the remaining kind with the matching
 trait parameter kind. Unit heads have kind `Const`; tuple heads have kind
 `Term`, matching the existing type kind checker. Report
 unification failures with the same head context and generalized expected
@@ -882,6 +885,10 @@ Tests (nash-can):
 - `impl_default_method_inherited`: `impl Ord Color where compare = ...` (no `lt`): snapshot shows `methods: ["compare"]`.
 - `impl_unapplied_constructor`: `trait Functor 'f where map : ('a -> 'b) -> 'f 'a -> 'f 'b` + `impl Functor List where map f xs = ...` (canonicalizes and kind-checks `List : Big -> Big` against `k1 -> k2`; type checking comes in chunk 8).
 - `impl_head_kind_mismatch`: `impl Functor Color` (a `Big` constructor for a `k1 -> k2` parameter) is `KindMismatch`.
+- `impl_overapplied_heads_report_kind_arity`: named and nominal alias heads
+  with too many variables report KindTooManyArgs at the complete head span.
+- `impl_duplicate_methods_preserve_both_locations`: duplicate impl method
+  names retain both declaration spans for the diagnostic renderer.
 - `impl_tuple_head`: `impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where ...` in a module that defines `Eq` (orphan rule satisfied via the trait).
 - errors: `impl_orphan` (module imports both trait and type via `Context.interfaces` built in the test), `impl_overlap`, `impl_missing_method`, `impl_unknown_method`, `impl_missing_superclass`, `impl_bad_head_nested` (`impl Eq (List Int)`), `impl_bad_head_repeated` (`trait Foo 'a 'b where ...` + `impl Foo 'a 'a`; the reflexive `Lift 'a 'a` is compiler provided and exempt, see below), `impl_bad_head_bare_var`, `impl_context_var_not_in_head`.
 - Reflexive Lift: exact package/module/trait identity activates the compiler

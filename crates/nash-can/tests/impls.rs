@@ -595,6 +595,48 @@ fn unit_and_tuple_impls_belong_to_core() {
 }
 
 #[test]
+fn impl_duplicate_methods_preserve_both_locations() {
+    let bump = Bump::new();
+    let result = canonicalize(
+        &bump,
+        indoc!(
+            "
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep int where
+            keep x = x
+            keep y = y
+    "
+        ),
+    );
+    let errors = result.unwrap_err();
+    assert!(matches!(
+        errors.as_slice(),
+        [nash_can::Error::DuplicateMethod { .. }]
+    ));
+    insta::assert_debug_snapshot!(errors);
+}
+
+#[test]
+fn impl_overapplied_heads_report_kind_arity() {
+    let bump = Bump::new();
+    let mut errors = Vec::new();
+    for head in ["list 'a 'b", "listAlias 'a 'b"] {
+        let source = format!(
+            "module Main exposing (..)\ntype alias listAlias 'a = list 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ({head}) where\n    keep x = x\n"
+        );
+        let result = canonicalize(&bump, &source).unwrap_err();
+        assert!(matches!(
+            result.as_slice(),
+            [nash_can::Error::KindTooManyArgs { .. }]
+        ));
+        errors.push(result);
+    }
+    insta::assert_debug_snapshot!(errors);
+}
+
+#[test]
 fn impl_unknown_method_precedes_missing_method() {
     let bump = Bump::new();
     let result = canonicalize(
