@@ -1857,6 +1857,190 @@ fn nested_operator_sections_apply() {
 }
 
 #[test]
+fn solved_alias_retains_its_closed_parameterized_body() {
+    let bump = Bump::new();
+    let annotations = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        type Color = Red | Blue
+        type alias Pair 'left 'right = { first : 'left, second : 'right }
+        pair : Pair Color Color
+        pair = Pair Red Blue
+    "#
+        ),
+    )
+    .unwrap();
+    let pair = annotations.get("pair").unwrap();
+    let CanType::Alias {
+        target: nash_ast::AliasType::Filled { body, typ },
+        arguments,
+        ..
+    } = &pair.typ.value
+    else {
+        panic!("solved nominal alias")
+    };
+    assert_eq!(arguments.len(), 2);
+    let CanType::Record { fields, .. } = &body.value else {
+        panic!("closed record body")
+    };
+    assert!(matches!(fields[0].typ.value, CanType::Var("left")));
+    assert!(matches!(fields[1].typ.value, CanType::Var("right")));
+    let CanType::Record { fields, .. } = &typ.value else {
+        panic!("instantiated record body")
+    };
+    assert!(fields.iter().all(|field| matches!(&field.typ.value, CanType::Named { reference, .. } if reference.name == "Color")));
+    insta::assert_snapshot!(render_annotations(&annotations));
+}
+
+#[test]
+fn higher_kinded_partial_alias_retains_its_nominal_impl() {
+    let bump = Bump::new();
+    let mut interfaces = std::collections::BTreeMap::new();
+    let mut output = Vec::new();
+    for (module_name, source) in [
+        (
+            "Higher",
+            indoc!(
+                r#"
+            module Higher exposing (..)
+            type alias Pair 'left 'right = { first : 'left, second : 'right }
+            trait Keep 'f where
+                keep : 'f 'a -> 'f 'a
+            impl Keep (Pair 'a) where
+                keep x = x
+            through x = keep x
+        "#
+            ),
+        ),
+        (
+            "Main",
+            indoc!(
+                r#"
+            module Main exposing (..)
+            import Higher exposing (..)
+            type Color = Red | Blue
+            type Mood = Calm | Busy
+            pair : Pair Color Color
+            pair = { first = Red, second = Blue }
+            other : Pair Mood Color
+            other = Pair Calm Red
+            kept = through pair
+            keptOther = through other
+        "#
+            ),
+        ),
+        (
+            "Reject",
+            indoc!(
+                r#"
+            module Reject exposing (..)
+            import Higher exposing (..)
+            type Color = Red | Blue
+            type alias Other 'left 'right = { first : 'left, second : 'right }
+            bad = through (Other Red Blue)
+        "#
+            ),
+        ),
+    ] {
+        let source = bump.alloc_str(source);
+        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let result = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables);
+        if module_name == "Reject" {
+            let errors =
+                result.expect_err("structurally identical aliases retain distinct impl heads");
+            assert!(
+                matches!(&errors[..], [Error::MissingImpl { trait_, .. }] if trait_.name == "Keep")
+            );
+            insta::assert_debug_snapshot!("partial_alias_nominal_mismatch", errors);
+            continue;
+        }
+        let (annotations, solved) = result.unwrap();
+        if module_name == "Main" {
+            let mut declarations = canonical.module.decls;
+            let mut checked = 0;
+            while let nash_ast::Decls::Declare { definition, next } = declarations {
+                if let nash_ast::Def::Def { name, body, .. } = definition {
+                    let expected = match name.value {
+                        "kept" => Some("Color"),
+                        "keptOther" => Some("Mood"),
+                        _ => None,
+                    };
+                    if let Some(expected) = expected {
+                        let nash_ast::Expr::Call { function, .. } = body.value else {
+                            panic!("through call")
+                        };
+                        let instance = &solved.instances[&nash_ast::NodeId::expr(function)];
+                        let [
+                            nash_ast::Evidence::Impl {
+                                impl_,
+                                type_args,
+                                args,
+                            },
+                        ] = instance.evidence
+                        else {
+                            panic!("alias impl evidence")
+                        };
+                        assert_eq!(impl_.key.trait_.name, "Keep");
+                        let [nash_ast::HeadCon::Named(head)] = impl_.key.heads else {
+                            panic!("nominal alias head")
+                        };
+                        assert_eq!((head.home.name, head.name), ("Higher", "Pair"));
+                        assert!(args.is_empty());
+                        assert!(
+                            matches!(type_args, [typ] if matches!(&typ.value, CanType::Named { reference, .. } if reference.name == expected))
+                        );
+                        assert!(instance.type_args.iter().any(|typ| matches!(&typ.value, CanType::Alias { reference, arguments, remaining, .. } if reference.name == "Pair" && arguments.len() == 1 && *remaining == ["right"])));
+                        checked += 1;
+                    }
+                }
+                declarations = next;
+            }
+            assert_eq!(checked, 2);
+        }
+        output.push(format!(
+            "{module_name}:\n{}",
+            render_annotations(&annotations)
+        ));
+        interfaces.insert(
+            module_name,
+            nash_can::from_module(&bump, &canonical.module, &annotations),
+        );
+    }
+    insta::assert_snapshot!(output.join("\n"));
+}
+
+#[test]
+fn higher_kinded_bind_chain_retains_its_monad_constraint() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Functor 'f where
+            map : ('a -> 'b) -> 'f 'a -> 'f 'b
+        trait Functor 'f => Applicative 'f where
+            pure : 'a -> 'f 'a
+        trait Applicative 'm => Monad 'm where
+            bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b
+        chain f g mx = bind (bind mx f) g
+    "#
+    );
+}
+
+#[test]
 fn higher_kinded_value_inference_preserves_partial_heads() {
     assert_inference_snapshot!(
         r#"

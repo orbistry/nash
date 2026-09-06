@@ -1,0 +1,11 @@
+---
+source: crates/nash-solve/tests/inference.rs
+expression: "output.join(\"\\n\")"
+---
+Higher:
+through : forall a f. Keep f => f a -> f a
+Main:
+kept : Pair Color Color
+keptOther : Pair Mood Color
+other : Pair Mood Color
+pair : Pair Color Color

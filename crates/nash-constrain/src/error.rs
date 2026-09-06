@@ -59,9 +59,6 @@ pub enum Error<'a> {
         name: Option<&'a str>,
         variable: &'a ErrorType<'a>,
     },
-    UnsupportedTypeApplication {
-        region: Region,
-    },
     BadExpr(
         Region,
         Category<'a>,

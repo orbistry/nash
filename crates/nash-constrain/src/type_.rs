@@ -138,13 +138,20 @@ pub enum FlatType<'a> {
 /// Elm's `Type.Type`: the language the constraint generator writes types in.
 #[derive(Clone, Copy, Debug)]
 pub enum Type<'a> {
-    UnsupportedApplication(Region),
+    PartialAliasN {
+        home: ModuleName<'a>,
+        name: &'a str,
+        args: &'a [(&'a str, &'a Type<'a>)],
+        remaining: &'a [&'a str],
+        body: &'a Located<nash_ast::Type<'a>>,
+    },
     AppVarN(&'a Type<'a>, &'a [&'a Type<'a>]),
     AliasN {
         home: ModuleName<'a>,
         name: &'a str,
         args: &'a [(&'a str, &'a Type<'a>)],
         real: &'a Type<'a>,
+        body: &'a Located<nash_ast::Type<'a>>,
     },
     VarN(Variable),
     AppN {
@@ -208,11 +215,19 @@ pub enum Content<'a> {
     FlexVar(Option<&'a str>),
     RigidVar(&'a str),
     Structure(FlatType<'a>),
+    PartialAlias {
+        home: ModuleName<'a>,
+        name: &'a str,
+        args: Vec<(&'a str, Variable)>,
+        remaining: Vec<&'a str>,
+        body: &'a Located<nash_ast::Type<'a>>,
+    },
     Alias {
         home: ModuleName<'a>,
         name: &'a str,
         args: Vec<(&'a str, Variable)>,
         real: Variable,
+        body: &'a Located<nash_ast::Type<'a>>,
     },
     Error,
 }

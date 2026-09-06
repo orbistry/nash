@@ -410,7 +410,7 @@ pub fn dealias<'a>(
     target: &CanAliasType<'a>,
 ) -> &'a Located<CanType<'a>> {
     match target {
-        CanAliasType::Filled(typ) => typ,
+        CanAliasType::Filled { typ, .. } => typ,
         CanAliasType::Open(typ) => {
             let table: BTreeMap<&'a str, &'a Located<CanType<'a>>> =
                 arguments.iter().map(|arg| (arg.name, arg.typ)).collect();
@@ -475,7 +475,7 @@ fn apply_type<'a>(
                     remaining: &remaining[consumed..],
                     target: match target {
                         CanAliasType::Open(t) => CanAliasType::Open(t),
-                        CanAliasType::Filled(t) => CanAliasType::Filled(t),
+                        CanAliasType::Filled { body, typ } => CanAliasType::Filled { body, typ },
                     },
                 },
             ));
@@ -540,7 +540,10 @@ pub fn substitute_type<'a>(
             })),
             target: match target {
                 CanAliasType::Open(t) => CanAliasType::Open(t),
-                CanAliasType::Filled(t) => CanAliasType::Filled(substitute_type(bump, table, t)),
+                CanAliasType::Filled { body, typ } => CanAliasType::Filled {
+                    body,
+                    typ: substitute_type(bump, table, typ),
+                },
             },
         },
         CanType::Tuple {
@@ -663,9 +666,35 @@ mod tests {
             reference: *reference,
             arguments,
             remaining: &[],
-            target: CanAliasType::Filled(expanded),
+            target: CanAliasType::Filled {
+                body: match &applied.value {
+                    CanType::Alias {
+                        target: CanAliasType::Open(body),
+                        ..
+                    } => body,
+                    _ => panic!("closed alias body"),
+                },
+                typ: expanded,
+            },
         }));
         let replaced = substitute_type(&bump, &BTreeMap::from([("right", &*unit)]), filled);
+        let (
+            CanType::Alias {
+                target: CanAliasType::Filled { body: original, .. },
+                ..
+            },
+            CanType::Alias {
+                target: CanAliasType::Filled { body: retained, .. },
+                ..
+            },
+        ) = (&filled.value, &replaced.value)
+        else {
+            panic!("filled alias template")
+        };
+        assert!(std::ptr::eq(*original, *retained));
+        assert!(
+            matches!(&retained.value, CanType::Lambda { to, .. } if matches!(to.value, CanType::Var("right")))
+        );
         let replaced = iterated_dealias(&bump, replaced);
         assert!(
             matches!(&replaced.value, CanType::Lambda { from, to } if matches!(from.value, CanType::Unit) && matches!(to.value, CanType::Unit))

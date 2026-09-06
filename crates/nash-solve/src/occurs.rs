@@ -61,7 +61,7 @@ fn occurs_help(
             result
         }
 
-        Content::Alias { args, .. } => {
+        Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
             seen.push(var);
             let result = args.iter().fold(found_cycle, |acc, (_, arg)| {
                 occurs_help(uf, seen, *arg, acc)

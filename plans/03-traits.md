@@ -2101,12 +2101,18 @@ snapshots reflect literal traits.
 
 ## Chunk 8: higher-kinded traits (type-variable application)
 
-Status: in progress. Nominal constructor applications now convert, unify,
-generalize and retain use-site evidence. Focused coverage checks distinct
-Functor impls, imported applications, rigid heads, partial variable heads,
-and cyclic application diagnostics. Partial alias inference remains gated;
-this chunk is not complete until nominal aliases survive application and
-saturation with capture-safe substitution.
+Status: complete. Constructor and partial alias applications convert, unify,
+generalize and retain use-site evidence. Coverage checks distinct Functor
+impls, a qualified Monad bind chain, imported applications, rigid heads,
+partial variable heads, cyclic diagnostics, and imported alias impl evidence
+with independent prefix arguments. Closed alias templates survive inference
+and interfaces; saturation does not capture caller variables, including in
+nested filled aliases. Allocating normalization returns variables through
+unification; inspection uses allocation-free inference views. Evidence keys
+ignore open-versus-filled body representation. The temporary conversion gates
+are removed. Real CLI projects verify successful imported partial aliases and
+MissingImpl for another alias with the same record shape. Formatting, strict
+Clippy, all workspace tests and snapshot hygiene pass.
 
 Files: `crates/nash-ast/src/lib.rs`, `crates/nash-can/src/types.rs`,
 `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/instantiate.rs`,
@@ -2130,7 +2136,10 @@ the solver handles canonical applications end to end.
 Partial aliases: canonical `Type::Alias.remaining` is the unsupplied suffix
 of the alias's formal parameters. `arguments` followed by `remaining`
 preserves declaration order. `Open` bodies bind those formal names;
-`Filled` bodies contain caller variables and always have empty `remaining`.
+`Filled { body, typ }` retains the closed template in `body` and the substituted
+caller type in `typ`, and always has empty `remaining`. Inference aliases carry
+the closed template through copies and serialization, so decomposition of a
+saturated alias can recover a partial constructor without reverse substitution.
 Canonical substitution consumes known applications into `Named.args` or
 `Alias.arguments`; applications whose heads remain variables stay `App`.
 The solver must also handle heads that become known only during unification:

@@ -171,7 +171,7 @@ Module {
                                                     },
                                                 ],
                                                 remaining: [],
-                                                target: Filled(
+                                                target: Open(
                                                     Located {
                                                         region: Region {
                                                             start: Position {

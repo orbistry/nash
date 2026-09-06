@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 
 use nash_region::Located;
 
-use crate::{AliasType, Evidence, Type};
+use crate::{Evidence, Type};
 
 fn same_types(a: &[&Located<Type<'_>>], b: &[&Located<Type<'_>>]) -> bool {
     a.len() == b.len() && a.iter().zip(b).all(|(a, b)| same_type(&a.value, &b.value))
@@ -68,13 +68,13 @@ fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
                 reference: ar,
                 arguments: aa,
                 remaining: ap,
-                target: at,
+                ..
             },
             Type::Alias {
                 reference: br,
                 arguments: ba,
                 remaining: bp,
-                target: bt,
+                ..
             },
         ) => {
             ar == br
@@ -84,11 +84,6 @@ fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
                     .iter()
                     .zip(*ba)
                     .all(|(a, b)| a.name == b.name && same_type(&a.typ.value, &b.typ.value))
-                && match (at, bt) {
-                    (AliasType::Open(a), AliasType::Open(b))
-                    | (AliasType::Filled(a), AliasType::Filled(b)) => same_type(&a.value, &b.value),
-                    _ => false,
-                }
         }
         _ => false,
     }
@@ -140,7 +135,7 @@ fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
             reference,
             arguments,
             remaining,
-            target,
+            ..
         } => {
             reference.hash(state);
             remaining.hash(state);
@@ -148,10 +143,6 @@ fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
             for a in *arguments {
                 a.name.hash(state);
                 hash_type(&a.typ.value, state);
-            }
-            std::mem::discriminant(target).hash(state);
-            match target {
-                AliasType::Open(t) | AliasType::Filled(t) => hash_type(&t.value, state),
             }
         }
     }

@@ -130,8 +130,41 @@ fn variable_to_can_type<'a>(
     state: &mut NameState<'a>,
     variable: Variable,
 ) -> &'a Located<CanType<'a>> {
+    if matches!(uf.get(variable).content, Content::Structure(_))
+        && let Some(alias) = nash_constrain::instantiate::alias_application(uf, variable)
+    {
+        return bump.alloc(Located::at_zero(CanType::Alias {
+            reference: QualifiedName {
+                home: alias.home,
+                name: alias.name,
+            },
+            arguments: bump.alloc_slice_fill_iter(alias.args.iter().map(|(name, var)| {
+                AliasArgument {
+                    name,
+                    typ: variable_to_can_type(bump, uf, state, *var),
+                }
+            })),
+            remaining: bump.alloc_slice_fill_iter(alias.remaining),
+            target: AliasType::Open(alias.body),
+        }));
+    }
     let content = uf.get(variable).content.clone();
     match content {
+        Content::PartialAlias {
+            home,
+            name,
+            args,
+            remaining,
+            body,
+        } => bump.alloc(Located::at_zero(CanType::Alias {
+            reference: QualifiedName { home, name },
+            arguments: bump.alloc_slice_fill_iter(args.iter().map(|(name, var)| AliasArgument {
+                name,
+                typ: variable_to_can_type(bump, uf, state, *var),
+            })),
+            remaining: bump.alloc_slice_fill_iter(remaining),
+            target: AliasType::Open(body),
+        })),
         Content::Structure(term) => term_to_can_type(bump, uf, state, term),
 
         Content::FlexVar(maybe_name) => {
@@ -153,6 +186,7 @@ fn variable_to_can_type<'a>(
             name,
             args,
             real,
+            body,
         } => {
             let can_args =
                 bump.alloc_slice_fill_iter(args.iter().map(|(arg_name, arg_var)| AliasArgument {
@@ -164,7 +198,10 @@ fn variable_to_can_type<'a>(
                 reference: QualifiedName { home, name },
                 arguments: can_args,
                 remaining: &[],
-                target: AliasType::Filled(can_type),
+                target: AliasType::Filled {
+                    body,
+                    typ: can_type,
+                },
             }))
         }
 
@@ -294,7 +331,18 @@ fn variable_to_error_type<'a>(
         bump.alloc(ErrorType::Infinite)
     } else {
         uf.modify(variable, |desc| desc.mark = OCCURS_MARK);
-        let content = uf.get(variable).content.clone();
+        let content = match nash_constrain::instantiate::alias_application(uf, variable) {
+            Some(alias) if matches!(uf.get(variable).content, Content::Structure(_)) => {
+                Content::PartialAlias {
+                    home: alias.home,
+                    name: alias.name,
+                    args: alias.args,
+                    remaining: alias.remaining,
+                    body: alias.body,
+                }
+            }
+            _ => uf.get(variable).content.clone(),
+        };
         let err_type = content_to_error_type(bump, uf, state, variable, content);
         uf.modify(variable, |desc| desc.mark = mark);
         err_type
@@ -309,6 +357,16 @@ fn content_to_error_type<'a>(
     content: Content<'a>,
 ) -> &'a ErrorType<'a> {
     match content {
+        Content::PartialAlias {
+            home, name, args, ..
+        } => bump.alloc(ErrorType::Type {
+            home,
+            name,
+            args: bump.alloc_slice_fill_iter(
+                args.iter()
+                    .map(|(_, var)| variable_to_error_type(bump, uf, state, *var)),
+            ),
+        }),
         Content::Structure(term) => term_to_error_type(bump, uf, state, term),
 
         Content::FlexVar(maybe_name) => {
@@ -330,6 +388,7 @@ fn content_to_error_type<'a>(
             name,
             args,
             real,
+            ..
         } => {
             let err_args = bump.alloc_slice_fill_iter(args.iter().map(|(arg_name, arg_var)| {
                 (*arg_name, variable_to_error_type(bump, uf, state, *arg_var))
@@ -547,9 +606,11 @@ fn get_var_names<'a>(
         Content::RigidVar(name) => add_name(bump, uf, name, var, Content::RigidVar, taken_names),
 
         // Elm folds with `foldrM`, so children are visited right-to-left.
-        Content::Alias { args, .. } => args.iter().rev().fold(taken_names, |taken, (_, arg)| {
-            get_var_names(bump, uf, seen, *arg, taken)
-        }),
+        Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
+            args.iter().rev().fold(taken_names, |taken, (_, arg)| {
+                get_var_names(bump, uf, seen, *arg, taken)
+            })
+        }
 
         Content::Structure(flat_type) => match flat_type {
             FlatType::AppV1(head, args) => {

@@ -120,6 +120,8 @@ fn guarded_unify<'a>(
     if uf.equivalent(left, right) {
         return Ok(());
     }
+    nash_constrain::instantiate::normalize_variable(uf, left, vars);
+    nash_constrain::instantiate::normalize_variable(uf, right, vars);
     let first_desc = uf.get(left).clone();
     let second_desc = uf.get(right).clone();
     actually_unify(
@@ -149,6 +151,7 @@ fn actually_unify<'a>(
     context: Context<'a>,
 ) -> UResult {
     match context.first_desc.content.clone() {
+        alias @ Content::PartialAlias { .. } => unify_partial_alias(uf, vars, &context, alias),
         Content::FlexVar(_) => unify_flex(uf, &context),
 
         Content::RigidVar(_) => unify_rigid(uf, &context),
@@ -158,7 +161,8 @@ fn actually_unify<'a>(
             name,
             args,
             real,
-        } => unify_alias(uf, vars, &context, home, name, args, real),
+            body,
+        } => unify_alias(uf, vars, &context, home, name, args, real, body),
 
         Content::Structure(flat_type) => unify_structure(uf, vars, &context, flat_type),
 
@@ -182,9 +186,10 @@ fn unify_flex<'a>(uf: &mut UnionFind<'a>, context: &Context<'a>) -> UResult {
             Some(_) => merge(uf, context, Content::FlexVar(maybe_name)),
         },
 
-        other @ (Content::RigidVar(_) | Content::Alias { .. } | Content::Structure(_)) => {
-            merge(uf, context, other)
-        }
+        other @ (Content::RigidVar(_)
+        | Content::Alias { .. }
+        | Content::PartialAlias { .. }
+        | Content::Structure(_)) => merge(uf, context, other),
     }
 }
 
@@ -195,13 +200,111 @@ fn unify_rigid<'a>(uf: &mut UnionFind<'a>, context: &Context<'a>) -> UResult {
     match &context.second_desc.content {
         Content::FlexVar(_) => merge(uf, context, content),
 
-        Content::RigidVar(_) | Content::Alias { .. } | Content::Structure(_) => Err(()),
+        Content::RigidVar(_)
+        | Content::Alias { .. }
+        | Content::PartialAlias { .. }
+        | Content::Structure(_) => Err(()),
 
         Content::Error => merge(uf, context, Content::Error),
     }
 }
 
 // UNIFY ALIASES
+
+fn unify_partial_alias<'a>(
+    uf: &mut UnionFind<'a>,
+    vars: &mut Vec<Variable>,
+    context: &Context<'a>,
+    alias: Content<'a>,
+) -> UResult {
+    let Content::PartialAlias {
+        home,
+        name,
+        args,
+        remaining,
+        ..
+    } = &alias
+    else {
+        unreachable!()
+    };
+    match context.second_desc.content.clone() {
+        Content::FlexVar(_) => merge(uf, context, alias),
+        other @ Content::PartialAlias { .. } => {
+            let Content::PartialAlias {
+                home: other_home,
+                name: other_name,
+                args: other_args,
+                remaining: other_remaining,
+                ..
+            } = &other
+            else {
+                unreachable!()
+            };
+            if home != other_home || name != other_name || remaining != other_remaining {
+                return Err(());
+            }
+            unify_alias_args(uf, vars, args, other_args)?;
+            merge(uf, context, other)
+        }
+        Content::Structure(flat) => unify_application_alias(uf, vars, context, flat, alias),
+        Content::Error => merge(uf, context, Content::Error),
+        _ => Err(()),
+    }
+}
+
+/// Decompose the supplied suffix while keeping the original closed alias body.
+fn unify_application_alias<'a>(
+    uf: &mut UnionFind<'a>,
+    vars: &mut Vec<Variable>,
+    context: &Context<'a>,
+    flat: FlatType<'a>,
+    alias: Content<'a>,
+) -> UResult {
+    let FlatType::AppV1(head, applied) = type_::normalize_application(uf, flat) else {
+        return Err(());
+    };
+    let (home, name, args, body, remaining) = match &alias {
+        Content::Alias {
+            home,
+            name,
+            args,
+            body,
+            ..
+        } => (*home, *name, args, *body, &[][..]),
+        Content::PartialAlias {
+            home,
+            name,
+            args,
+            body,
+            remaining,
+        } => (*home, *name, args, *body, remaining.as_slice()),
+        _ => unreachable!(),
+    };
+    if applied.is_empty() || applied.len() > args.len() {
+        return Err(());
+    }
+    let split = args.len() - applied.len();
+    let partial = fresh(
+        uf,
+        vars,
+        context,
+        Content::PartialAlias {
+            home,
+            name,
+            args: args[..split].to_vec(),
+            body,
+            remaining: args[split..]
+                .iter()
+                .map(|(name, _)| *name)
+                .chain(remaining.iter().copied())
+                .collect(),
+        },
+    );
+    sub_unify(uf, vars, head, partial)?;
+    let suffix: Vec<_> = args[split..].iter().map(|(_, var)| *var).collect();
+    unify_args(uf, vars, &applied, &suffix)?;
+    merge(uf, context, alias)
+}
 
 #[allow(clippy::too_many_arguments)]
 fn unify_alias<'a>(
@@ -212,8 +315,10 @@ fn unify_alias<'a>(
     name: &'a str,
     args: Vec<(&'a str, Variable)>,
     real_var: Variable,
+    body: &'a nash_region::Located<nash_ast::Type<'a>>,
 ) -> UResult {
     match context.second_desc.content.clone() {
+        Content::PartialAlias { .. } => Err(()),
         Content::FlexVar(_) => merge(
             uf,
             context,
@@ -222,6 +327,7 @@ fn unify_alias<'a>(
                 name,
                 args,
                 real: real_var,
+                body,
             },
         ),
 
@@ -232,6 +338,7 @@ fn unify_alias<'a>(
             name: other_name,
             args: other_args,
             real: other_real_var,
+            body: other_body,
         } => {
             if name == other_name && home == other_home {
                 unify_alias_args(uf, vars, &args, &other_args)?;
@@ -243,6 +350,7 @@ fn unify_alias<'a>(
                         name: other_name,
                         args: other_args,
                         real: other_real_var,
+                        body: other_body,
                     },
                 )
             } else {
@@ -250,6 +358,19 @@ fn unify_alias<'a>(
             }
         }
 
+        Content::Structure(flat @ FlatType::AppV1(..)) => unify_application_alias(
+            uf,
+            vars,
+            context,
+            flat,
+            Content::Alias {
+                home,
+                name,
+                args,
+                body,
+                real: real_var,
+            },
+        ),
         Content::Structure(_) => sub_unify(uf, vars, real_var, context.second),
 
         Content::Error => merge(uf, context, Content::Error),
@@ -289,7 +410,19 @@ fn unify_structure<'a>(
 
         Content::RigidVar(_) => Err(()),
 
-        Content::Alias { real, .. } => sub_unify(uf, vars, context.first, real),
+        alias @ Content::PartialAlias { .. } => {
+            unify_application_alias(uf, vars, context, flat_type, alias)
+        }
+        alias @ Content::Alias { .. } => {
+            if matches!(flat_type, FlatType::AppV1(..)) {
+                unify_application_alias(uf, vars, context, flat_type, alias)
+            } else {
+                let Content::Alias { real, .. } = alias else {
+                    unreachable!()
+                };
+                sub_unify(uf, vars, context.first, real)
+            }
+        }
 
         Content::Structure(other_flat_type) => match (
             nash_constrain::type_::normalize_application(uf, flat_type),

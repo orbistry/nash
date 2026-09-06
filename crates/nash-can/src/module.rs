@@ -1319,7 +1319,7 @@ fn collect_from_type<'a>(
                 collect_from_type(&a.typ.value, home, used);
             }
             match target {
-                nash_ast::AliasType::Open(t) | nash_ast::AliasType::Filled(t) => {
+                nash_ast::AliasType::Open(t) | nash_ast::AliasType::Filled { typ: t, .. } => {
                     collect_from_type(&t.value, home, used);
                 }
             }

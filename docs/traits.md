@@ -129,6 +129,14 @@ both its trait and its head type are visible.
   parameters. Applying it binds those parameters in declaration order;
   the alias body stays closed over its formals until saturation. Supplied
   caller variables are not captured by remaining formal names.
+  Solved aliases retain their original parameterized body as well as the
+  substituted body. Interfaces carry both, so later inference can recover a
+  partial constructor from a saturated alias without reverse-substituting
+  caller types. Substitution changes the filled body and supplied arguments;
+  it never changes the closed template.
+  Evidence identity uses the qualified alias name, supplied arguments and
+  remaining parameters. Whether its body is open or already substituted does
+  not change the evidence key.
 - The context `C` may only mention the variables of the heads.
 - Kinds: each head's kind must instantiate the trait's kind scheme. `impl
   Functor List` instantiates `k1 -> k2` at `Big -> Big`; `impl Functor list`

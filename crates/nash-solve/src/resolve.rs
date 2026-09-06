@@ -35,7 +35,7 @@ pub(crate) fn has_outer_flex(uf: &mut UnionFind<'_>, args: &[Variable], rank: us
                 pending.extend(fields.values().map(|var| (*var, outer)));
                 pending.push((*ext, outer));
             }
-            Content::Alias { args, .. } => {
+            Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
                 pending.extend(args.iter().map(|(_, var)| (*var, outer)))
             }
             _ => {}
@@ -65,6 +65,14 @@ pub(crate) fn select<'a>(
     let mut arguments = Vec::new();
     let mut unknown = false;
     for arg in args {
+        if let Some(alias) = nash_constrain::instantiate::alias_application(uf, *arg) {
+            heads.push(HeadCon::Named(QualifiedName {
+                home: alias.home,
+                name: alias.name,
+            }));
+            arguments.push(alias.args.into_iter().map(|(_, var)| var).collect());
+            continue;
+        }
         let content = uf.get(*arg).content.clone();
         let content = match content {
             Content::Structure(flat) => {
@@ -78,6 +86,9 @@ pub(crate) fn select<'a>(
                 args.clone(),
             ),
             Content::Alias {
+                home, name, args, ..
+            }
+            | Content::PartialAlias {
                 home, name, args, ..
             } => (
                 HeadCon::Named(QualifiedName { home: *home, name }),

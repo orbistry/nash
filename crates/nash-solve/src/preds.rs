@@ -140,6 +140,25 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
         if a == b || !seen.insert((a, b)) {
             continue;
         }
+        if let (Some(a), Some(b)) = (
+            nash_constrain::instantiate::alias_application(uf, a),
+            nash_constrain::instantiate::alias_application(uf, b),
+        ) {
+            if a.home != b.home
+                || a.name != b.name
+                || a.remaining != b.remaining
+                || a.args.len() != b.args.len()
+            {
+                return false;
+            }
+            pending.extend(
+                a.args
+                    .into_iter()
+                    .zip(b.args)
+                    .map(|((_, a), (_, b))| (a, b)),
+            );
+            continue;
+        }
         fn normalize<'a>(uf: &mut UnionFind<'a>, var: Variable) -> Content<'a> {
             match uf.get(var).content.clone() {
                 Content::Structure(flat) => {
@@ -151,6 +170,24 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
         let a_content = normalize(uf, a);
         let b_content = normalize(uf, b);
         match (a_content, b_content) {
+            (
+                Content::PartialAlias {
+                    home: ha,
+                    name: na,
+                    args: aa,
+                    remaining: ra,
+                    ..
+                },
+                Content::PartialAlias {
+                    home: hb,
+                    name: nb,
+                    args: ab,
+                    remaining: rb,
+                    ..
+                },
+            ) if ha == hb && na == nb && ra == rb && aa.len() == ab.len() => {
+                pending.extend(aa.into_iter().zip(ab).map(|((_, a), (_, b))| (a, b)));
+            }
             (
                 Content::Structure(FlatType::AppV1(a, aa)),
                 Content::Structure(FlatType::AppV1(b, ab)),
@@ -314,6 +351,8 @@ mod tests {
 
     #[test]
     fn matching_preserves_unknown_variables_and_nominal_alias_identity() {
+        let bump = bumpalo::Bump::new();
+        let body = bump.alloc(nash_region::Located::at_zero(nash_ast::Type::Unit));
         let mut uf = UnionFind::new();
         let a = uf.fresh(make_descriptor(Content::RigidVar("a")));
         let another_a = uf.fresh(make_descriptor(Content::RigidVar("a")));
@@ -338,12 +377,14 @@ mod tests {
         ))));
         assert!(same_args(&mut uf, &[first], &[second]));
         let alias_a = uf.fresh(make_descriptor(Content::Alias {
+            body,
             home,
             name: "A",
             args: vec![("x", a)],
             real: first,
         }));
         let alias_b = uf.fresh(make_descriptor(Content::Alias {
+            body,
             home,
             name: "B",
             args: vec![("x", a)],

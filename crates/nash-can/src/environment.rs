@@ -141,7 +141,7 @@ pub enum Ctor<'a> {
 }
 
 /// Build the curried constructor type for a record alias, mirroring Elm's
-/// `toRecordCtor`: `field1 -> field2 -> ... -> Alias args (Filled record)`,
+/// `toRecordCtor`: `field1 -> field2 -> ... -> Alias args (Open record)`,
 /// with fields in source order (`fieldsToList` sorts by index).
 pub fn make_record_ctor<'a>(
     bump: &'a Bump,
@@ -165,7 +165,7 @@ pub fn make_record_ctor<'a>(
                 name: alias_name,
             },
             arguments,
-            target: nash_ast::AliasType::Filled(record_type),
+            target: nash_ast::AliasType::Open(record_type),
         },
     ));
 

@@ -39,10 +39,9 @@ pub fn run<'a>(
         uses: Vec::new(),
         owners: Vec::new(),
         resolution_work: std::collections::HashMap::new(),
-        conversion_errors: Vec::new(),
     };
 
-    let mut state = solver.solve(
+    let state = solver.solve(
         uf,
         &Env::new(),
         OUTERMOST_RANK,
@@ -54,7 +53,6 @@ pub fn run<'a>(
         constraint,
     );
 
-    state.errors.append(&mut solver.conversion_errors);
     if state.errors.is_empty() {
         solver.finish(uf, &state.env)
     } else {
@@ -131,7 +129,6 @@ struct Solver<'a, 'tables> {
     uses: Vec<UseRecord<'a>>,
     owners: Vec<nash_ast::NodeId>,
     resolution_work: std::collections::HashMap<nash_ast::NodeId, usize>,
-    conversion_errors: Vec<Error<'a>>,
 }
 
 struct GivenFrame<'a> {
@@ -626,7 +623,7 @@ impl<'a> Solver<'a, '_> {
         binder: Option<type_::Binder<'a>>,
         annotated: bool,
     ) -> State<'a> {
-        let report_errors = state.errors.is_empty() && self.conversion_errors.is_empty();
+        let report_errors = state.errors.is_empty();
         let report_missing = annotated && report_errors;
         let mut queue: VecDeque<_> = self
             .wanted
@@ -1024,7 +1021,6 @@ impl<'a> Solver<'a, '_> {
                     }
 
                     if state1.errors.is_empty()
-                        && self.conversion_errors.is_empty()
                         && let Some(binder) = *binder
                     {
                         let depth = self.enter_givens(uf, rank, given, Some(binder));
@@ -1231,10 +1227,28 @@ impl<'a> Solver<'a, '_> {
         tipe: &Type<'a>,
     ) -> Variable {
         match tipe {
-            Type::UnsupportedApplication(region) => {
-                self.conversion_errors
-                    .push(Error::UnsupportedTypeApplication { region: *region });
-                self.register(uf, rank, Content::Error)
+            Type::PartialAliasN {
+                home,
+                name,
+                args,
+                remaining,
+                body,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|(name, typ)| (*name, self.type_to_variable(uf, rank, typ)))
+                    .collect();
+                self.register(
+                    uf,
+                    rank,
+                    Content::PartialAlias {
+                        home: *home,
+                        name,
+                        args,
+                        remaining: remaining.to_vec(),
+                        body,
+                    },
+                )
             }
             Type::VarN(var) => *var,
 
@@ -1270,6 +1284,7 @@ impl<'a> Solver<'a, '_> {
                 name,
                 args,
                 real,
+                body,
             } => {
                 let arg_vars: Vec<(&'a str, Variable)> = args
                     .iter()
@@ -1286,6 +1301,7 @@ impl<'a> Solver<'a, '_> {
                         name,
                         args: arg_vars,
                         real: alias_var,
+                        body,
                     },
                 )
             }
@@ -1405,122 +1421,13 @@ impl<'a> Solver<'a, '_> {
         flex_vars: &BTreeMap<&'a str, Variable>,
         src_type: &Located<CanType<'a>>,
     ) -> Variable {
-        match &src_type.value {
-            CanType::App { head, args } => {
-                let head = self.src_type_to_var(uf, rank, flex_vars, head);
-                let args = args
-                    .iter()
-                    .map(|arg| self.src_type_to_var(uf, rank, flex_vars, arg))
-                    .collect();
-                self.register(uf, rank, Content::Structure(FlatType::AppV1(head, args)))
-            }
-            CanType::Lambda { from, to } => {
-                let arg_var = self.src_type_to_var(uf, rank, flex_vars, from);
-                let result_var = self.src_type_to_var(uf, rank, flex_vars, to);
-                self.register(
-                    uf,
-                    rank,
-                    Content::Structure(FlatType::Fun1(arg_var, result_var)),
-                )
-            }
-
-            CanType::Var(name) => *flex_vars
-                .get(name)
-                .expect("annotations only mention their free variables"),
-
-            CanType::Named { reference, args } => {
-                let arg_vars: Vec<Variable> = args
-                    .iter()
-                    .map(|arg| self.src_type_to_var(uf, rank, flex_vars, arg))
-                    .collect();
-                self.register(
-                    uf,
-                    rank,
-                    Content::Structure(FlatType::App1(reference.home, reference.name, arg_vars)),
-                )
-            }
-
-            CanType::Record { fields, ext } => {
-                let field_vars: BTreeMap<&'a str, Variable> = fields
-                    .iter()
-                    .map(|field| {
-                        (
-                            field.field,
-                            self.src_type_to_var(uf, rank, flex_vars, field.typ),
-                        )
-                    })
-                    .collect();
-                let ext_var = match ext {
-                    None => self.register(uf, rank, Content::Structure(FlatType::EmptyRecord1)),
-                    Some(ext_name) => *flex_vars
-                        .get(ext_name)
-                        .expect("annotations only mention their free variables"),
-                };
-                self.register(
-                    uf,
-                    rank,
-                    Content::Structure(FlatType::Record1(field_vars, ext_var)),
-                )
-            }
-
-            CanType::Unit => self.register(uf, rank, Content::Structure(FlatType::Unit1)),
-
-            CanType::Tuple {
-                first,
-                second,
-                rest,
-            } => {
-                let a_var = self.src_type_to_var(uf, rank, flex_vars, first);
-                let b_var = self.src_type_to_var(uf, rank, flex_vars, second);
-                let c_var = rest
-                    .first()
-                    .map(|third| self.src_type_to_var(uf, rank, flex_vars, third));
-                self.register(
-                    uf,
-                    rank,
-                    Content::Structure(FlatType::Tuple1(a_var, b_var, c_var)),
-                )
-            }
-
-            CanType::Alias {
-                reference,
-                arguments,
-                remaining,
-                target,
-            } => {
-                if !remaining.is_empty() {
-                    self.conversion_errors
-                        .push(Error::UnsupportedTypeApplication {
-                            region: src_type.region,
-                        });
-                    return self.register(uf, rank, Content::Error);
-                }
-                let arg_vars: Vec<(&'a str, Variable)> = arguments
-                    .iter()
-                    .map(|arg| (arg.name, self.src_type_to_var(uf, rank, flex_vars, arg.typ)))
-                    .collect();
-                let alias_var = match target {
-                    nash_ast::AliasType::Open(real_type) => {
-                        let arg_dict: BTreeMap<&'a str, Variable> =
-                            arg_vars.iter().copied().collect();
-                        self.src_type_to_var(uf, rank, &arg_dict, real_type)
-                    }
-                    nash_ast::AliasType::Filled(real_type) => {
-                        self.src_type_to_var(uf, rank, flex_vars, real_type)
-                    }
-                };
-                self.register(
-                    uf,
-                    rank,
-                    Content::Alias {
-                        home: reference.home,
-                        name: reference.name,
-                        args: arg_vars,
-                        real: alias_var,
-                    },
-                )
-            }
-        }
+        nash_constrain::instantiate::canonical_to_variable(
+            uf,
+            rank,
+            &mut self.pools[rank],
+            flex_vars,
+            src_type,
+        )
     }
 
     // COPY
@@ -1535,9 +1442,6 @@ impl<'a> Solver<'a, '_> {
         binder: Option<type_::Binder<'a>>,
     ) {
         for definition in definitions {
-            if !self.conversion_errors.is_empty() {
-                return;
-            }
             let binding = Binding {
                 declared_quantifiers: &[],
                 variable: self.type_to_variable(uf, rank, definition.typ),
@@ -1829,7 +1733,9 @@ impl<'a> Solver<'a, '_> {
                     pending.extend(fields.values());
                     pending.push(*ext);
                 }
-                Content::Alias { args, .. } => pending.extend(args.iter().map(|(_, var)| var)),
+                Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
+                    pending.extend(args.iter().map(|(_, var)| var))
+                }
                 _ => {}
             }
         }
@@ -2001,6 +1907,29 @@ impl<'a> Solver<'a, '_> {
         // already marked the variable as copied, so we will not repeat this
         // work or crawl this variable again.
         match desc.content {
+            Content::PartialAlias {
+                home,
+                name,
+                args,
+                remaining,
+                body,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|(name, var)| (*name, self.make_copy_help(uf, max_rank, *var, quantified)))
+                    .collect();
+                uf.set(
+                    copy,
+                    make_descriptor(Content::PartialAlias {
+                        home,
+                        name,
+                        args,
+                        remaining,
+                        body,
+                    }),
+                );
+                copy
+            }
             Content::Structure(term) => {
                 let new_term = self.copy_flat_type(uf, max_rank, term, quantified);
                 uf.set(copy, make_descriptor(Content::Structure(new_term)));
@@ -2019,6 +1948,7 @@ impl<'a> Solver<'a, '_> {
                 name,
                 args,
                 real,
+                body,
             } => {
                 let new_args: Vec<(&'a str, Variable)> = args
                     .iter()
@@ -2037,6 +1967,7 @@ impl<'a> Solver<'a, '_> {
                         name,
                         args: new_args,
                         real: new_real,
+                        body,
                     }),
                 );
                 copy
@@ -2207,11 +2138,13 @@ fn adjust_rank_content<'a>(
         },
 
         // THEORY: anything in the realVar would be outermostRank
-        Content::Alias { args, .. } => args.iter().fold(OUTERMOST_RANK, |rank, (_, arg_var)| {
-            rank.max(adjust_rank(
-                uf, young_mark, visit_mark, group_rank, *arg_var,
-            ))
-        }),
+        Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
+            args.iter().fold(OUTERMOST_RANK, |rank, (_, arg_var)| {
+                rank.max(adjust_rank(
+                    uf, young_mark, visit_mark, group_rank, *arg_var,
+                ))
+            })
+        }
     }
 }
 
@@ -2244,7 +2177,6 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
-            conversion_errors: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -2258,7 +2190,6 @@ mod copy_tests {
             &constraint,
         );
         assert!(result.errors.is_empty());
-        assert!(solver.conversion_errors.is_empty());
         assert!(
             solver.wanted.is_empty(),
             "superclass givens must discharge eq uses"
@@ -2309,7 +2240,6 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
-            conversion_errors: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -2325,7 +2255,6 @@ mod copy_tests {
         assert!(
             matches!(&result.errors[..], [Error::MissingImpl { region, .. }] if region.start.line == 8)
         );
-        assert!(solver.conversion_errors.is_empty());
         assert!(solver.givens.is_empty());
         let uses: Vec<_> = solver
             .predicates
@@ -2369,7 +2298,6 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
-            conversion_errors: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -2449,7 +2377,6 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
-            conversion_errors: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -2564,7 +2491,6 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
-            conversion_errors: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -2699,7 +2625,6 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
-            conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
         let a = bump.alloc(Located::at_zero(CanType::Var("a")));
@@ -2775,7 +2700,6 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
-            conversion_errors: Vec::new(),
         };
         let mut uf = UnionFind::new();
         let result = uf.fresh(make_descriptor(Content::RigidVar("a")));

@@ -404,7 +404,12 @@ pub enum Type<'a> {
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum AliasType<'a> {
     Open(&'a Located<Type<'a>>),
-    Filled(&'a Located<Type<'a>>),
+    Filled {
+        /// Original body, closed over the alias's formal parameters.
+        body: &'a Located<Type<'a>>,
+        /// Body after substituting the supplied arguments.
+        typ: &'a Located<Type<'a>>,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -617,6 +622,66 @@ mod kind_tests {
 mod evidence_tests {
     use super::*;
     use std::collections::HashSet;
+
+    #[test]
+    fn evidence_alias_identity_does_not_depend_on_body_normalization() {
+        let reference = QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Identity",
+        };
+        let body = Located::at_zero(Type::Var("a"));
+        let unit = Located::at_zero(Type::Unit);
+        let args = [AliasArgument {
+            name: "a",
+            typ: &unit,
+        }];
+        let open = Located::at_zero(Type::Alias {
+            reference,
+            arguments: &args,
+            remaining: &[],
+            target: AliasType::Open(&body),
+        });
+        let filled = Located::at(
+            Region::one(),
+            Type::Alias {
+                reference,
+                arguments: &args,
+                remaining: &[],
+                target: AliasType::Filled {
+                    body: &body,
+                    typ: &unit,
+                },
+            },
+        );
+        let partial = Located::at_zero(Type::Alias {
+            reference,
+            arguments: &[],
+            remaining: &["a"],
+            target: AliasType::Open(&body),
+        });
+        let other = Located::at_zero(Type::Alias {
+            reference: QualifiedName {
+                name: "Other",
+                ..reference
+            },
+            arguments: &args,
+            remaining: &[],
+            target: AliasType::Open(&body),
+        });
+        let first = Evidence::ReflexiveLift { typ: &open };
+        let second = Evidence::ReflexiveLift { typ: &filled };
+        assert_eq!(first, second);
+        let keys = HashSet::from([
+            first,
+            second,
+            Evidence::ReflexiveLift { typ: &partial },
+            Evidence::ReflexiveLift { typ: &other },
+        ]);
+        assert_eq!(keys.len(), 3);
+    }
 
     #[test]
     fn evidence_shares_types_across_source_locations() {
