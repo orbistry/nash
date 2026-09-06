@@ -80,7 +80,7 @@ definition      = lower_var { pattern } '=' expression ;   (* same name, next fr
 ### Declaration attributes
 
 ```elm
-@derive(Eq, Ord, Show, ToData, FromData)
+@derive(Ord, Show, ToData, FromData)
 type Redeemer = Claim | Cancel
 
 @inline
@@ -649,6 +649,13 @@ generator is `comptime` is a constant and is a warning.
 `Derive.derive` from `nash/core`, exposed by the default imports. It
 dispatches on the trait name and appends one `impl` per trait after the
 original declaration.
+
+Requested traits must satisfy the declared type's kind restrictions. Eq
+derivation applies to little types. Big types already receive structural Eq
+from the compiler; deriving must not emit an Eq override for them. Generated
+impls go through the same checks as handwritten impls, including rejection
+of Big Eq overrides. For a Big Redeemer, request Ord/Show/ToData/FromData as
+needed and use the automatic Eq instance.
 
 Sketch of the `Eq` derivation in Nash:
 

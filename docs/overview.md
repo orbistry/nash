@@ -123,9 +123,13 @@ trait Eq 'a => Ord 'a where
     lt a b = compare a b == LT
 
 impl Ord int where
-    compare = Builtin.compareInteger
+    compare a b =
+        if Builtin.lessThanInteger a b then LT
+        else if Builtin.equalsInteger a b then EQ
+        else GT
 
-@derive(Eq, Show, ToData, FromData)
+-- Big Eq is automatic and cannot be overridden.
+@derive(Show, ToData, FromData)
 type Redeemer = Claim | Cancel
 
 main : Datum -> Redeemer -> Data -> unit

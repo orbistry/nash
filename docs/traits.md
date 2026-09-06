@@ -42,20 +42,26 @@ trait Lift 'small 'big where
 
 -- impl for a base type
 impl Ord int where
-    compare = Builtin.compareInteger
+    compare a b =
+        if Builtin.lessThanInteger a b then LT
+        else if Builtin.equalsInteger a b then EQ
+        else GT
 
 -- impl with a context
-impl Eq 'a => Eq (List 'a) where
+impl Eq 'a => Eq (cons 'a) where
     eq xs ys = ...
 
 -- impl for a type constructor (higher-kinded trait)
-impl Functor List where
-    map = List.map
+impl Functor list where
+    map f values =
+        case values of
+            [] -> []
+            x :: xs -> Builtin.mkCons (f x) (map f xs)
 
 -- multi-parameter impl
 impl Lift int Int where
-    lift = Builtin.iData
-    lower = Builtin.unIData
+    lift = Builtin.castLift
+    lower = Builtin.castLower
 
 -- contexts in annotations
 member : Eq 'a => 'a -> List 'a -> bool
@@ -153,8 +159,10 @@ both its trait and its head type are visible.
   the impl context (plus superclass closure) given.
 - Superclasses: for every superclass `S` of `T`, `S h1 .. hn` must be
   satisfiable from the impl table plus the impl's own context. `impl Ord
-  int` needs `impl Eq int` somewhere in the build. `impl Eq 'a => Ord (List
-  'a)` needs `Eq (List 'a)` given `Eq 'a`. Checked when the impl is added
+  int` needs `impl Eq int` somewhere in the build. `impl Ord 'a => Ord (cons
+  'a)` needs `Eq (cons 'a)`, using the element Eq implied by Ord. Big types
+  satisfy the Eq superclass through the compiler-owned structural rule.
+  Checked when the impl is added
   to the table, so declaration order does not matter.
 
 ### Coherence
@@ -591,7 +599,10 @@ Notes:
   kind-polymorphic (`List`, `list`, `option`, `fuzzer`).
 - `@derive(Eq, Ord, Show, ToData, FromData)` generates impls as macros
   ([macros.md](macros.md)); the generated impls are ordinary impls subject
-  to the orphan rule (always satisfied: the type is local).
+  to the orphan rule (always satisfied: the type is local). Each requested
+  trait must satisfy the target type's kind restrictions. Eq derivation is
+  for little types; Big types already have compiler-owned structural Eq,
+  and a generated Big Eq override is rejected like a handwritten one.
 
 ## Interfaces
 
@@ -708,13 +719,13 @@ Hint: Wrap the type in one of your own: `type Rows = Rows (List Row)`.
 ```
 -- OVERLAPPING IMPLS ---------------------------------------------- Main.nash
 
-There are two impls of Eq for Color:
+There are two impls of Eq for color:
 
-10|  impl Eq Color where
+10|  impl Eq color where
      ^^^^^^^^^^^^^
 and
 
-24|  impl Eq Color where
+24|  impl Eq color where
      ^^^^^^^^^^^^^
 Only one impl is allowed per trait and type. Delete one, or merge them.
 ```
@@ -737,14 +748,14 @@ of Ord are: compare, lt, le, gt, ge, min, max.
 ```
 -- MISSING SUPERCLASS --------------------------------------------- Main.nash
 
-This impl of Ord for Color needs an impl of Eq for Color:
+This impl of Ord for color needs an impl of Eq for color:
 
-10|  impl Ord Color where
+10|  impl Ord color where
      ^^^^^^^^^^^^^^
 Ord is declared as `trait Eq 'a => Ord 'a`, so anything with Ord must
-also have Eq. I could not find `impl Eq Color` anywhere.
+also have Eq. I could not find `impl Eq color` anywhere.
 
-Hint: Add `@derive(Eq)` to `type Color`, or write the impl by hand.
+Hint: Add `@derive(Eq)` to `type color`, or write the impl by hand.
 ```
 
 **Missing constraint** (type error, at the use inside a typed definition)
