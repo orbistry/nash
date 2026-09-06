@@ -63,3 +63,23 @@ impl Ord 'a => Ord (list 'a) where
             case compare (Builtin.headList xs) (Builtin.headList ys) of
                 EQ -> compare (Builtin.tailList xs) (Builtin.tailList ys)
                 order -> order
+
+impl Ord Int where
+    compare a b =
+        let
+            x = Builtin.castLower a
+            y = Builtin.castLower b
+        in
+        if Builtin.lessThanInteger x y then LT
+        else if Builtin.equalsInteger x y then EQ
+        else GT
+
+impl Ord Bytes where
+    compare a b =
+        let
+            x = Builtin.castLower a
+            y = Builtin.castLower b
+        in
+        if Builtin.lessThanByteString x y then LT
+        else if Builtin.equalsByteString x y then EQ
+        else GT

@@ -2781,6 +2781,15 @@ declarations. The CLI rejects mixed Int/int operands at the incompatible
 argument. Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass;
 this source-only step changes no Rust crate. Numeric results, negative
 division semantics and zero-divisor behavior remain Plan 07 execution checks.
+Eq now covers Int, Bytes, List and Map via structural equalsData. The Big
+container impls require no element Eq context; acceptance uses Unit payloads
+without an Eq Unit impl. Ord Int and Ord Bytes lower operands and use numeric
+and byte-string comparisons, with their Eq superclasses available. Core CLI
+acceptance compiles 17 modules and 126 declarations, including default Ord
+methods and a superclass-constrained helper. Comparing List Int with List Bytes
+is rejected at the incompatible operand. Runtime comparison results remain
+Plan 07 checks. Formatting, strict Clippy, 1,915 tests and snapshot hygiene
+pass. This source-only step changes no Rust crate.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

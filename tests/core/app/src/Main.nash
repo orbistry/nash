@@ -18,6 +18,15 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+bigEquality = (eq integerLiteral bigInteger, eq bytesLiteral bigBytes)
+bigOrdering = (compare integerLiteral bigInteger, compare bytesLiteral bigBytes)
+bigOrderDefaults = (lt integerLiteral bigInteger, max bytesLiteral bigBytes)
+bigOrderedEqual = orderedEqual integerLiteral bigInteger
+equalBigLists : List Unit -> List Unit -> bool
+equalBigLists = eq
+equalBigMaps : Map Int Unit -> Map Int Unit -> bool
+equalBigMaps = eq
+
 bigArithmetic : (Int, Int, Int, Int)
 bigArithmetic = (add 7 3, sub 7 3, mul 7 3, -7)
 bigDivision : (Int, Int, Int, Int)

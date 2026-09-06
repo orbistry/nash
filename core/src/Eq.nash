@@ -38,3 +38,15 @@ impl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where
 
 impl Eq Data where
     eq = Builtin.equalsData
+
+impl Eq Int where
+    eq a b = Builtin.equalsData (Builtin.castToData a) (Builtin.castToData b)
+
+impl Eq Bytes where
+    eq a b = Builtin.equalsData (Builtin.castToData a) (Builtin.castToData b)
+
+impl Eq (List 'a) where
+    eq a b = Builtin.equalsData (Builtin.castToData a) (Builtin.castToData b)
+
+impl Eq (Map 'k 'v) where
+    eq a b = Builtin.equalsData (Builtin.castToData a) (Builtin.castToData b)
