@@ -12,16 +12,69 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
             name: "Eq",
         },
         heads: [
-            Named(
-                QualifiedName {
+            Named {
+                reference: QualifiedName {
                     home: ModuleName {
                         package: None,
                         name: "Main",
                     },
                     name: "Wrap",
                 },
-            ),
+                args: [
+                    Var(
+                        0,
+                    ),
+                    Var(
+                        1,
+                    ),
+                ],
+            },
         ],
+        kinds: ValueKinds {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+                KindSet(
+                    15,
+                ),
+                KindSet(
+                    15,
+                ),
+            ],
+            kinds: [
+                Var(
+                    0,
+                ),
+                Var(
+                    1,
+                ),
+            ],
+            applications: [
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        2,
+                    ),
+                    result: Base(
+                        Big,
+                    ),
+                },
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        1,
+                    ),
+                    result: Base(
+                        Big,
+                    ),
+                },
+            ],
+        },
     },
     ImplKey {
         trait_: QualifiedName {
@@ -32,15 +85,68 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
             name: "Ord",
         },
         heads: [
-            Named(
-                QualifiedName {
+            Named {
+                reference: QualifiedName {
                     home: ModuleName {
                         package: None,
                         name: "Main",
                     },
                     name: "Wrap",
                 },
-            ),
+                args: [
+                    Var(
+                        0,
+                    ),
+                    Var(
+                        1,
+                    ),
+                ],
+            },
         ],
+        kinds: ValueKinds {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+                KindSet(
+                    15,
+                ),
+                KindSet(
+                    15,
+                ),
+            ],
+            kinds: [
+                Var(
+                    0,
+                ),
+                Var(
+                    1,
+                ),
+            ],
+            applications: [
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        2,
+                    ),
+                    result: Base(
+                        Big,
+                    ),
+                },
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        1,
+                    ),
+                    result: Base(
+                        Big,
+                    ),
+                },
+            ],
+        },
     },
 ]

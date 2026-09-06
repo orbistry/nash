@@ -897,6 +897,13 @@ impl<'a> Solver<'a, '_> {
                     &wanted.args,
                 ) {
                     crate::resolve::Selection::Deferred => self.wanted.push((wanted_rank, id)),
+                    crate::resolve::Selection::Limit => {
+                        state.errors.push(Error::ImplResolutionLimit {
+                            region: site.region,
+                            name: site.name,
+                            trait_: wanted.trait_,
+                        })
+                    }
                     crate::resolve::Selection::Missing => {
                         let args: Vec<_> = wanted
                             .args
@@ -2576,7 +2583,10 @@ mod copy_tests {
                     .heads
                     .iter()
                     .map(|head| match head {
-                        nash_ast::HeadCon::Named(name) => evidence_name(*name),
+                        nash_ast::Head::Named {
+                            reference,
+                            args: [],
+                        } => evidence_name(*reference),
                         other => format!("{other:?}"),
                     })
                     .collect::<Vec<_>>()

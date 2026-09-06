@@ -39,8 +39,8 @@ description: "Code:\n\nmodule Main exposing (Msg(..), broken)\n\ntype Msg\n    =
         ],
         available: [
             [
-                Named(
-                    QualifiedName {
+                Named {
+                    reference: QualifiedName {
                         home: ModuleName {
                             package: Some(
                                 PackageName {
@@ -52,7 +52,8 @@ description: "Code:\n\nmodule Main exposing (Msg(..), broken)\n\ntype Msg\n    =
                         },
                         name: "string",
                     },
-                ),
+                    args: [],
+                },
             ],
         ],
     },

@@ -13,8 +13,8 @@ expression: result.unwrap_err()
                 name: "Keep",
             },
             heads: [
-                Named(
-                    QualifiedName {
+                Named {
+                    reference: QualifiedName {
                         home: ModuleName {
                             package: Some(
                                 PackageName {
@@ -24,10 +24,47 @@ expression: result.unwrap_err()
                             ),
                             name: "Builtin",
                         },
-                        name: "List",
+                        name: "list",
                     },
-                ),
+                    args: [
+                        Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "pair",
+                            },
+                            args: [
+                                Var(
+                                    0,
+                                ),
+                                Var(
+                                    0,
+                                ),
+                            ],
+                        },
+                    ],
+                },
             ],
+            kinds: ValueKinds {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kinds: [
+                    Var(
+                        0,
+                    ),
+                ],
+                applications: [],
+            },
         },
         first: Region {
             start: Position {

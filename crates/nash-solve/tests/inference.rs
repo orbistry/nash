@@ -2177,6 +2177,57 @@ fn abstract_map_rejects_non_storable_builtin_list_results() {
 }
 
 #[test]
+fn recursive_impl_heads_select_disjoint_concrete_arguments() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep (list int) where
+            keep x = x
+        impl Keep (list bytes) where
+            keep x = x
+        integers : list int -> list int
+        integers = keep
+        byteStrings : list bytes -> list bytes
+        byteStrings = keep
+    "#
+    );
+}
+
+#[test]
+fn repeated_impl_variables_wait_without_equating_inferred_types() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type pairish 'a 'b = Both 'a 'b
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep (pairish 'a 'a) where
+            keep x = x
+        route x y = keep (Both x y)
+        accepted = route () ()
+    "#
+    );
+}
+
+#[test]
+fn repeated_impl_variables_reject_distinct_inferred_types() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type pairish 'a 'b = Both 'a 'b
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep (pairish 'a 'a) where
+            keep x = x
+        route x y = keep (Both x y)
+        rejected = route () ((), ())
+    "#
+    );
+}
+
+#[test]
 fn list_literal_rejects_function_elements() {
     assert_inference_error_snapshot!(
         r#"
@@ -2410,7 +2461,12 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
                             panic!("alias impl evidence")
                         };
                         assert_eq!(impl_.key.trait_.name, "Keep");
-                        let [nash_ast::HeadCon::Named(head)] = impl_.key.heads else {
+                        let [
+                            nash_ast::Head::Named {
+                                reference: head, ..
+                            },
+                        ] = impl_.key.heads
+                        else {
                             panic!("nominal alias head")
                         };
                         assert_eq!((head.home.name, head.name), ("Higher", "Pair"));
@@ -2899,7 +2955,12 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
                     panic!("resolved Functor evidence")
                 };
                 assert_eq!(impl_.key.trait_.name, "Functor");
-                let [nash_ast::HeadCon::Named(head)] = impl_.key.heads else {
+                let [
+                    nash_ast::Head::Named {
+                        reference: head, ..
+                    },
+                ] = impl_.key.heads
+                else {
                     panic!("nominal constructor")
                 };
                 assert_eq!(head.name, expected);
@@ -3107,7 +3168,7 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
                 assert!(solved.instances.values().flat_map(|instance| instance.evidence).any(|evidence| {
                     matches!(evidence, nash_ast::Evidence::Impl { impl_, .. }
                         if impl_.key.trait_.name == trait_name
-                        && matches!(impl_.key.heads, [nash_ast::HeadCon::Named(head)]
+                        && matches!(impl_.key.heads, [nash_ast::Head::Named { reference: head, .. }]
                             if head.home == nash_ast::primitives::builtin_home() && head.name == primitive))
                 }), "discarded literal must default to {primitive}");
             }

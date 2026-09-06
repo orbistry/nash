@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype pairish 'a 'b = Both 'a 'b\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (pairish 'a 'a) where\n    keep x = x\nroute x y = keep (Both x y)\naccepted = route () ()\n"
+---
+accepted : pairish () ()
+route : forall (a : Any) (b : Any). Keep (pairish a b) => a -> b -> pairish a b

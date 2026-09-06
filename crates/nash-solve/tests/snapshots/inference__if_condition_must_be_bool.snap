@@ -44,8 +44,8 @@ description: "Code:\n\nmodule Main exposing (main)\n\nmain = if 1 then 2 else 3\
         ],
         available: [
             [
-                Named(
-                    QualifiedName {
+                Named {
+                    reference: QualifiedName {
                         home: ModuleName {
                             package: Some(
                                 PackageName {
@@ -57,7 +57,8 @@ description: "Code:\n\nmodule Main exposing (main)\n\nmain = if 1 then 2 else 3\
                         },
                         name: "int",
                     },
-                ),
+                    args: [],
+                },
             ],
         ],
     },

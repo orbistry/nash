@@ -1,24 +1,24 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: errors
+description: "Code:\n\nmodule Main exposing (..)\ntype pairish 'a 'b = Both 'a 'b\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (pairish 'a 'a) where\n    keep x = x\nroute x y = keep (Both x y)\nrejected = route () ((), ())\n"
 ---
 [
     MissingImpl {
         region: Region {
             start: Position {
-                line: 5,
-                column: 7,
+                line: 8,
+                column: 12,
             },
             end: Position {
-                line: 5,
-                column: 14,
+                line: 8,
+                column: 17,
             },
         },
-        name: "through",
+        name: "route",
         trait_: QualifiedName {
             home: ModuleName {
                 package: None,
-                name: "Higher",
+                name: "Main",
             },
             name: "Keep",
         },
@@ -26,18 +26,16 @@ expression: errors
             Type {
                 home: ModuleName {
                     package: None,
-                    name: "Reject",
+                    name: "Main",
                 },
-                name: "Other",
+                name: "pairish",
                 args: [
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Reject",
-                        },
-                        name: "Color",
-                        args: [],
-                    },
+                    Unit,
+                    Tuple(
+                        Unit,
+                        Unit,
+                        [],
+                    ),
                 ],
             },
         ],
@@ -47,11 +45,14 @@ expression: errors
                     reference: QualifiedName {
                         home: ModuleName {
                             package: None,
-                            name: "Higher",
+                            name: "Main",
                         },
-                        name: "Pair",
+                        name: "pairish",
                     },
                     args: [
+                        Var(
+                            0,
+                        ),
                         Var(
                             0,
                         ),

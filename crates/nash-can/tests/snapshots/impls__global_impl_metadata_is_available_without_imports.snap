@@ -29,8 +29,8 @@ expression: "(traits, result.tables.impls)"
                 name: "Keep",
             },
             heads: [
-                Named(
-                    QualifiedName {
+                Named {
+                    reference: QualifiedName {
                         home: ModuleName {
                             package: Some(
                                 PackageName {
@@ -42,9 +42,35 @@ expression: "(traits, result.tables.impls)"
                         },
                         name: "List",
                     },
-                ),
+                    args: [
+                        Var(
+                            0,
+                        ),
+                    ],
+                },
             ],
+            kinds: ValueKinds {
+                bounds: [],
+                kinds: [
+                    Base(
+                        Big,
+                    ),
+                ],
+                applications: [],
+            },
         }: ImplInfo {
+            variables: [
+                "a",
+            ],
+            kinds: ValueKinds {
+                bounds: [],
+                kinds: [
+                    Base(
+                        Big,
+                    ),
+                ],
+                applications: [],
+            },
             home: ModuleName {
                 package: None,
                 name: "Instances",
@@ -119,8 +145,10 @@ expression: "(traits, result.tables.impls)"
                             },
                             name: "List",
                         },
-                        vars: [
-                            "a",
+                        args: [
+                            Var(
+                                0,
+                            ),
                         ],
                     },
                 },

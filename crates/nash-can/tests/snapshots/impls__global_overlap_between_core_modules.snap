@@ -13,8 +13,78 @@ expression: result.unwrap_err()
                 name: "Keep",
             },
             heads: [
-                Unit,
+                Tuple(
+                    [
+                        Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "list",
+                            },
+                            args: [
+                                Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "core",
+                                                },
+                                            ),
+                                            name: "Builtin",
+                                        },
+                                        name: "int",
+                                    },
+                                    args: [],
+                                },
+                            ],
+                        },
+                        Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "list",
+                            },
+                            args: [
+                                Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "core",
+                                                },
+                                            ),
+                                            name: "Builtin",
+                                        },
+                                        name: "int",
+                                    },
+                                    args: [],
+                                },
+                            ],
+                        },
+                    ],
+                ),
             ],
+            kinds: ValueKinds {
+                bounds: [],
+                kinds: [],
+                applications: [],
+            },
         },
         first: Region {
             start: Position {

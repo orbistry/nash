@@ -18,16 +18,30 @@ expression: proofs
                     name: "Keep",
                 },
                 heads: [
-                    Named(
-                        QualifiedName {
+                    Named {
+                        reference: QualifiedName {
                             home: ModuleName {
                                 package: None,
                                 name: "Main",
                             },
                             name: "Box",
                         },
-                    ),
+                        args: [
+                            Var(
+                                0,
+                            ),
+                        ],
+                    },
                 ],
+                kinds: ValueKinds {
+                    bounds: [],
+                    kinds: [
+                        Base(
+                            Big,
+                        ),
+                    ],
+                    applications: [],
+                },
             },
         },
         type_args: [
@@ -109,6 +123,11 @@ expression: proofs
                     Unit,
                     Unit,
                 ],
+                kinds: ValueKinds {
+                    bounds: [],
+                    kinds: [],
+                    applications: [],
+                },
             },
         },
         type_args: [],

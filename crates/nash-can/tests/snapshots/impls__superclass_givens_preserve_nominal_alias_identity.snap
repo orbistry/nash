@@ -46,8 +46,10 @@ expression: results
                                 },
                                 name: "Box",
                             },
-                            vars: [
-                                "a",
+                            args: [
+                                Var(
+                                    0,
+                                ),
                             ],
                         },
                     },

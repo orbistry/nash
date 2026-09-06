@@ -43,6 +43,8 @@ pub struct MethodInfo<'a> {
 /// Resolution metadata retained for every impl, including private declarations.
 #[derive(Clone, Copy, Debug)]
 pub struct ImplInfo<'a> {
+    pub variables: &'a [&'a str],
+    pub kinds: nash_ast::ValueKinds<'a>,
     pub home: ModuleName<'a>,
     pub region: Region,
     pub trait_: nash_ast::QualifiedName<'a>,

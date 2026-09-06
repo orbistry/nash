@@ -1032,8 +1032,12 @@ fn collect_used_modules<'a>(module: &CanModule<'a>) -> BTreeSet<&'a str> {
     for impl_ in module.impls {
         add_if_foreign(home, impl_.value.trait_.home, &mut used);
         for head in impl_.value.heads {
-            if let nash_ast::Head::Named { reference, .. } = head.value {
-                add_if_foreign(home, reference.home, &mut used);
+            let mut pending = vec![&head.value];
+            while let Some(head) = pending.pop() {
+                if let nash_ast::Head::Named { reference, .. } = head {
+                    add_if_foreign(home, reference.home, &mut used);
+                }
+                pending.extend(nash_ast::head::children(head));
             }
         }
         for predicate in impl_.value.context {

@@ -36,6 +36,9 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    ImplPatternLimit {
+        region: Region,
+    },
     NegateWithoutNum {
         region: Region,
     },
@@ -62,11 +65,6 @@ pub enum Error<'a> {
     BadInstanceHead {
         region: Region,
         reason: BadHead,
-    },
-    RepeatedHeadVar {
-        name: &'a str,
-        first: Region,
-        second: Region,
     },
     ImplContextVarNotInHead {
         region: Region,
@@ -420,7 +418,6 @@ pub enum KindContext<'a> {
 #[derive(Clone, Copy, Debug)]
 pub enum BadHead {
     BareVariable,
-    NonVariableArgument,
     Function,
     Record,
     VariableApplication,

@@ -32,6 +32,79 @@ fn input<'a>(annotations: &Annotations<'a>, name: &str) -> &'a Located<Type<'a>>
 }
 
 #[test]
+fn recursive_patterns_preserve_repeated_variables_and_inner_evidence() {
+    let bump = Bump::new();
+    let (tables, annotations) = fixture(
+        &bump,
+        indoc::indoc!(
+            r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep int where
+            keep x = x
+        impl Keep (pair 'a 'a) where
+            keep x = x
+        impl Keep (pair int bytes) where
+            keep x = x
+        impl Keep 'a => Keep (list (pair 'a 'a)) where
+            keep x = x
+        same : pair int int -> pair int int
+        same x = keep x
+        different : pair int bytes -> pair int bytes
+        different x = keep x
+        nested : list (pair int int) -> list (pair int int)
+        nested x = keep x
+        unmatched : list (pair int bytes) -> list (pair int bytes)
+        unmatched x = x
+    "#
+        ),
+    );
+    let trait_ = *tables
+        .traits
+        .keys()
+        .find(|name| name.name == "Keep")
+        .unwrap();
+    for (name, expected_count) in [("same", 1), ("different", 0), ("nested", 1)] {
+        let predicate = Pred {
+            trait_,
+            args: bump.alloc_slice_copy(&[input(&annotations, name)]),
+        };
+        let Evidence::Impl {
+            type_args, args, ..
+        } = resolve(&bump, &tables, &predicate).unwrap()
+        else {
+            panic!("impl evidence")
+        };
+        assert_eq!(type_args.len(), expected_count);
+        if expected_count == 1 {
+            assert!(
+                matches!(type_args[0].value, Type::Named { reference, args: [] } if reference.name == "int")
+            );
+        }
+        assert_eq!(args.len(), usize::from(name == "nested"));
+        if name == "nested" {
+            assert!(matches!(
+                args,
+                [Evidence::Impl {
+                    type_args: [],
+                    args: [],
+                    ..
+                }]
+            ));
+        }
+    }
+    let predicate = Pred {
+        trait_,
+        args: bump.alloc_slice_copy(&[input(&annotations, "unmatched")]),
+    };
+    assert_eq!(
+        resolve(&bump, &tables, &predicate).unwrap_err().reason,
+        Failure::MissingImpl
+    );
+}
+
+#[test]
 fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
     let bump = Bump::new();
     let (tables, annotations) = fixture(
@@ -70,7 +143,9 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
     else {
         panic!("list impl")
     };
-    assert!(matches!(outer.key.heads, [nash_ast::HeadCon::Named(name)] if name.name == "list"));
+    assert!(
+        matches!(outer.key.heads, [nash_ast::Head::Named { reference: name, .. }] if name.name == "list")
+    );
     assert!(matches!(type_args[0].value, Type::Alias { reference, .. } if reference.name == "bag"));
     let [
         Evidence::Impl {
@@ -82,10 +157,12 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
     else {
         panic!("nominal alias child")
     };
-    assert!(matches!(alias.key.heads, [nash_ast::HeadCon::Named(name)] if name.name == "bag"));
+    assert!(
+        matches!(alias.key.heads, [nash_ast::Head::Named { reference: name, .. }] if name.name == "bag")
+    );
     assert!(matches!(type_args[0].value, Type::Named { reference, .. } if reference.name == "int"));
     assert!(
-        matches!(args, [Evidence::Impl { impl_, type_args: [], args: [] }] if matches!(impl_.key.heads, [nash_ast::HeadCon::Named(name)] if name.name == "int"))
+        matches!(args, [Evidence::Impl { impl_, type_args: [], args: [] }] if matches!(impl_.key.heads, [nash_ast::Head::Named { reference: name, .. }] if name.name == "int"))
     );
     let tuple = Pred {
         trait_,
@@ -99,10 +176,10 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
     else {
         panic!("tuple impl")
     };
-    assert_eq!(impl_.key.heads, &[nash_ast::HeadCon::Tuple(5)]);
+    assert!(matches!(impl_.key.heads, [nash_ast::Head::Tuple(args)] if args.len() == 5));
     assert_eq!(type_args.len(), 5);
     assert!(
-        matches!(args, [Evidence::Impl { impl_, type_args: [], args: [] }] if matches!(impl_.key.heads, [nash_ast::HeadCon::Named(name)] if name.name == "int"))
+        matches!(args, [Evidence::Impl { impl_, type_args: [], args: [] }] if matches!(impl_.key.heads, [nash_ast::Head::Named { reference: name, .. }] if name.name == "int"))
     );
     for (typ, expected) in type_args
         .iter()
@@ -194,7 +271,7 @@ fn ground_higher_kinded_context_keeps_partial_alias_and_head_order() {
         panic!("applied partial alias context")
     };
     assert!(
-        matches!(impl_.key.heads, [nash_ast::HeadCon::Named(name)] if name.name == "pairAlias")
+        matches!(impl_.key.heads, [nash_ast::Head::Named { reference: name, .. }] if name.name == "pairAlias")
     );
     assert_eq!(type_args.len(), 2);
     assert!(

@@ -1,0 +1,42 @@
+---
+source: crates/nash-can/tests/impls.rs
+expression: errors
+---
+[
+    [
+        BadArity {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 12,
+                },
+                end: Position {
+                    line: 5,
+                    column: 22,
+                },
+            },
+            context: TypeArity,
+            name: "list",
+            expected: 1,
+            actual: 2,
+        },
+    ],
+    [
+        BadArity {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 12,
+                },
+                end: Position {
+                    line: 5,
+                    column: 27,
+                },
+            },
+            context: TypeArity,
+            name: "listAlias",
+            expected: 1,
+            actual: 2,
+        },
+    ],
+]

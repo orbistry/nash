@@ -1885,7 +1885,17 @@ pub(crate) struct ImplKinds<'e, 'a> {
 }
 
 impl<'a> ImplKinds<'_, 'a> {
-    fn overlaps_reflexive_lift(&self, heads: &[&'a Located<CanType<'a>>]) -> bool {
+    pub(crate) fn generalize(&mut self, variables: &[&str]) -> ValueKinds<'a> {
+        let roots: Vec<_> = variables
+            .iter()
+            .map(|name| self.scope.params[name])
+            .collect();
+        self.walker.infer.generalize_values(&roots)
+    }
+    fn overlaps_reflexive_lift(
+        &self,
+        heads: &[&'a Located<CanType<'a>>],
+    ) -> Result<bool, Vec<Error<'a>>> {
         fn named<'a>(
             typ: &CanType<'a>,
         ) -> Option<(QualifiedName<'a>, Vec<&'a Located<CanType<'a>>>)> {
@@ -1900,13 +1910,36 @@ impl<'a> ImplKinds<'_, 'a> {
             }
         }
         let [first, second] = heads else {
-            return false;
+            return Ok(false);
         };
+        let mut variables = BTreeMap::new();
+        let mut order = Vec::new();
+        let first_pattern = crate::impls::canonicalize_pattern(
+            self.walker.bump,
+            first,
+            &mut variables,
+            &mut order,
+        )?;
+        let second_pattern = crate::impls::canonicalize_pattern(
+            self.walker.bump,
+            second,
+            &mut variables,
+            &mut order,
+        )?;
+        if !nash_ast::head::can_equal(&[first_pattern], &[second_pattern], &mut 16_384).map_err(
+            |_| {
+                vec![Error::ImplPatternLimit {
+                    region: first.region,
+                }]
+            },
+        )? {
+            return Ok(false);
+        }
         let (Some((a, aa)), Some((b, ba))) = (named(&first.value), named(&second.value)) else {
-            return false;
+            return Ok(false);
         };
         if a != b || aa.len() != ba.len() {
-            return false;
+            return Ok(false);
         }
         let mut query = Walker {
             bump: self.walker.bump,
@@ -1921,12 +1954,12 @@ impl<'a> ImplKinds<'_, 'a> {
             let a = query.infer_type(&self.scope, a);
             let b = query.infer_type(&self.scope, b);
             if query.infer.unify(a, b).is_err() {
-                return false;
+                return Ok(false);
             }
         }
         let kind = query.infer_type(&self.scope, first);
         let big = query.bump.alloc(K::Base(BaseKind::Big));
-        query.errors.is_empty() && query.infer.unify(kind, big).is_ok()
+        Ok(query.errors.is_empty() && query.infer.unify(kind, big).is_ok())
     }
     /// Prove Big without narrowing the universally quantified impl variables.
     pub(crate) fn proves_big(&mut self, typ: &'a Located<CanType<'a>>) -> bool {
@@ -2031,7 +2064,7 @@ pub(crate) fn check_impl_heads<'e, 'a>(
             home: info.home,
             name: info.name,
         }) == nash_ast::primitives::lift_trait()
-            && checked.overlaps_reflexive_lift(heads)
+            && checked.overlaps_reflexive_lift(heads)?
         {
             return Err(vec![Error::ReflexiveLiftOverlap {
                 heads: bump.alloc_slice_copy(heads),

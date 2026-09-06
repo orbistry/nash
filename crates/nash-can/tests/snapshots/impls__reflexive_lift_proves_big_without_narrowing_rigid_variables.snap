@@ -46,8 +46,10 @@ expression: results
                                 },
                                 name: "container",
                             },
-                            vars: [
-                                "a",
+                            args: [
+                                Var(
+                                    0,
+                                ),
                             ],
                         },
                     },
@@ -146,8 +148,10 @@ expression: results
                                 },
                                 name: "container",
                             },
-                            vars: [
-                                "a",
+                            args: [
+                                Var(
+                                    0,
+                                ),
                             ],
                         },
                     },

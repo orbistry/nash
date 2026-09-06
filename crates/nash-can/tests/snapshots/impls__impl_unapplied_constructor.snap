@@ -27,7 +27,7 @@ expression: "result.module.impls[0].value.heads"
                 },
                 name: "List",
             },
-            vars: [],
+            args: [],
         },
     },
 ]

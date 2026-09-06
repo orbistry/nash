@@ -1,11 +1,12 @@
 mod evidence;
+pub mod head;
 pub mod primitives;
 
 use nash_region::{Located, Region};
 
 pub use nash_source::{Associativity, Docs, ModuleKind, Precedence};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum BaseKind {
     Big,
     Const,
@@ -13,7 +14,7 @@ pub enum BaseKind {
 }
 
 /// The shapes a kind variable may take. Bit set over `BaseKind` plus arrow.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct KindSet(u8);
 
 impl KindSet {
@@ -48,7 +49,7 @@ impl KindSet {
 }
 
 /// A kind after inference. `Var` indexes the enclosing `KindScheme` or `ValueKinds`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Kind<'a> {
     Base(BaseKind),
     Var(u16),
@@ -62,7 +63,7 @@ pub enum Kind<'a> {
 }
 
 /// `forall k0 .. kn. kind`, with one bound per variable.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct KindScheme<'a> {
     pub bounds: &'a [KindSet],
     pub kind: &'a Kind<'a>,
@@ -71,7 +72,7 @@ pub struct KindScheme<'a> {
 
 /// One use of a constructor, with all three kinds in the enclosing binder.
 /// Separate uses do not equate their argument kinds.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct KindApplication<'a> {
     pub head: &'a Kind<'a>,
     pub argument: &'a Kind<'a>,
@@ -79,7 +80,7 @@ pub struct KindApplication<'a> {
 }
 
 /// Kinds of a value scheme's free type variables, under one shared kind binder.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ValueKinds<'a> {
     pub bounds: &'a [KindSet],
     /// Same order as `Annotation::free_vars`; every kind indexes `bounds`.
@@ -533,19 +534,24 @@ pub struct Method<'a> {
     pub default: Option<&'a Def<'a>>,
 }
 
-/// One instance head: a constructor over distinct variables, or unit/tuple.
-#[derive(Debug)]
+/// Recursive impl pattern. Variables index the impl's first-occurrence order,
+/// giving alpha-equivalent heads the same identity.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Head<'a> {
+    Var(u16),
     Named {
         reference: QualifiedName<'a>,
-        vars: &'a [&'a str],
+        args: &'a [Head<'a>],
     },
     Unit,
-    Tuple(&'a [&'a str]),
+    Tuple(&'a [Head<'a>]),
+    Function(&'a Head<'a>, &'a Head<'a>),
 }
 
 #[derive(Debug)]
 pub struct Impl<'a> {
+    pub variables: &'a [&'a str],
+    pub kinds: ValueKinds<'a>,
     pub trait_: QualifiedName<'a>,
     /// Over the head variables only.
     pub context: &'a [Pred<'a>],
@@ -567,7 +573,8 @@ pub enum HeadCon<'a> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ImplKey<'a> {
     pub trait_: QualifiedName<'a>,
-    pub heads: &'a [HeadCon<'a>],
+    pub heads: &'a [Head<'a>],
+    pub kinds: ValueKinds<'a>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -598,12 +605,46 @@ pub enum Evidence<'a> {
 }
 
 impl<'a> Head<'a> {
-    pub fn con(&self) -> HeadCon<'a> {
+    pub fn con(&self) -> Option<HeadCon<'a>> {
         match self {
-            Head::Named { reference, .. } => HeadCon::Named(*reference),
-            Head::Unit => HeadCon::Unit,
-            Head::Tuple(vars) => HeadCon::Tuple(vars.len()),
+            Head::Var(_) => None,
+            Head::Named { reference, .. } => Some(HeadCon::Named(*reference)),
+            Head::Unit => Some(HeadCon::Unit),
+            Head::Tuple(args) => Some(HeadCon::Tuple(args.len())),
+            Head::Function(..) => Some(HeadCon::Fun),
         }
+    }
+
+    pub fn to_type(
+        &self,
+        bump: &'a bumpalo::Bump,
+        variables: &[&'a str],
+        region: Region,
+    ) -> &'a Located<Type<'a>> {
+        let typ = match self {
+            Head::Var(index) => Type::Var(variables[usize::from(*index)]),
+            Head::Named { reference, args } => Type::Named {
+                reference: *reference,
+                args: bump.alloc_slice_fill_iter(
+                    args.iter().map(|arg| arg.to_type(bump, variables, region)),
+                ),
+            },
+            Head::Unit => Type::Unit,
+            Head::Tuple(args) => Type::Tuple {
+                first: args[0].to_type(bump, variables, region),
+                second: args[1].to_type(bump, variables, region),
+                rest: bump.alloc_slice_fill_iter(
+                    args[2..]
+                        .iter()
+                        .map(|arg| arg.to_type(bump, variables, region)),
+                ),
+            },
+            Head::Function(from, to) => Type::Lambda {
+                from: from.to_type(bump, variables, region),
+                to: to.to_type(bump, variables, region),
+            },
+        };
+        bump.alloc(Located { region, value: typ })
     }
 }
 
@@ -773,6 +814,11 @@ mod evidence_tests {
             key: ImplKey {
                 trait_: QualifiedName { home, name: "Show" },
                 heads: &[],
+                kinds: ValueKinds {
+                    bounds: &[],
+                    kinds: &[],
+                    applications: &[],
+                },
             },
         };
         let first_args = [&first];

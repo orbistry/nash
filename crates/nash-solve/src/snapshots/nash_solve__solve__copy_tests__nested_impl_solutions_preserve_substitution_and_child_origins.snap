@@ -2,5 +2,5 @@
 source: crates/nash-solve/src/solve.rs
 expression: lines
 ---
-keep@9:9 : [nash/core/Builtin.list[nash/core/Builtin.list[Main.Color[]]]] [Impl Main.Keep [nash/core/Builtin.list] [nash/core/Builtin.list[Main.Color[]]] [Impl Main.Keep [nash/core/Builtin.list] [Main.Color[]] [Impl Main.Keep [Main.Color] [] []]]]
+keep@9:9 : [nash/core/Builtin.list[nash/core/Builtin.list[Main.Color[]]]] [Impl Main.Keep [Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "list" }, args: [Var(0)] }] [nash/core/Builtin.list[Main.Color[]]] [Impl Main.Keep [Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "list" }, args: [Var(0)] }] [Main.Color[]] [Impl Main.Keep [Main.Color] [] []]]]
 Red@9:16 : [] []

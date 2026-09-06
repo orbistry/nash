@@ -16,7 +16,7 @@ Implementation steps are in [plans/03-traits.md](../plans/03-traits.md).
 | Term | Meaning |
 |---|---|
 | Trait | A named set of method signatures over type parameters, with optional superclasses and default method bodies. |
-| Impl | The methods of a trait for a specific *instance head*: a type constructor applied to distinct type variables. |
+| Impl | The methods of a trait for recursive instance-head patterns, with consistent substitution for repeated variables. |
 | Predicate | `Tr t1 .. tn`: the claim that the types `t1..tn` have an impl of `Tr`. Written `Eq 'a`. |
 | Context | The predicates in front of `=>` in a signature, trait, or impl. |
 | Qualified type / scheme | `forall 'a 'b. (Eq 'a, Show 'b) => 'a -> 'b -> string`. The context is part of the scheme. |
@@ -78,7 +78,7 @@ canonicalization, not by the parser.
 
 Type variables are written `'a`; a bare lowercase name in type position is
 a little type (`int`, `list 'a`). An instance head names a constructor and
-applies it to zero or more *distinct* type variables. `impl Functor List`
+applies it to zero or more recursive type patterns. `impl Functor List`
 applies `List` to nothing: the head has kind `Big -> Big`.
 
 Exposing: `exposing (Ord)` exports the trait and all its methods. There is

@@ -41,13 +41,7 @@ fn impl_cannot_own_an_imported_trait_and_imported_heads() {
 fn impl_heads_reject_non_constructor_shapes() {
     let bump = Bump::new();
     let mut errors = Vec::new();
-    for head in [
-        "'a",
-        "(List (List 'a))",
-        "('a -> 'b)",
-        "{ value : 'a }",
-        "('f 'a)",
-    ] {
+    for head in ["'a", "('a -> 'b)", "{ value : 'a }", "('f 'a)"] {
         let source = format!(
             "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep {head} where\n    keep x = x\n"
         );
@@ -465,8 +459,11 @@ fn global_overlap_between_core_modules() {
     )]);
     // Compile independently, then combine the interfaces as a build would.
     let mut compiled = Vec::new();
-    for name in ["First", "Second"] {
-        let source = bump.alloc_str(&format!("module {name} exposing (..)\nimport Keep exposing (Keep)\nimpl Keep () where\n    keep x = x\n"));
+    for (name, head) in [
+        ("First", "(list 'a, list 'a)"),
+        ("Second", "(list int, list int)"),
+    ] {
+        let source = bump.alloc_str(&format!("module {name} exposing (..)\nimport Keep exposing (Keep)\nimpl Keep {head} where\n    keep x = x\n"));
         let module = nash_parse::Parser::new(&bump, source.as_bytes())
             .module()
             .unwrap();
@@ -610,7 +607,7 @@ fn tuple_impl_keys_preserve_large_arities() {
         .impls
         .keys()
         .map(|key| match key.heads {
-            [nash_ast::HeadCon::Tuple(arity)] => *arity,
+            [nash_ast::Head::Tuple(args)] => args.len(),
             _ => panic!("tuple impl key"),
         })
         .collect::<Vec<_>>();
@@ -642,7 +639,7 @@ fn impl_duplicate_methods_preserve_both_locations() {
 }
 
 #[test]
-fn impl_overapplied_heads_report_kind_arity() {
+fn impl_overapplied_heads_report_type_arity() {
     let bump = Bump::new();
     let mut errors = Vec::new();
     for head in ["list 'a 'b", "listAlias 'a 'b"] {
@@ -652,7 +649,7 @@ fn impl_overapplied_heads_report_kind_arity() {
         let result = canonicalize(&bump, &source).unwrap_err();
         assert!(matches!(
             result.as_slice(),
-            [nash_can::Error::KindTooManyArgs { .. }]
+            [nash_can::Error::BadArity { .. }]
         ));
         errors.push(result);
     }
@@ -697,7 +694,7 @@ fn impl_missing_required_method() {
 }
 
 #[test]
-fn impl_rejects_repeated_variables_across_heads() {
+fn impl_reuses_one_variable_across_heads() {
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
@@ -711,7 +708,12 @@ fn impl_rejects_repeated_variables_across_heads() {
     "
         ),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    let result = result.unwrap();
+    assert_eq!(result.module.impls[0].value.variables, &["a"]);
+    assert_eq!(
+        result.module.impls[0].value.heads[0].value,
+        result.module.impls[0].value.heads[1].value
+    );
 }
 
 #[test]
@@ -742,9 +744,9 @@ fn impl_overlap_ignores_variable_names() {
         module Main exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a
-        impl Keep (List 'a) where
+        impl Keep (list (pair 'a 'a)) where
             keep x = x
-        impl Keep (List 'b) where
+        impl Keep (list (pair 'b 'b)) where
             keep x = x
     "
         ),

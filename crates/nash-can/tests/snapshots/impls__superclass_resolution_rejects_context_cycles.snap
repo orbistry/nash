@@ -41,7 +41,7 @@ expression: result.unwrap_err()
                         },
                         name: "Color",
                     },
-                    vars: [],
+                    args: [],
                 },
             },
         ],

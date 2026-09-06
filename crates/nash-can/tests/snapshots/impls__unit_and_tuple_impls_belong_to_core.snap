@@ -57,8 +57,12 @@ expression: "(ordinary, heads)"
                 },
                 value: Tuple(
                     [
-                        "a",
-                        "b",
+                        Var(
+                            0,
+                        ),
+                        Var(
+                            1,
+                        ),
                     ],
                 ),
             },

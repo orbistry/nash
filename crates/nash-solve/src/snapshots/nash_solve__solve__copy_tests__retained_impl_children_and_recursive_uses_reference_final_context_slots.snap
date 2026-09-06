@@ -2,7 +2,7 @@
 source: crates/nash-solve/src/solve.rs
 expression: lines
 ---
-base@10:8 : [nash/core/Builtin.list[a]] [Impl Main.Base [nash/core/Builtin.list] [a] [Super 0 (Super 0 (Given g@11:1#0))]]
+base@10:8 : [nash/core/Builtin.list[a]] [Impl Main.Base [Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "list" }, args: [Var(0)] }] [a] [Super 0 (Super 0 (Given g@11:1#0))]]
 g@10:28 : [a] [Given g@11:1#0]
 local@10:35 : [] []
 top@10:45 : [a] [Given g@11:1#0]

@@ -12,16 +12,22 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
             name: "Eq",
         },
         heads: [
-            Named(
-                QualifiedName {
+            Named {
+                reference: QualifiedName {
                     home: ModuleName {
                         package: None,
                         name: "Base",
                     },
                     name: "Color",
                 },
-            ),
+                args: [],
+            },
         ],
+        kinds: ValueKinds {
+            bounds: [],
+            kinds: [],
+            applications: [],
+        },
     },
     ImplKey {
         trait_: QualifiedName {
@@ -32,15 +38,21 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
             name: "Ord",
         },
         heads: [
-            Named(
-                QualifiedName {
+            Named {
+                reference: QualifiedName {
                     home: ModuleName {
                         package: None,
                         name: "Base",
                     },
                     name: "Color",
                 },
-            ),
+                args: [],
+            },
         ],
+        kinds: ValueKinds {
+            bounds: [],
+            kinds: [],
+            applications: [],
+        },
     },
 ]

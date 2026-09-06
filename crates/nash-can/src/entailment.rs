@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 use bumpalo::Bump;
-use nash_ast::{Head, HeadCon, ImplKey, Pred, QualifiedName, Type};
+use nash_ast::{Pred, QualifiedName, Type};
 use nash_region::Located;
 
 use crate::Error;
@@ -284,31 +284,35 @@ impl<'a> Resolver<'_, 'a> {
                 return Err(Failure::Cycle);
             }
         }
-        let mut heads = Vec::new();
-        for arg in wanted.args {
-            heads.push(match arg.con {
-                Constructor::Named(name) => HeadCon::Named(name),
-                Constructor::Unit => HeadCon::Unit,
-                Constructor::Tuple(n) => HeadCon::Tuple(n),
-                Constructor::Function => HeadCon::Fun,
-                Constructor::Var(_) | Constructor::Record { .. } => return Err(Failure::Missing),
-            });
-        }
-        let key = ImplKey {
-            trait_: wanted.trait_,
-            heads: &heads,
-        };
-        let impl_ = *self.tables.impls.get(&key).ok_or(Failure::Missing)?;
-        let mut subst = BTreeMap::new();
-        for (head, arg) in impl_.heads.iter().zip(wanted.args) {
-            let vars = match &head.value {
-                Head::Named { vars, .. } | Head::Tuple(vars) => *vars,
-                Head::Unit => &[],
-            };
-            if vars.len() != arg.args.len() {
-                return Err(Failure::Missing);
+        let canonical_args: Vec<_> = wanted
+            .args
+            .iter()
+            .map(|arg| self.canonical(arg, 0))
+            .collect::<Result<_, _>>()?;
+        let mut selected = None;
+        for (key, info) in self
+            .tables
+            .impls
+            .iter()
+            .filter(|(key, _)| key.trait_ == wanted.trait_)
+        {
+            if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
+                &mut nash_ast::head::Canonical,
+                key.heads,
+                &canonical_args,
+                info.variables.len(),
+                &mut self.remaining,
+            )
+            .map_err(|_| Failure::Limit)?
+            {
+                selected = Some((*info, arguments));
+                break;
             }
-            subst.extend(vars.iter().copied().zip(arg.args.iter().copied()));
+        }
+        let (impl_, arguments) = selected.ok_or(Failure::Missing)?;
+        let mut subst = BTreeMap::new();
+        for (name, argument) in impl_.variables.iter().zip(arguments) {
+            subst.insert(*name, self.term(argument, &BTreeMap::new(), 0)?);
         }
         active.push(wanted);
         for pred in impl_.context {
@@ -330,54 +334,27 @@ pub(crate) fn check<'a>(
     if trait_.supers.is_empty() {
         return Ok(());
     }
-    let mut subst = BTreeMap::new();
-    let mut canonical_subst = BTreeMap::new();
-    for (parameter, head) in trait_.parameters.iter().zip(impl_.heads) {
-        let (con, vars) = match &head.value {
-            Head::Named { reference, vars } => (Constructor::Named(*reference), *vars),
-            Head::Tuple(vars) => (Constructor::Tuple(vars.len()), *vars),
-            Head::Unit => (Constructor::Unit, &[][..]),
-        };
-        let args = bump.alloc_slice_fill_iter(vars.iter().map(|v| {
-            &*bump.alloc(Term {
-                con: Constructor::Var(v),
-                args: &[],
-            })
-        }));
-        subst.insert(*parameter, &*bump.alloc(Term { con, args }));
-        let args = bump.alloc_slice_fill_iter(
-            vars.iter()
-                .map(|v| &*bump.alloc(Located::at(head.region, Type::Var(v)))),
-        );
-        let typ = match &head.value {
-            Head::Named { reference, .. } => Type::Named {
-                reference: *reference,
-                args,
-            },
-            Head::Tuple(_) => Type::Tuple {
-                first: args[0],
-                second: args[1],
-                rest: &args[2..],
-            },
-            Head::Unit => Type::Unit,
-        };
-        canonical_subst.insert(*parameter, &*bump.alloc(Located::at(head.region, typ)));
-    }
+    let canonical_subst: BTreeMap<_, _> = trait_
+        .parameters
+        .iter()
+        .zip(impl_.heads)
+        .map(|(parameter, head)| {
+            (
+                *parameter,
+                head.value.to_type(bump, impl_.variables, head.region),
+            )
+        })
+        .collect();
     let heads: Vec<_> = trait_
         .parameters
         .iter()
         .map(|p| canonical_subst[p])
         .collect();
-    let mut variables = BTreeMap::new();
-    for head in impl_.heads {
-        let vars = match &head.value {
-            Head::Named { vars, .. } | Head::Tuple(vars) => *vars,
-            Head::Unit => &[],
-        };
-        for var in vars {
-            variables.insert(*var, head.region);
-        }
-    }
+    let variables = impl_
+        .variables
+        .iter()
+        .map(|name| (*name, impl_.region))
+        .collect();
     let kinds = crate::kinds::check_impl_heads(
         bump,
         kind_env,
@@ -397,6 +374,10 @@ pub(crate) fn check<'a>(
     for (index, superclass) in trait_.supers.iter().enumerate() {
         let checked = (|| {
             let givens = givens.as_ref().map_err(|reason| *reason)?;
+            let mut subst = BTreeMap::new();
+            for (parameter, typ) in &canonical_subst {
+                subst.insert(*parameter, resolver.term(typ, &BTreeMap::new(), 0)?);
+            }
             let wanted = resolver.predicate(superclass, &subst)?;
             resolver.resolve(givens, wanted, &mut Vec::new())
         })();

@@ -54,6 +54,10 @@ impl Lift 'a 'b => Lift (list 'a) (List 'b) where
     lift values = wrapList (mapList lift values)
     lower values = mapList lower (unwrapList values)
 
+impl Lift (list (pair 'k 'v)) (Map 'k 'v) where
+    lift = Builtin.castLift
+    lower = Builtin.castLower
+
 wrapList : list 'a -> List 'a
 wrapList = Builtin.castLift
 

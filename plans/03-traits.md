@@ -13,7 +13,7 @@ The user rejected the Haskell-98-only head restriction. The authoritative
 rules are now docs/traits.md: recursive constructor patterns, consistent
 substitution for repeated variables, and overlap checked by full-pattern
 unification with kinds. This supersedes the distinct_vars/outer-constructor
-key sketches below; they describe the current implementation, not the target.
+key sketches below are superseded and must not guide new implementation.
 Do not add a Map-only exception.
 
 Reopen the affected acceptance of chunks 1, 3 and 6: canonical Head and impl
@@ -25,6 +25,17 @@ correction lands. Add focused tests for disjoint concrete heads, generic vs
 specific overlap, repeated-variable consistency, nested kind rejection,
 cross-module overlap and the specified Map Lift impl. Remove superseded
 flat-key matching rather than retaining a second legacy path.
+
+Recursive heads now retain constructor arguments and alpha-normalized variable
+indices in impl identity. Canonical entailment, inference and ground evidence
+use the shared pattern matcher; repeated variables do not unify wanted types
+to force a match. Structural overlap freshens both patterns and checks occurs.
+Focused tests cover concrete disjoint heads, repeated-variable deferral and
+rejection, imported nested overlap, and retained nested evidence. Record-row
+comparison normalizes extension fragments without binding inference variables.
+The core Map Lift impl now type-checks through this general path. Snapshot
+review, full tests and hygiene pass. Kind-disjoint coherence and selection
+remain outstanding; structural overlap is currently conservative.
 
 The user also confirmed that builtin list has no Applicative or Monad impl;
 keep apply unchanged. Abstract map must allow different element kinds when
@@ -70,7 +81,8 @@ Core CLI acceptance constructs a negative ledger value and type-checks Eq,
 compiling 18 modules and 184 declarations. Formatting, strict Clippy, 1,915
 tests and snapshot hygiene pass. This source-only impl does not change Rust
 crates. Nash execution of that equality remains a Plan 07 check; the universal
-Big Eq rule and kind-partitioned little-list impls are not implemented yet.
+kind-partitioned little-list impls remain outstanding; the Big Eq rule landed
+in the subsequent step described above.
 
 ### Existing prerequisites
 
@@ -275,19 +287,23 @@ pub struct Method<'a> {
     pub default: Option<&'a Def<'a>>,
 }
 
-/// One instance head: a constructor over distinct variables, or unit/tuple.
+/// Recursive pattern; variable indices follow first occurrence over all heads.
 #[derive(Debug)]
 pub enum Head<'a> {
+    Var(u16),
     Named {
         reference: QualifiedName<'a>,
-        vars: &'a [&'a str],
+        args: &'a [Head<'a>],
     },
     Unit,
-    Tuple(&'a [&'a str]),
+    Tuple(&'a [Head<'a>]),
+    Function(&'a Head<'a>, &'a Head<'a>),
 }
 
 #[derive(Debug)]
 pub struct Impl<'a> {
+    pub variables: &'a [&'a str],
+    pub kinds: ValueKinds<'a>,
     pub trait_: QualifiedName<'a>,
     /// Over the head variables only.
     pub context: &'a [Pred<'a>],
@@ -296,7 +312,7 @@ pub struct Impl<'a> {
     pub methods: &'a [&'a Def<'a>],
 }
 
-/// The constructor of a head, for impl lookup.
+/// The outer constructor, used while matching each pattern node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HeadCon<'a> {
     Named(QualifiedName<'a>),
@@ -309,7 +325,8 @@ pub enum HeadCon<'a> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ImplKey<'a> {
     pub trait_: QualifiedName<'a>,
-    pub heads: &'a [HeadCon<'a>],
+    pub heads: &'a [Head<'a>],
+    pub kinds: ValueKinds<'a>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -754,42 +771,12 @@ declarations. `Tables.traits` includes private metadata: the solver needs
 superclass info even for traits the module never names, because resolution
 can go through them. Source name lookup remains in `Env`.
 
-Head canonicalization:
-
-```rust
-// traits.rs
-/// Haskell 98 instance heads: `C 'v1 .. 'vn` with distinct vars, `()`, or a tuple of distinct vars.
-fn canonicalize_head<'a>(
-    bump: &'a Bump,
-    env: &Env<'a>,
-    typ: &'a Located<SourceType<'a>>,
-) -> Result<Located<Head<'a>>, Vec<Error<'a>>> {
-    let region = typ.region;
-    let bad = |reason| Err(vec![Error::BadInstanceHead { region, reason }]);
-    match &typ.value {
-        SourceType::Type { name, args, .. } | SourceType::TypeQual { name, args, .. } => {
-            let reference = types::find_type_reference(bump, env, region, module_of(&typ.value), name)?;
-            let vars = distinct_vars(args).ok_or_else(|| bad(BadHead::NotAVariable))?;
-            Ok(Located::at(region, Head::Named { reference, vars }))
-        }
-        SourceType::Unit => Ok(Located::at(region, Head::Unit)),
-        SourceType::Tuple { first, second, rest } => {
-            let all = [first, second].into_iter().chain(rest.iter().copied());
-            Ok(Located::at(region, Head::Tuple(distinct_vars(all)?)))
-        }
-        SourceType::Var(_) => bad(BadHead::BareVariable),
-        SourceType::Lambda { .. } => bad(BadHead::Function),
-        SourceType::Record { .. } => bad(BadHead::Record),
-        SourceType::VarApp { .. } => bad(BadHead::NotAVariable),
-    }
-}
-```
-
-`find_type_reference` is the existing `find_type` (`types.rs:166`) returning
-the `QualifiedName` for a union or alias without applying it (an alias head
-is nominal; no dealiasing). A head may be partially applied
-(`impl Functor List`); its remaining kind must match the trait parameter.
-Ordinary type annotations also permit partial constructors after chunk 8.
+Head canonicalization uses the ordinary canonical type checker, then recursively
+retains named constructors, unit, tuple and nested function types. Variables
+receive indices at first occurrence across all heads; repeats reuse that index.
+Bare variable, function, record and variable-application outer heads are rejected.
+Aliases keep their qualified identity and arguments. A head may be partially
+applied (`impl Functor List`); its remaining kind must fit the trait parameter.
 
 Kind check of heads, in `canonicalize_impl` once heads are known (uses
 plan 02's engine directly, so it lives in nash-can rather than
@@ -797,9 +784,8 @@ nash-constrain):
 
 Instantiate the trait scheme once, preserving shared kind variables across
 its parameters. For each head, instantiate the named type's scheme and
-apply it once per head variable. `Infer::apply` returns a `Result`;
-report overapplication as `KindTooManyArgs` at the impl head region,
-preserving plan 02's constructor-application diagnostic. Unify the remaining kind with the matching
+apply it to each recursive argument kind. Ordinary named-type overapplication
+reports `BadArity` with the original source region. Unify the remaining kind with the matching
 trait parameter kind. Unit heads have kind `Const`; tuple heads have kind
 `Term`, matching the existing type kind checker. Report
 unification failures with the same head context and generalized expected
@@ -831,12 +817,16 @@ fn check_orphan<'a>(home: ModuleName<'a>, trait_: QualifiedName<'a>, heads: &[Lo
 }
 
 fn impl_key<'a>(bump: &'a Bump, trait_: QualifiedName<'a>, heads: &[Located<Head<'a>>]) -> ImplKey<'a> {
-    ImplKey { trait_, heads: bump.alloc_slice_fill_iter(heads.iter().map(|h| h.value.con())) }
+    // Also retain generalized variable kinds; see the current ImplKey contract.
+    ImplKey { trait_, heads: copy_full_patterns(heads), kinds }
 }
 ```
 
-Overlap: `impls::tables` inserts into `Tables.impls`; an existing key is
+Overlap: compare full patterns for every impl of the same trait, freshening
+the two sets of variables and checking occurs. A unifiable pair is
 `Error::OverlappingImpls { key, first, second, first_home, second_home }`.
+Kind-disjointness must also be proved before accepting structurally overlapping
+patterns; this part remains outstanding.
 Both regions include their defining module because either entry can come
 from an interface. The same insertion check handles local and imported impls.
 
@@ -884,7 +874,7 @@ fn canonicalize_impl<'a>(bump, env, kind_env, impl_: &'a Located<SourceImpl<'a>>
     let heads = try_all(head.value.args.iter().map(|h| canonicalize_head(bump, env, h)))?;
     if heads.len() != info.parameters.len() { TraitArity }
     check_head_kinds(bump, kind_env, env.home, info, &heads)?;
-    let head_vars: BTreeSet<&str> = vars of all heads (distinct across heads too);
+    let head_vars: BTreeSet<&str> = variables occurring recursively in all heads;
     let context = types::canonicalize_context(bump, env, impl_.value.context)?;
     // context may only mention head vars
     ...
@@ -957,7 +947,10 @@ Tests (nash-can):
 - `impl_duplicate_methods_preserve_both_locations`: duplicate impl method
   names retain both declaration spans for the diagnostic renderer.
 - `impl_tuple_head`: `impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where ...` in a module that defines `Eq` (orphan rule satisfied via the trait).
-- errors: `impl_orphan` (module imports both trait and type via `Context.interfaces` built in the test), `impl_overlap`, `impl_missing_method`, `impl_unknown_method`, `impl_missing_superclass`, `impl_bad_head_nested` (`impl Eq (List Int)`), `impl_bad_head_repeated` (`trait Foo 'a 'b where ...` + `impl Foo 'a 'a`; the reflexive `Lift 'a 'a` is compiler provided and exempt, see below), `impl_bad_head_bare_var`, `impl_context_var_not_in_head`.
+- errors: orphan impls, overlapping recursive patterns, missing/unknown methods,
+  missing superclasses, bare variable heads and context variables absent from
+  heads. Concrete nested heads and repeated inner variables are legal; test
+  consistent substitution and rejection at an unequal use instead.
 - Reflexive Lift: exact package/module/trait identity activates the compiler
   rule outside `Tables.impls`; no `Head::Var` is introduced. Static entailment
   checks givens first, then already-equal types with a proven Big kind.
@@ -1164,7 +1157,7 @@ pub enum Error<'a> {
         trait_: QualifiedName<'a>,
         args: &'a [&'a ErrorType<'a>],
         /// Heads that do have impls of this trait, for the hint.
-        available: &'a [&'a [HeadCon<'a>]],
+        available: &'a [&'a [Head<'a>]],
     },
     /// A predicate on a rigid variable that the annotation does not provide.
     MissingConstraint {
@@ -1802,26 +1795,19 @@ impl<'a> Solver<'a> {
     /// Look the predicate up in the impl table; its context becomes sub-wanteds.
     pub(crate) fn by_instance(&mut self, uf: &mut UnionFind<'a>, id: PredId) -> Result<Vec<PredId>, Error<'a>> {
         let pred = self.store.get(id).clone();
-        let heads: Vec<HeadCon<'a>> = pred.args.iter().map(|a| head_of(uf, *a).expect("classified Ground")).collect();
-        let key = ImplKey { trait_: pred.trait_, heads: self.bump.alloc_slice_copy(&heads) };
-        let Some(info) = self.tables.impls.get(&key).copied() else {
-            return Err(self.missing_impl(uf, &pred));
+        let (key, info, subst) = match recursive_select(uf, &self.tables, &pred.args) {
+            Selected { key, info, substitution } => (key, info, substitution),
+            Deferred => return defer_without_binding(id),
+            Missing => return Err(self.missing_impl(uf, &pred)),
+            Limit => return Err(self.impl_resolution_limit(uf, &pred)),
         };
-        // Head variables map to the actual argument variables.
-        let mut subst: BTreeMap<&'a str, Variable> = BTreeMap::new();
-        for (head, arg) in info.heads.iter().zip(&pred.args) {
-            match (&head.value, actual_args(uf, *arg)) {
-                (Head::Named { vars, .. }, args) | (Head::Tuple(vars), args) => subst.extend(vars.iter().copied().zip(args)),
-                (Head::Unit, _) => {}
-            }
-        }
         let rank = self.wanted_rank_of(id);
         let subs: Vec<PredId> = info.context.iter().enumerate().map(|(index, ctx)| {
             let args = ctx.args.iter().map(|a| self.src_type_to_var(uf, rank, &subst, a)).collect();
             self.add_wanted(uf, rank, ctx.trait_, args, Origin::Sub { parent: id, index: index as u16 })
         }).collect();
         // head variables in head order, for `Evidence::Impl::type_args`
-        let type_vars: Vec<Variable> = info.heads.iter().flat_map(|h| head_vars(&h.value)).map(|v| subst[v]).collect();
+        let type_vars: Vec<Variable> = info.variables.iter().map(|v| subst[v]).collect();
         self.store.get_mut(id).solution = Some(Solution::Impl { impl_: ImplRef { home: info.home, key }, type_vars, subs: subs.clone() });
         self.detach(uf, id);
         Ok(subs)
@@ -2721,7 +2707,7 @@ declarations with explicit imports. Remaining requirements are:
 
 | Requirement | Current evidence / remaining work |
 |---|---|
-| Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift still conflicts with the nested-head restriction. |
+| Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift now uses recursive impl patterns; kind-partitioned list Eq remains outstanding. |
 | Higher-kinded hierarchy and operators | Functor/Applicative/Monad core modules and their impls remain absent. Apply is unchanged; builtin list has no Applicative/Monad. Independent argument-kind checking now passes mixed-kind map, partial and imported application, and do acceptance tests. |
 | Core option do acceptance | Compiler do tests exist, but the shipping core hierarchy must support the required option example; substitute test declarations do not establish this. |
 | Default imports | Not implemented. Missing specified modules: Functor, Applicative, Monad, Cons, Derive, Debug, Int, Bytes, String, List, Pair, Array, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |
@@ -2890,12 +2876,10 @@ Runtime conversion/validation remains Plan 07 work.
 Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
 source-only step changes no Rust crate.
 
-The documented Map Lift impl remains blocked by a spec conflict: its head
-`Lift (list (pair 'k 'v)) (Map 'k 'v)` has a nested constructor argument,
-which docs/traits.md forbids (only reflexive Lift is currently exempt).
-The real CLI reports BadInstanceHead/NonVariableArgument. No exception has
-been added: resolving this needs a head-policy decision and a representation
-that preserves the nested pattern through coherence and evidence resolution.
+The documented `Lift (list (pair 'k 'v)) (Map 'k 'v)` impl now uses the
+general recursive-head representation and matcher. The core CLI fixture
+type-checks both lift and lower with `Map Int Bytes`; execution and cast
+lowering remain Plan 07 requirements.
 Show now covers Int, Bytes, List and Map. Primitive impls extract little
 representations; typed container bridges preserve contextual Show evidence
 for elements, keys and values. The stdlib spec makes nominal Map's
@@ -2923,7 +2907,7 @@ generic merge, compiling 17 modules and 158 declarations. Missing key Eq
 reports MissingImpl at append. Formatting, strict Clippy, 1,915 tests and
 snapshot hygiene pass. This source-only step changes no Rust crate.
 Runtime right-bias, duplicate preservation and monoid laws remain Plan 07
-execution requirements; Map Lift's nested-head conflict is unchanged.
+execution requirements; Map Lift now type-checks through recursive patterns.
 Cons now provides its Term-kind ADT, concrete mapping/indexing/zipping,
 folds, append, length, singleton, list conversions and contextual Eq/Show.
 It imports real trait modules explicitly; no higher-kinded placeholder is

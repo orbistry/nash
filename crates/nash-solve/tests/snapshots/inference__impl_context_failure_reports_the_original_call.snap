@@ -34,8 +34,8 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep '
         ],
         available: [
             [
-                Named(
-                    QualifiedName {
+                Named {
+                    reference: QualifiedName {
                         home: ModuleName {
                             package: Some(
                                 PackageName {
@@ -47,7 +47,12 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep '
                         },
                         name: "list",
                     },
-                ),
+                    args: [
+                        Var(
+                            0,
+                        ),
+                    ],
+                },
             ],
             [
                 Unit,

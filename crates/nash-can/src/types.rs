@@ -578,19 +578,6 @@ pub fn iterated_dealias<'a>(
     }
 }
 
-pub(crate) fn find_type_info<'a>(
-    bump: &'a Bump,
-    env: &Env<'a>,
-    region: Region,
-    prefix: Option<&'a str>,
-    name: &'a str,
-) -> Result<environment::Type<'a>, Vec<Error<'a>>> {
-    match prefix {
-        Some(prefix) => find_type_qual(bump, env, region, prefix, name),
-        None => find_type(bump, env, region, name),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

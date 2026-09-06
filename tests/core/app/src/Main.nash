@@ -179,6 +179,13 @@ loweredOrdering = lower liftedOrdering
 reflexiveBool : Bool.Bool
 reflexiveBool = lift liftedBool
 
+emptyPairs : list (pair Int Bytes)
+emptyPairs = []
+liftedMap : Map Int Bytes
+liftedMap = lift emptyPairs
+loweredMap : list (pair Int Bytes)
+loweredMap = lower liftedMap
+
 integers = eq 1 2
 preludeOps = ((1 + 2) * 3, 1 == 1, [1] ++ [2])
 booleanOps = (not True, xor True False, True && False || True)

@@ -1,8 +1,6 @@
 //! Impl evidence for ground canonical predicates, outside the inference loop.
-use std::collections::BTreeMap;
-
 use bumpalo::Bump;
-use nash_ast::{Evidence, HeadCon, ImplKey, ImplRef, Pred, QualifiedName, Type};
+use nash_ast::{Evidence, ImplRef, Pred, QualifiedName, Type};
 use nash_can::environment::Tables;
 use nash_region::Located;
 
@@ -196,36 +194,33 @@ impl<'a> Resolver<'_, 'a> {
         {
             return Ok(Evidence::ReflexiveLift { typ: pred.args[0] });
         }
-        let heads = terms
+        let mut selected = None;
+        for (key, info) in self
+            .tables
+            .impls
             .iter()
-            .map(|term| match term.con {
-                Constructor::Named(name) => Ok(HeadCon::Named(name)),
-                Constructor::Unit => Ok(HeadCon::Unit),
-                Constructor::Tuple(arity) => Ok(HeadCon::Tuple(arity)),
-                Constructor::Function | Constructor::Record(_) => Err(error(Failure::MissingImpl)),
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let key = ImplKey {
-            trait_: pred.trait_,
-            heads: self.bump.alloc_slice_copy(&heads),
-        };
-        let Some(info) = self.tables.impls.get(&key).copied() else {
-            return Err(error(Failure::MissingImpl));
-        };
-        let mut substitution = BTreeMap::new();
-        let mut type_args = Vec::new();
-        for (head, typ) in info.heads.iter().zip(pred.args) {
-            let variables = crate::resolve::head_vars(&head.value);
-            let mut args = Vec::new();
-            application_args(&typ.value, &mut args);
-            if variables.len() != args.len() {
-                return Err(error(Failure::MissingImpl));
-            }
-            for (variable, arg) in variables.iter().zip(args) {
-                substitution.insert(*variable, arg);
-                type_args.push(arg);
+            .filter(|(key, _)| key.trait_ == pred.trait_)
+        {
+            if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
+                &mut nash_ast::head::Canonical,
+                key.heads,
+                pred.args,
+                info.variables.len(),
+                &mut self.remaining,
+            )
+            .map_err(|_| error(Failure::Limit))?
+            {
+                selected = Some((*key, *info, arguments));
+                break;
             }
         }
+        let (key, info, type_args) = selected.ok_or_else(|| error(Failure::MissingImpl))?;
+        let substitution = info
+            .variables
+            .iter()
+            .copied()
+            .zip(type_args.iter().copied())
+            .collect();
         let mut children = Vec::new();
         for context in info.context {
             for arg in context.args {
@@ -253,27 +248,5 @@ impl<'a> Resolver<'_, 'a> {
             type_args: self.bump.alloc_slice_copy(&type_args),
             args: self.bump.alloc_slice_fill_iter(children),
         })
-    }
-}
-
-// Called only after the bounded ground walk. Preserve original canonical nodes
-// in evidence, including aliases and their bound representation bodies.
-fn application_args<'a>(typ: &Type<'a>, out: &mut Vec<&'a Located<Type<'a>>>) {
-    match typ {
-        Type::App { head, args } => {
-            application_args(&head.value, out);
-            out.extend_from_slice(args);
-        }
-        Type::Named { args, .. } => out.extend_from_slice(args),
-        Type::Alias { arguments, .. } => out.extend(arguments.iter().map(|arg| arg.typ)),
-        Type::Tuple {
-            first,
-            second,
-            rest,
-        } => {
-            out.extend([*first, *second]);
-            out.extend_from_slice(rest);
-        }
-        _ => {}
     }
 }

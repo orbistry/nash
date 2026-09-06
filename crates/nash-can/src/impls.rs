@@ -1,10 +1,8 @@
-use crate::environment::{Env, TraitInfo, Type as EnvType, dups};
+use crate::environment::{Env, TraitInfo, dups};
 use crate::error::BadHead;
 use crate::{Error, kinds, module, types, warning::Warning};
 use bumpalo::Bump;
-use nash_ast::{
-    AliasArgument, AliasType, Annotation, Head, Impl, ImplKey, Pred, QualifiedName, Type,
-};
+use nash_ast::{Annotation, Head, Impl, ImplKey, Pred, QualifiedName, Type};
 use nash_region::{Located, Region};
 use nash_source::Type as SourceType;
 use std::collections::{BTreeMap, BTreeSet};
@@ -15,6 +13,8 @@ pub(crate) fn info<'a>(
     impl_: &Located<Impl<'a>>,
 ) -> crate::environment::ImplInfo<'a> {
     crate::environment::ImplInfo {
+        variables: impl_.value.variables,
+        kinds: impl_.value.kinds,
         home,
         region: impl_.region,
         trait_: impl_.value.trait_,
@@ -108,17 +108,31 @@ fn insert_impl<'a>(
 ) -> Result<(), Vec<Error<'a>>> {
     let key = ImplKey {
         trait_: impl_.trait_,
-        heads: bump.alloc_slice_fill_iter(impl_.heads.iter().map(|h| h.value.con())),
+        heads: bump.alloc_slice_fill_iter(impl_.heads.iter().map(|h| h.value)),
+        kinds: impl_.kinds,
     };
-    if let Some(first) = table.insert(key, impl_) {
-        return Err(vec![Error::OverlappingImpls {
-            key: bump.alloc(key),
-            first: first.region,
-            second: impl_.region,
-            first_home: first.home,
-            second_home: impl_.home,
-        }]);
+    let mut remaining = 16_384;
+    for (candidate, first) in table
+        .iter()
+        .filter(|(candidate, _)| candidate.trait_ == key.trait_)
+    {
+        let overlaps = nash_ast::head::overlaps(candidate.heads, key.heads, &mut remaining)
+            .map_err(|_| {
+                vec![Error::ImplPatternLimit {
+                    region: impl_.region,
+                }]
+            })?;
+        if overlaps {
+            return Err(vec![Error::OverlappingImpls {
+                key: bump.alloc(key),
+                first: first.region,
+                second: impl_.region,
+                first_home: first.home,
+                second_home: impl_.home,
+            }]);
+        }
     }
+    table.insert(key, impl_);
     Ok(())
 }
 
@@ -158,10 +172,11 @@ pub(crate) fn canonicalize<'a>(
             name: info.name,
         };
         let mut variables = BTreeMap::new();
+        let mut order = Vec::new();
         let mut heads = Vec::new();
         let mut head_types = Vec::new();
         for arg in predicate.args {
-            let (head, typ) = canonicalize_head(bump, env, arg, &mut variables)?;
+            let (head, typ) = canonicalize_head(bump, env, arg, &mut variables, &mut order)?;
             heads.push(head);
             head_types.push(typ);
         }
@@ -169,12 +184,17 @@ pub(crate) fn canonicalize<'a>(
             && !heads.iter().any(|h| match &h.value {
                 Head::Named { reference, .. } => reference.home == env.home,
                 Head::Unit | Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::CORE),
+                Head::Var(_) | Head::Function(..) => false,
             })
         {
             return Err(vec![Error::OrphanImpl {
                 region: source.region,
                 trait_,
-                heads: bump.alloc_slice_fill_iter(heads.iter().map(|h| h.value.con())),
+                heads: bump.alloc_slice_fill_iter(
+                    heads
+                        .iter()
+                        .map(|h| h.value.con().expect("checked outer head")),
+                ),
             }]);
         }
         let context = types::canonicalize_context(bump, env, src.context)?;
@@ -190,7 +210,7 @@ pub(crate) fn canonicalize<'a>(
                 }
             }
         }
-        kinds::check_impl_heads(
+        let mut checked_kinds = kinds::check_impl_heads(
             bump,
             kind_env,
             env.home,
@@ -199,6 +219,7 @@ pub(crate) fn canonicalize<'a>(
             &variables,
             context,
         )?;
+        let head_kinds = checked_kinds.generalize(&order);
         let names = dups::detect(
             src.methods.iter().map(|m| {
                 let nash_source::Def::Define { name, .. } = &m.value else {
@@ -253,6 +274,8 @@ pub(crate) fn canonicalize<'a>(
         result.push(&*bump.alloc(Located::at(
             source.region,
             Impl {
+                variables: bump.alloc_slice_fill_iter(order),
+                kinds: head_kinds,
                 trait_,
                 context,
                 heads: bump.alloc_slice_fill_iter(heads),
@@ -269,133 +292,107 @@ fn canonicalize_head<'a>(
     env: &Env<'a>,
     typ: &'a Located<SourceType<'a>>,
     variables: &mut BTreeMap<&'a str, Region>,
+    order: &mut Vec<&'a str>,
 ) -> Result<CanonicalHead<'a>, Vec<Error<'a>>> {
-    let mut distinct =
-        |args: &[&'a Located<SourceType<'a>>]| -> Result<&'a [&'a str], Vec<Error<'a>>> {
-            let mut names = Vec::new();
-            for arg in args {
-                let SourceType::Var(name) = arg.value else {
-                    return Err(vec![Error::BadInstanceHead {
-                        region: arg.region,
-                        reason: BadHead::NonVariableArgument,
-                    }]);
-                };
-                if let Some(first) = variables.insert(name, arg.region) {
-                    return Err(vec![Error::RepeatedHeadVar {
-                        name,
-                        first,
-                        second: arg.region,
-                    }]);
-                }
-                names.push(name);
-            }
-            Ok(bump.alloc_slice_fill_iter(names))
-        };
-    let (head, can_type) = match &typ.value {
-        SourceType::Type { name, args, .. } | SourceType::TypeQual { name, args, .. } => {
-            let prefix = match &typ.value {
-                SourceType::TypeQual { module, .. } => Some(*module),
-                _ => None,
-            };
-            let info = types::find_type_info(bump, env, typ.region, prefix, name)?;
-            let vars = distinct(args)?;
-            let can_args: &[&Located<Type>] = bump.alloc_slice_fill_iter(
-                args.iter()
-                    .zip(vars)
-                    .map(|(arg, var)| &*bump.alloc(Located::at(arg.region, Type::Var(var)))),
-            );
-            let (home, can_type) = match info {
-                EnvType::Union { home, .. } => (
-                    home,
-                    Type::Named {
-                        reference: QualifiedName { home, name },
-                        args: can_args,
-                    },
-                ),
-                EnvType::Alias {
-                    home,
-                    parameters,
-                    typ: target,
-                    arity,
-                } => {
-                    if vars.len() > arity {
-                        return Err(vec![Error::KindTooManyArgs {
-                            region: typ.region,
-                            head: kinds::KindHead::Named(QualifiedName { home, name }),
-                            applied: vars.len(),
-                            accepted: arity,
-                        }]);
-                    }
-                    (
-                        home,
-                        Type::Alias {
-                            reference: QualifiedName { home, name },
-                            arguments: bump.alloc_slice_fill_iter(
-                                parameters
-                                    .iter()
-                                    .zip(can_args)
-                                    .map(|(name, typ)| AliasArgument { name, typ }),
-                            ),
-                            target: AliasType::Open(target),
-                            remaining: &parameters[vars.len()..],
-                        },
-                    )
+    let reason = match typ.value {
+        SourceType::Var(_) => Some(BadHead::BareVariable),
+        SourceType::Lambda { .. } => Some(BadHead::Function),
+        SourceType::Record(_) => Some(BadHead::Record),
+        SourceType::VarApp { .. } => Some(BadHead::VariableApplication),
+        _ => None,
+    };
+    if let Some(reason) = reason {
+        return Err(vec![Error::BadInstanceHead {
+            region: typ.region,
+            reason,
+        }]);
+    }
+    let canonical = types::canonicalize_type(bump, env, typ)?;
+    let head = canonicalize_pattern(bump, canonical, variables, order)?;
+    Ok((Located::at(typ.region, head), canonical))
+}
+
+pub(crate) fn canonicalize_pattern<'a>(
+    bump: &'a Bump,
+    typ: &'a Located<Type<'a>>,
+    variables: &mut BTreeMap<&'a str, Region>,
+    order: &mut Vec<&'a str>,
+) -> Result<Head<'a>, Vec<Error<'a>>> {
+    let head = match &typ.value {
+        Type::Var(name) => {
+            variables.entry(name).or_insert(typ.region);
+            let index = match order.iter().position(|existing| existing == name) {
+                Some(index) => index,
+                None => {
+                    order.push(name);
+                    order.len() - 1
                 }
             };
-            if home == nash_ast::primitives::builtin_home() && *name == "unit" && vars.is_empty() {
-                (Head::Unit, Type::Unit)
+            Head::Var(index.try_into().expect("impl variable count exceeds u16"))
+        }
+        Type::Named { reference, args } => {
+            if *reference
+                == (QualifiedName {
+                    home: nash_ast::primitives::builtin_home(),
+                    name: "unit",
+                })
+                && args.is_empty()
+            {
+                Head::Unit
             } else {
-                (
-                    Head::Named {
-                        reference: QualifiedName { home, name },
-                        vars,
-                    },
-                    can_type,
-                )
+                let args = args
+                    .iter()
+                    .map(|arg| canonicalize_pattern(bump, arg, variables, order))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Head::Named {
+                    reference: *reference,
+                    args: bump.alloc_slice_fill_iter(args),
+                }
             }
         }
-        SourceType::Unit => (Head::Unit, Type::Unit),
-        SourceType::Tuple {
+        Type::Alias {
+            reference,
+            arguments,
+            ..
+        } => {
+            let args = arguments
+                .iter()
+                .map(|arg| canonicalize_pattern(bump, arg.typ, variables, order))
+                .collect::<Result<Vec<_>, _>>()?;
+            Head::Named {
+                reference: *reference,
+                args: bump.alloc_slice_fill_iter(args),
+            }
+        }
+        Type::Unit => Head::Unit,
+        Type::Tuple {
             first,
             second,
             rest,
         } => {
-            let args: Vec<_> = [*first, *second]
+            let args = [*first, *second]
                 .into_iter()
                 .chain(rest.iter().copied())
-                .collect();
-            let vars = distinct(&args)?;
-            let can_args: Vec<_> = args
-                .iter()
-                .zip(vars)
-                .map(|(arg, name)| &*bump.alloc(Located::at(arg.region, Type::Var(name))))
-                .collect();
-            (
-                Head::Tuple(vars),
-                Type::Tuple {
-                    first: can_args[0],
-                    second: can_args[1],
-                    rest: bump.alloc_slice_copy(&can_args[2..]),
-                },
-            )
+                .map(|arg| canonicalize_pattern(bump, arg, variables, order))
+                .collect::<Result<Vec<_>, _>>()?;
+            Head::Tuple(bump.alloc_slice_fill_iter(args))
         }
-        other => {
+        Type::Lambda { from, to } => Head::Function(
+            bump.alloc(canonicalize_pattern(bump, from, variables, order)?),
+            bump.alloc(canonicalize_pattern(bump, to, variables, order)?),
+        ),
+        Type::App { .. } | Type::Record { .. } => {
             return Err(vec![Error::BadInstanceHead {
                 region: typ.region,
-                reason: match other {
-                    SourceType::Var(_) => BadHead::BareVariable,
-                    SourceType::Lambda { .. } => BadHead::Function,
-                    SourceType::Record(_) => BadHead::Record,
-                    SourceType::VarApp { .. } => BadHead::VariableApplication,
-                    _ => unreachable!(),
+                reason: if matches!(typ.value, Type::App { .. }) {
+                    BadHead::VariableApplication
+                } else {
+                    BadHead::Record
                 },
             }]);
         }
     };
-    Ok((
-        Located::at(typ.region, head),
-        bump.alloc(Located::at(typ.region, can_type)),
-    ))
+    Ok(head)
 }
 
 fn instantiate_method<'a>(

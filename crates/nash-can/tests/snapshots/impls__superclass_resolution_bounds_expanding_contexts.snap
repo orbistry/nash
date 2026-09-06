@@ -46,8 +46,10 @@ expression: result.unwrap_err()
                         },
                         name: "List",
                     },
-                    vars: [
-                        "a",
+                    args: [
+                        Var(
+                            0,
+                        ),
                     ],
                 },
             },

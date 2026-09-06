@@ -22,24 +22,6 @@ expression: errors
         ],
     ),
     (
-        "(List (List 'a))",
-        [
-            BadInstanceHead {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 18,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 25,
-                    },
-                },
-                reason: NonVariableArgument,
-            },
-        ],
-    ),
-    (
         "('a -> 'b)",
         [
             BadInstanceHead {

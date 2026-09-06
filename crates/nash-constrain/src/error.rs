@@ -44,7 +44,7 @@ pub enum Error<'a> {
         name: &'a str,
         trait_: nash_ast::QualifiedName<'a>,
         args: &'a [&'a ErrorType<'a>],
-        available: &'a [&'a [nash_ast::HeadCon<'a>]],
+        available: &'a [&'a [nash_ast::Head<'a>]],
     },
     ImplResolutionLimit {
         region: Region,
