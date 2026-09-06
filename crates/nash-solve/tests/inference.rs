@@ -555,6 +555,19 @@ fn ambiguous_predicates_keep_distinct_variable_names() {
 }
 
 #[test]
+fn two_literal_traits_do_not_choose_an_arbitrary_default() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        same : 'a -> 'a -> 'a
+        same x _ = x
+        discard x = ()
+        value = discard (same 1 "one")
+    "#
+    );
+}
+
+#[test]
 fn hidden_trait_variable_is_reported_at_the_innermost_definition() {
     assert_inference_error_snapshot!(
         r#"

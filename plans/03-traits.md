@@ -902,7 +902,7 @@ and imported impls, and all listed errors have snapshots.
 
 ## Chunk 4: predicates in the constraint language
 
-Status: in progress. Default and impl method bodies now pass through the
+Status: complete. Default and impl method bodies now pass through the
 ordinary typed-definition constraints, with no module value header. Inference
 snapshots cover invalid default and specialized impl return types, and module
 helper visibility without exporting method bindings. Local and foreign
@@ -910,10 +910,12 @@ constraints carry expression identities, including the enclosing Binop node
 for operators; a same-region regression checks that these remain distinct.
 Annotation contexts now share the definition's rigid variables. Definition
 metadata retains every original name node and full function type, including
-methods and mixed recursive groups. The solver does not yet consume these
-contexts or record instances. Descriptors now retain predicate IDs through
+methods and mixed recursive groups. Descriptors retain predicate IDs through
 unification, including merges after recursive descriptor changes and failures.
-Qualified solving and predicate-body copying remain to be implemented.
+Later solving chunks consume these contexts, record instances and copy
+predicate bodies independently at each use. The inference regression
+`recursive_definition_metadata_preserves_names_types_and_given_variables`
+checks method headers, binder identity and shared rigid variables directly.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/module.rs`, `crates/nash-constrain/src/pattern.rs`,
@@ -1694,9 +1696,10 @@ Retained-context reduction and evidence ownership are implemented. Tests cover
 duplicate uses, transitive paths in either source order, permuted superclass
 parameters with distinct variables, and impl-child evidence in recursive groups.
 
-Final AST evidence and SolvedTypes publication,
-the standalone canonical resolver, and kind-aware reflexive Lift
-resolution remain unfinished. No chunk completion is claimed here.
+Final evidence publication through NodeId/SolvedTypes and kind-aware reflexive
+Lift resolution are implemented and tested, including nested evidence and
+rejection of foreign trait identities. The standalone canonical resolver
+remains unfinished. No chunk completion is claimed here.
 
 Files: `crates/nash-solve/src/solve.rs`, new `crates/nash-solve/src/resolve.rs`,
 `crates/nash-solve/src/preds.rs`, `crates/nash-solve/src/lib.rs`.
@@ -1969,8 +1972,12 @@ three-module CLI workspace checks all three literal syntaxes, a bytes pattern
 and destructuring; applying a destructured integer as a function reports
 MissingImpl at the extracted-name use. Inference snapshots reflect literal traits.
 The SuperType variants, name-prefix rules, specialized unification and error
-rendering are removed. Negation now records the core Num method scheme at its
-original node; canonical desugaring remains chunk 10. Core source modules remain.
+rendering are removed. Negation is canonically desugared to the core Num method
+and retains evidence at its original node. Core Literal and Num source modules
+are implemented; the remaining hierarchy belongs to chunk 12.
+`two_literal_traits_do_not_choose_an_arbitrary_default` verifies that FromInt
+and FromString on the same hidden variable report AmbiguousType with both
+requirements, rather than selecting either default.
 
 Files: `crates/nash-constrain/src/type_.rs`, `crates/nash-constrain/src/expression.rs`,
 `crates/nash-constrain/src/pattern.rs`, `crates/nash-constrain/src/error_type.rs`,
