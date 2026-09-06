@@ -1183,7 +1183,7 @@ Implementation audit (takes precedence over the sketches below):
   conversion; scheme inference must supply its ordered context. Instance type
   arguments must follow the final annotation's `free_vars` order.
 
-Status: annotation conversion accepts explicit contexts and has a regression
+Status: complete. Annotation conversion accepts explicit contexts and has a regression
 snapshot for headed and context-only arguments with a reserved variable name.
 Multi-root copying shares a copy map for all roots of one instantiation and
 restores all touched originals directly. Its regression covers repeated uses,
@@ -1226,8 +1226,8 @@ Annotated bodies now report `MissingConstraint` for an unmatched bare rigid
 trait argument, preserving the originating use and owning definition. Tests
 cover direct calls, impl element constraints, outer captures through local
 helpers, and successful superclass givens. The CLI exits with status 1 and
-the same diagnostic. Constructor-headed requirements still need impl
-resolution; the core reflexive Lift rule still needs its Big kind proof.
+the same diagnostic. Constructor-headed requirements and the kind-aware core
+reflexive Lift rule are implemented by Chunk 6.
 
 Retained predicates now receive `Given` or `Super` solutions at the owning
 definition's final context slots without changing their original use/sub
@@ -1239,9 +1239,8 @@ placing earlier members' roots in later pattern scopes generalized them early
 and disconnected recursive argument/result relationships. The evidence
 regression exposed and verifies the correction.
 
-Complete missing-constraint classification,
-final scheme/instance recording, and the resulting
-solver API are not implemented yet.
+Missing-constraint classification, final scheme/instance recording and the
+paired solver API are implemented and covered by the tests below.
 Definition records now preserve each original name-node identity, solved type,
 context and quantified variable identities at its generalization boundary.
 This includes local definitions and monomorphic methods through all three Let
@@ -1256,11 +1255,16 @@ group is generalized and reduced. The recursive evidence regression now
 checks calls inside the group as well as later instantiations, including an
 outer recursive call that stays pending while a local helper is checked. Typed recursive
 calls keep their declared contexts and do not receive duplicate slots.
-Ordered instance arguments, complete all-use recording, and scoped output naming still
-need to be connected before publishing the shared `SolvedTypes` result.
+Ordered instance arguments, all-use recording and scoped output naming are
+connected to the shared `SolvedTypes` result. The regression
+`solved_output_records_empty_context_calls_and_preserves_capture_names`
+checks ordinary empty-context calls and captured names; the recursive evidence
+test checks final context slots in the published instances.
 Chunk 6 now resolves ordinary constructor-headed predicates, including impl
-contexts, before inference publishes a scheme. Do not mark this chunk complete from the current
-inference snapshots alone.
+contexts, before inference publishes a scheme. The completion audit also
+checked multi-root copy sharing and cleanup, predicate preservation through
+unification, context-only quantifiers, annotation escape diagnostics and the
+driver's `retained_module_nodes_match_solved_evidence_after_compilation` test.
 
 Code:
 
@@ -1338,8 +1342,6 @@ struct Solver<'a> {
     /// Given predicates of the enclosing generalizing Lets, innermost last.
     givens: Vec<GivenFrame<'a>>,
     tables: &'a Tables<'a>,
-    /// `Strict` reports unresolved predicates; `Lenient` (macro rounds) drops them. See chunk 6.
-    mode: Mode,
     /// One entry per generalizing Let with a binder, in solve order.
     schemes: Vec<SchemeVars<'a>>,
     /// One entry per instantiated use site (`Local` on a generalized var, `Foreign`).
@@ -1596,10 +1598,10 @@ The implementation now returns the paired result below. Definition schemes
 and local/foreign use instances preserve quantifier and context order,
 including empty-context calls and recursive group evidence. Types within an
 outer definition's scope share capture names. Unresolved use evidence produces
-an error before publication. Literal and do instances remain for their chunks;
-expression and pattern type maps remain for Plan 07. The driver currently
-consumes annotations only: retaining canonical arenas and solved results is
-still required by chunk 11.
+an error before publication. Literal and do instances are implemented by
+their chunks; expression and pattern type maps remain for Plan 07. The driver
+retains canonical modules and solved maps in `SolvedModule` values whose
+nodes borrow the stable build arena, as verified by Chunk 11.
 
 ```rust
 // crates/nash-solve/src/solve.rs
@@ -1892,9 +1894,11 @@ depth 128; substitution is charged before allocation. Callers provide
 well-kinded canonical types and complete metadata. This API has no givens and
 does not create inference variables.
 
-Lenient mode (for plans/11 macro expansion rounds): `nash_solve::run`
-takes `nash_can::Mode` (`Strict` | `Lenient`, defined by plans/11 chunk 2
-on `nash_can::Context`). Every `Err(error)` arm in `split` goes through
+Deferred integration for plans/11 macro expansion rounds, not a Plan 03
+implementation requirement: Plan 11 introduces `nash_can::Mode`
+(`Strict` | `Lenient`) on `nash_can::Context` and then extends the solver
+entry point. Plan 03 uses strict behavior without a mode parameter.
+When implementing that later integration, route resolution errors through
 one helper:
 
 ```rust
@@ -1908,7 +1912,7 @@ one helper:
     }
 ```
 
-Chunk 7's ambiguity and polymorphic-recursion errors use the same helper,
+That later integration must route ambiguity and polymorphic-recursion errors through the same helper,
 so in `Lenient` an ambiguous variable is left unresolved (not defaulted
 to an error content) and `Instance.evidence` slots for dropped predicates
 are absent; `run` fills such slices only when every slot resolved, and
@@ -2600,7 +2604,7 @@ in normally dropped `SolvedModule` values, not directly in a bump allocation
 borrow has a separate lifetime from the arena references it returns. Memory grows with the build, which is what
 Elm's `Details`/`Artifacts` do too.
 
-`nash_solve::run(&bump, &mut uf, &constraint, &can_result.tables, &can_result.fields, Mode::Strict)`
+`nash_solve::run(&bump, &mut uf, &constraint, &can_result.tables)`
 (the "Solver API" signature in chunk 5).
 
 Elm reference: `Build.hs::compile` (`Compile.compile` returns
