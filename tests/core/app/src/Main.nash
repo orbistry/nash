@@ -18,6 +18,25 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Data exposing (ToData, FromData)
 
+bigInteger : Int
+bigInteger = lift 42
+littleInteger : int
+littleInteger = lower bigInteger
+bigBytes : Bytes
+bigBytes = lift #"ff"
+littleBytes : bytes
+littleBytes = lower bigBytes
+textBytes : Bytes
+textBytes = lift "Nash"
+littleText : string
+littleText = lower textBytes
+integerData = toData bigInteger
+bytesData = toData bigBytes
+readInteger : Int
+readInteger = fromData integerData
+checkedBytes : Bytes
+checkedBytes = validateData bytesData
+
 wireData = Constr 0 [I 1, B #"ff"]
 dataIdentity = toData wireData
 readData : Data

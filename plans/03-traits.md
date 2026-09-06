@@ -2752,11 +2752,20 @@ near misses; an inference snapshot preserves all five nominal signatures.
 Core cast generation, validation checkers and execution remain Plan 07.
 The stdlib Lift sketch now uses these bindings instead of assigning Data-valued
 UPLC builtins to nominal Int/Bytes/List/Map conversions. Actual cast-dependent
-core impls remain to be written.
+core impls are being added below.
 The real CLI compiles a core cast module and application wrapper (two modules,
 six declarations), and rejects an application explicitly importing a cast.
 Existing core acceptance remains 17 modules and 104 declarations. Formatting,
 strict Clippy, 1,914 tests and snapshot hygiene pass (three ignored doctests).
+Lift now supplies int/Int, bytes/Bytes and string/Bytes impls through the
+specified casts; string conversion explicitly encodes/decodes UTF-8. Data
+supplies ToData/FromData for Int and Bytes, using distinct shallow and full
+validation operations. Core acceptance checks both primitive directions and
+nominal Data conversions, compiling 17 modules and 114 declarations. A real
+CLI negative case rejects Lift string Int at the calling lift. Formatting,
+strict Clippy, 1,914 tests and snapshot hygiene pass. These source-only changes
+do not change Rust crates. Runtime round trips, invalid UTF-8 and invalid Data
+checks remain Plan 07 execution requirements.
 Remaining core modules, Big twin impls/conversions, implicit imports,
 and the full hierarchy acceptance example remain unfinished. The two contract
 questions recorded in Chunk 10 also remain open.

@@ -406,6 +406,13 @@ impl FromData Data where
     fromData = Builtin.identity
     validateData = Builtin.identity
 
+impl ToData Int where
+    toData = Builtin.castToData
+
+impl FromData Int where
+    fromData = Builtin.castFromDataShallow
+    validateData = Builtin.castValidateData
+
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
 

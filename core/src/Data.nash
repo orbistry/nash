@@ -17,6 +17,20 @@ impl FromData Data where
     fromData value = value
     validateData value = value
 
+impl ToData Int where
+    toData = Builtin.castToData
+
+impl FromData Int where
+    fromData = Builtin.castFromDataShallow
+    validateData = Builtin.castValidateData
+
+impl ToData Bytes where
+    toData = Builtin.castToData
+
+impl FromData Bytes where
+    fromData = Builtin.castFromDataShallow
+    validateData = Builtin.castValidateData
+
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
 

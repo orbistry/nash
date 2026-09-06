@@ -211,6 +211,7 @@ Builtin impls, with their UPLC:
 |---|---|---|
 | `Lift int Int` | `iData` | `unIData` |
 | `Lift bytes Bytes` | `bData` | `unBData` |
+| `Lift string Bytes` | UTF-8 encode, then `bData` | `unBData`, then UTF-8 decode |
 | `Lift bool Bool` | `ifThenElse c (Constr 1 []) (Constr 0 [])` | tag compare |
 | `Lift unit Unit` | `Constr 0 []` | `()` |
 | `Lift (list 'a) (List 'b)` given `Lift 'a 'b` | map `lift` over the elements, then `listData` | `unListData` then map `lower` |

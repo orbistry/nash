@@ -9,6 +9,18 @@ trait Lift 'small 'big where
     lift : 'small -> 'big
     lower : 'big -> 'small
 
+impl Lift int Int where
+    lift = Builtin.castLift
+    lower = Builtin.castLower
+
+impl Lift bytes Bytes where
+    lift = Builtin.castLift
+    lower = Builtin.castLower
+
+impl Lift string Bytes where
+    lift value = Builtin.castLift (Builtin.encodeUtf8 value)
+    lower value = Builtin.decodeUtf8 (Builtin.castLower value)
+
 impl Lift bool Bool where
     lift value = if value then Bool.True else Bool.False
     lower value =
