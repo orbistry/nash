@@ -2643,6 +2643,25 @@ reports the right errors.
 
 ## Chunk 12: the core trait hierarchy in `core/`
 
+### Current acceptance audit
+
+The progress entries below record individual steps, not completion of this
+chunk. At `26b8a5b5`, the real core CLI fixture compiles 17 modules and 158
+declarations with explicit imports. Remaining requirements are:
+
+| Requirement | Current evidence / remaining work |
+|---|---|
+| Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift still conflicts with the nested-head restriction. |
+| Higher-kinded hierarchy and operators | Functor/Applicative/Monad core modules and their impls remain absent. The list-of-functions Applicative contract and abstract constructor element-kind question remain open. |
+| Core option do acceptance | Compiler do tests exist, but the shipping core hierarchy must support the required option example; substitute test declarations do not establish this. |
+| Default imports | Not implemented. Missing specified modules: Functor, Applicative, Monad, Cons, Derive, Debug, Int, Bytes, String, List, Pair, Array, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |
+| Overview example up to tests | Not currently executable: Cardano.Tx and deriving require later work; the sketch names nonexistent Builtin.compareInteger and undefined currentSlot/signedBy, as well as later field-access/validator features. This acceptance item is not proved by the core fixture. |
+| Final release verification | Refresh release/publish dry runs after the final implementation changes. Earlier checks are revision-specific and downstream publishing was blocked by unpublished bumped dependencies. |
+
+Cons and concrete type-module helpers can proceed independently. Resolving
+the hierarchy/head-policy decisions and default-import prerequisites remains
+necessary; SPEC.md must stay incomplete until the full acceptance is met.
+
 Status: in progress. The synthetic Builtin interface now exports all 103
 specified value schemes: 101 symbolic DefaultFunction variants plus identity
 and error. Static canonical type trees preserve the documented signatures;
