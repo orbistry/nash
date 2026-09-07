@@ -1100,7 +1100,7 @@ canonical module so the `kind` fields show in the Debug snapshot;
   `kind_error_uppercase_alias_little_body` (`type alias Count = int`),
   `named_constructor_arity_remains_a_canonicalization_error` (`type alias x = int Int`, expected `BadArity`),
   `base_kinded_parameter_cannot_be_applied` (expected `KindTooManyArgs`),
-  `kind_error_infinite` (`type bad 'f = Bad ('f 'f)`),
+  `kind_error_infinite` (`type bad 'f = Bad (bad bad)`),
   `pair_requires_storable` (`type alias p = pair (option int) Int`),
   `kind_errors_all_reported` (two independent bad declarations give two
   errors).

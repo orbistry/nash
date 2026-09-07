@@ -341,8 +341,8 @@ but the way `'f` is used gives it kind `Term -> Big`.
 ```
 -- INFINITE KIND ------------------------------------------------- Main.nash
 
-I cannot find a kind for `'f` in `type bad 'f = Bad ('f 'f)`:
-`'f` would have to be applied to itself.
+I cannot find a finite kind for `bad` in `type bad 'f = Bad (bad bad)`:
+the recursive constructor `bad` is applied to itself.
 ```
 
 **Too many arguments**
