@@ -19,13 +19,16 @@ macro_rules! assert_kinds_snapshot {
 }
 
 macro_rules! assert_kind_error_snapshot {
-    ($source:expr) => {{
+    ($source:expr) => {
+        assert_kind_error_snapshot!($source, Error::KindMismatch { .. } | Error::KindInfinite { .. } | Error::KindTooManyArgs { .. });
+    };
+    ($source:expr, $expected:pat) => {{
         let bump = Bump::new();
         let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{}\n", $source));
         let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let errors = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect_err("kind checking fails");
-        assert!(errors.iter().all(|error| matches!(error, Error::KindMismatch { .. } | Error::KindInfinite { .. } | Error::KindTooManyArgs { .. })), "wrong compiler phase: {errors:?}");
+        assert!(errors.iter().all(|error| matches!(error, $expected)), "wrong compiler phase: {errors:?}");
         insta::with_settings!({description => $source, omit_expression => true}, {
             insta::assert_debug_snapshot!(errors);
         });
@@ -456,13 +459,11 @@ fn annotation_kinds_keep_application_parameters_correlated() {
             .position(|var| *var == name)
             .unwrap()]
     };
-    let [first_application, second_application] = kinds.applications else {
-        panic!("two constructor applications")
+    let [application] = kinds.applications else {
+        panic!("one n-ary constructor application")
     };
-    assert_eq!(first_application.head, kind("f"));
-    assert_eq!(first_application.argument, kind("a"));
-    assert_eq!(first_application.result, second_application.head);
-    assert_eq!(second_application.argument, kind("b"));
+    assert_eq!(application.head, kind("f"));
+    assert_eq!(application.arguments, &[kind("a"), kind("b")]);
     assert_ne!(kind("a"), kind("b"));
     let mut infer = nash_can::kinds::Infer::new(&bump);
     let first = infer.instantiate_values(&kinds);
@@ -636,7 +637,7 @@ fn kind_annotation_term() {
 
 #[test]
 fn retained_self_application_terminates() {
-    assert_kinds_snapshot!("type self 'f = Self ('f 'f)\ntype w = W (self self)");
+    assert_kind_error_snapshot!("type self 'f = Self ('f 'f)\ntype w = W (self self)");
 }
 
 #[test]
@@ -648,14 +649,50 @@ fn retained_self_application_rejects_a_term_argument() {
 
 #[test]
 fn retained_self_application_in_value_annotations() {
+    assert_kind_error_snapshot!(
+        "type self 'f = Self ('f 'f)\nidentity : self self -> self self\nidentity x = x",
+        Error::KindInfinite { .. }
+    );
+}
+
+#[test]
+fn finite_self_application_in_value_annotations() {
     assert_kinds_snapshot!(
-        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\nwitness : self tag\nwitness = Self (Tag ())\nidentity : self self -> self self\nidentity x = x"
+        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\nwitness : self tag\nwitness = Self (Tag ())"
+    );
+}
+
+#[test]
+fn saturated_binary_self_application_is_inductively_invalid() {
+    assert_kind_error_snapshot!(
+        "type s 'f 'a = S ('f 'f 'a)\ntype tag 'a = Tag\ntype w = W (s s tag)",
+        Error::KindInfinite { .. }
+    );
+}
+
+#[test]
+fn unused_declaration_checks_conflicting_parameter_bounds_eagerly() {
+    assert_kind_error_snapshot!(
+        "type unused 'a = Unused (list 'a) ('a unit)",
+        Error::KindMismatch { .. }
+    );
+}
+
+#[test]
+fn retained_application_preserves_three_arguments() {
+    assert_kinds_snapshot!("type apply3 'f 'a 'b 'c = Apply3 ('f 'a 'b 'c)");
+}
+
+#[test]
+fn annotated_head_preserves_remaining_application_arguments() {
+    assert_kinds_snapshot!(
+        "type apply2 ('f : Storable -> Storable -> Term) 'a 'b = Apply2 ('f 'a 'b)"
     );
 }
 
 #[test]
 fn retained_self_application_in_impl_heads() {
-    assert_kinds_snapshot!(
+    assert_kind_error_snapshot!(
         "type self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()"
     );
 }
@@ -671,5 +708,133 @@ fn retained_nested_self_application_terminates() {
 fn retained_finite_nested_constructor_application() {
     assert_kinds_snapshot!(
         "type app 'f 'a = App ('f 'a)\ntype tag 'a = Tag unit\ntype w = W (app (app tag) tag)"
+    );
+}
+
+#[test]
+fn fresh_parameter_replay_in_declarations() {
+    assert_kind_error_snapshot!(
+        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntype w = W (s s s)\ntype alias Count = int"
+    );
+}
+
+#[test]
+fn fresh_parameter_replay_in_annotations() {
+    assert_kind_error_snapshot!(
+        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\nidentity : s s s tag -> s s s tag\nidentity value = value"
+    );
+}
+
+#[test]
+fn fresh_parameter_replay_in_impl_heads() {
+    assert_kinds_snapshot!(
+        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (s s tag tag) where\n    marker _ = ()"
+    );
+}
+
+macro_rules! supplied_obligation_cases {
+    ($($name:ident: $number:literal => $valid:literal),* $(,)?) => {$(
+        #[test]
+        fn $name() {
+            let source = include_str!("fixtures/kind-obligations.md")
+                .split("```").nth(2 * $number - 1).expect("supplied case").trim();
+            let bump = Bump::new();
+            let source = bump.alloc_str(source);
+            let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
+            let result = canonicalize(&bump, Context { package: None, interfaces: None }, &module);
+            if $valid {
+                let result = result.expect("case 3 accepts a qualified partial phantom argument");
+                let kinds: Vec<_> = result.module.unions.iter().map(|union| (union.value.name.value, union.value.kind)).collect();
+                insta::assert_debug_snapshot!(kinds);
+            } else {
+                let errors = result.expect_err("a constructor cannot occupy a value field");
+                assert!(errors.iter().all(|error| matches!(error, Error::KindMismatch { .. })), "outer shape must fail before recursive expansion: {errors:?}");
+                insta::assert_debug_snapshot!(errors);
+            }
+        }
+    )*};
+}
+
+supplied_obligation_cases! {
+    supplied_obligation_01: 1 => false,
+    supplied_obligation_02: 2 => false,
+    supplied_obligation_03: 3 => true,
+    supplied_obligation_04: 4 => false,
+    supplied_obligation_05: 5 => false,
+    supplied_obligation_06: 6 => false,
+    supplied_obligation_07: 7 => false,
+    supplied_obligation_08: 8 => false,
+    supplied_obligation_09: 9 => false,
+    supplied_obligation_10: 10 => false,
+    supplied_obligation_11: 11 => false,
+    supplied_obligation_12: 12 => false,
+    supplied_obligation_13: 13 => false,
+    supplied_obligation_14: 14 => false,
+    supplied_obligation_15: 15 => false,
+    supplied_obligation_16: 16 => false,
+    supplied_obligation_17: 17 => false,
+    supplied_obligation_18: 18 => false,
+    supplied_obligation_19: 19 => false,
+    supplied_obligation_20: 20 => false,
+    supplied_obligation_21: 21 => false,
+    supplied_obligation_22: 22 => false,
+}
+
+#[test]
+fn partial_constructor_checks_closed_obligations() {
+    assert_kind_error_snapshot!(
+        "type self 'f = Self ('f 'f)\ntype p 'f 'a = P ('f 'f) 'a\ntype tag 'a = Tag\ntype w = W (tag (p self))"
+    );
+}
+
+#[test]
+fn phantom_constructor_checks_saturated_argument_validity() {
+    assert_kind_error_snapshot!(
+        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag\ntype w = W (tag (self self))"
+    );
+}
+
+#[test]
+fn phantom_constructor_checks_supplied_partial_bounds() {
+    assert_kind_error_snapshot!(
+        "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype w = W (tag (pair (option int)))"
+    );
+}
+
+#[test]
+fn partial_constructor_projects_consumer_bounds_before_missing_arguments() {
+    assert_kind_error_snapshot!(
+        "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'a))\ntype w = W (tag (s s option))"
+    );
+}
+
+#[test]
+fn generated_capture_outside_finite_fragment_is_not_an_infinite_kind() {
+    assert_kind_error_snapshot!(
+        "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntype w = W (wrap (app tag) app option)",
+        Error::KindRestricted { .. }
+    );
+}
+
+#[test]
+fn explicit_capture_has_a_finite_inductive_proof() {
+    assert_kinds_snapshot!(
+        "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype w = W (app tag (app option))"
+    );
+}
+
+#[test]
+fn fragment_restriction_cannot_validate_an_annotation() {
+    assert_kind_error_snapshot!(
+        "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\nidentity : wrap (app tag) app option -> wrap (app tag) app option\nidentity x = x",
+        Error::KindRestricted { .. }
+    );
+}
+
+#[test]
+fn fragment_restriction_cannot_validate_an_impl_head() {
+    assert_kind_error_snapshot!(
+        "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (wrap (app tag) app option) where\n    marker x = ()",
+        Error::KindRestricted { .. }
     );
 }

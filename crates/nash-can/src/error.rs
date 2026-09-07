@@ -160,6 +160,15 @@ pub enum Error<'a> {
         region: Region,
         context: &'a KindContext<'a>,
     },
+    KindLimit {
+        region: Region,
+        context: &'a KindContext<'a>,
+    },
+    KindRestricted {
+        region: Region,
+        context: &'a KindContext<'a>,
+        reason: &'static str,
+    },
     KindTooManyArgs {
         region: Region,
         head: KindHead<'a>,

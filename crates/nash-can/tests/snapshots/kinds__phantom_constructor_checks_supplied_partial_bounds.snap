@@ -1,0 +1,53 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype w = W (tag (pair (option int)))"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 24,
+            },
+            end: Position {
+                line: 7,
+                column: 34,
+            },
+        },
+        context: TypeArg {
+            head: Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "pair",
+                },
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    3,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Term,
+            ),
+            applications: [],
+        },
+    },
+]

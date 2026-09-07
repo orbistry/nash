@@ -43,9 +43,11 @@ expression: "(interface, canonical.module.unions[0].value.kind)"
                             head: Var(
                                 0,
                             ),
-                            argument: Var(
-                                1,
-                            ),
+                            arguments: [
+                                Var(
+                                    1,
+                                ),
+                            ],
                             result: Var(
                                 2,
                             ),
@@ -138,9 +140,11 @@ expression: "(interface, canonical.module.unions[0].value.kind)"
                             head: Var(
                                 0,
                             ),
-                            argument: Var(
-                                1,
-                            ),
+                            arguments: [
+                                Var(
+                                    1,
+                                ),
+                            ],
                             result: Var(
                                 2,
                             ),
@@ -223,12 +227,6 @@ expression: "(interface, canonical.module.unions[0].value.kind)"
                 15,
             ),
             KindSet(
-                15,
-            ),
-            KindSet(
-                7,
-            ),
-            KindSet(
                 7,
             ),
         ],
@@ -250,22 +248,13 @@ expression: "(interface, canonical.module.unions[0].value.kind)"
                 head: Var(
                     0,
                 ),
-                argument: Var(
+                arguments: [
+                    Var(
+                        1,
+                    ),
+                ],
+                result: Var(
                     2,
-                ),
-                result: Var(
-                    3,
-                ),
-            },
-            KindApplication {
-                head: Var(
-                    0,
-                ),
-                argument: Var(
-                    1,
-                ),
-                result: Var(
-                    4,
                 ),
             },
         ],

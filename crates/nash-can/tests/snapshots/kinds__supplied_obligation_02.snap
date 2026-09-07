@@ -1,0 +1,45 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: errors
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 13,
+            },
+            end: Position {
+                line: 4,
+                column: 22,
+            },
+        },
+        context: LittleField {
+            union: "w",
+            ctor: "W",
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+    },
+]

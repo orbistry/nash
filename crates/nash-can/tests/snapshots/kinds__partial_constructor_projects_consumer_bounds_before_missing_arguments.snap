@@ -1,0 +1,45 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'a))\ntype w = W (tag (s s option))"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 13,
+            },
+            end: Position {
+                line: 8,
+                column: 29,
+            },
+        },
+        context: LittleField {
+            union: "w",
+            ctor: "W",
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+    },
+]

@@ -36,9 +36,11 @@ description: "type wrap 'f 'a = Wrap ('f 'a)"
                         head: Var(
                             0,
                         ),
-                        argument: Var(
-                            1,
-                        ),
+                        arguments: [
+                            Var(
+                                1,
+                            ),
+                        ],
                         result: Var(
                             2,
                         ),

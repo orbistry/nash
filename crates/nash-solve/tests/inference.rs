@@ -3052,7 +3052,7 @@ fn imported_higher_kinded_value_preserves_application() {
         panic!("retained higher-kinded application")
     };
     assert_eq!(application.head, annotation.kinds.kinds[f]);
-    assert_eq!(application.argument, annotation.kinds.kinds[a]);
+    assert_eq!(application.arguments, &[annotation.kinds.kinds[a]]);
     let interface = nash_can::from_module(&bump, &canonical.module, &producer);
     let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
     let source =

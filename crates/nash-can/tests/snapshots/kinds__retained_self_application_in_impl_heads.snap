@@ -2,42 +2,27 @@
 source: crates/nash-can/tests/kinds.rs
 description: "type self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()"
 ---
-(
-    [
-        (
-            "self",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
-                ),
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            0,
-                        ),
-                        argument: Var(
-                            0,
-                        ),
-                        result: Var(
-                            1,
-                        ),
-                    },
-                ],
+[
+    KindInfinite {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 14,
             },
-        ),
-    ],
-    [],
-)
+            end: Position {
+                line: 8,
+                column: 23,
+            },
+        },
+        context: ImplHead {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Marker",
+            },
+            index: 0,
+        },
+    },
+]

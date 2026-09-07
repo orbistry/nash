@@ -81,9 +81,11 @@ expression: "(&trait_.kind, variables)"
                         head: Var(
                             1,
                         ),
-                        argument: Var(
-                            2,
-                        ),
+                        arguments: [
+                            Var(
+                                2,
+                            ),
+                        ],
                         result: Var(
                             3,
                         ),

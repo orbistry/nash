@@ -36,9 +36,11 @@ description: "type app 'f 'a = App ('f 'a)\ntype tag 'a = Tag unit\ntype w = W (
                         head: Var(
                             0,
                         ),
-                        argument: Var(
-                            1,
-                        ),
+                        arguments: [
+                            Var(
+                                1,
+                            ),
+                        ],
                         result: Var(
                             2,
                         ),

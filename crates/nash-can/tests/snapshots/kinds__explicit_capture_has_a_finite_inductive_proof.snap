@@ -1,0 +1,101 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype w = W (app tag (app option))"
+---
+(
+    [
+        (
+            "tag",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        15,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+                applications: [],
+            },
+        ),
+        (
+            "option",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+                applications: [],
+            },
+        ),
+        (
+            "app",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Arrow(
+                        Var(
+                            1,
+                        ),
+                        Base(
+                            Term,
+                        ),
+                    ),
+                ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        arguments: [
+                            Var(
+                                1,
+                            ),
+                        ],
+                        result: Var(
+                            2,
+                        ),
+                    },
+                ],
+            },
+        ),
+        (
+            "w",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+                applications: [],
+            },
+        ),
+    ],
+    [],
+)

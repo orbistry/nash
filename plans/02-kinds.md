@@ -73,6 +73,11 @@ disposable; support only the current format.
 
 ### Follow-up: retained constructor settlement termination
 
+Historical implementation record. The coinductive rules below are superseded
+by [inductive residual obligations](02-kind-obligations.md), which rejects
+required self/self cycles and adopts a finite expansion fragment with separate
+restriction and limit diagnostics.
+
 - [x] Close the retained-obligation self-application hang and verify acceptance.
 
 Use coinductive known-head application memoization within each settlement.

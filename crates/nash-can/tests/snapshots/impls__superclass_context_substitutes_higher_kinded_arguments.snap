@@ -38,9 +38,6 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                 KindSet(
                     15,
                 ),
-                KindSet(
-                    15,
-                ),
             ],
             kinds: [
                 Var(
@@ -55,20 +52,11 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                     head: Var(
                         0,
                     ),
-                    argument: Var(
-                        2,
-                    ),
-                    result: Base(
-                        Big,
-                    ),
-                },
-                KindApplication {
-                    head: Var(
-                        0,
-                    ),
-                    argument: Var(
-                        1,
-                    ),
+                    arguments: [
+                        Var(
+                            1,
+                        ),
+                    ],
                     result: Base(
                         Big,
                     ),
@@ -111,9 +99,6 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                 KindSet(
                     15,
                 ),
-                KindSet(
-                    15,
-                ),
             ],
             kinds: [
                 Var(
@@ -128,20 +113,11 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                     head: Var(
                         0,
                     ),
-                    argument: Var(
-                        2,
-                    ),
-                    result: Base(
-                        Big,
-                    ),
-                },
-                KindApplication {
-                    head: Var(
-                        0,
-                    ),
-                    argument: Var(
-                        1,
-                    ),
+                    arguments: [
+                        Var(
+                            1,
+                        ),
+                    ],
                     result: Base(
                         Big,
                     ),

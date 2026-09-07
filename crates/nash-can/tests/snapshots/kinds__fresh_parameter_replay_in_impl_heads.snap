@@ -1,0 +1,99 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (s s tag tag) where\n    marker _ = ()"
+---
+(
+    [
+        (
+            "tag",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        15,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+                applications: [],
+            },
+        ),
+        (
+            "s",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Arrow(
+                        Var(
+                            1,
+                        ),
+                        Arrow(
+                            Var(
+                                2,
+                            ),
+                            Base(
+                                Term,
+                            ),
+                        ),
+                    ),
+                ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        arguments: [
+                            Var(
+                                0,
+                            ),
+                            Var(
+                                2,
+                            ),
+                        ],
+                        result: Var(
+                            3,
+                        ),
+                    },
+                    KindApplication {
+                        head: Var(
+                            1,
+                        ),
+                        arguments: [
+                            Var(
+                                3,
+                            ),
+                        ],
+                        result: Var(
+                            4,
+                        ),
+                    },
+                ],
+            },
+        ),
+    ],
+    [],
+)

@@ -1,0 +1,348 @@
+---
+source: crates/nash-can/tests/kinds.rs
+expression: errors
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 13,
+            },
+            end: Position {
+                line: 4,
+                column: 28,
+            },
+        },
+        context: LittleField {
+            union: "w",
+            ctor: "W",
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Constructor {
+                scheme: KindScheme {
+                    bounds: [
+                        KindSet(
+                            8,
+                        ),
+                        KindSet(
+                            8,
+                        ),
+                        KindSet(
+                            15,
+                        ),
+                        KindSet(
+                            15,
+                        ),
+                        KindSet(
+                            15,
+                        ),
+                        KindSet(
+                            7,
+                        ),
+                    ],
+                    kind: Arrow(
+                        Var(
+                            0,
+                        ),
+                        Arrow(
+                            Var(
+                                1,
+                            ),
+                            Arrow(
+                                Var(
+                                    2,
+                                ),
+                                Base(
+                                    Term,
+                                ),
+                            ),
+                        ),
+                    ),
+                    applications: [
+                        KindApplication {
+                            head: Var(
+                                0,
+                            ),
+                            arguments: [
+                                Var(
+                                    1,
+                                ),
+                            ],
+                            result: Var(
+                                3,
+                            ),
+                        },
+                        KindApplication {
+                            head: Var(
+                                1,
+                            ),
+                            arguments: [
+                                Var(
+                                    2,
+                                ),
+                                Var(
+                                    1,
+                                ),
+                            ],
+                            result: Var(
+                                4,
+                            ),
+                        },
+                        KindApplication {
+                            head: Var(
+                                0,
+                            ),
+                            arguments: [
+                                Var(
+                                    3,
+                                ),
+                                Var(
+                                    4,
+                                ),
+                            ],
+                            result: Var(
+                                5,
+                            ),
+                        },
+                    ],
+                },
+                arguments: [
+                    Constructor {
+                        scheme: KindScheme {
+                            bounds: [
+                                KindSet(
+                                    8,
+                                ),
+                                KindSet(
+                                    8,
+                                ),
+                                KindSet(
+                                    15,
+                                ),
+                                KindSet(
+                                    15,
+                                ),
+                                KindSet(
+                                    15,
+                                ),
+                                KindSet(
+                                    7,
+                                ),
+                            ],
+                            kind: Arrow(
+                                Var(
+                                    0,
+                                ),
+                                Arrow(
+                                    Var(
+                                        1,
+                                    ),
+                                    Arrow(
+                                        Var(
+                                            2,
+                                        ),
+                                        Base(
+                                            Term,
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            applications: [
+                                KindApplication {
+                                    head: Var(
+                                        0,
+                                    ),
+                                    arguments: [
+                                        Var(
+                                            1,
+                                        ),
+                                    ],
+                                    result: Var(
+                                        3,
+                                    ),
+                                },
+                                KindApplication {
+                                    head: Var(
+                                        1,
+                                    ),
+                                    arguments: [
+                                        Var(
+                                            2,
+                                        ),
+                                        Var(
+                                            1,
+                                        ),
+                                    ],
+                                    result: Var(
+                                        4,
+                                    ),
+                                },
+                                KindApplication {
+                                    head: Var(
+                                        0,
+                                    ),
+                                    arguments: [
+                                        Var(
+                                            3,
+                                        ),
+                                        Var(
+                                            4,
+                                        ),
+                                    ],
+                                    result: Var(
+                                        5,
+                                    ),
+                                },
+                            ],
+                        },
+                        arguments: [
+                            Constructor {
+                                scheme: KindScheme {
+                                    bounds: [
+                                        KindSet(
+                                            15,
+                                        ),
+                                    ],
+                                    kind: Arrow(
+                                        Var(
+                                            0,
+                                        ),
+                                        Base(
+                                            Term,
+                                        ),
+                                    ),
+                                    applications: [],
+                                },
+                                arguments: [],
+                            },
+                            Constructor {
+                                scheme: KindScheme {
+                                    bounds: [
+                                        KindSet(
+                                            15,
+                                        ),
+                                    ],
+                                    kind: Arrow(
+                                        Var(
+                                            0,
+                                        ),
+                                        Base(
+                                            Term,
+                                        ),
+                                    ),
+                                    applications: [],
+                                },
+                                arguments: [],
+                            },
+                        ],
+                    },
+                    Constructor {
+                        scheme: KindScheme {
+                            bounds: [
+                                KindSet(
+                                    8,
+                                ),
+                                KindSet(
+                                    8,
+                                ),
+                                KindSet(
+                                    15,
+                                ),
+                                KindSet(
+                                    15,
+                                ),
+                                KindSet(
+                                    15,
+                                ),
+                                KindSet(
+                                    7,
+                                ),
+                            ],
+                            kind: Arrow(
+                                Var(
+                                    0,
+                                ),
+                                Arrow(
+                                    Var(
+                                        1,
+                                    ),
+                                    Arrow(
+                                        Var(
+                                            2,
+                                        ),
+                                        Base(
+                                            Term,
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            applications: [
+                                KindApplication {
+                                    head: Var(
+                                        0,
+                                    ),
+                                    arguments: [
+                                        Var(
+                                            1,
+                                        ),
+                                    ],
+                                    result: Var(
+                                        3,
+                                    ),
+                                },
+                                KindApplication {
+                                    head: Var(
+                                        1,
+                                    ),
+                                    arguments: [
+                                        Var(
+                                            2,
+                                        ),
+                                        Var(
+                                            1,
+                                        ),
+                                    ],
+                                    result: Var(
+                                        4,
+                                    ),
+                                },
+                                KindApplication {
+                                    head: Var(
+                                        0,
+                                    ),
+                                    arguments: [
+                                        Var(
+                                            3,
+                                        ),
+                                        Var(
+                                            4,
+                                        ),
+                                    ],
+                                    result: Var(
+                                        5,
+                                    ),
+                                },
+                            ],
+                        },
+                        arguments: [],
+                    },
+                ],
+            },
+            applications: [],
+        },
+    },
+]

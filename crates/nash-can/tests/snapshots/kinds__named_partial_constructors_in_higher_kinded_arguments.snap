@@ -28,9 +28,11 @@ description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a '
                         head: Var(
                             0,
                         ),
-                        argument: Base(
-                            Const,
-                        ),
+                        arguments: [
+                            Base(
+                                Const,
+                            ),
+                        ],
                         result: Var(
                             1,
                         ),

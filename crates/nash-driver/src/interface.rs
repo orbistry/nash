@@ -336,9 +336,13 @@ fn render_kind_scheme(scheme: nash_ast::KindScheme<'_>) -> String {
             .iter()
             .map(|app| {
                 format!(
-                    "Apply({}, {}, {})",
+                    "Apply({}, [{}], {})",
                     render(app.head, false),
-                    render(app.argument, false),
+                    app.arguments
+                        .iter()
+                        .map(|kind| render(kind, false))
+                        .collect::<Vec<_>>()
+                        .join(", "),
                     render(app.result, false)
                 )
             })

@@ -3,21 +3,44 @@ source: crates/nash-can/tests/kinds.rs
 description: "type wrong 'f = Wrong 'f ('f Int)"
 ---
 [
-    KindTooManyArgs {
+    KindMismatch {
         region: Region {
             start: Position {
                 line: 5,
-                column: 27,
+                column: 30,
             },
             end: Position {
                 line: 5,
                 column: 33,
             },
         },
-        head: Var(
-            "f",
-        ),
-        applied: 1,
-        accepted: 0,
+        context: TypeArg {
+            head: Var(
+                "f",
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
     },
 ]

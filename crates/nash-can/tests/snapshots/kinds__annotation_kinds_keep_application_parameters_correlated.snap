@@ -14,9 +14,6 @@ ValueKinds {
             15,
         ),
         KindSet(
-            8,
-        ),
-        KindSet(
             7,
         ),
     ],
@@ -36,22 +33,16 @@ ValueKinds {
             head: Var(
                 0,
             ),
-            argument: Var(
-                2,
-            ),
+            arguments: [
+                Var(
+                    2,
+                ),
+                Var(
+                    1,
+                ),
+            ],
             result: Var(
                 3,
-            ),
-        },
-        KindApplication {
-            head: Var(
-                3,
-            ),
-            argument: Var(
-                1,
-            ),
-            result: Var(
-                4,
             ),
         },
     ],

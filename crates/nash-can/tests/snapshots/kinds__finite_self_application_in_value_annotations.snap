@@ -1,0 +1,64 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\nwitness : self tag\nwitness = Self (Tag ())"
+---
+(
+    [
+        (
+            "self",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        arguments: [
+                            Var(
+                                0,
+                            ),
+                        ],
+                        result: Var(
+                            1,
+                        ),
+                    },
+                ],
+            },
+        ),
+        (
+            "tag",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        15,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+                applications: [],
+            },
+        ),
+    ],
+    [],
+)

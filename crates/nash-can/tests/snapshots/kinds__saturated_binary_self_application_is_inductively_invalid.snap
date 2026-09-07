@@ -1,0 +1,23 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type s 'f 'a = S ('f 'f 'a)\ntype tag 'a = Tag\ntype w = W (s s tag)"
+---
+[
+    KindInfinite {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 13,
+            },
+            end: Position {
+                line: 7,
+                column: 20,
+            },
+        },
+        context: LittleField {
+            union: "w",
+            ctor: "W",
+            index: 0,
+        },
+    },
+]

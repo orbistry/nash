@@ -31,9 +31,11 @@ expression: "(schemes, context)"
                         head: Var(
                             0,
                         ),
-                        argument: Var(
-                            1,
-                        ),
+                        arguments: [
+                            Var(
+                                1,
+                            ),
+                        ],
                         result: Var(
                             2,
                         ),
@@ -89,9 +91,11 @@ expression: "(schemes, context)"
                         head: Var(
                             0,
                         ),
-                        argument: Var(
-                            1,
-                        ),
+                        arguments: [
+                            Var(
+                                1,
+                            ),
+                        ],
                         result: Var(
                             2,
                         ),
@@ -100,9 +104,11 @@ expression: "(schemes, context)"
                         head: Var(
                             0,
                         ),
-                        argument: Var(
-                            3,
-                        ),
+                        arguments: [
+                            Var(
+                                3,
+                            ),
+                        ],
                         result: Var(
                             4,
                         ),
@@ -111,9 +117,11 @@ expression: "(schemes, context)"
                         head: Var(
                             5,
                         ),
-                        argument: Var(
-                            3,
-                        ),
+                        arguments: [
+                            Var(
+                                4,
+                            ),
+                        ],
                         result: Var(
                             6,
                         ),
@@ -122,20 +130,24 @@ expression: "(schemes, context)"
                         head: Var(
                             5,
                         ),
-                        argument: Var(
-                            4,
-                        ),
+                        arguments: [
+                            Var(
+                                7,
+                            ),
+                        ],
                         result: Var(
-                            7,
+                            8,
                         ),
                     },
                     KindApplication {
                         head: Var(
                             5,
                         ),
-                        argument: Var(
-                            8,
-                        ),
+                        arguments: [
+                            Var(
+                                3,
+                            ),
+                        ],
                         result: Var(
                             9,
                         ),

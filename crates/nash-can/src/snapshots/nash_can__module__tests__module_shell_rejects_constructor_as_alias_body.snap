@@ -27,14 +27,21 @@ description: "Code:\n\nmodule Main exposing (Wrapped, Maybe(..))\n\ntype alias W
         },
         actual: KindScheme {
             bounds: [],
-            kind: Arrow(
-                Base(
-                    Big,
-                ),
-                Base(
-                    Big,
-                ),
-            ),
+            kind: Constructor {
+                scheme: KindScheme {
+                    bounds: [],
+                    kind: Arrow(
+                        Base(
+                            Big,
+                        ),
+                        Base(
+                            Big,
+                        ),
+                    ),
+                    applications: [],
+                },
+                arguments: [],
+            },
             applications: [],
         },
     },

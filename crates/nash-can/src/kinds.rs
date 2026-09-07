@@ -22,8 +22,26 @@ pub enum K<'a> {
 #[derive(Clone, Copy, Debug)]
 struct Application<'a> {
     head: &'a K<'a>,
-    argument: &'a K<'a>,
+    arguments: &'a [&'a K<'a>],
     result: &'a K<'a>,
+    ancestors: &'a [(KindScheme<'a>, &'a [&'a K<'a>])],
+}
+
+/// A known application whose shape is available but whose qualified premises
+/// have not yet been proved. Missing template variables have no inference root.
+#[derive(Clone)]
+struct Expansion<'a> {
+    scheme: KindScheme<'a>,
+    arguments: &'a [&'a K<'a>],
+    substitution: Vec<Option<&'a K<'a>>>,
+    bounds: Vec<KindSet>,
+    ancestors: Vec<(KindScheme<'a>, &'a [&'a K<'a>])>,
+}
+
+#[derive(Clone, Copy)]
+struct Capability<'a> {
+    domain: &'a K<'a>,
+    promised: KindScheme<'a>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -40,17 +58,52 @@ pub enum Mismatch<'a> {
         expected: &'a K<'a>,
         actual: &'a K<'a>,
     },
+    /// A structural or required inductive proof cycle.
     Infinite(KindVar),
+    /// Operational safeguard; this does not establish an infinite kind.
+    Limit,
+    /// A proof dependency outside the admitted finite fragment.
+    Restricted(&'static str),
+    Arity {
+        applied: usize,
+        accepted: usize,
+    },
+    Argument {
+        index: usize,
+        error: Box<Mismatch<'a>>,
+    },
 }
+
+impl Mismatch<'_> {
+    fn incomplete(&self) -> bool {
+        match self {
+            Self::Limit | Self::Restricted(_) => true,
+            Self::Argument { error, .. } => error.incomplete(),
+            _ => false,
+        }
+    }
+}
+
+// Bound expansion even when replay continually introduces fresh kind variables.
+const WORK_LIMIT: usize = 4_096;
 
 #[derive(Clone)]
 pub struct Infer<'a> {
     bump: &'a Bump,
     nodes: Vec<Node<'a>>,
     applications: Vec<Application<'a>>,
+    expansions: Vec<Expansion<'a>>,
+    expansion_path: Vec<(KindScheme<'a>, &'a [&'a K<'a>])>,
+    defer_settlement: usize,
+    input_atoms: Vec<&'a K<'a>>,
+    frozen_atoms: Vec<&'a K<'a>>,
+    input_schemes: Vec<KindScheme<'a>>,
+    capabilities: Vec<Capability<'a>>,
     settling: bool,
+    work_remaining: Option<usize>,
+    work_exhausted: bool,
     #[cfg(test)]
-    settle_steps_remaining: Option<usize>,
+    work_limit: usize,
 }
 
 impl<'a> Infer<'a> {
@@ -59,10 +112,55 @@ impl<'a> Infer<'a> {
             bump,
             nodes: Vec::new(),
             applications: Vec::new(),
+            expansions: Vec::new(),
+            expansion_path: Vec::new(),
+            defer_settlement: 0,
+            input_atoms: Vec::new(),
+            frozen_atoms: Vec::new(),
+            input_schemes: Vec::new(),
+            capabilities: Vec::new(),
             settling: false,
+            work_remaining: None,
+            work_exhausted: false,
             #[cfg(test)]
-            settle_steps_remaining: None,
+            work_limit: WORK_LIMIT,
         }
+    }
+
+    fn with_work_budget<T>(
+        &mut self,
+        operation: impl FnOnce(&mut Self) -> Result<T, Mismatch<'a>>,
+    ) -> Result<T, Mismatch<'a>> {
+        let outer = self.work_remaining.is_none();
+        if outer {
+            #[cfg(test)]
+            let limit = self.work_limit;
+            #[cfg(not(test))]
+            let limit = WORK_LIMIT;
+            self.work_remaining = Some(limit);
+            self.work_exhausted = false;
+        }
+        let result = operation(self);
+        if outer {
+            self.work_remaining = None;
+            if result.is_err() {
+                self.applications.clear();
+                self.expansions.clear();
+                self.expansion_path.clear();
+                self.capabilities.clear();
+            }
+        }
+        result
+    }
+
+    fn spend_work(&mut self) -> Result<(), Mismatch<'a>> {
+        let remaining = self.work_remaining.as_mut().expect("active kind operation");
+        if *remaining == 0 {
+            self.work_exhausted = true;
+            return Err(Mismatch::Limit);
+        }
+        *remaining -= 1;
+        Ok(())
     }
 
     pub fn fresh(&mut self, bound: KindSet) -> KindVar {
@@ -105,15 +203,20 @@ impl<'a> Infer<'a> {
     }
 
     pub fn unify(&mut self, expected: &'a K<'a>, actual: &'a K<'a>) -> Result<(), Mismatch<'a>> {
-        if self.settling {
-            return self.unify_inner(expected, actual);
-        }
-        self.settling = true;
-        let result = self
-            .unify_inner(expected, actual)
-            .and_then(|()| self.settle());
-        self.settling = false;
-        result
+        self.with_work_budget(|infer| {
+            infer.spend_work()?;
+            if !infer.settling {
+                infer.remember_input(expected);
+                infer.remember_input(actual);
+            }
+            if infer.settling || infer.defer_settlement != 0 {
+                return infer.unify_inner(expected, actual);
+            }
+            infer.settling = true;
+            let result = infer.unify_inner(expected, actual);
+            infer.settling = false;
+            result.and_then(|()| infer.settle())
+        })
     }
 
     fn unify_inner(&mut self, expected: &'a K<'a>, actual: &'a K<'a>) -> Result<(), Mismatch<'a>> {
@@ -136,13 +239,30 @@ impl<'a> Infer<'a> {
                 Ok(())
             }
             (K::Var(var), other) | (other, K::Var(var)) => self.bind(*var, other, expected, actual),
-            (K::Constructor { .. }, _) => {
-                let expected = self.open_constructor(expected)?;
-                self.unify(expected, actual)
+            (K::Constructor { .. }, K::Arrow(parameter, result)) => {
+                self.protect_domain(parameter);
+                let applied =
+                    self.apply_many(expected, self.bump.alloc_slice_copy(&[*parameter]))?;
+                self.unify(applied, result)
             }
-            (_, K::Constructor { .. }) => {
-                let actual = self.open_constructor(actual)?;
-                self.unify(expected, actual)
+            (K::Arrow(parameter, result), K::Constructor { .. }) => {
+                self.protect_domain(parameter);
+                let applied = self.apply_many(actual, self.bump.alloc_slice_copy(&[*parameter]))?;
+                self.unify(result, applied)
+            }
+            (K::Constructor { .. }, K::Constructor { .. }) => {
+                if self.same_kind(expected, actual) {
+                    return Ok(());
+                }
+                for (left, right) in [(expected, actual), (actual, expected)] {
+                    let parameter = self.constructor_parameter(left)?;
+                    self.protect_domain(parameter);
+                    let arguments = self.bump.alloc_slice_copy(&[parameter]);
+                    let left = self.apply_many(left, arguments)?;
+                    let right = self.apply_many(right, arguments)?;
+                    self.unify(left, right)?;
+                }
+                Ok(())
             }
             (K::Base(a), K::Base(b)) if a == b => Ok(()),
             (K::Arrow(a1, r1), K::Arrow(a2, r2)) => {
@@ -174,6 +294,15 @@ impl<'a> Infer<'a> {
         if self.occurs(var, kind) {
             return Err(Mismatch::Infinite(var));
         }
+        if self.settling
+            && !self.frozen_atoms.is_empty()
+            && self.is_frozen_root(var)
+            && !self.admitted_shape(kind)
+        {
+            return Err(Mismatch::Restricted(
+                "a query root would acquire a kind outside the finite expansion fragment",
+            ));
+        }
         self.nodes[var.0 as usize] = Node::Bound(kind);
         Ok(())
     }
@@ -190,71 +319,102 @@ impl<'a> Infer<'a> {
     /// Apply `kind` to one argument: returns the parameter and result kinds.
     /// A variable head becomes a fresh arrow (its bound must allow arrows).
     pub fn apply(&mut self, kind: &'a K<'a>) -> Result<(&'a K<'a>, &'a K<'a>), Mismatch<'a>> {
-        match self.head(kind) {
-            K::Arrow(param, result) => Ok((param, result)),
-            K::Constructor { scheme, arguments } => {
-                let opened = self.open_constructor(kind)?;
-                let (parameter, result) = self.apply(opened)?;
-                let result = if matches!(self.head(result), K::Arrow(..)) {
-                    let mut captured = arguments.to_vec();
-                    captured.push(parameter);
-                    self.bump.alloc(K::Constructor {
-                        scheme: *scheme,
-                        arguments: self.bump.alloc_slice_fill_iter(captured),
-                    })
-                } else {
-                    result
-                };
-                Ok((parameter, result))
-            }
-            head => {
-                let param = self.fresh_k(KindSet::ALL);
-                let result = self.fresh_k(KindSet::ALL);
-                let arrow = self.fresh_k(KindSet::ARROW);
-                self.unify(arrow, head)?;
-                self.applications.push(Application {
-                    head,
-                    argument: param,
-                    result,
-                });
-                Ok((param, result))
-            }
+        self.with_work_budget(|infer| {
+            infer.spend_work()?;
+            infer.apply_inner(kind)
+        })
+    }
+
+    fn apply_inner(&mut self, kind: &'a K<'a>) -> Result<(&'a K<'a>, &'a K<'a>), Mismatch<'a>> {
+        let parameter = self.fresh_k(KindSet::ALL);
+        let arguments = self.bump.alloc_slice_copy(&[parameter]);
+        let result = self.apply_many(kind, arguments)?;
+        Ok((parameter, result))
+    }
+
+    /// Delay validity expansion while collecting a complete source constraint.
+    pub fn begin_constraints(&mut self) {
+        self.defer_settlement += 1;
+    }
+
+    /// Finish collecting constraints and check validity at the outer boundary.
+    pub fn finish_constraints(&mut self) -> Result<(), Mismatch<'a>> {
+        assert!(self.defer_settlement > 0);
+        self.defer_settlement -= 1;
+        if self.defer_settlement == 0 {
+            self.settle()
+        } else {
+            Ok(())
         }
     }
 
     fn settle(&mut self) -> Result<(), Mismatch<'a>> {
-        // Coherence also enters here directly, without unify's guard. Keep
-        // nested unifications in this settlement and restore the guard on error.
-        let settling = std::mem::replace(&mut self.settling, true);
-        let result = self.settle_inner();
-        if result.is_err() {
-            // The failed pass discards its pending work. Discard newly opened
-            // obligations too, so the next source check cannot replay this error.
-            self.applications.clear();
-        }
-        self.settling = settling;
-        result
+        self.with_work_budget(|infer| {
+            // Coherence also enters here directly, without unify's guard. Keep
+            // nested unifications in this settlement and restore the guard on error.
+            let settling = std::mem::replace(&mut infer.settling, true);
+            if !settling {
+                for application in infer.applications.clone() {
+                    infer.remember_input(application.head);
+                    for argument in application.arguments {
+                        infer.remember_input(argument);
+                    }
+                    infer.remember_input(application.result);
+                }
+                for expansion in infer.expansions.clone() {
+                    let input = infer.bump.alloc(K::Constructor {
+                        scheme: expansion.scheme,
+                        arguments: expansion.arguments,
+                    });
+                    infer.remember_input(input);
+                }
+                for capability in infer.capabilities.clone() {
+                    infer.remember_input(capability.domain);
+                }
+                infer.frozen_atoms = infer.input_atoms.clone();
+                // Base kinds are always atoms, including results produced by
+                // applications rather than written explicitly in the query.
+                for base in [BaseKind::Big, BaseKind::Const, BaseKind::Term] {
+                    infer.frozen_atoms.push(infer.bump.alloc(K::Base(base)));
+                }
+            }
+            let result = infer
+                .settle_inner()
+                .and_then(|()| infer.check_capabilities());
+            if result.is_err() {
+                // The failed pass discards its pending work. Discard newly opened
+                // obligations too, so the next source check cannot replay this error.
+                infer.applications.clear();
+                infer.expansions.clear();
+                infer.expansion_path.clear();
+                infer.capabilities.clear();
+            }
+            infer.settling = settling;
+            if !settling {
+                infer.input_atoms.clear();
+                infer.input_schemes.clear();
+                infer.frozen_atoms.clear();
+            }
+            result
+        })
     }
 
     fn settle_inner(&mut self) -> Result<(), Mismatch<'a>> {
-        // Keep known applications across passes, including while their retained
-        // obligations are being opened. Repeated evidence shares its result;
-        // separate arguments still instantiate constructor bounds independently.
-        let mut known: Vec<Application<'a>> = Vec::new();
         loop {
-            #[cfg(test)]
-            if let Some(remaining) = &mut self.settle_steps_remaining {
-                assert!(*remaining > 0, "settle exceeded test step limit");
-                *remaining -= 1;
-            }
-            let pending = std::mem::take(&mut self.applications);
+            let applications = std::mem::take(&mut self.applications);
+            let pending: Vec<_> = applications
+                .iter()
+                .copied()
+                .map(|application| self.application_spine(application, &applications))
+                .collect();
             let mut progress = false;
             let mut retained: Vec<Application<'a>> = Vec::new();
             for application in pending {
+                self.spend_work()?;
                 if matches!(self.head(application.head), K::Var(_)) {
                     if let Some(previous) = retained.iter().copied().find(|previous| {
                         self.same_kind(previous.head, application.head)
-                            && self.same_kind(previous.argument, application.argument)
+                            && self.same_arguments(previous.arguments, application.arguments)
                     }) {
                         self.unify(previous.result, application.result)?;
                         progress = true;
@@ -264,23 +424,331 @@ impl<'a> Infer<'a> {
                     continue;
                 }
                 progress = true;
-                if let Some(previous) = known.iter().copied().find(|previous| {
-                    self.same_kind(previous.head, application.head)
-                        && self.same_kind(previous.argument, application.argument)
-                }) {
-                    self.unify(previous.result, application.result)?;
-                    continue;
-                }
-                known.push(application);
-                let (parameter, result) = self.apply(application.head)?;
-                self.unify(parameter, application.argument)?;
+                self.expansion_path = application.ancestors.to_vec();
+                let result = self.apply_many(application.head, application.arguments)?;
                 self.unify(result, application.result)?;
+                self.expansion_path.clear();
             }
             self.applications.extend(retained);
+            // Shapes and bounds of this frontier are available before its
+            // descendants are expanded. A cycle never hides a local mismatch.
+            let expansions = std::mem::take(&mut self.expansions);
+            progress |= !expansions.is_empty();
+            for expansion in expansions {
+                self.expand(expansion)?;
+            }
             if !progress {
                 return Ok(());
             }
         }
+    }
+
+    fn expand(&mut self, mut expansion: Expansion<'a>) -> Result<(), Mismatch<'a>> {
+        self.spend_work()?;
+        // Specialization already checked this constructor's supplied bounds
+        // and result shape. Admit its key before any premise matching, which
+        // can itself demand a constructor/arrow capability application.
+        if expansion
+            .arguments
+            .iter()
+            .any(|argument| !self.admitted_atom(argument))
+        {
+            return Err(Mismatch::Restricted(
+                "a generated constructor capture is not an input atom",
+            ));
+        }
+        if expansion.ancestors.iter().any(|(scheme, arguments)| {
+            *scheme == expansion.scheme && self.same_arguments(arguments, expansion.arguments)
+        }) {
+            return Err(Mismatch::Infinite(self.fresh(KindSet::ALL)));
+        }
+        self.expansion_path = expansion.ancestors;
+        self.expansion_path
+            .push((expansion.scheme, expansion.arguments));
+        let mut pending = expansion.scheme.applications.to_vec();
+        loop {
+            let mut progress = false;
+            let mut residual = Vec::new();
+            for application in pending {
+                self.spend_work()?;
+                let Some(head) = self.substituted(application.head, &expansion.substitution) else {
+                    residual.push(application);
+                    continue;
+                };
+                let before_bounds = expansion.bounds.clone();
+                let before_slots = expansion
+                    .substitution
+                    .iter()
+                    .filter(|slot| slot.is_some())
+                    .count();
+                self.project_application(
+                    head,
+                    application,
+                    &mut expansion.bounds,
+                    &mut expansion.substitution,
+                )?;
+                progress |= before_bounds != expansion.bounds
+                    || before_slots
+                        != expansion
+                            .substitution
+                            .iter()
+                            .filter(|slot| slot.is_some())
+                            .count();
+                let arguments: Option<Vec<_>> = application
+                    .arguments
+                    .iter()
+                    .map(|argument| self.substituted(argument, &expansion.substitution))
+                    .collect();
+                let Some(arguments) = arguments else {
+                    residual.push(application);
+                    continue;
+                };
+                let arguments = self.bump.alloc_slice_fill_iter(arguments);
+                let result = self.apply_many(head, arguments)?;
+                self.match_template(
+                    application.result,
+                    result,
+                    &expansion.bounds,
+                    &mut expansion.substitution,
+                )?;
+                progress = true;
+            }
+            if !progress {
+                let mut remaining = expansion.scheme.kind;
+                for _ in expansion.arguments {
+                    let Kind::Arrow(_, result) = remaining else {
+                        unreachable!("specialized arity")
+                    };
+                    remaining = result;
+                }
+                if !residual.is_empty() && !matches!(remaining, Kind::Arrow(..)) {
+                    return Err(Mismatch::Restricted(
+                        "a saturated application has an unresolved local result dependency",
+                    ));
+                }
+                break;
+            }
+            pending = residual;
+        }
+        self.expansion_path.clear();
+        Ok(())
+    }
+
+    fn shape_bound(&mut self, kind: &'a K<'a>) -> KindSet {
+        match self.head(kind) {
+            K::Base(base) => KindSet::of(*base),
+            K::Arrow(..) | K::Constructor { .. } => KindSet::ARROW,
+            K::Var(var) => {
+                let Node::Unbound(bound) = self.nodes[var.0 as usize] else {
+                    unreachable!("resolved root")
+                };
+                bound
+            }
+        }
+    }
+
+    fn protect_domain(&mut self, domain: &'a K<'a>) {
+        let promised = self.generalize(domain);
+        self.capabilities.push(Capability { domain, promised });
+    }
+
+    fn check_capabilities(&mut self) -> Result<(), Mismatch<'a>> {
+        for capability in std::mem::take(&mut self.capabilities) {
+            if self.generalize(capability.domain) != capability.promised {
+                let expected = self.materialize(
+                    capability.promised.kind,
+                    capability.promised.bounds,
+                    &mut vec![None; capability.promised.bounds.len()],
+                );
+                return Err(Mismatch::Shapes {
+                    expected,
+                    actual: capability.domain,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Record only source/query inputs. Expansion never adds an atom.
+    fn remember_input(&mut self, kind: &'a K<'a>) {
+        if self
+            .input_atoms
+            .iter()
+            .any(|known| std::ptr::eq(*known, kind))
+        {
+            return;
+        }
+        self.input_atoms.push(kind);
+        match kind {
+            K::Base(_) => {}
+            K::Var(var) => {
+                let var = self.find(*var);
+                if let Node::Bound(kind) = self.nodes[var.0 as usize] {
+                    self.remember_input(kind);
+                }
+            }
+            K::Arrow(from, to) => {
+                self.remember_input(from);
+                self.remember_input(to);
+            }
+            K::Constructor { scheme, arguments } => {
+                for argument in *arguments {
+                    self.remember_input(argument);
+                }
+                if !self.input_schemes.contains(scheme) {
+                    self.input_schemes.push(*scheme);
+                    self.remember_constants(scheme.kind, scheme.bounds.len());
+                    for application in scheme.applications {
+                        self.remember_constants(application.head, scheme.bounds.len());
+                        for argument in application.arguments {
+                            self.remember_constants(argument, scheme.bounds.len());
+                        }
+                        self.remember_constants(application.result, scheme.bounds.len());
+                    }
+                }
+            }
+        }
+    }
+
+    fn remember_constants(&mut self, kind: &'a Kind<'a>, binder_size: usize) {
+        if let Some(closed) = self.substituted(kind, &vec![None; binder_size]) {
+            self.remember_input(closed);
+        }
+        match kind {
+            Kind::Arrow(from, to) => {
+                self.remember_constants(from, binder_size);
+                self.remember_constants(to, binder_size);
+            }
+            Kind::Constructor { scheme, arguments } => {
+                let constructor = self.bump.alloc(K::Constructor {
+                    scheme: *scheme,
+                    arguments: &[],
+                });
+                self.remember_input(constructor);
+                for argument in *arguments {
+                    self.remember_constants(argument, binder_size);
+                }
+            }
+            Kind::Var(_) | Kind::Base(_) => {}
+        }
+    }
+
+    fn is_frozen_root(&mut self, var: KindVar) -> bool {
+        let var = self.find(var);
+        self.frozen_atoms
+            .clone()
+            .into_iter()
+            .any(|atom| matches!(atom, K::Var(root) if self.find(*root) == var))
+    }
+
+    fn admitted_atom(&mut self, kind: &'a K<'a>) -> bool {
+        self.frozen_atoms
+            .clone()
+            .into_iter()
+            .any(|atom| self.same_kind(atom, kind))
+    }
+
+    fn admitted_shape(&mut self, kind: &'a K<'a>) -> bool {
+        match self.head(kind) {
+            K::Base(_) => true,
+            K::Var(var) => self.is_frozen_root(*var),
+            K::Arrow(from, to) => self.admitted_atom(from) && self.admitted_atom(to),
+            K::Constructor { arguments, .. } => arguments
+                .iter()
+                .all(|argument| self.admitted_atom(argument)),
+        }
+    }
+
+    fn template_bound(
+        &mut self,
+        template: &Kind<'a>,
+        bounds: &[KindSet],
+        substitution: &[Option<&'a K<'a>>],
+    ) -> KindSet {
+        match template {
+            Kind::Base(base) => KindSet::of(*base),
+            Kind::Arrow(..) | Kind::Constructor { .. } => KindSet::ARROW,
+            Kind::Var(index) => {
+                let index = usize::from(*index);
+                substitution[index].map_or(bounds[index], |kind| {
+                    bounds[index].intersect(self.shape_bound(kind))
+                })
+            }
+        }
+    }
+
+    fn project_bound(
+        &mut self,
+        template: &Kind<'a>,
+        required: KindSet,
+        bounds: &mut [KindSet],
+        substitution: &[Option<&'a K<'a>>],
+    ) -> Result<(), Mismatch<'a>> {
+        let actual = self.template_bound(template, bounds, substitution);
+        let joined = actual.intersect(required);
+        if joined.is_empty() {
+            return Err(Mismatch::Shapes {
+                expected: self.fresh_k(required),
+                actual: self.fresh_k(actual),
+            });
+        }
+        if let Kind::Var(index) = template {
+            let index = usize::from(*index);
+            bounds[index] = joined;
+            if let Some(kind) = substitution[index] {
+                let expected = self.fresh_k(joined);
+                self.unify(expected, kind)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Project arity, argument bounds and result shape without fabricating a
+    /// value for an unsupplied parameter. Local bounds form a finite lattice.
+    fn project_application(
+        &mut self,
+        head: &'a K<'a>,
+        application: KindApplication<'a>,
+        bounds: &mut [KindSet],
+        substitution: &mut [Option<&'a K<'a>>],
+    ) -> Result<(), Mismatch<'a>> {
+        let K::Constructor {
+            scheme,
+            arguments: captured,
+        } = self.head(head)
+        else {
+            return Ok(());
+        };
+        let mut parameters = vec![None; scheme.bounds.len()];
+        let mut result = scheme.kind;
+        for argument in *captured {
+            let Kind::Arrow(parameter, next) = result else {
+                unreachable!("partial constructor arity")
+            };
+            self.match_template(parameter, argument, scheme.bounds, &mut parameters)?;
+            result = next;
+        }
+        for (index, argument) in application.arguments.iter().enumerate() {
+            let Kind::Arrow(parameter, next) = result else {
+                return Err(Mismatch::Arity {
+                    applied: application.arguments.len(),
+                    accepted: index,
+                });
+            };
+            let required = self.template_bound(parameter, scheme.bounds, &parameters);
+            self.project_bound(argument, required, bounds, substitution)?;
+            if let Some(actual) = self.substituted(argument, substitution) {
+                self.match_template(parameter, actual, scheme.bounds, &mut parameters)?;
+            }
+            result = next;
+        }
+        let shape = self.template_bound(result, scheme.bounds, &parameters);
+        self.project_bound(application.result, shape, bounds, substitution)?;
+        if let Kind::Base(base) = result {
+            let result = self.bump.alloc(K::Base(*base));
+            self.match_template(application.result, result, bounds, substitution)?;
+        }
+        Ok(())
     }
 
     fn same_kind(&mut self, left: &'a K<'a>, right: &'a K<'a>) -> bool {
@@ -306,6 +774,296 @@ impl<'a> Infer<'a> {
         }
     }
 
+    fn same_arguments(&mut self, left: &[&'a K<'a>], right: &[&'a K<'a>]) -> bool {
+        left.len() == right.len()
+            && left
+                .iter()
+                .zip(right)
+                .all(|(left, right)| self.same_kind(left, right))
+    }
+
+    fn same_slot(&mut self, left: &'a K<'a>, right: &'a K<'a>) -> bool {
+        matches!((left, right), (K::Var(left), K::Var(right)) if self.find(*left) == self.find(*right))
+    }
+
+    /// Type substitution can put an abstract partial application in head
+    /// position (for example identityK at g b). Recover its original spine.
+    /// Keep the producer separately until generalization decides whether the
+    /// intermediate kind has an independently observable constraint.
+    fn application_spine(
+        &mut self,
+        mut application: Application<'a>,
+        producers: &[Application<'a>],
+    ) -> Application<'a> {
+        let mut visited: Vec<&'a K<'a>> = Vec::new();
+        loop {
+            if visited
+                .iter()
+                .any(|head| self.same_slot(head, application.head))
+            {
+                break;
+            }
+            visited.push(application.head);
+            let Some(producer) = producers.iter().find(|producer| {
+                self.same_slot(producer.result, application.head)
+                    && !self.same_slot(producer.head, producer.result)
+            }) else {
+                break;
+            };
+            application.head = producer.head;
+            application.arguments = self.bump.alloc_slice_fill_iter(
+                producer
+                    .arguments
+                    .iter()
+                    .chain(application.arguments)
+                    .copied()
+                    .collect::<Vec<_>>(),
+            );
+        }
+        application
+    }
+
+    fn unify_arguments(
+        &mut self,
+        left: &[&'a K<'a>],
+        right: &[&'a K<'a>],
+    ) -> Result<(), Mismatch<'a>> {
+        assert_eq!(left.len(), right.len());
+        for (left, right) in left.iter().zip(right) {
+            self.unify(left, right)?;
+        }
+        Ok(())
+    }
+
+    /// Apply a complete source spine without introducing intermediate heads.
+    pub fn apply_many(
+        &mut self,
+        head: &'a K<'a>,
+        arguments: &'a [&'a K<'a>],
+    ) -> Result<&'a K<'a>, Mismatch<'a>> {
+        self.with_work_budget(|infer| {
+            if !infer.settling {
+                infer.remember_input(head);
+                for argument in arguments {
+                    infer.remember_input(argument);
+                }
+            }
+            infer.defer_settlement += 1;
+            let result = infer.apply_many_inner(head, arguments);
+            infer.defer_settlement -= 1;
+            let result = result?;
+            if !infer.settling && infer.defer_settlement == 0 {
+                infer.settle()?;
+            }
+            Ok(result)
+        })
+    }
+
+    fn apply_many_inner(
+        &mut self,
+        kind: &'a K<'a>,
+        arguments: &'a [&'a K<'a>],
+    ) -> Result<&'a K<'a>, Mismatch<'a>> {
+        self.spend_work()?;
+        if arguments.is_empty() {
+            return Ok(kind);
+        }
+        match self.head(kind) {
+            K::Constructor {
+                scheme,
+                arguments: captured,
+            } => {
+                let arguments = self.bump.alloc_slice_fill_iter(
+                    captured
+                        .iter()
+                        .chain(arguments)
+                        .copied()
+                        .collect::<Vec<_>>(),
+                );
+                if !self.settling {
+                    let mut remaining = scheme.kind;
+                    for length in 0..=arguments.len() {
+                        let Kind::Arrow(_, result) = remaining else {
+                            break;
+                        };
+                        let prefix = self.bump.alloc(K::Constructor {
+                            scheme: *scheme,
+                            arguments: &arguments[..length],
+                        });
+                        self.remember_input(prefix);
+                        remaining = result;
+                    }
+                }
+                self.specialize(*scheme, arguments)
+                    .map_err(|error| match error {
+                        Mismatch::Argument { index, error } => Mismatch::Argument {
+                            index: index.saturating_sub(captured.len()),
+                            error,
+                        },
+                        error => error,
+                    })
+            }
+            K::Arrow(parameter, result) => {
+                self.unify(parameter, arguments[0])
+                    .map_err(|error| Mismatch::Argument {
+                        index: 0,
+                        error: Box::new(error),
+                    })?;
+                self.apply_many_inner(result, &arguments[1..])
+                    .map_err(|error| match error {
+                        Mismatch::Argument { index, error } => Mismatch::Argument {
+                            index: index + 1,
+                            error,
+                        },
+                        Mismatch::Arity { applied, accepted } => Mismatch::Arity {
+                            applied: applied + 1,
+                            accepted: accepted + 1,
+                        },
+                        error => error,
+                    })
+            }
+            head @ K::Var(_) => {
+                let arrow = self.fresh_k(KindSet::ARROW);
+                self.unify(arrow, head)?;
+                let result = self.fresh_k(KindSet::ALL);
+                let application = Application {
+                    head,
+                    arguments,
+                    result,
+                    ancestors: self.bump.alloc_slice_clone(&self.expansion_path),
+                };
+                let application = self.application_spine(application, &self.applications.clone());
+                self.applications.push(application);
+                Ok(result)
+            }
+            K::Base(_) => Err(Mismatch::Arity {
+                applied: arguments.len(),
+                accepted: 0,
+            }),
+        }
+    }
+
+    /// Substitute only parameters whose actual arguments have been supplied.
+    fn specialize(
+        &mut self,
+        scheme: KindScheme<'a>,
+        arguments: &'a [&'a K<'a>],
+    ) -> Result<&'a K<'a>, Mismatch<'a>> {
+        let mut substitution = vec![None; scheme.bounds.len()];
+        let mut remaining = scheme.kind;
+        for (index, argument) in arguments.iter().enumerate() {
+            let Kind::Arrow(parameter, result) = remaining else {
+                return Err(Mismatch::Arity {
+                    applied: arguments.len(),
+                    accepted: index,
+                });
+            };
+            self.match_template(parameter, argument, scheme.bounds, &mut substitution)
+                .map_err(|error| Mismatch::Argument {
+                    index,
+                    error: Box::new(error),
+                })?;
+            remaining = result;
+        }
+        let result = if matches!(remaining, Kind::Arrow(..)) {
+            self.bump.alloc(K::Constructor { scheme, arguments })
+        } else {
+            self.materialize(remaining, scheme.bounds, &mut substitution)
+        };
+        if !scheme.applications.is_empty() {
+            self.expansions.push(Expansion {
+                scheme,
+                arguments,
+                substitution,
+                bounds: scheme.bounds.to_vec(),
+                ancestors: self.expansion_path.clone(),
+            });
+        }
+        Ok(result)
+    }
+
+    fn match_template(
+        &mut self,
+        template: &Kind<'a>,
+        actual: &'a K<'a>,
+        bounds: &[KindSet],
+        substitution: &mut [Option<&'a K<'a>>],
+    ) -> Result<(), Mismatch<'a>> {
+        if let Kind::Var(index) = template {
+            let index = usize::from(*index);
+            let expected = self.fresh_k(bounds[index]);
+            self.unify(expected, actual)?;
+            if let Some(previous) = substitution[index] {
+                self.unify(previous, actual)?;
+            } else {
+                substitution[index] = Some(actual);
+            }
+            Ok(())
+        } else {
+            let expected = self.materialize(template, bounds, substitution);
+            self.unify(expected, actual)
+        }
+    }
+
+    /// Materialization is for supplied parameter patterns and result slots,
+    /// never the remaining parameter spine of a partial constructor.
+    fn materialize(
+        &mut self,
+        template: &Kind<'a>,
+        bounds: &[KindSet],
+        substitution: &mut [Option<&'a K<'a>>],
+    ) -> &'a K<'a> {
+        match template {
+            Kind::Var(index) => {
+                let index = usize::from(*index);
+                substitution[index].get_or_insert_with(|| self.fresh_k(bounds[index]))
+            }
+            Kind::Base(base) => self.bump.alloc(K::Base(*base)),
+            Kind::Arrow(from, to) => {
+                let from = self.materialize(from, bounds, substitution);
+                let to = self.materialize(to, bounds, substitution);
+                self.bump.alloc(K::Arrow(from, to))
+            }
+            Kind::Constructor { scheme, arguments } => {
+                let arguments = self.bump.alloc_slice_fill_iter(
+                    arguments
+                        .iter()
+                        .map(|argument| self.materialize(argument, bounds, substitution)),
+                );
+                self.bump.alloc(K::Constructor {
+                    scheme: *scheme,
+                    arguments,
+                })
+            }
+        }
+    }
+
+    fn substituted(
+        &mut self,
+        template: &Kind<'a>,
+        substitution: &[Option<&'a K<'a>>],
+    ) -> Option<&'a K<'a>> {
+        Some(match template {
+            Kind::Var(index) => substitution[usize::from(*index)]?,
+            Kind::Base(base) => self.bump.alloc(K::Base(*base)),
+            Kind::Arrow(from, to) => {
+                let from = self.substituted(from, substitution)?;
+                let to = self.substituted(to, substitution)?;
+                self.bump.alloc(K::Arrow(from, to))
+            }
+            Kind::Constructor { scheme, arguments } => {
+                let arguments: Option<Vec<_>> = arguments
+                    .iter()
+                    .map(|argument| self.substituted(argument, substitution))
+                    .collect();
+                self.bump.alloc(K::Constructor {
+                    scheme: *scheme,
+                    arguments: self.bump.alloc_slice_fill_iter(arguments?),
+                })
+            }
+        })
+    }
+
     pub fn constructor(&mut self, scheme: KindScheme<'a>) -> &'a K<'a> {
         if matches!(scheme.kind, Kind::Arrow(..)) {
             self.bump.alloc(K::Constructor {
@@ -317,17 +1075,30 @@ impl<'a> Infer<'a> {
         }
     }
 
-    fn open_constructor(&mut self, kind: &'a K<'a>) -> Result<&'a K<'a>, Mismatch<'a>> {
-        let K::Constructor { scheme, arguments } = self.head(kind) else {
-            return Ok(kind);
-        };
-        let mut opened = self.instantiate(scheme);
-        for argument in *arguments {
-            let (parameter, result) = self.apply(opened)?;
-            self.unify(parameter, argument)?;
-            opened = result;
+    /// A capability comparison supplies this symbolic domain explicitly to
+    /// both constructors. Ordinary partial application never uses this view.
+    fn constructor_parameter(&mut self, kind: &'a K<'a>) -> Result<&'a K<'a>, Mismatch<'a>> {
+        if !self.expansion_path.is_empty() || !self.frozen_atoms.is_empty() {
+            return Err(Mismatch::Restricted(
+                "recursive capability comparison would introduce a new binder",
+            ));
         }
-        Ok(opened)
+        let K::Constructor { scheme, arguments } = self.head(kind) else {
+            unreachable!("constructor capability")
+        };
+        let mut substitution = vec![None; scheme.bounds.len()];
+        let mut remaining = scheme.kind;
+        for argument in *arguments {
+            let Kind::Arrow(parameter, result) = remaining else {
+                unreachable!("partial arity")
+            };
+            self.match_template(parameter, argument, scheme.bounds, &mut substitution)?;
+            remaining = result;
+        }
+        let Kind::Arrow(parameter, _) = remaining else {
+            unreachable!("partial arity")
+        };
+        Ok(self.materialize(parameter, scheme.bounds, &mut substitution))
     }
 
     /// Instantiate a scheme with fresh variables carrying the scheme's bounds.
@@ -356,7 +1127,10 @@ impl<'a> Infer<'a> {
         self.proves_extension(query, protected)
     }
 
-    fn proves_extension(&self, query: Self, protected: &[&'a K<'a>]) -> bool {
+    fn proves_extension(&self, mut query: Self, protected: &[&'a K<'a>]) -> bool {
+        if query.settle().is_err() {
+            return false;
+        }
         let mut original = self.clone();
         let before = original.generalize_values(protected);
         let facts = original.applications.clone();
@@ -384,8 +1158,11 @@ impl<'a> Infer<'a> {
                     return false;
                 }
                 let mut candidate = query.clone();
-                if candidate.unify(wanted.head, fact.head).is_ok()
-                    && candidate.unify(wanted.argument, fact.argument).is_ok()
+                if wanted.arguments.len() == fact.arguments.len()
+                    && candidate.unify(wanted.head, fact.head).is_ok()
+                    && candidate
+                        .unify_arguments(wanted.arguments, fact.arguments)
+                        .is_ok()
                     && candidate.unify(wanted.result, fact.result).is_ok()
                 {
                     pending.push((candidate, index + 1));
@@ -413,12 +1190,18 @@ impl<'a> Infer<'a> {
     fn instantiate_applications(&mut self, applications: &[KindApplication<'_>], vars: &[KindVar]) {
         for application in applications {
             let head = self.instantiate_help(application.head, vars);
-            let argument = self.instantiate_help(application.argument, vars);
+            let arguments = self.bump.alloc_slice_fill_iter(
+                application
+                    .arguments
+                    .iter()
+                    .map(|argument| self.instantiate_help(argument, vars)),
+            );
             let result = self.instantiate_help(application.result, vars);
             self.applications.push(Application {
                 head,
-                argument,
+                arguments,
                 result,
+                ancestors: &[],
             });
         }
     }
@@ -488,7 +1271,12 @@ impl<'a> Infer<'a> {
     ) -> &'a [KindApplication<'a>] {
         // Retain the connected application graph, including intermediate
         // results of partial applications that are not free type variables.
-        let mut pending = self.applications.clone();
+        let all = self.applications.clone();
+        let mut pending: Vec<_> = all
+            .iter()
+            .copied()
+            .filter(|application| !self.redundant_prefix(*application, &all, vars))
+            .collect();
         let mut applications = Vec::new();
         loop {
             let before = pending.len();
@@ -497,7 +1285,12 @@ impl<'a> Infer<'a> {
                 if self.application_reaches(application, vars) {
                     applications.push(KindApplication {
                         head: self.generalize_help(application.head, vars),
-                        argument: self.generalize_help(application.argument, vars),
+                        arguments: self.bump.alloc_slice_fill_iter(
+                            application
+                                .arguments
+                                .iter()
+                                .map(|argument| self.generalize_help(argument, vars)),
+                        ),
                         result: self.generalize_help(application.result, vars),
                     });
                 } else {
@@ -510,6 +1303,55 @@ impl<'a> Infer<'a> {
             }
         }
         self.bump.alloc_slice_fill_iter(applications)
+    }
+
+    fn contains_root(&mut self, kind: &'a K<'a>, root: KindVar) -> bool {
+        match self.head(kind) {
+            K::Var(var) => *var == root,
+            K::Base(_) => false,
+            K::Arrow(from, to) => self.contains_root(from, root) || self.contains_root(to, root),
+            K::Constructor { arguments, .. } => arguments
+                .iter()
+                .any(|argument| self.contains_root(argument, root)),
+        }
+    }
+
+    fn redundant_prefix(
+        &mut self,
+        prefix: Application<'a>,
+        applications: &[Application<'a>],
+        visible: &[(KindVar, KindSet)],
+    ) -> bool {
+        let K::Var(root) = self.head(prefix.result) else {
+            return false;
+        };
+        if !matches!(self.nodes[root.0 as usize], Node::Unbound(KindSet::ARROW))
+            || visible.iter().any(|(var, _)| *var == *root)
+            || applications.iter().any(|application| {
+                self.contains_root(application.head, *root)
+                    || application
+                        .arguments
+                        .iter()
+                        .any(|argument| self.contains_root(argument, *root))
+            })
+        {
+            return false;
+        }
+        if applications.iter().any(|application| {
+            self.contains_root(application.result, *root)
+                && !(self.same_kind(application.head, prefix.head)
+                    && self.same_arguments(application.arguments, prefix.arguments))
+        }) {
+            return false;
+        }
+        applications.iter().any(|application| {
+            application.arguments.len() > prefix.arguments.len()
+                && self.same_kind(application.head, prefix.head)
+                && self.same_arguments(
+                    &application.arguments[..prefix.arguments.len()],
+                    prefix.arguments,
+                )
+        })
     }
 
     fn application_reaches(
@@ -534,7 +1376,10 @@ impl<'a> Infer<'a> {
             }
         }
         reaches(self, application.head, vars)
-            || reaches(self, application.argument, vars)
+            || application
+                .arguments
+                .iter()
+                .any(|argument| reaches(self, argument, vars))
             || reaches(self, application.result, vars)
     }
 
@@ -603,10 +1448,273 @@ mod tests {
             kind: &Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Term)),
             applications: &[KindApplication {
                 head: &Kind::Var(0),
-                argument: &Kind::Var(0),
+                arguments: &[&Kind::Var(0)],
                 result: &Kind::Var(1),
             }],
         }
+    }
+
+    #[test]
+    fn constructor_capabilities_require_the_whole_promised_domain() {
+        let bump = Bump::new();
+        for (left, right) in [(KindSet::ANY, KindSet::TERM), (KindSet::TERM, KindSet::ANY)] {
+            let mut infer = Infer::new(&bump);
+            let scheme = |bound| KindScheme {
+                bounds: &*bump.alloc_slice_copy(&[bound]),
+                kind: &Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Term)),
+                applications: &[],
+            };
+            let left = infer.constructor(scheme(left));
+            let right = infer.constructor(scheme(right));
+            assert!(
+                infer.unify(left, right).is_err(),
+                "domain overlap is not capability equality"
+            );
+        }
+        for accepted in [KindSet::ANY, KindSet::TERM] {
+            let mut infer = Infer::new(&bump);
+            let actual = infer.constructor(KindScheme {
+                bounds: bump.alloc_slice_copy(&[accepted]),
+                kind: &Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Term)),
+                applications: &[],
+            });
+            let signature = ValueKinds {
+                bounds: &[KindSet::ANY],
+                kinds: &[&Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Term))],
+                applications: &[],
+            };
+            assert_eq!(
+                infer.proves_values(signature, &[actual], &[actual]),
+                accepted == KindSet::ANY
+            );
+        }
+    }
+
+    #[test]
+    fn prefix_result_captured_by_another_predicate_stays_in_the_binder() {
+        let bump = Bump::new();
+        for in_head in [false, true] {
+            let mut infer = Infer::new(&bump);
+            let f = infer.fresh_k(KindSet::ARROW);
+            let a = infer.fresh_k(KindSet::ALL);
+            let b = infer.fresh_k(KindSet::ALL);
+            let h = infer.fresh_k(KindSet::ARROW);
+            let r = infer.fresh_k(KindSet::ANY);
+            let g = infer.fresh_k(KindSet::ARROW);
+            let other_result = infer.fresh_k(KindSet::ALL);
+            let nested = bump.alloc(K::Constructor {
+                scheme: fresh_replay_scheme(),
+                arguments: bump.alloc_slice_copy(&[h]),
+            });
+            let structured_result = bump.alloc(K::Arrow(h, r));
+            infer.applications.extend([
+                Application {
+                    head: f,
+                    arguments: bump.alloc_slice_copy(&[a]),
+                    result: h,
+                    ancestors: &[],
+                },
+                Application {
+                    head: f,
+                    arguments: bump.alloc_slice_copy(&[a, b]),
+                    result: r,
+                    ancestors: &[],
+                },
+                Application {
+                    head: if in_head { nested } else { g },
+                    arguments: bump.alloc_slice_copy(&[b]),
+                    result: if in_head {
+                        other_result
+                    } else {
+                        structured_result
+                    },
+                    ancestors: &[],
+                },
+            ]);
+            let signature = infer.generalize_values(&[f, a, b, g, other_result]);
+            assert_eq!(signature.applications.len(), 3);
+            assert!(
+                signature
+                    .applications
+                    .iter()
+                    .any(|application| application.head == signature.kinds[0]
+                        && application.arguments.len() == 1)
+            );
+        }
+    }
+
+    fn fresh_replay_scheme() -> KindScheme<'static> {
+        KindScheme {
+            bounds: &[
+                KindSet::ARROW,
+                KindSet::ARROW,
+                KindSet::ALL,
+                KindSet::ALL,
+                KindSet::ANY,
+            ],
+            kind: &Kind::Arrow(
+                &Kind::Var(0),
+                &Kind::Arrow(
+                    &Kind::Var(1),
+                    &Kind::Arrow(&Kind::Var(2), &Kind::Base(BaseKind::Term)),
+                ),
+            ),
+            applications: &[
+                KindApplication {
+                    head: &Kind::Var(0),
+                    arguments: &[&Kind::Var(0), &Kind::Var(2)],
+                    result: &Kind::Var(3),
+                },
+                KindApplication {
+                    head: &Kind::Var(1),
+                    arguments: &[&Kind::Var(3)],
+                    result: &Kind::Var(4),
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn work_limit_is_distinct_and_shared_by_every_entry() {
+        let bump = Bump::new();
+        for entry in 0..3 {
+            let mut infer = Infer::new(&bump);
+            infer.work_limit = 0;
+            let constructor = infer.constructor(fresh_replay_scheme());
+            let result = infer.fresh_k(KindSet::ALL);
+            let checked = match entry {
+                0 => infer.unify(result, constructor),
+                1 => {
+                    infer.applications.push(Application {
+                        ancestors: &[],
+                        head: constructor,
+                        arguments: bump.alloc_slice_copy(&[constructor]),
+                        result,
+                    });
+                    infer.settle()
+                }
+                _ => infer
+                    .apply_many(constructor, bump.alloc_slice_copy(&[constructor]))
+                    .map(|_| ()),
+            };
+            assert!(matches!(checked, Err(Mismatch::Limit)));
+            assert!(infer.applications.is_empty());
+            assert!(infer.expansions.is_empty());
+            assert!(!infer.settling);
+            assert!(infer.work_exhausted);
+            assert!(infer.work_remaining.is_none());
+            infer.work_limit = 64;
+            for _ in 0..128 {
+                let result = infer.fresh_k(KindSet::ANY);
+                infer
+                    .unify(result, bump.alloc(K::Base(BaseKind::Term)))
+                    .unwrap();
+                assert!(!infer.work_exhausted);
+            }
+        }
+    }
+
+    #[test]
+    fn incomplete_queries_cannot_prove_a_signature() {
+        let bump = Bump::new();
+        let mut infer = Infer::new(&bump);
+        infer.work_limit = 0;
+        let term = bump.alloc(K::Base(BaseKind::Term));
+        let signature = ValueKinds {
+            bounds: &[],
+            kinds: &[&Kind::Base(BaseKind::Term)],
+            applications: &[],
+        };
+        assert!(!infer.proves_values(signature, &[term], &[term]));
+        // Even an empty wanted must discharge pending validity premises.
+        let constructor = infer.constructor(self_scheme());
+        infer.applications.push(Application {
+            head: constructor,
+            arguments: bump.alloc_slice_copy(&[constructor]),
+            result: term,
+            ancestors: &[],
+        });
+        let empty = ValueKinds {
+            bounds: &[],
+            kinds: &[],
+            applications: &[],
+        };
+        assert!(!infer.proves_values(empty, &[], &[]));
+    }
+
+    #[test]
+    fn coherence_cannot_treat_exhausted_kind_checks_as_disjoint() {
+        use nash_ast::{Head, ImplKey};
+        let bump = Bump::new();
+        let reference = QualifiedName {
+            home: nash_ast::primitives::builtin_home(),
+            name: "s",
+        };
+        let trait_ = QualifiedName {
+            name: "Marker",
+            ..reference
+        };
+        let mut env = KindEnv::default();
+        env.insert(reference, fresh_replay_scheme());
+        let empty = ValueKinds {
+            bounds: &[],
+            kinds: &[],
+            applications: &[],
+        };
+        let variable = ImplKey {
+            trait_,
+            heads: &[Head::Var(0)],
+            kinds: ValueKinds {
+                bounds: &[KindSet::ALL],
+                kinds: &[&Kind::Var(0)],
+                ..empty
+            },
+        };
+        let applied = ImplKey {
+            trait_,
+            heads: bump.alloc_slice_copy(&[Head::Named {
+                reference,
+                args: bump.alloc_slice_copy(&[Head::Named {
+                    reference,
+                    args: &[],
+                }]),
+            }]),
+            kinds: empty,
+        };
+        let mut infer = Infer::new(&bump);
+        infer.work_limit = 0;
+        assert!(
+            impls_overlap_with_infer(&bump, &env, variable, applied, &mut 16_384, infer).is_err()
+        );
+
+        // Equal closed heads do not invoke pattern_kind: retained applications
+        // must also report exhaustion from the final direct settlement.
+        let constructor: &Kind = bump.alloc(Kind::Constructor {
+            scheme: fresh_replay_scheme(),
+            arguments: &[],
+        });
+        let retained = ImplKey {
+            trait_,
+            heads: &[Head::Unit],
+            kinds: ValueKinds {
+                bounds: &[KindSet::ALL],
+                kinds: &[],
+                applications: bump.alloc_slice_copy(&[KindApplication {
+                    head: constructor,
+                    arguments: bump.alloc_slice_copy(&[constructor]),
+                    result: &Kind::Var(0),
+                }]),
+            },
+        };
+        let closed = ImplKey {
+            kinds: empty,
+            ..retained
+        };
+        let mut infer = Infer::new(&bump);
+        infer.work_limit = 0;
+        assert!(
+            impls_overlap_with_infer(&bump, &env, retained, closed, &mut 16_384, infer).is_err()
+        );
     }
 
     #[test]
@@ -615,28 +1723,36 @@ mod tests {
         for direct in [false, true] {
             for base in [BaseKind::Term, BaseKind::Big] {
                 let mut infer = Infer::new(&bump);
-                infer.settle_steps_remaining = Some(256);
+                infer.work_limit = 256;
                 let constructor = infer.constructor(self_scheme());
                 let result = infer.fresh_k(KindSet::of(base));
                 let settled = if direct {
                     infer.applications.push(Application {
+                        ancestors: &[],
                         head: constructor,
-                        argument: constructor,
+                        arguments: bump.alloc_slice_copy(&[constructor]),
                         result,
                     });
                     infer.settle()
                 } else {
                     let head = infer.fresh_k(KindSet::ARROW);
                     infer.applications.push(Application {
+                        ancestors: &[],
                         head,
-                        argument: head,
+                        arguments: bump.alloc_slice_copy(&[head]),
                         result,
                     });
                     infer.unify(head, constructor)
                 };
-                assert_eq!(settled.is_ok(), base == BaseKind::Term);
-                if settled.is_ok() {
-                    assert_eq!(infer.generalize(result).kind, &Kind::Base(BaseKind::Term));
+                match base {
+                    BaseKind::Term => {
+                        assert!(matches!(settled, Err(Mismatch::Infinite(_))), "{settled:?}")
+                    }
+                    BaseKind::Big => assert!(
+                        matches!(settled, Err(Mismatch::Shapes { .. })),
+                        "{settled:?}"
+                    ),
+                    BaseKind::Const => unreachable!(),
                 }
                 assert!(infer.applications.is_empty());
                 assert!(!infer.settling);
@@ -662,8 +1778,9 @@ mod tests {
             };
             for (argument, base) in [(first, BaseKind::Const), (second, BaseKind::Term)] {
                 infer.applications.push(Application {
+                    ancestors: &[],
                     head: constructor,
-                    argument,
+                    arguments: bump.alloc_slice_copy(&[argument]),
                     result: bump.alloc(K::Base(base)),
                 });
             }
@@ -689,8 +1806,9 @@ mod tests {
             let captured = bump.alloc(K::Base(base));
             infer.unify(parameter, captured).unwrap();
             pending.push(Application {
+                ancestors: &[],
                 head: partial,
-                argument: bump.alloc(K::Base(BaseKind::Const)),
+                arguments: bump.alloc_slice_copy(&[&*bump.alloc(K::Base(BaseKind::Const))]),
                 result: captured,
             });
         }
@@ -707,7 +1825,7 @@ mod tests {
             kinds: &[&Kind::Var(0)],
             applications: &[KindApplication {
                 head: &Kind::Var(0),
-                argument: &Kind::Var(1),
+                arguments: &[&Kind::Var(1)],
                 result: &Kind::Base(BaseKind::Big),
             }],
         };
@@ -720,7 +1838,7 @@ mod tests {
             kinds: &[&Kind::Var(0)],
             applications: &[KindApplication {
                 head: &Kind::Var(0),
-                argument: &Kind::Base(BaseKind::Const),
+                arguments: &[&Kind::Base(BaseKind::Const)],
                 result: &Kind::Base(BaseKind::Big),
             }],
         };
@@ -788,25 +1906,25 @@ mod tests {
     #[test]
     fn value_kind_applications_retain_the_connected_binder() {
         let bump = Bump::new();
-        // The intermediate partial application is not a free type variable.
+        // A nested argument's result is a local witness, not a free type variable.
         let signature = ValueKinds {
             bounds: &[
                 KindSet::ARROW,
                 KindSet::ANY,
-                KindSet::ARROW,
                 KindSet::ANY,
+                KindSet::ARROW,
                 KindSet::ANY,
             ],
             kinds: &[&Kind::Var(0), &Kind::Var(1), &Kind::Var(3), &Kind::Var(4)],
             applications: &[
                 KindApplication {
                     head: &Kind::Var(0),
-                    argument: &Kind::Var(1),
+                    arguments: &[&Kind::Var(1)],
                     result: &Kind::Var(2),
                 },
                 KindApplication {
-                    head: &Kind::Var(2),
-                    argument: &Kind::Var(3),
+                    head: &Kind::Var(3),
+                    arguments: &[&Kind::Var(2)],
                     result: &Kind::Var(4),
                 },
             ],
@@ -821,12 +1939,12 @@ mod tests {
         assert_eq!(retained.applications.len(), 2);
         assert_eq!(retained.bounds.len(), 5);
         assert_eq!(retained.applications[0].head, retained.kinds[0]);
-        assert_eq!(retained.applications[0].argument, retained.kinds[1]);
+        assert_eq!(retained.applications[0].arguments, &[retained.kinds[1]]);
+        assert_eq!(retained.applications[1].head, retained.kinds[2]);
         assert_eq!(
-            retained.applications[0].result,
-            retained.applications[1].head
+            retained.applications[1].arguments,
+            &[retained.applications[0].result]
         );
-        assert_eq!(retained.applications[1].argument, retained.kinds[2]);
         assert_eq!(retained.applications[1].result, retained.kinds[3]);
         let mut imported = Infer::new(&bump);
         let roots = imported.instantiate_values(&retained);
@@ -907,7 +2025,10 @@ mod tests {
         assert_eq!(scheme.bounds, &[KindSet::ARROW]);
         assert_eq!(scheme.applications.len(), 1);
         assert_eq!(scheme.applications[0].head, scheme.kind);
-        assert_eq!(scheme.applications[0].argument, &Kind::Base(BaseKind::Big));
+        assert_eq!(
+            scheme.applications[0].arguments,
+            &[&Kind::Base(BaseKind::Big)]
+        );
         assert_eq!(scheme.applications[0].result, &Kind::Base(BaseKind::Term));
     }
 
@@ -1427,6 +2548,13 @@ impl<'e, 'a> Walker<'e, 'a> {
     }
 
     fn infer_type(&mut self, scope: &Scope<'a>, typ: &'a Located<CanType<'a>>) -> &'a K<'a> {
+        self.infer.defer_settlement += 1;
+        let result = self.infer_type_inner(scope, typ);
+        self.infer.defer_settlement -= 1;
+        result
+    }
+
+    fn infer_type_inner(&mut self, scope: &Scope<'a>, typ: &'a Located<CanType<'a>>) -> &'a K<'a> {
         match &typ.value {
             CanType::Kinded { typ: inner, kind } => {
                 let actual = self.infer_type(scope, inner);
@@ -1511,35 +2639,35 @@ impl<'e, 'a> Walker<'e, 'a> {
         scope: &Scope<'a>,
         region: Region,
         head: KindHead<'a>,
-        mut kind: &'a K<'a>,
+        kind: &'a K<'a>,
         args: &[&'a Located<CanType<'a>>],
     ) -> &'a K<'a> {
-        for (index, arg) in args.iter().enumerate() {
-            let (param, result) = match self.infer.apply(kind) {
-                Ok(pair) => pair,
-                Err(_) => {
-                    self.errors.push(Error::KindTooManyArgs {
-                        region,
-                        head,
-                        applied: args.len(),
-                        accepted: index,
-                    });
-                    return self.infer.fresh_k(KindSet::ALL);
-                }
-            };
-            let actual = self.infer_type(scope, arg);
-            self.expect(
-                arg.region,
-                KindContext::TypeArg {
-                    head,
-                    index: index as u16,
-                },
-                param,
-                actual,
-            );
-            kind = result;
+        let before = self.errors.len();
+        let actuals = self
+            .bump
+            .alloc_slice_fill_iter(args.iter().map(|arg| self.infer_type(scope, arg)));
+        if self.errors.len() != before {
+            return self.infer.fresh_k(KindSet::ALL);
         }
-        kind
+        match self.infer.apply_many(kind, actuals) {
+            Ok(result) => result,
+            Err(error) => {
+                let (index, error) = match error {
+                    Mismatch::Argument { index, error } => (index, *error),
+                    error => (0, error),
+                };
+                let region = args.get(index).map_or(region, |arg| arg.region);
+                self.report_mismatch(
+                    region,
+                    KindContext::TypeArg {
+                        head,
+                        index: index as u16,
+                    },
+                    error,
+                );
+                self.infer.fresh_k(KindSet::ALL)
+            }
+        }
     }
 
     fn expect_any(&mut self, scope: &Scope<'a>, typ: &'a Located<CanType<'a>>) {
@@ -1584,9 +2712,14 @@ impl<'e, 'a> Walker<'e, 'a> {
         expected: &'a K<'a>,
         actual: &'a K<'a>,
     ) {
-        match self.infer.unify(expected, actual) {
-            Ok(()) => {}
-            Err(Mismatch::Shapes { expected, actual }) => {
+        if let Err(error) = self.infer.unify(expected, actual) {
+            self.report_mismatch(region, context, error);
+        }
+    }
+
+    fn report_mismatch(&mut self, region: Region, context: KindContext<'a>, error: Mismatch<'a>) {
+        match error {
+            Mismatch::Shapes { expected, actual } => {
                 let expected = self.render(expected);
                 let actual = self.render(actual);
                 self.errors.push(Error::KindMismatch {
@@ -1596,10 +2729,32 @@ impl<'e, 'a> Walker<'e, 'a> {
                     actual,
                 });
             }
-            Err(Mismatch::Infinite(_)) => self.errors.push(Error::KindInfinite {
+            Mismatch::Infinite(_) => self.errors.push(Error::KindInfinite {
                 region,
                 context: self.bump.alloc(context),
             }),
+            Mismatch::Limit => self.errors.push(Error::KindLimit {
+                region,
+                context: self.bump.alloc(context),
+            }),
+            Mismatch::Restricted(reason) => self.errors.push(Error::KindRestricted {
+                region,
+                context: self.bump.alloc(context),
+                reason,
+            }),
+            Mismatch::Arity { applied, accepted } => {
+                let head = match context {
+                    KindContext::TypeArg { head, .. } => head,
+                    _ => KindHead::Application,
+                };
+                self.errors.push(Error::KindTooManyArgs {
+                    region,
+                    head,
+                    applied,
+                    accepted,
+                });
+            }
+            Mismatch::Argument { error, .. } => self.report_mismatch(region, context, *error),
         }
     }
 
@@ -2064,7 +3219,7 @@ impl<'a> Walker<'_, 'a> {
                     .expect("trait kinds cover resolved predicates"),
             ),
         };
-        self.apply_args(
+        let result = self.apply_args(
             scope,
             predicate
                 .args
@@ -2073,6 +3228,16 @@ impl<'a> Walker<'_, 'a> {
             KindHead::Named(predicate.trait_),
             root,
             predicate.args,
+        );
+        let term = self.bump.alloc(K::Base(BaseKind::Term));
+        self.expect(
+            predicate
+                .args
+                .first()
+                .map_or(Region::zero(), |arg| arg.region),
+            KindContext::TypeAnnotation,
+            term,
+            result,
         );
     }
 }
@@ -2103,7 +3268,7 @@ pub fn proves_ground_big<'a>(
         params: BTreeMap::new(),
     };
     let kind = walker.infer_type(&scope, typ);
-    if !walker.errors.is_empty() {
+    if !walker.errors.is_empty() || walker.infer.settle().is_err() {
         return false;
     }
     let records = walker
@@ -2134,6 +3299,17 @@ pub fn impls_overlap<'a>(
     right: nash_ast::ImplKey<'a>,
     remaining: &mut usize,
 ) -> Result<bool, nash_ast::head::Limit> {
+    impls_overlap_with_infer(bump, env, left, right, remaining, Infer::new(bump))
+}
+
+fn impls_overlap_with_infer<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    left: nash_ast::ImplKey<'a>,
+    right: nash_ast::ImplKey<'a>,
+    remaining: &mut usize,
+    mut infer: Infer<'a>,
+) -> Result<bool, nash_ast::head::Limit> {
     if left.trait_ != right.trait_ {
         return Ok(false);
     }
@@ -2153,14 +3329,19 @@ pub fn impls_overlap<'a>(
         match pattern {
             nash_ast::Head::Var(index) => Some(roots[usize::from(*index)]),
             nash_ast::Head::Named { reference, args } => {
-                let mut kind = infer.constructor(env.scheme(*reference));
-                for arg in *args {
-                    let actual = pattern_kind(bump, env, infer, roots, arg, remaining, exhausted)?;
-                    let (expected, result) = infer.apply(kind).ok()?;
-                    infer.unify(expected, actual).ok()?;
-                    kind = result;
+                let kind = infer.constructor(env.scheme(*reference));
+                let actuals: Option<Vec<_>> = args
+                    .iter()
+                    .map(|arg| pattern_kind(bump, env, infer, roots, arg, remaining, exhausted))
+                    .collect();
+                let actuals = bump.alloc_slice_fill_iter(actuals?);
+                match infer.apply_many(kind, actuals) {
+                    Ok(kind) => Some(kind),
+                    Err(error) => {
+                        *exhausted |= error.incomplete();
+                        None
+                    }
                 }
-                Some(kind)
             }
             nash_ast::Head::Unit => Some(bump.alloc(K::Base(BaseKind::Const))),
             nash_ast::Head::Tuple(_) | nash_ast::Head::Function(..) => {
@@ -2168,7 +3349,6 @@ pub fn impls_overlap<'a>(
             }
         }
     }
-    let mut infer = Infer::new(bump);
     let roots = [
         infer.instantiate_values(&left.kinds),
         infer.instantiate_values(&right.kinds),
@@ -2203,7 +3383,9 @@ pub fn impls_overlap<'a>(
             ) else {
                 return false;
             };
-            infer.unify(a, b).is_ok()
+            let unified = infer.unify(a, b);
+            exhausted |= unified.as_ref().is_err_and(|error| error.incomplete());
+            unified.is_ok()
         },
     )?;
     *remaining = remaining
@@ -2212,7 +3394,14 @@ pub fn impls_overlap<'a>(
     if exhausted {
         return Err(nash_ast::head::Limit);
     }
-    Ok(overlap && infer.settle().is_ok())
+    if !overlap {
+        return Ok(false);
+    }
+    let settled = infer.settle();
+    match settled {
+        Err(error) if error.incomplete() => Err(nash_ast::head::Limit),
+        result => Ok(result.is_ok()),
+    }
 }
 
 /// Prove an impl's kind requirements at closed canonical type arguments.
@@ -2374,13 +3563,27 @@ impl<'a> ImplKinds<'_, 'a> {
         for (a, b) in aa.iter().zip(&ba) {
             let a = query.infer_type(&self.scope, a);
             let b = query.infer_type(&self.scope, b);
-            if query.infer.unify(a, b).is_err() {
+            if let Err(error) = query.infer.unify(a, b) {
+                if error.incomplete() {
+                    query.report_mismatch(first.region, KindContext::TypeAnnotation, error);
+                    return Err(query.errors);
+                }
                 return Ok(false);
             }
         }
         let kind = query.infer_type(&self.scope, first);
         let big = query.bump.alloc(K::Base(BaseKind::Big));
-        Ok(query.errors.is_empty() && query.infer.unify(kind, big).is_ok())
+        if !query.errors.is_empty() {
+            return Err(query.errors);
+        }
+        match query.infer.unify(kind, big) {
+            Ok(()) => Ok(true),
+            Err(error) if error.incomplete() => {
+                query.report_mismatch(first.region, KindContext::TypeAnnotation, error);
+                Err(query.errors)
+            }
+            Err(_) => Ok(false),
+        }
     }
     /// Prove Big without narrowing the universally quantified impl variables.
     pub(crate) fn proves_big(&mut self, typ: &'a Located<CanType<'a>>) -> bool {
@@ -2399,7 +3602,10 @@ impl<'a> ImplKinds<'_, 'a> {
             inferred_records: None,
         };
         let kind = query.infer_type(&self.scope, typ);
-        if !query.errors.is_empty() || query.infer.generalize(root) != before {
+        if !query.errors.is_empty()
+            || query.infer.settle().is_err()
+            || query.infer.generalize(root) != before
+        {
             return false;
         }
         let kind = query.infer.generalize(kind);
@@ -2435,26 +3641,23 @@ pub(crate) fn check_impl_heads<'e, 'a>(
             .map(|name| (*name, walker.infer.fresh_k(KindSet::ALL)))
             .collect(),
     };
-    let mut kind = walker.infer.instantiate(&info.kind);
-    for (index, head) in heads.iter().enumerate() {
-        let (expected, result) = match walker.infer.apply(kind) {
-            Ok(parts) => parts,
-            Err(_) => {
-                walker.errors.push(Error::KindTooManyArgs {
-                    region: head.region,
-                    head: KindHead::Named(QualifiedName {
-                        home: info.home,
-                        name: info.name,
-                    }),
-                    applied: heads.len(),
-                    accepted: index,
-                });
-                return Err(walker.errors);
-            }
+    let kind = walker.infer.instantiate(&info.kind);
+    let actuals =
+        bump.alloc_slice_fill_iter(heads.iter().map(|head| walker.infer_type(&scope, head)));
+    if !walker.errors.is_empty() {
+        return Err(walker.errors);
+    }
+    let checked = walker
+        .infer
+        .apply_many(kind, actuals)
+        .and_then(|_| walker.infer.settle());
+    if let Err(error) = checked {
+        let (index, error) = match error {
+            Mismatch::Argument { index, error } => (index, *error),
+            error => (0, error),
         };
-        let actual = walker.infer_type(&scope, head);
-        walker.expect(
-            head.region,
+        walker.report_mismatch(
+            heads.get(index).map_or(Region::zero(), |head| head.region),
             KindContext::ImplHead {
                 trait_: QualifiedName {
                     home: info.home,
@@ -2462,10 +3665,9 @@ pub(crate) fn check_impl_heads<'e, 'a>(
                 },
                 index: index as u16,
             },
-            expected,
-            actual,
+            error,
         );
-        kind = result;
+        return Err(walker.errors);
     }
     for predicate in context {
         walker.infer_predicate(&scope, predicate, &BTreeMap::new());

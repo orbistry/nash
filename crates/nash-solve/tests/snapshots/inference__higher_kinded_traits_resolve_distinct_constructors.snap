@@ -5,4 +5,4 @@ expression: render_annotations(&annotations)
 big : Box Color
 changedKind : option ( (), () )
 little : option ()
-twice : forall (a : Any) (f : Arrow). Functor f => [KindApplication { head: Var(1), argument: Var(2), result: Var(3) }, KindApplication { head: Var(1), argument: Var(4), result: Var(5) }, KindApplication { head: Var(1), argument: Var(0), result: Var(6) }, KindApplication { head: Var(1), argument: Var(7), result: Var(8) }, KindApplication { head: Var(1), argument: Var(9), result: Var(10) }] => (a -> a) -> f a -> f a
+twice : forall (a : Any) (f : Arrow). Functor f => [KindApplication { head: Var(1), arguments: [Var(2)], result: Var(3) }, KindApplication { head: Var(1), arguments: [Var(4)], result: Var(5) }, KindApplication { head: Var(1), arguments: [Var(0)], result: Var(6) }, KindApplication { head: Var(1), arguments: [Var(7)], result: Var(8) }, KindApplication { head: Var(1), arguments: [Var(9)], result: Var(10) }] => (a -> a) -> f a -> f a

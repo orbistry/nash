@@ -1,0 +1,22 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\nidentity : wrap (app tag) app option -> wrap (app tag) app option\nidentity x = x"
+---
+[
+    KindRestricted {
+        region: Region {
+            start: Position {
+                line: 9,
+                column: 12,
+            },
+            end: Position {
+                line: 9,
+                column: 66,
+            },
+        },
+        context: Annotation {
+            name: "identity",
+        },
+        reason: "a generated constructor capture is not an input atom",
+    },
+]

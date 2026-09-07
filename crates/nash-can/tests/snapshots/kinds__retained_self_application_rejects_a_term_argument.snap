@@ -31,26 +31,11 @@ description: "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (s
                 KindSet(
                     8,
                 ),
-                KindSet(
-                    7,
-                ),
             ],
             kind: Var(
                 0,
             ),
-            applications: [
-                KindApplication {
-                    head: Var(
-                        0,
-                    ),
-                    argument: Var(
-                        0,
-                    ),
-                    result: Var(
-                        1,
-                    ),
-                },
-            ],
+            applications: [],
         },
         actual: KindScheme {
             bounds: [],

@@ -70,12 +70,12 @@ pub struct KindScheme<'a> {
     pub applications: &'a [KindApplication<'a>],
 }
 
-/// One use of a constructor, with all three kinds in the enclosing binder.
+/// One complete application spine, with all kinds in the enclosing binder.
 /// Separate uses do not equate their argument kinds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct KindApplication<'a> {
     pub head: &'a Kind<'a>,
-    pub argument: &'a Kind<'a>,
+    pub arguments: &'a [&'a Kind<'a>],
     pub result: &'a Kind<'a>,
 }
 

@@ -1,0 +1,43 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\nidentity : s s s tag -> s s s tag\nidentity value = value"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 12,
+            },
+            end: Position {
+                line: 7,
+                column: 34,
+            },
+        },
+        context: Annotation {
+            name: "identity",
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+    },
+]

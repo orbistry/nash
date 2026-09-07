@@ -60,6 +60,10 @@ impl<'a> State<'a> {
                 actual: self.infer.generalize(actual),
             },
             Mismatch::Infinite(_) => Error::Infinite,
+            Mismatch::Limit => Error::Limit,
+            Mismatch::Restricted(reason) => Error::Restricted(reason),
+            Mismatch::Arity { applied, accepted } => Error::Arity { applied, accepted },
+            Mismatch::Argument { error, .. } => self.error(*error),
         }
     }
 
@@ -90,6 +94,23 @@ impl<'a> State<'a> {
         signature: ValueKinds<'a>,
         variables: &[Variable],
     ) -> Result<(), Error<'a>> {
+        self.infer.begin_constraints();
+        let result = self.require_constraints(uf, env, signature, variables);
+        let settled = self
+            .infer
+            .finish_constraints()
+            .map_err(|error| self.error(error));
+        result.and(settled)?;
+        self.check_record_kinds(uf)
+    }
+
+    fn require_constraints(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        env: &KindEnv<'a>,
+        signature: ValueKinds<'a>,
+        variables: &[Variable],
+    ) -> Result<(), Error<'a>> {
         assert_eq!(signature.kinds.len(), variables.len());
         let mut seen = self.synchronize(uf, env)?;
         let expected = self.infer.instantiate_values(&signature);
@@ -97,7 +118,7 @@ impl<'a> State<'a> {
             let actual = self.infer_type(uf, env, *variable, &mut seen)?;
             self.unify(expected, actual)?;
         }
-        self.check_record_kinds(uf)
+        Ok(())
     }
 
     // Structural records do not yet identify a nominal carrier. Their kinds
@@ -169,7 +190,7 @@ impl<'a> State<'a> {
         };
         let baseline = query.clone();
         match query.require_mut(uf, env, signature, variables) {
-            Err(Error::AnonymousRecord) => Match::Deferred,
+            Err(Error::AnonymousRecord | Error::Limit | Error::Restricted(_)) => Match::Deferred,
             Err(_) => Match::No,
             Ok(()) => match query.generalize_mut(uf, env, &roots) {
                 Ok(after) if before == after => Match::Yes(()),
@@ -208,15 +229,31 @@ impl<'a> State<'a> {
         env: &KindEnv<'a>,
         variables: &[Variable],
     ) -> Result<ValueKinds<'a>, Error<'a>> {
+        self.infer.begin_constraints();
+        let result = self.generalize_constraints(uf, env, variables);
+        let settled = self
+            .infer
+            .finish_constraints()
+            .map_err(|error| self.error(error));
+        let roots = result?;
+        settled?;
+        // Settlement can refine shared roots and discharge retained premises.
+        self.check_record_kinds(uf)?;
+        Ok(normalize(self.bump, self.infer.generalize_values(&roots)))
+    }
+
+    fn generalize_constraints(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        env: &KindEnv<'a>,
+        variables: &[Variable],
+    ) -> Result<Vec<&'a K<'a>>, Error<'a>> {
         let mut seen = self.synchronize(uf, env)?;
         let roots: Result<Vec<_>, _> = variables
             .iter()
             .map(|var| self.infer_type(uf, env, *var, &mut seen))
             .collect();
-        let roots = roots?;
-        self.check_record_kinds(uf)?;
-        let signature = self.infer.generalize_values(&roots);
-        Ok(normalize(self.bump, signature))
+        roots
     }
 
     fn infer_type(
@@ -343,17 +380,18 @@ impl<'a> State<'a> {
         &mut self,
         uf: &mut UnionFind<'a>,
         env: &KindEnv<'a>,
-        mut head: &'a K<'a>,
+        head: &'a K<'a>,
         args: impl IntoIterator<Item = Variable>,
         seen: &mut BTreeSet<Variable>,
     ) -> Result<&'a K<'a>, Error<'a>> {
-        for arg in args {
-            let (parameter, result) = self.infer.apply(head).map_err(|error| self.error(error))?;
-            let actual = self.infer_type(uf, env, arg, seen)?;
-            self.unify(parameter, actual)?;
-            head = result;
-        }
-        Ok(head)
+        let actuals: Result<Vec<_>, _> = args
+            .into_iter()
+            .map(|arg| self.infer_type(uf, env, arg, seen))
+            .collect();
+        let actuals = self.bump.alloc_slice_fill_iter(actuals?);
+        self.infer
+            .apply_many(head, actuals)
+            .map_err(|error| self.error(error))
     }
 }
 
@@ -423,13 +461,17 @@ fn normalize<'a>(bump: &'a Bump, signature: ValueKinds<'a>) -> ValueKinds<'a> {
                     &mut variables,
                     &mut bounds,
                 ),
-                argument: root(
-                    bump,
-                    application.argument,
-                    signature.bounds,
-                    &mut variables,
-                    &mut bounds,
-                ),
+                arguments: bump.alloc_slice_fill_iter(application.arguments.iter().map(
+                    |argument| {
+                        root(
+                            bump,
+                            argument,
+                            signature.bounds,
+                            &mut variables,
+                            &mut bounds,
+                        )
+                    },
+                )),
                 result: root(
                     bump,
                     application.result,
@@ -585,13 +627,17 @@ mod tests {
         let bump = Bump::new();
         let env = KindEnv::default();
         let mut uf = UnionFind::new();
+        // A source `f a` demands this particular application. An unqualified
+        // `All -> Const` arrow would instead promise every argument kind,
+        // which list cannot provide.
         let signature = ValueKinds {
-            applications: &[],
-            bounds: &[KindSet::ALL],
-            kinds: &[
-                &Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Const)),
-                &Kind::Var(0),
-            ],
+            applications: &[nash_ast::KindApplication {
+                head: &Kind::Var(0),
+                arguments: &[&Kind::Var(1)],
+                result: &Kind::Base(BaseKind::Const),
+            }],
+            bounds: &[KindSet::ARROW, KindSet::ALL],
+            kinds: &[&Kind::Var(0), &Kind::Var(1)],
         };
         let mut state = State::new(&bump);
         let mut uses = Vec::new();
@@ -617,7 +663,7 @@ mod tests {
                 .generalize(&mut uf, &env, &[uses[1].1])
                 .unwrap()
                 .bounds,
-            &[KindSet::ALL]
+            &[KindSet::ALL, KindSet::ARROW]
         );
         let term = uf.fresh(make_descriptor(Content::Structure(FlatType::Fun1(
             uses[1].1, uses[1].1,

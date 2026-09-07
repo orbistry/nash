@@ -1,0 +1,75 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type apply3 'f 'a 'b 'c = Apply3 ('f 'a 'b 'c)"
+---
+(
+    [
+        (
+            "apply3",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Arrow(
+                        Var(
+                            1,
+                        ),
+                        Arrow(
+                            Var(
+                                2,
+                            ),
+                            Arrow(
+                                Var(
+                                    3,
+                                ),
+                                Base(
+                                    Term,
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        arguments: [
+                            Var(
+                                1,
+                            ),
+                            Var(
+                                2,
+                            ),
+                            Var(
+                                3,
+                            ),
+                        ],
+                        result: Var(
+                            4,
+                        ),
+                    },
+                ],
+            },
+        ),
+    ],
+    [],
+)

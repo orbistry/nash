@@ -31,29 +31,11 @@ description: "f : ('f 'a, 'f) -> int\nf x = 1"
                 KindSet(
                     8,
                 ),
-                KindSet(
-                    15,
-                ),
-                KindSet(
-                    7,
-                ),
             ],
             kind: Var(
                 0,
             ),
-            applications: [
-                KindApplication {
-                    head: Var(
-                        0,
-                    ),
-                    argument: Var(
-                        1,
-                    ),
-                    result: Var(
-                        2,
-                    ),
-                },
-            ],
+            applications: [],
         },
     },
 ]

@@ -662,15 +662,49 @@ mod kind_tests {
     }
 
     #[tokio::test]
+    async fn imported_fresh_parameter_replay_reports_kind_error() {
+        let result = compile_pair(
+            "module Types exposing (type s)\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\n",
+            "module Main exposing (..)\nimport Types exposing (type s)\ntype w = W (s s s)\n",
+        )
+        .await;
+        assert_eq!(result.success, 1, "{result:?}");
+        assert_eq!(result.failed, 1, "{result:?}");
+        let ModuleResult::Failed { message } =
+            &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+        else {
+            panic!("consumer must report a kind error");
+        };
+        assert!(message.contains("KindMismatch"), "{message}");
+        assert!(!message.contains("KindTooManyArgs"), "{message}");
+    }
+
+    #[tokio::test]
     async fn imported_retained_self_application_terminates() {
         for field in ["a a", "local a"] {
             let result = compile_pair(
                 "module Types exposing (type a)\ntype a 'f = A ('f 'f)\n",
                 &format!("module Main exposing (..)\nimport Types exposing (type a)\ntype local 'f = Local ('f 'f)\ntype b = B ({field})\n"),
             ).await;
-            assert_eq!(result.success, 2, "{result:?}");
-            assert_eq!(result.failed, 0, "{result:?}");
+            assert_eq!(result.success, 1, "{result:?}");
+            assert_eq!(result.failed, 1, "{result:?}");
+            let ModuleResult::Failed { message } =
+                &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+            else {
+                panic!("consumer must fail")
+            };
+            assert!(message.contains("KindInfinite"), "{message}");
         }
+    }
+
+    #[tokio::test]
+    async fn imported_residual_application_has_a_finite_proof() {
+        let result = compile_pair(
+            "module Types exposing (type s)\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\n",
+            "module Main exposing (..)\nimport Types exposing (type s)\ntype tag 'a = Tag\ntype w = W (s s tag tag)\n",
+        ).await;
+        assert_eq!(result.success, 2, "{result:?}");
+        assert_eq!(result.failed, 0, "{result:?}");
     }
 
     #[tokio::test]
@@ -695,6 +729,25 @@ mod kind_tests {
             panic!("invalid consumer compiled");
         };
         assert!(message.contains("KindMismatch"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn retained_argument_order_changes_the_interface_fingerprint() {
+        let consumer = "module Main exposing (..)\nimport Types exposing (type app)\n";
+        let forward = compile_pair(
+            "module Types exposing (type app)\ntype app 'f 'a 'b = App ('f 'a 'b)\n",
+            consumer,
+        )
+        .await;
+        let reverse = compile_pair(
+            "module Types exposing (type app)\ntype app 'f 'a 'b = App ('f 'b 'a)\n",
+            consumer,
+        )
+        .await;
+        assert_eq!(forward.success, 2, "{forward:?}");
+        assert_eq!(reverse.success, 2, "{reverse:?}");
+        let uri = Url::parse("file:///Types.nash").unwrap();
+        assert!(forward.interfaces[&uri].differs_from(&reverse.interfaces[&uri]));
     }
 
     #[tokio::test]

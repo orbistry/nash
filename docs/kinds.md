@@ -7,6 +7,12 @@ language, the casing rule, kind inference, kind annotations, the errors,
 and how kinds flow into codegen. [overview.md](overview.md) is authoritative
 where the two disagree.
 
+[Recursive kind obligations](kind-obligations.md) specifies the implemented
+n-ary residual specialization, inductive validity, and conservative finite
+expansion fragment. See the [implementation plan](../plans/02-kind-obligations.md)
+for validation. `KindRestricted` reports dependencies outside that fragment;
+`KindLimit` reports an operational allowance, separately from `KindInfinite`.
+
 ## Purpose
 
 UPLC has three distinct value shapes that cannot be mixed:
@@ -181,24 +187,23 @@ kinds. Kind variables in trait schemes have no surface syntax; they are
 always inferred. See [traits.md](traits.md).
 
 Internally, both declaration kind schemes and value kind schemes retain
-`Apply(head, argument, result)` obligations in their shared binder. A known
-constructor retains its own quantified scheme. Partial application retains
-that scheme and the supplied argument kinds: later applications instantiate
-the scheme and replay those arguments before checking the new argument.
-This preserves dependent results such as `forall k:Little. k -> k` and
-relationships between parameter positions without equating separate uses.
+`Apply(head, [arguments], result)` obligations in their shared binder. A known
+constructor retains its quantified scheme. Partial application specializes
+supplied arguments simultaneously, checks their bounds and determined premises,
+and leaves unsupplied parameters in the residual binder. It does not create
+fresh global roots for missing parameters. This preserves dependent results
+and sharing without equating independent constructor uses.
 
 ### Self-application and retained obligations
 
-`type self 'f = Self ('f 'f)` retains `Apply(k, k, r)` instead of
-constructing a cyclic arrow kind. Both `self tag` (for a phantom
-`type tag 'a = Tag unit`) and `self self` are valid. The latter resolves
-coinductively: during one settlement, a repeated known-head application
-unifies its result with the first application instead of opening the scheme
-again. Equality compares the scheme, captured argument kinds, and the supplied
-argument kind after resolving variables. Equal bounds alone do not make two
-variables equal. Distinct applications still check constructor bounds
-independently.
+`type self 'f = Self ('f 'f)` retains `Apply(k, [k], r)` instead of
+constructing a cyclic arrow kind. `self tag` (for a phantom
+`type tag 'a = Tag unit`) is valid. `self self` requires itself as a premise
+and reports `KindInfinite`: only finite inductive proofs establish validity.
+A phantom consumer cannot erase the validity requirement of a saturated
+argument. Outer value shapes and supplied ground bounds are checked before
+nested expansion. Ancestor equality includes captured and supplied arguments,
+resolved through current roots; equal bounds alone do not equate roots.
 
 Scheme identity alone is not a cycle: with `type app 'f 'a = App ('f 'a)`,
 `app (app tag) tag` is finite and valid because the inner application has a

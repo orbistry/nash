@@ -91,6 +91,12 @@ pub enum KindProblem<'a> {
         actual: nash_ast::KindScheme<'a>,
     },
     Infinite,
+    Limit,
+    Restricted(&'static str),
+    Arity {
+        applied: usize,
+        accepted: usize,
+    },
     Rigid {
         declared: nash_ast::ValueKinds<'a>,
         required: nash_ast::ValueKinds<'a>,

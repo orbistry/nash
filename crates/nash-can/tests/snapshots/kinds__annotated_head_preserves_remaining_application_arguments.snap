@@ -1,0 +1,51 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type apply2 ('f : Storable -> Storable -> Term) 'a 'b = Apply2 ('f 'a 'b)"
+---
+(
+    [
+        (
+            "apply2",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        3,
+                    ),
+                    KindSet(
+                        3,
+                    ),
+                ],
+                kind: Arrow(
+                    Arrow(
+                        Var(
+                            0,
+                        ),
+                        Arrow(
+                            Var(
+                                1,
+                            ),
+                            Base(
+                                Term,
+                            ),
+                        ),
+                    ),
+                    Arrow(
+                        Var(
+                            0,
+                        ),
+                        Arrow(
+                            Var(
+                                1,
+                            ),
+                            Base(
+                                Term,
+                            ),
+                        ),
+                    ),
+                ),
+                applications: [],
+            },
+        ),
+    ],
+    [],
+)
