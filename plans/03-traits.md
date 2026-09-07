@@ -5,6 +5,28 @@ declarations, qualified types in inference, impl resolution with evidence,
 literal traits with defaulting, `do` desugaring, and the interface plumbing
 so a trait defined in one module is usable from another.
 
+Status: complete for the user-approved Plan 03 scope. Default imports are
+deferred to Plan 12, builtin pair has no Functor impl, and Fuzz/overview
+validator integration waits for its real later-plan prerequisites. Runtime
+lowering and execution remain Plan 07; no placeholders establish acceptance.
+
+Final acceptance: formatting, strict Clippy, 1,937 tests (three ignored
+doctests), snapshot verification and hygiene pass. The shipping core CLI
+fixture compiles 23 modules and 215 declarations. Fresh CLI projects verify
+direct/transitive impl consumers, imported generic do instantiated at option
+and result, and separate orphan/overlap errors. Earlier focused acceptance
+also verifies kind restrictions, Big Eq overrides, literal defaulting and
+operator diagnostics. The retained-node/evidence contract and sequential
+driver path were independently audited; lqzsqvyw remains an ancestor.
+
+Release dry runs establish correct version propagation across all 28 internal
+dependency requirements and the source-to-cli publishing order. Cargo verifies
+the source package, then downstream packaging stops because the bumped source
+version is unpublished; this is not a successful full registry verification.
+No crates were published and nothing was pushed. The detailed release audit
+below records the exact tested revision and limits. Subsequent changes are
+tests/docs only, with no changes to release metadata or production Rust.
+
 Prerequisites:
 
 ### Approved correction: recursive impl patterns
@@ -20,8 +42,8 @@ Reopen the affected acceptance of chunks 1, 3 and 6: canonical Head and impl
 identity must retain recursive structure; local/imported coherence must
 compare full patterns; inference and ground evidence resolution must share
 matching semantics and retain substitutions through nested patterns.
-Existing completion labels for those chunks are provisional until this
-correction lands. Add focused tests for disjoint concrete heads, generic vs
+This correction has landed and the completion labels include its acceptance.
+Focused tests cover disjoint concrete heads, generic vs
 specific overlap, repeated-variable consistency, nested kind rejection,
 cross-module overlap and the specified Map Lift impl. Remove superseded
 flat-key matching rather than retaining a second legacy path.
@@ -713,7 +735,7 @@ Acceptance coverage is in `crates/nash-can/tests/traits.rs`:
   `methods_share_the_module_value_namespace`;
 - `default_body_checks_nested_annotation_kinds`,
   `default_parameter_cannot_shadow_local_method`;
-- `imported_trait_methods_survive_source_arena_drop`,
+- `imported_trait_methods_retain_context_and_defaults`,
   `private_trait_metadata_does_not_expose_names`,
   `imported_trait_and_method_ambiguity`.
 
@@ -965,8 +987,8 @@ Tests (nash-can):
 - `impl_default_method_inherited`: `impl Ord Color where compare = ...` (no `lt`): snapshot shows `methods: ["compare"]`.
 - `impl_unapplied_constructor`: `trait Functor 'f where map : ('a -> 'b) -> 'f 'a -> 'f 'b` + `impl Functor List where map f xs = ...` (canonicalizes and kind-checks `List : Big -> Big` against `k1 -> k2`; type checking comes in chunk 8).
 - `impl_head_kind_mismatch`: `impl Functor Color` (a `Big` constructor for a `k1 -> k2` parameter) is `KindMismatch`.
-- `impl_overapplied_heads_report_kind_arity`: named and nominal alias heads
-  with too many variables report KindTooManyArgs at the complete head span.
+- `impl_overapplied_heads_report_type_arity`: named and nominal alias heads
+  with too many variables report TypeTooManyArgs at the complete head span.
 - `impl_duplicate_methods_preserve_both_locations`: duplicate impl method
   names retain both declaration spans for the diagnostic renderer.
 - `impl_tuple_head`: `impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where ...` in a module that defines `Eq` (orphan rule satisfied via the trait).
@@ -2797,9 +2819,8 @@ upload it. Nothing was published or pushed, and release mutations stayed in
 the disposable copy. This establishes release planning and dependency order,
 not full downstream registry package verification or completion of Plan 03.
 
-Cons and concrete type-module helpers can proceed independently. Resolving
-the hierarchy/head-policy decisions and default-import prerequisites remains
-necessary; SPEC.md must stay incomplete until the full acceptance is met.
+The hierarchy/head-policy decisions are resolved. Default imports and the
+remaining general stdlib helpers belong to the later integration plan.
 
 The shipping Functor/Applicative/Monad step passes formatting, strict Clippy,
 1,937 tests (three ignored doctests), and snapshot hygiene. The parser now
@@ -2808,10 +2829,14 @@ real Prelude calls cover declaration and use. The core CLI compiles 21
 modules and 202 declarations. A separate CLI workspace rejects list do with
 both missing Applicative and Monad diagnostics, and rejects list mapping to
 a tuple with BadKind at map. These checks establish type checking and
-evidence selection, not runtime behavior. Pair construction, Fuzz and default
-imports remain open requirements of the full chunk.
+evidence selection, not runtime behavior. Pair helpers subsequently landed;
+pair Functor was removed, and Fuzz/default imports are explicitly deferred.
 
-Status: in progress. The synthetic Builtin interface now exports all 103
+Status: complete under the approved scope above. The following entries are
+historical implementation steps; their intermediate counts and pending items
+are superseded by the final acceptance audit.
+
+The synthetic Builtin interface now exports all 103
 specified value schemes: 101 symbolic DefaultFunction variants plus identity
 and error. Static canonical type trees preserve the documented signatures;
 the existing kind checker derives their shared bounds. The table adds no
