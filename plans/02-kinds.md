@@ -1,5 +1,9 @@
 # Plan 02: Kind inference
 
+Historical implementation plan. Its representation lattice and value-kind
+metadata are replaced by [02-kind-predicates.md](02-kind-predicates.md).
+Use [docs/kinds.md](../docs/kinds.md) for the current semantics.
+
 ## Goal
 
 Add the kind system of [docs/kinds.md](../docs/kinds.md) to the front end:
@@ -77,6 +81,8 @@ Historical implementation record. The coinductive rules below are superseded
 by [inductive residual obligations](02-kind-obligations.md), which rejects
 required self/self cycles and adopts a finite expansion fragment with separate
 restriction and limit diagnostics.
+The next replacement is [Haskell 98 kinds + representation predicates](02-kind-predicates.md);
+chunk 1 is written for review and has not replaced that engine.
 
 - [x] Close the retained-obligation self-application hang and verify acceptance.
 

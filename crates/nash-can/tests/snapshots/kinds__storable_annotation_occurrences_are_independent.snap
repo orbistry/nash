@@ -1,40 +1,150 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type wrap ('f : Storable -> Storable) 'a = Wrap ('f 'a)"
+description: "type wrap 'f ('a : Storable) = Wrap (('f 'a) : Storable)"
 ---
 (
     [
         (
             "wrap",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kind: Arrow(
-                    Arrow(
-                        Var(
-                            0,
-                        ),
-                        Var(
-                            1,
-                        ),
-                    ),
-                    Arrow(
-                        Var(
-                            0,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
+            Arrow(
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [],
-            },
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 39,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 41,
+                            },
+                        },
+                        value: Var(
+                            "f",
+                        ),
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 42,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 44,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 17,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Trait {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 39,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 44,
+                                },
+                            },
+                            value: App {
+                                head: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 39,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 41,
+                                        },
+                                    },
+                                    value: Var(
+                                        "f",
+                                    ),
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 42,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 44,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            ],
         ),
     ],
     [],

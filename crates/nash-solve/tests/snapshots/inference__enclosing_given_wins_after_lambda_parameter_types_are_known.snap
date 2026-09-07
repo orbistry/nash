@@ -2,5 +2,5 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (list 'a) where\n    keep xs = xs\ndirect : Keep (list 'a) => 'a -> list 'a\ndirect = \\x -> keep [x]\nnested : Keep (list 'a) => 'a -> list 'a\nnested = \\x ->\n    let\n        helper ignored = keep [x]\n    in\n    helper ()\n"
 ---
-direct : forall (a : Storable). Keep (list a) => a -> list a
-nested : forall (a : Storable). Keep (list a) => a -> list a
+direct : forall a. (Storable a, Keep (list a)) => a -> list a
+nested : forall a. (Storable a, Keep (list a)) => a -> list a

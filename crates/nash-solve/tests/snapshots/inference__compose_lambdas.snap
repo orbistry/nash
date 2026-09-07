@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (compose)\n\ncompose f g = \\x -> g (f x)\n"
 ---
-compose : forall (a : Any) (b : Any) (c : Any). (a -> b) -> (b -> c) -> a -> c
+compose : forall a b c. (a -> b) -> (b -> c) -> a -> c

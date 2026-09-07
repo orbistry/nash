@@ -194,6 +194,17 @@ enum Ctx {
     App,
 }
 
+fn ordinary_context_len(annotation: &Annotation<'_>) -> usize {
+    annotation
+        .context
+        .iter()
+        .filter(|p| {
+            p.trait_ref()
+                .is_some_and(|name| nash_ast::primitives::ReprTrait::of(name).is_none())
+        })
+        .count()
+}
+
 fn render_annotations(annotations: &Annotations<'_>) -> String {
     annotations
         .iter()
@@ -203,81 +214,38 @@ fn render_annotations(annotations: &Annotations<'_>) -> String {
 }
 
 fn render_annotation(annotation: &Annotation<'_>) -> String {
-    let mut tipe = render_type(annotation.typ, Ctx::None);
-    if !annotation.kinds.applications.is_empty() {
-        tipe = format!("{:?} => {tipe}", annotation.kinds.applications);
-    }
+    let mut typ = render_type(annotation.typ, Ctx::None);
     if !annotation.context.is_empty() {
-        let predicates: Vec<_> = annotation
+        let predicates = annotation
             .context
             .iter()
-            .map(|p| render_apply(p.trait_.name, p.args, Ctx::None))
-            .collect();
+            .map(|p| match p {
+                nash_ast::Pred::Trait { trait_, args }
+                | nash_ast::Pred::Implied { trait_, args } => {
+                    render_apply(trait_.name, args, Ctx::None)
+                }
+                nash_ast::Pred::Apply { head, args } => format!(
+                    "Apply {}",
+                    render_apply(&render_type(head, Ctx::App), args, Ctx::None)
+                ),
+            })
+            .collect::<Vec<_>>();
         let context = if predicates.len() == 1 {
             predicates[0].clone()
         } else {
             format!("({})", predicates.join(", "))
         };
-        tipe = format!("{context} => {tipe}");
+        typ = format!("{context} => {typ}");
     }
     if annotation.free_vars.is_empty() {
-        tipe
+        typ
     } else {
-        assert_eq!(annotation.free_vars.len(), annotation.kinds.kinds.len());
-        let variables = annotation.free_vars.iter().zip(annotation.kinds.kinds).map(|(name, kind)| {
-            if matches!(kind, nash_ast::Kind::Var(index) if annotation.kinds.bounds[usize::from(*index)] == nash_ast::KindSet::ALL) {
-                (*name).to_owned()
-            } else {
-                format!("({name} : {})", render_kind(kind, annotation.kinds.bounds))
-            }
-        }).collect::<Vec<_>>().join(" ");
-        format!("forall {variables}. {tipe}")
-    }
-}
-
-fn render_kind(kind: &nash_ast::Kind<'_>, bounds: &[nash_ast::KindSet]) -> String {
-    use nash_ast::{Kind, KindSet};
-    match kind {
-        Kind::Base(base) => format!("{base:?}"),
-        Kind::Constructor { scheme, arguments } => format!(
-            "({scheme:?})[{}]",
-            arguments
-                .iter()
-                .map(|kind| render_kind(kind, bounds))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        Kind::Arrow(from, to) => {
-            let from_text = render_kind(from, bounds);
-            let from_text = if matches!(from, Kind::Arrow(..)) {
-                format!("({from_text})")
-            } else {
-                from_text
-            };
-            format!("{from_text} -> {}", render_kind(to, bounds))
-        }
-        Kind::Var(index) => match bounds[usize::from(*index)] {
-            KindSet::ALL => "All".into(),
-            KindSet::ANY => "Any".into(),
-            KindSet::STORABLE => "Storable".into(),
-            KindSet::LITTLE => "Little".into(),
-            bound => [
-                (KindSet::BIG, "Big"),
-                (KindSet::CONST, "Const"),
-                (KindSet::TERM, "Term"),
-                (KindSet::ARROW, "Arrow"),
-            ]
-            .into_iter()
-            .filter_map(|(kind, name)| bound.contains(kind).then_some(name))
-            .collect::<Vec<_>>()
-            .join(" | "),
-        },
+        format!("forall {}. {typ}", annotation.free_vars.join(" "))
     }
 }
 
 fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
     match &typ.value {
-        CanType::Kinded { typ, .. } => render_type(typ, ctx),
         CanType::Lambda { from, to } => {
             let rendered = format!(
                 "{} -> {}",
@@ -502,7 +470,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
                 continue;
             }
             let (annotations, solved) = result.unwrap();
-            assert_eq!(annotations["run"].context.len(), 1);
+            assert_eq!(ordinary_context_len(annotations["run"]), 1);
             let gate = solved.instances.values().flat_map(|instance| instance.evidence).find(|evidence| {
         matches!(evidence, nash_ast::Evidence::Impl { impl_, .. } if impl_.key.trait_.name == "Gate")
     }).expect("defaulting selects the actual Gate impl");
@@ -516,8 +484,8 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
                 .unwrap()
                 .binder;
             assert!(
-                matches!(args, [nash_ast::Evidence::Given { binder, index: 0 }]
-                if *binder == run_binder)
+                matches!(args, [nash_ast::Evidence::Given { binder, index: 0 }, nash_ast::Evidence::Given { binder: repr_binder, index: 1 }]
+                if *binder == run_binder && *repr_binder == run_binder)
             );
             assert!(solved.instances.values().flat_map(|instance| instance.evidence).any(|evidence| {
         matches!(evidence, nash_ast::Evidence::Impl { impl_, .. }
@@ -787,7 +755,7 @@ fn declared_contexts_are_available_at_local_and_recursive_uses() {
     );
     let annotations = infer(&bump, source).unwrap();
     for name in ["boxed", "forward", "monomorphic", "recursive", "helper"] {
-        assert_eq!(annotations[name].context.len(), 1, "{name}");
+        assert_eq!(ordinary_context_len(annotations[name]), 1, "{name}");
     }
     assert!(annotations["use"].context.is_empty());
     assert!(annotations["useBox"].context.is_empty());
@@ -1022,7 +990,15 @@ fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
             &[unit],
         ),
     ];
-    let annotation = nash_solve::to_annotation_with_context(&bump, &mut uf, result, context);
+    let context = context
+        .iter()
+        .map(|(trait_, args)| nash_solve::preds::Body::Trait {
+            trait_: *trait_,
+            args: args.to_vec(),
+            hidden: false,
+        })
+        .collect::<Vec<_>>();
+    let annotation = nash_solve::to_annotation_with_context(&bump, &mut uf, result, &context);
     assert_eq!(annotation.free_vars, ["a", "b"]);
     assert!(matches!(annotation.typ.value, CanType::Var("b")));
     insta::assert_snapshot!(render_annotation(annotation));
@@ -1134,7 +1110,7 @@ fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
         }
         if binder.name().value == "f" || binder.name().value == "keep" {
             assert_eq!(given.len(), 1);
-            let Type::VarN(predicate_var) = given[0].args[0] else {
+            let Type::VarN(predicate_var) = given[0].types().next().unwrap() else {
                 panic!("predicate variable")
             };
             let Type::FunN(Type::VarN(argument), Type::VarN(result)) = definitions[0].typ else {
@@ -1293,11 +1269,11 @@ fn negation_retains_num_evidence() {
         panic!("Num constraint")
     };
     assert_eq!(
-        predicate.trait_.home.package,
+        predicate.trait_ref().unwrap().home.package,
         Some(nash_ast::primitives::CORE)
     );
-    assert_eq!(predicate.trait_.home.name, "Num");
-    assert_eq!(predicate.trait_.name, "Num");
+    assert_eq!(predicate.trait_ref().unwrap().home.name, "Num");
+    assert_eq!(predicate.trait_ref().unwrap().name, "Num");
     let mut decls = can.module.decls;
     while let nash_ast::Decls::Declare { definition, next } = decls {
         let nash_ast::Def::Def { name, body, .. } = definition else {
@@ -1315,7 +1291,7 @@ fn negation_retains_num_evidence() {
             panic!("ordinary method call")
         };
         assert!(
-            matches!(function.value, nash_ast::Expr::VarMethod { trait_, method: "negate", .. } if trait_ == predicate.trait_)
+            matches!(function.value, nash_ast::Expr::VarMethod { trait_, method: "negate", .. } if trait_ == predicate.trait_ref().unwrap())
         );
         let instance = &solved.instances[&nash_ast::NodeId::expr(function)];
         let [nash_ast::Evidence::Given { binder, index }] = instance.evidence else {
@@ -1324,7 +1300,10 @@ fn negation_retains_num_evidence() {
         let scheme = &solved.schemes[&nash_ast::NodeId::def(name)];
         assert_eq!(*binder, scheme.binder);
         assert_eq!(
-            scheme.annotation.context[usize::from(*index)].trait_.name,
+            scheme.annotation.context[usize::from(*index)]
+                .trait_ref()
+                .unwrap()
+                .name,
             "Num"
         );
         assert_eq!(instance.type_args.len(), 1);
@@ -1412,7 +1391,10 @@ fn literal_syntax_records_impls_and_pattern_givens() {
                         };
                         assert_eq!(*binder, scheme.binder);
                         assert_eq!(
-                            scheme.annotation.context[usize::from(*index)].trait_.name,
+                            scheme.annotation.context[usize::from(*index)]
+                                .trait_ref()
+                                .unwrap()
+                                .name,
                             expected
                         );
                     }
@@ -2069,7 +2051,10 @@ fn operator_methods_preserve_provider_and_backing_method() {
                 assert!(binop.annotation.context.is_empty());
             } else {
                 assert_eq!(binop.function.name, "select");
-                assert_eq!(binop.annotation.context[0].trait_.home.name, "Methods");
+                assert_eq!(
+                    binop.annotation.context[0].trait_ref().unwrap().home.name,
+                    "Methods"
+                );
             }
         }
         if name == "Main" || name == "OnlyOperators" {
@@ -2189,6 +2174,9 @@ fn inline_kind_bounds_survive_aliases_and_function_annotations() {
         identity x = x
         preserve : Record 'a -> Record 'a
         preserve x = identity x
+        type Color = Red
+        concrete = wrap Red
+        concrete2 = preserve concrete
     "#
     );
 }
@@ -2510,7 +2498,10 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
                             panic!("nominal alias head")
                         };
                         assert_eq!((head.home.name, head.name), ("Higher", "Pair"));
-                        assert!(args.is_empty());
+                        assert!(
+                            args.iter()
+                                .all(|arg| matches!(arg, nash_ast::Evidence::Repr { .. }))
+                        );
                         assert!(
                             matches!(type_args, [typ] if matches!(&typ.value, CanType::Named { reference, .. } if reference.name == expected))
                         );
@@ -2592,17 +2583,25 @@ fn imported_values_retain_declared_and_inferred_kind_signatures() {
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
     let (annotations, solved) =
         nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
-    assert_eq!(
-        annotations["first"].kinds.bounds,
-        &[nash_ast::KindSet::STORABLE]
-    );
-    assert_eq!(annotations["wrapper"].kinds, annotations["first"].kinds);
+    let context = annotations["first"].context;
     assert!(
-        solved
-            .schemes
-            .values()
-            .all(|scheme| scheme.annotation.kinds == annotations["first"].kinds)
+        matches!(context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()))
     );
+    assert_eq!(
+        annotations["wrapper"]
+            .context
+            .iter()
+            .map(|p| p.key())
+            .collect::<Vec<_>>(),
+        context.iter().map(|p| p.key()).collect::<Vec<_>>()
+    );
+    assert!(solved.schemes.values().all(|scheme| {
+        scheme
+            .annotation
+            .context
+            .iter()
+            .any(|p| p.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()))
+    }));
     interfaces.insert(
         "Source",
         nash_can::from_module(&bump, &canonical.module, &annotations),
@@ -2635,10 +2634,10 @@ fn imported_values_retain_declared_and_inferred_kind_signatures() {
         let mut uf = UnionFind::new();
         let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap_err();
-        assert!(matches!(
-            errors.as_slice(),
-            [Error::BadKind { name: actual, .. }] if *actual == name
-        ));
+        assert!(
+            errors.iter().all(|error| matches!(error, Error::MissingImpl { trait_, .. } if *trait_ == nash_ast::primitives::ReprTrait::Storable.qualified())) && errors.iter().any(|error| matches!(error, Error::MissingImpl { name: actual, .. } if *actual == name)),
+            "{errors:?}"
+        );
         results.push((name, errors));
     }
     insta::assert_snapshot!(format!(
@@ -2706,7 +2705,11 @@ fn do_infers_monad() {
     let (annotations, solved) =
         nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
     assert!(
-        matches!(annotations["run"].context, [pred] if pred.trait_ == nash_ast::primitives::monad_trait())
+        annotations["run"]
+            .context
+            .iter()
+            .any(|pred| pred.trait_ref() == Some(nash_ast::primitives::monad_trait()))
+            && ordinary_context_len(annotations["run"]) == 1
     );
     assert_eq!(
         render_annotation(annotations["run"]),
@@ -2827,15 +2830,33 @@ fn reflexive_lift_retains_big_evidence() {
     let (annotations, solved) =
         nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
     assert!(
-        ["concrete", "rigid", "inferred", "explicit", "nested"]
+        ["concrete", "explicit", "nested"]
             .iter()
             .all(|name| annotations[name].context.is_empty())
     );
+    for name in ["rigid", "inferred"] {
+        assert!(
+            matches!(annotations[name].context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Big.qualified())),
+            "{name}: {:?}",
+            annotations[name].context
+        );
+    }
     let mut proofs: Vec<_> = solved
         .instances
         .values()
         .flat_map(|instance| instance.evidence.iter())
         .collect();
+    assert!(
+        proofs
+            .iter()
+            .any(|proof| matches!(proof, nash_ast::Evidence::Given { .. }))
+    );
+    proofs.retain(|proof| {
+        !matches!(
+            proof,
+            nash_ast::Evidence::Given { .. } | nash_ast::Evidence::Repr { .. }
+        )
+    });
     assert_eq!(proofs.len(), 5);
     assert_eq!(
         proofs
@@ -2851,7 +2872,7 @@ fn reflexive_lift_retains_big_evidence() {
             .count(),
         2
     );
-    assert!(proofs.iter().any(|proof| matches!(proof, nash_ast::Evidence::Impl { args, .. } if matches!(args, [nash_ast::Evidence::ReflexiveLift { .. }]))));
+    assert!(proofs.iter().any(|proof| matches!(proof, nash_ast::Evidence::Impl { args, .. } if args.iter().any(|arg| matches!(arg, nash_ast::Evidence::ReflexiveLift { .. })))));
     proofs.sort_by_key(|proof| format!("{proof:?}"));
     insta::assert_debug_snapshot!(proofs);
 }
@@ -2889,6 +2910,20 @@ fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
         results.push((core, annotation, errors));
     }
     insta::assert_debug_snapshot!(results);
+}
+
+#[test]
+fn incompatible_representations_cannot_escape_in_an_inferred_scheme() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        useBig : ('a : Big) -> ()
+        useBig x = ()
+        useTerm : ('a : Term) -> ()
+        useTerm x = ()
+        bad x = (useBig x, useTerm x)
+    "#
+    );
 }
 
 #[test]
@@ -3048,11 +3083,11 @@ fn imported_higher_kinded_value_preserves_application() {
         .iter()
         .position(|name| *name == "f")
         .unwrap();
-    let [application] = annotation.kinds.applications else {
+    let [nash_ast::Pred::Apply { head, args: [arg] }] = annotation.context else {
         panic!("retained higher-kinded application")
     };
-    assert_eq!(application.head, annotation.kinds.kinds[f]);
-    assert_eq!(application.arguments, &[annotation.kinds.kinds[a]]);
+    assert!(matches!(head.value, CanType::Var(name) if name == annotation.free_vars[f]));
+    assert!(matches!(arg.value, CanType::Var(name) if name == annotation.free_vars[a]));
     let interface = nash_can::from_module(&bump, &canonical.module, &producer);
     let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
     let source =
@@ -3083,7 +3118,18 @@ fn imported_higher_kinded_value_preserves_application() {
     assert_eq!(instance.type_args.len(), 2);
     assert!(instance.evidence.is_empty());
     assert_eq!(annotations["value"].free_vars, annotation.free_vars);
-    assert_eq!(annotations["value"].kinds, annotation.kinds);
+    assert_eq!(
+        annotations["value"]
+            .context
+            .iter()
+            .map(|p| p.key())
+            .collect::<Vec<_>>(),
+        annotation
+            .context
+            .iter()
+            .map(|p| p.key())
+            .collect::<Vec<_>>()
+    );
     insta::assert_snapshot!(render_annotations(&annotations));
 }
 
@@ -3297,13 +3343,13 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
                 let CanType::Lambda { from, .. } = annotations[name].typ.value else {
                     panic!("function annotation")
                 };
-                let pred = nash_ast::Pred {
+                let pred = nash_ast::Pred::Trait {
                     trait_: nash_ast::primitives::eq_trait(),
                     args: bump.alloc_slice_copy(&[from]),
                 };
                 assert!(matches!(
                     nash_solve::evidence::resolve(&bump, &canonical.tables, &pred).unwrap(),
-                    nash_ast::Evidence::StructuralEq { .. }
+                    Some(nash_ast::Evidence::StructuralEq { .. })
                 ));
             }
             insta::assert_snapshot!(format!(

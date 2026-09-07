@@ -1,9 +1,9 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype w = W (tag (pair (option int)))"
+description: "type option 'a = None | Some 'a\ntype use 'f = Use ('f int)\ntype w = W (use (pair (option int)))"
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 7,
@@ -14,40 +14,12 @@ description: "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype w = W (ta
                 column: 34,
             },
         },
-        context: TypeArg {
-            head: Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "pair",
-                },
-            ),
+        context: LittleField {
+            union: "w",
+            ctor: "W",
             index: 0,
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    3,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Term,
-            ),
-            applications: [],
-        },
+        required: Storable,
+        actual: Term,
     },
 ]

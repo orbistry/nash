@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (id)\n\nid x = x\n"
 ---
-id : forall (a : Any). a -> a
+id : forall a. a -> a

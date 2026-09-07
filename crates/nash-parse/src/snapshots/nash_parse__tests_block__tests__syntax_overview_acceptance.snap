@@ -889,7 +889,7 @@ Module {
                             },
                             value: "a",
                         },
-                        kind: None,
+                        repr: None,
                     },
                 ],
                 ctors: [
@@ -1338,7 +1338,7 @@ Module {
                             },
                             value: "a",
                         },
-                        kind: None,
+                        repr: None,
                     },
                 ],
                 supers: [

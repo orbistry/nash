@@ -70,18 +70,43 @@ Module {
                 },
             },
             value: Union {
-                kind: KindScheme {
-                    bounds: [],
-                    kind: Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Base(
-                            Big,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 14,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
                 name: Located {
                     region: Region {
                         start: Position {
@@ -146,18 +171,43 @@ Module {
                 },
             },
             value: Alias {
-                kind: KindScheme {
-                    bounds: [],
-                    kind: Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Base(
-                            Big,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 36,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 38,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
                 name: Located {
                     region: Region {
                         start: Position {

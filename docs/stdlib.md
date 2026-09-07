@@ -278,7 +278,7 @@ not repeated here. What each module adds beyond its trait:
 | `Show` | `int`, `bytes` (hex), `string`, `bool`, `unit`, `list 'a`, `pair`, `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Num`, `Integral` | `int`, `Int` |
 | `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
-| `Functor` | `list`, `List`; each applied element must satisfy its constructor's kind bounds. No builtin pair Functor impl. |
+| `Functor` | `list`, `List`; each applied element must satisfy its constructor's datatype context (`Storable` for `list`, `Big` for `List`). No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
 | `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
@@ -305,14 +305,16 @@ The compiler supplies Eq for Big types, including user-defined ADTs and
 nominal aliases, through the shared kind/evidence contract.
 
 For builtin `list 'a` with `'a : Big`, the stdlib equality route is
-`equalsData (listData left) (listData right)`. This is the specified
-semantics, not an optimizer proof about arbitrary Eq bodies. The Const
-member of Storable uses element Eq. These cases must be disjoint under
-kind-aware coherence; do not retain an overlapping unrestricted list impl.
-`listData : list ('a : Big) -> Data` accepts those elements directly, since
-they already have the Data representation. Generic `Ord (list 'a)` retains
-both `Ord 'a` and `Eq (list 'a)` in its context; an unknown Storable kind
-does not select either list equality route during generic type checking.
+`equalsData (listData left) (listData right)` *as a codegen rewrite*: there
+is exactly one `impl Eq 'a => Eq (list 'a)` (elementwise), because impl
+coherence is head-only and contexts are not part of an impl's identity
+(kinds.md "Traits and impls"). plans/08 replaces the monomorphized
+elementwise body with the `equalsData` comparison whenever the ground
+element type is Big; the semantics are identical because Big equality is
+structural `equalsData` on each element. `listData : Big 'a => list 'a ->
+Data` accepts those elements directly, since they already have the Data
+representation. Generic `Ord (list 'a)` retains `Ord 'a` in its context
+and gets `Eq (list 'a)` through the superclass.
 Map Data equality compares the encoded sequence of entries, including order
 and duplicates. It is not dictionary-style equality.
 
@@ -378,10 +380,9 @@ impl Eq bool where
 impl Eq unit where
     eq _ _ = True
 
-impl Eq (list ('a : Big)) where
-    eq a b = Builtin.equalsData (Builtin.listData a) (Builtin.listData b)
-
-impl Eq 'a => Eq (list ('a : Const)) where
+-- One impl; plans/08 rewrites it to `equalsData` on `listData` when the
+-- ground element is Big.
+impl Eq 'a => Eq (list 'a) where
     eq xs ys =
         if Builtin.nullList xs then Builtin.nullList ys
         else if Builtin.nullList ys then False
@@ -590,7 +591,7 @@ which maps each `DefaultFunction` variant by its symbolic Rust name
 (`crates/nash-plutus/src/builtin/default_function.rs`) to a Nash name and
 type, plus the type constructors from plans/02's primitives table. The typed
 value table is in `primitives/builtins.rs`, re-exported by `primitives.rs`.
-The canonicalizer derives value-kind bounds from those types; the backend
+The canonicalizer derives representation predicates from those types; the backend
 resolves the symbolic variant without making the AST depend on the runtime.
 The `unit` spelling and `()` both canonicalize to the same unit type,
 including in impl heads.
@@ -605,9 +606,10 @@ Rules:
   `chooseList`, `chooseData`, and `trace`. `if`, `case`, `&&`, `||` are
   compiled by the compiler with delays; `Builtin.ifThenElse` is the raw
   strict builtin.
-- Type variables are kind-restricted as UPLC requires: elements of
+- Type variables have representation prerequisites as UPLC requires: elements of
   `list`/`array` and components of `pair` are `Storable`; `'a` in
-  `ifThenElse`, `chooseUnit`, `chooseList`, `chooseData`, `trace` is `Any`.
+  `ifThenElse`, `chooseUnit`, `chooseList`, `chooseData`, `trace` has no
+  representation restriction. All these value variables have kind `Type`.
 - `Builtin.identity : 'a -> 'a` and `Builtin.error : unit -> 'a` lower to
   nothing and to the UPLC `error` term.
 - `Builtin.castToData`, `castFromDataShallow`, `castValidateData`, `castLift`,
@@ -872,7 +874,7 @@ fromList : list 'a -> cons 'a                     -- 'a : Storable, from `list`
 toList : cons 'a -> list 'a                       -- 'a : Storable, from `list`
 ```
 
-`fromList`/`toList` carry the `Storable` kind bound that `list 'a`
+`fromList`/`toList` carry the `Storable 'a` predicate that `list 'a`
 implies (kinds.md); `Eq (cons 'a)` and `Show (cons 'a)` impls are in
 `Cons` too.
 

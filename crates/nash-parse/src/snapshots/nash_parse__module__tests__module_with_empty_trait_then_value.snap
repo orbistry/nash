@@ -135,7 +135,7 @@ Module {
                             },
                             value: "a",
                         },
-                        kind: None,
+                        repr: None,
                     },
                 ],
                 supers: [],

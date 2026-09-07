@@ -3,7 +3,7 @@ source: crates/nash-can/tests/kinds.rs
 description: type alias id = Int
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 5,
@@ -18,23 +18,7 @@ description: type alias id = Int
             alias: "id",
             big: false,
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    6,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
+        required: Little,
+        actual: Big,
     },
 ]

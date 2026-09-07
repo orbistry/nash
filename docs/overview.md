@@ -26,21 +26,22 @@ Done (ported from the Elm compiler, Haskell -> Rust):
 - `nash-driver` / `nash-config` / `nash-cli` — build graph, `nash.jsonc`, `nash check`
 - `nash-plutus` — complete UPLC: terms, flat codec, CEK machine, cost models
 
-Not done: kinds, traits, Big/little representation types, removal of row
-polymorphism, exhaustiveness, diagnostics rendering, codegen, validators,
-tests, macros, comptime, stdlib, fmt, docs.
+The front end also implements Haskell 98 kinds, representation predicates,
+traits, retained evidence and the approved Plan 03 shipping core. Remaining
+work is tracked in [SPEC.md](../SPEC.md), including runtime/codegen, optimizer
+implementation, default imports, Fuzz and the full validator example.
 
 ## Decisions at a glance
 
 | Area | Decision |
 |---|---|
 | Type classes | `trait` / `impl` keywords, Haskell layout. Superclasses, default methods, multi-param traits. Rust orphan rules. Full monomorphization (no dictionaries). |
-| Higher-kinded types | Yes. Kinds inferred; optional kind annotation `('f : Big -> Big)`. Kind variables (kind polymorphism) inferred, no user syntax for them. |
+| Higher-kinded types | Yes. Haskell 98 kinds (`Type`, `k -> k`) inferred by unification with an occurs check; no kind polymorphism, no kind syntax. |
 | Type variables | OCaml style: `'a`, `'b`. Bare lowercase names in type position are *little types*. |
-| Representation | Every type has a base kind: `Big` (Plutus `Data`), `Const` (UPLC builtin constant), or `Term` (UPLC `constr` term). Casing of the type name picks it: `Int` is Big, `int` is Const. |
+| Representation | Every ground type has a representation decided by its head constructor: `Big` (Plutus `Data`), `Const` (UPLC builtin constant), or `Term` (UPLC `constr` term). Casing of the type name picks it: `Int` is Big, `int` is Const. Representation is **not** part of the kind: it is enforced by compiler-owned predicates `Big`/`Const`/`Term`/`Storable`/`Little`/`Apply` and inferred datatype contexts, resolved by the trait machinery. `('a : Storable)` is sugar for the context entry `Storable 'a`. |
 | Records | Nominal only (via `type alias`). Row polymorphism removed. Record update syntax kept. Big record = `Data.List` of fields; little record = `constr 0`. |
-| Tuples | Always `Term` (`constr 0 [..]`), fields of any kind. No Big tuple. |
-| Named ctor fields | `type Datum = Datum { owner : Bytes, deadline : Int }` is a constructor with *labeled fields* (Aiken style), not a nested record: encoded flat (`Constr 0 [B, I]` / `constr 0 [..]`), fields follow the enclosing type's kind rule, `.field` access allowed on single-constructor types, record-style construction `Datum { owner = o, deadline = d }` and pattern `Datum { owner, deadline }` allowed; record update only on alias records in v1. Anonymous record *types* are not allowed anywhere else; use `type alias`. |
+| Tuples | Always `Term` (`constr 0 [..]`), fields of any representation (each has kind `Type`). No Big tuple. |
+| Named ctor fields | `type Datum = Datum { owner : Bytes, deadline : Int }` is a constructor with *labeled fields* (Aiken style), not a nested record: encoded flat (`Constr 0 [B, I]` / `constr 0 [..]`), fields follow the enclosing type's representation rule, `.field` access allowed on single-constructor types, record-style construction `Datum { owner = o, deadline = d }` and pattern `Datum { owner, deadline }` allowed; record update only on alias records in v1. Anonymous record *types* are not allowed anywhere else; use `type alias`. |
 | Prelude twins | `bool`/`Bool`, `unit`/`Unit`, `option`/`Option`, `result`/`Result`, `ordering`/`Ordering`. Little constructors are exposed unqualified by the prelude (`True`, `Some`, `Ok`, `LT`...); Big twins only qualified (`Bool.True`, `Option.Some`). `if` takes `bool`. |
 | `Data` | Big type with constructors `Constr tag fields | Map kvs | List xs | I n | B bs`; pattern-matchable. Decoder combinators built on top in the stdlib. |
 | Big <-> little | Explicit. `ToData`/`FromData` on Big types (`toData`, `fromData` shallow, `validateData` full). `Lift 'small 'big` multi-param trait (`lift`/`lower`) between reprs; built-in reflexive `impl Big 'a => Lift 'a 'a` (exempt from head rules) so `Lift 'a 'b => Lift (list 'a) (List 'b)` covers `list Int`. `validateData : Data -> 'a` traps on mismatch; `Data.Decode` is the non-failing path. No implicit coercion. |
@@ -48,11 +49,11 @@ tests, macros, comptime, stdlib, fmt, docs.
 | Operators | Trait methods (`Num`, `Integral`, `Eq`, `Ord`, `Semigroup`, ...). Elm's `number`/`comparable`/`appendable` supertypes removed. |
 | Operator sections | Whole `(+)` plus partial `(> 5)` / `(5 >)`, canonicalized to hygienic lambdas; `(-x)` stays negation. |
 | Dropped from Elm | `Float`, `Char`, row polymorphism, magic supertypes, ports/effects. |
-| Validators | `validator module Foo exposing (main)`. `main` required, signature free (args must be Big or Const kind; Term-kind args are an error), all args become lambdas. Success = evaluation does not error; return value ignored. No blueprint. |
+| Validators | `validator module Foo exposing (main)`. `main` required, signature free (args must have Big or Const representation; Term arguments are an error), all args become lambdas. Success = evaluation does not error; return value ignored. No blueprint. |
 | Tests | `tests` block at end of module with its own imports. `test "name" =`, `prop "name" =` with `let x via gen in`. Bodies are sequencing blocks (`e : unit` ⇒ `let () = e in ..`; `x <- e` ⇒ `let x = e`; no test monad). Power-assert `assert`. `fail` / `fail once`, `within (cpu N, mem M)`, `label`. |
 | Property testing | Aiken design: `type Prng = Seeded Bytes (List Int) \| Replayed Int (List Int)` (Big, built by the runner as Data), choice-sequence shrinking in Rust, `fuzzer 'a` little type with Functor/Applicative/Monad. Each prop compiles to `draw`/`run` programs. |
 | `do` notation | Layout `do` block, `x <- e` desugars to `Monad.bind`. |
-| Macros | Procedural. Input: typed AST; output: surface AST. `@derive(Eq)` on declarations, `name!(args)` in expressions. Hygienic. Run on the CEK machine. Expand-then-recheck loop per module. The `Ast` family is Term kind (little ADTs with `string`/`int`/`bytes` fields; child lists as core `cons 'a = Nil \| Cons 'a (cons 'a)`); the host builds input as a `Term::Constr` tree and reads output from the CEK result value. |
+| Macros | Procedural. Input: typed AST; output: surface AST. `@derive(Eq)` on declarations, `name!(args)` in expressions. Hygienic. Run on the CEK machine. Expand-then-recheck loop per module. The `Ast` family has Term representation (little ADTs with `string`/`int`/`bytes` fields; child lists as core `cons 'a = Nil \| Cons 'a (cons 'a)`); the host builds input as a `Term::Constr` tree and reads output from the CEK result value. |
 | Comptime | `comptime expr` evaluates on the CEK machine at compile time; result must be a UPLC constant (`Const` or `Big`). |
 | Deriving | Implemented as macros (`@derive(Eq, Ord, Show, ToData, FromData)`). |
 | IR | Single tree IR (`Core`): monomorphized lambda calculus with explicit reprs. Core -> Core optimization passes. Core -> UPLC `Term`. |
@@ -66,39 +67,34 @@ tests, macros, comptime, stdlib, fmt, docs.
 | CLI v1 | `nash check`, `nash build`, `nash test`, `nash fmt`, `nash docs`, `nash lsp`. |
 | Optimizations | Inline single-use lets / small lambdas; builtin force caching; DCE + unused params; case-of-known-constructor + constant folding (via CEK). |
 
-## Kinds in one page
+## Kinds and representation in one page
 
-Three base kinds describe the runtime representation:
+Kinds are Haskell 98: `Type` and `k1 -> k2`, inferred by unification.
+Representation is a separate, head-determined property enforced by
+predicates:
 
-- `Big` — a Plutus `Data` value. Boundary type. Uppercase type names: `Int`,
-  `Bytes`, `List 'a`, `Map 'k 'v`, `Data`, user ADTs `type Foo = ...`,
-  aliases `type alias Foo = { ... }`.
-- `Const` — a UPLC builtin constant. Lowercase names: `int`, `bytes`,
-  `string`, `bool`, `unit`, `list 'a`, `pair 'a 'b`, `bls_g1`, `bls_g2`,
-  `bls_mlr`, `array 'a`, `value`.
-- `Term` — a UPLC `constr` term (or a function). Lowercase user ADTs
-  `type option 'a = ...`, tuples, little records, function types.
+- `Big` — a Plutus `Data` value. Uppercase names: `Int`, `Bytes`, `List 'a`,
+  `Map 'k 'v`, `Data`, user `type Foo`, `type alias Foo`.
+- `Const` — a UPLC builtin constant. Lowercase builtins: `int`, `bytes`,
+  `string`, `bool`, `unit`, `list 'a`, `pair 'a 'b`, `array 'a`, `bls_*`,
+  `value`.
+- `Term` — a UPLC `constr` term or a function. Lowercase user ADTs, tuples,
+  little records, `'a -> 'b`.
 
-Element rules (kind checked, kind inferred):
+Every constructor carries an inferred **datatype context** its arguments
+must satisfy; forming the type anywhere (annotation, inference, impl
+specialization) instantiates it:
 
-| Constructor | Kind |
+| Constructor | Context |
 |---|---|
-| `List` | `Big -> Big` |
-| `Map` | `Big -> Big -> Big` |
+| `List`, `Map` | `Big` arguments |
 | Big ADT / Big record | fields `Big` |
-| `list` | `Storable -> Const` where `Storable` = `Big` or `Const` (never `Term`) |
-| `pair` | `Storable -> Storable -> Const` (only `mkPairData` constructs; `unConstrData` yields `pair int (list Data)`) |
-| `array` | `Storable -> Const` |
-| little ADT / tuple / little record | fields any kind |
-| `->` | `Term` |
+| `list`, `array`, `pair` | `Storable` = `Big` or `Const` (never `Term`); only `mkPairData` constructs a pair |
+| little ADT / tuple / little record / `->` | none |
+| `type wrap 'f 'a = Wrap ('f 'a)` | `Apply 'f 'a`, reduced when `'f` is known |
 
-Every `Big` value is also a constant at runtime (a `Data` constant), which is
-why `list Data`, `list Int`, and `list (List Int)` are legal but
-`list (option int)` is not. `Data` itself is always Big; there is no `data`.
-
-Traits range over kinds with kind variables: `trait Functor 'f` gets a kind
-scheme `k1 -> k2` and each `impl` instantiates it (`List : Big -> Big`,
-`list : Storable -> Const`, `option : Any -> Term`).
+`Data` is always Big; there is no `data`. `self 'f = Self ('f 'f)` is an
+infinite kind, as in Haskell. Details: [kinds.md](kinds.md).
 
 ## Syntax in one page
 
@@ -116,7 +112,7 @@ import Cardano.Tx exposing (Tx, Output)
 -- Big ADT: Data Constr, fields Big
 type Datum = Datum { owner : Bytes, deadline : Int }
 
--- little ADT: UPLC constr, fields any kind
+-- little ADT: UPLC constr, fields any representation
 type step 'a = Done 'a | Next int 'a
 
 -- alias, little record: constr 0 [fields]
@@ -208,7 +204,7 @@ core/                  the `nash/core` package (Nash source)
 ## Component docs
 
 - [syntax.md](syntax.md) — full surface syntax and grammar changes
-- [kinds.md](kinds.md) — Big / Const / Term kinds, kind inference
+- [kinds.md](kinds.md) — Haskell 98 kinds, representation predicates, datatype contexts
 - [traits.md](traits.md) — traits, impls, resolution, monomorphization
 - [representation.md](representation.md) — runtime layout of every type, Big/little bridging
 - [data.md](data.md) — `Data` type, patterns, encoders/decoders

@@ -5,40 +5,14 @@ expression: schemes
 [
     (
         "First",
-        KindScheme {
-            bounds: [
-                KindSet(
-                    7,
-                ),
-            ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Base(
-                    Term,
-                ),
-            ),
-            applications: [],
-        },
+        [
+            Type,
+        ],
     ),
     (
         "Second",
-        KindScheme {
-            bounds: [
-                KindSet(
-                    7,
-                ),
-            ],
-            kind: Arrow(
-                Var(
-                    0,
-                ),
-                Base(
-                    Term,
-                ),
-            ),
-            applications: [],
-        },
+        [
+            Type,
+        ],
     ),
 ]

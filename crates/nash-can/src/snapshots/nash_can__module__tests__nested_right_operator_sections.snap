@@ -108,19 +108,6 @@ Module {
                                 free_vars: [
                                     "a",
                                 ],
-                                kinds: ValueKinds {
-                                    bounds: [
-                                        KindSet(
-                                            15,
-                                        ),
-                                    ],
-                                    kinds: [
-                                        Var(
-                                            0,
-                                        ),
-                                    ],
-                                    applications: [],
-                                },
                                 typ: Located {
                                     region: Region {
                                         start: Position {
@@ -222,19 +209,6 @@ Module {
                                                         free_vars: [
                                                             "a",
                                                         ],
-                                                        kinds: ValueKinds {
-                                                            bounds: [
-                                                                KindSet(
-                                                                    15,
-                                                                ),
-                                                            ],
-                                                            kinds: [
-                                                                Var(
-                                                                    0,
-                                                                ),
-                                                            ],
-                                                            applications: [],
-                                                        },
                                                         typ: Located {
                                                             region: Region {
                                                                 start: Position {

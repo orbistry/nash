@@ -18,31 +18,10 @@ description: "Code:\n\nmodule Main exposing (Wrapped, Maybe(..))\n\ntype alias W
             alias: "Wrapped",
             big: true,
         },
-        expected: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Constructor {
-                scheme: KindScheme {
-                    bounds: [],
-                    kind: Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Base(
-                            Big,
-                        ),
-                    ),
-                    applications: [],
-                },
-                arguments: [],
-            },
-            applications: [],
-        },
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

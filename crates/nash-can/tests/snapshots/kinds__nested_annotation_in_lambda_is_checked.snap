@@ -3,7 +3,7 @@ source: crates/nash-can/tests/kinds.rs
 description: "type option 'a = None | Some 'a\nf = \\x ->\n    let\n        g : list (option int) -> int\n        g y = 1\n    in\n    g x"
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 8,
@@ -14,40 +14,10 @@ description: "type option 'a = None | Some 'a\nf = \\x ->\n    let\n        g : 
                 column: 29,
             },
         },
-        context: TypeArg {
-            head: Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                },
-            ),
-            index: 0,
+        context: Annotation {
+            name: "g",
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    3,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Term,
-            ),
-            applications: [],
-        },
+        required: Storable,
+        actual: Term,
     },
 ]

@@ -13,8 +13,7 @@ pub enum Failure {
 
 #[derive(Debug)]
 pub struct Error<'a> {
-    pub trait_: QualifiedName<'a>,
-    pub args: &'a [&'a Located<Type<'a>>],
+    pub predicate: Pred<'a>,
     pub reason: Failure,
 }
 
@@ -26,7 +25,7 @@ pub fn resolve<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
     pred: &Pred<'a>,
-) -> Result<Evidence<'a>, Error<'a>> {
+) -> Result<Option<Evidence<'a>>, Error<'a>> {
     Resolver {
         bump,
         tables,
@@ -60,6 +59,9 @@ struct Resolver<'t, 'a> {
 
 enum Resolution<'a> {
     Complete(Evidence<'a>),
+    Apply {
+        children: Vec<Pred<'a>>,
+    },
     Impl {
         impl_: ImplRef<'a>,
         type_args: &'a [&'a Located<Type<'a>>],
@@ -70,6 +72,7 @@ enum Resolution<'a> {
 enum Work<'a> {
     Resolve(Pred<'a>, usize),
     Assemble(ImplRef<'a>, &'a [&'a Located<Type<'a>>], usize),
+    Apply(usize),
 }
 
 impl<'a> Resolver<'_, 'a> {
@@ -78,7 +81,6 @@ impl<'a> Resolver<'_, 'a> {
     fn substitution_work(&mut self, typ: &Type<'a>, depth: usize) -> Result<(), Failure> {
         self.step(depth)?;
         match typ {
-            Type::Kinded { typ, .. } => self.substitution_work(&typ.value, depth + 1)?,
             Type::App { head, args } => {
                 self.substitution_work(&head.value, depth + 1)?;
                 for arg in *args {
@@ -136,7 +138,6 @@ impl<'a> Resolver<'_, 'a> {
     fn term(&mut self, typ: &Type<'a>, depth: usize) -> Result<Term<'a>, Failure> {
         self.step(depth)?;
         let (con, args) = match typ {
-            Type::Kinded { typ, .. } => return self.term(&typ.value, depth + 1),
             Type::Var(_) => return Err(Failure::NonGround),
             Type::App { head, args } => {
                 let mut head = self.term(&head.value, depth + 1)?;
@@ -183,19 +184,26 @@ impl<'a> Resolver<'_, 'a> {
         Ok(Term { con, args })
     }
 
-    fn resolve(&mut self, pred: &Pred<'a>, depth: usize) -> Result<Evidence<'a>, Error<'a>> {
-        let mut pending = vec![Work::Resolve(
-            Pred {
-                trait_: pred.trait_,
-                args: pred.args,
-            },
-            depth,
-        )];
+    fn resolve(
+        &mut self,
+        pred: &Pred<'a>,
+        depth: usize,
+    ) -> Result<Option<Evidence<'a>>, Error<'a>> {
+        let mut pending = vec![Work::Resolve(*pred, depth)];
         let mut evidence = Vec::new();
         while let Some(work) = pending.pop() {
             match work {
                 Work::Resolve(pred, depth) => match self.resolve_step(&pred, depth)? {
-                    Resolution::Complete(proof) => evidence.push(proof),
+                    Resolution::Complete(proof) => evidence.push(Some(proof)),
+                    Resolution::Apply { children } => {
+                        pending.push(Work::Apply(children.len()));
+                        pending.extend(
+                            children
+                                .into_iter()
+                                .rev()
+                                .map(|pred| Work::Resolve(pred, depth + 1)),
+                        );
+                    }
                     Resolution::Impl {
                         impl_,
                         type_args,
@@ -210,13 +218,19 @@ impl<'a> Resolver<'_, 'a> {
                         );
                     }
                 },
+                Work::Apply(count) => {
+                    evidence.truncate(evidence.len() - count);
+                    evidence.push(None);
+                }
                 Work::Assemble(impl_, type_args, count) => {
                     let children = evidence.split_off(evidence.len() - count);
-                    evidence.push(Evidence::Impl {
+                    evidence.push(Some(Evidence::Impl {
                         impl_,
                         type_args,
-                        args: self.bump.alloc_slice_fill_iter(children),
-                    });
+                        args: self.bump.alloc_slice_fill_iter(
+                            children.into_iter().flatten().collect::<Vec<_>>(),
+                        ),
+                    }));
                 }
             }
         }
@@ -225,33 +239,68 @@ impl<'a> Resolver<'_, 'a> {
 
     fn resolve_step(&mut self, pred: &Pred<'a>, depth: usize) -> Result<Resolution<'a>, Error<'a>> {
         let error = |reason| Error {
-            trait_: pred.trait_,
-            args: pred.args,
+            predicate: *pred,
             reason,
         };
         self.step(depth).map_err(error)?;
         let terms = pred
-            .args
-            .iter()
+            .types()
             .map(|arg| self.term(&arg.value, 0))
             .collect::<Result<Vec<_>, _>>()
             .map_err(error)?;
-        if pred.trait_ == nash_ast::primitives::eq_trait()
+        let group = Default::default();
+        let mut formation = nash_can::kinds::Formation::new(self.bump, &self.tables.kinds, &group);
+        for typ in pred.types() {
+            formation
+                .typ(typ)
+                .map_err(|_| error(Failure::MissingImpl))?;
+        }
+        // Every input is ground. Formation must fully discharge its internal
+        // requirements before a ground evidence marker can be issued.
+        if !formation.predicates.is_empty() {
+            return Err(error(Failure::NonGround));
+        }
+        if matches!(pred, Pred::Apply { .. }) {
+            formation
+                .reduce(*pred)
+                .map_err(|_| error(Failure::MissingImpl))?;
+            return Ok(Resolution::Apply {
+                children: formation.predicates,
+            });
+        }
+        let trait_ = pred.trait_ref().expect("trait predicate");
+        let args = pred.args();
+        if let Some(required) = nash_ast::primitives::ReprTrait::of(trait_) {
+            return match nash_can::kinds::repr_of(self.bump, &self.tables.kinds, args[0]) {
+                Some(actual) if required.admits().contains(actual) => {
+                    Ok(Resolution::Complete(Evidence::Repr {
+                        trait_: required,
+                        typ: args[0],
+                    }))
+                }
+                _ => Err(error(Failure::MissingImpl)),
+            };
+        }
+        let big = args.first().is_some_and(|typ| {
+            nash_can::kinds::repr_of(self.bump, &self.tables.kinds, typ)
+                == Some(nash_ast::primitives::Repr::Big)
+        });
+        if trait_ == nash_ast::primitives::eq_trait()
             && self.tables.has_structural_eq()
-            && pred.args.len() == 1
-            && nash_can::kinds::proves_ground_big(self.bump, &self.tables.kinds, pred.args[0])
+            && args.len() == 1
+            && big
         {
             return Ok(Resolution::Complete(Evidence::StructuralEq {
-                typ: pred.args[0],
+                typ: args[0],
             }));
         }
-        if pred.trait_ == nash_ast::primitives::lift_trait()
+        if trait_ == nash_ast::primitives::lift_trait()
             && self.tables.has_reflexive_lift()
             && matches!(terms.as_slice(), [first, second] if first == second)
-            && nash_can::kinds::proves_ground_big(self.bump, &self.tables.kinds, pred.args[0])
+            && big
         {
             return Ok(Resolution::Complete(Evidence::ReflexiveLift {
-                typ: pred.args[0],
+                typ: args[0],
             }));
         }
         let mut selected = None;
@@ -259,25 +308,17 @@ impl<'a> Resolver<'_, 'a> {
             .tables
             .impls
             .iter()
-            .filter(|(key, _)| key.trait_ == pred.trait_)
+            .filter(|(key, _)| key.trait_ == trait_)
         {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
                 &mut nash_ast::head::Canonical,
                 key.heads,
-                pred.args,
+                args,
                 info.variables.len(),
                 &mut self.remaining,
             )
             .map_err(|_| error(Failure::Limit))?
             {
-                if !nash_can::kinds::proves_ground_signature(
-                    self.bump,
-                    &self.tables.kinds,
-                    info.kinds,
-                    &arguments,
-                ) {
-                    continue;
-                }
                 selected = Some((*key, *info, arguments));
                 break;
             }
@@ -291,19 +332,14 @@ impl<'a> Resolver<'_, 'a> {
             .collect();
         let mut children = Vec::new();
         for context in info.context {
-            for arg in context.args {
-                self.substitution_work(&arg.value, 0).map_err(error)?;
+            for typ in context.types() {
+                self.substitution_work(&typ.value, 0).map_err(error)?;
             }
-            let args = self.bump.alloc_slice_fill_iter(
-                context
-                    .args
-                    .iter()
-                    .map(|arg| nash_can::types::substitute_type(self.bump, &substitution, arg)),
-            );
-            children.push(Pred {
-                trait_: context.trait_,
-                args,
-            });
+            children.push(nash_can::kinds::substitute_predicate(
+                self.bump,
+                &substitution,
+                *context,
+            ));
         }
         Ok(Resolution::Impl {
             impl_: ImplRef {
@@ -313,5 +349,86 @@ impl<'a> Resolver<'_, 'a> {
             type_args: self.bump.alloc_slice_copy(&type_args),
             children,
         })
+    }
+}
+
+#[cfg(test)]
+mod predicate_tests {
+    use super::*;
+    use nash_ast::primitives::{self, ReprTrait};
+
+    fn named<'a>(
+        bump: &'a Bump,
+        name: &'a str,
+        args: &'a [&'a Located<Type<'a>>],
+    ) -> &'a Located<Type<'a>> {
+        bump.alloc(Located::at_zero(Type::Named {
+            reference: QualifiedName {
+                home: primitives::builtin_home(),
+                name,
+            },
+            args,
+        }))
+    }
+
+    #[test]
+    fn ground_representation_returns_a_compile_time_marker() {
+        let bump = Bump::new();
+        let tables = Tables::default();
+        let int = named(&bump, "int", &[]);
+        let pred = Pred::Trait {
+            trait_: ReprTrait::Storable.qualified(),
+            args: bump.alloc_slice_copy(&[int]),
+        };
+        assert!(matches!(
+            resolve(&bump, &tables, &pred),
+            Ok(Some(Evidence::Repr {
+                trait_: ReprTrait::Storable,
+                ..
+            }))
+        ));
+    }
+
+    #[test]
+    fn ground_apply_checks_context_without_producing_evidence() {
+        let bump = Bump::new();
+        let tables = Tables::default();
+        let int = named(&bump, "int", &[]);
+        let pred = Pred::Apply {
+            head: named(&bump, "list", &[]),
+            args: bump.alloc_slice_copy(&[int]),
+        };
+        assert!(matches!(resolve(&bump, &tables, &pred), Ok(None)));
+        let function = &*bump.alloc(Located::at_zero(Type::Lambda { from: int, to: int }));
+        let pred = Pred::Apply {
+            head: named(&bump, "list", &[]),
+            args: bump.alloc_slice_copy(&[function]),
+        };
+        assert!(matches!(
+            resolve(&bump, &tables, &pred),
+            Err(Error {
+                reason: Failure::MissingImpl,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn known_big_head_does_not_hide_an_invalid_nested_application() {
+        let bump = Bump::new();
+        let tables = Tables::default();
+        let int = named(&bump, "int", &[]);
+        let invalid = named(&bump, "List", bump.alloc_slice_copy(&[int]));
+        let pred = Pred::Trait {
+            trait_: ReprTrait::Big.qualified(),
+            args: bump.alloc_slice_copy(&[invalid]),
+        };
+        assert!(matches!(
+            resolve(&bump, &tables, &pred),
+            Err(Error {
+                reason: Failure::MissingImpl,
+                ..
+            })
+        ));
     }
 }

@@ -14,16 +14,9 @@ description: "type bad 'f = Bad (bad bad)"
                 column: 27,
             },
         },
-        context: TypeArg {
-            head: Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "bad",
-                },
-            ),
+        context: LittleField {
+            union: "bad",
+            ctor: "Bad",
             index: 0,
         },
     },

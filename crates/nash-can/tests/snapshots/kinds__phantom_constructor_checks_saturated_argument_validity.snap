@@ -6,17 +6,17 @@ description: "type self 'f = Self ('f 'f)\ntype tag 'a = Tag\ntype w = W (tag (s
     KindInfinite {
         region: Region {
             start: Position {
-                line: 7,
-                column: 13,
+                line: 5,
+                column: 25,
             },
             end: Position {
-                line: 7,
-                column: 28,
+                line: 5,
+                column: 27,
             },
         },
         context: LittleField {
-            union: "w",
-            ctor: "W",
+            union: "self",
+            ctor: "Self",
             index: 0,
         },
     },

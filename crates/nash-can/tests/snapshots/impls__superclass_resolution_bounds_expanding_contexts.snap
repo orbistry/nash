@@ -54,7 +54,7 @@ expression: result.unwrap_err()
                 },
             },
         ],
-        superclass: Pred {
+        superclass: Trait {
             trait_: QualifiedName {
                 home: ModuleName {
                     package: None,

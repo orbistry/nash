@@ -28,7 +28,7 @@ pub struct TraitInfo<'a> {
     pub home: ModuleName<'a>,
     pub name: &'a str,
     pub parameters: &'a [&'a str],
-    pub kind: nash_ast::KindScheme<'a>,
+    pub kinds: &'a [&'a nash_ast::Kind<'a>],
     pub supers: &'a [nash_ast::Pred<'a>],
     pub methods: &'a [MethodInfo<'a>],
 }
@@ -44,7 +44,6 @@ pub struct MethodInfo<'a> {
 #[derive(Clone, Copy, Debug)]
 pub struct ImplInfo<'a> {
     pub variables: &'a [&'a str],
-    pub kinds: nash_ast::ValueKinds<'a>,
     pub home: ModuleName<'a>,
     pub region: Region,
     pub trait_: nash_ast::QualifiedName<'a>,

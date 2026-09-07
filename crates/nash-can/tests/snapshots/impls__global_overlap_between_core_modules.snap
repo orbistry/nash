@@ -80,11 +80,6 @@ expression: result.unwrap_err()
                     ],
                 ),
             ],
-            kinds: ValueKinds {
-                bounds: [],
-                kinds: [],
-                applications: [],
-            },
         },
         first: Region {
             start: Position {

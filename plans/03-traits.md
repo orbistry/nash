@@ -1,133 +1,44 @@
 # Plan 03: Traits
 
-Goal: implement [docs/traits.md](../docs/traits.md): `trait`/`impl`
-declarations, qualified types in inference, impl resolution with evidence,
-literal traits with defaulting, `do` desugaring, and the interface plumbing
-so a trait defined in one module is usable from another.
+Goal: implement [docs/traits.md](../docs/traits.md): qualified types,
+recursive impl patterns, superclass and impl resolution, literal defaulting,
+operators, do notation, retained evidence and cross-module interfaces.
 
-Status: complete for the user-approved Plan 03 scope. Default imports are
-deferred to Plan 12, builtin pair has no Functor impl, and Fuzz/overview
-validator integration waits for its real later-plan prerequisites. Runtime
-lowering and execution remain Plan 07; no placeholders establish acceptance.
+Status: complete for the approved scope, including the Haskell 98 replacement in [02-kind-predicates.md](02-kind-predicates.md).
 
-Final acceptance: formatting, strict Clippy, 1,937 tests (three ignored
-doctests), snapshot verification and hygiene pass. The shipping core CLI
-fixture compiles 23 modules and 215 declarations. Fresh CLI projects verify
-direct/transitive impl consumers, imported generic do instantiated at option
-and result, and separate orphan/overlap errors. Earlier focused acceptance
-also verifies kind restrictions, Big Eq overrides, literal defaulting and
-operator diagnostics. The retained-node/evidence contract and sequential
-driver path were independently audited; lqzsqvyw remains an ancestor.
+The current kind system is `Type | Arrow`; representation is expressed through
+compiler-owned predicates and inferred datatype contexts. All old kind schemes,
+value-kind metadata and retained kind obligations are removed. Coherence uses
+recursive heads only, after kind checking. Representation prerequisites do not
+make identical heads disjoint. Partial heads and nominal aliases retain their
+ordered arguments through specialization and interfaces.
 
-Release dry runs establish correct version propagation across all 28 internal
-dependency requirements and the source-to-cli publishing order. Cargo verifies
-the source package, then downstream packaging stops because the bumped source
-version is unpublished; this is not a successful full registry verification.
-No crates were published and nothing was pushed. The detailed release audit
-below records the exact tested revision and limits. Subsequent changes are
-tests/docs only, with no changes to release metadata or production Rust.
+Big Eq remains compiler-owned, including generic transparent Big aliases.
+Builtin-list Eq now has one elementwise implementation. Plan 08 may optimize
+only ground Big-element Eq; Ord and Show do not acquire that rewrite. Reflexive
+Big Lift, superclass proofs, independent instantiation and dictionary slot order
+remain part of this plan's acceptance contract.
 
-Prerequisites:
+Default imports remain Plan 12. Runtime/codegen, optimizer implementation,
+Fuzz and the full validator example retain their approved later-plan deferrals.
+Builtin pair has no Functor impl; builtin list has neither Applicative nor Monad.
+The shipping hierarchy includes option/result do and mapping between different
+representations wherever the inferred constructor contexts permit it.
 
-### Approved correction: recursive impl patterns
+## Current acceptance
 
-The user rejected the Haskell-98-only head restriction. The authoritative
-rules are now docs/traits.md: recursive constructor patterns, consistent
-substitution for repeated variables, and overlap checked by full-pattern
-unification with kinds. This supersedes the distinct_vars/outer-constructor
-key sketches below are superseded and must not guide new implementation.
-Do not add a Map-only exception.
+See the final acceptance record in 02-kind-predicates.md. The real core fixture
+is `cargo run -q -p nash-cli -- check tests/core`. The refreshed Sampo audit verifies all 28 internal requirements and publication
+order; downstream package verification stops at the unpublished source version.
+Historical release versions and test counts below do not establish acceptance
+of the replacement. Nothing is committed, pushed or published by this work.
 
-Reopen the affected acceptance of chunks 1, 3 and 6: canonical Head and impl
-identity must retain recursive structure; local/imported coherence must
-compare full patterns; inference and ground evidence resolution must share
-matching semantics and retain substitutions through nested patterns.
-This correction has landed and the completion labels include its acceptance.
-Focused tests cover disjoint concrete heads, generic vs
-specific overlap, repeated-variable consistency, nested kind rejection,
-cross-module overlap and the specified Map Lift impl. Remove superseded
-flat-key matching rather than retaining a second legacy path.
+## Historical implementation record
 
-Recursive heads now retain constructor arguments and alpha-normalized variable
-indices in impl identity. Canonical entailment, inference and ground evidence
-use the shared pattern matcher; repeated variables do not unify wanted types
-to force a match. Structural overlap freshens both patterns and checks occurs.
-Focused tests cover concrete disjoint heads, repeated-variable deferral and
-rejection, imported nested overlap, and retained nested evidence. Record-row
-comparison normalizes extension fragments without binding inference variables.
-The core Map Lift impl now type-checks through this general path. Snapshot
-review, full tests and hygiene pass. Kind-disjoint coherence and selection now
-use the shared kind engine as described below.
-
-Inline type bounds now use a retained `Kinded` node in source and canonical
-types. Kind checking consumes the bound; substitutions and interfaces retain
-it. Shape-only visitors look through it for record constructors, function
-arity and impl-head restrictions. Reconstructed superclass heads restore the
-original impl kind requirements. The core list Eq impls are disjoint: Big
-elements use `equalsData (listData a) (listData b)`, Const elements use element
-Eq. `listData` accepts Big elements directly. Generic list Ord retains
-`Eq (list 'a)` alongside `Ord 'a` so its superclass evidence stays explicit.
-The core CLI fixture checks both routes, including lists of user Big ADTs.
-This does not implement or validate Plan 07 runtime lowering.
-
-`kinds::impls_overlap` combines
-the structural equations with fresh copies of both retained kind schemes.
-The focused test distinguishes nested Big/Const patterns from overlapping
-Storable patterns and checks pattern-work accounting. Table insertion uses
-this query; inference, canonical entailment and ground selection prove the
-candidate's kind bounds without narrowing callers. Existing application
-witnesses may satisfy equivalent existential kind obligations; the complete
-protected kind graph must remain unchanged. Ground resolution uses an explicit
-work stack so expanding contexts reach the limit diagnostic safely. The CLI
-accepts imported Big/Const impls and rejects an overlapping unrestricted impl.
-Full tests, strict Clippy, core CLI and snapshot hygiene pass for this step.
-
-The user also confirmed that builtin list has no Applicative or Monad impl;
-keep apply unchanged. Abstract map must allow different element kinds when
-each satisfies the constructor's bounds. These supersede the earlier open
-questions proposing liftA2 or a shared actual element kind.
-
-Independent applications are implemented in the shared kind engine.
-KindScheme and ValueKinds retain application obligations; known constructors
-retain quantified schemes and partial applications retain supplied argument
-kinds. This replaces the old abstract shared-arrow path. Obligations survive
-inference, rigid annotation checks, specialization and retained interfaces.
-Cross-module CLI checks accept the mixed-kind option map and reject the
-corresponding builtin-list call at map. Dependent results, partial captures,
-reversed use order, do expansion and constructor evidence are tested. Formatting,
-strict Clippy, all 1,920 tests (three ignored doctests), snapshot verification
-and hygiene pass. This does not complete the core higher-kinded hierarchy.
-
-The user has now settled Big Eq: structural equalsData is mandatory for
-every Big type and user Big Eq overrides are forbidden. Add a uniform
-compiler-owned Eq rule, retain evidence for codegen, and remove explicit
-core Big Eq impls when that rule lands. Builtin-list Eq must split into
-disjoint Big and Const element-kind cases; Big uses listData/equalsData,
-Const uses element Eq. No custom-body analysis or optimizer recognition.
-Test user Big Eq rejection, automatic Eq for user Big ADTs/aliases,
-nested structural equality, disjoint kind selection and overlap rejection.
-Lowercase value is Const: use its dedicated valueData operation for Eq,
-not valueContains (which rejects negative quantities). Cardano.Value and
-ordinary Map union must not be conflated with additive unionValue.
-
-The uniform Big Eq compiler rule is implemented: canonicalization rejects
-explicit Big overrides; superclass entailment, inference and ground resolution
-provide Eq from the proven Big kind. `StructuralEq` evidence retains the type,
-and the explicit core Big impls are removed. Snapshot tests cover user ADTs,
-nominal record aliases, generic Big containers, superclass obligations and
-exact core trait identity. The CLI core fixture checks both eq and neq for a
-user Big ADT. Disjoint builtin-list kind selection is implemented with
-recursive impl patterns and inline bounds; backend lowering remains Plan 07.
-
-The concrete core Eq value impl now compares valueData results with
-equalsData. The runtime table has no equalsValue operation; inspection of
-LedgerValue::value_contains confirms that it rejects negative quantities.
-Core CLI acceptance constructs a negative ledger value and type-checks Eq,
-compiling 18 modules and 184 declarations. Formatting, strict Clippy, 1,915
-tests and snapshot hygiene pass. This source-only impl does not change Rust
-crates. Nash execution of that equality remains a Plan 07 check; the universal
-kind-partitioned little-list impls and Big Eq rule landed in subsequent steps
-described above.
+The detailed chunks below record the original implementation and its tests.
+Where they mention the removed lattice, kind partitions, `Kinded`,
+`KindScheme`, `ValueKinds`, or split list Eq, the current documents and
+02-kind-predicates.md supersede those sketches.
 
 ### Existing prerequisites
 

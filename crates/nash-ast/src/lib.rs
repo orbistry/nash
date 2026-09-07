@@ -6,119 +6,22 @@ use nash_region::{Located, Region};
 
 pub use nash_source::{Associativity, Docs, ModuleKind, Precedence};
 
+/// A closed Haskell 98 kind. Inference variables never escape the kind checker.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum BaseKind {
-    Big,
-    Const,
-    Term,
-}
-
-/// The shapes a kind variable may take. Bit set over `BaseKind` plus arrow.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct KindSet(u8);
-
-impl KindSet {
-    pub const BIG: KindSet = KindSet(0b0001);
-    pub const CONST: KindSet = KindSet(0b0010);
-    pub const TERM: KindSet = KindSet(0b0100);
-    pub const ARROW: KindSet = KindSet(0b1000);
-    pub const ANY: KindSet = KindSet(0b0111);
-    pub const ALL: KindSet = KindSet(0b1111);
-    pub const STORABLE: KindSet = KindSet(0b0011);
-    pub const LITTLE: KindSet = KindSet(0b0110);
-
-    pub fn of(base: BaseKind) -> KindSet {
-        match base {
-            BaseKind::Big => KindSet::BIG,
-            BaseKind::Const => KindSet::CONST,
-            BaseKind::Term => KindSet::TERM,
-        }
-    }
-
-    pub fn contains(self, other: KindSet) -> bool {
-        self.0 & other.0 == other.0
-    }
-
-    pub fn intersect(self, other: KindSet) -> KindSet {
-        KindSet(self.0 & other.0)
-    }
-
-    pub fn is_empty(self) -> bool {
-        self.0 == 0
-    }
-}
-
-/// A kind after inference. `Var` indexes the enclosing `KindScheme` or `ValueKinds`.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Kind<'a> {
-    Base(BaseKind),
-    Var(u16),
+    Type,
     Arrow(&'a Kind<'a>, &'a Kind<'a>),
-    /// A constructor scheme and arguments already supplied to it. The scheme
-    /// owns its binder; captured arguments use the enclosing binder.
-    Constructor {
-        scheme: KindScheme<'a>,
-        arguments: &'a [&'a Kind<'a>],
-    },
 }
 
-/// `forall k0 .. kn. kind`, with one bound per variable.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct KindScheme<'a> {
-    pub bounds: &'a [KindSet],
-    pub kind: &'a Kind<'a>,
-    pub applications: &'a [KindApplication<'a>],
-}
-
-/// One complete application spine, with all kinds in the enclosing binder.
-/// Separate uses do not equate their argument kinds.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct KindApplication<'a> {
-    pub head: &'a Kind<'a>,
-    pub arguments: &'a [&'a Kind<'a>],
-    pub result: &'a Kind<'a>,
-}
-
-/// Kinds of a value scheme's free type variables, under one shared kind binder.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ValueKinds<'a> {
-    pub bounds: &'a [KindSet],
-    /// Same order as `Annotation::free_vars`; every kind indexes `bounds`.
-    pub kinds: &'a [&'a Kind<'a>],
-    pub applications: &'a [KindApplication<'a>],
-}
-
-impl<'a> ValueKinds<'a> {
-    /// Fresh independent kind parameters before checking an annotation.
-    pub fn unconstrained(bump: &'a bumpalo::Bump, count: usize) -> Self {
-        Self {
-            applications: &[],
-            bounds: bump.alloc_slice_fill_copy(count, KindSet::ALL),
-            kinds: bump.alloc_slice_fill_iter((0..count).map(|index| {
-                &*bump.alloc(Kind::Var(
-                    index.try_into().expect("too many kind parameters"),
-                ))
-            })),
+impl Kind<'_> {
+    pub fn arity(&self) -> usize {
+        let mut count = 0;
+        let mut kind = self;
+        while let Self::Arrow(_, result) = kind {
+            count += 1;
+            kind = result;
         }
-    }
-}
-
-impl<'a> KindScheme<'a> {
-    pub fn mono(kind: &'a Kind<'a>) -> KindScheme<'a> {
-        KindScheme {
-            bounds: &[],
-            kind,
-            applications: &[],
-        }
-    }
-
-    /// The result kind after all parameters are applied.
-    pub fn result(&self) -> &'a Kind<'a> {
-        let mut kind = self.kind;
-        while let Kind::Arrow(_, to) = kind {
-            kind = to;
-        }
-        kind
+        count
     }
 }
 
@@ -185,7 +88,6 @@ pub enum Def<'a> {
         body: &'a Located<Expr<'a>>,
     },
     TypedDef {
-        kinds: ValueKinds<'a>,
         context: &'a [Pred<'a>],
         /// The original annotation, before aliases and function arguments are split.
         annotation: &'a Located<Type<'a>>,
@@ -205,7 +107,8 @@ pub struct TypedPattern<'a> {
 
 #[derive(Debug)]
 pub struct Union<'a> {
-    pub kind: KindScheme<'a>,
+    pub kind: &'a Kind<'a>,
+    pub context: &'a [Pred<'a>],
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
     pub ctors: &'a [&'a Ctor<'a>],
@@ -223,7 +126,8 @@ pub struct Ctor<'a> {
 
 #[derive(Debug)]
 pub struct Alias<'a> {
-    pub kind: KindScheme<'a>,
+    pub kind: &'a Kind<'a>,
+    pub context: &'a [Pred<'a>],
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
     pub typ: &'a Located<Type<'a>>,
@@ -413,16 +317,11 @@ pub struct Annotation<'a> {
     /// Scheme context, in evidence order.
     pub context: &'a [Pred<'a>],
     pub free_vars: FreeVars<'a>,
-    pub kinds: ValueKinds<'a>,
     pub typ: &'a Located<Type<'a>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Type<'a> {
-    Kinded {
-        typ: &'a Located<Type<'a>>,
-        kind: &'a Located<nash_source::Kind<'a>>,
-    },
     Lambda {
         from: &'a Located<Type<'a>>,
         to: &'a Located<Type<'a>>,
@@ -465,17 +364,6 @@ pub enum AliasType<'a> {
         /// Body after substituting the supplied arguments.
         typ: &'a Located<Type<'a>>,
     },
-}
-
-impl<'a> Type<'a> {
-    /// Inspect shape without discarding the annotation from the stored type.
-    pub fn unannotated(&self) -> &Self {
-        let mut typ = self;
-        while let Self::Kinded { typ: inner, .. } = typ {
-            typ = &inner.value;
-        }
-        typ
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -522,19 +410,72 @@ impl NodeId {
     }
 }
 
-/// `Tr t1 .. tn`: the claim that `t1..tn` have an impl of `Tr`.
-#[derive(Debug)]
-pub struct Pred<'a> {
-    pub trait_: QualifiedName<'a>,
-    pub args: &'a [&'a Located<Type<'a>>],
+/// Stored scheme obligations. Only Trait is written in a source context.
+/// Semantic deduplication must ignore source positions and display provenance.
+#[derive(Clone, Copy, Debug)]
+pub enum Pred<'a> {
+    Trait {
+        trait_: QualifiedName<'a>,
+        args: &'a [&'a Located<Type<'a>>],
+    },
+    /// A trait requirement implied by forming a type in the scheme.
+    Implied {
+        trait_: QualifiedName<'a>,
+        args: &'a [&'a Located<Type<'a>>],
+    },
+    /// Well-formedness of an application with a substitutable head.
+    Apply {
+        head: &'a Located<Type<'a>>,
+        args: &'a [&'a Located<Type<'a>>],
+    },
 }
+
+impl<'a> Pred<'a> {
+    pub fn key(self) -> PredicateKey<'a> {
+        PredicateKey(self)
+    }
+    pub fn trait_ref(self) -> Option<QualifiedName<'a>> {
+        match self {
+            Self::Trait { trait_, .. } | Self::Implied { trait_, .. } => Some(trait_),
+            Self::Apply { .. } => None,
+        }
+    }
+    pub fn args(self) -> &'a [&'a Located<Type<'a>>] {
+        match self {
+            Self::Trait { args, .. } | Self::Implied { args, .. } | Self::Apply { args, .. } => {
+                args
+            }
+        }
+    }
+    /// Includes the head, so copying and quantification cannot lose it.
+    pub fn types(self) -> impl Iterator<Item = &'a Located<Type<'a>>> {
+        let head = match self {
+            Self::Apply { head, .. } => Some(head),
+            _ => None,
+        };
+        head.into_iter().chain(self.args().iter().copied())
+    }
+    pub fn hidden(self) -> bool {
+        !matches!(self, Self::Trait { .. })
+    }
+    pub fn implied(self) -> Self {
+        match self {
+            Self::Trait { trait_, args } => Self::Implied { trait_, args },
+            other => other,
+        }
+    }
+}
+
+/// Semantic identity; source regions and explicit/implied provenance are excluded.
+#[derive(Clone, Copy, Debug)]
+pub struct PredicateKey<'a>(Pred<'a>);
 
 #[derive(Debug)]
 pub struct Trait<'a> {
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
-    /// One kind per parameter, generalized together (plans/02 `KindScheme`).
-    pub kind: KindScheme<'a>,
+    /// Closed Haskell 98 kind of each trait parameter.
+    pub kinds: &'a [&'a Kind<'a>],
     /// Superclasses; args are `Type::Var` over `parameters`.
     pub supers: &'a [Pred<'a>],
     pub methods: &'a [Method<'a>],
@@ -566,7 +507,6 @@ pub enum Head<'a> {
 #[derive(Debug)]
 pub struct Impl<'a> {
     pub variables: &'a [&'a str],
-    pub kinds: ValueKinds<'a>,
     pub trait_: QualifiedName<'a>,
     /// Over the head variables only.
     pub context: &'a [Pred<'a>],
@@ -589,7 +529,6 @@ pub enum HeadCon<'a> {
 pub struct ImplKey<'a> {
     pub trait_: QualifiedName<'a>,
     pub heads: &'a [Head<'a>],
-    pub kinds: ValueKinds<'a>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -602,6 +541,11 @@ pub struct ImplRef<'a> {
 /// (plans/07 chunk 9 keys specializations by ground evidence, hence `Hash`).
 #[derive(Debug)]
 pub enum Evidence<'a> {
+    /// Compile-time representation proof; no runtime dictionary.
+    Repr {
+        trait_: primitives::ReprTrait,
+        typ: &'a Located<Type<'a>>,
+    },
     /// The compiler-owned core Lift rule for an already-equal Big type.
     ReflexiveLift { typ: &'a Located<Type<'a>> },
     /// Compiler-owned structural equality for any Big type.
@@ -660,70 +604,6 @@ impl<'a> Head<'a> {
             },
         };
         bump.alloc(Located { region, value: typ })
-    }
-}
-
-#[cfg(test)]
-mod kind_tests {
-    use super::{BaseKind, Kind, KindScheme, KindSet};
-
-    #[test]
-    fn bounds_allow_only_documented_shapes() {
-        let shapes = [
-            KindSet::of(BaseKind::Big),
-            KindSet::of(BaseKind::Const),
-            KindSet::of(BaseKind::Term),
-            KindSet::ARROW,
-        ];
-        for (bound, allowed) in [
-            (KindSet::BIG, [true, false, false, false]),
-            (KindSet::CONST, [false, true, false, false]),
-            (KindSet::TERM, [false, false, true, false]),
-            (KindSet::ARROW, [false, false, false, true]),
-            (KindSet::ANY, [true, true, true, false]),
-            (KindSet::ALL, [true, true, true, true]),
-            (KindSet::STORABLE, [true, true, false, false]),
-            (KindSet::LITTLE, [false, true, true, false]),
-        ] {
-            for (shape, expected) in shapes.into_iter().zip(allowed) {
-                assert_eq!(
-                    bound.contains(shape),
-                    expected,
-                    "{bound:?} contains {shape:?}"
-                );
-            }
-        }
-        assert!(KindSet::ALL.contains(KindSet::ANY));
-        assert!(!KindSet::STORABLE.contains(KindSet::LITTLE));
-    }
-
-    #[test]
-    fn intersection_refines_bounds() {
-        assert_eq!(KindSet::STORABLE.intersect(KindSet::LITTLE), KindSet::CONST);
-        assert_eq!(KindSet::LITTLE.intersect(KindSet::STORABLE), KindSet::CONST);
-        assert_eq!(KindSet::ALL.intersect(KindSet::ANY), KindSet::ANY);
-        assert!(KindSet::BIG.intersect(KindSet::LITTLE).is_empty());
-        assert!(KindSet::ANY.intersect(KindSet::ARROW).is_empty());
-        assert!(!KindSet::CONST.is_empty());
-    }
-
-    #[test]
-    fn scheme_result_follows_only_result_arrows() {
-        let big = Kind::Base(BaseKind::Big);
-        let arrow = Kind::Arrow(&big, &big);
-        let nested = Kind::Arrow(&big, &arrow);
-        let scheme = KindScheme::mono(&nested);
-        assert!(scheme.bounds.is_empty());
-        assert!(std::ptr::eq(scheme.result(), &big));
-        let var = Kind::Var(0);
-        let higher = Kind::Arrow(&arrow, &var);
-        let scheme = KindScheme {
-            applications: &[],
-            bounds: &[KindSet::LITTLE],
-            kind: &higher,
-        };
-        assert!(std::ptr::eq(scheme.result(), &var));
-        assert!(std::ptr::eq(KindScheme::mono(&big).result(), &big));
     }
 }
 
@@ -829,11 +709,6 @@ mod evidence_tests {
             key: ImplKey {
                 trait_: QualifiedName { home, name: "Show" },
                 heads: &[],
-                kinds: ValueKinds {
-                    bounds: &[],
-                    kinds: &[],
-                    applications: &[],
-                },
             },
         };
         let first_args = [&first];

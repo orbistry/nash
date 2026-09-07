@@ -36,16 +36,39 @@ Module {
     ),
     decls: Declare {
         definition: TypedDef {
-            kinds: ValueKinds {
-                bounds: [],
-                kinds: [
-                    Base(
-                        Big,
-                    ),
-                ],
-                applications: [],
-            },
-            context: [],
+            context: [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 21,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 23,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            ],
             annotation: Located {
                 region: Region {
                     start: Position {
@@ -315,22 +338,11 @@ Module {
                 },
             },
             value: Alias {
-                kind: KindScheme {
-                    bounds: [
-                        KindSet(
-                            7,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [],
                 name: Located {
                     region: Region {
                         start: Position {

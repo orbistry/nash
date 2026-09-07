@@ -2,10 +2,10 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
-boxed : forall (a : Big). Keep (Container a) => a -> a
-forward : forall (a : Any). Keep a => a -> a
-helper : forall (a : Any). Keep a => a -> a
+boxed : forall a. (Big a, Keep (Container a)) => a -> a
+forward : forall a. Keep a => a -> a
+helper : forall a. Keep a => a -> a
 monomorphic : Keep () => ()
-recursive : forall (a : Any). Keep a => a -> a
+recursive : forall a. Keep a => a -> a
 use : ( (), () )
 useBox : ( Container Color, Color )

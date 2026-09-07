@@ -7,13 +7,8 @@ description: type alias p = pair int (list Data)
     [
         (
             "p",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Const,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
 )

@@ -10,8 +10,8 @@ macro_rules! assert_kinds_snapshot {
         let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let result = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect("kind checking succeeds");
-        let unions: Vec<_> = result.module.unions.iter().map(|u| (u.value.name.value, u.value.kind)).collect();
-        let aliases: Vec<_> = result.module.aliases.iter().map(|a| (a.value.name.value, a.value.kind)).collect();
+        let unions: Vec<_> = result.module.unions.iter().map(|u| (u.value.name.value, u.value.kind, u.value.context)).collect();
+        let aliases: Vec<_> = result.module.aliases.iter().map(|a| (a.value.name.value, a.value.kind, a.value.context)).collect();
         insta::with_settings!({description => $source, omit_expression => true}, {
             insta::assert_debug_snapshot!((unions, aliases));
         });
@@ -20,7 +20,7 @@ macro_rules! assert_kinds_snapshot {
 
 macro_rules! assert_kind_error_snapshot {
     ($source:expr) => {
-        assert_kind_error_snapshot!($source, Error::KindMismatch { .. } | Error::KindInfinite { .. } | Error::KindTooManyArgs { .. });
+        assert_kind_error_snapshot!($source, Error::KindMismatch { .. } | Error::KindInfinite { .. } | Error::RepresentationMismatch { .. } | Error::ContradictoryRepresentation { .. });
     };
     ($source:expr, $expected:pat) => {{
         let bump = Bump::new();
@@ -42,7 +42,7 @@ fn inline_kind_bounds_reject_contradictory_repeated_variables() {
 
 #[test]
 fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
-    use nash_ast::{AliasType, Kind, KindScheme, KindSet, QualifiedName, Type};
+    use nash_ast::{AliasType, Kind, QualifiedName, Type, primitives::Repr};
     use nash_region::Located;
     let bump = Bump::new();
     let mut env = nash_can::kinds::KindEnv::default();
@@ -58,32 +58,20 @@ fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
     let list = named("list", &[]);
     let big_list = named("List", bump.alloc_slice_copy(&[big]));
     let invalid_big_list = named("List", bump.alloc_slice_copy(&[small]));
-    let unknown = QualifiedName {
-        home,
-        name: "UnknownKind",
-    };
-    env.insert(
-        unknown,
-        KindScheme {
-            applications: &[],
-            bounds: &[KindSet::ANY],
-            kind: &Kind::Var(0),
-        },
-    );
-    let unknown = named("UnknownKind", &[]);
     let alias_name = QualifiedName {
         home,
         name: "Alias",
     };
-    env.insert(
+    env.types.insert(
         alias_name,
-        KindScheme {
-            applications: &[],
-            bounds: &[],
-            kind: &Kind::Base(nash_ast::BaseKind::Const),
+        nash_can::kinds::TypeInfo::Defined {
+            kind: &Kind::Type,
+            parameters: &[],
+            context: &[],
+            repr: None,
+            alias: Some(big),
         },
     );
-    // Representation bodies do not determine a nominal alias's kind.
     let alias = bump.alloc(Located::at_zero(Type::Alias {
         reference: alias_name,
         arguments: &[],
@@ -92,28 +80,25 @@ fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
     }));
     let variable = bump.alloc(Located::at_zero(Type::Var("a")));
     for (typ, expected) in [
-        (big, true),
-        (small, false),
-        (list, false),
-        (big_list, true),
-        (invalid_big_list, false),
-        (unknown, false),
-        (alias, false),
-        (variable, false),
+        (big, Some(Repr::Big)),
+        (small, Some(Repr::Const)),
+        (list, None),
+        (big_list, Some(Repr::Big)),
+        (invalid_big_list, Some(Repr::Big)),
+        (alias, Some(Repr::Big)),
+        (variable, None),
     ] {
         assert_eq!(
-            nash_can::kinds::proves_ground_big(&bump, &env, typ),
+            nash_can::kinds::repr_of(&bump, &env, typ),
             expected,
             "{typ:?}"
         );
     }
-    assert_eq!(
-        env.scheme(QualifiedName {
-            home,
-            name: "UnknownKind"
-        })
-        .bounds,
-        &[KindSet::ANY]
+    let group = Default::default();
+    let mut formation = nash_can::kinds::Formation::new(&bump, &env, &group);
+    assert!(
+        formation.typ(invalid_big_list).is_err(),
+        "known representation does not bypass the constructor context"
     );
 }
 
@@ -346,14 +331,15 @@ fn annotation_storable_parameter() {
         panic!("expected f declaration")
     };
     let nash_ast::Def::TypedDef {
-        free_vars, kinds, ..
+        free_vars, context, ..
     } = definition
     else {
         panic!("expected typed f")
     };
     assert_eq!(*free_vars, &["a"]);
-    assert_eq!(kinds.bounds, &[nash_ast::KindSet::STORABLE]);
-    assert_eq!(kinds.kinds, &[&nash_ast::Kind::Var(0)]);
+    assert!(
+        matches!(context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()))
+    );
 }
 
 #[test]
@@ -401,8 +387,17 @@ fn imported_interfaces_retain_higher_kinded_types() {
         nash_can::from_module(source_arena, &canonical.module, &BTreeMap::new())
     };
     let scheme = interface.unions[0].kind;
-    assert!(matches!(scheme.kind, Kind::Arrow(Kind::Var(_), _)));
-    assert_eq!(scheme.applications.len(), 1);
+    assert_eq!(
+        scheme,
+        &Kind::Arrow(
+            &Kind::Arrow(&Kind::Type, &Kind::Type),
+            &Kind::Arrow(&Kind::Type, &Kind::Type)
+        )
+    );
+    assert!(matches!(
+        interface.unions[0].context,
+        [nash_ast::Pred::Apply { .. }]
+    ));
     assert!(matches!(interface.aliases[0].typ.value, Type::App { .. }));
     let interfaces = BTreeMap::from([("Shapes", interface)]);
     let source = destination.alloc_str("module Main exposing (..)\n\nimport Shapes exposing (type wrap)\n\ntype holder 'f 'a = Holder (wrap 'f 'a)\n");
@@ -418,7 +413,15 @@ fn imported_interfaces_retain_higher_kinded_types() {
         &module,
     )
     .unwrap();
-    insta::assert_debug_snapshot!((interface, canonical.module.unions[0].value.kind));
+    assert!(matches!(
+        canonical.module.unions[0].value.context,
+        [nash_ast::Pred::Apply { .. }]
+    ));
+    insta::assert_debug_snapshot!((
+        interface,
+        canonical.module.unions[0].value.kind,
+        canonical.module.unions[0].value.context
+    ));
 }
 
 #[test]
@@ -436,7 +439,6 @@ fn annotation_kinds_keep_application_parameters_correlated() {
         to: application,
     }));
     let annotation = Annotation {
-        kinds: nash_ast::ValueKinds::unconstrained(&bump, 3),
         free_vars: &["f", "b", "a"],
         context: &[],
         typ,
@@ -452,36 +454,28 @@ fn annotation_kinds_keep_application_parameters_correlated() {
         &annotation,
     )
     .unwrap();
-    let kind = |name| {
-        kinds.kinds[annotation
-            .free_vars
-            .iter()
-            .position(|var| *var == name)
-            .unwrap()]
-    };
-    let [application] = kinds.applications else {
+    let [nash_ast::Pred::Apply { head, args: [a, b] }] = kinds.context else {
         panic!("one n-ary constructor application")
     };
-    assert_eq!(application.head, kind("f"));
-    assert_eq!(application.arguments, &[kind("a"), kind("b")]);
-    assert_ne!(kind("a"), kind("b"));
-    let mut infer = nash_can::kinds::Infer::new(&bump);
-    let first = infer.instantiate_values(&kinds);
-    let second = infer.instantiate_values(&kinds);
-    let big = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Big));
-    let constant = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Const));
-    let term = bump.alloc(nash_can::kinds::K::Base(nash_ast::BaseKind::Term));
-    let concrete = bump.alloc(nash_can::kinds::K::Arrow(
-        big,
-        bump.alloc(nash_can::kinds::K::Arrow(constant, term)),
-    ));
-    infer.unify(first[0], concrete).unwrap();
-    assert!(
-        infer.unify(first[2], constant).is_err(),
-        "a must satisfy the selected constructor's first domain"
+    assert!(matches!(head.value, Type::Var("f")));
+    assert!(matches!(a.value, Type::Var("a")));
+    assert!(matches!(b.value, Type::Var("b")));
+    let env = nash_can::kinds::KindEnv::default();
+    let mut checker = nash_can::kinds::TypeChecker::new(&bump, &env);
+    checker.value(typ).unwrap();
+    let f = checker.variable("f");
+    assert_eq!(
+        checker.infer.default_and_zonk(f),
+        &nash_ast::Kind::Arrow(
+            &nash_ast::Kind::Type,
+            &nash_ast::Kind::Arrow(&nash_ast::Kind::Type, &nash_ast::Kind::Type)
+        )
     );
-    infer.unify(first[1], constant).unwrap();
-    infer.unify(second[2], constant).unwrap();
+    let substitution = BTreeMap::from([("a", var("x")), ("b", var("y")), ("f", var("g"))]);
+    let copied = nash_can::kinds::substitute_predicate(&bump, &substitution, kinds.context[0]);
+    assert!(
+        matches!(copied, nash_ast::Pred::Apply { head, args: [a,b] } if matches!(head.value, Type::Var("g")) && matches!(a.value, Type::Var("x")) && matches!(b.value, Type::Var("y")))
+    );
     insta::assert_debug_snapshot!(kinds);
 }
 
@@ -504,7 +498,6 @@ fn annotation_returns_shared_storable_bound() {
         to: list,
     }));
     let annotation = nash_ast::Annotation {
-        kinds: nash_ast::ValueKinds::unconstrained(&bump, 1),
         context: &[],
         free_vars: &["a"],
         typ,
@@ -520,14 +513,15 @@ fn annotation_returns_shared_storable_bound() {
         &annotation,
     )
     .unwrap();
-    assert_eq!(kinds.kinds.len(), 1);
-    assert_eq!(kinds.bounds, &[nash_ast::KindSet::STORABLE]);
+    assert!(
+        matches!(kinds.context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()) && matches!(pred.args()[0].value, nash_ast::Type::Var("a")))
+    );
     insta::assert_debug_snapshot!(kinds);
 }
 
 #[test]
 fn annotation_checks_alias_contract_before_argument_splitting() {
-    use nash_ast::{BaseKind, Kind, KindScheme, Type};
+    use nash_ast::{Kind, Type};
     use nash_region::Located;
     let bump = Bump::new();
     let a = bump.alloc(Located::at_zero(Type::Var("a")));
@@ -547,10 +541,11 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
             parameters: &["a"],
             typ: body,
             visibility: nash_can::AliasVisibility::Public,
-            kind: KindScheme::mono(&Kind::Arrow(
-                &Kind::Base(BaseKind::Big),
-                &Kind::Base(BaseKind::Term),
-            )),
+            kind: &Kind::Arrow(&Kind::Type, &Kind::Type),
+            context: bump.alloc_slice_copy(&[nash_ast::Pred::Implied {
+                trait_: nash_ast::primitives::ReprTrait::Big.qualified(),
+                args: bump.alloc_slice_copy(&[&*a]),
+            }]),
         }]),
     };
     let interfaces = BTreeMap::from([("Restricted", interface)]);
@@ -567,13 +562,16 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
         &module,
     )
     .expect_err("the alias parameter requires Big, even when the body accepts Const");
-    assert!(matches!(errors.as_slice(), [Error::KindMismatch { .. }]));
+    assert!(matches!(
+        errors.as_slice(),
+        [Error::RepresentationMismatch { .. }]
+    ));
     insta::assert_debug_snapshot!(errors);
 }
 
 #[test]
 fn kind_annotation_fix() {
-    assert_kinds_snapshot!("type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))");
+    assert_kinds_snapshot!("type Fix 'f = Fix ('f (Fix 'f))");
 }
 
 #[test]
@@ -593,7 +591,7 @@ fn kind_annotation_arrow_mismatch() {
 
 #[test]
 fn storable_annotation_occurrences_are_independent() {
-    assert_kinds_snapshot!("type wrap ('f : Storable -> Storable) 'a = Wrap ('f 'a)");
+    assert_kinds_snapshot!("type wrap 'f ('a : Storable) = Wrap (('f 'a) : Storable)");
 }
 
 #[test]
@@ -657,7 +655,7 @@ fn retained_self_application_in_value_annotations() {
 
 #[test]
 fn finite_self_application_in_value_annotations() {
-    assert_kinds_snapshot!(
+    assert_kind_error_snapshot!(
         "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\nwitness : self tag\nwitness = Self (Tag ())"
     );
 }
@@ -686,7 +684,7 @@ fn retained_application_preserves_three_arguments() {
 #[test]
 fn annotated_head_preserves_remaining_application_arguments() {
     assert_kinds_snapshot!(
-        "type apply2 ('f : Storable -> Storable -> Term) 'a 'b = Apply2 ('f 'a 'b)"
+        "type apply2 'f ('a : Storable) ('b : Storable) = Apply2 (('f 'a 'b) : Term)"
     );
 }
 
@@ -706,9 +704,7 @@ fn retained_nested_self_application_terminates() {
 
 #[test]
 fn retained_finite_nested_constructor_application() {
-    assert_kinds_snapshot!(
-        "type app 'f 'a = App ('f 'a)\ntype tag 'a = Tag unit\ntype w = W (app (app tag) tag)"
-    );
+    assert_kinds_snapshot!("type app 'f 'a = App ('f 'a)\ntype w = W (app (app list) int)");
 }
 
 #[test]
@@ -727,13 +723,13 @@ fn fresh_parameter_replay_in_annotations() {
 
 #[test]
 fn fresh_parameter_replay_in_impl_heads() {
-    assert_kinds_snapshot!(
+    assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (s s tag tag) where\n    marker _ = ()"
     );
 }
 
 macro_rules! supplied_obligation_cases {
-    ($($name:ident: $number:literal => $valid:literal),* $(,)?) => {$(
+    ($($name:ident: $number:literal),* $(,)?) => {$(
         #[test]
         fn $name() {
             let source = include_str!("fixtures/kind-obligations.md")
@@ -742,42 +738,36 @@ macro_rules! supplied_obligation_cases {
             let source = bump.alloc_str(source);
             let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
             let result = canonicalize(&bump, Context { package: None, interfaces: None }, &module);
-            if $valid {
-                let result = result.expect("case 3 accepts a qualified partial phantom argument");
-                let kinds: Vec<_> = result.module.unions.iter().map(|union| (union.value.name.value, union.value.kind)).collect();
-                insta::assert_debug_snapshot!(kinds);
-            } else {
-                let errors = result.expect_err("a constructor cannot occupy a value field");
-                assert!(errors.iter().all(|error| matches!(error, Error::KindMismatch { .. })), "outer shape must fail before recursive expansion: {errors:?}");
-                insta::assert_debug_snapshot!(errors);
-            }
+            let errors = result.expect_err("self application fails the H98 occurs check");
+            assert!(errors.iter().all(|error| matches!(error, Error::KindInfinite { .. })), "declaration-time occurs check: {errors:?}");
+            insta::assert_debug_snapshot!(errors);
         }
     )*};
 }
 
 supplied_obligation_cases! {
-    supplied_obligation_01: 1 => false,
-    supplied_obligation_02: 2 => false,
-    supplied_obligation_03: 3 => true,
-    supplied_obligation_04: 4 => false,
-    supplied_obligation_05: 5 => false,
-    supplied_obligation_06: 6 => false,
-    supplied_obligation_07: 7 => false,
-    supplied_obligation_08: 8 => false,
-    supplied_obligation_09: 9 => false,
-    supplied_obligation_10: 10 => false,
-    supplied_obligation_11: 11 => false,
-    supplied_obligation_12: 12 => false,
-    supplied_obligation_13: 13 => false,
-    supplied_obligation_14: 14 => false,
-    supplied_obligation_15: 15 => false,
-    supplied_obligation_16: 16 => false,
-    supplied_obligation_17: 17 => false,
-    supplied_obligation_18: 18 => false,
-    supplied_obligation_19: 19 => false,
-    supplied_obligation_20: 20 => false,
-    supplied_obligation_21: 21 => false,
-    supplied_obligation_22: 22 => false,
+    supplied_obligation_01: 1,
+    supplied_obligation_02: 2,
+    supplied_obligation_03: 3,
+    supplied_obligation_04: 4,
+    supplied_obligation_05: 5,
+    supplied_obligation_06: 6,
+    supplied_obligation_07: 7,
+    supplied_obligation_08: 8,
+    supplied_obligation_09: 9,
+    supplied_obligation_10: 10,
+    supplied_obligation_11: 11,
+    supplied_obligation_12: 12,
+    supplied_obligation_13: 13,
+    supplied_obligation_14: 14,
+    supplied_obligation_15: 15,
+    supplied_obligation_16: 16,
+    supplied_obligation_17: 17,
+    supplied_obligation_18: 18,
+    supplied_obligation_19: 19,
+    supplied_obligation_20: 20,
+    supplied_obligation_21: 21,
+    supplied_obligation_22: 22,
 }
 
 #[test]
@@ -797,7 +787,8 @@ fn phantom_constructor_checks_saturated_argument_validity() {
 #[test]
 fn phantom_constructor_checks_supplied_partial_bounds() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype w = W (tag (pair (option int)))"
+        "type option 'a = None | Some 'a\ntype use 'f = Use ('f int)\ntype w = W (use (pair (option int)))",
+        Error::RepresentationMismatch { .. }
     );
 }
 
@@ -812,13 +803,13 @@ fn partial_constructor_projects_consumer_bounds_before_missing_arguments() {
 fn generated_capture_outside_finite_fragment_is_not_an_infinite_kind() {
     assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntype w = W (wrap (app tag) app option)",
-        Error::KindRestricted { .. }
+        Error::KindMismatch { .. }
     );
 }
 
 #[test]
 fn explicit_capture_has_a_finite_inductive_proof() {
-    assert_kinds_snapshot!(
+    assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype w = W (app tag (app option))"
     );
 }
@@ -827,7 +818,7 @@ fn explicit_capture_has_a_finite_inductive_proof() {
 fn fragment_restriction_cannot_validate_an_annotation() {
     assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\nidentity : wrap (app tag) app option -> wrap (app tag) app option\nidentity x = x",
-        Error::KindRestricted { .. }
+        Error::KindMismatch { .. }
     );
 }
 
@@ -835,6 +826,6 @@ fn fragment_restriction_cannot_validate_an_annotation() {
 fn fragment_restriction_cannot_validate_an_impl_head() {
     assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (wrap (app tag) app option) where\n    marker x = ()",
-        Error::KindRestricted { .. }
+        Error::KindMismatch { .. }
     );
 }

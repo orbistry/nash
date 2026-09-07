@@ -359,9 +359,9 @@ pub enum Pattern<'a> {
 
 #[derive(Debug)]
 pub enum Type<'a> {
-    Kinded {
+    Repr {
         typ: &'a Located<Type<'a>>,
-        kind: &'a Located<Kind<'a>>,
+        repr: &'a Located<Repr>,
     },
     Lambda {
         from: &'a Located<Type<'a>>,
@@ -397,7 +397,7 @@ impl<'a> Type<'a> {
     /// Inspect shape without discarding the annotation from the stored type.
     pub fn unannotated(&self) -> &Self {
         let mut typ = self;
-        while let Self::Kinded { typ: inner, .. } = typ {
+        while let Self::Repr { typ: inner, .. } = typ {
             typ = &inner.value;
         }
         typ
@@ -407,19 +407,16 @@ impl<'a> Type<'a> {
 #[derive(Debug)]
 pub struct TypeParam<'a> {
     pub name: &'a Located<&'a str>,
-    pub kind: Option<&'a Located<Kind<'a>>>,
+    pub repr: Option<&'a Located<Repr>>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum Kind<'a> {
+/// Representation annotation sugar; Haskell 98 kinds have no surface syntax.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Repr {
     Big,
     Const,
     Term,
     Storable,
-    Arrow {
-        from: &'a Located<Kind<'a>>,
-        to: &'a Located<Kind<'a>>,
-    },
 }
 
 #[derive(Debug)]

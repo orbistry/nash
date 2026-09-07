@@ -39,7 +39,7 @@ struct Term<'a> {
 
 #[derive(Clone, Copy)]
 struct Predicate<'a> {
-    trait_: QualifiedName<'a>,
+    trait_: Option<QualifiedName<'a>>,
     args: &'a [&'a Term<'a>],
 }
 
@@ -49,7 +49,7 @@ struct Resolver<'t, 'a> {
     bump: &'a Bump,
     tables: &'t Tables<'a>,
     remaining: usize,
-    kinds: crate::kinds::ImplKinds<'t, 'a>,
+    kinds: &'t crate::kinds::KindEnv<'a>,
 }
 
 impl<'a> Resolver<'_, 'a> {
@@ -114,7 +114,6 @@ impl<'a> Resolver<'_, 'a> {
     ) -> Result<&'a Term<'a>, Failure> {
         self.step(depth)?;
         let (con, args): (_, Vec<_>) = match &typ.value {
-            Type::Kinded { typ, .. } => return self.term(typ, subst, depth + 1),
             Type::Var(name) => {
                 if let Some(term) = subst.get(name) {
                     return Ok(term);
@@ -182,11 +181,11 @@ impl<'a> Resolver<'_, 'a> {
     ) -> Result<Predicate<'a>, Failure> {
         self.step(0)?;
         let mut args = Vec::new();
-        for arg in pred.args {
+        for arg in pred.types() {
             args.push(self.term(arg, subst, 0)?);
         }
         Ok(Predicate {
-            trait_: pred.trait_,
+            trait_: pred.trait_ref(),
             args: self.bump.alloc_slice_fill_iter(args),
         })
     }
@@ -196,13 +195,26 @@ impl<'a> Resolver<'_, 'a> {
         if a.trait_ != b.trait_ || a.args.len() != b.args.len() {
             return Ok(false);
         }
-        let mut pending: Vec<_> = a.args.iter().zip(b.args).collect();
+        let mut left = a.args.to_vec();
+        let mut right = b.args.to_vec();
+        if a.trait_
+            .and_then(nash_ast::primitives::ReprTrait::of)
+            .is_some()
+        {
+            for term in left.iter_mut().chain(&mut right) {
+                let canonical = self.canonical(term, 0)?;
+                let subject =
+                    crate::kinds::representation_subject(self.bump, self.kinds, canonical);
+                *term = self.term(subject, &BTreeMap::new(), 0)?;
+            }
+        }
+        let mut pending: Vec<_> = left.into_iter().zip(right).collect();
         while let Some((a, b)) = pending.pop() {
             self.step(0)?;
             if a.con != b.con || a.args.len() != b.args.len() {
                 return Ok(false);
             }
-            pending.extend(a.args.iter().zip(b.args));
+            pending.extend(a.args.iter().copied().zip(b.args.iter().copied()));
         }
         Ok(true)
     }
@@ -226,7 +238,19 @@ impl<'a> Resolver<'_, 'a> {
                 continue;
             }
             result.push(pred);
-            let trait_ = self.tables.traits[&pred.trait_];
+            let Some(name) = pred.trait_ else {
+                continue;
+            };
+            if let Some(repr) = nash_ast::primitives::ReprTrait::of(name) {
+                for superclass in repr.supers() {
+                    pending.push(Predicate {
+                        trait_: Some(superclass.qualified()),
+                        args: pred.args,
+                    });
+                }
+                continue;
+            }
+            let trait_ = self.tables.traits[&name];
             let subst = trait_
                 .parameters
                 .iter()
@@ -252,17 +276,52 @@ impl<'a> Resolver<'_, 'a> {
                 return Ok(());
             }
         }
+        if let Some(required) = wanted.trait_.and_then(nash_ast::primitives::ReprTrait::of) {
+            let typ = self.canonical(wanted.args[0], 0)?;
+            return match crate::kinds::repr_of(self.bump, self.kinds, typ) {
+                Some(actual) if required.admits().contains(actual) => Ok(()),
+                _ => Err(Failure::Missing),
+            };
+        }
+        if wanted.trait_.is_none() {
+            let head = self.canonical(wanted.args[0], 0)?;
+            let args: Vec<_> = wanted.args[1..]
+                .iter()
+                .map(|arg| self.canonical(arg, 0))
+                .collect::<Result<_, _>>()?;
+            let group = Default::default();
+            let mut formation = crate::kinds::Formation::new(self.bump, self.kinds, &group);
+            formation
+                .reduce(Pred::Apply {
+                    head,
+                    args: self.bump.alloc_slice_fill_iter(args),
+                })
+                .map_err(|_| Failure::Missing)?;
+            for pred in formation.predicates {
+                let child = self.predicate(&pred, &BTreeMap::new())?;
+                if self.equal(child, wanted)? {
+                    return Err(Failure::Missing);
+                }
+                self.resolve(given, child, active)?;
+            }
+            return Ok(());
+        }
         if self.tables.has_structural_eq()
-            && wanted.trait_ == nash_ast::primitives::eq_trait()
+            && wanted.trait_ == Some(nash_ast::primitives::eq_trait())
             && wanted.args.len() == 1
         {
-            let typ = self.canonical(wanted.args[0], 0)?;
-            if self.kinds.proves_big(typ) {
-                return Ok(());
+            let big = Predicate {
+                trait_: Some(nash_ast::primitives::ReprTrait::Big.qualified()),
+                args: &wanted.args[..1],
+            };
+            match self.resolve(given, big, active) {
+                Ok(()) => return Ok(()),
+                Err(Failure::Missing) => {}
+                Err(reason) => return Err(reason),
             }
         }
         if self.tables.has_reflexive_lift()
-            && wanted.trait_ == nash_ast::primitives::lift_trait()
+            && wanted.trait_ == Some(nash_ast::primitives::lift_trait())
             && wanted.args.len() == 2
             && self.equal(
                 Predicate {
@@ -275,9 +334,14 @@ impl<'a> Resolver<'_, 'a> {
                 },
             )?
         {
-            let typ = self.canonical(wanted.args[0], 0)?;
-            if self.kinds.proves_big(typ) {
-                return Ok(());
+            let big = Predicate {
+                trait_: Some(nash_ast::primitives::ReprTrait::Big.qualified()),
+                args: &wanted.args[..1],
+            };
+            match self.resolve(given, big, active) {
+                Ok(()) => return Ok(()),
+                Err(Failure::Missing) => {}
+                Err(reason) => return Err(reason),
             }
         }
         for pred in active.iter() {
@@ -295,7 +359,7 @@ impl<'a> Resolver<'_, 'a> {
             .tables
             .impls
             .iter()
-            .filter(|(key, _)| key.trait_ == wanted.trait_)
+            .filter(|(key, _)| Some(key.trait_) == wanted.trait_)
         {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
                 &mut nash_ast::head::Canonical,
@@ -306,9 +370,6 @@ impl<'a> Resolver<'_, 'a> {
             )
             .map_err(|_| Failure::Limit)?
             {
-                if !self.kinds.proves_signature(info.kinds, &arguments) {
-                    continue;
-                }
                 selected = Some((*info, arguments));
                 break;
             }
@@ -349,31 +410,11 @@ pub(crate) fn check<'a>(
             )
         })
         .collect();
-    let heads: Vec<_> = trait_
-        .parameters
-        .iter()
-        .map(|p| canonical_subst[p])
-        .collect();
-    let variables = impl_
-        .variables
-        .iter()
-        .map(|name| (*name, impl_.region))
-        .collect();
-    let mut kinds = crate::kinds::check_impl_heads(
-        bump,
-        kind_env,
-        impl_.home,
-        trait_,
-        &heads,
-        &variables,
-        impl_.context,
-    )?;
-    kinds.restore(impl_.variables, impl_.kinds, impl_.region)?;
     let mut resolver = Resolver {
         bump,
         tables,
         remaining: WORK_LIMIT,
-        kinds,
+        kinds: kind_env,
     };
     let givens = resolver.givens(impl_.context);
     for (index, superclass) in trait_.supers.iter().enumerate() {
@@ -391,15 +432,11 @@ pub(crate) fn check<'a>(
                 region: impl_.region,
                 trait_: impl_.trait_,
                 heads: impl_.heads,
-                superclass: bump.alloc(Pred {
-                    trait_: superclass.trait_,
-                    args: bump.alloc_slice_fill_iter(
-                        superclass
-                            .args
-                            .iter()
-                            .map(|a| crate::types::substitute_type(bump, &canonical_subst, a)),
-                    ),
-                }),
+                superclass: bump.alloc(crate::kinds::substitute_predicate(
+                    bump,
+                    &canonical_subst,
+                    *superclass,
+                )),
                 index: index as u16,
                 reason,
             }]);

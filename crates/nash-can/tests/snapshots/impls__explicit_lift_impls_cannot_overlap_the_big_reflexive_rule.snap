@@ -142,4 +142,130 @@ expression: results
     Ok(
         (),
     ),
+    Err(
+        [
+            ReflexiveLiftOverlap {
+                heads: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 20,
+                            },
+                        },
+                        value: Alias {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "Alias",
+                            },
+                            arguments: [
+                                AliasArgument {
+                                    name: "a",
+                                    typ: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 4,
+                                                column: 18,
+                                            },
+                                            end: Position {
+                                                line: 4,
+                                                column: 20,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                },
+                            ],
+                            remaining: [],
+                            target: Open(
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 25,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ),
+                        },
+                    },
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 23,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 31,
+                            },
+                        },
+                        value: Alias {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "Alias",
+                            },
+                            arguments: [
+                                AliasArgument {
+                                    name: "a",
+                                    typ: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 4,
+                                                column: 29,
+                                            },
+                                            end: Position {
+                                                line: 4,
+                                                column: 31,
+                                            },
+                                        },
+                                        value: Var(
+                                            "b",
+                                        ),
+                                    },
+                                },
+                            ],
+                            remaining: [],
+                            target: Open(
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 25,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ),
+                        },
+                    },
+                ],
+            },
+        ],
+    ),
 ]

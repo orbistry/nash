@@ -7,34 +7,18 @@ description: "type wrap ('f : Big) 'a = Wrap ('f 'a)"
         region: Region {
             start: Position {
                 line: 5,
-                column: 17,
+                column: 12,
             },
             end: Position {
                 line: 5,
-                column: 20,
+                column: 14,
             },
         },
-        context: ParamAnnotation {
-            type_name: "wrap",
-            param: "f",
-        },
-        expected: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
+        context: TypeAnnotation,
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

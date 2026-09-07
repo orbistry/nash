@@ -14,33 +14,15 @@ description: "type unused 'a = Unused (list 'a) ('a unit)"
                 column: 43,
             },
         },
-        context: TypeArg {
-            head: Var(
-                "a",
-            ),
-            index: 0,
+        context: LittleField {
+            union: "unused",
+            ctor: "Unused",
+            index: 1,
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [
-                KindSet(
-                    3,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

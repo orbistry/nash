@@ -37,6 +37,7 @@ pub struct Builtin {
     pub free_vars: &'static [&'static str],
     pub typ: &'static Located<Type<'static>>,
     pub lowering: BuiltinLowering,
+    pub context: &'static [crate::Pred<'static>],
 }
 
 pub(super) const fn named(
@@ -61,16 +62,12 @@ macro_rules! function {
 
 macro_rules! builtin {
     ($name:literal, $lowering:ident $(($variant:literal))?, [$($var:literal),*], $typ:expr) => {
-        Builtin { name: $name, free_vars: &[$($var),*], typ: $typ, lowering: BuiltinLowering::$lowering $(($variant))? }
+        Builtin { context: &[], name: $name, free_vars: &[$($var),*], typ: $typ, lowering: BuiltinLowering::$lowering $(($variant))? }
     };
 }
 
 const A: &Located<Type<'static>> = &Located::at_zero(Type::Var("a"));
 const B: &Located<Type<'static>> = &Located::at_zero(Type::Var("b"));
-const BIG_A: &Located<Type<'static>> = &Located::at_zero(Type::Kinded {
-    typ: A,
-    kind: &Located::at_zero(nash_source::Kind::Big),
-});
 const UNIT: &Located<Type<'static>> = &Located::at_zero(Type::Unit);
 const INT: &Located<Type<'static>> = &named("int", &[]);
 const BOOL: &Located<Type<'static>> = &named("bool", &[]);
@@ -338,12 +335,16 @@ pub const BUILTINS: &[Builtin] = &[
         [],
         function!(&named("list", &[&named("pair", &[DATA, DATA])]), DATA)
     ),
-    builtin!(
-        "listData",
-        Plutus("ListData"),
-        ["a"],
-        function!(&named("list", &[BIG_A]), DATA)
-    ),
+    Builtin {
+        name: "listData",
+        free_vars: &["a"],
+        typ: function!(&named("list", &[A]), DATA),
+        lowering: BuiltinLowering::Plutus("ListData"),
+        context: &[crate::Pred::Trait {
+            trait_: super::ReprTrait::Big.qualified(),
+            args: &[A],
+        }],
+    },
     builtin!("iData", Plutus("IData"), [], function!(INT, DATA)),
     builtin!("bData", Plutus("BData"), [], function!(BYTES, DATA)),
     builtin!(

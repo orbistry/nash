@@ -100,18 +100,11 @@ Module {
                                     name: "Just",
                                 },
                                 union: Union {
-                                    kind: KindScheme {
-                                        bounds: [],
-                                        kind: Arrow(
-                                            Base(
-                                                Big,
-                                            ),
-                                            Base(
-                                                Big,
-                                            ),
-                                        ),
-                                        applications: [],
-                                    },
+                                    kind: Arrow(
+                                        Type,
+                                        Type,
+                                    ),
+                                    context: [],
                                     name: Located {
                                         region: Region {
                                             start: Position {

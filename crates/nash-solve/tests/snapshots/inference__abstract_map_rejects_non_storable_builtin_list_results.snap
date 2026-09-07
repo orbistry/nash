@@ -3,7 +3,85 @@ source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\nimpl Functor list where\n    map f xs =\n        case xs of\n            [] -> []\n            x :: rest -> Builtin.mkCons (f x) (map f rest)\nbad = map (\\x -> (x, x)) [()]\n"
 ---
 [
-    BadKind {
+    MissingImpl {
+        region: Region {
+            start: Position {
+                line: 10,
+                column: 7,
+            },
+            end: Position {
+                line: 10,
+                column: 10,
+            },
+        },
+        name: "type application",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
+        args: [
+            Tuple(
+                Unit,
+                Unit,
+                [],
+            ),
+        ],
+        available: [],
+        because: [
+            Formation(
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                    args: [
+                        Tuple(
+                            Unit,
+                            Unit,
+                            [],
+                        ),
+                    ],
+                },
+            ),
+            Application {
+                head: Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                    args: [],
+                },
+                args: [
+                    Tuple(
+                        Unit,
+                        Unit,
+                        [],
+                    ),
+                ],
+            },
+        ],
+    },
+    MissingImpl {
         region: Region {
             start: Position {
                 line: 10,
@@ -15,46 +93,105 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
             },
         },
         name: "map",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
         args: [
-            Unit,
             Tuple(
                 Unit,
                 Unit,
                 [],
             ),
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "list",
-                args: [],
-            },
         ],
-        reason: Mismatch {
-            expected: KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
+        available: [],
+        because: [
+            Application {
+                head: Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                    args: [],
+                },
+                args: [
+                    Tuple(
+                        Unit,
+                        Unit,
+                        [],
                     ),
                 ],
-                kind: Var(
-                    0,
-                ),
-                applications: [],
             },
-            actual: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
+        ],
+    },
+    MissingImpl {
+        region: Region {
+            start: Position {
+                line: 10,
+                column: 7,
+            },
+            end: Position {
+                line: 10,
+                column: 30,
             },
         },
+        name: "type application",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
+        args: [
+            Tuple(
+                Unit,
+                Unit,
+                [],
+            ),
+        ],
+        available: [],
+        because: [
+            Formation(
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                    args: [
+                        Tuple(
+                            Unit,
+                            Unit,
+                            [],
+                        ),
+                    ],
+                },
+            ),
+        ],
     },
 ]

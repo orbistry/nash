@@ -2,13 +2,79 @@
 source: crates/nash-solve/tests/inference.rs
 expression: "format!(\"{}\\n{results:#?}\", render_annotations(&annotations))"
 ---
-first : forall (a : Storable). a -> list a -> a
-wrapper : forall (a : Storable). a -> list a -> a
+first : forall a. Storable a => a -> list a -> a
+wrapper : forall a. Storable a => a -> list a -> a
 [
     (
         "first",
         [
-            BadKind {
+            MissingImpl {
+                region: Region {
+                    start: Position {
+                        line: 4,
+                        column: 10,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 15,
+                    },
+                },
+                name: "type application",
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Storable",
+                },
+                args: [
+                    Type {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "option",
+                        args: [
+                            Unit,
+                        ],
+                    },
+                ],
+                available: [],
+                because: [
+                    Formation(
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "list",
+                            args: [
+                                Type {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Main",
+                                    },
+                                    name: "option",
+                                    args: [
+                                        Unit,
+                                    ],
+                                },
+                            ],
+                        },
+                    ),
+                ],
+            },
+            MissingImpl {
                 region: Region {
                     start: Position {
                         line: 4,
@@ -20,6 +86,18 @@ wrapper : forall (a : Storable). a -> list a -> a
                     },
                 },
                 name: "first",
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Storable",
+                },
                 args: [
                     Type {
                         home: ModuleName {
@@ -32,33 +110,81 @@ wrapper : forall (a : Storable). a -> list a -> a
                         ],
                     },
                 ],
-                reason: Mismatch {
-                    expected: KindScheme {
-                        bounds: [
-                            KindSet(
-                                3,
-                            ),
-                        ],
-                        kind: Var(
-                            0,
-                        ),
-                        applications: [],
-                    },
-                    actual: KindScheme {
-                        bounds: [],
-                        kind: Base(
-                            Term,
-                        ),
-                        applications: [],
-                    },
-                },
+                available: [],
+                because: [],
             },
         ],
     ),
     (
         "wrapper",
         [
-            BadKind {
+            MissingImpl {
+                region: Region {
+                    start: Position {
+                        line: 4,
+                        column: 10,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 17,
+                    },
+                },
+                name: "type application",
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Storable",
+                },
+                args: [
+                    Type {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "option",
+                        args: [
+                            Unit,
+                        ],
+                    },
+                ],
+                available: [],
+                because: [
+                    Formation(
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "list",
+                            args: [
+                                Type {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Main",
+                                    },
+                                    name: "option",
+                                    args: [
+                                        Unit,
+                                    ],
+                                },
+                            ],
+                        },
+                    ),
+                ],
+            },
+            MissingImpl {
                 region: Region {
                     start: Position {
                         line: 4,
@@ -70,6 +196,18 @@ wrapper : forall (a : Storable). a -> list a -> a
                     },
                 },
                 name: "wrapper",
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Storable",
+                },
                 args: [
                     Type {
                         home: ModuleName {
@@ -82,26 +220,8 @@ wrapper : forall (a : Storable). a -> list a -> a
                         ],
                     },
                 ],
-                reason: Mismatch {
-                    expected: KindScheme {
-                        bounds: [
-                            KindSet(
-                                3,
-                            ),
-                        ],
-                        kind: Var(
-                            0,
-                        ),
-                        applications: [],
-                    },
-                    actual: KindScheme {
-                        bounds: [],
-                        kind: Base(
-                            Term,
-                        ),
-                        applications: [],
-                    },
-                },
+                available: [],
+                because: [],
             },
         ],
     ),

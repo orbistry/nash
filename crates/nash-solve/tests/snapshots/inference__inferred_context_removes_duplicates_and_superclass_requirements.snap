@@ -2,7 +2,7 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
-distinct : forall (a : Any) (a1 : Any). (Base a, Top a1) => a -> a1 -> ( a, a1, a )
-permuted : forall (a : Any) (a1 : Any). (Base a1, Select a1 a) => a1 -> a -> ( a1, a, a )
-reduced : forall (a : Any). Top a => a -> ( a, a, a )
-reversed : forall (a : Any). Top a => a -> ( a, a, a )
+distinct : forall a a1. (Base a, Top a1) => a -> a1 -> ( a, a1, a )
+permuted : forall a a1. (Base a1, Select a1 a) => a1 -> a -> ( a1, a, a )
+reduced : forall a. Top a => a -> ( a, a, a )
+reversed : forall a. Top a => a -> ( a, a, a )

@@ -32,22 +32,9 @@ expression: "(&result.module.traits, &result.module.exports)"
                 parameters: [
                     "a",
                 ],
-                kind: KindScheme {
-                    bounds: [
-                        KindSet(
-                            7,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kinds: [
+                    Type,
+                ],
                 supers: [],
                 methods: [
                     Method {
@@ -66,7 +53,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                         },
                         annotation: Annotation {
                             context: [
-                                Pred {
+                                Trait {
                                     trait_: QualifiedName {
                                         home: ModuleName {
                                             package: None,
@@ -96,19 +83,6 @@ expression: "(&result.module.traits, &result.module.exports)"
                             free_vars: [
                                 "a",
                             ],
-                            kinds: ValueKinds {
-                                bounds: [
-                                    KindSet(
-                                        7,
-                                    ),
-                                ],
-                                kinds: [
-                                    Var(
-                                        0,
-                                    ),
-                                ],
-                                applications: [],
-                            },
                             typ: Located {
                                 region: Region {
                                     start: Position {
@@ -228,24 +202,11 @@ expression: "(&result.module.traits, &result.module.exports)"
                 parameters: [
                     "a",
                 ],
-                kind: KindScheme {
-                    bounds: [
-                        KindSet(
-                            7,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kinds: [
+                    Type,
+                ],
                 supers: [
-                    Pred {
+                    Trait {
                         trait_: QualifiedName {
                             home: ModuleName {
                                 package: None,
@@ -289,7 +250,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                         },
                         annotation: Annotation {
                             context: [
-                                Pred {
+                                Trait {
                                     trait_: QualifiedName {
                                         home: ModuleName {
                                             package: None,
@@ -319,19 +280,6 @@ expression: "(&result.module.traits, &result.module.exports)"
                             free_vars: [
                                 "a",
                             ],
-                            kinds: ValueKinds {
-                                bounds: [
-                                    KindSet(
-                                        7,
-                                    ),
-                                ],
-                                kinds: [
-                                    Var(
-                                        0,
-                                    ),
-                                ],
-                                applications: [],
-                            },
                             typ: Located {
                                 region: Region {
                                     start: Position {
@@ -420,21 +368,8 @@ expression: "(&result.module.traits, &result.module.exports)"
                         },
                         default: Some(
                             TypedDef {
-                                kinds: ValueKinds {
-                                    bounds: [
-                                        KindSet(
-                                            7,
-                                        ),
-                                    ],
-                                    kinds: [
-                                        Var(
-                                            0,
-                                        ),
-                                    ],
-                                    applications: [],
-                                },
                                 context: [
-                                    Pred {
+                                    Trait {
                                         trait_: QualifiedName {
                                             home: ModuleName {
                                                 package: None,
@@ -662,7 +597,7 @@ expression: "(&result.module.traits, &result.module.exports)"
                                                 method: "eq",
                                                 annotation: Annotation {
                                                     context: [
-                                                        Pred {
+                                                        Trait {
                                                             trait_: QualifiedName {
                                                                 home: ModuleName {
                                                                     package: None,
@@ -692,19 +627,6 @@ expression: "(&result.module.traits, &result.module.exports)"
                                                     free_vars: [
                                                         "a",
                                                     ],
-                                                    kinds: ValueKinds {
-                                                        bounds: [
-                                                            KindSet(
-                                                                7,
-                                                            ),
-                                                        ],
-                                                        kinds: [
-                                                            Var(
-                                                                0,
-                                                            ),
-                                                        ],
-                                                        applications: [],
-                                                    },
                                                     typ: Located {
                                                         region: Region {
                                                             start: Position {

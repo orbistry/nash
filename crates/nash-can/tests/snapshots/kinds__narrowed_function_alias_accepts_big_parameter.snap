@@ -7,18 +7,43 @@ description: "type alias fn ('a : Big) = 'a -> 'a\nf : fn Int\nf x = x"
     [
         (
             "fn",
-            KindScheme {
-                bounds: [],
-                kind: Arrow(
-                    Base(
-                        Big,
-                    ),
-                    Base(
-                        Term,
-                    ),
-                ),
-                applications: [],
-            },
+            Arrow(
+                Type,
+                Type,
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 18,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
     ],
 )

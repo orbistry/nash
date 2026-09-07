@@ -23,11 +23,6 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                 args: [],
             },
         ],
-        kinds: ValueKinds {
-            bounds: [],
-            kinds: [],
-            applications: [],
-        },
     },
     ImplKey {
         trait_: QualifiedName {
@@ -49,10 +44,5 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                 args: [],
             },
         ],
-        kinds: ValueKinds {
-            bounds: [],
-            kinds: [],
-            applications: [],
-        },
     },
 ]

@@ -2,5 +2,5 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
-forward : forall (a : Any). Keep a => a -> a
+forward : forall a. Keep a => a -> a
 pair : ( (), Color )

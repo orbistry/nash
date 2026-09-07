@@ -42,7 +42,7 @@ pub enum Export {
         name: String,
         /// Whether constructors are exposed.
         constructors_exposed: bool,
-        /// Kind scheme, including every quantified variable bound.
+        /// Closed Haskell 98 constructor kind.
         kind: String,
     },
 }
@@ -75,7 +75,7 @@ impl Interface {
                 .map(|union| Export::Type {
                     name: union.name.into(),
                     constructors_exposed: union.visibility == nash_can::UnionVisibility::Open,
-                    kind: render_kind_scheme(union.kind),
+                    kind: render_kind(union.kind),
                 }),
         );
         exports.extend(
@@ -86,11 +86,20 @@ impl Interface {
                 .map(|alias| Export::Type {
                     name: alias.name.into(),
                     constructors_exposed: false,
-                    kind: render_kind_scheme(alias.kind),
+                    kind: render_kind(alias.kind),
                 }),
         );
         exports.sort_by(|a, b| export_name(a).cmp(export_name(b)));
-        Self::new(interface.home.name.into(), exports)
+        let mut result = Self::new(interface.home.name.into(), exports);
+        // Changes to hidden contexts, private constructor metadata, trait
+        // signatures, aliases, or global impls also invalidate dependents.
+        // This conservative fingerprint can change with source regions; it
+        // never omits a contract because it is absent from the public exports.
+        let mut hasher = DefaultHasher::new();
+        result.exports.hash(&mut hasher);
+        format!("{interface:?}").hash(&mut hasher);
+        result.fingerprint = hasher.finish();
+        result
     }
 
     /// Load an interface from a file.
@@ -291,7 +300,7 @@ mod kind_tests {
             vec![Export::Type {
                 name: "list".into(),
                 constructors_exposed: false,
-                kind: "forall k0:{Big,Const}. k0 -> Const".into(),
+                kind: "Type -> Type".into(),
             }],
         );
         cache.save(&original).unwrap();
@@ -308,69 +317,15 @@ fn export_name(export: &Export) -> &str {
     }
 }
 
-fn render_kind_scheme(scheme: nash_ast::KindScheme<'_>) -> String {
+fn render_kind(kind: &nash_ast::Kind<'_>) -> String {
     fn render(kind: &nash_ast::Kind<'_>, argument: bool) -> String {
-        use nash_ast::Kind;
         match kind {
-            Kind::Base(base) => format!("{base:?}"),
-            Kind::Var(index) => format!("k{index}"),
-            Kind::Constructor { scheme, arguments } => format!(
-                "({})[{}]",
-                render_kind_scheme(*scheme),
-                arguments
-                    .iter()
-                    .map(|kind| render(kind, false))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            Kind::Arrow(from, to) => {
+            nash_ast::Kind::Type => "Type".into(),
+            nash_ast::Kind::Arrow(from, to) => {
                 let text = format!("{} -> {}", render(from, true), render(to, false));
                 if argument { format!("({text})") } else { text }
             }
         }
     }
-    let mut body = render(scheme.kind, false);
-    if !scheme.applications.is_empty() {
-        let applications = scheme
-            .applications
-            .iter()
-            .map(|app| {
-                format!(
-                    "Apply({}, [{}], {})",
-                    render(app.head, false),
-                    app.arguments
-                        .iter()
-                        .map(|kind| render(kind, false))
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                    render(app.result, false)
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(", ");
-        body = format!("{applications} => {body}");
-    }
-    if scheme.bounds.is_empty() {
-        return body;
-    }
-    use nash_ast::KindSet;
-    let bounds = scheme
-        .bounds
-        .iter()
-        .enumerate()
-        .map(|(index, bound)| {
-            let names: Vec<_> = [
-                (KindSet::BIG, "Big"),
-                (KindSet::CONST, "Const"),
-                (KindSet::TERM, "Term"),
-                (KindSet::ARROW, "Arrow"),
-            ]
-            .into_iter()
-            .filter_map(|(shape, name)| bound.contains(shape).then_some(name))
-            .collect();
-            format!("k{index}:{{{}}}", names.join(","))
-        })
-        .collect::<Vec<_>>()
-        .join(" ");
-    format!("forall {bounds}. {body}")
+    render(kind, false)
 }

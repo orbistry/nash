@@ -1,0 +1,25 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+expression: errors
+---
+[
+    RepresentationMismatch {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 20,
+            },
+            end: Position {
+                line: 5,
+                column: 27,
+            },
+        },
+        context: BigField {
+            union: "Bad",
+            ctor: "Bad",
+            index: 0,
+        },
+        required: Big,
+        actual: Const,
+    },
+]

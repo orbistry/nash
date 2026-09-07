@@ -21,11 +21,13 @@ pub fn to_annotation<'a>(
     annotation: &'a nash_source::Annotation<'a>,
 ) -> Result<&'a Annotation<'a>, Vec<Error<'a>>> {
     let typ = canonicalize_type(bump, env, annotation.typ)?;
-    let context = canonicalize_context(bump, env, annotation.constraints)?;
+    let mut predicates = canonicalize_context(bump, env, annotation.constraints)?.to_vec();
+    predicates.extend(repr_predicates(bump, env, annotation.typ)?);
+    let context: &'a [nash_ast::Pred<'a>] = bump.alloc_slice_fill_iter(predicates);
     let mut free_var_set: BTreeSet<&'a str> = BTreeSet::new();
     collect_free_vars(&typ.value, &mut free_var_set);
     for predicate in context {
-        for argument in predicate.args {
+        for argument in predicate.types() {
             let mut variables = BTreeSet::new();
             collect_free_vars(&argument.value, &mut variables);
             if let Some(name) = variables.difference(&free_var_set).next() {
@@ -38,7 +40,6 @@ pub fn to_annotation<'a>(
     }
     let free_vars: FreeVars<'a> = bump.alloc_slice_fill_iter(free_var_set);
     Ok(bump.alloc(Annotation {
-        kinds: nash_ast::ValueKinds::unconstrained(bump, free_vars.len()),
         context,
         free_vars,
         typ,
@@ -64,7 +65,7 @@ pub fn canonicalize_context<'a>(
                     actual: source.args.len(),
                 }]);
             }
-            Ok(nash_ast::Pred {
+            Ok(nash_ast::Pred::Trait {
                 trait_: QualifiedName {
                     home: info.home,
                     name: info.name,
@@ -73,6 +74,57 @@ pub fn canonicalize_context<'a>(
             })
         }),
     )
+}
+
+/// Desugar every inline representation annotation, including nested arguments.
+/// Callers retain these predicates alongside the resulting canonical type.
+pub(crate) fn repr_predicates<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    typ: &'a Located<SourceType<'a>>,
+) -> Result<Vec<nash_ast::Pred<'a>>, Vec<Error<'a>>> {
+    let mut result = Vec::new();
+    let mut pending = vec![typ];
+    while let Some(typ) = pending.pop() {
+        match &typ.value {
+            SourceType::Repr { typ, repr } => {
+                let trait_ = repr_trait(repr.value).qualified();
+                let arg = canonicalize_type(bump, env, typ)?;
+                result.push(nash_ast::Pred::Trait {
+                    trait_,
+                    args: bump.alloc_slice_copy(&[arg]),
+                });
+                pending.push(typ);
+            }
+            SourceType::Lambda { from, to } => pending.extend([*to, *from]),
+            SourceType::VarApp { args, .. }
+            | SourceType::Type { args, .. }
+            | SourceType::TypeQual { args, .. } => pending.extend(args.iter().rev().copied()),
+            SourceType::Record(fields) => {
+                pending.extend(fields.iter().rev().map(|field| field.typ))
+            }
+            SourceType::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                pending.extend(rest.iter().rev().copied());
+                pending.extend([*second, *first]);
+            }
+            SourceType::Var(_) | SourceType::Unit => {}
+        }
+    }
+    Ok(result)
+}
+
+pub(crate) fn repr_trait(repr: nash_source::Repr) -> nash_ast::primitives::ReprTrait {
+    use nash_ast::primitives::ReprTrait;
+    match repr {
+        nash_source::Repr::Big => ReprTrait::Big,
+        nash_source::Repr::Const => ReprTrait::Const,
+        nash_source::Repr::Term => ReprTrait::Term,
+        nash_source::Repr::Storable => ReprTrait::Storable,
+    }
 }
 
 /// Canonicalize a source type using the environment.
@@ -109,10 +161,7 @@ fn canonicalize_type_value<'a>(
     typ: &SourceType<'a>,
 ) -> Result<CanType<'a>, Vec<Error<'a>>> {
     Ok(match typ {
-        SourceType::Kinded { typ, kind } => CanType::Kinded {
-            typ: canonicalize_type(bump, env, typ)?,
-            kind,
-        },
+        SourceType::Repr { typ, .. } => canonicalize_type_value(bump, env, region, &typ.value)?,
         SourceType::Lambda { from, to } => {
             let (from, to) = accumulate::accumulate2(
                 canonicalize_type(bump, env, from),
@@ -362,7 +411,6 @@ fn canonicalize_field_type<'a>(
 
 pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
     match typ {
-        CanType::Kinded { typ, .. } => collect_free_vars(&typ.value, vars),
         CanType::App { head, args } => {
             collect_free_vars(&head.value, vars);
             for arg in *args {
@@ -428,7 +476,7 @@ pub fn dealias<'a>(
 }
 
 /// Apply a known canonical head without opening an alias's bound body.
-fn apply_type<'a>(
+pub(crate) fn apply_type<'a>(
     bump: &'a Bump,
     region: Region,
     head: &'a Located<CanType<'a>>,
@@ -506,10 +554,6 @@ pub fn substitute_type<'a>(
     typ: &'a Located<CanType<'a>>,
 ) -> &'a Located<CanType<'a>> {
     let substituted = match &typ.value {
-        CanType::Kinded { typ, kind } => CanType::Kinded {
-            typ: substitute_type(bump, table, typ),
-            kind,
-        },
         CanType::Var(name) => return table.get(name).copied().unwrap_or(typ),
         CanType::App { head, args } => {
             let head = substitute_type(bump, table, head);
@@ -577,7 +621,6 @@ pub fn iterated_dealias<'a>(
     typ: &'a Located<CanType<'a>>,
 ) -> &'a Located<CanType<'a>> {
     match &typ.value {
-        CanType::Kinded { typ, .. } => iterated_dealias(bump, typ),
         CanType::Alias {
             arguments,
             target,
@@ -625,7 +668,6 @@ mod tests {
             interface.values = source.alloc_slice_fill_iter([crate::InterfaceValue {
                 name: "partial",
                 annotation: source.alloc(nash_ast::Annotation {
-                    kinds: nash_ast::ValueKinds::unconstrained(source, 1),
                     free_vars: &["right"],
                     context: &[],
                     typ: partial,
@@ -956,7 +998,7 @@ mod tests {
 mod context_tests {
     use super::*;
     use crate::environment::TraitInfo;
-    use nash_ast::{BaseKind, Kind, KindScheme, ModuleName};
+    use nash_ast::{Kind, ModuleName};
 
     fn source_annotation<'a>(bump: &'a Bump, annotation: &str) -> &'a nash_source::Annotation<'a> {
         let source = bump.alloc_str(&format!(
@@ -977,10 +1019,6 @@ mod context_tests {
             &[],
         )
         .unwrap();
-        let kind = bump.alloc(Kind::Arrow(
-            bump.alloc(Kind::Base(BaseKind::Big)),
-            bump.alloc(Kind::Base(BaseKind::Term)),
-        ));
         let info = bump.alloc(TraitInfo {
             home: ModuleName {
                 package: None,
@@ -988,7 +1026,7 @@ mod context_tests {
             },
             name: "Eq",
             parameters: &["a"],
-            kind: KindScheme::mono(kind),
+            kinds: &[&Kind::Type],
             supers: &[],
             methods: &[],
         });

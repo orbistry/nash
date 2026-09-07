@@ -33,15 +33,6 @@ expression: proofs
                         ],
                     },
                 ],
-                kinds: ValueKinds {
-                    bounds: [],
-                    kinds: [
-                        Base(
-                            Big,
-                        ),
-                    ],
-                    applications: [],
-                },
             },
         },
         type_args: [
@@ -70,6 +61,31 @@ expression: proofs
         ],
         args: [
             ReflexiveLift {
+                typ: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "Color",
+                        },
+                        args: [],
+                    },
+                },
+            },
+            Repr {
+                trait_: Big,
                 typ: Located {
                     region: Region {
                         start: Position {
@@ -123,11 +139,6 @@ expression: proofs
                     Unit,
                     Unit,
                 ],
-                kinds: ValueKinds {
-                    bounds: [],
-                    kinds: [],
-                    applications: [],
-                },
             },
         },
         type_args: [],

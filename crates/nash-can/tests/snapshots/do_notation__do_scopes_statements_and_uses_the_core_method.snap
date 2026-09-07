@@ -136,7 +136,7 @@ Declare {
                             method: "bind",
                             annotation: Annotation {
                                 context: [
-                                    Pred {
+                                    Trait {
                                         trait_: QualifiedName {
                                             home: ModuleName {
                                                 package: Some(
@@ -167,108 +167,80 @@ Declare {
                                             },
                                         ],
                                     },
+                                    Apply {
+                                        head: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 3,
+                                                    column: 12,
+                                                },
+                                                end: Position {
+                                                    line: 3,
+                                                    column: 14,
+                                                },
+                                            },
+                                            value: Var(
+                                                "m",
+                                            ),
+                                        },
+                                        args: [
+                                            Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 3,
+                                                        column: 15,
+                                                    },
+                                                    end: Position {
+                                                        line: 3,
+                                                        column: 17,
+                                                    },
+                                                },
+                                                value: Var(
+                                                    "a",
+                                                ),
+                                            },
+                                        ],
+                                    },
+                                    Apply {
+                                        head: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 3,
+                                                    column: 28,
+                                                },
+                                                end: Position {
+                                                    line: 3,
+                                                    column: 30,
+                                                },
+                                            },
+                                            value: Var(
+                                                "m",
+                                            ),
+                                        },
+                                        args: [
+                                            Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 3,
+                                                        column: 31,
+                                                    },
+                                                    end: Position {
+                                                        line: 3,
+                                                        column: 33,
+                                                    },
+                                                },
+                                                value: Var(
+                                                    "b",
+                                                ),
+                                            },
+                                        ],
+                                    },
                                 ],
                                 free_vars: [
                                     "a",
                                     "b",
                                     "m",
                                 ],
-                                kinds: ValueKinds {
-                                    bounds: [
-                                        KindSet(
-                                            7,
-                                        ),
-                                        KindSet(
-                                            15,
-                                        ),
-                                        KindSet(
-                                            8,
-                                        ),
-                                        KindSet(
-                                            7,
-                                        ),
-                                        KindSet(
-                                            7,
-                                        ),
-                                        KindSet(
-                                            15,
-                                        ),
-                                        KindSet(
-                                            7,
-                                        ),
-                                        KindSet(
-                                            7,
-                                        ),
-                                        KindSet(
-                                            7,
-                                        ),
-                                    ],
-                                    kinds: [
-                                        Var(
-                                            0,
-                                        ),
-                                        Var(
-                                            1,
-                                        ),
-                                        Var(
-                                            2,
-                                        ),
-                                    ],
-                                    applications: [
-                                        KindApplication {
-                                            head: Var(
-                                                2,
-                                            ),
-                                            arguments: [
-                                                Var(
-                                                    3,
-                                                ),
-                                            ],
-                                            result: Var(
-                                                4,
-                                            ),
-                                        },
-                                        KindApplication {
-                                            head: Var(
-                                                2,
-                                            ),
-                                            arguments: [
-                                                Var(
-                                                    5,
-                                                ),
-                                            ],
-                                            result: Var(
-                                                6,
-                                            ),
-                                        },
-                                        KindApplication {
-                                            head: Var(
-                                                2,
-                                            ),
-                                            arguments: [
-                                                Var(
-                                                    0,
-                                                ),
-                                            ],
-                                            result: Var(
-                                                7,
-                                            ),
-                                        },
-                                        KindApplication {
-                                            head: Var(
-                                                2,
-                                            ),
-                                            arguments: [
-                                                Var(
-                                                    1,
-                                                ),
-                                            ],
-                                            result: Var(
-                                                8,
-                                            ),
-                                        },
-                                    ],
-                                },
                                 typ: Located {
                                     region: Region {
                                         start: Position {
@@ -654,7 +626,7 @@ Declare {
                                                         method: "bind",
                                                         annotation: Annotation {
                                                             context: [
-                                                                Pred {
+                                                                Trait {
                                                                     trait_: QualifiedName {
                                                                         home: ModuleName {
                                                                             package: Some(
@@ -685,108 +657,80 @@ Declare {
                                                                         },
                                                                     ],
                                                                 },
+                                                                Apply {
+                                                                    head: Located {
+                                                                        region: Region {
+                                                                            start: Position {
+                                                                                line: 3,
+                                                                                column: 12,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 3,
+                                                                                column: 14,
+                                                                            },
+                                                                        },
+                                                                        value: Var(
+                                                                            "m",
+                                                                        ),
+                                                                    },
+                                                                    args: [
+                                                                        Located {
+                                                                            region: Region {
+                                                                                start: Position {
+                                                                                    line: 3,
+                                                                                    column: 15,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 3,
+                                                                                    column: 17,
+                                                                                },
+                                                                            },
+                                                                            value: Var(
+                                                                                "a",
+                                                                            ),
+                                                                        },
+                                                                    ],
+                                                                },
+                                                                Apply {
+                                                                    head: Located {
+                                                                        region: Region {
+                                                                            start: Position {
+                                                                                line: 3,
+                                                                                column: 28,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 3,
+                                                                                column: 30,
+                                                                            },
+                                                                        },
+                                                                        value: Var(
+                                                                            "m",
+                                                                        ),
+                                                                    },
+                                                                    args: [
+                                                                        Located {
+                                                                            region: Region {
+                                                                                start: Position {
+                                                                                    line: 3,
+                                                                                    column: 31,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 3,
+                                                                                    column: 33,
+                                                                                },
+                                                                            },
+                                                                            value: Var(
+                                                                                "b",
+                                                                            ),
+                                                                        },
+                                                                    ],
+                                                                },
                                                             ],
                                                             free_vars: [
                                                                 "a",
                                                                 "b",
                                                                 "m",
                                                             ],
-                                                            kinds: ValueKinds {
-                                                                bounds: [
-                                                                    KindSet(
-                                                                        7,
-                                                                    ),
-                                                                    KindSet(
-                                                                        15,
-                                                                    ),
-                                                                    KindSet(
-                                                                        8,
-                                                                    ),
-                                                                    KindSet(
-                                                                        7,
-                                                                    ),
-                                                                    KindSet(
-                                                                        7,
-                                                                    ),
-                                                                    KindSet(
-                                                                        15,
-                                                                    ),
-                                                                    KindSet(
-                                                                        7,
-                                                                    ),
-                                                                    KindSet(
-                                                                        7,
-                                                                    ),
-                                                                    KindSet(
-                                                                        7,
-                                                                    ),
-                                                                ],
-                                                                kinds: [
-                                                                    Var(
-                                                                        0,
-                                                                    ),
-                                                                    Var(
-                                                                        1,
-                                                                    ),
-                                                                    Var(
-                                                                        2,
-                                                                    ),
-                                                                ],
-                                                                applications: [
-                                                                    KindApplication {
-                                                                        head: Var(
-                                                                            2,
-                                                                        ),
-                                                                        arguments: [
-                                                                            Var(
-                                                                                3,
-                                                                            ),
-                                                                        ],
-                                                                        result: Var(
-                                                                            4,
-                                                                        ),
-                                                                    },
-                                                                    KindApplication {
-                                                                        head: Var(
-                                                                            2,
-                                                                        ),
-                                                                        arguments: [
-                                                                            Var(
-                                                                                5,
-                                                                            ),
-                                                                        ],
-                                                                        result: Var(
-                                                                            6,
-                                                                        ),
-                                                                    },
-                                                                    KindApplication {
-                                                                        head: Var(
-                                                                            2,
-                                                                        ),
-                                                                        arguments: [
-                                                                            Var(
-                                                                                0,
-                                                                            ),
-                                                                        ],
-                                                                        result: Var(
-                                                                            7,
-                                                                        ),
-                                                                    },
-                                                                    KindApplication {
-                                                                        head: Var(
-                                                                            2,
-                                                                        ),
-                                                                        arguments: [
-                                                                            Var(
-                                                                                1,
-                                                                            ),
-                                                                        ],
-                                                                        result: Var(
-                                                                            8,
-                                                                        ),
-                                                                    },
-                                                                ],
-                                                            },
                                                             typ: Located {
                                                                 region: Region {
                                                                     start: Position {

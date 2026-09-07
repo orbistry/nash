@@ -30,39 +30,6 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                 ],
             },
         ],
-        kinds: ValueKinds {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-                KindSet(
-                    15,
-                ),
-            ],
-            kinds: [
-                Var(
-                    0,
-                ),
-                Var(
-                    1,
-                ),
-            ],
-            applications: [
-                KindApplication {
-                    head: Var(
-                        0,
-                    ),
-                    arguments: [
-                        Var(
-                            1,
-                        ),
-                    ],
-                    result: Base(
-                        Big,
-                    ),
-                },
-            ],
-        },
     },
     ImplKey {
         trait_: QualifiedName {
@@ -91,38 +58,5 @@ expression: "result.tables.impls.keys().collect::<Vec<_>>()"
                 ],
             },
         ],
-        kinds: ValueKinds {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-                KindSet(
-                    15,
-                ),
-            ],
-            kinds: [
-                Var(
-                    0,
-                ),
-                Var(
-                    1,
-                ),
-            ],
-            applications: [
-                KindApplication {
-                    head: Var(
-                        0,
-                    ),
-                    arguments: [
-                        Var(
-                            1,
-                        ),
-                    ],
-                    result: Base(
-                        Big,
-                    ),
-                },
-            ],
-        },
     },
 ]

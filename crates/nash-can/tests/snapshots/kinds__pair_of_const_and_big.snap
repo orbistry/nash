@@ -7,33 +7,18 @@ description: "type alias p = pair int Data\ntype alias q = pair Data int\ntype a
     [
         (
             "p",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Const,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
         (
             "q",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Const,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
         (
             "r",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Const,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
 )

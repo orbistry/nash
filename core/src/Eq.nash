@@ -23,10 +23,7 @@ impl Eq bool where
 impl Eq unit where
     eq _ _ = True
 
-impl Eq (list ('a : Big)) where
-    eq a b = Builtin.equalsData (Builtin.listData a) (Builtin.listData b)
-
-impl Eq 'a => Eq (list ('a : Const)) where
+impl Eq 'a => Eq (list 'a) where
     eq xs ys =
         if Builtin.nullList xs then Builtin.nullList ys
         else if Builtin.nullList ys then False

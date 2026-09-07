@@ -3,7 +3,7 @@ source: crates/nash-can/tests/kinds.rs
 description: "type alias fn ('a : Big) = 'a -> 'a\nf : fn int\nf x = x"
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 6,
@@ -14,31 +14,10 @@ description: "type alias fn ('a : Big) = 'a -> 'a\nf : fn int\nf x = x"
                 column: 11,
             },
         },
-        context: TypeArg {
-            head: Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "fn",
-                },
-            ),
-            index: 0,
+        context: Annotation {
+            name: "f",
         },
-        expected: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Const,
-            ),
-            applications: [],
-        },
+        required: Big,
+        actual: Const,
     },
 ]

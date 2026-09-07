@@ -6,18 +6,43 @@ description: "type Box 'a = Box 'a"
     [
         (
             "Box",
-            KindScheme {
-                bounds: [],
-                kind: Arrow(
-                    Base(
-                        Big,
-                    ),
-                    Base(
-                        Big,
-                    ),
-                ),
-                applications: [],
-            },
+            Arrow(
+                Type,
+                Type,
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 19,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 21,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
     ],
     [],

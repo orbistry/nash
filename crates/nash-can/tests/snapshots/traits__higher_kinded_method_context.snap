@@ -6,170 +6,242 @@ expression: "(schemes, context)"
     [
         (
             "Applicative",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
+            [
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            0,
-                        ),
-                        arguments: [
-                            Var(
-                                1,
-                            ),
-                        ],
-                        result: Var(
-                            2,
-                        ),
-                    },
-                ],
-            },
+            ],
         ),
         (
             "Traversable",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
+            [
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            0,
-                        ),
-                        arguments: [
-                            Var(
-                                1,
-                            ),
-                        ],
-                        result: Var(
-                            2,
-                        ),
-                    },
-                    KindApplication {
-                        head: Var(
-                            0,
-                        ),
-                        arguments: [
-                            Var(
-                                3,
-                            ),
-                        ],
-                        result: Var(
-                            4,
-                        ),
-                    },
-                    KindApplication {
-                        head: Var(
-                            5,
-                        ),
-                        arguments: [
-                            Var(
-                                4,
-                            ),
-                        ],
-                        result: Var(
-                            6,
-                        ),
-                    },
-                    KindApplication {
-                        head: Var(
-                            5,
-                        ),
-                        arguments: [
-                            Var(
-                                7,
-                            ),
-                        ],
-                        result: Var(
-                            8,
-                        ),
-                    },
-                    KindApplication {
-                        head: Var(
-                            5,
-                        ),
-                        arguments: [
-                            Var(
-                                3,
-                            ),
-                        ],
-                        result: Var(
-                            9,
-                        ),
-                    },
-                ],
-            },
+            ],
         ),
     ],
     [
-        QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
+        Trait {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Traversable",
             },
-            name: "Traversable",
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 19,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 21,
+                        },
+                    },
+                    value: Var(
+                        "t",
+                    ),
+                },
+            ],
         },
-        QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
+        Trait {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Applicative",
             },
-            name: "Applicative",
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 28,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 30,
+                        },
+                    },
+                    value: Var(
+                        "f",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 41,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 43,
+                    },
+                },
+                value: Var(
+                    "f",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 44,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 46,
+                        },
+                    },
+                    value: Var(
+                        "b",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 51,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 53,
+                    },
+                },
+                value: Var(
+                    "t",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 54,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 56,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 64,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 66,
+                    },
+                },
+                value: Var(
+                    "t",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 67,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 69,
+                        },
+                    },
+                    value: Var(
+                        "b",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 60,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 62,
+                    },
+                },
+                value: Var(
+                    "f",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 64,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 69,
+                        },
+                    },
+                    value: App {
+                        head: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 64,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 66,
+                                },
+                            },
+                            value: Var(
+                                "t",
+                            ),
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 7,
+                                        column: 67,
+                                    },
+                                    end: Position {
+                                        line: 7,
+                                        column: 69,
+                                    },
+                                },
+                                value: Var(
+                                    "b",
+                                ),
+                            },
+                        ],
+                    },
+                },
+            ],
         },
     ],
 )

@@ -1,309 +1,339 @@
-# Kinds
+# Kinds and representation
 
-Nash kinds describe the runtime representation of a type. Every well-formed
-type has a kind, and the base kind of a ground type tells codegen exactly
-which UPLC shape a value of that type has. This document specifies the kind
-language, the casing rule, kind inference, kind annotations, the errors,
-and how kinds flow into codegen. [overview.md](overview.md) is authoritative
-where the two disagree.
+Nash has two separate questions about a type, answered by two separate
+mechanisms:
 
-[Recursive kind obligations](kind-obligations.md) specifies the implemented
-n-ary residual specialization, inductive validity, and conservative finite
-expansion fragment. See the [implementation plan](../plans/02-kind-obligations.md)
-for validation. `KindRestricted` reports dependencies outside that fragment;
-`KindLimit` reports an operational allowance, separately from `KindInfinite`.
+1. **Kind**: how many type arguments does it take? Haskell 98 kinds,
+   `Type` and `k1 -> k2`, inferred by unification.
+2. **Representation**: which UPLC value shape do its values have? `Big`
+   (Plutus `Data`), `Const` (UPLC builtin constant), or `Term` (UPLC
+   `constr` term or lambda). Decided by the head constructor of a ground
+   type; enforced on polymorphic code by **representation predicates**
+   resolved through the trait machinery of [traits.md](traits.md).
+
+Representation is not part of the kind. This document supersedes the
+subkinding design (`Big -> Big -> Const`, `Storable` bounds on kind
+variables, finite satisfiability); see "Why not subkinding" at the end.
+[overview.md](overview.md) is authoritative where the two disagree.
+
+Status: implemented by [plans/02-kind-predicates.md](../plans/02-kind-predicates.md).
+The retained-obligation engine and value-kind metadata are removed.
 
 ## Purpose
 
-UPLC has three distinct value shapes that cannot be mixed:
+UPLC has three value shapes that cannot be mixed:
 
-| Base kind | Runtime value | Examples |
+| Representation | Runtime value | Examples |
 |---|---|---|
 | `Big` | a Plutus `Data` constant | `Int`, `Bytes`, `List 'a`, `Map 'k 'v`, `Data`, user `type Foo`, `type alias Foo` |
 | `Const` | a UPLC builtin constant | `int`, `bytes`, `string`, `bool`, `unit`, `list 'a`, `pair 'a 'b`, `array 'a`, `bls_g1`, `bls_g2`, `bls_mlr`, `value` |
 | `Term` | a UPLC `constr` term, or a lambda | user `type option 'a`, tuples, little records, `'a -> 'b` |
 
-A builtin such as `mkCons : 'a -> list 'a -> list 'a` only works when the
-element is something a builtin list can hold. A `Data` constructor can only
-hold `Data`. The kind system makes these facts static so that no value ever
-has to be inspected at runtime to pick a representation.
+A builtin list can only hold constants, a `Data.Constr` can only hold
+`Data`, and `if` needs a `bool`. These facts must be static: codegen never
+inspects a value to pick a representation.
 
-## Kind language
-
-A type occurrence can carry a bound: `('a : Big)`, `('a : Const)`, or
-`('a : Storable)`. Parenthesized annotations apply to the enclosed type,
-including within recursive impl patterns: `list (pair ('a : Big) 'b)`.
-Occurrences of the same variable share one kind, so contradictory annotations
-are errors. Bounds survive aliases, method substitution and interfaces. They
-constrain types without changing their identity or runtime representation.
-
-```ebnf
-kind       = kind_atom [ '->' kind ] ;
-kind_atom  = 'Big' | 'Const' | 'Term' | 'Storable' | '(' kind ')' ;
-```
-
-Internally a kind is:
+## Kinds
 
 ```
-Kind ::= Big | Const | Term          -- base kinds
-       | Kind -> Kind                -- kind arrow (right associative)
-       | k                           -- kind variable, with a bound
-       | Constructor(scheme, args)   -- quantified constructor with captured arguments
+Kind ::= Type | Kind -> Kind | k        -- k: inference variable
 ```
 
-A kind variable carries a *bound*, which is the set of shapes it may take.
-Bounds are subsets of `{ Big, Const, Term, Arrow }`:
+Kind inference is Haskell 98:
 
-| Bound | Members | Used for |
-|---|---|---|
-| `Any` | `Big`, `Const`, `Term` | fields of little ADTs, tuple components, function arguments and results |
-| `Storable` | `Big`, `Const` | elements of `list`, `array`, and components of `pair` |
-| `Little` | `Const`, `Term` | the body of a lowercase alias |
-| `All` | `Big`, `Const`, `Term`, `Arrow` | unannotated declaration parameters (may be higher-kinded) |
+- Every type constructor has a kind `k1 -> ... -> kn -> Type`. Every fully
+  applied type has kind `Type`.
+- `'f 'a` requires `'f : k -> Type` for the kind `k` of `'a`. Two uses
+  `'f 'a` and `'f 'b` in one signature give `'a` and `'b` the same kind.
+- Unification with an occurs check. `type self 'f = Self ('f 'f)` is an
+  infinite kind, as in Haskell.
+- Unconstrained kind variables default to `Type` at generalization
+  (`type tag 'a = Tag` gives `tag : Type -> Type`). There is no kind
+  polymorphism in v1.
+- Traits: `trait Functor 'f where map : ('a -> 'b) -> 'f 'a -> 'f 'b`
+  gives `'f : Type -> Type`. An impl head must have exactly that kind:
+  `impl Functor List`, `impl Functor list`, `impl Functor option` all do.
+  `impl Functor Map` does not (`Map : Type -> Type -> Type`); `impl Functor
+  (Map 'k)` does.
 
-`Storable` is the only bound with surface syntax. Every `Big` value is also a
-`Data` constant at runtime, which is why `Storable` includes `Big`: `list Int`
-and `list (List Int)` are legal, `list (option int)` is not.
+Kinds never mention `Big`, `Const`, or `Term`.
 
-Bounds intersect when two variables unify; an empty intersection is a kind
-error. Binding a variable to a base kind requires that base kind to be in the
-bound; binding it to an arrow requires `Arrow` in the bound.
+There is no surface syntax for kinds. The former `('f : Big -> Big)`
+annotation is removed; `('a : Storable)` remains and is representation
+sugar (below).
 
-## Kinds of the builtin constructors
+## Representation of a ground type
 
-| Constructor | Kind |
+`repr(t)` is a function of `t`'s head constructor:
+
+| Head | `repr` |
 |---|---|
-| `Int`, `Bytes`, `Data` | `Big` |
-| `List` | `Big -> Big` |
-| `Map` | `Big -> Big -> Big` |
-| `int`, `bytes`, `string`, `bool`, `unit`, `bls_g1`, `bls_g2`, `bls_mlr`, `value` | `Const` |
-| `list`, `array` | `Storable -> Const` |
-| `pair` | `Storable -> Storable -> Const` (values from `unConstrData`, `unMapData`; only `mkPairData : Data -> Data -> pair Data Data` constructs one, so the API, not the kind, restricts construction) |
-| `->` | `Any -> Any -> Term` |
-| tuple `( , )`, `( , , )` | `Any -> Any -> Term`, `Any -> Any -> Any -> Term` |
-| `()` (the unit type) | `Const` (it is `unit`) |
+| `Int`, `Bytes`, `Data`, `List _`, `Map _ _` | `Big` |
+| uppercase user union, uppercase alias | `Big` |
+| `int`, `bytes`, `string`, `bool`, `unit`, `list _`, `pair _ _`, `array _`, `bls_*`, `value` | `Const` |
+| lowercase user union, tuple, function, little record alias | `Term` |
+| lowercase alias of a non-record body | `repr` of the body |
 
-These are seeded by the compiler into the `Builtin` module of the `nash/core`
-package. See [representation.md](representation.md) for their layouts.
+Arguments never change the head's representation: `List (option int)` is
+still `Big` (and ill-formed for a different reason, see below). This is what
+makes representation a *predicate* rather than a kind: it is decidable as
+soon as the head is known, and deferrable while the head is a variable.
 
-## The casing rule
+The casing rule is therefore a definition, not an inference:
 
-The first character of a type name fixes the shape class of its result kind:
-
-- Uppercase name: the result kind is `Big`.
-- Lowercase name: the result kind is `Const` for a compiler builtin, and
-  `Term` for a user little ADT. A lowercase alias must have a `Little` body
-  (`Const` or `Term`).
-
-The rule is a *constraint added during inference*, not a lookup. It applies
-to unions, aliases and record aliases:
+- Uppercase type name: `Big`. Every constructor field must be `Big`; every
+  field of an uppercase record alias must be `Big`.
+- Lowercase union: `Term`. Fields may have any representation.
+- Lowercase alias: the body must be `Little` (`Const` or `Term`). A
+  lowercase record alias is `Term` with fields of any representation.
 
 ```elm
 type Datum = Datum { owner : Bytes, deadline : Int }   -- Big, fields must be Big
-type step 'a = Done 'a | Next int 'a                    -- Term, fields any kind
+type step 'a = Done 'a | Next int 'a                    -- Term, fields any
 type alias Vault = { owner : Bytes, amount : Int }      -- Big record, fields Big
 type alias acc = { total : int, seen : list Int }       -- little record, fields any
-type alias Id = Int                                     -- ok: Big body
+type alias Id = Int                                     -- ok
 type alias id = Int                                     -- error: lowercase alias, Big body
-type alias count = int                                  -- ok: Const body
+type alias count = int                                  -- ok
 ```
 
-Type variables are always written `'a`, so a bare lowercase name in type
-position is never ambiguous with a variable.
+## Representation predicates
 
-## Declarations and their kinds
+Five compiler-owned traits live in `Builtin` and are re-exposed by the
+prelude. They have no user impls; the compiler resolves them structurally
+from the head constructor:
 
-### Big ADTs
-
-`type Foo 'a ... = C1 t11 ... | C2 ...` with an uppercase `Foo`:
-
-- Result kind `Big`.
-- Every constructor field type must have kind `Big`. Fields of kind `Const`
-  or `Term` are errors, because a `Data.Constr` can only hold `Data`.
-- Parameters get fresh kind variables with bound `All`; the field constraints
-  refine them. A phantom parameter stays a kind variable and is generalized.
-
-```elm
-type Box 'a = Box 'a          -- Box : Big -> Big
-type Tag 'a = Tag Int         -- Tag : forall k. k -> Big
-type Pair2 'a = P (list 'a)   -- error: field `list 'a` is Const, `Pair2` is Big
-```
-
-A constructor may label its fields, `type Datum = Datum { owner : Bytes, deadline : Int }`.
-Labels change nothing for kinds: the fields are the constructor's fields
-and follow the enclosing type's rule (Big here, so both must be Big).
-Labeled fields are not an anonymous record type.
-
-### Little ADTs
-
-`type foo 'a ... = ...` with a lowercase `foo`:
-
-- Result kind `Term`.
-- Fields may have any base kind (`Any`), including functions and tuples.
-
-```elm
-type option 'a = None | Some 'a          -- option : Any -> Term
-type thunk 'a = Thunk (unit -> 'a)       -- thunk : Any -> Term
-type wrap 'f 'a = Wrap ('f 'a)           -- requires applying f to a to produce a value
-```
-
-### Aliases
-
-The kind of an alias is the kind of its body, then the casing rule applies
-to the result:
-
-- `type alias Foo ... = body`: result unifies with `Big`. If the body is a
-  record type, it is a *Big record* and every field must be `Big`.
-- `type alias foo ... = body`: result unifies with a fresh `Little` variable.
-  If the body is a record type, it is a *little record* with kind `Term` and
-  fields of any kind.
-
-An alias is expanded transparently by the type checker, so its kind is only
-ever a description of its body. Record aliases are nominal (see
-[representation.md](representation.md)) but their kinds follow the same rule.
-
-### Tuples, functions, unit
-
-`( 'a, 'b )` and `( 'a, 'b, 'c )` have kind `Term` with `Any` components.
-`'a -> 'b` has kind `Term` with `Any` argument and result. `()` in a type is
-the Const type `unit`.
-
-### Traits
-
-`trait Functor 'f where map : ('a -> 'b) -> 'f 'a -> 'f 'b` gives `'f` a
-fresh `All` variable. Inference requires an arrow-capable constructor and
-retains separate application obligations for `'f 'a` and `'f 'b`. Both
-arguments and results must be values. Each impl supplies a constructor scheme;
-each application instantiates that scheme independently:
-
-| Impl head | Instantiation |
+| Predicate | Holds when |
 |---|---|
-| `impl Functor List` | Each argument must be Big; each result is Big. |
-| `impl Functor list` | Each argument must be Storable; each result is Const. |
-| `impl Functor option` | Each argument may have any base kind; each result is Term. |
+| `Big t` | `repr(t) = Big` |
+| `Const t` | `repr(t) = Const` |
+| `Term t` | `repr(t) = Term` |
+| `Storable t` | `Big t` or `Const t` (what `list`, `array`, `pair` can hold) |
+| `Little t` | `Const t` or `Term t` (what a lowercase alias may be) |
 
-Method signatures of an impl are then kind-checked with the instantiated
-kinds. Kind variables in trait schemes have no surface syntax; they are
-always inferred. See [traits.md](traits.md).
+They are ordinary predicates in every other respect: they appear in scheme
+contexts, are instantiated with the type, are discharged by structural
+resolution when the argument's head is known, are deferred (retained in the
+generalized scheme) while it is a variable, and can be written by the user
+in a context: `cons : Storable 'a => 'a -> list 'a -> list 'a`. The
+annotation form `('a : Storable)` is sugar for that context entry;
+`('a : Big)`, `('a : Const)`, `('a : Term)` likewise. There is no arrow
+form: kinds have no syntax.
 
-Internally, both declaration kind schemes and value kind schemes retain
-`Apply(head, [arguments], result)` obligations in their shared binder. A known
-constructor retains its quantified scheme. Partial application specializes
-supplied arguments simultaneously, checks their bounds and determined premises,
-and leaves unsupplied parameters in the residual binder. It does not create
-fresh global roots for missing parameters. This preserves dependent results
-and sharing without equating independent constructor uses.
+Implication between them is expressed as superclasses, so plan 03's
+superclass entailment discharges a wanted `Storable 'a` from a given
+`Big 'a` with no new machinery:
 
-### Self-application and retained obligations
+| Trait | Superclasses |
+|---|---|
+| `Big` | `Storable` |
+| `Const` | `Storable`, `Little` |
+| `Term` | `Little` |
+| `Storable`, `Little` | none |
 
-`type self 'f = Self ('f 'f)` retains `Apply(k, [k], r)` instead of
-constructing a cyclic arrow kind. `self tag` (for a phantom
-`type tag 'a = Tag unit`) is valid. `self self` requires itself as a premise
-and reports `KindInfinite`: only finite inductive proofs establish validity.
-A phantom consumer cannot erase the validity requirement of a saturated
-argument. Outer value shapes and supplied ground bounds are checked before
-nested expansion. Ancestor equality includes captured and supplied arguments,
-resolved through current roots; equal bounds alone do not equate roots.
+A context that requires incompatible representations of one variable
+(`Big 'a` and `Const 'a`; `Big 'a` and `Little 'a`) is rejected at the
+annotation with `ContradictoryRepresentation`: intersect the admitted
+sets of every repr predicate on the variable; empty means no type can
+ever satisfy the scheme. `Storable 'a` with `Little 'a` is a legal (narrow)
+context: only `Const` heads satisfy it.
 
-Scheme identity alone is not a cycle: with `type app 'f 'a = App ('f 'a)`,
-`app (app tag) tag` is finite and valid because the inner application has a
-captured `tag`. Conversely, `self (self tag)` is invalid because `self tag`
-has kind `Term`, where `self` requires a constructor. Structural cycles in a
-monomorphic recursive group, such as `type bad 'f = Bad (bad bad)`, still
-report `KindInfinite` through the ordinary occurs check.
+Resolution never chooses a type: `Storable 'a` on a flexible `'a` waits.
+At generalization it becomes part of the context, exactly like `Eq 'a`.
+After monomorphization every predicate is ground, so nothing is ever
+checked at runtime and no evidence is passed: `Evidence::Repr` is a marker.
 
-## Kind inference
+No user impl of these traits is accepted (`ImplOfBuiltinTrait`).
 
-Inference is Haskell 98 style, run in `nash-can` after type declarations are
-canonicalized and before value declarations are canonicalized:
+## Datatype contexts
 
-1. Build the dependency graph of the module's unions and aliases (an edge for
-   every `Type::Named` / `Type::Alias` reference to a local declaration) and
-   compute strongly connected components in dependency order. Union and
-   alias declarations share one graph because `type Tree = Node (List Branch)` with
-   `type alias Branch = Tree` is legal. Both the union field and alias
-   body have kind `Big`.
-2. For each SCC, give every declaration a monomorphic kind
-   `p1 -> ... -> pn -> r`: each parameter `pi` is a fresh `All` variable (or
-   the user annotation), and `r` is `Big` or `Term` for unions, or a fresh
-   `All` variable for aliases.
-3. Walk every constructor field type and alias body, unifying as described
-   above. References to declarations in the same SCC use the monomorphic
-   kind; references to earlier SCCs and imported declarations instantiate
-   their kind scheme with fresh variables.
-4. After the SCC is solved, apply the casing constraints, zonk each
-   declaration's kind, and generalize the remaining variables into a
-   `KindScheme`. Nothing is defaulted: an unconstrained variable stays
-   polymorphic, which is what lets `type option 'a` accept any kind and lets
-   phantom parameters carry any kind.
+Every type constructor carries a **context**: the predicates its arguments
+must satisfy for an application to be well-formed. Contexts are inferred
+from the declaration body and never written by the user.
 
-Value annotations are checked afterwards with the same walker. The compiler
-retains the original annotation before splitting argument/result types or
-expanding function aliases, so explicit alias parameter bounds remain
-visible to this check. For each annotation, every free
-type variable of the annotation gets a fresh `All` variable shared by all
-its occurrences, every `Type::Named` application is checked against the
-constructor's scheme, and the walk yields the kind of every free variable.
-**Kind bounds on type variables are predicates.** A free variable's kind
-(`'a : Storable` in `cons : 'a -> list 'a -> list 'a`) is stored on the
-value's type scheme as a kind predicate, next to trait predicates, and the
-qualified-type machinery of [traits.md](traits.md) (plans/03) discharges it
-at every instantiation. All free-variable kinds share one binder, but an
-abstract constructor's accepted argument kinds are not equated with the actual
-kind of each argument. For `'f 'a` and `'f 'b`, check each application against
-the bounds of `'f` independently. Thus mapping `option unit` to
-`option (unit, unit)` is legal: Const and Term both fit option's element bound.
-The corresponding builtin-list mapping is illegal because Term does not fit
-Storable. Repeated occurrences of the same type variable still share its kind.
-Generalize and instantiate the entire group together, preserving free-variable
-order and the application constraints, including across module interfaces.
-Multiple bounds intersect; checking a rigid annotation proves a requirement
-without narrowing the annotation's promised kind. Plans/02 infers and reports the kinds; plans/03
-enforces them at use sites. Without that step plain HM unification would
-instantiate `'a` at `option int` with nothing to reject it, because
-declaration-level inference never sees instantiations.
+| Constructor | Context |
+|---|---|
+| `List 'a` | `Big 'a` |
+| `Map 'k 'v` | `Big 'k, Big 'v` |
+| `list 'a`, `array 'a` | `Storable 'a` |
+| `pair 'a 'b` | `Storable 'a, Storable 'b` (only `mkPairData : Data -> Data -> pair Data Data` constructs one; `unConstrData` yields `pair int (list Data)`) |
+| `type Box 'a = Box 'a` | `Big 'a` |
+| `type Tag 'a = Tag Int` | none (phantom) |
+| `type option 'a = None \| Some 'a` | none |
+| `type wrap 'f 'a = Wrap ('f 'a)` | `Apply 'f 'a` |
+| `type Box 'f 'a = Box ('f 'a)` | `Apply 'f 'a, Big ('f 'a)` (the field's representation is unknown until `'f` is) |
+| tuples, `->` | none |
 
-Inferred (unannotated) values carry no kind information in the front end.
-Their kind predicates arrive from the instantiations they contain, again via
-the predicate mechanism.
+`Apply 'f t1 .. tn` is an **internal obligation**, not a trait: "the
+application `'f t1 .. tn` is well-formed". It lives in the predicate store
+beside trait predicates (`Predicate::Apply { head, args }`), is attached
+to the descriptors of its head and arguments, is instantiated with the
+scheme that carries it, is never user-writable and never displayed. It
+reduces as soon as the head is known, to that head's context instantiated
+at the arguments. A partial head `T u1 .. uk` supplies `u1 .. uk` first;
+contexts of `T` that mention only supplied parameters are checked at the
+partial application itself, the rest wait for the `Apply` that supplies
+the remaining arguments. This is what lets `wrap` be declared once and
+`wrap list (option int)` be rejected at the use: `Apply list (option int)`
+reduces to `Storable (option int)`, which fails.
 
-### Kind annotations
+### Inferring a context
 
-A declaration parameter may be annotated:
+For one strongly connected group of unions and aliases:
 
-```ebnf
-type_param = type_var | '(' type_var ':' kind ')' ;
-```
+1. Walk every constructor field and alias body. At each type application
+   `T args` whose head is outside the group, instantiate `T`'s context at
+   `args` and add the result; at a variable-headed application add `Apply
+   'f args`; at a reference to a group member, record the reference and
+   read no context yet (its context is still being computed). Add the
+   positional requirement of the enclosing position: `Big` for a field of
+   an uppercase union or record alias; nothing for a lowercase union field,
+   tuple component, or function argument. A requirement on a
+   variable-headed application is retained as is (`Big ('f 'a)`), not
+   decided.
+2. Resolve every predicate whose argument head is known. A failure is a
+   declaration error (`BigField`, `AliasCasing`, `ListElement`, ...) reported
+   at that field. A predicate on a declaration parameter is retained.
+3. References to members of the same group use the group's current
+   contexts. Iterate steps 1–2 until no context grows. Retained predicates
+   have exactly two forms: a representation predicate on a bare parameter
+   (a finite set), or a predicate containing a variable-headed application
+   (`Apply 'f 'a`, `Big ('f 'b)`). Only the second form can grow under
+   substitution. A parameter is **applied-relevant** if it occurs anywhere
+   — head or argument — in a retained predicate of the second form.
+   **Rule, checked at every round for every recursive reference:** the
+   reference's substitution must map each applied-relevant parameter to a
+   bare parameter; every other parameter may be mapped to anything
+   (wrapped, closed, or variable-headed). A violation is
+   `IrregularRecursion` at that reference. Since contexts and the relevant
+   set only grow, a parameter that becomes relevant in a later round trips
+   the rule then.
 
-```elm
-type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))
-trait Foldable ('t : Storable -> Const) where ...
-```
+   Under the rule the second-form predicates are closed under substitution
+   up to renaming, so the iteration reaches a fixpoint. A non-relevant
+   parameter substituted by a fixed type can create a second-form
+   predicate at most once per shape, after which its parameters are
+   relevant and frozen. The implementation retains predicates in a
+   deduplicated set and drives replay with a worklist keyed by (reference,
+   predicate); it ends when the worklist is empty. There is no round cap:
+   a reference that permutes many parameters legitimately produces many
+   distinct predicates before repeating, and each is inserted once.
+4. The retained predicates over the declaration's parameters are its
+   context. Its kind is the Haskell 98 kind from the same walk.
 
-The annotation is unified with the inferred kind, not substituted for it, so
-a wrong annotation is reported as a mismatch between the two. `Storable` in
-an annotation stands for a fresh variable bounded `Storable`; each
-occurrence is a separate variable. There is no syntax for naming a kind
-variable.
+The walk that infers the context is the same walk that reports declaration
+errors: `type Pair2 'a = P (list 'a)` fails at `list 'a` because the field
+must be `Big` and `list _` is `Const`, before any context is retained.
 
-### Partial application
+### Where contexts are enforced
 
-Kinds allow a constructor to be applied to fewer arguments than its arity
-(`Functor List`, `wrap List Int`). Kind checking accepts such applications;
-where the surface grammar and the type solver accept them is decided in
-[traits.md](traits.md). Applying a base-kinded type to an argument
-is invalid. Named constructors and nominal aliases may be partial in type
-annotations when the enclosing parameter accepts their arrow kind. A
-constructor in a value-type position is rejected by kind checking. Supplying
-more arguments than a named constructor declares reports `BadArity` before
-kind inference runs.
+Every place a type is *formed* generates its context:
+
+- **Annotations.** Checking `f : Box 'a -> ...` instantiates `Box`'s context
+  at `'a`: `Big 'a` joins `f`'s scheme context. `map : ('a -> 'b) -> 'f 'a
+  -> 'f 'b` gets `Apply 'f 'a, Apply 'f 'b`.
+- **Inference.** When the solver forms `list α` for a list literal, or
+  `App1(T, args)` for a constructor use, it emits `T`'s context at the
+  fresh variables. Predicates that survive generalization join the inferred
+  scheme's context; the rest resolve when their heads become known.
+- **Instantiation.** Instantiating a scheme instantiates its context, as
+  for every predicate. `f (Some 1)` at `f : Big 'a => Box 'a -> unit` wants
+  `Big (option int)`, which fails: "`Box` needs a Big argument, but `option
+  int` is a Term type".
+- **Impls.** `impl Functor list` specializes `map` to `('a -> 'b) -> list 'a
+  -> list 'b`; the specialized scheme's context becomes `Storable 'a,
+  Storable 'b`. Inside the impl body those are givens. At a use,
+  `map f (xs : list int)` wants `Storable int` and `Storable b`; mapping to
+  `option int` fails at the use with the chain `Storable (option int)` ⇐
+  `list b` in `map` at `impl Functor list`.
+- **Substitution.** When a variable head becomes known (`'f := list`), the
+  pending `Apply 'f 'a` reduces to `Storable 'a`. Predicates live on the
+  descriptors of their arguments (plans/03), so this is the existing
+  re-examination path.
+
+Predicates implied by the annotated type itself (a context entry `Big 'a`
+where `Box 'a` appears in the type; every `Apply`) are not displayed in
+rendered signatures. They are still stored and still instantiated.
+
+### Contexts and `Data`
+
+`Data`'s constructors (`Constr int (list Data)`, `Map (list (pair Data
+Data))`, `List (list Data)`, `I int`, `B bytes`) are compiler-known and
+exempt from the Big-field rule: they mirror `chooseData`.
+
+## Traits and impls
+
+- A trait parameter has a kind, inferred from the method signatures by
+  unification. `Functor : Type -> Type`, `Eq : Type`, `Lift : Type -> Type`
+  (two parameters, each `Type`).
+- An impl head must have the parameter's kind. No representation
+  requirement is placed on the head; representation requirements arise
+  from the specialized method signatures, as above.
+- Compiler-owned impls that depend on representation state it as a context:
+  the reflexive `impl Big 'a => Lift 'a 'a`, structural `impl Big 'a => Eq
+  'a`. These are the only impls with a representation predicate in their
+  context that the user cannot write themselves; they are exempt from the
+  Haskell 98 head-shape rule (see [traits.md](traits.md)).
+- Coherence (impl overlap) is a unification question over heads and their
+  kinds. Contexts do not participate: two impls with unifiable heads overlap
+  regardless of `Big`/`Const` contexts, because contexts are not part of
+  the impl's identity. Consequently core ships one `impl Eq 'a => Eq (list
+  'a)` (elementwise), not a second `Big 'a => Eq (list 'a)`; the
+  whole-list `equalsData` fast path is a codegen rewrite on ground types
+  whose element is Big ([codegen.md](codegen.md), plans/08). Same for
+  `Ord` and `Show`.
+
+## Recursion and infinite kinds
+
+- `type Tree 'a = Node 'a (List (Tree 'a))`: regular recursion, `Tree :
+  Type -> Type`, context `Big 'a` (from the field `'a`; the recursive
+  reference contributes the same context).
+- `type Nest 'a = N (Nest (List 'a))`: nested datatype, accepted; `'a` is
+  not applied-relevant, and `Big (List 'a)` resolves structurally each
+  round.
+- `type compose 'f 'g 'a = C ('f ('g 'a))` with `type r 'f 'g 'a = R ('f
+  'a) (r (compose 'f 'g) 'g 'a)`: kinds unify, but `'f` is applied-relevant
+  from the field `'f 'a` and the recursive reference maps it to `compose 'f
+  'g` ⇒ `IrregularRecursion` at round 1. Without the rule the contexts
+  would grow `Apply 'f ('g ('g .. 'a))` forever.
+- `type self 'f = Self ('f 'f)`: `'f : k -> Type` and `'f : k` ⇒ occurs
+  check ⇒ `KindInfinite`. Same as Haskell. `self tag` is not expressible.
+- `type bad 'f = Bad (bad bad)`: `bad : k -> Type` applied to itself ⇒
+  `KindInfinite`.
+- `type r 'f 'a = R ('f 'a) (r 'f (list 'a))`: `IrregularRecursion`
+  (`'a` is applied-relevant and is mapped to `list 'a`).
+
+## Kinds and representation in codegen
+
+Every `Core` type carries its representation. After monomorphization every
+type is ground; `repr` of a ground type is computed from its head
+(builtins, casing, alias bodies). Codegen uses it to choose:
+
+- how a constructor allocates (`Constr` data vs `constr` term),
+- how a `case` scrutinizes (`unConstrData` + tag vs UPLC `case`),
+- the UPLC `Type` of `list`/`array`/`pair` element constants (`Big`
+  elements are `Type::Data`),
+- which `Lift` implementation applies,
+- whether `if` may use `ifThenElse` (the condition must be `bool`).
+
+Representation predicates produce no runtime evidence.
 
 ## Errors
 
-Error data is stored, like every other Nash error, and rendered by
-`nash-report`. The intended prose:
+| Error | When | Reported at |
+|---|---|---|
+| `KindMismatch` | arity mismatch: a `Type` applied, or `k1 -> k2` where `Type` is needed | the application |
+| `KindInfinite` | occurs check in kind unification | the declaration |
+| `IrregularRecursion` | a recursive substitution constructs an applied-relevant parameter instead of renaming it | the reference |
+| `RepresentationMismatch` with its field/body context | a representation predicate fails while checking a declaration | the field / body |
+| `MissingImpl` with a representation trait | a representation predicate fails at a use or annotation | the use, with the provenance chain |
+| `ContradictoryRepresentation` | one variable's repr predicates admit no representation | the annotation or inferred definition |
+| `ImplOfBuiltinTrait` | a user impl of `Big`/`Const`/`Term`/`Storable`/`Little` | the impl |
+| `KindAnnotationArrow` | `('f : Big -> Big)` (no kind syntax exists) | the annotation |
+| `MissingConstraint` | a body requires `Storable 'a` and the annotation does not promise it | the body use, pointing at the annotation |
 
-**Kind mismatch on a type argument**
+The last two are the ordinary predicate errors of [traits.md](traits.md)
+with representation-specific prose. Intended rendering:
 
 ```
 -- KIND MISMATCH ------------------------------------------------ Main.nash
@@ -319,8 +349,6 @@ Hint: use the Big twin `List (Option Int)` if the values cross the data
 boundary anyway, or keep a little record of the fields you need.
 ```
 
-**Big field that is not Big**
-
 ```
 -- BIG TYPE WITH LITTLE FIELD ------------------------------------ Main.nash
 
@@ -331,10 +359,8 @@ boundary anyway, or keep a little record of the fields you need.
 `bytes` is a Const type (a UPLC builtin bytestring).
 
 Hint: use `Bytes`, or name the type `datum` to make it a little type whose
-fields can have any kind.
+fields can have any representation.
 ```
-
-**Alias casing**
 
 ```
 -- LOWERCASE ALIAS OF A BIG TYPE ---------------------------------- Main.nash
@@ -348,28 +374,27 @@ fields can have any kind.
 Hint: rename the alias to `Id`.
 ```
 
-**Annotation mismatch**
-
 ```
--- KIND ANNOTATION MISMATCH --------------------------------------- Main.nash
+-- MISSING REPRESENTATION ----------------------------------------- Main.nash
 
-The annotation says `'f` has kind `Big -> Big`:
+`cons` needs its element to be Big or Const:
 
-3| type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))
-              ^^^^^^^^^^^^^^
-but the way `'f` is used gives it kind `Term -> Big`.
+9|     cons (Some x) rest
+            ^^^^^^^^
+`cons` is used at `option int`, but `option int` is a Term type.
+
+`cons : Storable 'a => 'a -> list 'a -> list 'a`
 ```
-
-**Infinite kind**
 
 ```
 -- INFINITE KIND ------------------------------------------------- Main.nash
 
-I cannot find a finite kind for `bad` in `type bad 'f = Bad (bad bad)`:
-the recursive constructor `bad` is applied to itself.
-```
+`self` applies its parameter `'f` to itself:
 
-**Too many arguments**
+3| type self 'f = Self ('f 'f)
+                        ^^^^^
+`'f` would need the kind `k -> Type` and the kind `k` at the same time.
+```
 
 ```
 -- TYPE APPLIED TO TOO MANY ARGUMENTS ------------------------------ Main.nash
@@ -380,50 +405,34 @@ the recursive constructor `bad` is applied to itself.
        ^^^^^^^
 ```
 
-Too many arguments to a named constructor still produce Elm's `BadArity`
-error from `nash-can`. Fewer arguments retain an arrow kind, which must fit
-the enclosing type position.
-
-Canonical variable applications retain a general `App` head and argument
-list. Plan 03 substitution normalizes a head that becomes known into a
-named or nominal alias application, preserving every argument. Partial
-aliases retain their remaining bound parameters in retained interfaces.
-Kind checking and higher-kinded value inference support these applications,
-including partial aliases and imported annotations. Named constructors in
-ordinary type annotations and impl heads may be partial and are checked by kind.
-A base-bounded variable applied to arguments instead
-reaches the kind-specific too-many-arguments error.
-
-## Kinds in codegen
-
-Every `Core` type carries its base kind (`Big`, `Const`, `Term`). After
-monomorphization every type is ground, so kind variables never reach `Core`;
-the kind of a ground type is computed by instantiating the head
-constructor's scheme and reading the result. Codegen uses it to choose:
-
-- how a constructor allocates (`Constr` data vs `constr` term),
-- how a `case` scrutinizes (`unConstrData` + tag vs UPLC `case`),
-- the UPLC `Type` of `list`/`array`/`pair` element constants (`Big` elements
-  are `Type::Data`),
-- which `Lift` builtin implementation applies,
-- whether `if` can use `ifThenElse` (the condition must be `bool`, kind
-  `Const`).
-
-The same scheme lookup answers `validateData` and `@derive(FromData)` about
-field shapes. See [representation.md](representation.md) and
-[codegen.md](codegen.md).
+`BadArity` (too many arguments to a named constructor) is still Elm's
+canonicalization error. Fewer arguments than the arity leave a
+higher-kinded type, which must fit the enclosing position by kind.
 
 ## Interactions
 
-- **Canonicalization**: kind inference is a pass in `nash-can` between type
-  declaration canonicalization and value canonicalization; declarations
-  store their `KindScheme`, interfaces export it.
-- **Traits**: kind schemes for traits, kind predicates on value schemes and
-  the `Storable`/`Big` predicates used by `Lift` impls all live in the
-  qualified-type machinery.
-- **Representation**: casing decides the encoding of records and ADTs.
-- **Data**: `Data`'s constructors are a compiler-known Big type whose
-  constructor fields (`int`, `list Data`, ...) are exempt from the Big-field
-  rule because they map directly onto `chooseData` results.
-- **Interfaces**: an exported type's kind scheme is part of the interface
-  and of the incremental-build fingerprint.
+- **Canonicalization** (`nash-can`): kind inference and context inference
+  run over the type-declaration SCCs before value canonicalization.
+  Declarations store `kind` and `context`; interfaces export both; they are
+  part of the incremental-build fingerprint.
+- **Traits** (plans/03): representation predicates, `Apply`, and datatype
+  contexts are predicates in the existing store; structural resolution is a
+  third resolver branch beside `by_instance` and `by_given`, like
+  `StructuralEq`.
+- **Representation** ([representation.md](representation.md)): casing decides
+  the encoding of records and ADTs; `repr` is the single lookup.
+- **Data** ([data.md](data.md)): `Data`'s constructors are exempt from the
+  Big-field rule.
+
+## Why not subkinding
+
+The previous design put representation inside kinds (`list : Storable ->
+Const`, `option : Any -> Term`) and made application `kind(arg) <= domain`.
+Bounds plus contravariant arrows plus polymorphism is a subtype-constraint
+problem: cyclic constraint graphs, finite-satisfiability proofs, relational
+kind schemes with private witnesses, and an annotation-entailment problem
+with no total procedure. All of it served one guarantee, "a `list` holds
+constants", which is a property of a head constructor and is expressed
+exactly by a predicate. Moving representation out of the kind restores
+Haskell 98 kinds (unification, occurs check, nothing to prove) and reuses
+the predicate machinery Nash already needs for traits.

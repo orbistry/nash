@@ -3,7 +3,50 @@ source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nignore value = ()\nbad : 'a -> ()\nbad x =\n    let\n        helper ignored = ignore (first x)\n    in\n    helper ()\n"
 ---
 [
-    BadKind {
+    MissingConstraint {
+        region: Region {
+            start: Position {
+                line: 9,
+                column: 34,
+            },
+            end: Position {
+                line: 9,
+                column: 39,
+            },
+        },
+        name: "type application",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
+        args: [
+            RigidVar(
+                "a",
+            ),
+        ],
+        binder: Located {
+            region: Region {
+                start: Position {
+                    line: 7,
+                    column: 1,
+                },
+                end: Position {
+                    line: 7,
+                    column: 4,
+                },
+            },
+            value: "bad",
+        },
+    },
+    MissingConstraint {
         region: Region {
             start: Position {
                 line: 9,
@@ -15,38 +58,35 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
             },
         },
         name: "first",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
         args: [
             RigidVar(
                 "a",
             ),
         ],
-        reason: Rigid {
-            declared: ValueKinds {
-                bounds: [
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kinds: [
-                    Var(
-                        0,
-                    ),
-                ],
-                applications: [],
+        binder: Located {
+            region: Region {
+                start: Position {
+                    line: 7,
+                    column: 1,
+                },
+                end: Position {
+                    line: 7,
+                    column: 4,
+                },
             },
-            required: ValueKinds {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kinds: [
-                    Var(
-                        0,
-                    ),
-                ],
-                applications: [],
-            },
+            value: "bad",
         },
     },
 ]

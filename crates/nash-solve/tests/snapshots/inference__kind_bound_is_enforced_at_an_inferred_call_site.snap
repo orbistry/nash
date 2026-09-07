@@ -3,7 +3,7 @@ source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nbad xs = first (Some ()) xs\n"
 ---
 [
-    BadKind {
+    MissingImpl {
         region: Region {
             start: Position {
                 line: 6,
@@ -14,7 +14,19 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                 column: 15,
             },
         },
-        name: "first",
+        name: "type application",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
         args: [
             Type {
                 home: ModuleName {
@@ -27,25 +39,73 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                 ],
             },
         ],
-        reason: Mismatch {
-            expected: KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kind: Var(
-                    0,
-                ),
-                applications: [],
+        available: [],
+        because: [
+            Formation(
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                    args: [
+                        Type {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "option",
+                            args: [
+                                Unit,
+                            ],
+                        },
+                    ],
+                },
+            ),
+        ],
+    },
+    MissingImpl {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 10,
             },
-            actual: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
+            end: Position {
+                line: 6,
+                column: 15,
             },
         },
+        name: "first",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
+        args: [
+            Type {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "option",
+                args: [
+                    Unit,
+                ],
+            },
+        ],
+        available: [],
+        because: [],
     },
 ]

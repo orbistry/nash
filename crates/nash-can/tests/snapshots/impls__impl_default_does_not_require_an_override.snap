@@ -4,16 +4,39 @@ expression: "result.module.impls[0].value.methods"
 ---
 [
     TypedDef {
-        kinds: ValueKinds {
-            bounds: [],
-            kinds: [
-                Base(
-                    Big,
-                ),
-            ],
-            applications: [],
-        },
-        context: [],
+        context: [
+            Implied {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Big",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 6,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 6,
+                                column: 19,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
         annotation: Located {
             region: Region {
                 start: Position {
@@ -226,7 +249,7 @@ expression: "result.module.impls[0].value.methods"
                         method: "keep",
                         annotation: Annotation {
                             context: [
-                                Pred {
+                                Trait {
                                     trait_: QualifiedName {
                                         home: ModuleName {
                                             package: None,
@@ -256,19 +279,6 @@ expression: "result.module.impls[0].value.methods"
                             free_vars: [
                                 "a",
                             ],
-                            kinds: ValueKinds {
-                                bounds: [
-                                    KindSet(
-                                        7,
-                                    ),
-                                ],
-                                kinds: [
-                                    Var(
-                                        0,
-                                    ),
-                                ],
-                                applications: [],
-                            },
                             typ: Located {
                                 region: Region {
                                     start: Position {

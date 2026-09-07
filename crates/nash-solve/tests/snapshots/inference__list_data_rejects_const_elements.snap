@@ -3,7 +3,7 @@ source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nbadList = Builtin.listData [()]\n"
 ---
 [
-    BadKind {
+    MissingImpl {
         region: Region {
             start: Position {
                 line: 3,
@@ -15,24 +15,22 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nbadList = Buil
             },
         },
         name: "listData",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Big",
+        },
         args: [
             Unit,
         ],
-        reason: Mismatch {
-            expected: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
-            actual: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Const,
-                ),
-                applications: [],
-            },
-        },
+        available: [],
+        because: [],
     },
 ]

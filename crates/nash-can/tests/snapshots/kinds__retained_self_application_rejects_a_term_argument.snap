@@ -3,46 +3,21 @@ source: crates/nash-can/tests/kinds.rs
 description: "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (self (self tag))"
 ---
 [
-    KindMismatch {
+    KindInfinite {
         region: Region {
             start: Position {
-                line: 7,
-                column: 19,
+                line: 5,
+                column: 25,
             },
             end: Position {
-                line: 7,
+                line: 5,
                 column: 27,
             },
         },
-        context: TypeArg {
-            head: Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "self",
-                },
-            ),
+        context: LittleField {
+            union: "self",
+            ctor: "Self",
             index: 0,
-        },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Term,
-            ),
-            applications: [],
         },
     },
 ]

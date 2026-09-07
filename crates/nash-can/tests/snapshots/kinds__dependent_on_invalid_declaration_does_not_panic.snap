@@ -3,7 +3,7 @@ source: crates/nash-can/tests/kinds.rs
 description: "type Bad = Bad int\ntype Dependent = Dependent Bad"
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 5,
@@ -19,19 +19,7 @@ description: "type Bad = Bad int\ntype Dependent = Dependent Bad"
             ctor: "Bad",
             index: 0,
         },
-        expected: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Const,
-            ),
-            applications: [],
-        },
+        required: Big,
+        actual: Const,
     },
 ]

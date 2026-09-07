@@ -44,7 +44,7 @@ Alias(
                         },
                         value: "a",
                     },
-                    kind: None,
+                    repr: None,
                 },
                 TypeParam {
                     name: Located {
@@ -60,7 +60,7 @@ Alias(
                         },
                         value: "b",
                     },
-                    kind: None,
+                    repr: None,
                 },
             ],
             typ: Located {

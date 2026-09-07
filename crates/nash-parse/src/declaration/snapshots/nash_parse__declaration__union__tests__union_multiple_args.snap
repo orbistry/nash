@@ -44,7 +44,7 @@ Union(
                         },
                         value: "e",
                     },
-                    kind: None,
+                    repr: None,
                 },
                 TypeParam {
                     name: Located {
@@ -60,7 +60,7 @@ Union(
                         },
                         value: "a",
                     },
-                    kind: None,
+                    repr: None,
                 },
             ],
             ctors: [

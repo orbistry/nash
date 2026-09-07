@@ -9,9 +9,10 @@
 
 mod annotation;
 pub mod evidence;
-pub mod kinds;
+mod kind_check;
 mod occurs;
 pub mod preds;
+mod representation;
 mod resolve;
 mod solve;
 pub mod solved;

@@ -3,38 +3,24 @@ source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype alias bigUse ('a : Big) = 'a -> ()\ntype alias termUse ('a : Term) = 'a -> ()\nuseBig : bigUse 'a\nuseBig x = ()\nuseTerm : termUse 'a\nuseTerm x = ()\nloop x = loop x\ndiscard x y = ()\nbad : ()\nbad = (\\x -> discard (useBig x) (useTerm x)) (loop ())\n"
 ---
 [
-    BadKind {
+    ContradictoryRepresentation {
         region: Region {
             start: Position {
                 line: 11,
-                column: 34,
+                column: 1,
             },
             end: Position {
                 line: 11,
-                column: 41,
+                column: 4,
             },
         },
-        name: "useTerm",
-        args: [
-            FlexVar(
-                "a",
-            ),
+        name: "bad",
+        typ: FlexVar(
+            "a",
+        ),
+        requirements: [
+            Big,
+            Term,
         ],
-        reason: Mismatch {
-            expected: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
-            actual: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
-        },
     },
 ]

@@ -205,6 +205,7 @@ fn build_raw_type_info<'a>(bump: &'a Bump, interface: &Interface<'a>) -> RawType
             let can_union = bump.alloc(nash_ast::Union {
                 name: bump.alloc(Located::at(Region::zero(), public.name)),
                 kind: public.kind,
+                context: public.context,
                 parameters: public.parameters,
                 ctors: public.ctors,
                 alternatives: public.alternatives,
@@ -234,7 +235,7 @@ fn build_raw_type_info<'a>(bump: &'a Bump, interface: &Interface<'a>) -> RawType
                 typ: public.typ,
             };
             let mut ctors = BTreeMap::new();
-            if let CanType::Record { fields, ext: None } = public.typ.value.unannotated() {
+            if let CanType::Record { fields, ext: None } = &public.typ.value {
                 ctors.insert(
                     public.name,
                     super::make_record_ctor(
@@ -551,7 +552,7 @@ fn trait_info<'a>(
         home,
         name: trait_.name,
         parameters: trait_.parameters,
-        kind: trait_.kind,
+        kinds: trait_.kinds,
         supers: trait_.supers,
         methods: bump.alloc_slice_fill_iter(trait_.methods.iter().map(|m| super::MethodInfo {
             name: m.name,

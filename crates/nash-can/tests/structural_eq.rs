@@ -12,7 +12,7 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
             project: "core",
         },
     ] {
-        for head in ["Token", "Box"] {
+        for head in ["Token", "Box", "(Alias 'a)", "(Applied 'f 'a)"] {
             let bump = Bump::new();
             let builtins = std::collections::BTreeMap::from([(
                 "Builtin",
@@ -36,7 +36,7 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                 "Eq",
                 nash_can::from_module(&bump, &canonical.module, &Default::default()),
             );
-            let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = {{ item : Int }}\nimpl Eq {head} where\n    eq _ _ = Builtin.True\n"));
+            let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = {{ item : Int }}\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq {head} where\n    eq _ _ = Builtin.True\n"));
             let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
                 .module()
                 .unwrap();

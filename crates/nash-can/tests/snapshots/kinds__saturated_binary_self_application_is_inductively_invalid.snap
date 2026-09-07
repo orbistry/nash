@@ -6,17 +6,17 @@ description: "type s 'f 'a = S ('f 'f 'a)\ntype tag 'a = Tag\ntype w = W (s s ta
     KindInfinite {
         region: Region {
             start: Position {
-                line: 7,
-                column: 13,
+                line: 5,
+                column: 22,
             },
             end: Position {
-                line: 7,
-                column: 20,
+                line: 5,
+                column: 24,
             },
         },
         context: LittleField {
-            union: "w",
-            ctor: "W",
+            union: "s",
+            ctor: "S",
             index: 0,
         },
     },

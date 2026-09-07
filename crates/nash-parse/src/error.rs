@@ -496,6 +496,7 @@ pub enum TypeParam<'a> {
 
 #[derive(Debug)]
 pub enum Kind<'a> {
+    Arrow(Row, Col),
     Start(Row, Col),
     Name(&'a str, Row, Col),
     End(Row, Col),

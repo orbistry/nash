@@ -6,13 +6,8 @@ description: type Box = Box Int
     [
         (
             "Box",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
     [],

@@ -49,28 +49,10 @@ expression: "(traits, result.tables.impls)"
                     ],
                 },
             ],
-            kinds: ValueKinds {
-                bounds: [],
-                kinds: [
-                    Base(
-                        Big,
-                    ),
-                ],
-                applications: [],
-            },
         }: ImplInfo {
             variables: [
                 "a",
             ],
-            kinds: ValueKinds {
-                bounds: [],
-                kinds: [
-                    Base(
-                        Big,
-                    ),
-                ],
-                applications: [],
-            },
             home: ModuleName {
                 package: None,
                 name: "Instances",
@@ -93,7 +75,7 @@ expression: "(traits, result.tables.impls)"
                 name: "Keep",
             },
             context: [
-                Pred {
+                Trait {
                     trait_: QualifiedName {
                         home: ModuleName {
                             package: None,
@@ -111,6 +93,37 @@ expression: "(traits, result.tables.impls)"
                                 end: Position {
                                     line: 6,
                                     column: 15,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 30,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 32,
                                 },
                             },
                             value: Var(

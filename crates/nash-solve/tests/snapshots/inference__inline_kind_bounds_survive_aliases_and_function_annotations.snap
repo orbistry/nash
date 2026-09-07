@@ -1,7 +1,9 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias Record 'a = ({ field : ('a : Big) } : Big)\nwrap : (('a : Big) -> Record 'a : Term)\nwrap x = Record x\nidentity : ('a : Big) -> 'a\nidentity x = x\npreserve : Record 'a -> Record 'a\npreserve x = identity x\n"
+description: "Code:\n\nmodule Main exposing (..)\ntype alias Record 'a = ({ field : ('a : Big) } : Big)\nwrap : (('a : Big) -> Record 'a : Term)\nwrap x = Record x\nidentity : ('a : Big) -> 'a\nidentity x = x\npreserve : Record 'a -> Record 'a\npreserve x = identity x\ntype Color = Red\nconcrete = wrap Red\nconcrete2 = preserve concrete\n"
 ---
-identity : forall (a : Big). a -> a
-preserve : forall (a : Big). Record a -> Record a
-wrap : forall (a : Big). a -> Record a
+concrete : Record Color
+concrete2 : Record Color
+identity : forall a. Big a => a -> a
+preserve : forall a. Big a => Record a -> Record a
+wrap : forall a. Big a => a -> Record a

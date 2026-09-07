@@ -17,40 +17,11 @@ description: "value : list\nvalue = ()\nother : pair int\nother = ()"
         context: Annotation {
             name: "value",
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    7,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Constructor {
-                scheme: KindScheme {
-                    bounds: [
-                        KindSet(
-                            3,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Base(
-                            Const,
-                        ),
-                    ),
-                    applications: [],
-                },
-                arguments: [],
-            },
-            applications: [],
-        },
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
     KindMismatch {
         region: Region {
@@ -66,51 +37,10 @@ description: "value : list\nvalue = ()\nother : pair int\nother = ()"
         context: Annotation {
             name: "other",
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    7,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Constructor {
-                scheme: KindScheme {
-                    bounds: [
-                        KindSet(
-                            3,
-                        ),
-                        KindSet(
-                            3,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Arrow(
-                            Var(
-                                1,
-                            ),
-                            Base(
-                                Const,
-                            ),
-                        ),
-                    ),
-                    applications: [],
-                },
-                arguments: [
-                    Base(
-                        Const,
-                    ),
-                ],
-            },
-            applications: [],
-        },
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

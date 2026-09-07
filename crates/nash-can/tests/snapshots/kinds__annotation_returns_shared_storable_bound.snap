@@ -2,16 +2,113 @@
 source: crates/nash-can/tests/kinds.rs
 expression: kinds
 ---
-ValueKinds {
-    bounds: [
-        KindSet(
-            3,
-        ),
+Annotation {
+    context: [
+        Implied {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "Storable",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+            ],
+        },
     ],
-    kinds: [
-        Var(
-            0,
-        ),
+    free_vars: [
+        "a",
     ],
-    applications: [],
+    typ: Located {
+        region: Region {
+            start: Position {
+                line: 0,
+                column: 0,
+            },
+            end: Position {
+                line: 0,
+                column: 0,
+            },
+        },
+        value: Lambda {
+            from: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Var(
+                    "a",
+                ),
+            },
+            to: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "list",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            },
+        },
+    },
 }

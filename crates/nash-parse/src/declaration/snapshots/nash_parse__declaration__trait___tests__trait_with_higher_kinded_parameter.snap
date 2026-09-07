@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
-description: "trait Functor ('f : Big -> Big) where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n"
+description: "trait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n"
 ---
 Trait(
     Located {
@@ -34,57 +34,16 @@ Trait(
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 16,
+                                column: 15,
                             },
                             end: Position {
                                 line: 1,
-                                column: 18,
+                                column: 17,
                             },
                         },
                         value: "f",
                     },
-                    kind: Some(
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 1,
-                                    column: 21,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 31,
-                                },
-                            },
-                            value: Arrow {
-                                from: Located {
-                                    region: Region {
-                                        start: Position {
-                                            line: 1,
-                                            column: 21,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 24,
-                                        },
-                                    },
-                                    value: Big,
-                                },
-                                to: Located {
-                                    region: Region {
-                                        start: Position {
-                                            line: 1,
-                                            column: 28,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 31,
-                                        },
-                                    },
-                                    value: Big,
-                                },
-                            },
-                        },
-                    ),
+                    repr: None,
                 },
             ],
             supers: [],

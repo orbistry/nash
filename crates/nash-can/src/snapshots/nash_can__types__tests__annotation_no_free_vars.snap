@@ -5,11 +5,6 @@ description: Int
 Annotation {
     context: [],
     free_vars: [],
-    kinds: ValueKinds {
-        bounds: [],
-        kinds: [],
-        applications: [],
-    },
     typ: Located {
         region: Region {
             start: Position {

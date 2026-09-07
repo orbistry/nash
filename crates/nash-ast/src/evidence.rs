@@ -11,8 +11,6 @@ fn same_types(a: &[&Located<Type<'_>>], b: &[&Located<Type<'_>>]) -> bool {
 
 fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
     match (a, b) {
-        (Type::Kinded { typ, .. }, b) => same_type(&typ.value, b),
-        (a, Type::Kinded { typ, .. }) => same_type(a, &typ.value),
         (Type::Var(a), Type::Var(b)) => a == b,
         (Type::Unit, Type::Unit) => true,
         (Type::Lambda { from: af, to: at }, Type::Lambda { from: bf, to: bt }) => {
@@ -99,12 +97,8 @@ fn hash_types<H: Hasher>(types: &[&Located<Type<'_>>], state: &mut H) {
 }
 
 fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
-    if let Type::Kinded { typ, .. } = typ {
-        return hash_type(&typ.value, state);
-    }
     std::mem::discriminant(typ).hash(state);
     match typ {
-        Type::Kinded { .. } => unreachable!("kind annotation stripped"),
         Type::Var(name) => name.hash(state),
         Type::Unit => {}
         Type::Lambda { from, to } => {
@@ -157,6 +151,9 @@ fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
 impl PartialEq for Evidence<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (Self::Repr { trait_: a, typ: at }, Self::Repr { trait_: b, typ: bt }) => {
+                a == b && same_type(&at.value, &bt.value)
+            }
             (Self::ReflexiveLift { typ: a }, Self::ReflexiveLift { typ: b })
             | (Self::StructuralEq { typ: a }, Self::StructuralEq { typ: b }) => {
                 same_type(&a.value, &b.value)
@@ -197,6 +194,10 @@ impl Hash for Evidence<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::mem::discriminant(self).hash(state);
         match self {
+            Self::Repr { trait_, typ } => {
+                trait_.hash(state);
+                hash_type(&typ.value, state);
+            }
             Self::ReflexiveLift { typ } | Self::StructuralEq { typ } => {
                 hash_type(&typ.value, state)
             }
@@ -216,6 +217,36 @@ impl Hash for Evidence<'_> {
             Self::Super { of, index } => {
                 of.hash(state);
                 index.hash(state);
+            }
+        }
+    }
+}
+
+impl PartialEq for crate::PredicateKey<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        use crate::Pred;
+        match (self.0, other.0) {
+            (Pred::Apply { head: a, args: aa }, Pred::Apply { head: b, args: ba }) => {
+                same_type(&a.value, &b.value) && same_types(aa, ba)
+            }
+            (Pred::Apply { .. }, _) | (_, Pred::Apply { .. }) => false,
+            (a, b) => a.trait_ref() == b.trait_ref() && same_types(a.args(), b.args()),
+        }
+    }
+}
+impl Eq for crate::PredicateKey<'_> {}
+impl Hash for crate::PredicateKey<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self.0 {
+            crate::Pred::Apply { head, args } => {
+                1u8.hash(state);
+                hash_type(&head.value, state);
+                hash_types(args, state);
+            }
+            trait_pred => {
+                0u8.hash(state);
+                trait_pred.trait_ref().hash(state);
+                hash_types(trait_pred.args(), state);
             }
         }
     }

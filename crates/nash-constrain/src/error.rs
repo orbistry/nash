@@ -25,6 +25,12 @@ pub enum Error<'a> {
         variable: &'a ErrorType<'a>,
         predicates: &'a [AmbiguousPredicate<'a>],
     },
+    ContradictoryRepresentation {
+        region: Region,
+        name: &'a str,
+        typ: &'a ErrorType<'a>,
+        requirements: &'a [nash_ast::primitives::ReprTrait],
+    },
     /// A cycle of evidence arguments adds an impl wrapper on each traversal.
     PolymorphicRecursion {
         region: Region,
@@ -39,12 +45,19 @@ pub enum Error<'a> {
         trait_: nash_ast::QualifiedName<'a>,
         args: &'a [&'a ErrorType<'a>],
     },
+    UnresolvedApplication {
+        region: Region,
+        name: &'a str,
+        head: &'a ErrorType<'a>,
+        args: &'a [&'a ErrorType<'a>],
+    },
     MissingImpl {
         region: Region,
         name: &'a str,
         trait_: nash_ast::QualifiedName<'a>,
         args: &'a [&'a ErrorType<'a>],
         available: &'a [&'a [nash_ast::Head<'a>]],
+        because: &'a [Requirement<'a>],
     },
     ImplResolutionLimit {
         region: Region,
@@ -84,24 +97,28 @@ pub enum Error<'a> {
     },
 }
 
+/// The outer requirements which produced a failing predicate, in source-to-
+/// failure order. Applications carry their complete supplied argument spine.
+#[derive(Debug)]
+pub enum Requirement<'a> {
+    Trait {
+        trait_: nash_ast::QualifiedName<'a>,
+        args: &'a [&'a ErrorType<'a>],
+    },
+    Application {
+        head: &'a ErrorType<'a>,
+        args: &'a [&'a ErrorType<'a>],
+    },
+    Formation(&'a ErrorType<'a>),
+}
+
 #[derive(Debug)]
 pub enum KindProblem<'a> {
     Mismatch {
-        expected: nash_ast::KindScheme<'a>,
-        actual: nash_ast::KindScheme<'a>,
+        expected: &'a nash_ast::Kind<'a>,
+        actual: &'a nash_ast::Kind<'a>,
     },
     Infinite,
-    Limit,
-    Restricted(&'static str),
-    Arity {
-        applied: usize,
-        accepted: usize,
-    },
-    Rigid {
-        declared: nash_ast::ValueKinds<'a>,
-        required: nash_ast::ValueKinds<'a>,
-    },
-    AnonymousRecord,
 }
 
 #[derive(Debug)]

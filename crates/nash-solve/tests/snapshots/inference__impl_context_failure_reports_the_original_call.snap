@@ -58,5 +58,40 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep '
                 Unit,
             ],
         ],
+        because: [
+            Trait {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Keep",
+                },
+                args: [
+                    Type {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "list",
+                        args: [
+                            Type {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "Color",
+                                args: [],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
     },
 ]

@@ -100,18 +100,43 @@ Module {
                 },
             },
             value: Union {
-                kind: KindScheme {
-                    bounds: [],
-                    kind: Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Base(
-                            Big,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 10,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 10,
+                                        column: 14,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
                 name: Located {
                     region: Region {
                         start: Position {
@@ -176,30 +201,14 @@ Module {
                 },
             },
             value: Alias {
-                kind: KindScheme {
-                    bounds: [
-                        KindSet(
-                            7,
-                        ),
-                        KindSet(
-                            7,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Arrow(
-                            Var(
-                                1,
-                            ),
-                            Base(
-                                Term,
-                            ),
-                        ),
+                kind: Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Type,
                     ),
-                    applications: [],
-                },
+                ),
+                context: [],
                 name: Located {
                     region: Region {
                         start: Position {
@@ -276,30 +285,14 @@ Module {
                 },
             },
             value: Alias {
-                kind: KindScheme {
-                    bounds: [
-                        KindSet(
-                            7,
-                        ),
-                        KindSet(
-                            7,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Arrow(
-                            Var(
-                                1,
-                            ),
-                            Base(
-                                Term,
-                            ),
-                        ),
+                kind: Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Type,
                     ),
-                    applications: [],
-                },
+                ),
+                context: [],
                 name: Located {
                     region: Region {
                         start: Position {
@@ -438,18 +431,43 @@ Module {
                 },
             },
             value: Alias {
-                kind: KindScheme {
-                    bounds: [],
-                    kind: Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Base(
-                            Big,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 7,
+                                        column: 36,
+                                    },
+                                    end: Position {
+                                        line: 7,
+                                        column: 38,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
                 name: Located {
                     region: Region {
                         start: Position {

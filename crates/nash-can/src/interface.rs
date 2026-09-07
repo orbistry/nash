@@ -43,7 +43,7 @@ pub struct Interface<'a> {
 pub struct InterfaceTrait<'a> {
     pub name: &'a str,
     pub parameters: &'a [&'a str],
-    pub kind: nash_ast::KindScheme<'a>,
+    pub kinds: &'a [&'a nash_ast::Kind<'a>],
     pub supers: &'a [nash_ast::Pred<'a>],
     pub methods: &'a [InterfaceMethod<'a>],
     /// Private metadata remains available to check exported schemes.
@@ -59,7 +59,8 @@ pub struct InterfaceMethod<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct InterfaceUnion<'a> {
-    pub kind: nash_ast::KindScheme<'a>,
+    pub kind: &'a nash_ast::Kind<'a>,
+    pub context: &'a [nash_ast::Pred<'a>],
     pub name: &'a str,
     pub parameters: &'a [&'a str],
     pub ctors: &'a [&'a CanCtor<'a>],
@@ -70,7 +71,8 @@ pub struct InterfaceUnion<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct InterfaceAlias<'a> {
-    pub kind: nash_ast::KindScheme<'a>,
+    pub kind: &'a nash_ast::Kind<'a>,
+    pub context: &'a [nash_ast::Pred<'a>],
     pub name: &'a str,
     pub parameters: &'a [&'a str],
     pub typ: &'a Located<CanType<'a>>,
@@ -113,7 +115,7 @@ pub fn from_module<'a>(
         traits: bump.alloc_slice_fill_iter(module.traits.iter().map(|t| InterfaceTrait {
             name: t.value.name.value,
             parameters: t.value.parameters,
-            kind: t.value.kind,
+            kinds: t.value.kinds,
             supers: t.value.supers,
             methods: bump.alloc_slice_fill_iter(t.value.methods.iter().map(|m| InterfaceMethod {
                 name: m.name.value,
@@ -234,6 +236,7 @@ fn extract_unions<'a>(
         InterfaceUnion {
             name,
             kind: union.value.kind,
+            context: union.value.context,
             parameters: union.value.parameters,
             ctors: union.value.ctors,
             alternatives: union.value.alternatives,
@@ -253,6 +256,7 @@ fn extract_aliases<'a>(
         InterfaceAlias {
             name,
             kind: alias.value.kind,
+            context: alias.value.context,
             parameters: alias.value.parameters,
             typ: alias.value.typ,
             visibility: alias_visibility(exports, name),

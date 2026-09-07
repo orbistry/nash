@@ -78,14 +78,15 @@ allowed.
 
 The grammar lives in [syntax.md](syntax.md): `trait_decl`, `trait_item`,
 `impl_decl`, `impl_item`, `context`, `type_scheme`, and `type_param`
-(which allows a kind annotation, `('f : Big -> Big)`). Instance heads are
+(which allows a representation annotation, `('a : Storable)`, sugar for
+the context entry `Storable 'a`). Instance heads are
 `type_term`s syntactically; the shape rules below are checked in
 canonicalization, not by the parser.
 
 Type variables are written `'a`; a bare lowercase name in type position is
 a little type (`int`, `list 'a`). An instance head names a constructor and
 applies it to zero or more recursive type patterns. `impl Functor List`
-applies `List` to nothing: the head has kind `Big -> Big`.
+applies `List` to nothing: the head has kind `Type -> Type`.
 
 Exposing: `exposing (Ord)` exports the trait and all its methods. There is
 no `Ord(..)` form. Impls are never listed; every impl is visible wherever
@@ -110,9 +111,10 @@ both its trait and its head type are visible.
 - A default body is checked exactly like a top-level definition with that
   method scheme as its annotation: the parameters are rigid and the trait
   predicate plus its superclass closure are given.
-- Each parameter has a kind inferred from the method signatures. The trait
-  stores a *kind scheme*: `Functor 'f` gets `'f : k1 -> k2` with kind
-  variables `k1`, `k2`. See [kinds.md](kinds.md).
+- Each parameter has a Haskell 98 kind inferred from the method
+  signatures by unification: `Functor 'f` gets `'f : Type -> Type`.
+  Representation (`Big`/`Const`/`Term`) is not part of the kind; it is a
+  predicate. See [kinds.md](kinds.md).
 
 ### Impl declarations
 
@@ -123,9 +125,9 @@ both its trait and its head type are visible.
   arguments are recursive type patterns, including concrete types and nested
   applications: `list int`, `list (pair 'k 'v)`, and `List 'a` are legal.
   Variables may recur across patterns; every occurrence denotes the same type.
-  Inline annotations constrain the shared variable kind, for example
-  `impl Eq (list ('a : Big))`. They remain part of the impl kind requirements
-  used by coherence, superclass checks and selection.
+  Inline annotations add representation prerequisites, for example
+  `impl Keep (list ('a : Big))` requires `Big 'a`. They are checked during
+  superclass proof and selection; they do not distinguish overlapping heads.
   Matching must preserve that equality. Bare variable heads and function heads
   remain excluded; reflexive Big Lift remains a compiler-provided rule.
   This rule applies uniformly to user and core impls, with no Map-specific
@@ -145,14 +147,14 @@ both its trait and its head type are visible.
   remaining parameters. Whether its body is open or already substituted does
   not change the evidence key.
 - The context `C` may only mention the variables of the heads.
-- Kinds: each head's kind must instantiate the trait's kind scheme. `impl
-  Functor List` instantiates `k1 -> k2` at `Big -> Big`; `impl Functor list`
-  at `Storable -> Const`; `impl Functor option` at `Any -> Term`.
-  Different applications of an abstract constructor check their element
-  kinds independently against its domain bounds. For example, map over cons
-  may turn Const integers into Term tuples; map over builtin list may not
-  produce those tuples. Do not unify the actual input and output element
-  kinds merely because they use the same abstract constructor.
+- Kinds: each head must have the trait parameter's Haskell 98 kind.
+  `impl Functor List`, `impl Functor list`, `impl Functor option` all
+  supply a `Type -> Type` head. Representation requirements come from the
+  specialized method signatures, not from the head: `impl Functor list`
+  specializes `map` to `('a -> 'b) -> list 'a -> list 'b`, whose datatype
+  contexts add `Storable 'a, Storable 'b` to that method scheme; over
+  `option` there is no such requirement, so `map` over `option` may turn
+  Const integers into Term tuples while `map` over builtin `list` may not.
 - Every method without a default must be defined. Defining a name that is
   not a method of `T` is an error. Each method body is checked against the
   method scheme with `'p1 .. 'pn := h1 .. hn`, the head variables rigid, and
@@ -170,19 +172,21 @@ both its trait and its head type are visible.
 **Big equality.** The exact core Eq trait is compiler-provided for every
 Big type and always compares structural Data. User Eq impls for Big types
 are rejected, including nested user ADTs and nominal aliases. This is a
-uniform kind rule, not a list of special-cased type names. It supersedes
+uniform representation rule, not a list of special-cased type names. It supersedes
 any earlier assumption that Big types may override structural equality.
 Core declares no explicit Big Eq impls. Inference, superclass entailment
-and ground resolution use the same kind rule; `StructuralEq` evidence
+and ground resolution use the same representation rule; `StructuralEq` evidence
 retains the compared type for codegen.
-The Big-element builtin-list Eq case likewise uses structural listData
-equality, while its disjoint Const-element case delegates to element Eq.
+Builtin-list Eq has one elementwise implementation for every storable element
+type with Eq. The later Plan 08 Eq-only optimization may replace a ground
+Big-element comparison with structural listData equality.
 
-An impl's identity retains its trait, full recursive head patterns and kind
-requirements, with bound variables normalized independently of their spelling.
+An impl's identity retains its trait and full recursive head patterns,
+with bound variables normalized independently of their spelling.
 Outer constructors may index candidates, but are not a complete impl identity
 or an overlap test. Matching substitutes through every nested argument and
-checks repeated variables, kind bounds and trait prerequisites.
+checks repeated variables and trait prerequisites. Head kinds are checked
+separately by Haskell 98 unification before table insertion.
 
 **Orphan rule.** An impl in module `M` is legal only if the trait `T` is
 defined in `M`, or at least one head constructor is defined in `M`. Unit and
@@ -608,7 +612,7 @@ Notes:
 
 A module's interface gains:
 
-- `traits`: trait parameters, kind schemes, superclasses, and method
+- `traits`: trait parameters, closed parameter kinds, superclasses, and method
   schemes, with export visibility. Private metadata is retained to check
   exported schemes that reference it; private trait and method names do
   not enter import scopes. Default bodies are not in the interface;
@@ -630,15 +634,17 @@ has a declared scheme, so it is always constrained through its annotation.
 
 ## Interactions
 
-- **Kinds** ([kinds.md](kinds.md)): trait parameters carry a
-  `KindScheme` inferred from the method signatures; impl heads instantiate
-  it; `'f 'a` in signatures requires type-variable application in the
-  solver (`FlatType::AppV1`). Kind bounds on a value's type variables
-  (`'a : Storable` in `cons : 'a -> list 'a -> list 'a`) are *kind
-  predicates*: they ride the same machinery as trait predicates (attached
-  to the variable, instantiated per use, classified at generalization) but
-  produce no evidence. `cons (Some 1) nil` is rejected at the call site
-  with a kind error, and `impl Lift 'a 'a` carries `Big 'a`.
+- **Kinds** ([kinds.md](kinds.md)): trait parameters carry a Haskell 98
+  kind inferred from the method signatures; impl heads must have it; `'f 'a`
+  in signatures requires type-variable application in the solver
+  (`FlatType::AppV1`). Representation is enforced by the compiler-owned
+  predicates `Big`/`Const`/`Term`/`Storable`/`Little`/`Apply` and inferred
+  datatype contexts: they ride the same machinery as trait predicates
+  (attached to the variable, instantiated per use, resolved structurally
+  from the head, retained at generalization) and produce `Evidence::Repr`,
+  which carries nothing at runtime. `cons (Some 1) nil` is rejected at the
+  call site as a missing `Storable (option int)`, and the compiler-owned
+  `impl Lift 'a 'a` carries `Big 'a`.
 - **Representation** ([representation.md](representation.md)): `Lift`,
   `ToData`, `FromData` are the only bridges between reprs. Nothing in trait
   resolution depends on reprs; specialization is by evidence only.

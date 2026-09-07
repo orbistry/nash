@@ -8,7 +8,7 @@
 
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position, Region};
-use nash_source::{Annotation, Constraint, FieldType, Kind, Type, TypeParam};
+use nash_source::{Annotation, Constraint, FieldType, Repr, Type, TypeParam};
 
 use crate::Parser;
 use crate::error::{self, TRecord, TTuple};
@@ -332,7 +332,13 @@ impl<'a> Parser<'a> {
                                 )?;
                                 p.check_indent(end.line, end.column, TTuple::IndentEnd)?;
                                 p.word1(b')', TTuple::End)?;
-                                Ok(p.add_end(start, Type::Kinded { typ: first, kind }))
+                                Ok(p.add_end(
+                                    start,
+                                    Type::Repr {
+                                        typ: first,
+                                        repr: kind,
+                                    },
+                                ))
                             }),
                             Box::new(|p: &mut Parser<'a>| p.type_tuple_help(start, first)),
                         ],
@@ -508,7 +514,7 @@ impl<'a> Parser<'a> {
         Ok(fields.into_bump_slice())
     }
 
-    /// Parse a declaration type parameter, with an optional kind annotation.
+    /// Parse a declaration type parameter, with an optional representation annotation.
     pub(crate) fn type_param(&mut self) -> Result<&'a TypeParam<'a>, error::TypeParam<'a>> {
         let start = self.get_position();
         self.one_of(
@@ -518,7 +524,7 @@ impl<'a> Parser<'a> {
                     let name = p.type_var_name(error::TypeParam::Start)?;
                     Ok(p.alloc(TypeParam {
                         name: p.add_end(start, name),
-                        kind: None,
+                        repr: None,
                     }))
                 }),
                 Box::new(|p: &mut Parser<'a>| {
@@ -547,70 +553,34 @@ impl<'a> Parser<'a> {
                     p.word1(b')', error::TypeParam::End)?;
                     Ok(p.alloc(TypeParam {
                         name,
-                        kind: Some(kind),
+                        repr: Some(kind),
                     }))
                 }),
             ],
         )
     }
 
-    /// Parse a kind expression.
-    fn kind_expr(&mut self) -> Result<(&'a Located<Kind<'a>>, Position), error::Kind<'a>> {
+    /// Parse representation sugar and reject the removed kind-arrow syntax.
+    fn kind_expr(&mut self) -> Result<(&'a Located<Repr>, Position), error::Kind<'a>> {
         let start = self.get_position();
-        let atom = self.kind_atom()?;
-        let end1 = self.get_position();
+        let (row, col) = self.position();
+        let name = self.upper_name(error::Kind::Start)?;
+        let repr = match name {
+            "Big" => Repr::Big,
+            "Const" => Repr::Const,
+            "Term" => Repr::Term,
+            "Storable" => Repr::Storable,
+            other => return Err(error::Kind::Name(other, row, col)),
+        };
+        let value = self.add_end(start, repr);
+        let end = self.get_position();
         self.chomp(error::Kind::Space)?;
-        self.one_of_with_fallback(
-            vec![Box::new(|p: &mut Parser<'a>| {
-                p.check_indent(end1.line, end1.column, error::Kind::IndentStart)?;
-                p.word2(b'-', b'>', error::Kind::Start)?;
-                p.chomp_and_check_indent(error::Kind::Space, error::Kind::IndentStart)?;
-                let (to, end2) = p.kind_expr()?;
-                Ok((
-                    p.alloc(Located::at(
-                        Region::new(start, end2),
-                        Kind::Arrow { from: atom, to },
-                    )),
-                    end2,
-                ))
-            })],
-            (atom, end1),
-        )
-    }
-
-    /// Parse a base or parenthesized kind.
-    fn kind_atom(&mut self) -> Result<&'a Located<Kind<'a>>, error::Kind<'a>> {
-        let start = self.get_position();
-        self.one_of(
-            error::Kind::Start,
-            vec![
-                Box::new(|p: &mut Parser<'a>| {
-                    let (row, col) = p.position();
-                    let name = p.upper_name(error::Kind::Start)?;
-                    let kind = match name {
-                        "Big" => Kind::Big,
-                        "Const" => Kind::Const,
-                        "Term" => Kind::Term,
-                        "Storable" => Kind::Storable,
-                        other => return Err(error::Kind::Name(other, row, col)),
-                    };
-                    Ok(p.add_end(start, kind))
-                }),
-                Box::new(|p: &mut Parser<'a>| {
-                    p.in_context(
-                        |bump, e, row, col| error::Kind::Paren(bump.alloc(e), row, col),
-                        |p| p.word1(b'(', error::Kind::Start),
-                        |p| {
-                            p.chomp_and_check_indent(error::Kind::Space, error::Kind::IndentStart)?;
-                            let (kind, end) = p.kind_expr()?;
-                            p.check_indent(end.line, end.column, error::Kind::End)?;
-                            p.word1(b')', error::Kind::End)?;
-                            Ok(kind)
-                        },
-                    )
-                }),
-            ],
-        )
+        if self.peek() == Some(b'-') {
+            let (row, col) = self.position();
+            self.word2(b'-', b'>', error::Kind::Start)?;
+            return Err(error::Kind::Arrow(row, col));
+        }
+        Ok((value, end))
     }
 
     // -------------------------------------------------------------------------
@@ -819,6 +789,11 @@ mod tests {
     }
 
     // Type variables
+    #[test]
+    fn representation_annotation_rejects_arrow() {
+        assert_type_error_snapshot!("('f : Big -> Big)");
+    }
+
     #[test]
     fn inline_kind_bound_in_nested_type() {
         assert_type_snapshot!("list (pair ('a : Big) ('b : Storable))");

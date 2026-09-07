@@ -1,0 +1,103 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+expression: "unions.iter().map(|u|\n(u.value.name.value, u.value.kind, u.value.context)).collect::<Vec<_>>()"
+---
+[
+    (
+        "Box",
+        Arrow(
+            Type,
+            Type,
+        ),
+        [
+            Implied {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Big",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 19,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 21,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+    ),
+    (
+        "option",
+        Arrow(
+            Type,
+            Type,
+        ),
+        [],
+    ),
+    (
+        "wrap",
+        Arrow(
+            Arrow(
+                Type,
+                Type,
+            ),
+            Arrow(
+                Type,
+                Type,
+            ),
+        ),
+        [
+            Apply {
+                head: Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 25,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 27,
+                        },
+                    },
+                    value: Var(
+                        "f",
+                    ),
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 7,
+                                column: 28,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 30,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+    ),
+]

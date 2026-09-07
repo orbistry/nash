@@ -3,23 +3,14 @@ source: crates/nash-can/src/module.rs
 ---
 Some(
     InterfaceAlias {
-        kind: KindScheme {
-            bounds: [],
-            kind: Arrow(
-                Base(
-                    Big,
-                ),
-                Arrow(
-                    Base(
-                        Big,
-                    ),
-                    Base(
-                        Big,
-                    ),
-                ),
+        kind: Arrow(
+            Type,
+            Arrow(
+                Type,
+                Type,
             ),
-            applications: [],
-        },
+        ),
+        context: [],
         name: "Pair",
         parameters: [
             "a",

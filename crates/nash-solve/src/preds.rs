@@ -17,21 +17,155 @@ pub struct UseSite<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Origin<'a> {
+    Formation { site: UseSite<'a>, typ: Variable },
     Use { site: UseSite<'a>, index: usize },
     Annotation { binder: NodeId, index: usize },
     Sub { parent: PredId, index: usize },
 }
 
 #[derive(Clone, Debug)]
+pub enum Body<'a> {
+    Trait {
+        trait_: QualifiedName<'a>,
+        args: Vec<Variable>,
+        hidden: bool,
+    },
+    Apply {
+        head: Variable,
+        args: Vec<Variable>,
+    },
+}
+
+impl<'a> Body<'a> {
+    pub fn trait_ref(&self) -> Option<QualifiedName<'a>> {
+        match self {
+            Self::Trait { trait_, .. } => Some(*trait_),
+            Self::Apply { .. } => None,
+        }
+    }
+    pub fn args(&self) -> &[Variable] {
+        match self {
+            Self::Trait { args, .. } | Self::Apply { args, .. } => args,
+        }
+    }
+    /// Every root participates in copying, rank retention, and descriptor wakeup.
+    pub fn roots(&self) -> impl Iterator<Item = Variable> + '_ {
+        let head = match self {
+            Self::Apply { head, .. } => Some(*head),
+            _ => None,
+        };
+        head.into_iter().chain(self.args().iter().copied())
+    }
+    pub fn map_variables(&self, mut map: impl FnMut(Variable) -> Variable) -> Self {
+        match self {
+            Self::Trait {
+                trait_,
+                args,
+                hidden,
+            } => Self::Trait {
+                trait_: *trait_,
+                args: args.iter().copied().map(map).collect(),
+                hidden: *hidden,
+            },
+            Self::Apply { head, args } => Self::Apply {
+                head: map(*head),
+                args: args.iter().copied().map(map).collect(),
+            },
+        }
+    }
+    pub fn same(&self, uf: &mut UnionFind<'a>, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::Trait {
+                    trait_: a,
+                    args: aa,
+                    ..
+                },
+                Self::Trait {
+                    trait_: b,
+                    args: ba,
+                    ..
+                },
+            ) => a == b && same_args(uf, aa, ba),
+            (Self::Apply { head: a, args: aa }, Self::Apply { head: b, args: ba }) => {
+                let (a, aa) = application_spine(uf, *a, aa);
+                let (b, ba) = application_spine(uf, *b, ba);
+                same_args(uf, &[a], &[b]) && same_args(uf, &aa, &ba)
+            }
+            _ => false,
+        }
+    }
+}
+
+// Applying a partial variable head is the same ordered application spine.
+fn application_spine(
+    uf: &mut UnionFind<'_>,
+    mut head: Variable,
+    args: &[Variable],
+) -> (Variable, Vec<Variable>) {
+    let mut args = args.to_vec();
+    let mut seen = BTreeSet::new();
+    while seen.insert(uf.find(head)) {
+        let Content::Structure(FlatType::AppV1(inner, mut prefix)) = uf.get(head).content.clone()
+        else {
+            break;
+        };
+        prefix.extend(args);
+        args = prefix;
+        head = inner;
+    }
+    (head, args)
+}
+
+#[derive(Clone, Debug)]
 pub struct Predicate<'a> {
-    pub trait_: QualifiedName<'a>,
-    pub args: Vec<Variable>,
+    pub body: Body<'a>,
     pub origin: Origin<'a>,
     pub solution: Option<Solution<'a>>,
 }
 
+/// One mapping from context positions to dictionary positions. Apply consumes
+/// no slot; hidden representation traits still have compile-time marker slots.
+#[derive(Clone, Debug)]
+pub struct ContextSlots {
+    slots: Vec<Option<usize>>,
+    evidence_len: usize,
+}
+impl ContextSlots {
+    pub fn new<'a>(bodies: impl IntoIterator<Item = &'a Body<'a>>) -> Self {
+        let mut evidence_len = 0;
+        let slots = bodies
+            .into_iter()
+            .map(|body| {
+                body.trait_ref().map(|_| {
+                    let slot = evidence_len;
+                    evidence_len += 1;
+                    slot
+                })
+            })
+            .collect();
+        Self {
+            slots,
+            evidence_len,
+        }
+    }
+    pub fn slot(&self, predicate_index: usize) -> Option<usize> {
+        self.slots[predicate_index]
+    }
+    pub fn evidence_len(&self) -> usize {
+        self.evidence_len
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Solution<'a> {
+    Repr {
+        trait_: nash_ast::primitives::ReprTrait,
+        typ: Variable,
+    },
+    Apply {
+        subs: Vec<PredId>,
+    },
     StructuralEq {
         typ: Variable,
     },
@@ -63,7 +197,7 @@ impl<'a> Store<'a> {
     pub fn use_site(&self, mut id: PredId) -> Option<UseSite<'a>> {
         loop {
             match self.get(id).origin {
-                Origin::Use { site, .. } => return Some(site),
+                Origin::Use { site, .. } | Origin::Formation { site, .. } => return Some(site),
                 Origin::Sub { parent, .. } => id = parent,
                 Origin::Annotation { .. } => return None,
             }
@@ -77,8 +211,8 @@ impl<'a> Store<'a> {
     }
 
     pub(crate) fn detach(&self, uf: &mut UnionFind<'a>, id: PredId) {
-        for arg in &self.get(id).args {
-            uf.modify(*arg, |desc| desc.preds.retain(|pending| *pending != id));
+        for arg in self.get(id).body.roots() {
+            uf.modify(arg, |desc| desc.preds.retain(|pending| *pending != id));
         }
     }
     pub fn iter(&self) -> impl Iterator<Item = &Predicate<'a>> {
@@ -121,8 +255,8 @@ impl<'a> Store<'a> {
 
     pub fn push(&mut self, uf: &mut UnionFind<'a>, predicate: Predicate<'a>) -> PredId {
         let id = PredId(u32::try_from(self.predicates.len()).expect("predicate store exhausted"));
-        for arg in &predicate.args {
-            uf.modify(*arg, |desc| {
+        for arg in predicate.body.roots() {
+            uf.modify(arg, |desc| {
                 if !desc.preds.contains(&id) {
                     desc.preds.push(id);
                 }
@@ -398,5 +532,93 @@ mod tests {
         }));
         assert!(!same_args(&mut uf, &[alias_a], &[alias_b]));
         assert!(!same_args(&mut uf, &[alias_a], &[first]));
+    }
+}
+
+#[cfg(test)]
+mod formation_store_tests {
+    use super::*;
+    use bumpalo::Bump;
+    use nash_ast::primitives::ReprTrait;
+    use nash_constrain::type_::mk_flex_var;
+    use nash_region::Located;
+
+    #[test]
+    fn apply_attaches_and_detaches_head_and_all_arguments() {
+        let bump = Bump::new();
+        let mut uf = UnionFind::new();
+        let head = mk_flex_var(&mut uf);
+        let arg = mk_flex_var(&mut uf);
+        let binder = NodeId::def(bump.alloc(Located::at_zero("f")));
+        let mut store = Store::default();
+        let id = store.push(
+            &mut uf,
+            Predicate {
+                body: Body::Apply {
+                    head,
+                    args: vec![arg, head],
+                },
+                origin: Origin::Annotation { binder, index: 0 },
+                solution: None,
+            },
+        );
+        assert_eq!(uf.get(head).preds, [id]);
+        assert_eq!(uf.get(arg).preds, [id]);
+        store.solve(&mut uf, id, Solution::Apply { subs: Vec::new() });
+        assert!(uf.get(head).preds.is_empty());
+        assert!(uf.get(arg).preds.is_empty());
+    }
+
+    #[test]
+    fn hidden_traits_have_slots_but_apply_does_not() {
+        let mut uf = UnionFind::new();
+        let var = mk_flex_var(&mut uf);
+        let bodies = [
+            Body::Trait {
+                trait_: ReprTrait::Big.qualified(),
+                args: vec![var],
+                hidden: false,
+            },
+            Body::Apply {
+                head: var,
+                args: vec![var],
+            },
+            Body::Trait {
+                trait_: ReprTrait::Storable.qualified(),
+                args: vec![var],
+                hidden: true,
+            },
+            Body::Apply {
+                head: var,
+                args: vec![],
+            },
+        ];
+        let slots = ContextSlots::new(bodies.iter());
+        assert_eq!(
+            (0..4).map(|i| slots.slot(i)).collect::<Vec<_>>(),
+            [Some(0), None, Some(1), None]
+        );
+        assert_eq!(slots.evidence_len(), 2);
+    }
+
+    #[test]
+    fn apply_identity_includes_its_head() {
+        let mut uf = UnionFind::new();
+        let f = mk_flex_var(&mut uf);
+        let g = mk_flex_var(&mut uf);
+        let a = mk_flex_var(&mut uf);
+        let left = Body::Apply {
+            head: f,
+            args: vec![a],
+        };
+        let right = Body::Apply {
+            head: g,
+            args: vec![a],
+        };
+        assert!(!left.same(&mut uf, &right));
+        assert!(left.same(&mut uf, &left));
+        let mapping = BTreeMap::from([(f, g), (a, f)]);
+        let copied = left.map_variables(|var| mapping[&var]);
+        assert_eq!(copied.roots().collect::<Vec<_>>(), [g, f]);
     }
 }

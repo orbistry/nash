@@ -54,7 +54,7 @@ expression: results
                         },
                     },
                 ],
-                superclass: Pred {
+                superclass: Trait {
                     trait_: QualifiedName {
                         home: ModuleName {
                             package: None,
@@ -156,7 +156,7 @@ expression: results
                         },
                     },
                 ],
-                superclass: Pred {
+                superclass: Trait {
                     trait_: QualifiedName {
                         home: ModuleName {
                             package: None,

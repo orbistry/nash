@@ -43,7 +43,7 @@ Trait(
                         },
                         value: "k",
                     },
-                    kind: None,
+                    repr: None,
                 },
             ],
             supers: [

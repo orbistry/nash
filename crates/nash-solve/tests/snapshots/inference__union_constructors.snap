@@ -2,5 +2,5 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (Maybe(..), just, nothing)\n\ntype Maybe 'a\n    = Just 'a\n    | Nothing\n\njust = Just\n\nnothing = Nothing\n"
 ---
-just : forall (a : Big). a -> Maybe a
-nothing : forall (a : Big). Maybe a
+just : forall a. Big a => a -> Maybe a
+nothing : forall a. Big a => Maybe a

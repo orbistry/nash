@@ -23,9 +23,11 @@ fn inline_impl_bounds_are_retained_for_superclasses() {
     .unwrap();
     assert_eq!(result.tables.impls.len(), 2);
     for info in result.tables.impls.values() {
-        assert_eq!(
-            info.kinds.kinds,
-            &[&nash_ast::Kind::Base(nash_ast::BaseKind::Big)]
+        assert!(
+            info.context
+                .iter()
+                .any(|pred| pred.trait_ref()
+                    == Some(nash_ast::primitives::ReprTrait::Big.qualified()))
         );
     }
 }
@@ -34,47 +36,33 @@ fn inline_impl_bounds_are_retained_for_superclasses() {
 fn recursive_overlap_combines_inferred_kind_bounds() {
     let bump = Bump::new();
     let mut keys = Vec::new();
-    let mut environments = Vec::new();
     for bound in ["Big", "Const", "Storable"] {
         let source = bump.alloc_str(&format!(
             "module Main exposing (..)\ntrait Bound ('a : {bound}) where\n    bound : 'a -> 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Bound 'a => Keep (list (pair 'a 'a)) where\n    keep x = x\n"
         ));
         let result = canonicalize(&bump, source).unwrap();
         keys.push(*result.tables.impls.keys().next().unwrap());
-        environments.push(result.tables.kinds);
     }
-    let overlap = |a, b| {
-        nash_can::kinds::impls_overlap(&bump, &environments[0], keys[a], keys[b], &mut 16_384)
-            .unwrap()
+    let overlap = |a: usize, b: usize, budget: &mut usize| {
+        nash_ast::head::overlaps(keys[a].heads, keys[b].heads, budget, |_, _, _, _| true)
     };
-    assert!(!overlap(0, 1), "Big and Const inner variables are disjoint");
-    assert!(overlap(0, 2), "Storable includes Big");
-    assert!(overlap(1, 2), "Storable includes Const");
     assert!(
-        overlap(0, 0),
-        "fresh binders do not make equal impls disjoint"
+        overlap(0, 1, &mut 16_384).unwrap(),
+        "representation contexts do not make equal heads disjoint"
+    );
+    assert!(overlap(0, 2, &mut 16_384).unwrap());
+    assert!(overlap(1, 2, &mut 16_384).unwrap());
+    assert!(
+        overlap(0, 0, &mut 16_384).unwrap(),
+        "fresh binders preserve overlap"
     );
     let mut budget = 16_384;
-    assert!(
-        nash_can::kinds::impls_overlap(&bump, &environments[0], keys[0], keys[0], &mut budget,)
-            .unwrap()
-    );
+    assert!(overlap(0, 0, &mut budget).unwrap());
     let mut exact_budget = 16_384 - budget;
     assert!(exact_budget > 0);
-    assert!(
-        nash_can::kinds::impls_overlap(
-            &bump,
-            &environments[0],
-            keys[0],
-            keys[0],
-            &mut exact_budget,
-        )
-        .unwrap()
-    );
+    assert!(overlap(0, 0, &mut exact_budget).unwrap());
     assert_eq!(exact_budget, 0);
-    assert!(
-        nash_can::kinds::impls_overlap(&bump, &environments[0], keys[0], keys[0], &mut 0,).is_err()
-    );
+    assert!(overlap(0, 0, &mut 0).is_err());
 }
 
 #[test]
@@ -150,6 +138,7 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
             "(Container 'a) (Container 'b)",
         ),
         ("type color = Red", "color color"),
+        ("type alias Alias 'a = 'a", "(Alias 'a) (Alias 'b)"),
     ] {
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\n{declaration}\nimpl Lift {heads} where\n    lift x = x\n    lower x = x\n"));
         let module = nash_parse::Parser::new(&bump, source.as_bytes())
@@ -176,6 +165,10 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
         [nash_can::Error::ReflexiveLiftOverlap { .. }]
     ));
     assert!(results[2].is_ok());
+    assert!(matches!(
+        results[3].as_ref().unwrap_err().as_slice(),
+        [nash_can::Error::ReflexiveLiftOverlap { .. }]
+    ));
     insta::assert_debug_snapshot!(results);
 }
 
@@ -891,13 +884,12 @@ fn impl_method_substitution_does_not_capture_head_variables() {
         annotation,
         free_vars,
         context,
-        kinds,
         ..
     } = result.module.impls[0].value.methods[0]
     else {
         panic!("typed method")
     };
-    insta::assert_debug_snapshot!((annotation, free_vars, context, kinds));
+    insta::assert_debug_snapshot!((annotation, free_vars, context));
 }
 
 #[test]
@@ -932,8 +924,8 @@ fn impl_method_retains_owner_kind_restriction() {
 
         type option 'a = None | Some 'a
 
-        trait Keep ('f : Big -> Term) where
-            keep : 'f 'a -> 'f 'a
+        trait Keep 'f where
+            keep : 'f ('a : Big) -> 'f 'a
 
         impl Keep option where
             keep value = value
@@ -942,24 +934,23 @@ fn impl_method_retains_owner_kind_restriction() {
     )
     .unwrap();
     let nash_ast::Def::TypedDef {
-        kinds,
-        free_vars,
-        context,
-        ..
+        free_vars, context, ..
     } = result.module.impls[0].value.methods[0]
     else {
         panic!("typed method")
     };
     assert!(
-        context.is_empty(),
+        context
+            .iter()
+            .all(|pred| pred.trait_ref().is_none_or(|name| name.name != "Keep")),
         "owner dictionary is supplied by the impl"
     );
     assert_eq!(*free_vars, &["a"]);
-    assert_eq!(
-        kinds.kinds,
-        &[&nash_ast::Kind::Base(nash_ast::BaseKind::Big)]
+    assert!(
+        context
+            .iter()
+            .any(|pred| pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Big.qualified()))
     );
-    assert!(kinds.bounds.is_empty());
 }
 
 #[test]

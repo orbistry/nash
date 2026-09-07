@@ -55,13 +55,8 @@ Module {
                 },
             },
             value: Union {
-                kind: KindScheme {
-                    bounds: [],
-                    kind: Base(
-                        Big,
-                    ),
-                    applications: [],
-                },
+                kind: Type,
+                context: [],
                 name: Located {
                     region: Region {
                         start: Position {

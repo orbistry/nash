@@ -3,7 +3,7 @@ source: crates/nash-can/tests/kinds.rs
 description: type alias Count = int
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 5,
@@ -18,19 +18,7 @@ description: type alias Count = int
             alias: "Count",
             big: true,
         },
-        expected: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Const,
-            ),
-            applications: [],
-        },
+        required: Big,
+        actual: Const,
     },
 ]

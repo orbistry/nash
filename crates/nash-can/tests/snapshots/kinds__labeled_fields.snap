@@ -6,13 +6,8 @@ description: "type Datum = Datum { owner : Bytes, amount : Int }"
     [
         (
             "Datum",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
     [],

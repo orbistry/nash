@@ -16,9 +16,26 @@ use crate::union_find::{UnionFind, Variable};
 
 /// An annotation predicate instantiated over the definition's rigid variables.
 #[derive(Clone, Copy, Debug)]
-pub struct Pred<'a> {
-    pub trait_: QualifiedName<'a>,
-    pub args: &'a [&'a Type<'a>],
+pub enum Pred<'a> {
+    Trait {
+        trait_: QualifiedName<'a>,
+        args: &'a [&'a Type<'a>],
+        hidden: bool,
+    },
+    Apply {
+        head: &'a Type<'a>,
+        args: &'a [&'a Type<'a>],
+    },
+}
+
+impl<'a> Pred<'a> {
+    pub fn types(self) -> impl Iterator<Item = &'a Type<'a>> {
+        let (head, args) = match self {
+            Self::Trait { args, .. } => (None, args),
+            Self::Apply { head, args } => (Some(head), args),
+        };
+        head.into_iter().chain(args.iter().copied())
+    }
 }
 
 /// Scheme identity is an original definition name or a destructuring pattern.
@@ -46,14 +63,6 @@ impl<'a> Binder<'a> {
     }
 }
 
-/// A declared shared kind binder associated with its inference type variables.
-#[derive(Clone, Copy, Debug)]
-pub struct KindSignature<'a> {
-    pub kinds: nash_ast::ValueKinds<'a>,
-    /// Type variables aligned with the shared signature's roots.
-    pub variables: &'a [Variable],
-}
-
 /// Preserve the original scheme identity and full type independently of lexical scope.
 #[derive(Clone, Copy, Debug)]
 pub struct Definition<'a> {
@@ -61,7 +70,6 @@ pub struct Definition<'a> {
     pub typ: &'a Type<'a>,
     /// `Some`, including an empty slice, distinguishes a declared scheme.
     pub context: Option<&'a [Pred<'a>]>,
-    pub kinds: Option<KindSignature<'a>>,
 }
 
 /// Elm's `Type.Constraint`. Allocated in a bump arena, so collections are
@@ -310,13 +318,8 @@ pub fn literal_annotation<'a>(
     let typ: &'a Located<nash_ast::Type<'a>> =
         bump.alloc(Located::at_zero(nash_ast::Type::Var("a")));
     bump.alloc(Annotation {
-        kinds: nash_ast::ValueKinds {
-            applications: &[],
-            bounds: &[nash_ast::KindSet::ANY],
-            kinds: &[&nash_ast::Kind::Var(0)],
-        },
         free_vars: &["a"],
-        context: bump.alloc_slice_fill_iter(traits.iter().map(|trait_| nash_ast::Pred {
+        context: bump.alloc_slice_fill_iter(traits.iter().map(|trait_| nash_ast::Pred::Trait {
             trait_: *trait_,
             args: bump.alloc_slice_copy(&[typ]),
         })),

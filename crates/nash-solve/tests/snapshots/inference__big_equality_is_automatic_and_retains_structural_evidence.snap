@@ -4,5 +4,5 @@ expression: "format!(\"{}\\nStructural evidence: {}\", render_annotations(&annot
 ---
 same : Token -> Token -> bool
 sameBox : Box -> Box -> bool
-sameList : forall (a : Big). List a -> List a -> bool
+sameList : forall a. Big a => List a -> List a -> bool
 Structural evidence: Box, List a, Token, Token

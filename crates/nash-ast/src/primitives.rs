@@ -1,88 +1,148 @@
-//! Compiler-known types of the `nash/core` `Builtin` module.
+//! Compiler-owned types and representation predicates of `nash/core.Builtin`.
 
 mod builtins;
 pub use builtins::{BUILTINS, Builtin, BuiltinLowering};
 
-use crate::{BaseKind, Kind, KindScheme, KindSet, ModuleName, PackageName};
+use crate::{Kind, ModuleName, PackageName, QualifiedName};
 
 pub const CORE: PackageName<'static> = PackageName {
     author: "nash",
     project: "core",
 };
-
 pub const fn builtin_home() -> ModuleName<'static> {
     ModuleName {
         package: Some(CORE),
         name: "Builtin",
     }
 }
-
 pub const fn literal_home() -> ModuleName<'static> {
     ModuleName {
         package: Some(CORE),
         name: "Literal",
     }
 }
-
-pub const fn eq_trait() -> crate::QualifiedName<'static> {
-    crate::QualifiedName {
+const fn core_trait(module: &'static str, name: &'static str) -> QualifiedName<'static> {
+    QualifiedName {
         home: ModuleName {
             package: Some(CORE),
-            name: "Eq",
+            name: module,
         },
-        name: "Eq",
+        name,
+    }
+}
+pub const fn eq_trait() -> QualifiedName<'static> {
+    core_trait("Eq", "Eq")
+}
+pub const fn lift_trait() -> QualifiedName<'static> {
+    core_trait("Lift", "Lift")
+}
+pub const fn monad_trait() -> QualifiedName<'static> {
+    core_trait("Monad", "Monad")
+}
+pub const fn num_trait() -> QualifiedName<'static> {
+    core_trait("Num", "Num")
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Repr {
+    Big,
+    Const,
+    Term,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ReprTrait {
+    Big,
+    Const,
+    Term,
+    Storable,
+    Little,
+}
+
+impl ReprTrait {
+    pub const ALL: [Self; 5] = [
+        Self::Big,
+        Self::Const,
+        Self::Term,
+        Self::Storable,
+        Self::Little,
+    ];
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Big => "Big",
+            Self::Const => "Const",
+            Self::Term => "Term",
+            Self::Storable => "Storable",
+            Self::Little => "Little",
+        }
+    }
+    pub const fn qualified(self) -> QualifiedName<'static> {
+        QualifiedName {
+            home: builtin_home(),
+            name: self.name(),
+        }
+    }
+    pub fn of(name: QualifiedName<'_>) -> Option<Self> {
+        if name.home != builtin_home() {
+            return None;
+        }
+        Self::ALL.into_iter().find(|repr| repr.name() == name.name)
+    }
+    pub const fn admits(self) -> ReprSet {
+        ReprSet(match self {
+            Self::Big => 1,
+            Self::Const => 2,
+            Self::Term => 4,
+            Self::Storable => 3,
+            Self::Little => 6,
+        })
+    }
+    pub const fn supers(self) -> &'static [Self] {
+        match self {
+            Self::Big => &[Self::Storable],
+            Self::Const => &[Self::Storable, Self::Little],
+            Self::Term => &[Self::Little],
+            Self::Storable | Self::Little => &[],
+        }
     }
 }
 
-pub const fn lift_trait() -> crate::QualifiedName<'static> {
-    crate::QualifiedName {
-        home: ModuleName {
-            package: Some(CORE),
-            name: "Lift",
-        },
-        name: "Lift",
+/// Used only for representation contradictions, never for kind unification.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReprSet(u8);
+impl ReprSet {
+    pub const ALL: Self = Self(7);
+    pub const fn intersect(self, other: Self) -> Self {
+        Self(self.0 & other.0)
+    }
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+    pub const fn contains(self, repr: Repr) -> bool {
+        self.0
+            & match repr {
+                Repr::Big => 1,
+                Repr::Const => 2,
+                Repr::Term => 4,
+            }
+            != 0
     }
 }
 
-pub const fn monad_trait() -> crate::QualifiedName<'static> {
-    crate::QualifiedName {
-        home: ModuleName {
-            package: Some(CORE),
-            name: "Monad",
-        },
-        name: "Monad",
-    }
-}
-
-pub const fn num_trait() -> crate::QualifiedName<'static> {
-    crate::QualifiedName {
-        home: ModuleName {
-            package: Some(CORE),
-            name: "Num",
-        },
-        name: "Num",
-    }
-}
-
-const BIG: &Kind<'static> = &Kind::Base(BaseKind::Big);
-const CONST: &Kind<'static> = &Kind::Base(BaseKind::Const);
-const K0: &Kind<'static> = &Kind::Var(0);
-const K1: &Kind<'static> = &Kind::Var(1);
-
-const BIG_TO_BIG: &Kind<'static> = &Kind::Arrow(BIG, BIG);
-const BIG2_TO_BIG: &Kind<'static> = &Kind::Arrow(BIG, BIG_TO_BIG);
-const STORABLE_TO_CONST: &Kind<'static> = &Kind::Arrow(K0, CONST);
-// Only `mkPairData` builds pairs, so construction is restricted by the API,
-// not by kinds: `unConstrData` yields `pair int (list Data)`.
-const STORABLE2_TO_CONST: &Kind<'static> = &Kind::Arrow(K0, &Kind::Arrow(K1, CONST));
-
+#[derive(Debug)]
 pub struct Primitive {
     pub name: &'static str,
     pub arity: usize,
-    pub kind: KindScheme<'static>,
+    pub kind: &'static Kind<'static>,
+    pub repr: Repr,
+    /// Requirements on formal parameters, in declaration order.
+    pub context: &'static [(usize, ReprTrait)],
     pub ctors: &'static [&'static crate::Ctor<'static>],
 }
 
+const TYPE: &Kind<'static> = &Kind::Type;
+const UNARY: &Kind<'static> = &Kind::Arrow(TYPE, TYPE);
+const BINARY: &Kind<'static> = &Kind::Arrow(TYPE, UNARY);
 const BOOL_CTORS: &[&crate::Ctor<'static>] = &[
     &crate::Ctor {
         name: "False",
@@ -97,10 +157,8 @@ const BOOL_CTORS: &[&crate::Ctor<'static>] = &[
         arguments: &[],
     },
 ];
-
-const DATA_TYPE: &nash_region::Located<crate::Type<'static>> = &builtins::named("Data", &[]);
-const DATA_LIST: &nash_region::Located<crate::Type<'static>> =
-    &builtins::named("list", &[DATA_TYPE]);
+const DATA: &nash_region::Located<crate::Type<'static>> = &builtins::named("Data", &[]);
+const DATA_LIST: &nash_region::Located<crate::Type<'static>> = &builtins::named("list", &[DATA]);
 const DATA_CTORS: &[&crate::Ctor<'static>] = &[
     &crate::Ctor {
         name: "Constr",
@@ -114,7 +172,7 @@ const DATA_CTORS: &[&crate::Ctor<'static>] = &[
         arity: 1,
         arguments: &[&builtins::named(
             "list",
-            &[&builtins::named("pair", &[DATA_TYPE, DATA_TYPE])],
+            &[&builtins::named("pair", &[DATA, DATA])],
         )],
     },
     &crate::Ctor {
@@ -137,184 +195,72 @@ const DATA_CTORS: &[&crate::Ctor<'static>] = &[
     },
 ];
 
-const fn mono(kind: &'static Kind<'static>) -> KindScheme<'static> {
-    KindScheme {
-        bounds: &[],
-        kind,
-        applications: &[],
-    }
+macro_rules! primitive {
+    ($name:literal, $arity:literal, $kind:ident, $repr:ident, $context:expr, $ctors:expr) => {
+        Primitive {
+            name: $name,
+            arity: $arity,
+            kind: $kind,
+            repr: Repr::$repr,
+            context: $context,
+            ctors: $ctors,
+        }
+    };
 }
-
 pub const PRIMITIVES: &[Primitive] = &[
-    Primitive {
-        name: "Data",
-        ctors: DATA_CTORS,
-        arity: 0,
-        kind: mono(BIG),
-    },
-    Primitive {
-        name: "Int",
-        ctors: &[],
-        arity: 0,
-        kind: mono(BIG),
-    },
-    Primitive {
-        name: "Bytes",
-        ctors: &[],
-        arity: 0,
-        kind: mono(BIG),
-    },
-    Primitive {
-        name: "List",
-        ctors: &[],
-        arity: 1,
-        kind: mono(BIG_TO_BIG),
-    },
-    Primitive {
-        name: "Map",
-        ctors: &[],
-        arity: 2,
-        kind: mono(BIG2_TO_BIG),
-    },
-    Primitive {
-        name: "int",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "bytes",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "string",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "bool",
-        ctors: BOOL_CTORS,
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "unit",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "bls_g1",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "bls_g2",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "bls_mlr",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "value",
-        ctors: &[],
-        arity: 0,
-        kind: mono(CONST),
-    },
-    Primitive {
-        name: "list",
-        ctors: &[],
-        arity: 1,
-        kind: KindScheme {
-            applications: &[],
-            bounds: &[KindSet::STORABLE],
-            kind: STORABLE_TO_CONST,
-        },
-    },
-    Primitive {
-        name: "array",
-        ctors: &[],
-        arity: 1,
-        kind: KindScheme {
-            applications: &[],
-            bounds: &[KindSet::STORABLE],
-            kind: STORABLE_TO_CONST,
-        },
-    },
-    Primitive {
-        name: "pair",
-        ctors: &[],
-        arity: 2,
-        kind: KindScheme {
-            applications: &[],
-            bounds: &[KindSet::STORABLE, KindSet::STORABLE],
-            kind: STORABLE2_TO_CONST,
-        },
-    },
+    primitive!("Data", 0, TYPE, Big, &[], DATA_CTORS),
+    primitive!("Int", 0, TYPE, Big, &[], &[]),
+    primitive!("Bytes", 0, TYPE, Big, &[], &[]),
+    primitive!("List", 1, UNARY, Big, &[(0, ReprTrait::Big)], &[]),
+    primitive!(
+        "Map",
+        2,
+        BINARY,
+        Big,
+        &[(0, ReprTrait::Big), (1, ReprTrait::Big)],
+        &[]
+    ),
+    primitive!("int", 0, TYPE, Const, &[], &[]),
+    primitive!("bytes", 0, TYPE, Const, &[], &[]),
+    primitive!("string", 0, TYPE, Const, &[], &[]),
+    primitive!("bool", 0, TYPE, Const, &[], BOOL_CTORS),
+    primitive!("unit", 0, TYPE, Const, &[], &[]),
+    primitive!("bls_g1", 0, TYPE, Const, &[], &[]),
+    primitive!("bls_g2", 0, TYPE, Const, &[], &[]),
+    primitive!("bls_mlr", 0, TYPE, Const, &[], &[]),
+    primitive!("value", 0, TYPE, Const, &[], &[]),
+    primitive!("list", 1, UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
+    primitive!("array", 1, UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
+    primitive!(
+        "pair",
+        2,
+        BINARY,
+        Const,
+        &[(0, ReprTrait::Storable), (1, ReprTrait::Storable)],
+        &[]
+    ),
 ];
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
-    fn primitives_have_declared_arity_and_unique_names() {
+    fn primitive_inventory_is_complete_and_well_kinded() {
         let mut names = std::collections::BTreeSet::new();
         for primitive in PRIMITIVES {
             assert!(names.insert(primitive.name));
-            let mut kind = primitive.kind.kind;
-            let mut arity = 0;
-            while let Kind::Arrow(_, result) = kind {
-                arity += 1;
-                kind = result;
-            }
-            assert_eq!(arity, primitive.arity, "{}", primitive.name);
+            assert_eq!(primitive.arity, primitive.kind.arity());
+            assert!(
+                primitive
+                    .context
+                    .iter()
+                    .all(|(index, _)| *index < primitive.arity)
+            );
         }
         assert_eq!(names.len(), 17);
-        assert_eq!(builtin_home().package, Some(CORE));
-        assert_eq!(builtin_home().name, "Builtin");
-    }
-
-    #[test]
-    fn containers_enforce_runtime_element_shapes() {
-        let get = |name| PRIMITIVES.iter().find(|p| p.name == name).unwrap().kind;
-        for name in ["list", "array"] {
-            let scheme = get(name);
-            assert_eq!(scheme.bounds, &[KindSet::STORABLE]);
-            assert!(matches!(
-                scheme.kind,
-                Kind::Arrow(Kind::Var(0), Kind::Base(BaseKind::Const))
-            ));
-        }
-        assert!(matches!(
-            get("List").kind,
-            Kind::Arrow(Kind::Base(BaseKind::Big), Kind::Base(BaseKind::Big))
-        ));
-        let pair = get("pair");
-        assert_eq!(pair.bounds, &[KindSet::STORABLE, KindSet::STORABLE]);
-        assert!(matches!(
-            pair.kind,
-            Kind::Arrow(
-                Kind::Var(0),
-                Kind::Arrow(Kind::Var(1), Kind::Base(BaseKind::Const))
-            )
-        ));
-        for name in ["Int", "Bytes", "Data"] {
-            assert!(matches!(get(name).kind, Kind::Base(BaseKind::Big)));
-        }
-        for name in [
-            "int", "bytes", "string", "bool", "unit", "bls_g1", "bls_g2", "bls_mlr", "value",
-        ] {
-            assert!(matches!(get(name).kind, Kind::Base(BaseKind::Const)));
-        }
+        assert_eq!(
+            DATA_CTORS.iter().map(|ctor| ctor.arity).collect::<Vec<_>>(),
+            [2, 1, 1, 1, 1]
+        );
     }
 }

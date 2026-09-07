@@ -215,7 +215,7 @@ fn compile_module<'s>(
     };
     let can_result = match nash_can::canonicalize(bump, context, &module) {
         Ok(can_result) => can_result,
-        Err(errors) => return failed(format!("{:?}", errors)),
+        Err(errors) => return failed(crate::diagnostics::canonical(src, &errors)),
     };
     let warnings: Vec<String> = can_result
         .warnings
@@ -228,7 +228,7 @@ fn compile_module<'s>(
     let (annotations, types) = match nash_solve::run(bump, &mut uf, &constraint, &can_result.tables)
     {
         Ok(solved) => solved,
-        Err(errors) => return failed(format!("{:?}", errors)),
+        Err(errors) => return failed(crate::diagnostics::inference(src, &errors)),
     };
 
     let module = bump.alloc(can_result.module);
@@ -384,7 +384,10 @@ mod tests {
             };
             assert_eq!(*binder, scheme.binder);
             assert_eq!(*index, 0);
-            assert_eq!(scheme.annotation.context[0].trait_.home.name, "Base");
+            assert_eq!(
+                scheme.annotation.context[0].trait_ref().unwrap().home.name,
+                "Base"
+            );
         }
     }
 
@@ -668,15 +671,15 @@ mod kind_tests {
             "module Main exposing (..)\nimport Types exposing (type s)\ntype w = W (s s s)\n",
         )
         .await;
-        assert_eq!(result.success, 1, "{result:?}");
-        assert_eq!(result.failed, 1, "{result:?}");
+        assert_eq!(result.success, 0, "{result:?}");
+        assert_eq!(result.failed, 2, "{result:?}");
         let ModuleResult::Failed { message } =
-            &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+            &result.modules[&Url::parse("file:///Types.nash").unwrap()]
         else {
-            panic!("consumer must report a kind error");
+            panic!("producer must report a kind error");
         };
-        assert!(message.contains("KindMismatch"), "{message}");
-        assert!(!message.contains("KindTooManyArgs"), "{message}");
+        assert!(message.contains("KindInfinite"), "{message}");
+        assert!(message.contains("infinite kind"), "{message}");
     }
 
     #[tokio::test]
@@ -686,25 +689,53 @@ mod kind_tests {
                 "module Types exposing (type a)\ntype a 'f = A ('f 'f)\n",
                 &format!("module Main exposing (..)\nimport Types exposing (type a)\ntype local 'f = Local ('f 'f)\ntype b = B ({field})\n"),
             ).await;
-            assert_eq!(result.success, 1, "{result:?}");
-            assert_eq!(result.failed, 1, "{result:?}");
+            assert_eq!(result.success, 0, "{result:?}");
+            assert_eq!(result.failed, 2, "{result:?}");
             let ModuleResult::Failed { message } =
-                &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+                &result.modules[&Url::parse("file:///Types.nash").unwrap()]
             else {
-                panic!("consumer must fail")
+                panic!("producer must fail")
             };
             assert!(message.contains("KindInfinite"), "{message}");
         }
     }
 
     #[tokio::test]
-    async fn imported_residual_application_has_a_finite_proof() {
+    async fn imported_residual_self_application_is_rejected_at_declaration() {
         let result = compile_pair(
             "module Types exposing (type s)\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\n",
             "module Main exposing (..)\nimport Types exposing (type s)\ntype tag 'a = Tag\ntype w = W (s s tag tag)\n",
         ).await;
-        assert_eq!(result.success, 2, "{result:?}");
-        assert_eq!(result.failed, 0, "{result:?}");
+        assert_eq!(result.success, 0, "{result:?}");
+        assert_eq!(result.failed, 2, "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn imported_partial_heads_enforce_supplied_and_remaining_contexts() {
+        let producer = "module Types exposing (type wrap)\nimport Builtin exposing (..)\ntype wrap 'f 'a = Wrap ('f 'a)\n";
+        for (field, succeeds) in [
+            ("wrap (pair int) bytes", true),
+            ("wrap (pair (option int)) bytes", false),
+            ("wrap (pair int) (option int)", false),
+        ] {
+            let result = compile_pair(
+                producer,
+                &format!("module Main exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (type wrap)\ntype option 'a = None | Some 'a\ntype use = Use ({field})\n"),
+            ).await;
+            assert_eq!(result.success, if succeeds { 2 } else { 1 }, "{result:?}");
+            assert_eq!(result.failed, usize::from(!succeeds), "{result:?}");
+            if !succeeds {
+                let ModuleResult::Failed { message } =
+                    &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+                else {
+                    panic!("consumer must reject the supplied Term argument")
+                };
+                assert!(
+                    message.contains("RepresentationMismatch") && message.contains("Storable"),
+                    "{message}"
+                );
+            }
+        }
     }
 
     #[tokio::test]
@@ -728,7 +759,14 @@ mod kind_tests {
         else {
             panic!("invalid consumer compiled");
         };
-        assert!(message.contains("KindMismatch"), "{message}");
+        assert!(
+            message.contains("RepresentationMismatch") && message.contains("Storable"),
+            "{message}"
+        );
+        assert!(
+            message.contains("Big or Const") && message.contains("Term"),
+            "{message}"
+        );
     }
 
     #[tokio::test]
@@ -772,6 +810,17 @@ mod kind_tests {
         else {
             panic!("missing type export");
         };
-        assert_eq!(kind, "forall k0:{Big,Const}. k0 -> Term");
+        assert_eq!(kind, "Type -> Type");
+        let crate::interface::Export::Type {
+            kind: unrestricted_kind,
+            ..
+        } = &any.interfaces[&uri].exports[0]
+        else {
+            panic!("missing type export")
+        };
+        assert_eq!(
+            kind, unrestricted_kind,
+            "representation context changes do not change H98 kinds"
+        );
     }
 }

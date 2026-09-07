@@ -14,7 +14,6 @@ pub(crate) fn info<'a>(
 ) -> crate::environment::ImplInfo<'a> {
     crate::environment::ImplInfo {
         variables: impl_.value.variables,
-        kinds: impl_.value.kinds,
         home,
         region: impl_.region,
         trait_: impl_.value.trait_,
@@ -50,7 +49,7 @@ pub(crate) fn tables<'a>(
                     home: name.home,
                     name: name.name,
                     parameters: trait_.parameters,
-                    kind: trait_.kind,
+                    kinds: trait_.kinds,
                     supers: trait_.supers,
                     methods: bump.alloc_slice_fill_iter(trait_.methods.iter().map(|m| {
                         MethodInfo {
@@ -78,7 +77,7 @@ pub(crate) fn tables<'a>(
                 home: name.home,
                 name: name.name,
                 parameters: t.parameters,
-                kind: t.kind,
+                kinds: t.kinds,
                 supers: t.supers,
                 methods: bump.alloc_slice_fill_iter(t.methods.iter().map(|m| MethodInfo {
                     name: m.name.value,
@@ -104,21 +103,23 @@ pub(crate) fn tables<'a>(
 
 fn insert_impl<'a>(
     bump: &'a Bump,
-    kind_env: &kinds::KindEnv<'a>,
+    _kind_env: &kinds::KindEnv<'a>,
     table: &mut crate::environment::ImplTable<'a>,
     impl_: &'a crate::environment::ImplInfo<'a>,
 ) -> Result<(), Vec<Error<'a>>> {
     let key = ImplKey {
         trait_: impl_.trait_,
         heads: bump.alloc_slice_fill_iter(impl_.heads.iter().map(|h| h.value)),
-        kinds: impl_.kinds,
     };
     let mut remaining = 16_384;
     for (candidate, first) in table
         .iter()
         .filter(|(candidate, _)| candidate.trait_ == key.trait_)
     {
-        let overlaps = kinds::impls_overlap(bump, kind_env, *candidate, key, &mut remaining)
+        let overlaps =
+            nash_ast::head::overlaps(candidate.heads, key.heads, &mut remaining, |_, _, _, _| {
+                true
+            })
             .map_err(|_| {
                 vec![Error::ImplPatternLimit {
                     region: impl_.region,
@@ -173,6 +174,12 @@ pub(crate) fn canonicalize<'a>(
             home: info.home,
             name: info.name,
         };
+        if nash_ast::primitives::ReprTrait::of(trait_).is_some() {
+            return Err(vec![Error::ImplOfBuiltinTrait {
+                region: source.region,
+                trait_,
+            }]);
+        }
         let mut variables = BTreeMap::new();
         let mut order = Vec::new();
         let mut heads = Vec::new();
@@ -199,9 +206,13 @@ pub(crate) fn canonicalize<'a>(
                 ),
             }]);
         }
-        let context = types::canonicalize_context(bump, env, src.context)?;
+        let mut context = types::canonicalize_context(bump, env, src.context)?.to_vec();
+        for arg in predicate.args {
+            context.extend(types::repr_predicates(bump, env, arg)?);
+        }
+        let context = &*bump.alloc_slice_fill_iter(context);
         for predicate in context {
-            for argument in predicate.args {
+            for argument in predicate.types() {
                 let mut free = BTreeSet::new();
                 types::collect_free_vars(&argument.value, &mut free);
                 if let Some(name) = free.iter().find(|name| !variables.contains_key(**name)) {
@@ -212,16 +223,57 @@ pub(crate) fn canonicalize<'a>(
                 }
             }
         }
-        let mut checked_kinds = kinds::check_impl_heads(
-            bump,
-            kind_env,
-            env.home,
-            info,
-            &head_types,
-            &variables,
-            context,
-        )?;
-        let head_kinds = checked_kinds.generalize(&order);
+        let context = kinds::check_impl(bump, kind_env, info, &head_types, context)?;
+        // Compiler-owned instances participate in coherence with the exact core
+        // trait identity. Representation contexts cannot make equal heads disjoint.
+        let known_big = |typ| {
+            if kinds::repr_of(bump, kind_env, typ) == Some(nash_ast::primitives::Repr::Big) {
+                return true;
+            }
+            // Transparent aliases can have a variable body. Their inferred
+            // casing predicate is still a proof of Big for every valid use.
+            let subject = kinds::representation_subject(bump, kind_env, typ);
+            let big = nash_ast::primitives::ReprTrait::Big.qualified();
+            let wanted = Pred::Implied {
+                trait_: big,
+                args: bump.alloc_slice_copy(&[subject]),
+            };
+            context.iter().any(|given| {
+                given.trait_ref() == Some(big)
+                    && (Pred::Implied {
+                        trait_: big,
+                        args: bump.alloc_slice_copy(&[kinds::representation_subject(
+                            bump,
+                            kind_env,
+                            given.args()[0],
+                        )]),
+                    })
+                    .key()
+                        == wanted.key()
+            })
+        };
+        if trait_ == nash_ast::primitives::eq_trait()
+            && let [head] = head_types.as_slice()
+            && known_big(*head)
+        {
+            return Err(vec![Error::StructuralEqOverride { head }]);
+        }
+        if trait_ == nash_ast::primitives::lift_trait()
+            && let [left, right] = heads.as_slice()
+            && head_types.iter().any(|typ| known_big(*typ))
+            && nash_ast::head::can_equal(&[left.value], &[right.value], &mut 16_384).map_err(
+                |_| {
+                    vec![Error::ImplPatternLimit {
+                        region: source.region,
+                    }]
+                },
+            )?
+        {
+            return Err(vec![Error::ReflexiveLiftOverlap {
+                heads: bump.alloc_slice_copy(&head_types),
+            }]);
+        }
+
         let names = dups::detect(
             src.methods.iter().map(|m| {
                 let nash_source::Def::Define { name, .. } = &m.value else {
@@ -277,7 +329,6 @@ pub(crate) fn canonicalize<'a>(
             source.region,
             Impl {
                 variables: bump.alloc_slice_fill_iter(order),
-                kinds: head_kinds,
                 trait_,
                 context,
                 heads: bump.alloc_slice_fill_iter(heads),
@@ -321,7 +372,6 @@ pub(crate) fn canonicalize_pattern<'a>(
     order: &mut Vec<&'a str>,
 ) -> Result<Head<'a>, Vec<Error<'a>>> {
     let head = match &typ.value {
-        Type::Kinded { typ, .. } => return canonicalize_pattern(bump, typ, variables, order),
         Type::Var(name) => {
             variables.entry(name).or_insert(typ.region);
             let index = match order.iter().position(|existing| existing == name) {
@@ -435,60 +485,46 @@ fn instantiate_method<'a>(
         }
     }
     let typ = types::substitute_type(bump, &substitution, annotation.typ);
-    let mut predicates: Vec<_> = context
-        .iter()
-        .map(|p| Pred {
-            trait_: p.trait_,
-            args: p.args,
-        })
-        .collect();
-    predicates.extend(annotation.context.iter().skip(1).map(|p| {
-        Pred {
-            trait_: p.trait_,
-            args: bump.alloc_slice_fill_iter(
-                p.args
-                    .iter()
-                    .map(|t| types::substitute_type(bump, &substitution, t)),
-            ),
-        }
-    }));
+    let mut predicates = context.to_vec();
+    // Remove the owner predicate by identity; hidden formation predicates do
+    // not have a dictionary slot and must not affect this selection.
+    let owner = QualifiedName {
+        home: info.home,
+        name: info.name,
+    };
+    let owner_key = Pred::Trait {
+        trait_: owner,
+        args: bump.alloc_slice_fill_iter(
+            info.parameters
+                .iter()
+                .map(|name| &*bump.alloc(Located::at_zero(Type::Var(name)))),
+        ),
+    }
+    .key();
+    predicates.extend(
+        annotation
+            .context
+            .iter()
+            .filter(|p| p.key() != owner_key)
+            .map(|p| kinds::substitute_predicate(bump, &substitution, *p)),
+    );
     let mut free: BTreeSet<_> = head_vars.keys().copied().collect();
     types::collect_free_vars(&typ.value, &mut free);
     for predicate in &predicates {
-        for arg in predicate.args {
+        for arg in predicate.types() {
             types::collect_free_vars(&arg.value, &mut free);
         }
     }
     let annotation = Annotation {
-        kinds: nash_ast::ValueKinds::unconstrained(bump, free.len()),
         free_vars: bump.alloc_slice_fill_iter(free),
         context: bump.alloc_slice_fill_iter(predicates),
         typ,
     };
-    // Substitute the shared method kind signature too. Rechecking the owner
-    // predicate alone would freshly instantiate polymorphic constructor kinds
-    // and lose their relationship to the method-local variables.
-    let arguments: Vec<_> = method
-        .annotation
-        .free_vars
-        .iter()
-        .map(|var| {
-            substitution
-                .get(var)
-                .copied()
-                .unwrap_or_else(|| bump.alloc(Located::at_zero(Type::Var(var))))
-        })
-        .collect();
-    let kinds = kinds::check_annotation_specialization(
+    kinds::check_annotation(
         bump,
         kind_env,
         info.home,
         method.name,
-        &annotation,
-        Some((method.annotation.kinds, &arguments)),
-    )?;
-    Ok(bump.alloc(Annotation {
-        kinds,
-        ..annotation
-    }))
+        bump.alloc(annotation),
+    )
 }

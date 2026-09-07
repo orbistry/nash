@@ -36,19 +36,6 @@ Module {
     ),
     decls: Declare {
         definition: TypedDef {
-            kinds: ValueKinds {
-                bounds: [
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kinds: [
-                    Var(
-                        0,
-                    ),
-                ],
-                applications: [],
-            },
             context: [],
             annotation: Located {
                 region: Region {

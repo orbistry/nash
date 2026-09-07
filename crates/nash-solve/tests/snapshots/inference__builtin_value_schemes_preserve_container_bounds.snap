@@ -2,10 +2,10 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (type unit)\ntag data = Builtin.fstPair (Builtin.unConstrData data)\nfields data = Builtin.sndPair (Builtin.unConstrData data)\ncons x xs = Builtin.mkCons x xs\nchoose flag x y = Builtin.ifThenElse flag x y\nunit x = Builtin.chooseUnit () x\nnamedUnit : unit\nnamedUnit = ()\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep unit where\n    keep x = Builtin.chooseUnit x ()\nkept = keep ()\n"
 ---
-choose : forall (a : Any). bool -> a -> a -> a
-cons : forall (a : Storable). a -> list a -> list a
+choose : forall a. bool -> a -> a -> a
+cons : forall a. Storable a => a -> list a -> list a
 fields : Data -> list Data
 kept : ()
 namedUnit : ()
 tag : Data -> int
-unit : forall (a : Any). a -> a
+unit : forall a. a -> a

@@ -31,8 +31,42 @@ fn input<'a>(annotations: &Annotations<'a>, name: &str) -> &'a Located<Type<'a>>
     from
 }
 
+// Check compile-time representation markers before comparing runtime dictionary trees.
+fn dictionaries<'a>(
+    bump: &'a Bump,
+    tables: &Tables<'a>,
+    args: &[Evidence<'a>],
+) -> &'a [Evidence<'a>] {
+    bump.alloc_slice_fill_iter(
+        args.iter()
+            .filter_map(|evidence| match evidence {
+                Evidence::Repr { trait_, typ } => {
+                    let repr = nash_can::kinds::repr_of(bump, &tables.kinds, typ)
+                        .expect("ground representation proof");
+                    assert!(trait_.admits().contains(repr));
+                    None
+                }
+                Evidence::Impl {
+                    impl_,
+                    type_args,
+                    args,
+                } => Some(Evidence::Impl {
+                    impl_: *impl_,
+                    type_args,
+                    args: dictionaries(bump, tables, args),
+                }),
+                Evidence::StructuralEq { typ } => Some(Evidence::StructuralEq { typ }),
+                Evidence::ReflexiveLift { typ } => Some(Evidence::ReflexiveLift { typ }),
+                Evidence::Given { .. } | Evidence::Super { .. } => {
+                    panic!("ground evidence must be closed")
+                }
+            })
+            .collect::<Vec<_>>(),
+    )
+}
+
 #[test]
-fn kind_disjoint_impls_select_matching_evidence() {
+fn nominally_disjoint_impls_select_matching_context_evidence() {
     let bump = Bump::new();
     let (tables, annotations) = fixture(
         &bump,
@@ -50,13 +84,13 @@ fn kind_disjoint_impls_select_matching_evidence() {
             big x = x
         impl ConstBound int where
             little x = x
-        impl BigBound 'a => Keep (list (pair 'a 'a)) where
+        impl BigBound 'a => Keep (List 'a) where
             keep x = x
-        impl ConstBound 'a => Keep (list (pair 'a 'a)) where
+        impl ConstBound 'a => Keep (list 'a) where
             keep x = x
-        large : list (pair Token Token) -> list (pair Token Token)
+        large : List Token -> List Token
         large x = keep x
-        small : list (pair int int) -> list (pair int int)
+        small : list int -> list int
         small x = keep x
         generic xs = keep xs
     "#
@@ -68,13 +102,15 @@ fn kind_disjoint_impls_select_matching_evidence() {
         .find(|name| name.name == "Keep")
         .unwrap();
     for (name, bound) in [("large", "BigBound"), ("small", "ConstBound")] {
-        let predicate = Pred {
+        let predicate = Pred::Trait {
             trait_,
             args: bump.alloc_slice_copy(&[input(&annotations, name)]),
         };
-        let Evidence::Impl { args, .. } = resolve(&bump, &tables, &predicate).unwrap() else {
+        let Evidence::Impl { args, .. } = resolve(&bump, &tables, &predicate).unwrap().unwrap()
+        else {
             panic!("impl evidence")
         };
+        let args = dictionaries(&bump, &tables, args);
         let [Evidence::Impl { impl_, .. }] = args else {
             panic!("one bound proof")
         };
@@ -122,16 +158,17 @@ fn recursive_patterns_preserve_repeated_variables_and_inner_evidence() {
         .find(|name| name.name == "Keep")
         .unwrap();
     for (name, expected_count) in [("same", 1), ("different", 0), ("nested", 1)] {
-        let predicate = Pred {
+        let predicate = Pred::Trait {
             trait_,
             args: bump.alloc_slice_copy(&[input(&annotations, name)]),
         };
         let Evidence::Impl {
             type_args, args, ..
-        } = resolve(&bump, &tables, &predicate).unwrap()
+        } = resolve(&bump, &tables, &predicate).unwrap().unwrap()
         else {
             panic!("impl evidence")
         };
+        let args = dictionaries(&bump, &tables, args);
         assert_eq!(type_args.len(), expected_count);
         if expected_count == 1 {
             assert!(
@@ -150,7 +187,7 @@ fn recursive_patterns_preserve_repeated_variables_and_inner_evidence() {
             ));
         }
     }
-    let predicate = Pred {
+    let predicate = Pred::Trait {
         trait_,
         args: bump.alloc_slice_copy(&[input(&annotations, "unmatched")]),
     };
@@ -187,7 +224,7 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
         ),
     );
     let trait_ = *tables.traits.keys().find(|key| key.name == "Keep").unwrap();
-    let pred = Pred {
+    let pred = Pred::Trait {
         trait_,
         args: bump.alloc_slice_copy(&[input(&annotations, "witness")]),
     };
@@ -195,7 +232,7 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
         impl_: outer,
         type_args,
         args,
-    } = resolve(&bump, &tables, &pred).unwrap()
+    } = resolve(&bump, &tables, &pred).unwrap().unwrap()
     else {
         panic!("list impl")
     };
@@ -203,6 +240,7 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
         matches!(outer.key.heads, [nash_ast::Head::Named { reference: name, .. }] if name.name == "list")
     );
     assert!(matches!(type_args[0].value, Type::Alias { reference, .. } if reference.name == "bag"));
+    let args = dictionaries(&bump, &tables, args);
     let [
         Evidence::Impl {
             impl_: alias,
@@ -220,7 +258,7 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
     assert!(
         matches!(args, [Evidence::Impl { impl_, type_args: [], args: [] }] if matches!(impl_.key.heads, [nash_ast::Head::Named { reference: name, .. }] if name.name == "int"))
     );
-    let tuple = Pred {
+    let tuple = Pred::Trait {
         trait_,
         args: bump.alloc_slice_copy(&[input(&annotations, "tuple")]),
     };
@@ -228,10 +266,11 @@ fn ground_resolution_preserves_nominal_aliases_and_nested_evidence() {
         impl_,
         type_args,
         args,
-    } = resolve(&bump, &tables, &tuple).unwrap()
+    } = resolve(&bump, &tables, &tuple).unwrap().unwrap()
     else {
         panic!("tuple impl")
     };
+    let args = dictionaries(&bump, &tables, args);
     assert!(matches!(impl_.key.heads, [nash_ast::Head::Tuple(args)] if args.len() == 5));
     assert_eq!(type_args.len(), 5);
     assert!(
@@ -298,13 +337,13 @@ fn ground_higher_kinded_context_keeps_partial_alias_and_head_order() {
         .keys()
         .find(|name| name.name == "Use")
         .unwrap();
-    let pred = Pred {
+    let pred = Pred::Trait {
         trait_,
         args: bump.alloc_slice_copy(&[from, second]),
     };
     let Evidence::Impl {
         type_args, args, ..
-    } = resolve(&bump, &tables, &pred).unwrap()
+    } = resolve(&bump, &tables, &pred).unwrap().unwrap()
     else {
         panic!("Use impl")
     };
@@ -316,6 +355,7 @@ fn ground_higher_kinded_context_keeps_partial_alias_and_head_order() {
     );
     assert!(matches!(first.value, Type::Named { reference, .. } if reference.name == "string"));
     assert!(matches!(second.value, Type::Named { reference, .. } if reference.name == "bytes"));
+    let args = dictionaries(&bump, &tables, args);
     let [
         Evidence::Impl {
             impl_,
@@ -377,7 +417,7 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
         resolve(
             &bump,
             &tables,
-            &Pred {
+            &Pred::Trait {
                 trait_,
                 args: bump.alloc_slice_copy(&[
                     input(&annotations, "big"),
@@ -385,13 +425,13 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
                 ]),
             }
         ),
-        Ok(Evidence::ReflexiveLift { .. })
+        Ok(Some(Evidence::ReflexiveLift { .. }))
     ));
     assert_eq!(
         resolve(
             &bump,
             &tables,
-            &Pred {
+            &Pred::Trait {
                 trait_,
                 args: bump.alloc_slice_copy(&[
                     input(&annotations, "first"),
@@ -418,31 +458,32 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
         args: bump.alloc_slice_copy(&[*carrier]),
     }));
     assert!(
-        !nash_can::kinds::proves_ground_big(&bump, &tables.kinds, narrowed),
-        "the query must not choose Big for an inferred record carrier"
+        nash_can::kinds::repr_of(&bump, &tables.kinds, narrowed)
+            == Some(nash_ast::primitives::Repr::Big),
+        "representation depends on the head; formation checks the element requirement independently"
     );
     assert!(matches!(
         resolve(
             &bump,
             &tables,
-            &Pred {
+            &Pred::Trait {
                 trait_,
                 args: bump.alloc_slice_copy(&[record, record]),
             }
         ),
-        Ok(Evidence::ReflexiveLift { .. })
+        Ok(Some(Evidence::ReflexiveLift { .. }))
     ));
-    let predicate = |name| Pred {
+    let predicate = |name| Pred::Trait {
         trait_,
         args: bump.alloc_slice_copy(&[input(&annotations, name), input(&annotations, name)]),
     };
     assert!(matches!(
         resolve(&bump, &tables, &predicate("big")),
-        Ok(Evidence::ReflexiveLift { .. })
+        Ok(Some(Evidence::ReflexiveLift { .. }))
     ));
     assert!(matches!(
         resolve(&bump, &tables, &predicate("unit")),
-        Ok(Evidence::Impl { .. })
+        Ok(Some(Evidence::Impl { .. }))
     ));
     assert_eq!(
         resolve(&bump, &tables, &predicate("small"))
@@ -450,7 +491,7 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
             .reason,
         Failure::MissingImpl
     );
-    let foreign = Pred {
+    let foreign = Pred::Trait {
         trait_: QualifiedName {
             home: nash_ast::ModuleName {
                 package: None,
@@ -458,7 +499,7 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
             },
             name: "Lift",
         },
-        args: predicate("big").args,
+        args: predicate("big").args(),
     };
     assert_eq!(
         resolve(&bump, &tables, &foreign).unwrap_err().reason,
@@ -504,7 +545,7 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
     let results: Vec<_> = ["missing", "open", "growing", "cycle", "function"]
         .into_iter()
         .map(|name| {
-            let pred = Pred {
+            let pred = Pred::Trait {
                 trait_,
                 args: bump.alloc_slice_copy(&[input(&annotations, name)]),
             };
@@ -526,7 +567,7 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
         resolve(
             &bump,
             &tables,
-            &Pred {
+            &Pred::Trait {
                 trait_,
                 args: bump.alloc_slice_copy(&[deep])
             }

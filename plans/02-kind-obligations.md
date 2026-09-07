@@ -1,12 +1,14 @@
 # Follow-up to Plan 02: inductive residual kind obligations
 
-Status: implemented. The finite expansion fragment is adopted; unrestricted
-termination and higher-rank implication completeness are not claimed.
+Status: historical implemented plan. The retained-obligation engine remains
+in the checkout. Its replacement is
+[02-kind-predicates](02-kind-predicates.md) (Haskell 98 kinds +
+representation predicates), specified in [kinds](../docs/kinds.md). No
+production replacement has landed.
 
-Design: [recursive kind obligations](../docs/kind-obligations.md).
-Language decision: inductive validity; `self self` changes from accepted to
-`KindInfinite`. Other representation, inference and evidence behavior stays
-subject to the acceptance tests below.
+The former `docs/kind-obligations.md` design was removed. The checked items
+below record the earlier implementation, including its finite admission
+fragment and cost safeguard; they are not claims about the replacement.
 
 ## 0. Review the semantic boundary
 

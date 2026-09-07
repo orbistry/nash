@@ -3,7 +3,7 @@ source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nbad xs = Builtin.mkCons (\\x -> x) xs\n"
 ---
 [
-    BadKind {
+    MissingImpl {
         region: Region {
             start: Position {
                 line: 3,
@@ -14,7 +14,19 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nbad xs = Built
                 column: 24,
             },
         },
-        name: "mkCons",
+        name: "type application",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
         args: [
             Lambda(
                 FlexVar(
@@ -26,25 +38,71 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nbad xs = Built
                 [],
             ),
         ],
-        reason: Mismatch {
-            expected: KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kind: Var(
-                    0,
-                ),
-                applications: [],
+        available: [],
+        because: [
+            Formation(
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "list",
+                    args: [
+                        Lambda(
+                            FlexVar(
+                                "a",
+                            ),
+                            FlexVar(
+                                "a",
+                            ),
+                            [],
+                        ),
+                    ],
+                },
+            ),
+        ],
+    },
+    MissingImpl {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 10,
             },
-            actual: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
+            end: Position {
+                line: 3,
+                column: 24,
             },
         },
+        name: "mkCons",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "Storable",
+        },
+        args: [
+            Lambda(
+                FlexVar(
+                    "a",
+                ),
+                FlexVar(
+                    "a",
+                ),
+                [],
+            ),
+        ],
+        available: [],
+        because: [],
     },
 ]

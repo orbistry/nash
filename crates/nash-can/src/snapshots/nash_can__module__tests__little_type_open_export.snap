@@ -13,22 +13,11 @@ Interface {
     aliases: [],
     unions: [
         InterfaceUnion {
-            kind: KindScheme {
-                bounds: [
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
-                ),
-                applications: [],
-            },
+            kind: Arrow(
+                Type,
+                Type,
+            ),
+            context: [],
             name: "option",
             parameters: [
                 "a",

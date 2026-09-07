@@ -95,7 +95,8 @@ pub fn canonicalize<'a>(
                 ctors: u.ctors,
                 alternatives: u.alternatives,
                 options: u.options,
-                kind: schemes.union(u.name.value),
+                kind: schemes.kind(u.name.value),
+                context: schemes.context(u.name.value),
             },
         ))
     }));
@@ -106,7 +107,8 @@ pub fn canonicalize<'a>(
                 name: a.name,
                 parameters: a.parameters,
                 typ: a.typ,
-                kind: schemes.alias(a.name.value),
+                kind: schemes.kind(a.name.value),
+                context: schemes.context(a.name.value),
             },
         ))
     }));
@@ -117,8 +119,6 @@ pub fn canonicalize<'a>(
     environment::local::check_binops(&env, module.binops)?;
     let impls = crate::impls::canonicalize(bump, &env, &kind_env, module.impls, &mut warnings)?;
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
-    kinds::check_decl_annotations(bump, &kind_env, home, decls)?;
-    kinds::check_trait_method_annotations(bump, &kind_env, home, traits, impls)?;
     let binops = canonicalize_binops(bump, &env, module.binops);
     let exports = canonicalize_exports(bump, module)?;
 
@@ -281,7 +281,6 @@ struct NodeOne<'a> {
 
 enum TopLevelDefBuilder<'a> {
     Typed {
-        kinds: nash_ast::ValueKinds<'a>,
         context: &'a [nash_ast::Pred<'a>],
         annotation: &'a Located<nash_ast::Type<'a>>,
         free_vars: nash_ast::FreeVars<'a>,
@@ -319,7 +318,7 @@ fn to_node_one<'a>(
             .transpose()?,
     };
     let annotation = match (known_annotation, annotation) {
-        (None, Some(annotation)) => Some(kinds::retain_annotation(
+        (None, Some(annotation)) => Some(kinds::check_annotation(
             bump,
             &env.kinds,
             env.home,
@@ -342,7 +341,6 @@ fn to_node_one<'a>(
             pattern::detect_duplicates(DuplicatePatternContext::FuncArgs(src.name.value), bound)?;
         (
             TopLevelDefBuilder::Typed {
-                kinds: annotation.kinds,
                 context: annotation.context,
                 annotation: annotation.typ,
                 free_vars: annotation.free_vars,
@@ -380,14 +378,12 @@ fn to_node_one<'a>(
 
     let def = match builder {
         TopLevelDefBuilder::Typed {
-            kinds,
             context,
             annotation,
             free_vars,
             args,
             typ,
         } => bump.alloc(nash_ast::Def::TypedDef {
-            kinds,
             context,
             annotation,
             name: src.name,
@@ -417,6 +413,7 @@ pub(crate) struct PreUnion<'a> {
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
     pub ctors: &'a [&'a CanCtor<'a>],
+    pub context: &'a [nash_ast::Pred<'a>],
     pub alternatives: u16,
     pub options: CtorOpts,
 }
@@ -427,6 +424,7 @@ pub(crate) struct PreAlias<'a> {
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
     pub typ: &'a Located<nash_ast::Type<'a>>,
+    pub context: &'a [nash_ast::Pred<'a>],
 }
 
 fn canonicalize_unions<'a>(
@@ -468,6 +466,13 @@ fn canonicalize_union<'a>(
     let parameters =
         bump.alloc_slice_fill_iter(union.arguments.iter().copied().map(|arg| arg.name.value));
     let ctors = canonicalize_ctors(bump, env, union.ctors)?;
+    let mut context = parameter_repr_predicates(bump, union.arguments);
+    for ctor in union.ctors {
+        for typ in ctor_arg_types(bump, ctor) {
+            context.extend(types::repr_predicates(bump, env, typ)?);
+        }
+    }
+    let context = bump.alloc_slice_fill_iter(context);
     let alternatives = union
         .ctors
         .len()
@@ -487,6 +492,7 @@ fn canonicalize_union<'a>(
 
     Ok(PreUnion {
         source: source_union,
+        context,
         name: union.name,
         parameters,
         ctors,
@@ -609,7 +615,10 @@ fn canonicalize_single_alias<'a>(
         bump.alloc_slice_fill_iter(alias.arguments.iter().copied().map(|arg| arg.name.value));
     let typ = types::canonicalize_type(bump, env, alias.typ)?;
 
+    let mut context = parameter_repr_predicates(bump, alias.arguments);
+    context.extend(types::repr_predicates(bump, env, alias.typ)?);
     let can_alias = PreAlias {
+        context: bump.alloc_slice_fill_iter(context),
         source: source_alias,
         name: alias.name,
         parameters,
@@ -731,7 +740,7 @@ fn collect_type_edges<'a>(
     edges: &mut Vec<&'a str>,
 ) {
     match typ {
-        SourceType::Kinded { typ, .. } => collect_type_edges(&typ.value, alias_names, edges),
+        SourceType::Repr { typ, .. } => collect_type_edges(&typ.value, alias_names, edges),
         SourceType::Lambda { from, to } => {
             collect_type_edges(&from.value, alias_names, edges);
             collect_type_edges(&to.value, alias_names, edges);
@@ -782,7 +791,7 @@ fn collect_type_edges<'a>(
 /// wins the region), and the record extension variable counts as free.
 fn collect_free_type_vars<'a>(typ: &Located<SourceType<'a>>, vars: &mut BTreeMap<&'a str, Region>) {
     match &typ.value {
-        SourceType::Kinded { typ, .. } => collect_free_type_vars(typ, vars),
+        SourceType::Repr { typ, .. } => collect_free_type_vars(typ, vars),
         SourceType::Var(name) => {
             vars.insert(name, typ.region);
         }
@@ -1324,7 +1333,6 @@ fn collect_from_type<'a>(
 ) {
     use nash_ast::Type::*;
     match typ {
-        Kinded { typ, .. } => collect_from_type(&typ.value, home, used),
         App { head, args } => {
             collect_from_type(&head.value, home, used);
             for arg in *args {
@@ -1408,14 +1416,40 @@ fn collect_from_predicate<'a>(
     home: ModuleName<'a>,
     used: &mut BTreeSet<&'a str>,
 ) {
-    add_if_foreign(home, predicate.trait_.home, used);
-    for argument in predicate.args {
+    if let Some(trait_) = predicate.trait_ref() {
+        add_if_foreign(home, trait_.home, used);
+    }
+    for argument in predicate.types() {
         collect_from_type(&argument.value, home, used);
     }
 }
 
+fn parameter_repr_predicates<'a>(
+    bump: &'a Bump,
+    parameters: &'a [&'a nash_source::TypeParam<'a>],
+) -> Vec<nash_ast::Pred<'a>> {
+    parameters
+        .iter()
+        .filter_map(|parameter| {
+            parameter.repr.map(|repr| nash_ast::Pred::Implied {
+                trait_: types::repr_trait(repr.value).qualified(),
+                args: bump.alloc_slice_copy(&[&*bump.alloc(Located::at(
+                    parameter.name.region,
+                    nash_ast::Type::Var(parameter.name.value),
+                ))]),
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
+    fn test_constructor_kind<'a>(bump: &'a bumpalo::Bump, arity: usize) -> &'a nash_ast::Kind<'a> {
+        (0..arity).fold(&nash_ast::Kind::Type, |result, _| {
+            bump.alloc(nash_ast::Kind::Arrow(&nash_ast::Kind::Type, result))
+        })
+    }
+
     use std::collections::BTreeMap;
 
     use bumpalo::Bump;
@@ -1501,7 +1535,6 @@ mod tests {
     fn test_annotation<'a>(bump: &'a Bump) -> &'a nash_ast::Annotation<'a> {
         bump.alloc(nash_ast::Annotation {
             context: &[],
-            kinds: nash_ast::ValueKinds::unconstrained(bump, 1),
             free_vars: bump.alloc_slice_fill_iter(["a"]),
             typ: var_type(bump, "a"),
         })
@@ -1571,7 +1604,8 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
-                kind: crate::kinds::test_big_kind(bump, parameters.len()),
+                context: &[],
+                kind: test_constructor_kind(bump, parameters.len()),
                 name: union_name,
                 parameters,
                 ctors: &[],
@@ -1599,7 +1633,8 @@ mod tests {
             },
             values: &[],
             aliases: bump.alloc_slice_fill_iter([InterfaceAlias {
-                kind: crate::kinds::test_big_kind(bump, parameters.len()),
+                context: &[],
+                kind: test_constructor_kind(bump, parameters.len()),
                 name: alias_name,
                 parameters,
                 typ,
@@ -2184,7 +2219,8 @@ mod tests {
     #[test]
     fn to_public_union_open_passes_through() {
         let union = InterfaceUnion {
-            kind: nash_ast::KindScheme::mono(&nash_ast::Kind::Base(nash_ast::BaseKind::Big)),
+            context: &[],
+            kind: &nash_ast::Kind::Type,
             name: "Bool",
             parameters: &[],
             ctors: &[],
@@ -2209,7 +2245,8 @@ mod tests {
             arguments: &[],
         });
         let union = InterfaceUnion {
-            kind: nash_ast::KindScheme::mono(&nash_ast::Kind::Base(nash_ast::BaseKind::Big)),
+            context: &[],
+            kind: &nash_ast::Kind::Type,
             name: "Bool",
             parameters: &[],
             ctors: bump.alloc_slice_fill_iter([ctor]),
@@ -2227,7 +2264,8 @@ mod tests {
     #[test]
     fn to_public_union_private_returns_none() {
         let union = InterfaceUnion {
-            kind: nash_ast::KindScheme::mono(&nash_ast::Kind::Base(nash_ast::BaseKind::Big)),
+            context: &[],
+            kind: &nash_ast::Kind::Type,
             name: "Internal",
             parameters: &[],
             ctors: &[],
@@ -2247,7 +2285,8 @@ mod tests {
         let bump = Bump::new();
         let typ = bump.alloc(Located::at(Region::zero(), CanType::Unit));
         let alias = InterfaceAlias {
-            kind: crate::kinds::test_big_kind(&bump, 2),
+            context: &[],
+            kind: test_constructor_kind(&bump, 2),
             name: "Pair",
             parameters: &["a", "b"],
             typ,
@@ -2265,7 +2304,8 @@ mod tests {
         let bump = Bump::new();
         let typ = bump.alloc(Located::at(Region::zero(), CanType::Unit));
         let alias = InterfaceAlias {
-            kind: nash_ast::KindScheme::mono(&nash_ast::Kind::Base(nash_ast::BaseKind::Big)),
+            context: &[],
+            kind: &nash_ast::Kind::Type,
             name: "Internal",
             parameters: &[],
             typ,
@@ -3025,7 +3065,8 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
-                kind: crate::kinds::test_big_kind(bump, 1),
+                context: &[],
+                kind: test_constructor_kind(bump, 1),
                 name: "Maybe",
                 parameters: bump.alloc_slice_fill_iter(["a"]),
                 ctors: bump.alloc_slice_fill_iter([just_ctor, nothing_ctor]),
@@ -3571,7 +3612,8 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
-                kind: crate::kinds::test_big_kind(&bump, 1),
+                context: &[],
+                kind: test_constructor_kind(&bump, 1),
                 name: "Maybe",
                 parameters: bump.alloc_slice_fill_iter(["a"]),
                 ctors: bump.alloc_slice_fill_iter([just_ctor, nothing_ctor]),
@@ -3605,7 +3647,8 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
-                kind: crate::kinds::test_big_kind(&bump, 1),
+                context: &[],
+                kind: test_constructor_kind(&bump, 1),
                 name: "Option",
                 parameters: bump.alloc_slice_fill_iter(["a"]),
                 ctors: bump.alloc_slice_fill_iter([just_ctor2, none_ctor]),
@@ -4128,7 +4171,8 @@ mod tests {
             },
             values: &[],
             aliases: bump.alloc_slice_fill_iter([InterfaceAlias {
-                kind: crate::kinds::test_big_kind(&bump, 1),
+                context: &[],
+                kind: test_constructor_kind(&bump, 1),
                 name: "MyAlias",
                 parameters: bump.alloc_slice_fill_iter(["a"]),
                 typ: alias_type,

@@ -1,7 +1,5 @@
 use bumpalo::Bump;
-use nash_ast::{
-    Annotation, BaseKind, Kind, KindScheme, KindSet, Method, Pred, QualifiedName, Trait, Type,
-};
+use nash_ast::{Annotation, Method, Pred, QualifiedName, Trait, Type};
 use nash_region::Located;
 
 use crate::environment::{Env, Info, MethodInfo, QualifiedValue, TraitInfo, Var, dups};
@@ -71,19 +69,11 @@ pub(crate) fn canonicalize<'a>(
             },
         )?;
         let parameters = bump.alloc_slice_fill_iter(t.params.iter().map(|p| p.name.value));
-        let mut kind: &Kind = bump.alloc(Kind::Base(BaseKind::Term));
-        for i in (0..parameters.len()).rev() {
-            kind = bump.alloc(Kind::Arrow(bump.alloc(Kind::Var(i as u16)), kind));
-        }
         let info = bump.alloc(TraitInfo {
             home: env.home,
             name: t.name.value,
             parameters,
-            kind: KindScheme {
-                applications: &[],
-                bounds: bump.alloc_slice_fill_copy(parameters.len(), KindSet::ALL),
-                kind,
-            },
+            kinds: &[],
             supers: &[],
             methods: &[],
         });
@@ -93,11 +83,19 @@ pub(crate) fn canonicalize<'a>(
     for source in source.traits {
         let t = &source.value;
         let info = env.find_trait(bump, t.name.region, None, t.name.value)?;
-        let supers = types::canonicalize_context(bump, env, t.supers)?;
+        let mut supers = types::canonicalize_context(bump, env, t.supers)?.to_vec();
+        supers.extend(t.params.iter().filter_map(|p| {
+            p.repr.map(|repr| Pred::Trait {
+                trait_: types::repr_trait(repr.value).qualified(),
+                args: bump.alloc_slice_copy(&[
+                    &*bump.alloc(Located::at(p.name.region, Type::Var(p.name.value)))
+                ]),
+            })
+        }));
+        let supers = &*bump.alloc_slice_fill_iter(supers);
         for predicate in supers {
-            for argument in predicate.args {
-                if !matches!(argument.value.unannotated(), Type::Var(name) if info.parameters.contains(name))
-                {
+            for argument in predicate.args() {
+                if !matches!(&argument.value, Type::Var(name) if info.parameters.contains(name)) {
                     return Err(vec![Error::SuperclassBadArg {
                         region: argument.region,
                         trait_: t.name.value,
@@ -116,7 +114,7 @@ pub(crate) fn canonicalize<'a>(
                 }]);
             }
             let trait_pred =
-                Pred {
+                Pred::Trait {
                     trait_: QualifiedName {
                         home: env.home,
                         name: t.name.value,
@@ -127,16 +125,12 @@ pub(crate) fn canonicalize<'a>(
                 };
             let context = bump.alloc_slice_fill_iter(
                 std::iter::once(trait_pred)
-                    .chain(own.context.iter().map(|p| Pred {
-                        trait_: p.trait_,
-                        args: p.args,
-                    }))
+                    .chain(own.context.iter().copied())
                     .collect::<Vec<_>>(),
             );
             methods.push(Method {
                 name: method.name,
                 annotation: bump.alloc(Annotation {
-                    kinds: own.kinds,
                     free_vars: own.free_vars,
                     context,
                     typ: own.typ,
@@ -159,8 +153,9 @@ pub(crate) fn canonicalize<'a>(
             deps: t
                 .supers
                 .iter()
-                .filter(|p| p.trait_.home == env.home)
-                .map(|p| p.trait_.name)
+                .filter_map(|p| p.trait_ref())
+                .filter(|trait_| trait_.home == env.home)
+                .map(|trait_| trait_.name)
                 .collect(),
         })
         .collect();
@@ -180,7 +175,7 @@ pub(crate) fn canonicalize<'a>(
             .map(|method| {
                 Ok(Method {
                     name: method.name,
-                    annotation: kinds::retain_annotation(
+                    annotation: kinds::check_annotation(
                         bump,
                         kind_env,
                         env.home,
@@ -203,7 +198,7 @@ pub(crate) fn canonicalize<'a>(
             home: env.home,
             name: reference.name,
             parameters: t.parameters,
-            kind: schemes[reference.name],
+            kinds: schemes[reference.name],
             supers: t.supers,
             methods: bump.alloc_slice_fill_iter(t.methods.iter().zip(t.source.value.methods).map(
                 |(m, source)| MethodInfo {
@@ -256,7 +251,7 @@ pub(crate) fn canonicalize<'a>(
             Trait {
                 name: t.source.value.name,
                 parameters: t.parameters,
-                kind: schemes[t.source.value.name.value],
+                kinds: schemes[t.source.value.name.value],
                 supers: t.supers,
                 methods: bump.alloc_slice_fill_iter(methods),
             },

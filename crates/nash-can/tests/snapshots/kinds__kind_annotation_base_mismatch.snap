@@ -3,34 +3,17 @@ source: crates/nash-can/tests/kinds.rs
 description: "type Box ('a : Const) = Box 'a"
 ---
 [
-    KindMismatch {
+    ContradictoryRepresentation {
         region: Region {
             start: Position {
                 line: 5,
-                column: 16,
+                column: 11,
             },
             end: Position {
                 line: 5,
-                column: 21,
+                column: 13,
             },
         },
-        context: ParamAnnotation {
-            type_name: "Box",
-            param: "a",
-        },
-        expected: KindScheme {
-            bounds: [],
-            kind: Base(
-                Const,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
+        variable: "a",
     },
 ]

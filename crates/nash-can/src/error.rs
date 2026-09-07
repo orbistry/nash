@@ -1,6 +1,5 @@
-use crate::kinds::KindHead;
 use nash_ast::ModuleName;
-use nash_ast::{KindScheme, QualifiedName};
+use nash_ast::{Kind, QualifiedName};
 use nash_region::{Located, Region};
 use nash_source::Type as SourceType;
 
@@ -153,27 +152,31 @@ pub enum Error<'a> {
     KindMismatch {
         region: Region,
         context: &'a KindContext<'a>,
-        expected: KindScheme<'a>,
-        actual: KindScheme<'a>,
+        expected: &'a Kind<'a>,
+        actual: &'a Kind<'a>,
     },
     KindInfinite {
         region: Region,
         context: &'a KindContext<'a>,
     },
-    KindLimit {
+    RepresentationMismatch {
         region: Region,
         context: &'a KindContext<'a>,
+        required: nash_ast::primitives::ReprTrait,
+        actual: nash_ast::primitives::Repr,
     },
-    KindRestricted {
+    ContradictoryRepresentation {
         region: Region,
-        context: &'a KindContext<'a>,
-        reason: &'static str,
+        variable: &'a str,
     },
-    KindTooManyArgs {
+    ImplOfBuiltinTrait {
         region: Region,
-        head: KindHead<'a>,
-        applied: usize,
-        accepted: usize,
+        trait_: QualifiedName<'a>,
+    },
+    IrregularRecursion {
+        region: Region,
+        constructor: QualifiedName<'a>,
+        parameter: &'a str,
     },
 
     Unsupported {
@@ -381,6 +384,12 @@ pub enum Error<'a> {
         region: Region,
         name: &'a str,
     },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum KindHead<'a> {
+    Named(QualifiedName<'a>),
+    Variable(&'a str),
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -7,13 +7,8 @@ description: "type alias Vault = { owner : Bytes, amount : Int }"
     [
         (
             "Vault",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
 )

@@ -14,33 +14,13 @@ description: "f : list 'f -> 'f 'a -> int\nf xs g = 1"
                 column: 21,
             },
         },
-        context: TypeArg {
-            head: Var(
-                "f",
-            ),
-            index: 0,
+        context: Annotation {
+            name: "f",
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [
-                KindSet(
-                    3,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

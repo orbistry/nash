@@ -3,15 +3,15 @@ source: crates/nash-can/tests/kinds.rs
 description: "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntype w = W (wrap (app tag) app option)"
 ---
 [
-    KindRestricted {
+    KindMismatch {
         region: Region {
             start: Position {
                 line: 9,
-                column: 13,
+                column: 28,
             },
             end: Position {
                 line: 9,
-                column: 38,
+                column: 31,
             },
         },
         context: LittleField {
@@ -19,6 +19,10 @@ description: "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App 
             ctor: "W",
             index: 0,
         },
-        reason: "a generated constructor capture is not an input atom",
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

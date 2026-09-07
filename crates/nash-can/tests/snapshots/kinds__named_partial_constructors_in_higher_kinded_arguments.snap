@@ -6,98 +6,152 @@ description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a '
     [
         (
             "box",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
+            Arrow(
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            0,
-                        ),
-                        arguments: [
-                            Base(
-                                Const,
-                            ),
-                        ],
-                        result: Var(
-                            1,
+                Type,
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 20,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 22,
+                            },
+                        },
+                        value: Var(
+                            "f",
                         ),
                     },
-                ],
-            },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 23,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 26,
+                                },
+                            },
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "core",
+                                            },
+                                        ),
+                                        name: "Builtin",
+                                    },
+                                    name: "int",
+                                },
+                                args: [],
+                            },
+                        },
+                    ],
+                },
+            ],
         ),
     ],
     [
         (
             "pairAlias",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Arrow(
-                        Var(
-                            1,
-                        ),
-                        Base(
-                            Const,
-                        ),
-                    ),
+            Arrow(
+                Type,
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [],
-            },
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 35,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 37,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 38,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 40,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
         (
             "withList",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
         (
             "withPair",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
         (
             "withAlias",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
 )

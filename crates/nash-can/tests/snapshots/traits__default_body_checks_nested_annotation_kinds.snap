@@ -3,7 +3,7 @@ source: crates/nash-can/tests/traits.rs
 expression: "nash_can::canonicalize(&bump, nash_can::Context\n{ package: None, interfaces: Some(&interfaces) }, source).unwrap_err()"
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 8,
@@ -14,40 +14,10 @@ expression: "nash_can::canonicalize(&bump, nash_can::Context\n{ package: None, i
                 column: 33,
             },
         },
-        context: TypeArg {
-            head: Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                },
-            ),
-            index: 0,
+        context: Annotation {
+            name: "bad",
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    3,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Term,
-            ),
-            applications: [],
-        },
+        required: Storable,
+        actual: Term,
     },
 ]

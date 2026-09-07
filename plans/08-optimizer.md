@@ -523,11 +523,18 @@ hoisted as lambdas over all their pattern variables.
 
 ---
 
-## Chunk 6 — Case-of-known-constructor, constant folding, cast cancellation
+## Chunk 6 — Case-of-known-constructor, constant folding, cast cancellation, Big-list fast paths
 
 **Files**
 
 - `crates/nash-ir/src/fold.rs` (new)
+- `crates/nash-ir/src/fastpath.rs` (new): rewrites a monomorphized call of
+  core's elementwise `Eq (list 'a)` / `Ord (list 'a)` / `Show (list 'a)`
+  method at a ground Big element type into the single-builtin form
+  (`equalsData (listData a) (listData b)`, etc.). Keyed on the core impl's
+  `ImplRef` plus the ground `MonoKey`; semantics identical because Big
+  equality is structural `equalsData` per element. Budget test: `list Int`
+  equality of 100 elements must cost one `equalsData` plus two `listData`.
 - `crates/nash-codegen/src/comptime.rs` (`eval_closed` reused)
 - `crates/nash-codegen/src/lower.rs` (`Case(Bool)` without delay when
   both branches are values)

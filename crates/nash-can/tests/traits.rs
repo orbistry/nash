@@ -105,9 +105,9 @@ fn method_quantifiers_have_independent_kinds() {
     let variables: Vec<_> = trait_
         .methods
         .iter()
-        .map(|m| (m.name.value, m.annotation.free_vars, m.annotation.kinds))
+        .map(|m| (m.name.value, m.annotation.free_vars, m.annotation.context))
         .collect();
-    insta::assert_debug_snapshot!((&trait_.kind, variables));
+    insta::assert_debug_snapshot!((&trait_.kinds, variables));
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn mutually_referencing_method_contexts_are_not_superclass_cycles() {
         .module
         .traits
         .iter()
-        .map(|t| (t.value.name.value, t.value.kind))
+        .map(|t| (t.value.name.value, t.value.kinds))
         .collect();
     insta::assert_debug_snapshot!(schemes);
 }
@@ -336,7 +336,7 @@ fn private_trait_metadata_does_not_expose_names() {
         "module Main exposing (..)\nimport Identity exposing (..)\n\nf x = Identity.hidden x\n",
     );
     insta::assert_debug_snapshot!((
-        can.module.traits[0].value.kind,
+        can.module.traits[0].value.kinds,
         nash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),
         nash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),
     ));
@@ -394,14 +394,9 @@ fn higher_kinded_method_context() {
         .module
         .traits
         .iter()
-        .map(|t| (t.value.name.value, t.value.kind))
+        .map(|t| (t.value.name.value, t.value.kinds))
         .collect();
-    let context: Vec<_> = can.module.traits[1].value.methods[0]
-        .annotation
-        .context
-        .iter()
-        .map(|p| p.trait_)
-        .collect();
+    let context = can.module.traits[1].value.methods[0].annotation.context;
     insta::assert_debug_snapshot!((schemes, context));
 }
 

@@ -8,25 +8,6 @@ Annotation {
         "a",
         "b",
     ],
-    kinds: ValueKinds {
-        bounds: [
-            KindSet(
-                15,
-            ),
-            KindSet(
-                15,
-            ),
-        ],
-        kinds: [
-            Var(
-                0,
-            ),
-            Var(
-                1,
-            ),
-        ],
-        applications: [],
-    },
     typ: Located {
         region: Region {
             start: Position {

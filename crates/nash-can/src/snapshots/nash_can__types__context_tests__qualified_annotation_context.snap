@@ -4,7 +4,7 @@ expression: result
 ---
 Annotation {
     context: [
-        Pred {
+        Trait {
             trait_: QualifiedName {
                 home: ModuleName {
                     package: None,
@@ -34,19 +34,6 @@ Annotation {
     free_vars: [
         "a",
     ],
-    kinds: ValueKinds {
-        bounds: [
-            KindSet(
-                15,
-            ),
-        ],
-        kinds: [
-            Var(
-                0,
-            ),
-        ],
-        applications: [],
-    },
     typ: Located {
         region: Region {
             start: Position {

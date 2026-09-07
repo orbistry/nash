@@ -4,8 +4,8 @@ expression: "output.join(\"\\n\")"
 ---
 Main:
 left : ()
-operator : forall (a : Any). Select a => a -> a -> a
-pick : forall (a : Any). Select a => a -> a -> a
+operator : forall a. Select a => a -> a -> a
+pick : forall a. Select a => a -> a -> a
 right : ()
 section : () -> ()
 OnlyOperators:

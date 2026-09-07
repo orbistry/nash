@@ -2,48 +2,197 @@
 source: crates/nash-can/tests/kinds.rs
 expression: kinds
 ---
-ValueKinds {
-    bounds: [
-        KindSet(
-            8,
-        ),
-        KindSet(
-            15,
-        ),
-        KindSet(
-            15,
-        ),
-        KindSet(
-            7,
-        ),
-    ],
-    kinds: [
-        Var(
-            0,
-        ),
-        Var(
-            1,
-        ),
-        Var(
-            2,
-        ),
-    ],
-    applications: [
-        KindApplication {
-            head: Var(
-                0,
-            ),
-            arguments: [
-                Var(
-                    2,
+Annotation {
+    context: [
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Var(
+                    "f",
                 ),
-                Var(
-                    1,
-                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Var(
+                        "b",
+                    ),
+                },
             ],
-            result: Var(
-                3,
-            ),
         },
     ],
+    free_vars: [
+        "f",
+        "b",
+        "a",
+    ],
+    typ: Located {
+        region: Region {
+            start: Position {
+                line: 0,
+                column: 0,
+            },
+            end: Position {
+                line: 0,
+                column: 0,
+            },
+        },
+        value: Lambda {
+            from: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: App {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "f",
+                        ),
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            },
+            to: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: App {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "f",
+                        ),
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            },
+        },
+    },
 }

@@ -263,7 +263,7 @@ mod tests {
     fn trait_with_higher_kinded_parameter() {
         assert_decl_snapshot!(
             r#"
-            trait Functor ('f : Big -> Big) where
+            trait Functor 'f where
                 map : ('a -> 'b) -> 'f 'a -> 'f 'b
         "#
         );

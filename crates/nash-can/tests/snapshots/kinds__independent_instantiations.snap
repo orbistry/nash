@@ -6,32 +6,16 @@ description: "type option 'a = None | Some 'a\ntype both = Both (option Int) (op
     [
         (
             "option",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
-                ),
-                applications: [],
-            },
+            Arrow(
+                Type,
+                Type,
+            ),
+            [],
         ),
         (
             "both",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
     [],

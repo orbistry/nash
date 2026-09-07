@@ -13,13 +13,8 @@ Interface {
     aliases: [],
     unions: [
         InterfaceUnion {
-            kind: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
+            kind: Type,
+            context: [],
             name: "Bool",
             parameters: [],
             ctors: [

@@ -2,5 +2,5 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
-empty : forall (a : Storable). list a
-first : forall (a : Storable). list a -> a
+empty : forall a. Storable a => list a
+first : forall a. Storable a => list a -> a

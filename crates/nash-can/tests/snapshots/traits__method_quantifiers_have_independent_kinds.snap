@@ -1,24 +1,11 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(&trait_.kind, variables)"
+expression: "(&trait_.kinds, variables)"
 ---
 (
-    KindScheme {
-        bounds: [
-            KindSet(
-                7,
-            ),
-        ],
-        kind: Arrow(
-            Var(
-                0,
-            ),
-            Base(
-                Term,
-            ),
-        ),
-        applications: [],
-    },
+    [
+        Type,
+    ],
     [
         (
             "ordinary",
@@ -26,22 +13,65 @@ expression: "(&trait_.kind, variables)"
                 "a",
                 "b",
             ],
-            ValueKinds {
-                bounds: [
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kinds: [
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Big,
-                    ),
-                ],
-                applications: [],
-            },
+            [
+                Trait {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Carry",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 15,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 27,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 29,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
         (
             "higher",
@@ -50,48 +80,68 @@ expression: "(&trait_.kind, variables)"
                 "b",
                 "c",
             ],
-            ValueKinds {
-                bounds: [
-                    KindSet(
-                        7,
-                    ),
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kinds: [
-                    Var(
-                        0,
-                    ),
-                    Var(
-                        1,
-                    ),
-                    Var(
-                        2,
-                    ),
-                ],
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            1,
-                        ),
-                        arguments: [
-                            Var(
-                                2,
+            [
+                Trait {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "Carry",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 15,
+                                },
+                            },
+                            value: Var(
+                                "a",
                             ),
-                        ],
-                        result: Var(
-                            3,
+                        },
+                    ],
+                },
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 20,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 22,
+                            },
+                        },
+                        value: Var(
+                            "b",
                         ),
                     },
-                ],
-            },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 23,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 25,
+                                },
+                            },
+                            value: Var(
+                                "c",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
     ],
 )

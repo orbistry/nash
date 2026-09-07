@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-expression: "(interface, canonical.module.unions[0].value.kind)"
+expression: "(interface, canonical.module.unions[0].value.kind,\ncanonical.module.unions[0].value.context)"
 ---
 (
     Interface {
@@ -13,47 +13,114 @@ expression: "(interface, canonical.module.unions[0].value.kind)"
         values: [],
         aliases: [
             InterfaceAlias {
-                kind: KindScheme {
-                    bounds: [
-                        KindSet(
-                            8,
-                        ),
-                        KindSet(
-                            15,
-                        ),
-                        KindSet(
-                            6,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Arrow(
-                            Var(
-                                1,
-                            ),
-                            Var(
-                                2,
-                            ),
-                        ),
+                kind: Arrow(
+                    Arrow(
+                        Type,
+                        Type,
                     ),
-                    applications: [
-                        KindApplication {
-                            head: Var(
-                                0,
-                            ),
-                            arguments: [
-                                Var(
-                                    1,
-                                ),
-                            ],
-                            result: Var(
-                                2,
+                    Arrow(
+                        Type,
+                        Type,
+                    ),
+                ),
+                context: [
+                    Apply {
+                        head: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 28,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 30,
+                                },
+                            },
+                            value: Var(
+                                "f",
                             ),
                         },
-                    ],
-                },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 4,
+                                        column: 31,
+                                    },
+                                    end: Position {
+                                        line: 4,
+                                        column: 33,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Little",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 4,
+                                        column: 28,
+                                    },
+                                    end: Position {
+                                        line: 4,
+                                        column: 33,
+                                    },
+                                },
+                                value: App {
+                                    head: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 4,
+                                                column: 28,
+                                            },
+                                            end: Position {
+                                                line: 4,
+                                                column: 30,
+                                            },
+                                        },
+                                        value: Var(
+                                            "f",
+                                        ),
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 4,
+                                                    column: 31,
+                                                },
+                                                end: Position {
+                                                    line: 4,
+                                                    column: 33,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
                 name: "applied",
                 parameters: [
                     "f",
@@ -110,47 +177,52 @@ expression: "(interface, canonical.module.unions[0].value.kind)"
         ],
         unions: [
             InterfaceUnion {
-                kind: KindScheme {
-                    bounds: [
-                        KindSet(
-                            8,
-                        ),
-                        KindSet(
-                            15,
-                        ),
-                        KindSet(
-                            7,
-                        ),
-                    ],
-                    kind: Arrow(
-                        Var(
-                            0,
-                        ),
-                        Arrow(
-                            Var(
-                                1,
-                            ),
-                            Base(
-                                Term,
-                            ),
-                        ),
+                kind: Arrow(
+                    Arrow(
+                        Type,
+                        Type,
                     ),
-                    applications: [
-                        KindApplication {
-                            head: Var(
-                                0,
-                            ),
-                            arguments: [
-                                Var(
-                                    1,
-                                ),
-                            ],
-                            result: Var(
-                                2,
+                    Arrow(
+                        Type,
+                        Type,
+                    ),
+                ),
+                context: [
+                    Apply {
+                        head: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 25,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 27,
+                                },
+                            },
+                            value: Var(
+                                "f",
                             ),
                         },
-                    ],
-                },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 28,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 30,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
                 name: "wrap",
                 parameters: [
                     "f",
@@ -218,45 +290,50 @@ expression: "(interface, canonical.module.unions[0].value.kind)"
         ],
         binops: [],
     },
-    KindScheme {
-        bounds: [
-            KindSet(
-                8,
-            ),
-            KindSet(
-                15,
-            ),
-            KindSet(
-                7,
-            ),
-        ],
-        kind: Arrow(
-            Var(
-                0,
-            ),
-            Arrow(
-                Var(
-                    1,
-                ),
-                Base(
-                    Term,
-                ),
-            ),
+    Arrow(
+        Arrow(
+            Type,
+            Type,
         ),
-        applications: [
-            KindApplication {
-                head: Var(
-                    0,
-                ),
-                arguments: [
-                    Var(
-                        1,
-                    ),
-                ],
-                result: Var(
-                    2,
+        Arrow(
+            Type,
+            Type,
+        ),
+    ),
+    [
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 5,
+                        column: 34,
+                    },
+                    end: Position {
+                        line: 5,
+                        column: 36,
+                    },
+                },
+                value: Var(
+                    "f",
                 ),
             },
-        ],
-    },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 5,
+                            column: 37,
+                        },
+                        end: Position {
+                            line: 5,
+                            column: 39,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+            ],
+        },
+    ],
 )

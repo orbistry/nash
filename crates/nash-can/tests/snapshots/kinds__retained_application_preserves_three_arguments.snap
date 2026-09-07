@@ -6,69 +6,94 @@ description: "type apply3 'f 'a 'b 'c = Apply3 ('f 'a 'b 'c)"
     [
         (
             "apply3",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
+            Arrow(
+                Arrow(
+                    Type,
                     Arrow(
-                        Var(
-                            1,
-                        ),
+                        Type,
                         Arrow(
-                            Var(
-                                2,
-                            ),
-                            Arrow(
-                                Var(
-                                    3,
-                                ),
-                                Base(
-                                    Term,
-                                ),
-                            ),
+                            Type,
+                            Type,
                         ),
                     ),
                 ),
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            0,
+                Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Arrow(
+                            Type,
+                            Type,
                         ),
-                        arguments: [
-                            Var(
-                                1,
-                            ),
-                            Var(
-                                2,
-                            ),
-                            Var(
-                                3,
-                            ),
-                        ],
-                        result: Var(
-                            4,
+                    ),
+                ),
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 35,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 37,
+                            },
+                        },
+                        value: Var(
+                            "f",
                         ),
                     },
-                ],
-            },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 38,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 40,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 41,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 43,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 44,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 46,
+                                },
+                            },
+                            value: Var(
+                                "c",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
     ],
     [],

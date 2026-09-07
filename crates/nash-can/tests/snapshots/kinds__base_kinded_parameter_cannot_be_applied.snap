@@ -14,33 +14,15 @@ description: "type wrong 'f = Wrong 'f ('f Int)"
                 column: 33,
             },
         },
-        context: TypeArg {
-            head: Var(
-                "f",
-            ),
-            index: 0,
+        context: LittleField {
+            union: "wrong",
+            ctor: "Wrong",
+            index: 1,
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [
-                KindSet(
-                    7,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

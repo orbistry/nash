@@ -315,7 +315,11 @@ mod tests {
             arguments: bump.alloc_slice_fill_iter([&*just_arg_typ]),
         });
         let maybe_union: &Union = bump.alloc(Union {
-            kind: crate::kinds::test_big_kind(bump, 1),
+            kind: bump.alloc(nash_ast::Kind::Arrow(
+                &nash_ast::Kind::Type,
+                &nash_ast::Kind::Type,
+            )),
+            context: &[],
             name: bump.alloc(Located::at(Region::zero(), "Maybe")),
             parameters: bump.alloc_slice_fill_iter(["a"]),
             ctors: bump.alloc_slice_fill_iter([&*nothing_ctor, &*just_ctor]),

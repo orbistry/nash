@@ -12,18 +12,43 @@ Interface {
     values: [],
     aliases: [
         InterfaceAlias {
-            kind: KindScheme {
-                bounds: [],
-                kind: Arrow(
-                    Base(
-                        Big,
-                    ),
-                    Base(
-                        Big,
-                    ),
-                ),
-                applications: [],
-            },
+            kind: Arrow(
+                Type,
+                Type,
+            ),
+            context: [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 29,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 31,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
             name: "PublicAlias",
             parameters: [
                 "a",
@@ -46,18 +71,43 @@ Interface {
             visibility: Public,
         },
         InterfaceAlias {
-            kind: KindScheme {
-                bounds: [],
-                kind: Arrow(
-                    Base(
-                        Big,
-                    ),
-                    Base(
-                        Big,
-                    ),
-                ),
-                applications: [],
-            },
+            kind: Arrow(
+                Type,
+                Type,
+            ),
+            context: [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 30,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 32,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
             name: "PrivateAlias",
             parameters: [
                 "a",
@@ -82,13 +132,8 @@ Interface {
     ],
     unions: [
         InterfaceUnion {
-            kind: KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
+            kind: Type,
+            context: [],
             name: "PrivateUnion",
             parameters: [],
             ctors: [

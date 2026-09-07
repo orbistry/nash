@@ -6,25 +6,15 @@ description: "type Tree = Node (List Branch)\ntype alias Branch = Tree"
     [
         (
             "Tree",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
     [
         (
             "Branch",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Big,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
 )

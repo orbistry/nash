@@ -1,81 +1,62 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type app 'f 'a = App ('f 'a)\ntype tag 'a = Tag unit\ntype w = W (app (app tag) tag)"
+description: "type app 'f 'a = App ('f 'a)\ntype w = W (app (app list) int)"
 ---
 (
     [
         (
             "app",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Arrow(
-                        Var(
-                            1,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
+            Arrow(
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            0,
-                        ),
-                        arguments: [
-                            Var(
-                                1,
-                            ),
-                        ],
-                        result: Var(
-                            2,
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 23,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 25,
+                            },
+                        },
+                        value: Var(
+                            "f",
                         ),
                     },
-                ],
-            },
-        ),
-        (
-            "tag",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        15,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
-                ),
-                applications: [],
-            },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 26,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 28,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
         (
             "w",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
     [],

@@ -6,22 +6,17 @@ description: "type self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : '
     KindInfinite {
         region: Region {
             start: Position {
-                line: 8,
-                column: 14,
+                line: 5,
+                column: 25,
             },
             end: Position {
-                line: 8,
-                column: 23,
+                line: 5,
+                column: 27,
             },
         },
-        context: ImplHead {
-            trait_: QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Marker",
-            },
+        context: LittleField {
+            union: "self",
+            ctor: "Self",
             index: 0,
         },
     },

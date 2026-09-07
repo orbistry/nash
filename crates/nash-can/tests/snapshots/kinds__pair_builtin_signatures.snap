@@ -7,77 +7,161 @@ description: "type alias unConstrData = Data -> pair int (list Data)\ntype alias
     [
         (
             "unConstrData",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
         (
             "fstPair",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Arrow(
-                        Var(
-                            1,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
+            Arrow(
+                Type,
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [],
-            },
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 33,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 35,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 36,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 38,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
         (
             "sndPair",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Arrow(
-                        Var(
-                            1,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
+            Arrow(
+                Type,
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [],
-            },
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 33,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 35,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 36,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 38,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
         (
             "mkPairData",
-            KindScheme {
-                bounds: [],
-                kind: Base(
-                    Term,
-                ),
-                applications: [],
-            },
+            Type,
+            [],
         ),
     ],
 )

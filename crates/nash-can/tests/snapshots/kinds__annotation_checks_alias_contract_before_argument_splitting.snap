@@ -3,7 +3,7 @@ source: crates/nash-can/tests/kinds.rs
 expression: errors
 ---
 [
-    KindMismatch {
+    RepresentationMismatch {
         region: Region {
             start: Position {
                 line: 5,
@@ -14,31 +14,10 @@ expression: errors
                 column: 18,
             },
         },
-        context: TypeArg {
-            head: Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Restricted",
-                    },
-                    name: "restricted",
-                },
-            ),
-            index: 0,
+        context: Annotation {
+            name: "f",
         },
-        expected: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Const,
-            ),
-            applications: [],
-        },
+        required: Big,
+        actual: Const,
     },
 ]

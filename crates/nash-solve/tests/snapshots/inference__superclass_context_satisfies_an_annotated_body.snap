@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\ntrait Keep 'a => Strong 'a where\n    strong : 'a -> 'a\npresent : Strong 'a => 'a -> 'a\npresent x = keep x\n"
 ---
-present : forall (a : Any). Strong a => a -> a
+present : forall a. Strong a => a -> a

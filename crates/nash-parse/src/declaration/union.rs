@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn union_with_kind() {
-        assert_decl_snapshot!("type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))");
+        assert_decl_error_snapshot!("type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))");
     }
 
     #[test]

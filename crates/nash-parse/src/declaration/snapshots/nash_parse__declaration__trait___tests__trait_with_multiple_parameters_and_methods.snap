@@ -43,7 +43,7 @@ Trait(
                         },
                         value: "small",
                     },
-                    kind: None,
+                    repr: None,
                 },
                 TypeParam {
                     name: Located {
@@ -59,7 +59,7 @@ Trait(
                         },
                         value: "big",
                     },
-                    kind: None,
+                    repr: None,
                 },
             ],
             supers: [],

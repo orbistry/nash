@@ -52,19 +52,6 @@ expression: result.unwrap_err()
                     ],
                 },
             ],
-            kinds: ValueKinds {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kinds: [
-                    Var(
-                        0,
-                    ),
-                ],
-                applications: [],
-            },
         },
         first: Region {
             start: Position {

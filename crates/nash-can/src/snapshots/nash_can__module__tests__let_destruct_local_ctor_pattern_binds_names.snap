@@ -100,18 +100,43 @@ Module {
                                     name: "Wrap",
                                 },
                                 union: Union {
-                                    kind: KindScheme {
-                                        bounds: [],
-                                        kind: Arrow(
-                                            Base(
-                                                Big,
-                                            ),
-                                            Base(
-                                                Big,
-                                            ),
-                                        ),
-                                        applications: [],
-                                    },
+                                    kind: Arrow(
+                                        Type,
+                                        Type,
+                                    ),
+                                    context: [
+                                        Implied {
+                                            trait_: QualifiedName {
+                                                home: ModuleName {
+                                                    package: Some(
+                                                        PackageName {
+                                                            author: "nash",
+                                                            project: "core",
+                                                        },
+                                                    ),
+                                                    name: "Builtin",
+                                                },
+                                                name: "Big",
+                                            },
+                                            args: [
+                                                Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 4,
+                                                            column: 12,
+                                                        },
+                                                        end: Position {
+                                                            line: 4,
+                                                            column: 14,
+                                                        },
+                                                    },
+                                                    value: Var(
+                                                        "a",
+                                                    ),
+                                                },
+                                            ],
+                                        },
+                                    ],
                                     name: Located {
                                         region: Region {
                                             start: Position {
@@ -244,18 +269,43 @@ Module {
                 },
             },
             value: Union {
-                kind: KindScheme {
-                    bounds: [],
-                    kind: Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Base(
-                            Big,
-                        ),
-                    ),
-                    applications: [],
-                },
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 4,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 4,
+                                        column: 14,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
                 name: Located {
                     region: Region {
                         start: Position {

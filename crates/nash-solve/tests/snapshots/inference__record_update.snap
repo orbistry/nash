@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (bump)\n\nbump r = { r | x = 1 }\n"
 ---
-bump : forall (a : Any) b. FromInt a => { b | x : a } -> { b | x : a }
+bump : forall a b. FromInt a => { b | x : a } -> { b | x : a }

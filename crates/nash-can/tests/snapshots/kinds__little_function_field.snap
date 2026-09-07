@@ -6,22 +6,11 @@ description: "type thunk 'a = Thunk (unit -> 'a)"
     [
         (
             "thunk",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Term,
-                    ),
-                ),
-                applications: [],
-            },
+            Arrow(
+                Type,
+                Type,
+            ),
+            [],
         ),
     ],
     [],

@@ -1,20 +1,11 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(can.module.traits[0].value.kind,\nnash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),\nnash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),)"
+expression: "(can.module.traits[0].value.kinds,\nnash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),\nnash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),)"
 ---
 (
-    KindScheme {
-        bounds: [],
-        kind: Arrow(
-            Base(
-                Big,
-            ),
-            Base(
-                Term,
-            ),
-        ),
-        applications: [],
-    },
+    [
+        Type,
+    ],
     [
         NotFoundTrait {
             region: Region {

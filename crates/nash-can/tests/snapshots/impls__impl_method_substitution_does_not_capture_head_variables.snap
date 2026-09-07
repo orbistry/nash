@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "(annotation, free_vars, context, kinds)"
+expression: "(annotation, free_vars, context)"
 ---
 (
     Located {
@@ -108,21 +108,37 @@ expression: "(annotation, free_vars, context, kinds)"
         "$impl0",
         "b",
     ],
-    [],
-    ValueKinds {
-        bounds: [
-            KindSet(
-                7,
-            ),
-        ],
-        kinds: [
-            Var(
-                0,
-            ),
-            Base(
-                Big,
-            ),
-        ],
-        applications: [],
-    },
+    [
+        Implied {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "Big",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 19,
+                        },
+                    },
+                    value: Var(
+                        "b",
+                    ),
+                },
+            ],
+        },
+    ],
 )

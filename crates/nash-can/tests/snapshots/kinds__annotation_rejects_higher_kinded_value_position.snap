@@ -14,28 +14,13 @@ description: "f : ('f 'a, 'f) -> int\nf x = 1"
                 column: 15,
             },
         },
-        context: ValuePosition,
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    7,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
+        context: Annotation {
+            name: "f",
         },
-        actual: KindScheme {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
+        expected: Type,
+        actual: Arrow(
+            Type,
+            Type,
+        ),
     },
 ]

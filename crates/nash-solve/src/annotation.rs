@@ -65,29 +65,48 @@ pub fn to_annotation_with_context<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
     variable: Variable,
-    context: &[(QualifiedName<'a>, &[Variable])],
+    context: &[crate::preds::Body<'a>],
 ) -> &'a Annotation<'a> {
     let mut seen = BTreeSet::new();
     let mut user_names = get_var_names(bump, uf, &mut seen, variable, BTreeMap::new());
-    for (_, args) in context {
-        for arg in *args {
-            user_names = get_var_names(bump, uf, &mut seen, *arg, user_names);
+    for predicate in context {
+        for root in predicate.roots() {
+            user_names = get_var_names(bump, uf, &mut seen, root, user_names);
         }
     }
     let mut state = NameState::new(&user_names);
     let tipe = variable_to_can_type(bump, uf, &mut state, variable);
-    let context = bump.alloc_slice_fill_iter(context.iter().map(|(trait_, args)| {
-        nash_ast::Pred {
-            trait_: *trait_,
-            args: bump.alloc_slice_fill_iter(
-                args.iter()
-                    .map(|arg| variable_to_can_type(bump, uf, &mut state, *arg)),
-            ),
+    let context = bump.alloc_slice_fill_iter(context.iter().map(|body| {
+        let args = bump.alloc_slice_fill_iter(
+            body.args()
+                .iter()
+                .map(|arg| variable_to_can_type(bump, uf, &mut state, *arg)),
+        );
+        match body {
+            crate::preds::Body::Trait {
+                trait_,
+                hidden: false,
+                ..
+            } => nash_ast::Pred::Trait {
+                trait_: *trait_,
+                args,
+            },
+            crate::preds::Body::Trait {
+                trait_,
+                hidden: true,
+                ..
+            } => nash_ast::Pred::Implied {
+                trait_: *trait_,
+                args,
+            },
+            crate::preds::Body::Apply { head, .. } => nash_ast::Pred::Apply {
+                head: variable_to_can_type(bump, uf, &mut state, *head),
+                args,
+            },
         }
     }));
     bump.alloc(Annotation {
         context,
-        kinds: nash_ast::ValueKinds::unconstrained(bump, state.taken.len()),
         free_vars: bump.alloc_slice_fill_iter(state.taken.keys().copied()),
         typ: tipe,
     })
@@ -99,7 +118,7 @@ pub(crate) fn to_scheme_annotation<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
     variable: Variable,
-    context: &[(QualifiedName<'a>, &[Variable])],
+    context: &[crate::preds::Body<'a>],
     quantified: &[Variable],
 ) -> &'a Annotation<'a> {
     let annotation = to_annotation_with_context(bump, uf, variable, context);
@@ -112,14 +131,6 @@ pub(crate) fn to_scheme_annotation<'a>(
         })
         .collect();
     bump.alloc(Annotation {
-        kinds: nash_ast::ValueKinds::unconstrained(
-            bump,
-            annotation
-                .free_vars
-                .iter()
-                .filter(|name| names.contains(*name))
-                .count(),
-        ),
         free_vars: bump.alloc_slice_fill_iter(
             annotation
                 .free_vars
@@ -691,5 +702,65 @@ fn add_name<'a>(
                 index += 1;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod predicate_tests {
+    use super::*;
+    use crate::preds::Body;
+    use nash_constrain::type_::mk_flex_var;
+
+    #[test]
+    fn hidden_apply_roots_are_named_and_retained_in_the_scheme() {
+        let bump = Bump::new();
+        let mut uf = UnionFind::new();
+        let result = mk_flex_var(&mut uf);
+        let head = mk_flex_var(&mut uf);
+        let arg = mk_flex_var(&mut uf);
+        let context = [
+            Body::Apply {
+                head,
+                args: vec![arg],
+            },
+            Body::Trait {
+                trait_: nash_ast::primitives::ReprTrait::Big.qualified(),
+                args: vec![arg],
+                hidden: true,
+            },
+        ];
+        let annotation = to_annotation_with_context(&bump, &mut uf, result, &context);
+        assert_eq!(annotation.free_vars.len(), 3);
+        assert!(annotation.context.iter().all(|pred| pred.hidden()));
+        let nash_ast::Pred::Apply { head, args } = annotation.context[0] else {
+            panic!("Apply survives rendering")
+        };
+        assert_ne!(head.value, args[0].value);
+        assert_eq!(args[0].value, annotation.context[1].args()[0].value);
+    }
+
+    #[test]
+    fn scheme_quantifiers_exclude_captured_predicate_roots() {
+        let bump = Bump::new();
+        let mut uf = UnionFind::new();
+        let local = mk_flex_var(&mut uf);
+        let captured = mk_flex_var(&mut uf);
+        let context = [Body::Apply {
+            head: captured,
+            args: vec![local],
+        }];
+        let annotation = to_scheme_annotation(&bump, &mut uf, local, &context, &[local]);
+        assert_eq!(annotation.free_vars.len(), 1);
+        let nash_ast::Pred::Apply { head, args } = annotation.context[0] else {
+            panic!("Apply survives")
+        };
+        let CanType::Var(local_name) = args[0].value else {
+            panic!("local variable")
+        };
+        let CanType::Var(captured_name) = head.value else {
+            panic!("captured variable")
+        };
+        assert_eq!(annotation.free_vars, &[local_name]);
+        assert_ne!(local_name, captured_name);
     }
 }

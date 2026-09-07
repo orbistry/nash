@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (swap)\n\nswap ( a, b ) = ( b, a )\n"
 ---
-swap : forall (a : Any) (b : Any). ( a, b ) -> ( b, a )
+swap : forall a b. ( a, b ) -> ( b, a )

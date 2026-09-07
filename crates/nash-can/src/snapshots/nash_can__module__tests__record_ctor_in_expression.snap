@@ -73,23 +73,74 @@ Module {
                     },
                     index: 0,
                     annotation: Annotation {
-                        context: [],
+                        context: [
+                            Implied {
+                                trait_: QualifiedName {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "core",
+                                            },
+                                        ),
+                                        name: "Builtin",
+                                    },
+                                    name: "Big",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                ],
+                            },
+                            Implied {
+                                trait_: QualifiedName {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "core",
+                                            },
+                                        ),
+                                        name: "Builtin",
+                                    },
+                                    name: "Big",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        value: Var(
+                                            "b",
+                                        ),
+                                    },
+                                ],
+                            },
+                        ],
                         free_vars: [
                             "a",
                             "b",
                         ],
-                        kinds: ValueKinds {
-                            bounds: [],
-                            kinds: [
-                                Base(
-                                    Big,
-                                ),
-                                Base(
-                                    Big,
-                                ),
-                            ],
-                            applications: [],
-                        },
                         typ: Located {
                             region: Region {
                                 start: Position {
@@ -285,23 +336,77 @@ Module {
                 },
             },
             value: Alias {
-                kind: KindScheme {
-                    bounds: [],
-                    kind: Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Arrow(
-                            Base(
-                                Big,
-                            ),
-                            Base(
-                                Big,
-                            ),
-                        ),
+                kind: Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Type,
                     ),
-                    applications: [],
-                },
+                ),
+                context: [
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 35,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 37,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 48,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 50,
+                                    },
+                                },
+                                value: Var(
+                                    "b",
+                                ),
+                            },
+                        ],
+                    },
+                ],
                 name: Located {
                     region: Region {
                         start: Position {

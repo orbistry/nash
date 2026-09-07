@@ -7,22 +7,43 @@ description: "type alias xs ('a : Storable) = list 'a"
     [
         (
             "xs",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        3,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Base(
-                        Const,
-                    ),
-                ),
-                applications: [],
-            },
+            Arrow(
+                Type,
+                Type,
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 38,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 40,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
     ],
 )

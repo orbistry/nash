@@ -14,7 +14,9 @@ pub mod types;
 pub mod warning;
 
 pub use crate::entailment::Failure as EntailmentFailure;
-pub use crate::error::{BadArityContext, DuplicatePatternContext, Error, PossibleNames, VarKind};
+pub use crate::error::{
+    BadArityContext, DuplicatePatternContext, Error, KindContext, KindHead, PossibleNames, VarKind,
+};
 pub use crate::interface::{
     AliasVisibility, Annotations, Interface, InterfaceAlias, InterfaceBinop, InterfaceMethod,
     InterfaceTrait, InterfaceUnion, InterfaceValue, UnionVisibility, from_module,

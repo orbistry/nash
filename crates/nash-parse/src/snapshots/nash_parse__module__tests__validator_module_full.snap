@@ -378,7 +378,7 @@ Module {
                             },
                             value: "a",
                         },
-                        kind: None,
+                        repr: None,
                     },
                 ],
                 ctors: [

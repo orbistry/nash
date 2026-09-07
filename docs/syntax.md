@@ -22,7 +22,7 @@ exactly as in Elm.
 | `_` | wildcard pattern |
 | `_foo` | error: underscore-prefixed names are not variables (Elm rule kept) |
 
-Casing of a type name selects its base kind (see `kinds.md`): `Int`,
+Casing of a type name selects its representation (see `kinds.md`): `Int`,
 `List 'a`, `Data` are `Big`; `int`, `list 'a`, `bool`, and lowercase user
 ADTs such as `option 'a` are little. Type variables are always written with a
 leading `'`. A bare lowercase name in type position is therefore never a
@@ -130,23 +130,26 @@ inside a type is an error.
 type Datum = Datum { owner : Bytes, deadline : Int }   -- Big ADT, labeled fields
 type step 'a = Done 'a | Next int 'a                    -- little ADT
 type alias acc = { total : int, seen : list Int }       -- little record
-type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))          -- kind-annotated binder
+type cell ('a : Storable) = Cell (list 'a)              -- representation-annotated binder
 ```
 
 Changes from Elm:
 
 - The declared name may be lowercase (little type) or uppercase (Big type).
   `alias` cannot be a type name.
-- Type parameters are `'a` binders. A binder may carry a kind annotation
-  `('f : Big -> Big)` on `type`, `type alias` and `trait` parameters. Kinds
-  are exactly `Big`, `Const`, `Term`, `Storable` and arrows between them;
-  the parser rejects any other name.
+- Type parameters are `'a` binders. A binder may carry a representation
+  annotation `('a : Storable)` on `type`, `type alias` and `trait`
+  parameters and on type variables inside annotations. The names are
+  exactly `Big`, `Const`, `Term`, `Storable`; the parser rejects any other
+  name. The annotation is sugar for the context entry `Storable 'a`
+  ([kinds.md](kinds.md)). There is no syntax for kinds themselves; kinds
+  are inferred.
 - Constructors are still uppercase, for both Big and little types.
 - A constructor may take *labeled fields* (*new*, Aiken style): `Datum {
   owner : Bytes, deadline : Int }`. This is not a constructor holding an
   anonymous record: the fields are encoded flat (`Constr 0 [B, I]` for a Big
   type, `constr 0 [..]` for a little one) and follow the enclosing type's
-  kind rule. A constructor has either positional arguments or one `{ ... }`
+  representation rule. A constructor has either positional arguments or one `{ ... }`
   block, never both. `datum.owner` works on single-constructor types with
   labeled fields. Construction is `Datum { owner = o, deadline = d }`; the
   record update form `Datum { d | deadline = 0 }` is not supported in v1
@@ -182,7 +185,7 @@ trait Eq 'a => Ord 'a where
     lt : 'a -> 'a -> bool
     lt a b = compare a b == LT
 
-trait Functor ('f : Big -> Big) where
+trait Functor 'f where
     map : ('a -> 'b) -> 'f 'a -> 'f 'b
 
 trait (Ord 'k, ToData 'k) => Key 'k where
@@ -190,7 +193,7 @@ trait (Ord 'k, ToData 'k) => Key 'k where
 ```
 
 Head: optional superclass context, `=>`, trait name, one or more binders
-(plain `'a` or kind-annotated), `where`. Body: a layout block of methods. A
+(plain `'a` or representation-annotated), `where`. Body: a layout block of methods. A
 method is a signature `name : type`; a signature may be followed by a default
 definition with the same name (arguments and `=`, exactly like a let
 definition after its annotation). A definition without a preceding signature
@@ -510,7 +513,7 @@ type_head      = type_var | type_named ;               (* new *)
 type_term      = type_var | type_named | type_tuple | type_record ;
 type_named     = upper_var | lower_var | qualified_upper ;   (* changed *)
 type_tuple     = '(' ')' | '(' type_expr ')'
-               | '(' type_expr ':' kind ')'
+               | '(' type_expr ':' repr ')'
                | '(' type_expr ',' type_expr { ',' type_expr } ')' ;
 type_record    = '{' '}' | '{' type_field { ',' type_field } '}' ;  (* changed: no ext *)
 type_field     = lower_var ':' type_expr ;
@@ -519,9 +522,8 @@ type_scheme    = [ context '=>' ] type_expr ;          (* new *)
 context        = constraint | '(' constraint { ',' constraint } ')' ;
 constraint     = ( upper_var | qualified_upper ) type_term { type_term } ;
 
-type_param     = type_var | '(' type_var ':' kind ')' ; (* new *)
-kind           = kind_atom [ '->' kind ] ;
-kind_atom      = 'Big' | 'Const' | 'Term' | 'Storable' | '(' kind ')' ;
+type_param     = type_var | '(' type_var ':' repr ')' ; (* new *)
+repr           = 'Big' | 'Const' | 'Term' | 'Storable' ;   (* sugar for a context entry *)
 ```
 
 ### Expressions

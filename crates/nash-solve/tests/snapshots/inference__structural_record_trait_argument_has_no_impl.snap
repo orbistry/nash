@@ -37,5 +37,6 @@ description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a 'b where\n    ke
             },
         ],
         available: [],
+        because: [],
     },
 ]

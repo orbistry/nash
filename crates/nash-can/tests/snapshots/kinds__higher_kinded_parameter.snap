@@ -6,47 +6,52 @@ description: "type wrap 'f 'a = Wrap ('f 'a)"
     [
         (
             "wrap",
-            KindScheme {
-                bounds: [
-                    KindSet(
-                        8,
-                    ),
-                    KindSet(
-                        15,
-                    ),
-                    KindSet(
-                        7,
-                    ),
-                ],
-                kind: Arrow(
-                    Var(
-                        0,
-                    ),
-                    Arrow(
-                        Var(
-                            1,
-                        ),
-                        Base(
-                            Term,
-                        ),
-                    ),
+            Arrow(
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [
-                    KindApplication {
-                        head: Var(
-                            0,
-                        ),
-                        arguments: [
-                            Var(
-                                1,
-                            ),
-                        ],
-                        result: Var(
-                            2,
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 25,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 27,
+                            },
+                        },
+                        value: Var(
+                            "f",
                         ),
                     },
-                ],
-            },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 28,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 30,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
         ),
     ],
     [],

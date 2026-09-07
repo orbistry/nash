@@ -2,5 +2,5 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (point)\n\nkeep value = value\npoint = keep { x = 1, y = 2 }\n"
 ---
-keep : forall (a : Any). a -> a
-point : forall (a : Any) (a1 : Any). (FromInt a1, FromInt a) => { x : a1, y : a }
+keep : forall a. a -> a
+point : forall a a1. (FromInt a1, FromInt a) => { x : a1, y : a }

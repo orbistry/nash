@@ -24,23 +24,10 @@ expression: result.unwrap_err()
             },
             index: 0,
         },
-        expected: KindScheme {
-            bounds: [
-                KindSet(
-                    8,
-                ),
-            ],
-            kind: Var(
-                0,
-            ),
-            applications: [],
-        },
-        actual: KindScheme {
-            bounds: [],
-            kind: Base(
-                Big,
-            ),
-            applications: [],
-        },
+        expected: Arrow(
+            Type,
+            Type,
+        ),
+        actual: Type,
     },
 ]

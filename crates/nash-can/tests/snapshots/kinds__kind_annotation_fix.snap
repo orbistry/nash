@@ -1,28 +1,162 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))"
+description: "type Fix 'f = Fix ('f (Fix 'f))"
 ---
 (
     [
         (
             "Fix",
-            KindScheme {
-                bounds: [],
-                kind: Arrow(
-                    Arrow(
-                        Base(
-                            Big,
-                        ),
-                        Base(
-                            Big,
-                        ),
-                    ),
-                    Base(
-                        Big,
-                    ),
+            Arrow(
+                Arrow(
+                    Type,
+                    Type,
                 ),
-                applications: [],
-            },
+                Type,
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 20,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 22,
+                            },
+                        },
+                        value: Var(
+                            "f",
+                        ),
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 24,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 30,
+                                },
+                            },
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Main",
+                                    },
+                                    name: "Fix",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 28,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 30,
+                                            },
+                                        },
+                                        value: Var(
+                                            "f",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 20,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 31,
+                                },
+                            },
+                            value: App {
+                                head: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 20,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 22,
+                                        },
+                                    },
+                                    value: Var(
+                                        "f",
+                                    ),
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 24,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 30,
+                                            },
+                                        },
+                                        value: Named {
+                                            reference: QualifiedName {
+                                                home: ModuleName {
+                                                    package: None,
+                                                    name: "Main",
+                                                },
+                                                name: "Fix",
+                                            },
+                                            args: [
+                                                Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 5,
+                                                            column: 28,
+                                                        },
+                                                        end: Position {
+                                                            line: 5,
+                                                            column: 30,
+                                                        },
+                                                    },
+                                                    value: Var(
+                                                        "f",
+                                                    ),
+                                                },
+                                            ],
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            ],
         ),
     ],
     [],
