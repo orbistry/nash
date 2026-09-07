@@ -97,6 +97,10 @@ little `string` module.
 
 ## Default imports
 
+Default imports are deferred to Plan 12's stdlib integration. Plan 03 uses
+explicit imports of real core modules; it does not install partial defaults
+or placeholder modules. The list below specifies the eventual behavior.
+
 Every module outside `nash/core` starts with these imports, prepended by
 `nash-can` (Elm's `Elm.Compiler.Imports.defaults`,
 `elm/compiler/src/Elm/Compiler/Imports.hs`). `exposing (Trait)` exposes
@@ -274,7 +278,7 @@ not repeated here. What each module adds beyond its trait:
 | `Show` | `int`, `bytes` (hex), `string`, `bool`, `unit`, `list 'a`, `pair`, `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Num`, `Integral` | `int`, `Int` |
 | `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
-| `Functor` | `list`, `List`, `pair 'k`; each applied element must satisfy its constructor's kind bounds. The pair impl requires resolution of the construction prerequisite below. |
+| `Functor` | `list`, `List`; each applied element must satisfy its constructor's kind bounds. No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
 | `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
@@ -288,8 +292,9 @@ and `result 'e`, and Applicative/Monad for `option` and `result 'e`.
 Big List mapping uses an explicitly typed little-list helper between Lift
 conversions, keeping the intermediate container unambiguous. Builtin list
 mapping can change element kinds within Storable; it cannot produce Term
-elements. The required `pair 'k` Functor remains unresolved: `mkPairData`
-constructs only `pair Data Data`, not the arbitrary pair needed by `map`.
+elements. Builtin pair has no Functor impl: `mkPairData` constructs only
+`pair Data Data`, not the arbitrary pair needed by `map`. Pair.fst,
+Pair.snd and Pair.make remain the specified projection/construction helpers.
 The `fuzzer` impls require the real Fuzz implementation from plan 10.
 
 ### Equality at the Big boundary

@@ -12,6 +12,12 @@ type solving, walks the canonical AST, and reports:
 - `Redundant` — a `case` branch can never match because earlier branches
   already cover it.
 
+Confirmed design: use Maranget's algorithm for missing patterns, with Elm's
+local `Nitpick` folder as the implementation reference. In particular,
+`PatternMatches.hs::isExhaustive` constructs missing-pattern witnesses and
+`isUseful`/`toNonRedundantRows` detect branches covered by earlier rows.
+This decision is spec-only during Plan 03; do not implement this pass there.
+
 Nash additions over Elm: `bytes` literal patterns, `Data` constructor
 patterns (`Constr tag fields | Map kvs | List xs | I n | B bs`), and Big /
 little ADTs (identical for this check — representation never changes the

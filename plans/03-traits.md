@@ -2730,6 +2730,17 @@ reports the right errors.
 
 ## Chunk 12: the core trait hierarchy in `core/`
 
+### Approved scope clarification
+
+Builtin pair has no Functor impl; its projection and Data-only construction
+helpers remain. Default imports are deferred to Plan 12, with explicit
+imports for Plan 03 acceptance. Do not add partial defaults or placeholders.
+Fuzzer impls land with the real Fuzz implementation after Plan 10. The full
+overview validator example is a later integration check because it needs
+Cardano modules, deriving, and the deferred defaults; it is not a Plan 03
+completion gate. Plan 03 must verify the shipping trait hierarchy, operators,
+literal defaulting and option/result do through the real core CLI fixture.
+
 ### Current acceptance audit
 
 The progress entries below record individual steps, not completion of this
@@ -2739,10 +2750,10 @@ declarations with explicit imports. Remaining requirements are:
 | Requirement | Current evidence / remaining work |
 |---|---|
 | Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses disjoint Big/Const element bounds. |
-| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option/result; Applicative/Monad support option/result. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad. Pair Functor needs a construction decision; fuzzer needs the real Plan 10 implementation. |
+| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option/result; Applicative/Monad support option/result. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Fuzzer impls are deferred with the real Fuzz implementation. |
 | Core option do acceptance | The real core fixture compiles option and result do blocks, operator calls, mixed-kind builtin list mapping and List Int to List Packet mapping. Runtime execution remains a backend prerequisite. |
-| Default imports | Not implemented. Missing specified modules: Derive, Debug, Int, Bytes, String, List, Map, Fuzz, Test. Later-plan modules require explicit prerequisites, not empty interfaces or silently omitted imports. Defaults must participate in dependency discovery before sequential compilation. |
-| Overview example up to tests | Not currently executable: Cardano.Tx and deriving require later work; the sketch has undefined currentSlot/signedBy, as well as later field-access/validator features. Its integer comparison now uses real builtins and its Big Redeemer uses automatic Eq. This acceptance item is not proved by the core fixture. |
+| Default imports | User-approved deferral to Plan 12. Explicit imports are required for Plan 03. Eventual defaults must participate in dependency discovery before sequential compilation. |
+| Overview example up to tests | Later integration requirement: Cardano.Tx, deriving, field access, validator features and defaults require later work; the sketch also has undefined currentSlot/signedBy. Plan 03 acceptance uses the real core fixture with explicit imports. |
 | Final release verification | Refreshed at 1735e2f9 with Sampo 0.21.0. Release planning succeeds; all 28 internal dependency requirements match prepared versions. Publish dry-run verifies source, then ast is blocked by unpublished source 0.5.0. Repeat after any further crate changes; downstream package verification is not established. |
 
 Default-import integration also needs core source availability: the current
@@ -3073,8 +3084,10 @@ Tests: a driver test compiling `core/` plus a `Main.nash` using `==`, `<`,
 `+`, `show`, a `do` block over `option`, and literal defaulting, with no
 trait declarations in `Main`.
 
-Done when: `nash check` on the example in `docs/overview.md` type-checks
-up to the `tests` block.
+Done when: `nash check tests/core` type-checks the shipping core hierarchy
+with explicit imports, including operators, literal defaulting and option/result
+do, and the focused cross-module and rejection checks pass. Default imports
+and the complete overview validator example remain later integration work.
 
 ---
 

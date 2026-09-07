@@ -102,6 +102,12 @@ scheme `k1 -> k2` and each `impl` instantiates it (`List : Big -> Big`,
 
 ## Syntax in one page
 
+Missing and unreachable match cases are checked with Maranget's pattern-matrix
+algorithm, following Elm's `Nitpick/PatternMatches.hs`. After type solving,
+exhaustiveness checking reports missing-pattern examples and usefulness
+checking reports redundant branches. This is Plan 05 work; diagnostic prose
+and rendering belong to Plan 06.
+
 ```elm
 validator module Vesting exposing (main)
 
