@@ -633,3 +633,43 @@ fn little_record_field_rejects_an_arrow_kind() {
 fn kind_annotation_term() {
     assert_kinds_snapshot!("type wrapper ('a : Term) = Wrap 'a");
 }
+
+#[test]
+fn retained_self_application_terminates() {
+    assert_kinds_snapshot!("type self 'f = Self ('f 'f)\ntype w = W (self self)");
+}
+
+#[test]
+fn retained_self_application_rejects_a_term_argument() {
+    assert_kind_error_snapshot!(
+        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (self (self tag))"
+    );
+}
+
+#[test]
+fn retained_self_application_in_value_annotations() {
+    assert_kinds_snapshot!(
+        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\nwitness : self tag\nwitness = Self (Tag ())\nidentity : self self -> self self\nidentity x = x"
+    );
+}
+
+#[test]
+fn retained_self_application_in_impl_heads() {
+    assert_kinds_snapshot!(
+        "type self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()"
+    );
+}
+
+#[test]
+fn retained_nested_self_application_terminates() {
+    assert_kind_error_snapshot!(
+        "type g 'f = G ('f ('f 'f))\ntype w = W (g g)\ntype alias Count = int"
+    );
+}
+
+#[test]
+fn retained_finite_nested_constructor_application() {
+    assert_kinds_snapshot!(
+        "type app 'f 'a = App ('f 'a)\ntype tag 'a = Tag unit\ntype w = W (app (app tag) tag)"
+    );
+}

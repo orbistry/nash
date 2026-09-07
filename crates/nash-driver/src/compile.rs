@@ -662,6 +662,18 @@ mod kind_tests {
     }
 
     #[tokio::test]
+    async fn imported_retained_self_application_terminates() {
+        for field in ["a a", "local a"] {
+            let result = compile_pair(
+                "module Types exposing (type a)\ntype a 'f = A ('f 'f)\n",
+                &format!("module Main exposing (..)\nimport Types exposing (type a)\ntype local 'f = Local ('f 'f)\ntype b = B ({field})\n"),
+            ).await;
+            assert_eq!(result.success, 2, "{result:?}");
+            assert_eq!(result.failed, 0, "{result:?}");
+        }
+    }
+
+    #[tokio::test]
     async fn imported_big_alias_is_a_valid_list_element() {
         let result = compile_pair(
             "module Types exposing (Item)\n\nimport Builtin exposing (..)\n\ntype alias Item = Int\n",

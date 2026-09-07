@@ -1,0 +1,80 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type app 'f 'a = App ('f 'a)\ntype tag 'a = Tag unit\ntype w = W (app (app tag) tag)"
+---
+(
+    [
+        (
+            "app",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        15,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Arrow(
+                        Var(
+                            1,
+                        ),
+                        Base(
+                            Term,
+                        ),
+                    ),
+                ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        argument: Var(
+                            1,
+                        ),
+                        result: Var(
+                            2,
+                        ),
+                    },
+                ],
+            },
+        ),
+        (
+            "tag",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        15,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+                applications: [],
+            },
+        ),
+        (
+            "w",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+                applications: [],
+            },
+        ),
+    ],
+    [],
+)

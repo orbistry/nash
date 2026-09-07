@@ -71,6 +71,67 @@ disposable; support only the current format.
 - [x] Chunk 6: user parameter annotations. Tests cover Fix, Storable, base/arrow mismatches at annotation regions, separate bounded occurrences, narrowed alias applications, and constraints from all recursive-group uses. Formatting, strict Clippy, snapshot tests, workspace tests, and snapshot hygiene pass.
 - [x] Chunk 7: changeset, final acceptance audit, and SPEC. Final record-field error snapshots check context and source regions; an explicit Term annotation has a success snapshot. All final gates pass.
 
+### Follow-up: retained constructor settlement termination
+
+- [x] Close the retained-obligation self-application hang and verify acceptance.
+
+Use coinductive known-head application memoization within each settlement.
+Compare the constructor scheme and captured arguments through `same_kind`,
+plus the supplied argument; unify repeated results. Keep constructor schemes
+and independent Big/Const/Term bounds. Protect direct coherence settlement as
+well as settlement entered through `unify`, and discard queued replay work
+when settlement fails so it cannot produce a second error in another context.
+
+The bounded probes do not support replacing this with a scheme-only occurs
+check: `app (app tag) tag` is finite and legal, while `g g` for
+`type g 'f = G ('f ('f 'f))` already reaches `KindMismatch` with the memo.
+No production step budget or scheme-recursion restriction is introduced.
+Elm's `Type/Unify.hs` and `Type/Occurs.hs` remain references for structural
+unification and occurs checks; retained constructor obligations are Nash's
+additional machinery.
+
+Before the fix, the engine regression exhausted a test-only 256-pass limit.
+The declaration, value annotation, impl head, and imported driver regressions
+each timed out after three seconds in separately bounded test processes.
+`self (self tag)` already rejected with a kind mismatch; it is a preservation
+check, not evidence of the original hang.
+
+Verification (2026-09-07):
+
+- Ten new regression tests: three engine invariants, six canonicalization
+  snapshots, and one driver test with two imported/local variants. All six
+  new snapshots were reviewed before acceptance; no existing snapshot changed.
+- `cargo fmt --all`, strict Clippy (`--all-targets --all-features -- -D warnings`),
+  `cargo insta test`, `cargo insta test --unreferenced reject`, and `cargo test`
+  pass. Each full test run reports 1,947 passed, zero failed, three ignored.
+  Snapshot hygiene finds no pending or unreferenced snapshots.
+- Real CLI acceptance passes for `pass/abstract-self-application`,
+  `pass/retained-self-application` (two modules, declarations, annotations,
+  impl heads, and finite nested applications), and `pass/core-do` (including
+  Functor mapping from `option unit` to `option (unit, unit)`).
+  `fail/infinite-kind/infinite` exits 1 with `KindInfinite`, verifying the
+  diagnostic example below and in the design doc.
+- Seventeen additional isolated CLI probes terminate with their expected
+  outcomes. These include self and mutual/partial application, `g g`, alias
+  self-application, and Storable rejection through abstraction, annotations,
+  aliases, and partial application. The `g g` snapshot now accumulates an
+  independent alias-casing error without replaying the failed obligation in
+  the enclosing field's context.
+- Sampo 0.21.0 `release --dry-run` passes in an isolated checkout on `main`
+  (Sampo rejects the original detached Git HEAD). After materializing the
+  release only in that checkout, `publish --dry-run --cargo-args=--allow-dirty`
+  preserves the order source -> ast -> parse -> can -> constrain -> solve ->
+  driver -> cli and packages/verifies nash-source 0.5.0. It then stops at
+  nash-ast because nash-source 0.5.0 is not yet on crates.io. Remaining package
+  publish verification is therefore incomplete; nothing was uploaded.
+- Read-only implementation and coverage reviews found no actionable issues.
+
+Limits: this memo resolves repeated known-head obligations; it is not a
+production resource budget or a proof of termination for every possible
+inference graph. These are front-end checks, not runtime-encoding evidence.
+Plan 04 and the deferred exhaustiveness, rendering, and codegen work remain
+unchanged. The Sampo changeset is `kind-settle-termination.md` (nash-can patch).
+
 ### Pair kind correction
 
 The builtin `pair` has two independent Storable component bounds. This admits

@@ -49,6 +49,8 @@ pub struct Infer<'a> {
     nodes: Vec<Node<'a>>,
     applications: Vec<Application<'a>>,
     settling: bool,
+    #[cfg(test)]
+    settle_steps_remaining: Option<usize>,
 }
 
 impl<'a> Infer<'a> {
@@ -58,6 +60,8 @@ impl<'a> Infer<'a> {
             nodes: Vec::new(),
             applications: Vec::new(),
             settling: false,
+            #[cfg(test)]
+            settle_steps_remaining: None,
         }
     }
 
@@ -219,7 +223,30 @@ impl<'a> Infer<'a> {
     }
 
     fn settle(&mut self) -> Result<(), Mismatch<'a>> {
+        // Coherence also enters here directly, without unify's guard. Keep
+        // nested unifications in this settlement and restore the guard on error.
+        let settling = std::mem::replace(&mut self.settling, true);
+        let result = self.settle_inner();
+        if result.is_err() {
+            // The failed pass discards its pending work. Discard newly opened
+            // obligations too, so the next source check cannot replay this error.
+            self.applications.clear();
+        }
+        self.settling = settling;
+        result
+    }
+
+    fn settle_inner(&mut self) -> Result<(), Mismatch<'a>> {
+        // Keep known applications across passes, including while their retained
+        // obligations are being opened. Repeated evidence shares its result;
+        // separate arguments still instantiate constructor bounds independently.
+        let mut known: Vec<Application<'a>> = Vec::new();
         loop {
+            #[cfg(test)]
+            if let Some(remaining) = &mut self.settle_steps_remaining {
+                assert!(*remaining > 0, "settle exceeded test step limit");
+                *remaining -= 1;
+            }
             let pending = std::mem::take(&mut self.applications);
             let mut progress = false;
             let mut retained: Vec<Application<'a>> = Vec::new();
@@ -237,6 +264,14 @@ impl<'a> Infer<'a> {
                     continue;
                 }
                 progress = true;
+                if let Some(previous) = known.iter().copied().find(|previous| {
+                    self.same_kind(previous.head, application.head)
+                        && self.same_kind(previous.argument, application.argument)
+                }) {
+                    self.unify(previous.result, application.result)?;
+                    continue;
+                }
+                known.push(application);
                 let (parameter, result) = self.apply(application.head)?;
                 self.unify(parameter, application.argument)?;
                 self.unify(result, application.result)?;
@@ -561,6 +596,108 @@ impl<'a> Infer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn self_scheme() -> KindScheme<'static> {
+        KindScheme {
+            bounds: &[KindSet::ARROW, KindSet::ANY],
+            kind: &Kind::Arrow(&Kind::Var(0), &Kind::Base(BaseKind::Term)),
+            applications: &[KindApplication {
+                head: &Kind::Var(0),
+                argument: &Kind::Var(0),
+                result: &Kind::Var(1),
+            }],
+        }
+    }
+
+    #[test]
+    fn retained_self_application_settles_from_unify_and_direct_call() {
+        let bump = Bump::new();
+        for direct in [false, true] {
+            for base in [BaseKind::Term, BaseKind::Big] {
+                let mut infer = Infer::new(&bump);
+                infer.settle_steps_remaining = Some(256);
+                let constructor = infer.constructor(self_scheme());
+                let result = infer.fresh_k(KindSet::of(base));
+                let settled = if direct {
+                    infer.applications.push(Application {
+                        head: constructor,
+                        argument: constructor,
+                        result,
+                    });
+                    infer.settle()
+                } else {
+                    let head = infer.fresh_k(KindSet::ARROW);
+                    infer.applications.push(Application {
+                        head,
+                        argument: head,
+                        result,
+                    });
+                    infer.unify(head, constructor)
+                };
+                assert_eq!(settled.is_ok(), base == BaseKind::Term);
+                if settled.is_ok() {
+                    assert_eq!(infer.generalize(result).kind, &Kind::Base(BaseKind::Term));
+                }
+                assert!(infer.applications.is_empty());
+                assert!(!infer.settling);
+            }
+        }
+    }
+
+    #[test]
+    fn settled_applications_share_results_only_for_the_same_argument() {
+        let bump = Bump::new();
+        for same_argument in [false, true] {
+            let mut infer = Infer::new(&bump);
+            let constructor = infer.constructor(KindScheme {
+                bounds: &[KindSet::LITTLE],
+                kind: &Kind::Arrow(&Kind::Var(0), &Kind::Var(0)),
+                applications: &[],
+            });
+            let first = infer.fresh_k(KindSet::LITTLE);
+            let second = if same_argument {
+                first
+            } else {
+                infer.fresh_k(KindSet::LITTLE)
+            };
+            for (argument, base) in [(first, BaseKind::Const), (second, BaseKind::Term)] {
+                infer.applications.push(Application {
+                    head: constructor,
+                    argument,
+                    result: bump.alloc(K::Base(base)),
+                });
+            }
+            assert_eq!(infer.settle().is_ok(), !same_argument);
+            assert!(!infer.settling, "errors must restore the settlement guard");
+            assert!(infer.applications.is_empty());
+        }
+    }
+
+    #[test]
+    fn settled_partial_constructors_keep_their_captured_arguments() {
+        let bump = Bump::new();
+        let mut infer = Infer::new(&bump);
+        // The kind of `type alias first 'a 'b = 'a`.
+        let constructor = infer.constructor(KindScheme {
+            bounds: &[KindSet::LITTLE, KindSet::ALL],
+            kind: &Kind::Arrow(&Kind::Var(0), &Kind::Arrow(&Kind::Var(1), &Kind::Var(0))),
+            applications: &[],
+        });
+        let mut pending = Vec::new();
+        for base in [BaseKind::Const, BaseKind::Term] {
+            let (parameter, partial) = infer.apply(constructor).unwrap();
+            let captured = bump.alloc(K::Base(base));
+            infer.unify(parameter, captured).unwrap();
+            pending.push(Application {
+                head: partial,
+                argument: bump.alloc(K::Base(BaseKind::Const)),
+                result: captured,
+            });
+        }
+        infer.applications.extend(pending);
+        infer.settle().unwrap();
+        assert!(infer.applications.is_empty());
+    }
 
     #[test]
     fn kind_proofs_reuse_existential_witnesses_without_restricting_them() {

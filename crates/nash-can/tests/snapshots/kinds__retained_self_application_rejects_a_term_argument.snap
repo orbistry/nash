@@ -1,0 +1,63 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (self (self tag))"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 19,
+            },
+            end: Position {
+                line: 7,
+                column: 27,
+            },
+        },
+        context: TypeArg {
+            head: Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "self",
+                },
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+                KindSet(
+                    7,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [
+                KindApplication {
+                    head: Var(
+                        0,
+                    ),
+                    argument: Var(
+                        0,
+                    ),
+                    result: Var(
+                        1,
+                    ),
+                },
+            ],
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Term,
+            ),
+            applications: [],
+        },
+    },
+]

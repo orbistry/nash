@@ -1,0 +1,53 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type self 'f = Self ('f 'f)\ntype w = W (self self)"
+---
+(
+    [
+        (
+            "self",
+            KindScheme {
+                bounds: [
+                    KindSet(
+                        8,
+                    ),
+                    KindSet(
+                        7,
+                    ),
+                ],
+                kind: Arrow(
+                    Var(
+                        0,
+                    ),
+                    Base(
+                        Term,
+                    ),
+                ),
+                applications: [
+                    KindApplication {
+                        head: Var(
+                            0,
+                        ),
+                        argument: Var(
+                            0,
+                        ),
+                        result: Var(
+                            1,
+                        ),
+                    },
+                ],
+            },
+        ),
+        (
+            "w",
+            KindScheme {
+                bounds: [],
+                kind: Base(
+                    Term,
+                ),
+                applications: [],
+            },
+        ),
+    ],
+    [],
+)

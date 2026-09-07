@@ -188,6 +188,25 @@ the scheme and replay those arguments before checking the new argument.
 This preserves dependent results such as `forall k:Little. k -> k` and
 relationships between parameter positions without equating separate uses.
 
+### Self-application and retained obligations
+
+`type self 'f = Self ('f 'f)` retains `Apply(k, k, r)` instead of
+constructing a cyclic arrow kind. Both `self tag` (for a phantom
+`type tag 'a = Tag unit`) and `self self` are valid. The latter resolves
+coinductively: during one settlement, a repeated known-head application
+unifies its result with the first application instead of opening the scheme
+again. Equality compares the scheme, captured argument kinds, and the supplied
+argument kind after resolving variables. Equal bounds alone do not make two
+variables equal. Distinct applications still check constructor bounds
+independently.
+
+Scheme identity alone is not a cycle: with `type app 'f 'a = App ('f 'a)`,
+`app (app tag) tag` is finite and valid because the inner application has a
+captured `tag`. Conversely, `self (self tag)` is invalid because `self tag`
+has kind `Term`, where `self` requires a constructor. Structural cycles in a
+monomorphic recursive group, such as `type bad 'f = Bad (bad bad)`, still
+report `KindInfinite` through the ordinary occurs check.
+
 ## Kind inference
 
 Inference is Haskell 98 style, run in `nash-can` after type declarations are

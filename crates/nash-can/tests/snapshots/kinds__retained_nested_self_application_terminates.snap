@@ -1,0 +1,78 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "type g 'f = G ('f ('f 'f))\ntype w = W (g g)\ntype alias Count = int"
+---
+[
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 15,
+            },
+            end: Position {
+                line: 6,
+                column: 16,
+            },
+        },
+        context: TypeArg {
+            head: Named(
+                QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "g",
+                },
+            ),
+            index: 0,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Term,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [
+                KindSet(
+                    8,
+                ),
+            ],
+            kind: Var(
+                0,
+            ),
+            applications: [],
+        },
+    },
+    KindMismatch {
+        region: Region {
+            start: Position {
+                line: 7,
+                column: 20,
+            },
+            end: Position {
+                line: 7,
+                column: 23,
+            },
+        },
+        context: AliasCasing {
+            alias: "Count",
+            big: true,
+        },
+        expected: KindScheme {
+            bounds: [],
+            kind: Base(
+                Big,
+            ),
+            applications: [],
+        },
+        actual: KindScheme {
+            bounds: [],
+            kind: Base(
+                Const,
+            ),
+            applications: [],
+        },
+    },
+]
