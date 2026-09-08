@@ -677,10 +677,10 @@ pub struct RepresentationFailure<'a> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct GroupReference<'a> {
-    pub name: QualifiedName<'a>,
-    pub args: &'a [&'a Located<Type<'a>>],
-    pub region: nash_region::Region,
+struct GroupReference<'a> {
+    name: QualifiedName<'a>,
+    args: &'a [&'a Located<Type<'a>>],
+    region: nash_region::Region,
 }
 
 /// Formation and context reduction use one path for declarations and signatures.
@@ -689,7 +689,7 @@ pub struct Formation<'a, 'env> {
     bump: &'a Bump,
     env: &'env KindEnv<'a>,
     group: &'env std::collections::BTreeSet<QualifiedName<'a>>,
-    pub references: Vec<GroupReference<'a>>,
+    references: Vec<GroupReference<'a>>,
     pub predicates: Vec<Pred<'a>>,
     keys: std::collections::HashSet<nash_ast::PredicateKey<'a>>,
 }
@@ -917,15 +917,15 @@ pub fn predicate_variables(pred: Pred<'_>) -> std::collections::BTreeSet<&str> {
     result
 }
 
-pub struct ContextInput<'a> {
-    pub name: QualifiedName<'a>,
-    pub parameters: &'a [&'a str],
-    pub predicates: Vec<Pred<'a>>,
-    pub references: Vec<GroupReference<'a>>,
+struct ContextInput<'a> {
+    name: QualifiedName<'a>,
+    parameters: &'a [&'a str],
+    predicates: Vec<Pred<'a>>,
+    references: Vec<GroupReference<'a>>,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum ContextFailure<'a> {
+enum ContextFailure<'a> {
     Representation(RepresentationFailure<'a>),
     IrregularRecursion {
         reference: GroupReference<'a>,
@@ -936,7 +936,7 @@ pub enum ContextFailure<'a> {
 /// Close one SCC under substitution. Each (reference, predicate) pair is
 /// processed once. New relevant parameters are checked as their predicates
 /// enter the queue; there is no iteration limit.
-pub fn close_contexts<'a>(
+fn close_contexts<'a>(
     bump: &'a Bump,
     env: &KindEnv<'a>,
     inputs: &[ContextInput<'a>],
@@ -1296,13 +1296,13 @@ mod formation_tests {
     }
 }
 
-pub struct DeclarationKinds<'a>(BTreeMap<&'a str, (&'a Kind<'a>, &'a [Pred<'a>])>);
+pub(crate) struct DeclarationKinds<'a>(BTreeMap<&'a str, (&'a Kind<'a>, &'a [Pred<'a>])>);
 
 impl<'a> DeclarationKinds<'a> {
-    pub fn kind(&self, name: &str) -> &'a Kind<'a> {
+    pub(crate) fn kind(&self, name: &str) -> &'a Kind<'a> {
         self.0[name].0
     }
-    pub fn context(&self, name: &str) -> &'a [Pred<'a>] {
+    pub(crate) fn context(&self, name: &str) -> &'a [Pred<'a>] {
         self.0[name].1
     }
 }

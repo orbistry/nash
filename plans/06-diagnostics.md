@@ -2356,7 +2356,7 @@ otherwise an `impl` skeleton.
 `missing_impl_from_string_literal` (`add "one" 2`), `missing_constraint`,
 `ambiguous_literal`, `polymorphic_recursion`, `orphan_impl`,
 `overlapping_impls`, `missing_method`, `unknown_method`,
-`missing_superclass`, `bad_instance_head`, `missing_const_constraint_for_list_element`,
+`missing_superclass`, `bad_instance_head`, `missing_storable_constraint_for_list_element`,
 `kind_mismatch_type_arg`, `non_function_kind_application`.
 
 **Done when** example 2's snapshot matches `docs/diagnostics.md`.

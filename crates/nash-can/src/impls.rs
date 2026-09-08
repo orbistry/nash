@@ -3,7 +3,7 @@ use crate::error::BadHead;
 use crate::{Error, kinds, module, types, warning::Warning};
 use bumpalo::Bump;
 use nash_ast::{Annotation, Head, Impl, ImplKey, Pred, QualifiedName, Type};
-use nash_region::{Located, Region};
+use nash_region::Located;
 use nash_source::Type as SourceType;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -175,12 +175,11 @@ pub(crate) fn canonicalize<'a>(
                 trait_,
             }]);
         }
-        let mut variables = BTreeMap::new();
-        let mut order = Vec::new();
+        let mut variables = Vec::new();
         let mut heads = Vec::new();
         let mut head_types = Vec::new();
         for arg in predicate.args {
-            let (head, typ) = canonicalize_head(bump, env, arg, &mut variables, &mut order)?;
+            let (head, typ) = canonicalize_head(bump, env, arg, &mut variables)?;
             heads.push(head);
             head_types.push(typ);
         }
@@ -215,7 +214,7 @@ pub(crate) fn canonicalize<'a>(
             for argument in predicate.types() {
                 let mut free = BTreeSet::new();
                 types::collect_free_vars(&argument.value, &mut free);
-                if let Some(name) = free.iter().find(|name| !variables.contains_key(**name)) {
+                if let Some(name) = free.iter().find(|name| !variables.contains(*name)) {
                     return Err(vec![Error::ImplContextVarNotInHead {
                         region: argument.region,
                         name,
@@ -328,7 +327,7 @@ pub(crate) fn canonicalize<'a>(
         result.push(&*bump.alloc(Located::at(
             source.region,
             Impl {
-                variables: bump.alloc_slice_fill_iter(order),
+                variables: bump.alloc_slice_fill_iter(variables),
                 trait_,
                 context,
                 heads: bump.alloc_slice_fill_iter(heads),
@@ -344,8 +343,7 @@ fn canonicalize_head<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
     typ: &'a Located<SourceType<'a>>,
-    variables: &mut BTreeMap<&'a str, Region>,
-    order: &mut Vec<&'a str>,
+    variables: &mut Vec<&'a str>,
 ) -> Result<CanonicalHead<'a>, Vec<Error<'a>>> {
     let reason = match typ.value.unannotated() {
         SourceType::Var(_) => Some(BadHead::BareVariable),
@@ -361,24 +359,22 @@ fn canonicalize_head<'a>(
         }]);
     }
     let canonical = types::canonicalize_type(bump, env, typ)?;
-    let head = canonicalize_pattern(bump, canonical, variables, order)?;
+    let head = canonicalize_pattern(bump, canonical, variables)?;
     Ok((Located::at(typ.region, head), canonical))
 }
 
-pub(crate) fn canonicalize_pattern<'a>(
+fn canonicalize_pattern<'a>(
     bump: &'a Bump,
     typ: &'a Located<Type<'a>>,
-    variables: &mut BTreeMap<&'a str, Region>,
-    order: &mut Vec<&'a str>,
+    variables: &mut Vec<&'a str>,
 ) -> Result<Head<'a>, Vec<Error<'a>>> {
     let head = match &typ.value {
         Type::Var(name) => {
-            variables.entry(name).or_insert(typ.region);
-            let index = match order.iter().position(|existing| existing == name) {
+            let index = match variables.iter().position(|existing| existing == name) {
                 Some(index) => index,
                 None => {
-                    order.push(name);
-                    order.len() - 1
+                    variables.push(name);
+                    variables.len() - 1
                 }
             };
             Head::Var(index.try_into().expect("impl variable count exceeds u16"))
@@ -386,7 +382,7 @@ pub(crate) fn canonicalize_pattern<'a>(
         Type::Named { reference, args } => {
             let args = args
                 .iter()
-                .map(|arg| canonicalize_pattern(bump, arg, variables, order))
+                .map(|arg| canonicalize_pattern(bump, arg, variables))
                 .collect::<Result<Vec<_>, _>>()?;
             Head::Named {
                 reference: *reference,
@@ -400,7 +396,7 @@ pub(crate) fn canonicalize_pattern<'a>(
         } => {
             let args = arguments
                 .iter()
-                .map(|arg| canonicalize_pattern(bump, arg.typ, variables, order))
+                .map(|arg| canonicalize_pattern(bump, arg.typ, variables))
                 .collect::<Result<Vec<_>, _>>()?;
             Head::Named {
                 reference: *reference,
@@ -416,13 +412,13 @@ pub(crate) fn canonicalize_pattern<'a>(
             let args = [*first, *second]
                 .into_iter()
                 .chain(rest.iter().copied())
-                .map(|arg| canonicalize_pattern(bump, arg, variables, order))
+                .map(|arg| canonicalize_pattern(bump, arg, variables))
                 .collect::<Result<Vec<_>, _>>()?;
             Head::Tuple(bump.alloc_slice_fill_iter(args))
         }
         Type::Lambda { from, to } => Head::Function(
-            bump.alloc(canonicalize_pattern(bump, from, variables, order)?),
-            bump.alloc(canonicalize_pattern(bump, to, variables, order)?),
+            bump.alloc(canonicalize_pattern(bump, from, variables)?),
+            bump.alloc(canonicalize_pattern(bump, to, variables)?),
         ),
         Type::App { .. } | Type::Record { .. } => {
             return Err(vec![Error::BadInstanceHead {
@@ -445,7 +441,7 @@ fn instantiate_method<'a>(
     method: &crate::environment::MethodInfo<'a>,
     heads: &[&'a Located<Type<'a>>],
     context: &'a [Pred<'a>],
-    head_vars: &BTreeMap<&'a str, Region>,
+    head_vars: &[&'a str],
 ) -> Result<&'a Annotation<'a>, Vec<Error<'a>>> {
     let annotation = method.annotation;
     let mut substitution: BTreeMap<_, _> = info
@@ -458,10 +454,10 @@ fn instantiate_method<'a>(
         .free_vars
         .iter()
         .copied()
-        .chain(head_vars.keys().copied())
+        .chain(head_vars.iter().copied())
         .collect();
     for var in annotation.free_vars {
-        if !info.parameters.contains(var) && head_vars.contains_key(var) {
+        if !info.parameters.contains(var) && head_vars.contains(var) {
             let mut index = 0;
             let fresh = loop {
                 let candidate = format!("$impl{index}");
@@ -498,7 +494,7 @@ fn instantiate_method<'a>(
             .filter(|p| p.key() != owner_key)
             .map(|p| kinds::substitute_predicate(bump, &substitution, *p)),
     );
-    let mut free: BTreeSet<_> = head_vars.keys().copied().collect();
+    let mut free: BTreeSet<_> = head_vars.iter().copied().collect();
     types::collect_free_vars(&typ.value, &mut free);
     for predicate in &predicates {
         for arg in predicate.types() {

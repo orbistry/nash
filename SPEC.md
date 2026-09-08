@@ -58,7 +58,7 @@ Planned, in execution order (each links to its plan):
 - [x] 02 follow-up: Haskell 98 kinds + compiler-owned representation predicates (`Big`/`Const`/`Term`/`Storable`/`Little`), internal `Apply`, inferred datatype contexts; replaces the retained-obligation and value-kind engines — [plans/02-kind-predicates.md](plans/02-kind-predicates.md)
 - [x] 02 rewrite cleanup: remove obsolete hooks, metadata, error paths and test contracts; audit all integration against the Haskell 98 design — [plans/02-kind-rewrite-audit.md](plans/02-kind-rewrite-audit.md)
 - [x] 03 Traits: qualified types, resolution, superclasses, defaults, multi-param, orphan rules, literal traits + defaulting, evidence — [plans/03-traits.md](plans/03-traits.md) (default imports deferred to Plan 12)
-- [ ] 04 Representation: remove row polymorphism and Elm supertypes, builtin type inventory, record encoding — [plans/04-representation.md](plans/04-representation.md)
+- [x] 04 Representation: remove row polymorphism and Elm supertypes, builtin type inventory, record encoding — [plans/04-representation.md](plans/04-representation.md)
 - [ ] 05 Exhaustiveness (`Nitpick/PatternMatches` port) — [plans/05-nitpick.md](plans/05-nitpick.md)
 - [ ] 06 Diagnostics (`nash-report`, Elm `Reporting/*` port onto miette) — [plans/06-diagnostics.md](plans/06-diagnostics.md)
 - [ ] 07 Codegen: Core IR, monomorphization, decision trees, recursion, Data casts, UPLC lowering — [plans/07-codegen.md](plans/07-codegen.md)
