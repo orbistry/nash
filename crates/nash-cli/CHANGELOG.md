@@ -1,5 +1,23 @@
 # nash-cli
 
+## 0.2.5 — 2026-09-08
+
+### Patch changes
+
+- [3495cc5](https://github.com/orbistry/nash/commit/3495cc5c755ca5b81c315a1e5358df1888db31c3) Infer Haskell 98 kinds with occurs checks and defaulting. Check storage
+  requirements through separate representation predicates and inline
+  representation annotations. Infer datatype contexts with a terminating SCC
+  worklist and enforce them at declarations and local or imported uses.
+  
+  Preserve higher-kinded and partial alias applications, captured variables,
+  head-only impl coherence, superclass evidence and literal defaulting. Export
+  closed kinds and ordered predicate contexts through interfaces. Use
+  elementwise builtin-list Eq, structural Big Eq and reflexive Lift. — Thanks @MicroProofs!
+- [dc3d24f](https://github.com/orbistry/nash/commit/dc3d24fe03d7909f0af693e8a6624f64992ceac2) Carry discovered package ownership into canonicalization and imported
+  interfaces so core literal defaulting works through the CLI. Preserve
+  application identities and reject conflicting ownership of a source URI. — Thanks @MicroProofs!
+- Updated dependencies: nash-driver@0.3.0
+
 ## 0.2.4 — 2026-09-05
 
 ### Patch changes

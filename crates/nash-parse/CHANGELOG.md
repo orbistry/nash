@@ -1,5 +1,27 @@
 # nash-parse
 
+## 0.4.0 — 2026-09-08
+
+### Minor changes
+
+- [3495cc5](https://github.com/orbistry/nash/commit/3495cc5c755ca5b81c315a1e5358df1888db31c3) Infer Haskell 98 kinds with occurs checks and defaulting. Check storage
+  requirements through separate representation predicates and inline
+  representation annotations. Infer datatype contexts with a terminating SCC
+  worklist and enforce them at declarations and local or imported uses.
+  
+  Preserve higher-kinded and partial alias applications, captured variables,
+  head-only impl coherence, superclass evidence and literal defaulting. Export
+  closed kinds and ordered predicate contexts through interfaces. Use
+  elementwise builtin-list Eq, structural Big Eq and reflexive Lift. — Thanks @MicroProofs!
+- [600364d](https://github.com/orbistry/nash/commit/600364da0123550f74f40fad20dd016b4acd2bfd) Accept dollar signs in operators so the specified Functor map operator `<$>`
+  can be declared and used by core Prelude. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [84e8b7e](https://github.com/orbistry/nash/commit/84e8b7e4d9db858e5ad3af07abbc69038b45d03c) Preserve module prefixes when parsing qualified constructor expressions,
+  including builtin constructors used alongside Big twin declarations in core. — Thanks @MicroProofs!
+- Updated dependencies: nash-source@0.5.0
+
 ## 0.3.0 — 2026-09-05
 
 ### Minor changes

@@ -1,5 +1,38 @@
 # nash-driver
 
+## 0.3.0 — 2026-09-08
+
+### Minor changes
+
+- [3495cc5](https://github.com/orbistry/nash/commit/3495cc5c755ca5b81c315a1e5358df1888db31c3) Infer Haskell 98 kinds with occurs checks and defaulting. Check storage
+  requirements through separate representation predicates and inline
+  representation annotations. Infer datatype contexts with a terminating SCC
+  worklist and enforce them at declarations and local or imported uses.
+  
+  Preserve higher-kinded and partial alias applications, captured variables,
+  head-only impl coherence, superclass evidence and literal defaulting. Export
+  closed kinds and ordered predicate contexts through interfaces. Use
+  elementwise builtin-list Eq, structural Big Eq and reflexive Lift. — Thanks @MicroProofs!
+- [dc3d24f](https://github.com/orbistry/nash/commit/dc3d24fe03d7909f0af693e8a6624f64992ceac2) Carry discovered package ownership into canonicalization and imported
+  interfaces so core literal defaulting works through the CLI. Preserve
+  application identities and reject conflicting ownership of a source URI. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [e32dd1b](https://github.com/orbistry/nash/commit/e32dd1b619690c728389dc29b856e79d112da84b) Preserve module dependency order while loading sources so imports compile after their dependencies. Retain failed reads in their original positions. — Thanks @MicroProofs!
+- [3d3e735](https://github.com/orbistry/nash/commit/3d3e735d3209c30858af8908fde20de1a4b3dc9b) Verify direct and transitive trait impl resolution through the driver, including
+  impls owned by a type's module and orphan and overlap diagnostics. Correct the
+  driver documentation to describe sequential compilation after source fetching. — Thanks @MicroProofs!
+- [482c758](https://github.com/orbistry/nash/commit/482c75856f03432e67cdc8b05e402445b21377bb) Return definition schemes and use-site type arguments and trait evidence with
+  inferred annotations. Preserve captured variable names and recursive evidence
+  binders, and report unresolved evidence before publishing solver results.
+  Adapt the driver to the paired solver result. — Thanks @MicroProofs!
+- [9ad0e77](https://github.com/orbistry/nash/commit/9ad0e77164bb9f84d7e68cfa579874fc6d7cf443) Retain canonical module nodes and solved trait evidence together for the duration of a build. Separate the canonicalizer's interface lookup lifetime from arena data so dependent modules borrow interfaces without copying nodes. — Thanks @MicroProofs!
+- [18bd47a](https://github.com/orbistry/nash/commit/18bd47abd82d8018833540ddc615c468f5544adb) Pass canonical trait tables into inference and discharge wanted predicates
+  through superclass givens. Preserve original context indexes and projection
+  paths, substitute trait parameters, and prefer explicit given evidence. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.6.0, nash-can@0.5.0, nash-constrain@0.3.0, nash-parse@0.4.0, nash-solve@0.3.0, nash-source@0.5.0
+
 ## 0.2.3 — 2026-09-05
 
 ### Patch changes
