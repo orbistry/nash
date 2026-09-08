@@ -1,0 +1,29 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype Box = Box { z : Int, a : Int }\ntype box = Box { a : int, z : int }\n"
+---
+[
+    DuplicateCtor {
+        name: "Box",
+        first: Region {
+            start: Position {
+                line: 2,
+                column: 12,
+            },
+            end: Position {
+                line: 2,
+                column: 15,
+            },
+        },
+        second: Region {
+            start: Position {
+                line: 3,
+                column: 12,
+            },
+            end: Position {
+                line: 3,
+                column: 15,
+            },
+        },
+    },
+]

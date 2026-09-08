@@ -293,6 +293,21 @@ pub enum Error<'a> {
         unused: &'a [(&'a str, Region)],
         unbound: &'a [(&'a str, Region)],
     },
+    LabeledCtorMissingField {
+        region: Region,
+        ctor: &'a str,
+        field: &'a str,
+    },
+    LabeledCtorExtraField {
+        region: Region,
+        ctor: &'a str,
+        field: &'a str,
+    },
+    LabeledCtorUnknownField {
+        region: Region,
+        ctor: &'a str,
+        field: &'a str,
+    },
     DuplicateField {
         name: &'a str,
         first: Region,

@@ -339,7 +339,9 @@ The parser reads it as the constructor applied to a record literal;
 canonicalization turns it into labeled construction when `Datum` declares
 labeled fields (the two forms cannot be told apart syntactically, and a
 positional constructor taking an alias record is the other reading). Update
-on a labeled constructor is not in v1. Labeled constructors are matched
+on a labeled constructor is not in v1. Parenthesize a record literal to pass
+it as one positional field of a labeled constructor: `Wrap ({ x = () })`.
+Labeled constructors are matched
 positionally, `Datum owner deadline`, or by label with record-pattern sugar,
 `Datum { owner, deadline }`. The sugar parses today as a constructor applied
 to a record pattern; nash-can rewrites it to positional form when the

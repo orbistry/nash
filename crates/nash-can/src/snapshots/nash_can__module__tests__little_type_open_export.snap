@@ -24,6 +24,7 @@ Interface {
             ],
             ctors: [
                 Ctor {
+                    labels: None,
                     name: "Some",
                     index: 0,
                     arity: 1,
@@ -46,6 +47,7 @@ Interface {
                     ],
                 },
                 Ctor {
+                    labels: None,
                     name: "None",
                     index: 1,
                     arity: 0,

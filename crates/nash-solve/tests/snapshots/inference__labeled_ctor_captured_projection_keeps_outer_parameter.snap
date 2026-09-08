@@ -1,0 +1,52 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype box 'a = Box { value : 'a }\nbad : box 'a -> ('a, unit)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 8,
+                column: 5,
+            },
+            end: Position {
+                line: 8,
+                column: 21,
+            },
+        },
+        Tuple,
+        Tuple(
+            RigidVar(
+                "a",
+            ),
+            RigidVar(
+                "a",
+            ),
+            [],
+        ),
+        FromAnnotation(
+            "bad",
+            1,
+            TypedBody,
+            Tuple(
+                RigidVar(
+                    "a",
+                ),
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+                [],
+            ),
+        ),
+    ),
+]

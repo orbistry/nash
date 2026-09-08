@@ -1,0 +1,40 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype box 'a = Box { value : 'a }\nchange : box unit -> box unit\nchange b = { b | value = () }\n"
+---
+[
+    UpdateNotRecord {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 18,
+            },
+            end: Position {
+                line: 4,
+                column: 23,
+            },
+        },
+        record: Type {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "box",
+            args: [
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+            ],
+        },
+    },
+]

@@ -56,9 +56,52 @@ pub type ImplTable<'a> = BTreeMap<nash_ast::ImplKey<'a>, &'a ImplInfo<'a>>;
 
 #[derive(Clone, Debug, Default)]
 pub struct Tables<'a> {
+    /// Field projection is limited to constructors visible in this module.
+    pub fields: BTreeMap<nash_ast::QualifiedName<'a>, LabeledUnion<'a>>,
     pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: BTreeMap<nash_ast::QualifiedName<'a>, &'a TraitInfo<'a>>,
     pub impls: ImplTable<'a>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct LabeledUnion<'a> {
+    pub parameters: &'a [&'a str],
+    pub fields: &'a [nash_ast::FieldType<'a>],
+}
+
+pub fn visible_fields<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+) -> BTreeMap<nash_ast::QualifiedName<'a>, LabeledUnion<'a>> {
+    let mut fields = BTreeMap::new();
+    for info in env
+        .ctors
+        .values()
+        .chain(env.q_ctors.values().flat_map(|ctors| ctors.values()))
+    {
+        if let Info::Specific(
+            _,
+            Ctor::Union {
+                home,
+                type_name,
+                union,
+                ..
+            },
+        ) = info
+            && let Some(labels) = union.labeled_fields()
+        {
+            fields
+                .entry(nash_ast::QualifiedName {
+                    home: *home,
+                    name: type_name,
+                })
+                .or_insert_with(|| LabeledUnion {
+                    parameters: union.parameters,
+                    fields: bump.alloc_slice_fill_iter(labels),
+                });
+        }
+    }
+    fields
 }
 
 impl Tables<'_> {
@@ -480,7 +523,7 @@ pub(super) fn twin_unions(
         && left_ctors
             .iter()
             .zip(right_ctors)
-            .all(|(a, b)| a.name == b.name && a.arity == b.arity)
+            .all(|(a, b)| a.name == b.name && a.arity == b.arity && a.labels == b.labels)
 }
 
 pub fn merge_exposed<'a, T: Clone>(

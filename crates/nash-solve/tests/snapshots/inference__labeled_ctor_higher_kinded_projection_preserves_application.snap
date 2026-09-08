@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype holder 'f 'a = Holder { value : 'f 'a }\ntype alias wrapped 'f 'a = holder 'f 'a\nget : wrapped 'f 'a -> 'f 'a\nget h = h.value\nmain = get (Holder [()])\n"
+---
+get : forall a f. Apply f a => wrapped f a -> f a
+main : list unit

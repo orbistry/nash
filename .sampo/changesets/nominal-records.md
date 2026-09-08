@@ -1,4 +1,5 @@
 ---
+cargo/nash-source: minor
 cargo/nash-ast: minor
 cargo/nash-parse: minor
 cargo/nash-can: minor
@@ -16,3 +17,6 @@ representation predicates.
 Use the complete primitive type inventory under the Builtin qualifier and
 represent unit uniformly as a named builtin type throughout inference and
 instance selection.
+Preserve labeled constructor metadata, support construction and pattern sugar,
+and permit field projection only through visible single-constructor unions.
+Keep parenthesized record literals as positional constructor arguments.

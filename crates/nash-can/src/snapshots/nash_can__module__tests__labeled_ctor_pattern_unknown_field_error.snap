@@ -1,0 +1,20 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit }\nget (Packet { a }) = a\n"
+---
+[
+    LabeledCtorUnknownField {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 15,
+            },
+            end: Position {
+                line: 3,
+                column: 16,
+            },
+        },
+        ctor: "Packet",
+        field: "a",
+    },
+]

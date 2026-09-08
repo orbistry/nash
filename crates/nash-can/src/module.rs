@@ -146,8 +146,10 @@ pub fn canonicalize<'a>(
         }
     }
 
+    let mut tables = crate::impls::tables(bump, context.interfaces, &can_module, &kind_env)?;
+    tables.fields = environment::visible_fields(bump, &env);
     Ok(CanResult {
-        tables: crate::impls::tables(bump, context.interfaces, &can_module, &kind_env)?,
+        tables,
         module: can_module,
         warnings,
     })
@@ -519,8 +521,23 @@ fn canonicalize_ctors<'a>(
                     region: record.region,
                 }]);
             }
+            let labels = match &ctor.arguments {
+                SourceCtorArgs::Positional(_) => None,
+                SourceCtorArgs::Labeled(fields) => {
+                    dups::detect(
+                        fields.iter().map(|(name, _)| (name.value, name.region)),
+                        |name, first, second| Error::DuplicateField {
+                            name,
+                            first,
+                            second,
+                        },
+                    )?;
+                    Some(&*bump.alloc_slice_fill_iter(fields.iter().map(|(name, _)| name.value)))
+                }
+            };
             let arguments = types::canonicalize_type_arguments(bump, env, source_arguments)?;
             Ok(&*bump.alloc(CanCtor {
+                labels,
                 name: ctor.name.value,
                 index: index.try_into().expect("constructor index exceeds u16"),
                 arity: source_arguments
@@ -2318,6 +2335,7 @@ mod tests {
     fn to_public_union_closed_strips_ctors() {
         let bump = Bump::new();
         let ctor: &CanCtor = bump.alloc(CanCtor {
+            labels: None,
             name: "True",
             index: 0,
             arity: 0,
@@ -3124,12 +3142,14 @@ mod tests {
     fn maybe_with_ctors_interface<'a>(bump: &'a Bump) -> Interface<'a> {
         let just_arg = bump.alloc(Located::at(Region::zero(), CanType::Var("a")));
         let just_ctor: &CanCtor = bump.alloc(CanCtor {
+            labels: None,
             name: "Just",
             index: 0,
             arity: 1,
             arguments: bump.alloc_slice_fill_iter([&*just_arg]),
         });
         let nothing_ctor: &CanCtor = bump.alloc(CanCtor {
+            labels: None,
             name: "Nothing",
             index: 1,
             arity: 0,
@@ -3671,12 +3691,14 @@ mod tests {
         // Build two interfaces that both expose "Just"
         let just_arg = bump.alloc(Located::at(Region::zero(), CanType::Var("a")));
         let just_ctor: &CanCtor = bump.alloc(CanCtor {
+            labels: None,
             name: "Just",
             index: 0,
             arity: 1,
             arguments: bump.alloc_slice_fill_iter([&*just_arg]),
         });
         let nothing_ctor: &CanCtor = bump.alloc(CanCtor {
+            labels: None,
             name: "Nothing",
             index: 1,
             arity: 0,
@@ -3706,12 +3728,14 @@ mod tests {
 
         let just_arg2 = bump.alloc(Located::at(Region::zero(), CanType::Var("a")));
         let just_ctor2: &CanCtor = bump.alloc(CanCtor {
+            labels: None,
             name: "Just",
             index: 0,
             arity: 1,
             arguments: bump.alloc_slice_fill_iter([&*just_arg2]),
         });
         let none_ctor: &CanCtor = bump.alloc(CanCtor {
+            labels: None,
             name: "None",
             index: 1,
             arity: 0,
@@ -4655,5 +4679,60 @@ mod tests {
                 matches!(typ.value, nash_ast::Type::Named { reference, args } if reference.home == nash_ast::primitives::builtin_home() && reference.name == "unit" && args.is_empty())
             );
         }
+    }
+    #[test]
+    fn labeled_ctor_construction_in_wire_order() {
+        assert_module_snapshot!(
+            "module Main exposing (..)\ntype packet = Packet { z : unit, a : unit }\nbuild first second = Packet { a = second, z = first }\n"
+        );
+    }
+
+    #[test]
+    fn labeled_ctor_missing_field_error() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\ntype packet = Packet { z : unit, a : unit }\nmain = Packet { a = () }\n"
+        );
+    }
+
+    #[test]
+    fn labeled_ctor_extra_field_error() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\ntype packet = Packet { z : unit }\nmain = Packet { z = (), a = () }\n"
+        );
+    }
+
+    #[test]
+    fn ctor_duplicate_label_error() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\ntype packet = Packet { z : unit, z : unit }\n"
+        );
+    }
+
+    #[test]
+    fn labeled_ctor_pattern_in_wire_order() {
+        assert_module_snapshot!(
+            "module Main exposing (..)\ntype packet = Packet { z : unit, a : unit }\nget (Packet { a }) = a\n"
+        );
+    }
+
+    #[test]
+    fn labeled_ctor_pattern_unknown_field_error() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\ntype packet = Packet { z : unit }\nget (Packet { a }) = a\n"
+        );
+    }
+
+    #[test]
+    fn labeled_ctor_pattern_duplicate_field_error() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\ntype packet = Packet { z : unit }\nget (Packet { z, z }) = z\n"
+        );
+    }
+
+    #[test]
+    fn labeled_ctor_twins_require_equal_label_order() {
+        assert_module_error_snapshot!(
+            "module Main exposing (..)\ntype Box = Box { z : Int, a : Int }\ntype box = Box { a : int, z : int }\n"
+        );
     }
 }

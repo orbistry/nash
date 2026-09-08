@@ -13,8 +13,8 @@ Located {
             column: 24,
         },
     },
-    value: Record(
-        [
+    value: Record {
+        fields: [
             FieldAssign {
                 field: Located {
                     region: Region {
@@ -106,5 +106,6 @@ Located {
                 },
             },
         ],
-    ),
+        grouped: false,
+    },
 }

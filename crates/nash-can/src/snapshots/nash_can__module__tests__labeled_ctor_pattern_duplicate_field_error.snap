@@ -1,0 +1,32 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit }\nget (Packet { z, z }) = z\n"
+---
+[
+    DuplicatePattern {
+        context: FuncArgs(
+            "get",
+        ),
+        name: "z",
+        first: Region {
+            start: Position {
+                line: 3,
+                column: 15,
+            },
+            end: Position {
+                line: 3,
+                column: 16,
+            },
+        },
+        second: Region {
+            start: Position {
+                line: 3,
+                column: 18,
+            },
+            end: Position {
+                line: 3,
+                column: 19,
+            },
+        },
+    },
+]

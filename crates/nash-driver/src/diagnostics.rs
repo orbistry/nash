@@ -134,6 +134,9 @@ pub(crate) fn canonical(source: &str, errors: &[nash_can::Error<'_>]) -> String 
     use nash_can::Error;
     errors.iter().map(|error| {
         let (region, tag, message) = match error {
+            Error::LabeledCtorMissingField { region, ctor, field } => (*region, "LabeledCtorMissingField", format!("constructor {ctor} needs the field {field}.")),
+            Error::LabeledCtorExtraField { region, ctor, field } => (*region, "LabeledCtorExtraField", format!("constructor {ctor} has no field named {field}.")),
+            Error::LabeledCtorUnknownField { region, ctor, field } => (*region, "LabeledCtorUnknownField", format!("constructor {ctor} has no field named {field}.")),
             Error::RecordTypeOutsideAlias { region } => (*region, "RecordTypeOutsideAlias",
                 "a record type is only allowed as the direct body of a type alias. Give this record a named alias.".into()),
             Error::RecordLiteralNoAlias { region, fields } => (*region, "RecordLiteralNoAlias",

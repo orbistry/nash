@@ -144,12 +144,14 @@ const UNARY: &Kind<'static> = &Kind::Arrow(TYPE, TYPE);
 const BINARY: &Kind<'static> = &Kind::Arrow(TYPE, UNARY);
 const BOOL_CTORS: &[&crate::Ctor<'static>] = &[
     &crate::Ctor {
+        labels: None,
         name: "False",
         index: 0,
         arity: 0,
         arguments: &[],
     },
     &crate::Ctor {
+        labels: None,
         name: "True",
         index: 1,
         arity: 0,
@@ -160,12 +162,14 @@ const DATA: &nash_region::Located<crate::Type<'static>> = &builtins::named("Data
 const DATA_LIST: &nash_region::Located<crate::Type<'static>> = &builtins::named("list", &[DATA]);
 const DATA_CTORS: &[&crate::Ctor<'static>] = &[
     &crate::Ctor {
+        labels: None,
         name: "Constr",
         index: 0,
         arity: 2,
         arguments: &[&builtins::named("int", &[]), DATA_LIST],
     },
     &crate::Ctor {
+        labels: None,
         name: "Map",
         index: 1,
         arity: 1,
@@ -175,18 +179,21 @@ const DATA_CTORS: &[&crate::Ctor<'static>] = &[
         )],
     },
     &crate::Ctor {
+        labels: None,
         name: "List",
         index: 2,
         arity: 1,
         arguments: &[DATA_LIST],
     },
     &crate::Ctor {
+        labels: None,
         name: "I",
         index: 3,
         arity: 1,
         arguments: &[&builtins::named("int", &[])],
     },
     &crate::Ctor {
+        labels: None,
         name: "B",
         index: 4,
         arity: 1,

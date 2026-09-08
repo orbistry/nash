@@ -257,7 +257,11 @@ pub enum Expr<'a> {
         record: &'a Located<&'a str>,
         fields: &'a [&'a FieldAssign<'a>],
     },
-    Record(&'a [&'a FieldAssign<'a>]),
+    Record {
+        fields: &'a [&'a FieldAssign<'a>],
+        /// Parentheses force a positional record argument to a labeled constructor.
+        grouped: bool,
+    },
     Unit,
     Tuple {
         first: &'a Located<Expr<'a>>,

@@ -665,6 +665,94 @@ mod kind_tests {
     }
 
     #[tokio::test]
+    async fn labeled_ctor_imports_preserve_sugar_and_projection() {
+        let result = compile_pair(
+            "module Types exposing (type box(..))\ntype box 'a = Box { z : 'a, a : unit }\n",
+            "module Main exposing (..)\nimport Types\nmake x = Types.Box { a = (), z = x }\nget : Types.box 'a -> 'a\nget x = x.z\npattern (Types.Box { z }) = z\n",
+        ).await;
+        assert_eq!(result.success, 2, "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn labeled_ctor_closed_exports_hide_projection() {
+        let result = compile_pair(
+            "module Types exposing (type box)\ntype box 'a = Box { value : 'a }\n",
+            "module Main exposing (..)\nimport Types\nget : Types.box 'a -> 'a\nget x = x.value\n",
+        )
+        .await;
+        assert_eq!(result.success, 1, "{result:?}");
+        let ModuleResult::Failed { message } =
+            &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+        else {
+            panic!("consumer must reject hidden label")
+        };
+        assert!(message.contains("NotARecord"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn labeled_ctor_import_rejects_updates() {
+        let result = compile_pair(
+            "module Types exposing (type box(..))\ntype box = Box { value : unit }\n",
+            "module Main exposing (..)\nimport Types\nchange : Types.box -> Types.box\nchange x = { x | value = () }\n",
+        ).await;
+        assert_eq!(result.success, 1, "{result:?}");
+        let ModuleResult::Failed { message } =
+            &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+        else {
+            panic!("consumer must reject union update")
+        };
+        assert!(message.contains("UpdateNotRecord"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn labeled_ctor_private_type_returned_by_export_has_no_projection() {
+        let result = compile_pair(
+            "module Types exposing (make)\ntype box = Box { value : unit }\nmake = Box ()\n",
+            "module Main exposing (..)\nimport Types\nbad = Types.make.value\n",
+        )
+        .await;
+        assert_eq!(result.success, 1, "{result:?}");
+        let ModuleResult::Failed { message } =
+            &result.modules[&Url::parse("file:///Main.nash").unwrap()]
+        else {
+            panic!("private constructor labels must remain hidden")
+        };
+        assert!(message.contains("NotARecord"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn labeled_ctor_imported_higher_kinded_projection() {
+        let producer = "module Types exposing (type holder(..), get)\ntype holder 'f 'a = Holder { value : 'f 'a }\nget : holder 'f 'a -> 'f 'a\nget h = h.value\n";
+        let positive = compile_pair(
+            producer,
+            "module Main exposing (..)\nimport Types\ntype option 'a = Some 'a\nlist = Types.get (Types.Holder [()])\nterm = Types.get (Types.Holder (Some ()))\n",
+        ).await;
+        assert_eq!(positive.success, 2, "{positive:?}");
+        let negative = compile_pair(
+            producer,
+            "module Main exposing (..)\nimport Types\nmake x = Types.Holder [x]\nbad = Types.get (make (\\x -> x))\n",
+        ).await;
+        assert_eq!(negative.success, 1, "{negative:?}");
+        assert_eq!(negative.failed, 1, "{negative:?}");
+    }
+
+    #[tokio::test]
+    async fn labeled_ctor_imported_captured_parameter_stays_shared() {
+        let producer = "module Types exposing (type box(..))\ntype box 'a = Box { value : 'a }\n";
+        let positive = compile_pair(
+            producer,
+            "module Main exposing (..)\nimport Types\ngood : Types.box 'a -> ('a, 'a)\ngood b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n",
+        ).await;
+        assert_eq!(positive.success, 2, "{positive:?}");
+        let negative = compile_pair(
+            producer,
+            "module Main exposing (..)\nimport Types\nbad : Types.box 'a -> ('a, unit)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n",
+        ).await;
+        assert_eq!(negative.success, 1, "{negative:?}");
+        assert_eq!(negative.failed, 1, "{negative:?}");
+    }
+
+    #[tokio::test]
     async fn nominal_record_imports_preserve_identity_and_field_order() {
         let result = compile_pair(
             "module Types exposing (type point)\ntype alias point = { z : unit, a : unit }\n",

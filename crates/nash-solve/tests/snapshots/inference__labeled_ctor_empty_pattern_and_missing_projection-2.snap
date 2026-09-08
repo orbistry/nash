@@ -1,0 +1,45 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype box = Box { value : unit }\nbad : box -> unit\nbad e = e.missing\n"
+---
+[
+    MissingField {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 9,
+            },
+            end: Position {
+                line: 4,
+                column: 18,
+            },
+        },
+        context: Access {
+            record_region: Region {
+                start: Position {
+                    line: 4,
+                    column: 9,
+                },
+                end: Position {
+                    line: 4,
+                    column: 10,
+                },
+            },
+            maybe_name: Some(
+                "e",
+            ),
+        },
+        field: "missing",
+        record: Type {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "box",
+            args: [],
+        },
+        available: [
+            "value",
+        ],
+    },
+]

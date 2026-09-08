@@ -1,0 +1,370 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit, a : unit }\nbuild first second = Packet { a = second, z = first }\n"
+---
+Module {
+    traits: [],
+    impls: [],
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 4,
+                column: 1,
+            },
+        },
+    ),
+    decls: Declare {
+        definition: Def {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 6,
+                    },
+                },
+                value: "build",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 12,
+                        },
+                    },
+                    value: Var(
+                        "first",
+                    ),
+                },
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 13,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 19,
+                        },
+                    },
+                    value: Var(
+                        "second",
+                    ),
+                },
+            ],
+            body: Located {
+                region: Region {
+                    start: Position {
+                        line: 3,
+                        column: 22,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 54,
+                    },
+                },
+                value: Call {
+                    function: Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 22,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 28,
+                            },
+                        },
+                        value: VarConstructor {
+                            options: Normal,
+                            reference: ConstructorName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                union: "packet",
+                                name: "Packet",
+                            },
+                            index: 0,
+                            annotation: Annotation {
+                                context: [],
+                                free_vars: [],
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Lambda {
+                                        from: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 28,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 32,
+                                                },
+                                            },
+                                            value: Named {
+                                                reference: QualifiedName {
+                                                    home: ModuleName {
+                                                        package: Some(
+                                                            PackageName {
+                                                                author: "nash",
+                                                                project: "core",
+                                                            },
+                                                        ),
+                                                        name: "Builtin",
+                                                    },
+                                                    name: "unit",
+                                                },
+                                                args: [],
+                                            },
+                                        },
+                                        to: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                            },
+                                            value: Lambda {
+                                                from: Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 2,
+                                                            column: 38,
+                                                        },
+                                                        end: Position {
+                                                            line: 2,
+                                                            column: 42,
+                                                        },
+                                                    },
+                                                    value: Named {
+                                                        reference: QualifiedName {
+                                                            home: ModuleName {
+                                                                package: Some(
+                                                                    PackageName {
+                                                                        author: "nash",
+                                                                        project: "core",
+                                                                    },
+                                                                ),
+                                                                name: "Builtin",
+                                                            },
+                                                            name: "unit",
+                                                        },
+                                                        args: [],
+                                                    },
+                                                },
+                                                to: Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 0,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 0,
+                                                        },
+                                                    },
+                                                    value: Named {
+                                                        reference: QualifiedName {
+                                                            home: ModuleName {
+                                                                package: None,
+                                                                name: "Main",
+                                                            },
+                                                            name: "packet",
+                                                        },
+                                                        args: [],
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    arguments: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 47,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 52,
+                                },
+                            },
+                            value: VarLocal(
+                                "first",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 3,
+                                    column: 35,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 41,
+                                },
+                            },
+                            value: VarLocal(
+                                "second",
+                            ),
+                        },
+                    ],
+                },
+            },
+        },
+        next: Empty,
+    },
+    unions: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 1,
+                },
+                end: Position {
+                    line: 3,
+                    column: 1,
+                },
+            },
+            value: Union {
+                kind: Type,
+                context: [],
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 12,
+                        },
+                    },
+                    value: "packet",
+                },
+                parameters: [],
+                ctors: [
+                    Ctor {
+                        labels: Some(
+                            [
+                                "z",
+                                "a",
+                            ],
+                        ),
+                        name: "Packet",
+                        index: 0,
+                        arity: 2,
+                        arguments: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 28,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 32,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "core",
+                                                },
+                                            ),
+                                            name: "Builtin",
+                                        },
+                                        name: "unit",
+                                    },
+                                    args: [],
+                                },
+                            },
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 38,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 42,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "core",
+                                                },
+                                            ),
+                                            name: "Builtin",
+                                        },
+                                        name: "unit",
+                                    },
+                                    args: [],
+                                },
+                            },
+                        ],
+                    },
+                ],
+                alternatives: 1,
+                options: Normal,
+            },
+        },
+    ],
+    aliases: [],
+    binops: [],
+}

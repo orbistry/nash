@@ -202,8 +202,19 @@ impl<'a> Parser<'a> {
 
         // Determine what we parsed
         if rest.is_empty() {
-            // Just parenthesized expression - return unwrapped
-            Ok(first)
+            // Record grouping distinguishes a positional constructor argument from
+            // construction by label. Other parenthesized expressions are transparent.
+            if let Expr::Record { fields, .. } = &first.value {
+                Ok(self.add_end(
+                    start,
+                    Expr::Record {
+                        fields,
+                        grouped: true,
+                    },
+                ))
+            } else {
+                Ok(first)
+            }
         } else {
             // Tuple: need at least 2 elements
             let second = rest.remove(0);

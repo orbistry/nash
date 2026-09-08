@@ -19,12 +19,14 @@ Interface {
             parameters: [],
             ctors: [
                 Ctor {
+                    labels: None,
                     name: "True",
                     index: 0,
                     arity: 0,
                     arguments: [],
                 },
                 Ctor {
+                    labels: None,
                     name: "False",
                     index: 1,
                     arity: 0,

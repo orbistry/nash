@@ -230,6 +230,7 @@ expression: "(interface, canonical.module.unions[0].value.kind,\ncanonical.modul
                 ],
                 ctors: [
                     Ctor {
+                        labels: None,
                         name: "Wrap",
                         index: 0,
                         arity: 1,

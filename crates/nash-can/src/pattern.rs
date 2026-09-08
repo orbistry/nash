@@ -177,6 +177,44 @@ fn canonicalize_ctor_pattern<'a>(
             options,
             alternatives,
         } => {
+            let mut repeated = Vec::new();
+            let args = if let [argument] = args
+                && let SourcePattern::Record(names) = &argument.value
+                && let Some(labels) = union_def
+                    .ctors
+                    .iter()
+                    .find(|ctor| ctor.index == *index)
+                    .and_then(|ctor| ctor.labels)
+            {
+                let unknown: Vec<_> = names
+                    .iter()
+                    .filter(|field| !labels.contains(&field.value))
+                    .map(|field| Error::LabeledCtorUnknownField {
+                        region: field.region,
+                        ctor: name,
+                        field: field.value,
+                    })
+                    .collect();
+                if !unknown.is_empty() {
+                    return Err(unknown);
+                }
+                // Keep repeated occurrences for the enclosing duplicate-binding check.
+                // The expanded variable accounts for the first occurrence of each label.
+                let mut seen = std::collections::BTreeSet::new();
+                for field in *names {
+                    if !seen.insert(field.value) {
+                        repeated.push((field.value, field.region));
+                    }
+                }
+                &*bump.alloc_slice_fill_iter(labels.iter().map(|label| {
+                    &*bump.alloc(match names.iter().find(|name| name.value == *label) {
+                        Some(name) => Located::at(name.region, SourcePattern::Var(name.value)),
+                        None => Located::at(argument.region, SourcePattern::Anything),
+                    })
+                }))
+            } else {
+                args
+            };
             if args.len() != *arity as usize {
                 return Err(vec![Error::BadArity {
                     region,
@@ -204,6 +242,7 @@ fn canonicalize_ctor_pattern<'a>(
                     Err(mut e) => errors.append(&mut e),
                 }
             }
+            bindings.extend(repeated);
             if !errors.is_empty() {
                 return Err(errors);
             }
@@ -302,6 +341,7 @@ mod tests {
         let mut env = empty_env(bump);
 
         let nothing_ctor = bump.alloc(nash_ast::Ctor {
+            labels: None,
             name: "Nothing",
             index: 1,
             arity: 0,
@@ -309,6 +349,7 @@ mod tests {
         });
         let just_arg_typ = bump.alloc(Located::at(Region::zero(), CanType::Var("a")));
         let just_ctor = bump.alloc(nash_ast::Ctor {
+            labels: None,
             name: "Just",
             index: 0,
             arity: 1,

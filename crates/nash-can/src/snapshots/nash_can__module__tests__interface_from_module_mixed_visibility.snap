@@ -138,12 +138,14 @@ Interface {
             parameters: [],
             ctors: [
                 Ctor {
+                    labels: None,
                     name: "Foo",
                     index: 0,
                     arity: 0,
                     arguments: [],
                 },
                 Ctor {
+                    labels: None,
                     name: "Bar",
                     index: 1,
                     arity: 0,

@@ -62,7 +62,13 @@ impl<'a> Parser<'a> {
                 Box::new(|p: &mut Parser<'a>| {
                     p.word1(0x7D, Record::Open)?;
                     let empty: &'a [&'a FieldAssign<'a>] = &[];
-                    Ok(p.add_end(start, Expr::Record(empty)))
+                    Ok(p.add_end(
+                        start,
+                        Expr::Record {
+                            fields: empty,
+                            grouped: false,
+                        },
+                    ))
                 }),
                 // Non-empty: field name first
                 Box::new(|p: &mut Parser<'a>| p.record_starter(start)),
@@ -158,7 +164,13 @@ impl<'a> Parser<'a> {
         self.chomp_fields(&mut fields)?;
 
         let slice = fields.into_bump_slice();
-        Ok(self.add_end(start, Expr::Record(slice)))
+        Ok(self.add_end(
+            start,
+            Expr::Record {
+                fields: slice,
+                grouped: false,
+            },
+        ))
     }
 
     /// Parse a single field: `name = expr`.

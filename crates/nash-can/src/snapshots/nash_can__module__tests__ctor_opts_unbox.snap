@@ -103,6 +103,7 @@ Module {
                 ],
                 ctors: [
                     Ctor {
+                        labels: None,
                         name: "Wrap",
                         index: 0,
                         arity: 1,

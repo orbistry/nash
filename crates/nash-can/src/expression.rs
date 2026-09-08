@@ -215,7 +215,82 @@ pub fn canonicalize_expr<'a>(
             arguments,
         } => {
             let can_func = canonicalize_expr(bump, env, function, free_locals, warnings)?;
-            let can_args = canonicalize_exprs(bump, env, arguments, free_locals, warnings)?;
+            let labeled = if let (
+                [argument],
+                CanExpr::VarConstructor {
+                    reference, index, ..
+                },
+            ) = (*arguments, &can_func.value)
+                && let SourceExpr::Record {
+                    fields,
+                    grouped: false,
+                } = &argument.value
+            {
+                env.ctors
+                    .values()
+                    .chain(env.q_ctors.values().flat_map(|ctors| ctors.values()))
+                    .find_map(|info| {
+                        let Info::Specific(
+                            _,
+                            EnvCtor::Union {
+                                home,
+                                type_name,
+                                union,
+                                ..
+                            },
+                        ) = info
+                        else {
+                            return None;
+                        };
+                        if *home != reference.home || *type_name != reference.union {
+                            return None;
+                        }
+                        union
+                            .ctors
+                            .iter()
+                            .find(|ctor| ctor.index == *index)
+                            .and_then(|ctor| ctor.labels)
+                            .map(|labels| (labels, *fields))
+                    })
+            } else {
+                None
+            };
+            let can_args = if let Some((labels, fields)) = labeled {
+                let CanExpr::VarConstructor { reference, .. } = &can_func.value else {
+                    unreachable!()
+                };
+                let given = check_field_assigns(fields)?;
+                let mut errors = Vec::new();
+                for label in labels {
+                    if !given.contains_key(label) {
+                        errors.push(Error::LabeledCtorMissingField {
+                            region,
+                            ctor: reference.name,
+                            field: label,
+                        });
+                    }
+                }
+                for (name, assign) in &given {
+                    if !labels.contains(name) {
+                        errors.push(Error::LabeledCtorExtraField {
+                            region: assign.field.region,
+                            ctor: reference.name,
+                            field: name,
+                        });
+                    }
+                }
+                if !errors.is_empty() {
+                    return Err(errors);
+                }
+                crate::accumulate::try_all_alloc_ref(
+                    bump,
+                    labels.iter().map(|label| {
+                        canonicalize_expr(bump, env, given[label].value, free_locals, warnings)
+                    }),
+                )?
+            } else {
+                canonicalize_exprs(bump, env, arguments, free_locals, warnings)?
+            };
             CanExpr::Call {
                 function: can_func,
                 arguments: can_args,
@@ -251,7 +326,7 @@ pub fn canonicalize_expr<'a>(
             canonicalize_update(bump, env, record, fields, free_locals, warnings)?
         }
 
-        SourceExpr::Record(fields) => {
+        SourceExpr::Record { fields, .. } => {
             canonicalize_record(bump, env, region, fields, free_locals, warnings)?
         }
 

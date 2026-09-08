@@ -123,6 +123,7 @@ Module {
                                     ],
                                     ctors: [
                                         Ctor {
+                                            labels: None,
                                             name: "Just",
                                             index: 0,
                                             arity: 1,
@@ -145,6 +146,7 @@ Module {
                                             ],
                                         },
                                         Ctor {
+                                            labels: None,
                                             name: "Nothing",
                                             index: 1,
                                             arity: 0,

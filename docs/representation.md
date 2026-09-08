@@ -117,7 +117,10 @@ rebuild the value with the constructor. A labeled constructor is
 built positionally (`Datum owner deadline`) or by label
 (`Datum { owner = o, deadline = d }`); the labeled form is sugar that the
 compiler rewrites to the positional call in wire order, and its field set
-must match the constructor's labels exactly. The pattern
+must match the constructor's labels exactly. A parenthesized record literal,
+`Wrap ({ x = () })`, is one positional argument instead. Canonical constructor
+arguments and their optional labels both retain declaration order;
+`Ctor::labeled_fields` supplies the corresponding wire indices. The pattern
 `Datum { owner, deadline }` is the same sugar for matching: it rewrites to
 the positional constructor pattern, the named fields must be a subset of
 the labels, and labels not mentioned become `_`. The alias form has both
@@ -175,7 +178,7 @@ Patterns follow the same rule: `case b of Bool.True -> ...`.
 This rule also applies to user-defined twins in one module. Their type names
 must differ only in the case of the initial letter (`status` and `Status`),
 with the same number of type parameters and the same constructor names,
-order and arities. Field types may differ across the representation boundary;
+order, arities and ordered labels. Field types may differ across the representation boundary;
 pairing does not create conversions or impls.
 
 For a recognized pair, bare constructor names belong only to the little

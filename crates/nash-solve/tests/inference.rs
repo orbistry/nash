@@ -3691,3 +3691,136 @@ fn unit_impl_syntax_matches_named_builtin() {
     "#
     );
 }
+
+#[test]
+fn labeled_ctor_access_and_construction() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type box 'a = Box { z : 'a, count : int }
+        get : box 'a -> 'a
+        get b = b.z
+        make value = Box { count = 1, z = value }
+        positional value = Box value 1
+        pattern (Box { z }) = z
+        accessor = .z (Box () 1)
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_update_error() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type box 'a = Box { value : 'a }
+        change : box unit -> box unit
+        change b = { b | value = () }
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_multi_access_error() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type choice = First { value : unit } | Second { value : unit }
+        get : choice -> unit
+        get b = b.value
+    "#
+    );
+}
+
+#[test]
+fn positional_ctor_record_operations_stay_positional() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : unit }
+        type wrapper = Wrap point
+        main = Wrap { x = () }
+        get (Wrap { x }) = x
+    "#
+    );
+}
+
+#[test]
+fn grouped_record_is_positional_argument_to_labeled_ctor() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : unit }
+        type wrapper = Wrap { inner : point }
+        positional = Wrap ({ x = () })
+        labeled = Wrap { inner = { x = () } }
+        get (Wrap inner) = inner.x
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_higher_kinded_projection_preserves_application() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type holder 'f 'a = Holder { value : 'f 'a }
+        type alias wrapped 'f 'a = holder 'f 'a
+        get : wrapped 'f 'a -> 'f 'a
+        get h = h.value
+        main = get (Holder [()])
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_twins_preserve_labeled_construction() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Box 'a = Box { z : 'a }
+        type box 'a = Box { z : 'a }
+        little : box unit
+        little = Box { z = () }
+        get : box 'a -> 'a
+        get b = b.z
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_captured_projection_keeps_outer_parameter() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type box 'a = Box { value : 'a }
+        bad : box 'a -> ('a, unit)
+        bad b =
+            let
+                get ignored = b.value
+            in
+            (get (), get ())
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_empty_pattern_and_missing_projection() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type box = Box { value : unit }
+        make = Box { value = () }
+        get : box -> unit
+        get {} = ()
+    "#
+    );
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type box = Box { value : unit }
+        bad : box -> unit
+        bad e = e.missing
+    "#
+    );
+}

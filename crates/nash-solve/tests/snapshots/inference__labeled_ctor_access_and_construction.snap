@@ -1,0 +1,9 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype box 'a = Box { z : 'a, count : int }\nget : box 'a -> 'a\nget b = b.z\nmake value = Box { count = 1, z = value }\npositional value = Box value 1\npattern (Box { z }) = z\naccessor = .z (Box () 1)\n"
+---
+accessor : unit
+get : forall a. box a -> a
+make : forall a. a -> box a
+pattern : forall a. box a -> a
+positional : forall a. a -> box a

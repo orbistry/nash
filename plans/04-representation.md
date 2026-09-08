@@ -66,6 +66,18 @@ shapes are not current APIs. In particular:
   D1 uses existing representation predicates and metadata, never a second
   representation classifier.
 
+A5 implementation uses a smaller canonical representation than the old sketch:
+`Ctor.arguments` remains the shared positional type slice, with optional labels
+in the same declaration order. `Ctor::labeled_fields` and
+`Union::labeled_fields` derive indexed metadata without storing the types twice.
+`Tables.fields` holds single-constructor unions from the actual visible
+constructor environment; it does not use every interface in the build. This
+preserves the current solver API and keeps real trait tables intact. The older
+`CtorArgs` enum and extra `run` parameters below are superseded by this choice.
+Parenthesized record literals retain a source `grouped` flag, so they remain
+positional arguments even to labeled constructors. This flag is erased during
+canonicalization. Twin constructors must also have equal ordered labels.
+
 Progress:
 
 - [x] A1: direct record alias bodies only; canonical extensions removed.
@@ -74,7 +86,7 @@ Progress:
 - [x] A4: deferred fields and empty-record shape checks, with scoped generalization.
 - [ ] A5: labeled constructors, sugar and visible field metadata.
 - [x] B1: obsolete magic supertypes absent; existing trait literals preserved.
-- [ ] C1: finish qualified builtin availability and named unit representation.
+- [x] C1: qualified builtin availability and named unit representation.
 - [ ] D1: record alias helper complete; labeled-union helper remains.
 - [ ] E1: complete remaining changesets, progress updates and final validation.
 

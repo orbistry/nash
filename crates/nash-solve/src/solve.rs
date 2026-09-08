@@ -236,6 +236,55 @@ impl<'a> Solver<'a, '_> {
                         }
                     };
                 }
+                Content::Structure(FlatType::App1(home, name, args)) => {
+                    let Some(union) = self
+                        .tables
+                        .fields
+                        .get(&nash_ast::QualifiedName { home, name })
+                        .copied()
+                    else {
+                        break;
+                    };
+                    if matches!(field.context, type_::FieldContext::Update { .. }) {
+                        errors.push(Error::UpdateNotRecord {
+                            region: field.region,
+                            record: to_error_type(self.bump, uf, field.record),
+                        });
+                        return true;
+                    }
+                    let Some((name, field_type)) = field.field else {
+                        return true;
+                    };
+                    let Some(actual) = union.fields.iter().find(|actual| actual.field == name)
+                    else {
+                        errors.push(Error::MissingField {
+                            region: field.region,
+                            context: field.context,
+                            field: name,
+                            record: to_error_type(self.bump, uf, field.record),
+                            available: self.bump.alloc_slice_fill_iter(
+                                union.fields.iter().map(|field| field.field),
+                            ),
+                        });
+                        return true;
+                    };
+                    let substitution = union.parameters.iter().copied().zip(args).collect();
+                    let actual = self.src_type_to_var(uf, rank, &substitution, actual.typ);
+                    match unify::unify(self.bump, uf, actual, field_type) {
+                        unify::Answer::Ok(vars) => self.introduce(uf, rank, &vars),
+                        unify::Answer::Err(vars, actual, expected) => {
+                            self.introduce(uf, rank, &vars);
+                            errors.push(Error::FieldMismatch {
+                                region: field.region,
+                                context: field.context,
+                                field: name,
+                                actual,
+                                expected,
+                            });
+                        }
+                    }
+                    return true;
+                }
                 Content::Structure(FlatType::AppV1(..)) => return false,
                 _ => break,
             }

@@ -118,10 +118,38 @@ pub struct Union<'a> {
 
 #[derive(Debug)]
 pub struct Ctor<'a> {
+    /// Labels in declaration order, parallel to arguments; None is positional.
+    pub labels: Option<&'a [&'a str]>,
     pub name: &'a str,
     pub index: u16,
     pub arity: u16,
     pub arguments: &'a [&'a Located<Type<'a>>],
+}
+
+impl<'a> Ctor<'a> {
+    /// Field metadata in declaration (wire) order, without duplicating types.
+    pub fn labeled_fields(&self) -> Option<Vec<FieldType<'a>>> {
+        self.labels.map(|labels| {
+            labels
+                .iter()
+                .zip(self.arguments)
+                .enumerate()
+                .map(|(index, (field, typ))| FieldType {
+                    index: index as u16,
+                    field,
+                    typ,
+                })
+                .collect()
+        })
+    }
+}
+
+impl<'a> Union<'a> {
+    /// Only a single labeled constructor has unambiguous field projection.
+    pub fn labeled_fields(&self) -> Option<Vec<FieldType<'a>>> {
+        let [ctor] = self.ctors else { return None };
+        ctor.labeled_fields()
+    }
 }
 
 #[derive(Debug)]
@@ -637,6 +665,53 @@ impl<'a> Head<'a> {
 mod evidence_tests {
     use super::*;
     use std::collections::HashSet;
+
+    #[test]
+    fn labeled_union_fields_preserve_wire_order() {
+        let unit = Located::at_zero(Type::unit());
+        let variable = Located::at_zero(Type::Var("a"));
+        let types = [&variable, &unit];
+        let ctor = Ctor {
+            name: "Box",
+            labels: Some(&["z", "a"]),
+            index: 0,
+            arity: 2,
+            arguments: &types,
+        };
+        let name = Located::at_zero("box");
+        let ctors = [&ctor];
+        let union = Union {
+            kind: &Kind::Type,
+            context: &[],
+            name: &name,
+            parameters: &["a"],
+            ctors: &ctors,
+            alternatives: 1,
+            options: CtorOpts::Normal,
+        };
+        let fields = union.labeled_fields().unwrap();
+        assert_eq!(
+            fields
+                .iter()
+                .map(|field| (field.index, field.field))
+                .collect::<Vec<_>>(),
+            [(0, "z"), (1, "a")]
+        );
+        assert_eq!(fields[0].typ, &variable);
+        assert_eq!(fields[1].typ, &unit);
+        let positional = Ctor {
+            labels: None,
+            ..ctor
+        };
+        assert!(positional.labeled_fields().is_none());
+        let ctors = [&ctor, &positional];
+        let multi = Union {
+            ctors: &ctors,
+            alternatives: 2,
+            ..union
+        };
+        assert!(multi.labeled_fields().is_none());
+    }
 
     #[test]
     fn evidence_alias_identity_does_not_depend_on_body_normalization() {

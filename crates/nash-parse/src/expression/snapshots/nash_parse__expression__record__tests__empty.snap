@@ -13,7 +13,8 @@ Located {
             column: 3,
         },
     },
-    value: Record(
-        [],
-    ),
+    value: Record {
+        fields: [],
+        grouped: false,
+    },
 }
