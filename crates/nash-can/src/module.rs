@@ -612,10 +612,10 @@ fn canonicalize_single_alias<'a>(
     }
     let parameters =
         bump.alloc_slice_fill_iter(alias.arguments.iter().copied().map(|arg| arg.name.value));
-    let typ = types::canonicalize_type(bump, env, alias.typ)?;
+    let typ = types::canonicalize_alias_body(bump, env, alias.typ)?;
 
     let mut context = parameter_repr_predicates(bump, alias.arguments);
-    context.extend(types::repr_predicates(bump, env, alias.typ)?);
+    context.extend(types::alias_repr_predicates(bump, env, alias.typ)?);
     let can_alias = PreAlias {
         context: bump.alloc_slice_fill_iter(context),
         source: source_alias,
@@ -1252,7 +1252,13 @@ fn collect_from_expr<'a>(
                 collect_from_expr(&f.value.value, home, used);
             }
         }
-        Record(fields) => {
+        Record {
+            alias,
+            annotation,
+            fields,
+        } => {
+            add_if_foreign(home, alias.home, used);
+            collect_from_type(&annotation.typ.value, home, used);
             for f in *fields {
                 collect_from_expr(&f.value.value, home, used);
             }
@@ -1524,6 +1530,80 @@ mod tests {
                 insta::assert_debug_snapshot!(result);
             });
         }};
+    }
+
+    #[test]
+    fn record_type_outside_alias_errors() {
+        assert_module_error_snapshot!(
+            r#"
+            module Main exposing (..)
+            f : { x : int } -> int
+            f r = r.x
+        "#
+        );
+    }
+
+    #[test]
+    fn nested_record_type_in_alias_errors() {
+        assert_module_error_snapshot!(
+            r#"
+            module Main exposing (..)
+            type alias outer = { inner : { x : int } }
+        "#
+        );
+    }
+
+    #[test]
+    fn record_type_in_transparent_alias_errors() {
+        assert_module_error_snapshot!(
+            r#"
+            module Main exposing (..)
+            type alias wrapped = list { x : int }
+        "#
+        );
+    }
+
+    #[test]
+    fn alias_record_fields_sorted_by_name() {
+        assert_module_snapshot!(
+            r#"
+            module Main exposing (..)
+            type alias point = { z : int, a : int }
+        "#
+        );
+    }
+
+    #[test]
+    fn record_literal_no_alias_error() {
+        assert_module_error_snapshot!(
+            r#"
+            module Main exposing (..)
+            value = { x = () }
+        "#
+        );
+    }
+
+    #[test]
+    fn record_literal_ambiguous_error() {
+        assert_module_error_snapshot!(
+            r#"
+            module Main exposing (..)
+            type alias first = { x : unit }
+            type alias second = { x : unit }
+            value = { x = () }
+        "#
+        );
+    }
+
+    #[test]
+    fn record_literal_fields_in_wire_order() {
+        assert_module_snapshot!(
+            r#"
+            module Main exposing (..)
+            type alias point = { z : unit, a : unit }
+            value = { a = (), z = () }
+        "#
+        );
     }
 
     fn var_type<'a>(bump: &'a Bump, name: &'a str) -> &'a Located<CanType<'a>> {
@@ -2604,6 +2684,7 @@ mod tests {
             r#"
             module Main exposing (..)
 
+            type alias point = { x : int, y : int }
             f = { x = 1, y = 2 }
         "#
         );

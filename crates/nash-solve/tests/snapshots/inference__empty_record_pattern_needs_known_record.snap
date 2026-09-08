@@ -1,0 +1,23 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nf {} = ()\n"
+---
+[
+    AmbiguousRecordAccess {
+        region: Region {
+            start: Position {
+                line: 2,
+                column: 3,
+            },
+            end: Position {
+                line: 2,
+                column: 5,
+            },
+        },
+        context: Pattern,
+        field: None,
+        record: FlexVar(
+            "a",
+        ),
+    },
+]

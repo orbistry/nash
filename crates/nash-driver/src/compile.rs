@@ -665,6 +665,36 @@ mod kind_tests {
     }
 
     #[tokio::test]
+    async fn nominal_record_imports_preserve_identity_and_field_order() {
+        let result = compile_pair(
+            "module Types exposing (type point)\ntype alias point = { z : unit, a : unit }\n",
+            "module Main exposing (..)\nimport Types\nvalue = { a = (), z = () }\nget : Types.point -> unit\nget r = r.z\nconstructed = Types.point () ()\n",
+        ).await;
+        assert_eq!(result.success, 2, "{result:?}");
+        assert!(result.is_success());
+    }
+
+    #[tokio::test]
+    async fn nominal_record_import_rejects_identical_foreign_fields() {
+        let result = compile_pair(
+            "module Types exposing (type point)\ntype alias point = { x : unit }\n",
+            "module Main exposing (..)\nimport Types\ntype alias local = { x : unit }\nf : Types.point -> local\nf r = r\n",
+        ).await;
+        assert_eq!(result.success, 1, "{result:?}");
+        assert_eq!(result.failed, 1, "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn nominal_record_literal_deduplicates_exposed_and_qualified_alias() {
+        let result = compile_pair(
+            "module Types exposing (type point)\ntype alias point = { x : unit }\n",
+            "module Main exposing (..)\nimport Types exposing (type point)\nvalue = { x = () }\n",
+        )
+        .await;
+        assert_eq!(result.success, 2, "{result:?}");
+    }
+
+    #[tokio::test]
     async fn producer_rejects_ternary_self_application_with_an_infinite_kind() {
         let result = compile_pair(
             "module Types exposing (type s)\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\n",

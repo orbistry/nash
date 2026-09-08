@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\nf = { x = 1, y = 2 }\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntype alias point = { x : int, y : int }\nf = { x = 1, y = 2 }\n"
 ---
 Module {
     traits: [],
@@ -29,7 +29,7 @@ Module {
                 column: 1,
             },
             end: Position {
-                line: 4,
+                line: 5,
                 column: 1,
             },
         },
@@ -39,11 +39,11 @@ Module {
             name: Located {
                 region: Region {
                     start: Position {
-                        line: 3,
+                        line: 4,
                         column: 1,
                     },
                     end: Position {
-                        line: 3,
+                        line: 4,
                         column: 2,
                     },
                 },
@@ -53,25 +53,221 @@ Module {
             body: Located {
                 region: Region {
                     start: Position {
-                        line: 3,
+                        line: 4,
                         column: 5,
                     },
                     end: Position {
-                        line: 3,
+                        line: 4,
                         column: 21,
                     },
                 },
-                value: Record(
-                    [
+                value: Record {
+                    alias: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Main",
+                        },
+                        name: "point",
+                    },
+                    annotation: Annotation {
+                        context: [],
+                        free_vars: [],
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Lambda {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 26,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 29,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "int",
+                                        },
+                                        args: [],
+                                    },
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Lambda {
+                                        from: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 3,
+                                                    column: 35,
+                                                },
+                                                end: Position {
+                                                    line: 3,
+                                                    column: 38,
+                                                },
+                                            },
+                                            value: Named {
+                                                reference: QualifiedName {
+                                                    home: ModuleName {
+                                                        package: Some(
+                                                            PackageName {
+                                                                author: "nash",
+                                                                project: "core",
+                                                            },
+                                                        ),
+                                                        name: "Builtin",
+                                                    },
+                                                    name: "int",
+                                                },
+                                                args: [],
+                                            },
+                                        },
+                                        to: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                            },
+                                            value: Alias {
+                                                reference: QualifiedName {
+                                                    home: ModuleName {
+                                                        package: None,
+                                                        name: "Main",
+                                                    },
+                                                    name: "point",
+                                                },
+                                                arguments: [],
+                                                remaining: [],
+                                                target: Open(
+                                                    Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 3,
+                                                                column: 20,
+                                                            },
+                                                            end: Position {
+                                                                line: 3,
+                                                                column: 40,
+                                                            },
+                                                        },
+                                                        value: Record {
+                                                            fields: [
+                                                                FieldType {
+                                                                    index: 0,
+                                                                    field: "x",
+                                                                    typ: Located {
+                                                                        region: Region {
+                                                                            start: Position {
+                                                                                line: 3,
+                                                                                column: 26,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 3,
+                                                                                column: 29,
+                                                                            },
+                                                                        },
+                                                                        value: Named {
+                                                                            reference: QualifiedName {
+                                                                                home: ModuleName {
+                                                                                    package: Some(
+                                                                                        PackageName {
+                                                                                            author: "nash",
+                                                                                            project: "core",
+                                                                                        },
+                                                                                    ),
+                                                                                    name: "Builtin",
+                                                                                },
+                                                                                name: "int",
+                                                                            },
+                                                                            args: [],
+                                                                        },
+                                                                    },
+                                                                },
+                                                                FieldType {
+                                                                    index: 1,
+                                                                    field: "y",
+                                                                    typ: Located {
+                                                                        region: Region {
+                                                                            start: Position {
+                                                                                line: 3,
+                                                                                column: 35,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 3,
+                                                                                column: 38,
+                                                                            },
+                                                                        },
+                                                                        value: Named {
+                                                                            reference: QualifiedName {
+                                                                                home: ModuleName {
+                                                                                    package: Some(
+                                                                                        PackageName {
+                                                                                            author: "nash",
+                                                                                            project: "core",
+                                                                                        },
+                                                                                    ),
+                                                                                    name: "Builtin",
+                                                                                },
+                                                                                name: "int",
+                                                                            },
+                                                                            args: [],
+                                                                        },
+                                                                    },
+                                                                },
+                                                            ],
+                                                        },
+                                                    },
+                                                ),
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    fields: [
                         FieldValue {
                             field: Located {
                                 region: Region {
                                     start: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 7,
                                     },
                                     end: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 8,
                                     },
                                 },
@@ -80,11 +276,11 @@ Module {
                             value: Located {
                                 region: Region {
                                     start: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 11,
                                     },
                                     end: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 12,
                                     },
                                 },
@@ -97,11 +293,11 @@ Module {
                             field: Located {
                                 region: Region {
                                     start: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 14,
                                     },
                                     end: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 15,
                                     },
                                 },
@@ -110,11 +306,11 @@ Module {
                             value: Located {
                                 region: Region {
                                     start: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 18,
                                     },
                                     end: Position {
-                                        line: 3,
+                                        line: 4,
                                         column: 19,
                                     },
                                 },
@@ -124,12 +320,121 @@ Module {
                             },
                         },
                     ],
-                ),
+                },
             },
         },
         next: Empty,
     },
     unions: [],
-    aliases: [],
+    aliases: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 1,
+                },
+                end: Position {
+                    line: 4,
+                    column: 1,
+                },
+            },
+            value: Alias {
+                kind: Type,
+                context: [],
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 17,
+                        },
+                    },
+                    value: "point",
+                },
+                parameters: [],
+                typ: Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 20,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 40,
+                        },
+                    },
+                    value: Record {
+                        fields: [
+                            FieldType {
+                                index: 0,
+                                field: "x",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 26,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 29,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "int",
+                                        },
+                                        args: [],
+                                    },
+                                },
+                            },
+                            FieldType {
+                                index: 1,
+                                field: "y",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 3,
+                                            column: 35,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 38,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "int",
+                                        },
+                                        args: [],
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    ],
     binops: [],
 }

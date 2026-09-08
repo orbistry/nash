@@ -1,0 +1,33 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nf : int -> ()\nf {} = ()\n"
+---
+[
+    NotARecord {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 3,
+            },
+            end: Position {
+                line: 3,
+                column: 5,
+            },
+        },
+        context: Pattern,
+        field: None,
+        record: Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "int",
+            args: [],
+        },
+    },
+]

@@ -14,6 +14,49 @@ Make the type checker speak the representation model of
 
 ## Prerequisites
 
+### Current implementation reconciliation (2026-09-08)
+
+The Haskell 98 kind and trait implementations have landed. The code sketches
+below describe the intended changes, but their line numbers and older enum
+shapes are not current APIs. In particular:
+
+- Preserve trait-based literals, negation, real trait tables and solver mode.
+  B1's magic supertypes are already removed; legitimate superclass evidence
+  named `Super` remains. Verify the obsolete variants specifically.
+- C1 already seeds unqualified primitive types. Finish qualified primitive
+  lookup and replace the remaining special unit variants with `Builtin.unit`.
+- A1 must preserve representation annotations and reject nested anonymous
+  record types as well as anonymous records in value annotations.
+- A2 must use the retained alias body to distinguish a nominal record alias
+  from a transparent alias of that record. Preserve partial aliases and
+  higher-kinded application unification.
+- A4 must retry fields to a fixed point before generalization. Reject
+  unresolved constraints owned by definitions before their variables can be
+  copied; existential constraint wrappers are not definition boundaries.
+  Preserve constraints on captured outer variables until their owning scope.
+- A5 must retain the current trait/evidence integration at all solver callers.
+  D1 uses existing representation predicates and metadata, never a second
+  representation classifier.
+
+Progress:
+
+- [x] A1: direct record alias bodies only; canonical extensions removed.
+- [x] A2: closed record inference and nominal identity through transparent aliases.
+- [x] A3: field-set literal resolution, lowercase alias constructors and wire order.
+- [x] A4: deferred fields and empty-record shape checks, with scoped generalization.
+- [ ] A5: labeled constructors, sugar and visible field metadata.
+- [x] B1: obsolete magic supertypes absent; existing trait literals preserved.
+- [ ] C1: finish qualified builtin availability and named unit representation.
+- [ ] D1: record alias helper complete; labeled-union helper remains.
+- [ ] E1: complete remaining changesets, progress updates and final validation.
+
+A1–A4 validation: workspace snapshot suite passes with reviewed snapshots and
+stale snapshots removed. Cross-module checks cover qualified lowercase names,
+record identity and duplicate exposure. Regressions cover empty record patterns,
+fixed-point field resolution, captured field rank safety and retained trait
+evidence. The nominal-record changeset covers the public API and downstream
+publication chain.
+
 - plans/01 (syntax): record extension syntax removed from the type
   grammar, so `nash_source::Type::Record` has no `ext`; `'a` variables;
   lowercase type names.

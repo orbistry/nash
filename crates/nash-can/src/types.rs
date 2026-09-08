@@ -83,33 +83,56 @@ pub(crate) fn repr_predicates<'a>(
     env: &Env<'a>,
     typ: &'a Located<SourceType<'a>>,
 ) -> Result<Vec<nash_ast::Pred<'a>>, Vec<Error<'a>>> {
+    collect_repr_predicates(bump, env, typ, false)
+}
+
+pub(crate) fn alias_repr_predicates<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    typ: &'a Located<SourceType<'a>>,
+) -> Result<Vec<nash_ast::Pred<'a>>, Vec<Error<'a>>> {
+    collect_repr_predicates(bump, env, typ, true)
+}
+
+fn collect_repr_predicates<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    typ: &'a Located<SourceType<'a>>,
+    alias_body: bool,
+) -> Result<Vec<nash_ast::Pred<'a>>, Vec<Error<'a>>> {
     let mut result = Vec::new();
-    let mut pending = vec![typ];
-    while let Some(typ) = pending.pop() {
+    let mut pending = vec![(typ, alias_body)];
+    while let Some((typ, alias_body)) = pending.pop() {
         match &typ.value {
             SourceType::Repr { typ, repr } => {
                 let trait_ = repr_trait(repr.value).qualified();
-                let arg = canonicalize_type(bump, env, typ)?;
+                let arg = if alias_body {
+                    canonicalize_alias_body(bump, env, typ)?
+                } else {
+                    canonicalize_type(bump, env, typ)?
+                };
                 result.push(nash_ast::Pred::Trait {
                     trait_,
                     args: bump.alloc_slice_copy(&[arg]),
                 });
-                pending.push(typ);
+                pending.push((typ, alias_body));
             }
-            SourceType::Lambda { from, to } => pending.extend([*to, *from]),
+            SourceType::Lambda { from, to } => pending.extend([(*to, false), (*from, false)]),
             SourceType::VarApp { args, .. }
             | SourceType::Type { args, .. }
-            | SourceType::TypeQual { args, .. } => pending.extend(args.iter().rev().copied()),
+            | SourceType::TypeQual { args, .. } => {
+                pending.extend(args.iter().rev().map(|typ| (*typ, false)))
+            }
             SourceType::Record(fields) => {
-                pending.extend(fields.iter().rev().map(|field| field.typ))
+                pending.extend(fields.iter().rev().map(|field| (field.typ, false)))
             }
             SourceType::Tuple {
                 first,
                 second,
                 rest,
             } => {
-                pending.extend(rest.iter().rev().copied());
-                pending.extend([*second, *first]);
+                pending.extend(rest.iter().rev().map(|typ| (*typ, false)));
+                pending.extend([(*second, false), (*first, false)]);
             }
             SourceType::Var(_) | SourceType::Unit => {}
         }
@@ -138,6 +161,28 @@ pub fn canonicalize_type<'a>(
         typ.region,
         canonicalize_type_value(bump, env, typ.region, &typ.value)?,
     )))
+}
+
+/// Canonicalize a direct record alias body; nested types use the ordinary rules.
+pub fn canonicalize_alias_body<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    typ: &'a Located<SourceType<'a>>,
+) -> Result<&'a Located<CanType<'a>>, Vec<Error<'a>>> {
+    match &typ.value {
+        SourceType::Repr { typ, .. } => canonicalize_alias_body(bump, env, typ),
+        SourceType::Record(fields) => {
+            let field_dict = check_fields(fields)?;
+            let fields = accumulate::try_all_alloc(
+                bump,
+                field_dict
+                    .into_iter()
+                    .map(|(_, (index, field))| canonicalize_field_type(bump, env, index, field)),
+            )?;
+            Ok(bump.alloc(Located::at(typ.region, CanType::Record { fields })))
+        }
+        _ => canonicalize_type(bump, env, typ),
+    }
 }
 
 /// Canonicalize a slice of type arguments.
@@ -195,19 +240,7 @@ fn canonicalize_type_value<'a>(
             let info = find_type_qual(bump, env, *name_region, type_module, name)?;
             canonicalize_env_type(bump, env, region, name, args, info)?
         }
-        SourceType::Record(fields) => {
-            let field_dict = check_fields(fields)?;
-            let can_fields = accumulate::try_all_alloc(
-                bump,
-                field_dict
-                    .into_iter()
-                    .map(|(_, (index, field))| canonicalize_field_type(bump, env, index, field)),
-            )?;
-            CanType::Record {
-                fields: can_fields,
-                ext: None,
-            }
-        }
+        SourceType::Record(_) => return Err(vec![Error::RecordTypeOutsideAlias { region }]),
         SourceType::Unit => CanType::Unit,
         SourceType::Tuple {
             first,
@@ -429,10 +462,7 @@ pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
                 collect_free_vars(&arg.value, vars);
             }
         }
-        CanType::Record { fields, ext } => {
-            if let Some(name) = ext {
-                vars.insert(name);
-            }
+        CanType::Record { fields } => {
             for f in *fields {
                 collect_free_vars(&f.typ.value, vars);
             }
@@ -571,15 +601,12 @@ pub fn substitute_type<'a>(
             args: bump
                 .alloc_slice_fill_iter(args.iter().map(|arg| substitute_type(bump, table, arg))),
         },
-        // NOTE: like Elm's `dealiasHelp`, the record extension variable is
-        // not substituted.
-        CanType::Record { fields, ext } => CanType::Record {
+        CanType::Record { fields } => CanType::Record {
             fields: bump.alloc_slice_fill_iter(fields.iter().map(|f| CanFieldType {
                 index: f.index,
                 field: f.field,
                 typ: substitute_type(bump, table, f.typ),
             })),
-            ext: *ext,
         },
         // Open bodies bind alias parameters; filled bodies contain caller variables.
         CanType::Alias {
@@ -929,8 +956,8 @@ mod tests {
     }
 
     #[test]
-    fn record_fields_sorted_by_name() {
-        assert_type_snapshot!("{ z : Int, a : Int }", env_with_int);
+    fn anonymous_record_type_errors() {
+        assert_type_error_snapshot!("{ z : Int, a : Int }", env_with_int);
     }
 
     #[test]

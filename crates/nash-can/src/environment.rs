@@ -143,6 +143,7 @@ pub enum Ctor<'a> {
         alias_name: &'a str,
         type_vars: &'a [&'a str],
         typ: &'a Located<CanType<'a>>,
+        fields: &'a [nash_ast::FieldType<'a>],
     },
 }
 
@@ -194,6 +195,7 @@ pub fn make_record_ctor<'a>(
         alias_name,
         type_vars: parameters,
         typ,
+        fields,
     }
 }
 

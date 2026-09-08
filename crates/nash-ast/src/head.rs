@@ -31,7 +31,7 @@ pub struct Canonical;
 enum CanonicalCon<'a> {
     Known(HeadCon<'a>),
     Var(&'a str),
-    Record(Vec<&'a str>, Option<&'a str>),
+    Record(Vec<&'a str>),
 }
 
 fn canonical_view<'a>(
@@ -69,8 +69,8 @@ fn canonical_view<'a>(
                 .collect(),
         ),
         Type::Lambda { from, to } => (CanonicalCon::Known(HeadCon::Fun), vec![*from, *to]),
-        Type::Record { fields, ext } => (
-            CanonicalCon::Record(fields.iter().map(|field| field.field).collect(), *ext),
+        Type::Record { fields } => (
+            CanonicalCon::Record(fields.iter().map(|field| field.field).collect()),
             fields.iter().map(|field| field.typ).collect(),
         ),
         Type::App { .. } => unreachable!("application head flattened"),

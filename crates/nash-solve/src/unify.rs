@@ -10,9 +10,7 @@ use std::collections::BTreeMap;
 
 use bumpalo::Bump;
 use nash_constrain::error_type::ErrorType;
-use nash_constrain::type_::{
-    self, Content, Descriptor, FlatType, NO_MARK, NO_RANK, unnamed_flex_var,
-};
+use nash_constrain::type_::{self, Content, Descriptor, FlatType, NO_MARK, NO_RANK};
 use nash_constrain::{UnionFind, Variable};
 
 use crate::annotation;
@@ -317,6 +315,7 @@ fn unify_alias<'a>(
     real_var: Variable,
     body: &'a nash_region::Located<nash_ast::Type<'a>>,
 ) -> UResult {
+    let nominal = matches!(body.value, nash_ast::Type::Record { .. });
     match context.second_desc.content.clone() {
         Content::PartialAlias { .. } => Err(()),
         Content::FlexVar(_) => merge(
@@ -331,6 +330,7 @@ fn unify_alias<'a>(
             },
         ),
 
+        Content::RigidVar(_) if nominal => Err(()),
         Content::RigidVar(_) => sub_unify(uf, vars, real_var, context.second),
 
         Content::Alias {
@@ -353,8 +353,13 @@ fn unify_alias<'a>(
                         body: other_body,
                     },
                 )
+            } else if !nominal {
+                // Unwrap only transparent sides so the record's identity survives.
+                sub_unify(uf, vars, real_var, context.second)
+            } else if !matches!(other_body.value, nash_ast::Type::Record { .. }) {
+                sub_unify(uf, vars, context.first, other_real_var)
             } else {
-                sub_unify(uf, vars, real_var, other_real_var)
+                Err(())
             }
         }
 
@@ -371,6 +376,7 @@ fn unify_alias<'a>(
                 real: real_var,
             },
         ),
+        Content::Structure(_) if nominal => Err(()),
         Content::Structure(_) => sub_unify(uf, vars, real_var, context.second),
 
         Content::Error => merge(uf, context, Content::Error),
@@ -417,9 +423,12 @@ fn unify_structure<'a>(
             if matches!(flat_type, FlatType::AppV1(..)) {
                 unify_application_alias(uf, vars, context, flat_type, alias)
             } else {
-                let Content::Alias { real, .. } = alias else {
+                let Content::Alias { real, body, .. } = alias else {
                     unreachable!()
                 };
+                if matches!(body.value, nash_ast::Type::Record { .. }) {
+                    return Err(());
+                }
                 sub_unify(uf, vars, context.first, real)
             }
         }
@@ -491,22 +500,8 @@ fn unify_structure<'a>(
                 merge(uf, context, Content::Structure(FlatType::Fun1(arg2, res2)))
             }
 
-            (FlatType::EmptyRecord1, FlatType::EmptyRecord1) => {
-                merge(uf, context, Content::Structure(FlatType::EmptyRecord1))
-            }
-
-            (FlatType::Record1(fields, ext), FlatType::EmptyRecord1) if fields.is_empty() => {
-                sub_unify(uf, vars, ext, context.second)
-            }
-
-            (FlatType::EmptyRecord1, FlatType::Record1(fields, ext)) if fields.is_empty() => {
-                sub_unify(uf, vars, context.first, ext)
-            }
-
-            (FlatType::Record1(fields1, ext1), FlatType::Record1(fields2, ext2)) => {
-                let structure1 = gather_fields(uf, fields1, ext1);
-                let structure2 = gather_fields(uf, fields2, ext2);
-                unify_record(uf, vars, context, structure1, structure2)
+            (FlatType::Record1(fields1), FlatType::Record1(fields2)) => {
+                unify_record(uf, vars, context, fields1, fields2)
             }
 
             (FlatType::Tuple1(a, b, rest), FlatType::Tuple1(x, y, other))
@@ -562,160 +557,20 @@ fn unify_record<'a>(
     uf: &mut UnionFind<'a>,
     vars: &mut Vec<Variable>,
     context: &Context<'a>,
-    structure1: RecordStructure<'a>,
-    structure2: RecordStructure<'a>,
+    fields1: BTreeMap<&'a str, Variable>,
+    fields2: BTreeMap<&'a str, Variable>,
 ) -> UResult {
-    let RecordStructure {
-        fields: fields1,
-        ext: ext1,
-    } = structure1;
-    let RecordStructure {
-        fields: fields2,
-        ext: ext2,
-    } = structure2;
-
-    let shared_fields: BTreeMap<&'a str, (Variable, Variable)> = fields1
-        .iter()
-        .filter_map(|(name, var1)| fields2.get(name).map(|var2| (*name, (*var1, *var2))))
-        .collect();
-    let unique_fields1: BTreeMap<&'a str, Variable> = fields1
-        .iter()
-        .filter(|(name, _)| !fields2.contains_key(*name))
-        .map(|(name, var)| (*name, *var))
-        .collect();
-    let unique_fields2: BTreeMap<&'a str, Variable> = fields2
-        .iter()
-        .filter(|(name, _)| !fields1.contains_key(*name))
-        .map(|(name, var)| (*name, *var))
-        .collect();
-
-    if unique_fields1.is_empty() {
-        if unique_fields2.is_empty() {
-            sub_unify(uf, vars, ext1, ext2)?;
-            unify_shared_fields(uf, vars, context, shared_fields, BTreeMap::new(), ext1)
-        } else {
-            let sub_record = fresh(
-                uf,
-                vars,
-                context,
-                Content::Structure(FlatType::Record1(unique_fields2, ext2)),
-            );
-            sub_unify(uf, vars, ext1, sub_record)?;
-            unify_shared_fields(
-                uf,
-                vars,
-                context,
-                shared_fields,
-                BTreeMap::new(),
-                sub_record,
-            )
-        }
-    } else if unique_fields2.is_empty() {
-        let sub_record = fresh(
-            uf,
-            vars,
-            context,
-            Content::Structure(FlatType::Record1(unique_fields1, ext1)),
-        );
-        sub_unify(uf, vars, sub_record, ext2)?;
-        unify_shared_fields(
-            uf,
-            vars,
-            context,
-            shared_fields,
-            BTreeMap::new(),
-            sub_record,
-        )
-    } else {
-        let mut other_fields = unique_fields1.clone();
-        other_fields.extend(unique_fields2.iter().map(|(name, var)| (*name, *var)));
-
-        let ext = fresh(uf, vars, context, unnamed_flex_var());
-        let sub1 = fresh(
-            uf,
-            vars,
-            context,
-            Content::Structure(FlatType::Record1(unique_fields1, ext)),
-        );
-        let sub2 = fresh(
-            uf,
-            vars,
-            context,
-            Content::Structure(FlatType::Record1(unique_fields2, ext)),
-        );
-        sub_unify(uf, vars, ext1, sub2)?;
-        sub_unify(uf, vars, sub1, ext2)?;
-        unify_shared_fields(uf, vars, context, shared_fields, other_fields, ext)
+    if !fields1.keys().eq(fields2.keys()) {
+        return Err(());
     }
-}
-
-fn unify_shared_fields<'a>(
-    uf: &mut UnionFind<'a>,
-    vars: &mut Vec<Variable>,
-    context: &Context<'a>,
-    shared_fields: BTreeMap<&'a str, (Variable, Variable)>,
-    other_fields: BTreeMap<&'a str, Variable>,
-    ext: Variable,
-) -> UResult {
-    let shared_count = shared_fields.len();
-    let mut matching_fields: BTreeMap<&'a str, Variable> = BTreeMap::new();
-    for (name, (actual, expected)) in shared_fields {
-        // A field that fails to unify is dropped, not fatal here; the size
-        // comparison below turns any dropped field into a mismatch.
-        if sub_unify(uf, vars, actual, expected).is_ok() {
-            matching_fields.insert(name, actual);
-        }
+    let mut failed = false;
+    for (a, b) in fields1.values().zip(fields2.values()) {
+        failed |= sub_unify(uf, vars, *a, *b).is_err();
     }
-
-    if shared_count == matching_fields.len() {
-        let mut all_fields = matching_fields;
-        for (name, var) in other_fields {
-            all_fields.entry(name).or_insert(var);
-        }
-        merge(
-            uf,
-            context,
-            Content::Structure(FlatType::Record1(all_fields, ext)),
-        )
-    } else {
+    if failed {
         Err(())
-    }
-}
-
-// GATHER RECORD STRUCTURE
-
-struct RecordStructure<'a> {
-    fields: BTreeMap<&'a str, Variable>,
-    ext: Variable,
-}
-
-fn gather_fields<'a>(
-    uf: &mut UnionFind<'a>,
-    mut fields: BTreeMap<&'a str, Variable>,
-    variable: Variable,
-) -> RecordStructure<'a> {
-    let mut variable = variable;
-    loop {
-        match uf.get(variable).content.clone() {
-            Content::Structure(FlatType::Record1(sub_fields, sub_ext)) => {
-                for (name, var) in sub_fields {
-                    fields.entry(name).or_insert(var);
-                }
-                variable = sub_ext;
-            }
-
-            // TODO may be dropping useful alias info here
-            Content::Alias { real, .. } => {
-                variable = real;
-            }
-
-            _ => {
-                return RecordStructure {
-                    fields,
-                    ext: variable,
-                };
-            }
-        }
+    } else {
+        merge(uf, context, Content::Structure(FlatType::Record1(fields1)))
     }
 }
 
@@ -800,7 +655,7 @@ mod predicate_tests {
         }
 
         let record = uf.fresh(type_::make_descriptor(Content::Structure(
-            FlatType::EmptyRecord1,
+            FlatType::Record1(BTreeMap::new()),
         )));
         uf.modify(record, |desc| desc.preds = vec![PredId(3)]);
         assert!(matches!(unify(&bump, &mut uf, b, record), Answer::Err(..)));

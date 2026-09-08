@@ -109,11 +109,11 @@ impl<'a, 'env> Check<'a, 'env> {
                     self.values(uf, [a, b].into_iter().chain(rest))?;
                     &K::Type
                 }
-                FlatType::Record1(fields, ext) => {
-                    self.values(uf, fields.into_values().chain([ext]))?;
+                FlatType::Record1(fields) => {
+                    self.values(uf, fields.into_values())?;
                     &K::Type
                 }
-                FlatType::Unit1 | FlatType::EmptyRecord1 => &K::Type,
+                FlatType::Unit1 => &K::Type,
             },
         };
         self.infer.unify(kind, actual)?;

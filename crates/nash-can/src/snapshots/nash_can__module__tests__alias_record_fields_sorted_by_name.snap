@@ -1,0 +1,150 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { z : int, a : int }\n"
+---
+Module {
+    traits: [],
+    impls: [],
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 3,
+                column: 1,
+            },
+        },
+    ),
+    decls: Empty,
+    unions: [],
+    aliases: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 1,
+                },
+                end: Position {
+                    line: 3,
+                    column: 1,
+                },
+            },
+            value: Alias {
+                kind: Type,
+                context: [],
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 17,
+                        },
+                    },
+                    value: "point",
+                },
+                parameters: [],
+                typ: Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 20,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 40,
+                        },
+                    },
+                    value: Record {
+                        fields: [
+                            FieldType {
+                                index: 1,
+                                field: "a",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 35,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 38,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "int",
+                                        },
+                                        args: [],
+                                    },
+                                },
+                            },
+                            FieldType {
+                                index: 0,
+                                field: "z",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 2,
+                                            column: 26,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 29,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "int",
+                                        },
+                                        args: [],
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    ],
+    binops: [],
+}

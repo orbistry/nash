@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use bumpalo::Bump;
 use nash_ast::{AliasArgument, AliasType, Annotation, FieldType, QualifiedName, Type as CanType};
-use nash_constrain::error_type::{self, ErrorType, Extension};
+use nash_constrain::error_type::ErrorType;
 use nash_constrain::type_::OCCURS_MARK;
 use nash_constrain::{Content, FlatType, UnionFind, Variable};
 use nash_region::Located;
@@ -256,41 +256,15 @@ fn term_to_can_type<'a>(
             to: variable_to_can_type(bump, uf, state, b),
         })),
 
-        FlatType::EmptyRecord1 => bump.alloc(Located::at_zero(CanType::Record {
-            fields: &[],
-            ext: None,
-        })),
-
-        FlatType::Record1(fields, extension) => {
-            let can_fields: Vec<FieldType<'a>> = fields
-                .iter()
-                .map(|(field, field_var)| FieldType {
-                    index: 0,
+        FlatType::Record1(fields) => bump.alloc(Located::at_zero(CanType::Record {
+            fields: bump.alloc_slice_fill_iter(fields.iter().enumerate().map(
+                |(index, (field, var))| FieldType {
+                    index: index as u16,
                     field,
-                    typ: variable_to_can_type(bump, uf, state, *field_var),
-                })
-                .collect();
-            let can_ext = nash_can::types::iterated_dealias(
-                bump,
-                variable_to_can_type(bump, uf, state, extension),
-            );
-            match &can_ext.value {
-                CanType::Record {
-                    fields: sub_fields,
-                    ext: sub_ext,
-                } => bump.alloc(Located::at_zero(CanType::Record {
-                    fields: union_fields(bump, sub_fields, &can_fields),
-                    ext: *sub_ext,
-                })),
-
-                CanType::Var(ext_name) => bump.alloc(Located::at_zero(CanType::Record {
-                    fields: bump.alloc_slice_fill_iter(can_fields),
-                    ext: Some(ext_name),
-                })),
-
-                _ => panic!("used to_annotation on a type that is not well-formed"),
-            }
-        }
+                    typ: variable_to_can_type(bump, uf, state, *var),
+                },
+            )),
+        })),
 
         FlatType::Unit1 => bump.alloc(Located::at_zero(CanType::Unit)),
 
@@ -308,23 +282,6 @@ fn term_to_can_type<'a>(
             }))
         }
     }
-}
-
-/// Elm's `Map.union subFields canFields`: left-biased merge of two
-/// name-sorted field slices.
-fn union_fields<'a>(
-    bump: &'a Bump,
-    sub_fields: &[FieldType<'a>],
-    can_fields: &[FieldType<'a>],
-) -> &'a [FieldType<'a>] {
-    let mut merged: BTreeMap<&'a str, FieldType<'a>> = BTreeMap::new();
-    for field in can_fields {
-        merged.insert(field.field, *field);
-    }
-    for field in sub_fields {
-        merged.insert(field.field, *field);
-    }
-    bump.alloc_slice_fill_iter(merged.into_values())
 }
 
 // TO ERROR TYPE
@@ -466,42 +423,13 @@ fn term_to_error_type<'a>(
             }
         }
 
-        FlatType::EmptyRecord1 => bump.alloc(ErrorType::Record {
-            fields: &[],
-            ext: Extension::Closed,
+        FlatType::Record1(fields) => bump.alloc(ErrorType::Record {
+            fields: bump.alloc_slice_fill_iter(
+                fields
+                    .iter()
+                    .map(|(field, var)| (*field, variable_to_error_type(bump, uf, state, *var))),
+            ),
         }),
-
-        FlatType::Record1(fields, extension) => {
-            let err_fields: Vec<(&'a str, &'a ErrorType<'a>)> = fields
-                .iter()
-                .map(|(field, field_var)| {
-                    (*field, variable_to_error_type(bump, uf, state, *field_var))
-                })
-                .collect();
-            let err_ext =
-                error_type::iterated_dealias(variable_to_error_type(bump, uf, state, extension));
-            match err_ext {
-                ErrorType::Record {
-                    fields: sub_fields,
-                    ext: sub_ext,
-                } => bump.alloc(ErrorType::Record {
-                    fields: union_error_fields(bump, sub_fields, &err_fields),
-                    ext: *sub_ext,
-                }),
-
-                ErrorType::FlexVar(ext) => bump.alloc(ErrorType::Record {
-                    fields: bump.alloc_slice_fill_iter(err_fields),
-                    ext: Extension::FlexOpen(ext),
-                }),
-
-                ErrorType::RigidVar(ext) => bump.alloc(ErrorType::Record {
-                    fields: bump.alloc_slice_fill_iter(err_fields),
-                    ext: Extension::RigidOpen(ext),
-                }),
-
-                _ => panic!("used to_error_type on a type that is not well-formed"),
-            }
-        }
 
         FlatType::Unit1 => bump.alloc(ErrorType::Unit),
 
@@ -515,23 +443,6 @@ fn term_to_error_type<'a>(
             bump.alloc(ErrorType::Tuple(first, second, third))
         }
     }
-}
-
-/// Elm's `Map.union subFields errFields`: left-biased merge of two
-/// name-sorted field slices.
-fn union_error_fields<'a>(
-    bump: &'a Bump,
-    sub_fields: &[(&'a str, &'a ErrorType<'a>)],
-    err_fields: &[(&'a str, &'a ErrorType<'a>)],
-) -> &'a [(&'a str, &'a ErrorType<'a>)] {
-    let mut merged: BTreeMap<&'a str, &'a ErrorType<'a>> = BTreeMap::new();
-    for (field, tipe) in err_fields {
-        merged.insert(field, tipe);
-    }
-    for (field, tipe) in sub_fields {
-        merged.insert(field, tipe);
-    }
-    bump.alloc_slice_fill_iter(merged)
 }
 
 // MANAGE FRESH VARIABLE NAMES
@@ -651,14 +562,9 @@ fn get_var_names<'a>(
                 get_var_names(bump, uf, seen, arg, taken)
             }
 
-            FlatType::EmptyRecord1 => taken_names,
-
-            FlatType::Record1(fields, extension) => {
-                let taken = fields.values().rev().fold(taken_names, |taken, field| {
-                    get_var_names(bump, uf, seen, *field, taken)
-                });
-                get_var_names(bump, uf, seen, extension, taken)
-            }
+            FlatType::Record1(fields) => fields.values().rev().fold(taken_names, |taken, field| {
+                get_var_names(bump, uf, seen, *field, taken)
+            }),
 
             FlatType::Unit1 => taken_names,
 

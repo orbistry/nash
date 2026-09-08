@@ -87,7 +87,7 @@ pub fn add_ctors<'a>(
         }
     }
     for alias in aliases {
-        if matches!(&alias.value.typ.value, CanType::Record { ext: None, .. }) {
+        if matches!(&alias.value.typ.value, CanType::Record { .. }) {
             occurrences
                 .entry(alias.value.name.value)
                 .or_default()
@@ -144,7 +144,7 @@ pub fn add_ctors<'a>(
     }
 
     for alias in aliases {
-        if let CanType::Record { fields, ext: None } = &alias.value.typ.value {
+        if let CanType::Record { fields } = &alias.value.typ.value {
             let info = super::make_record_ctor(
                 bump,
                 env.home,

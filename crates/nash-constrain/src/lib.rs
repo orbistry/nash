@@ -19,7 +19,7 @@ mod union_find;
 pub use crate::error::{
     Category, Context, Error, Expected, MaybeName, PCategory, PContext, PExpected, SubContext,
 };
-pub use crate::error_type::{ErrorType, Extension};
+pub use crate::error_type::ErrorType;
 pub use crate::module::constrain;
 pub use crate::type_::{Constraint, Content, Descriptor, FlatType, Mark, Type};
 pub use crate::union_find::{UnionFind, Variable};

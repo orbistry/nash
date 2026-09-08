@@ -118,37 +118,39 @@ pub fn add<'a>(
         }
 
         CanPattern::Record(fields) => {
-            let ext_var = mk_flex_var(uf);
-            let ext_type: &'a Type<'a> = bump.alloc(Type::VarN(ext_var));
-
-            let field_vars: Vec<(&'a str, Variable)> = fields
-                .iter()
-                .map(|field| (*field, mk_flex_var(uf)))
-                .collect();
-            let field_types: BTreeMap<&'a str, &'a Type<'a>> = field_vars
-                .iter()
-                .map(|(field, var)| (*field, &*bump.alloc(Type::VarN(*var))))
-                .collect();
-            let record_type: &'a Type<'a> = bump.alloc(Type::RecordN {
-                fields: bump
-                    .alloc_slice_fill_iter(field_types.iter().map(|(field, typ)| (*field, *typ))),
-                ext: ext_type,
-            });
-
             let mut state = state;
-            let record_con =
-                Constraint::Pattern(region, PCategory::Record, record_type, expectation);
-            // Elm: `Map.union headers (Map.map (A.At region) fieldTypes)`
-            // is left-biased, so existing headers win.
-            for (field, typ) in &field_types {
+            let record_var = mk_flex_var(uf);
+            let record_type: &'a Type<'a> = bump.alloc(Type::VarN(record_var));
+            state.vars.push(record_var);
+            state.rev_cons.push(Constraint::Pattern(
+                region,
+                PCategory::Record,
+                record_type,
+                expectation,
+            ));
+            if fields.is_empty() {
+                state.rev_cons.push(Constraint::Record {
+                    region,
+                    context: type_::FieldContext::Pattern,
+                    record: record_type,
+                });
+            }
+            for field in *fields {
+                let var = mk_flex_var(uf);
+                let field_type: &'a Type<'a> = bump.alloc(Type::VarN(var));
+                state.vars.push(var);
                 state
                     .headers
                     .entry(field)
-                    .or_insert_with(|| Located::at(region, *typ));
+                    .or_insert_with(|| Located::at(region, field_type));
+                state.rev_cons.push(Constraint::Field {
+                    region,
+                    context: type_::FieldContext::Pattern,
+                    record: record_type,
+                    field,
+                    field_type,
+                });
             }
-            state.vars.extend(field_vars.iter().map(|(_, var)| *var));
-            state.vars.push(ext_var);
-            state.rev_cons.push(record_con);
             state
         }
 

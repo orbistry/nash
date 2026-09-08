@@ -171,8 +171,7 @@ impl<'a> Resolver<'_, 'a> {
                     .collect(),
             ),
             Type::Lambda { from, to } => (Constructor::Function, vec![*from, *to]),
-            Type::Record { ext: Some(_), .. } => return Err(Failure::NonGround),
-            Type::Record { fields, ext: None } => (
+            Type::Record { fields } => (
                 Constructor::Record(fields.iter().map(|field| field.field).collect()),
                 fields.iter().map(|field| field.typ).collect(),
             ),

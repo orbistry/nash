@@ -124,18 +124,12 @@ pub fn from_src_type<'a>(
 
         CanType::Unit => bump.alloc(Type::UnitN),
 
-        CanType::Record { fields, ext } => bump.alloc(Type::RecordN {
+        CanType::Record { fields } => bump.alloc(Type::RecordN {
             fields: bump.alloc_slice_fill_iter(
                 fields
                     .iter()
                     .map(|field| (field.field, from_src_type(bump, free_vars, field.typ))),
             ),
-            ext: match ext {
-                None => bump.alloc(Type::EmptyRecordN),
-                Some(ext_name) => free_vars
-                    .get(ext_name)
-                    .expect("canonical types only mention their free variables"),
-            },
         }),
     }
 }
@@ -335,7 +329,7 @@ pub fn canonical_to_variable<'a>(
             )
         }
 
-        CanType::Record { fields, ext } => {
+        CanType::Record { fields } => {
             let field_vars: BTreeMap<&'a str, Variable> = fields
                 .iter()
                 .map(|field| {
@@ -345,22 +339,11 @@ pub fn canonical_to_variable<'a>(
                     )
                 })
                 .collect();
-            let ext_var = match ext {
-                None => register(
-                    uf,
-                    rank,
-                    variables,
-                    Content::Structure(FlatType::EmptyRecord1),
-                ),
-                Some(ext_name) => *flex_vars
-                    .get(ext_name)
-                    .expect("annotations only mention their free variables"),
-            };
             register(
                 uf,
                 rank,
                 variables,
-                Content::Structure(FlatType::Record1(field_vars, ext_var)),
+                Content::Structure(FlatType::Record1(field_vars)),
             )
         }
 

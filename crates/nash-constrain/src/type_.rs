@@ -76,6 +76,18 @@ pub struct Definition<'a> {
 /// slices, not owned containers.
 #[derive(Debug)]
 pub enum Constraint<'a> {
+    Record {
+        region: Region,
+        context: FieldContext<'a>,
+        record: &'a Type<'a>,
+    },
+    Field {
+        region: Region,
+        context: FieldContext<'a>,
+        record: &'a Type<'a>,
+        field: &'a str,
+        field_type: &'a Type<'a>,
+    },
     True,
     SaveTheEnvironment,
     Equal(
@@ -139,6 +151,19 @@ pub fn exists<'a>(
 
 // TYPE PRIMITIVES
 
+#[derive(Clone, Copy, Debug)]
+pub enum FieldContext<'a> {
+    Access {
+        record_region: Region,
+        maybe_name: Option<&'a str>,
+    },
+    Accessor,
+    Update {
+        record: &'a str,
+    },
+    Pattern,
+}
+
 /// Elm's `Type.FlatType`. Lives inside descriptors owned by the union-find
 /// store (real heap, so owned containers are fine here).
 #[derive(Clone, Debug)]
@@ -146,8 +171,7 @@ pub enum FlatType<'a> {
     App1(ModuleName<'a>, &'a str, Vec<Variable>),
     AppV1(Variable, Vec<Variable>),
     Fun1(Variable, Variable),
-    EmptyRecord1,
-    Record1(BTreeMap<&'a str, Variable>, Variable),
+    Record1(BTreeMap<&'a str, Variable>),
     Unit1,
     Tuple1(Variable, Variable, Vec<Variable>),
 }
@@ -177,11 +201,9 @@ pub enum Type<'a> {
         args: &'a [&'a Type<'a>],
     },
     FunN(&'a Type<'a>, &'a Type<'a>),
-    EmptyRecordN,
     /// Name-sorted, mirroring Elm's `Map.Map Name Type`.
     RecordN {
         fields: &'a [(&'a str, &'a Type<'a>)],
-        ext: &'a Type<'a>,
     },
     UnitN,
     TupleN(&'a Type<'a>, &'a Type<'a>, &'a [&'a Type<'a>]),

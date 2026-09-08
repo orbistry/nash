@@ -408,6 +408,7 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
         type Phantom 'a = Phantom
         wrap : 'a -> Phantom 'a
         wrap _ = Phantom
+        type alias record = { field : unit }
         record = wrap { field = () }
     "
         ),

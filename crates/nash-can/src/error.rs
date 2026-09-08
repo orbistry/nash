@@ -35,6 +35,17 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    RecordLiteralNoAlias {
+        region: Region,
+        fields: &'a [&'a str],
+    },
+    RecordLiteralAmbiguous {
+        region: Region,
+        candidates: &'a [QualifiedName<'a>],
+    },
+    RecordTypeOutsideAlias {
+        region: Region,
+    },
     ImplPatternLimit {
         region: Region,
     },

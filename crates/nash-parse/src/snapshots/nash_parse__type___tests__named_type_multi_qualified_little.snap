@@ -1,0 +1,47 @@
+---
+source: crates/nash-parse/src/type_.rs
+description: "Code:\n\nSome.Types.box 'a"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 18,
+        },
+    },
+    value: TypeQual {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 15,
+            },
+        },
+        module: "Some.Types",
+        name: "box",
+        args: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 16,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 18,
+                    },
+                },
+                value: Var(
+                    "a",
+                ),
+            },
+        ],
+    },
+}

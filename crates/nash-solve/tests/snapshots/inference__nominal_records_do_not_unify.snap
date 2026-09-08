@@ -1,0 +1,82 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\ntype alias other = { x : int }\nf : point -> other\nf r = r\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 5,
+                column: 7,
+            },
+            end: Position {
+                line: 5,
+                column: 8,
+            },
+        },
+        Local(
+            "r",
+        ),
+        Alias {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "point",
+            args: [],
+            real: Record {
+                fields: [
+                    (
+                        "x",
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "int",
+                            args: [],
+                        },
+                    ),
+                ],
+            },
+        },
+        FromAnnotation(
+            "f",
+            1,
+            TypedBody,
+            Alias {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "other",
+                args: [],
+                real: Record {
+                    fields: [
+                        (
+                            "x",
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "int",
+                                args: [],
+                            },
+                        ),
+                    ],
+                },
+            },
+        ),
+    ),
+]

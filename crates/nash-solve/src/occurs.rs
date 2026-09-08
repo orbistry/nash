@@ -37,14 +37,9 @@ fn occurs_help(
                     occurs_help(uf, seen, a, acc)
                 }
 
-                FlatType::EmptyRecord1 => found_cycle,
-
-                FlatType::Record1(fields, ext) => {
-                    let acc = fields
-                        .values()
-                        .fold(found_cycle, |acc, field| occurs_help(uf, seen, *field, acc));
-                    occurs_help(uf, seen, ext, acc)
-                }
+                FlatType::Record1(fields) => fields
+                    .values()
+                    .fold(found_cycle, |acc, field| occurs_help(uf, seen, *field, acc)),
 
                 FlatType::Unit1 => found_cycle,
 

@@ -13,6 +13,36 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    FieldMismatch {
+        region: Region,
+        context: crate::type_::FieldContext<'a>,
+        field: &'a str,
+        actual: &'a ErrorType<'a>,
+        expected: &'a ErrorType<'a>,
+    },
+    MissingField {
+        region: Region,
+        context: crate::type_::FieldContext<'a>,
+        field: &'a str,
+        record: &'a ErrorType<'a>,
+        available: &'a [&'a str],
+    },
+    NotARecord {
+        region: Region,
+        context: crate::type_::FieldContext<'a>,
+        field: Option<&'a str>,
+        record: &'a ErrorType<'a>,
+    },
+    UpdateNotRecord {
+        region: Region,
+        record: &'a ErrorType<'a>,
+    },
+    AmbiguousRecordAccess {
+        region: Region,
+        context: crate::type_::FieldContext<'a>,
+        field: Option<&'a str>,
+        record: &'a ErrorType<'a>,
+    },
     BadKind {
         region: Region,
         name: &'a str,
@@ -139,6 +169,7 @@ pub enum Expected<'a, T> {
 /// Indexes are zero-based, mirroring Elm's `Index.ZeroBased`.
 #[derive(Clone, Copy, Debug)]
 pub enum Context<'a> {
+    RecordField(&'a str, &'a str),
     ListEntry(usize),
     OpLeft(&'a str),
     OpRight(&'a str),

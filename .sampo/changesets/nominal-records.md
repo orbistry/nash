@@ -1,0 +1,15 @@
+---
+cargo/nash-ast: minor
+cargo/nash-parse: minor
+cargo/nash-can: minor
+cargo/nash-constrain: minor
+cargo/nash-solve: minor
+cargo/nash-driver: patch
+cargo/nash-cli: patch
+---
+
+Replace row polymorphism with nominal record aliases. Resolve literals by
+visible field sets, preserve declaration-order metadata, and resolve record
+operations before generalization. Support qualified lowercase type names and
+alias constructor functions while preserving trait-based literals and
+representation predicates.

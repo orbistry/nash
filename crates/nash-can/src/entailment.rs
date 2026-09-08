@@ -26,10 +26,7 @@ enum Constructor<'a> {
     Unit,
     Tuple(usize),
     Function,
-    Record {
-        fields: &'a [&'a str],
-        ext: Option<&'a str>,
-    },
+    Record { fields: &'a [&'a str] },
 }
 
 struct Term<'a> {
@@ -81,7 +78,7 @@ impl<'a> Resolver<'_, 'a> {
                 from: args[0],
                 to: args[1],
             },
-            Constructor::Record { fields, ext } => Type::Record {
+            Constructor::Record { fields } => Type::Record {
                 fields: self.bump.alloc_slice_fill_iter(
                     fields
                         .iter()
@@ -93,7 +90,6 @@ impl<'a> Resolver<'_, 'a> {
                             typ,
                         }),
                 ),
-                ext,
             },
         };
         Ok(self.bump.alloc(Located::at_zero(typ)))
@@ -143,12 +139,11 @@ impl<'a> Resolver<'_, 'a> {
                     .collect(),
             ),
             Type::Lambda { from, to } => (Constructor::Function, vec![*from, *to]),
-            Type::Record { fields, ext } => (
+            Type::Record { fields } => (
                 Constructor::Record {
                     fields: self
                         .bump
                         .alloc_slice_fill_iter(fields.iter().map(|f| f.field)),
-                    ext: *ext,
                 },
                 fields.iter().map(|f| f.typ).collect(),
             ),

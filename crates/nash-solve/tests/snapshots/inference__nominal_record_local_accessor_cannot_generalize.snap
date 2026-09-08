@@ -1,0 +1,39 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\nf p =\n    let\n        get r = r.x\n    in\n    get (point p)\n"
+---
+[
+    AmbiguousRecordAccess {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 17,
+            },
+            end: Position {
+                line: 5,
+                column: 20,
+            },
+        },
+        context: Access {
+            record_region: Region {
+                start: Position {
+                    line: 5,
+                    column: 17,
+                },
+                end: Position {
+                    line: 5,
+                    column: 18,
+                },
+            },
+            maybe_name: Some(
+                "r",
+            ),
+        },
+        field: Some(
+            "x",
+        ),
+        record: FlexVar(
+            "a",
+        ),
+    },
+]

@@ -628,18 +628,9 @@ impl<'a, 'env> TypeChecker<'a, 'env> {
                 }
                 Ok(&K::Type)
             }
-            Type::Record { fields, ext } => {
+            Type::Record { fields } => {
                 for field in *fields {
                     self.value(field.typ)?;
-                }
-                if let Some(ext) = ext {
-                    let kind = self.variable(ext);
-                    self.infer
-                        .unify(&K::Type, kind)
-                        .map_err(|mismatch| TypeMismatch {
-                            region: typ.region,
-                            mismatch,
-                        })?;
                 }
                 Ok(&K::Type)
             }
@@ -919,11 +910,8 @@ pub fn predicate_variables(pred: Pred<'_>) -> std::collections::BTreeSet<&str> {
                 pending.extend([*first, *second]);
                 pending.extend(rest.iter().copied());
             }
-            Type::Record { fields, ext } => {
+            Type::Record { fields } => {
                 pending.extend(fields.iter().map(|f| f.typ));
-                if let Some(ext) = ext {
-                    result.insert(*ext);
-                }
             }
             Type::Unit => {}
         }

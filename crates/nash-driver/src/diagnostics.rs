@@ -48,7 +48,7 @@ fn application(head: String, args: impl IntoIterator<Item = String>) -> String {
 }
 
 fn typ(value: &nash_constrain::error_type::ErrorType<'_>) -> String {
-    use nash_constrain::error_type::{ErrorType, Extension};
+    use nash_constrain::error_type::ErrorType;
     let qualified = |home: nash_ast::ModuleName<'_>, name: &str| {
         if home == nash_ast::primitives::builtin_home() {
             name.to_owned()
@@ -84,18 +84,13 @@ fn typ(value: &nash_constrain::error_type::ErrorType<'_>) -> String {
                 .collect::<Vec<_>>()
                 .join(" -> ")
         ),
-        ErrorType::Record { fields, ext } => {
+        ErrorType::Record { fields } => {
             let fields = fields
                 .iter()
                 .map(|(name, value)| format!("{name} : {}", typ(value)))
                 .collect::<Vec<_>>()
                 .join(", ");
-            match ext {
-                Extension::Closed => format!("{{ {fields} }}"),
-                Extension::FlexOpen(name) | Extension::RigidOpen(name) => {
-                    format!("{{ '{name} | {fields} }}")
-                }
-            }
+            format!("{{ {fields} }}")
         }
         ErrorType::Infinite => "<infinite type>".into(),
         ErrorType::Error => "<type error>".into(),
@@ -140,6 +135,12 @@ pub(crate) fn canonical(source: &str, errors: &[nash_can::Error<'_>]) -> String 
     use nash_can::Error;
     errors.iter().map(|error| {
         let (region, tag, message) = match error {
+            Error::RecordTypeOutsideAlias { region } => (*region, "RecordTypeOutsideAlias",
+                "a record type is only allowed as the direct body of a type alias. Give this record a named alias.".into()),
+            Error::RecordLiteralNoAlias { region, fields } => (*region, "RecordLiteralNoAlias",
+                format!("no visible record alias has exactly these fields: {}. Declare or import an alias for this record.", fields.join(", "))),
+            Error::RecordLiteralAmbiguous { region, candidates } => (*region, "RecordLiteralAmbiguous",
+                format!("these record aliases have the same field set: {}. Use the intended alias constructor.", candidates.iter().map(|name| format!("{}.{}", name.home.name, name.name)).collect::<Vec<_>>().join(", "))),
             Error::KindMismatch { region, expected, actual, .. } => (*region, "KindMismatch",
                 format!("expected kind {}, but found {}. Type arguments must have matching kinds.", kind(expected), kind(actual))),
             Error::KindInfinite { region, .. } => (*region, "KindInfinite",
@@ -162,6 +163,16 @@ pub(crate) fn inference(source: &str, errors: &[nash_constrain::error::Error<'_>
     use nash_constrain::error::{Error, KindProblem};
     errors.iter().map(|error| {
         let (region, tag, message) = match error {
+            Error::AmbiguousRecordAccess { region, .. } => (*region, "AmbiguousRecordAccess",
+                "the record type is not known before this definition is generalized. Add a type annotation.".into()),
+            Error::NotARecord { region, record, .. } => (*region, "NotARecord",
+                format!("{} does not provide record fields.", typ(record))),
+            Error::MissingField { region, field, record, available, .. } => (*region, "MissingField",
+                format!("{} has no field {field}. Available fields: {}.", typ(record), available.join(", "))),
+            Error::FieldMismatch { region, field, actual, expected, .. } => (*region, "FieldMismatch",
+                format!("field {field} has type {}, but this use requires {}.", typ(actual), typ(expected))),
+            Error::UpdateNotRecord { region, record } => (*region, "UpdateNotRecord",
+                format!("{} is not a record alias. Rebuild the value with its constructor.", typ(record))),
             Error::BadKind { region, name, reason, .. } => (*region, "BadKind", match reason {
                 KindProblem::Infinite => format!("{name} requires an infinite kind. A type constructor cannot be applied to itself."),
                 KindProblem::Mismatch { expected, actual } => format!("{name} requires kind {}, but this use has kind {}. An annotation's quantified kinds cannot be specialized by its body.", kind(expected), kind(actual)),

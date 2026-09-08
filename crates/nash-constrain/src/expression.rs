@@ -131,57 +131,57 @@ pub fn constrain<'a>(
         }
 
         CanExpr::Accessor(field) => {
-            let ext_var = mk_flex_var(uf);
+            let record_var = mk_flex_var(uf);
             let field_var = mk_flex_var(uf);
-            let ext_type: &'a Type<'a> = bump.alloc(Type::VarN(ext_var));
+            let record_type: &'a Type<'a> = bump.alloc(Type::VarN(record_var));
             let field_type: &'a Type<'a> = bump.alloc(Type::VarN(field_var));
-            let record_type: &'a Type<'a> = bump.alloc(Type::RecordN {
-                fields: bump.alloc_slice_copy(&[(*field, field_type)]),
-                ext: ext_type,
-            });
             exists(
                 bump,
-                bump.alloc_slice_copy(&[field_var, ext_var]),
-                Constraint::Equal(
-                    region,
-                    Category::Accessor(field),
-                    bump.alloc(Type::FunN(record_type, field_type)),
-                    expected,
+                bump.alloc_slice_copy(&[record_var, field_var]),
+                c_and(
+                    bump,
+                    vec![
+                        Constraint::Field {
+                            region,
+                            context: type_::FieldContext::Accessor,
+                            record: record_type,
+                            field,
+                            field_type,
+                        },
+                        Constraint::Equal(
+                            region,
+                            Category::Accessor(field),
+                            bump.alloc(Type::FunN(record_type, field_type)),
+                            expected,
+                        ),
+                    ],
                 ),
             )
         }
 
         CanExpr::Access { record, field } => {
-            let ext_var = mk_flex_var(uf);
+            let record_var = mk_flex_var(uf);
             let field_var = mk_flex_var(uf);
-            let ext_type: &'a Type<'a> = bump.alloc(Type::VarN(ext_var));
+            let record_type: &'a Type<'a> = bump.alloc(Type::VarN(record_var));
             let field_type: &'a Type<'a> = bump.alloc(Type::VarN(field_var));
-            let record_type: &'a Type<'a> = bump.alloc(Type::RecordN {
-                fields: bump.alloc_slice_copy(&[(field.value, field_type)]),
-                ext: ext_type,
-            });
-
-            let context = Context::RecordAccess {
-                record_region: record.region,
-                maybe_name: get_access_name(record),
-                field_region: field.region,
-                field: field.value,
-            };
-            let record_con = constrain(
-                bump,
-                uf,
-                rtv,
-                record,
-                Expected::FromContext(region, context, record_type),
-            );
-
+            let record_con = constrain(bump, uf, rtv, record, Expected::NoExpectation(record_type));
             exists(
                 bump,
-                bump.alloc_slice_copy(&[field_var, ext_var]),
+                bump.alloc_slice_copy(&[record_var, field_var]),
                 c_and(
                     bump,
                     vec![
                         record_con,
+                        Constraint::Field {
+                            region,
+                            context: type_::FieldContext::Access {
+                                record_region: record.region,
+                                maybe_name: get_access_name(record),
+                            },
+                            record: record_type,
+                            field: field.value,
+                            field_type,
+                        },
                         Constraint::Equal(
                             region,
                             Category::Access(field.value),
@@ -199,7 +199,13 @@ pub fn constrain<'a>(
             fields,
         } => constrain_update(bump, uf, rtv, region, record, base, fields, expected),
 
-        CanExpr::Record(fields) => constrain_record(bump, uf, rtv, region, fields, expected),
+        CanExpr::Record {
+            alias,
+            annotation,
+            fields,
+        } => constrain_record(
+            bump, uf, rtv, region, node, *alias, annotation, fields, expected,
+        ),
 
         CanExpr::Unit => {
             Constraint::Equal(region, Category::Unit, bump.alloc(Type::UnitN), expected)
@@ -666,35 +672,57 @@ fn constrain_case_branch<'a>(
 
 // CONSTRAIN RECORD
 
+#[allow(clippy::too_many_arguments)]
 fn constrain_record<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
     rtv: &Rtv<'a>,
     region: Region,
+    node: NodeId,
+    alias: nash_ast::QualifiedName<'a>,
+    annotation: &'a nash_ast::Annotation<'a>,
     fields: &[FieldValue<'a>],
     expected: Exp<'a>,
 ) -> Constraint<'a> {
-    // Canonical record fields are name-sorted, matching Elm's `Map` order.
-    let dict: Vec<(&'a str, (Variable, &'a Type<'a>, Constraint<'a>))> = fields
-        .iter()
-        .map(|field| {
-            let var = mk_flex_var(uf);
-            let tipe: &'a Type<'a> = bump.alloc(Type::VarN(var));
-            let con = constrain(bump, uf, rtv, field.value, Expected::NoExpectation(tipe));
-            (field.field.value, (var, tipe, con))
-        })
-        .collect();
-
-    let record_type: &'a Type<'a> = bump.alloc(Type::RecordN {
-        fields: bump.alloc_slice_fill_iter(dict.iter().map(|(name, (_, tipe, _))| (*name, *tipe))),
-        ext: bump.alloc(Type::EmptyRecordN),
+    let mut vars = Vec::with_capacity(fields.len() + 1);
+    let mut cons = Vec::with_capacity(fields.len() + 2);
+    let mut args = Vec::with_capacity(fields.len());
+    for field in fields {
+        let var = mk_flex_var(uf);
+        let typ: &'a Type<'a> = bump.alloc(Type::VarN(var));
+        vars.push(var);
+        args.push(typ);
+        cons.push(constrain(
+            bump,
+            uf,
+            rtv,
+            field.value,
+            Expected::FromContext(
+                region,
+                Context::RecordField(alias.name, field.field.value),
+                typ,
+            ),
+        ));
+    }
+    let result = mk_flex_var(uf);
+    vars.push(result);
+    let result_type: &'a Type<'a> = bump.alloc(Type::VarN(result));
+    let ctor_type = args.into_iter().rev().fold(result_type, |result, arg| {
+        &*bump.alloc(Type::FunN(arg, result))
     });
-    let record_con = Constraint::Equal(region, Category::Record, record_type, expected);
-
-    let vars: Vec<Variable> = dict.iter().map(|(_, (var, _, _))| *var).collect();
-    let mut cons: Vec<Constraint<'a>> = dict.into_iter().map(|(_, (_, _, con))| con).collect();
-    cons.push(record_con);
-
+    cons.push(Constraint::Foreign(
+        region,
+        node,
+        alias.name,
+        annotation,
+        Expected::NoExpectation(ctor_type),
+    ));
+    cons.push(Constraint::Equal(
+        region,
+        Category::Record,
+        result_type,
+        expected,
+    ));
     exists(bump, bump.alloc_slice_fill_iter(vars), c_and(bump, cons))
 }
 
@@ -711,58 +739,52 @@ fn constrain_update<'a>(
     fields: &'a [FieldUpdate<'a>],
     expected: Exp<'a>,
 ) -> Constraint<'a> {
-    let ext_var = mk_flex_var(uf);
-
-    // Canonical update fields are name-sorted, matching Elm's `Map` order.
-    let field_dict: Vec<(&'a str, (Variable, &'a Type<'a>, Constraint<'a>))> = fields
-        .iter()
-        .map(|field| {
-            let var = mk_flex_var(uf);
-            let tipe: &'a Type<'a> = bump.alloc(Type::VarN(var));
-            let con = constrain(
-                bump,
-                uf,
-                rtv,
-                field.value,
-                Expected::FromContext(region, Context::RecordUpdateValue(field.field.value), tipe),
-            );
-            (field.field.value, (var, tipe, con))
-        })
-        .collect();
-
     let record_var = mk_flex_var(uf);
     let record_type: &'a Type<'a> = bump.alloc(Type::VarN(record_var));
-    let fields_type: &'a Type<'a> = bump.alloc(Type::RecordN {
-        fields: bump
-            .alloc_slice_fill_iter(field_dict.iter().map(|(name, (_, tipe, _))| (*name, *tipe))),
-        ext: bump.alloc(Type::VarN(ext_var)),
-    });
-
-    // NOTE: fieldsType is separate so that Error propagates better
-    let fields_con = Constraint::Equal(
-        region,
-        Category::Record,
-        record_type,
-        Expected::NoExpectation(fields_type),
-    );
-    let record_con = Constraint::Equal(region, Category::Record, record_type, expected);
-
-    let mut vars: Vec<Variable> = field_dict.iter().map(|(_, (var, _, _))| *var).collect();
-    vars.push(record_var);
-    vars.push(ext_var);
-
-    let con = constrain(
+    let mut vars = vec![record_var];
+    let mut cons = vec![constrain(
         bump,
         uf,
         rtv,
         expr,
         Expected::FromContext(region, Context::RecordUpdateKeys(name, fields), record_type),
-    );
-
-    let mut cons = vec![fields_con, con];
-    cons.extend(field_dict.into_iter().map(|(_, (_, _, con))| con));
-    cons.push(record_con);
-
+    )];
+    if fields.is_empty() {
+        cons.push(Constraint::Record {
+            region,
+            context: type_::FieldContext::Update { record: name },
+            record: record_type,
+        });
+    }
+    for field in fields {
+        let var = mk_flex_var(uf);
+        vars.push(var);
+        let field_type: &'a Type<'a> = bump.alloc(Type::VarN(var));
+        cons.push(constrain(
+            bump,
+            uf,
+            rtv,
+            field.value,
+            Expected::FromContext(
+                region,
+                Context::RecordUpdateValue(field.field.value),
+                field_type,
+            ),
+        ));
+        cons.push(Constraint::Field {
+            region: field.field.region,
+            context: type_::FieldContext::Update { record: name },
+            record: record_type,
+            field: field.field.value,
+            field_type,
+        });
+    }
+    cons.push(Constraint::Equal(
+        region,
+        Category::Record,
+        record_type,
+        expected,
+    ));
     exists(bump, bump.alloc_slice_fill_iter(vars), c_and(bump, cons))
 }
 

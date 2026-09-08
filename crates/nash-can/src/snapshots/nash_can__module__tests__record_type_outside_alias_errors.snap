@@ -1,0 +1,18 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\nf : { x : int } -> int\nf r = r.x\n"
+---
+[
+    RecordTypeOutsideAlias {
+        region: Region {
+            start: Position {
+                line: 2,
+                column: 5,
+            },
+            end: Position {
+                line: 2,
+                column: 16,
+            },
+        },
+    },
+]

@@ -1,0 +1,34 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias first = { x : unit }\ntype alias second = { x : unit }\nvalue = { x = () }\n"
+---
+[
+    RecordLiteralAmbiguous {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 9,
+            },
+            end: Position {
+                line: 4,
+                column: 19,
+            },
+        },
+        candidates: [
+            QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "first",
+            },
+            QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "second",
+            },
+        ],
+    },
+]

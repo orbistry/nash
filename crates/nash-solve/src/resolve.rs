@@ -30,9 +30,8 @@ pub(crate) fn has_outer_flex(uf: &mut UnionFind<'_>, args: &[Variable], rank: us
                 pending.extend([(*a, outer), (*b, outer)]);
                 pending.extend(c.iter().map(|var| (*var, outer)));
             }
-            Content::Structure(FlatType::Record1(fields, ext)) => {
+            Content::Structure(FlatType::Record1(fields)) => {
                 pending.extend(fields.values().map(|var| (*var, outer)));
-                pending.push((*ext, outer));
             }
             Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
                 pending.extend(args.iter().map(|(_, var)| (*var, outer)))
@@ -70,34 +69,6 @@ enum View<'a> {
 struct InferenceTypes<'u, 'a>(&'u mut UnionFind<'a>);
 
 impl<'a> InferenceTypes<'_, 'a> {
-    fn row(
-        &mut self,
-        mut variable: Variable,
-        remaining: &mut usize,
-    ) -> Result<
-        (
-            std::collections::BTreeMap<&'a str, Variable>,
-            Option<Variable>,
-        ),
-        nash_ast::head::Limit,
-    > {
-        let mut fields = std::collections::BTreeMap::new();
-        loop {
-            nash_ast::head::step(remaining)?;
-            match self.0.get(variable).content.clone() {
-                Content::Structure(FlatType::Record1(next, tail)) => {
-                    for (name, value) in next {
-                        fields.entry(name).or_insert(value);
-                    }
-                    variable = tail;
-                }
-                Content::Alias { real, .. } => variable = real,
-                Content::Structure(FlatType::EmptyRecord1) => return Ok((fields, None)),
-                _ => return Ok((fields, Some(variable))),
-            }
-        }
-    }
-
     fn view(&mut self, variable: Variable) -> (View<'a>, Vec<Variable>) {
         if let Some(alias) = nash_constrain::instantiate::alias_application(self.0, variable) {
             return (
@@ -134,11 +105,10 @@ impl<'a> InferenceTypes<'_, 'a> {
                 [a, b].into_iter().chain(rest).collect(),
             ),
             Content::Structure(FlatType::Fun1(a, b)) => (View::Function, vec![a, b]),
-            Content::Structure(FlatType::Record1(fields, extension)) => (
+            Content::Structure(FlatType::Record1(fields)) => (
                 View::Record(fields.keys().copied().collect()),
-                fields.values().copied().chain([extension]).collect(),
+                fields.into_values().collect(),
             ),
-            Content::Structure(FlatType::EmptyRecord1) => (View::Record(Vec::new()), Vec::new()),
             Content::Structure(FlatType::AppV1(head, args)) => {
                 (View::Application, [head].into_iter().chain(args).collect())
             }
@@ -188,50 +158,6 @@ impl<'a> nash_ast::head::Types<'a> for InferenceTypes<'_, 'a> {
             }
             let (a, aa) = self.view(first);
             let (b, ba) = self.view(second);
-            if matches!(a, View::Record(_)) && matches!(b, View::Record(_)) {
-                let (af, at) = self.row(first, remaining)?;
-                let (bf, bt) = self.row(second, remaining)?;
-                let left_extra = af.keys().any(|name| !bf.contains_key(name));
-                let right_extra = bf.keys().any(|name| !af.contains_key(name));
-                if (left_extra && bt.is_none()) || (right_extra && at.is_none()) {
-                    return Ok(Match::No);
-                }
-                for (extra, tail) in [(left_extra, bt), (right_extra, at)] {
-                    if extra
-                        && let Some(tail) = tail
-                        && !matches!(
-                            self.view(tail).0,
-                            View::Flexible | View::Application | View::Error
-                        )
-                    {
-                        return Ok(Match::No);
-                    }
-                }
-                for (name, value) in &af {
-                    if let Some(other) = bf.get(name) {
-                        pending.push((*value, *other));
-                    }
-                }
-                if left_extra || right_extra {
-                    deferred = true;
-                } else {
-                    match (at, bt) {
-                        (None, None) => {}
-                        (Some(a), Some(b)) => pending.push((a, b)),
-                        (Some(tail), None) | (None, Some(tail)) => {
-                            if matches!(
-                                self.view(tail).0,
-                                View::Flexible | View::Application | View::Error
-                            ) {
-                                deferred = true;
-                            } else {
-                                return Ok(Match::No);
-                            }
-                        }
-                    }
-                }
-                continue;
-            }
             if matches!(a, View::Flexible | View::Error)
                 || matches!(b, View::Flexible | View::Error)
             {
@@ -310,77 +236,36 @@ mod tests {
     use nash_constrain::type_::make_descriptor;
 
     #[test]
-    fn repeated_patterns_compare_record_rows_without_unifying_them() {
-        use nash_ast::{
-            Head,
-            head::{Match, Types, matches},
-        };
+    fn repeated_patterns_compare_closed_records_without_unifying_them() {
+        use nash_ast::head::{Match, Types};
         let mut uf = UnionFind::new();
-        let empty = uf.fresh(make_descriptor(Content::Structure(FlatType::EmptyRecord1)));
-        let wrapped_empty = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
-            Default::default(),
-            empty,
-        ))));
         let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::Unit1)));
-        let flat = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+        let unknown = uf.fresh(make_descriptor(Content::FlexVar(None)));
+        let first = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
             [("a", unit), ("b", unit)].into(),
-            empty,
         ))));
-        let fragment = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
-            [("b", unit)].into(),
-            wrapped_empty,
+        let second = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            [("b", unit), ("a", unit)].into(),
         ))));
-        let split = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+        let fewer = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
             [("a", unit)].into(),
-            fragment,
         ))));
-        let tuple = uf.fresh(make_descriptor(Content::Structure(FlatType::Tuple1(
-            flat,
-            split,
-            vec![],
+        let flexible = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            [("a", unknown), ("b", unit)].into(),
         ))));
-        let heads = [Head::Tuple(&[Head::Var(0), Head::Var(0)])];
         let mut types = InferenceTypes(&mut uf);
         assert!(matches!(
-            matches(&mut types, &heads, &[tuple], 1, &mut 100),
-            Ok(Match::Yes(_))
-        ));
-        assert!(matches!(
-            types.equal(empty, wrapped_empty, &mut 100),
+            types.equal(first, second, &mut 100),
             Ok(Match::Yes(()))
         ));
-        assert_ne!(types.0.find(flat), types.0.find(split));
-        let open = types.0.fresh(make_descriptor(Content::FlexVar(None)));
-        let open_record = types
-            .0
-            .fresh(make_descriptor(Content::Structure(FlatType::Record1(
-                [("a", unit)].into(),
-                open,
-            ))));
+        assert!(matches!(types.equal(first, fewer, &mut 100), Ok(Match::No)));
         assert!(matches!(
-            types.equal(flat, open_record, &mut 100),
+            types.equal(first, flexible, &mut 100),
             Ok(Match::Deferred)
         ));
-        assert!(matches!(
-            types.equal(flat, fragment, &mut 100),
-            Ok(Match::No)
-        ));
-        assert!(matches!(types.0.get(open).content, Content::FlexVar(_)));
-        types
-            .0
-            .modify(open, |desc| desc.content = Content::RigidVar("row"));
-        let extended_rigid = types
-            .0
-            .fresh(make_descriptor(Content::Structure(FlatType::Record1(
-                [("a", unit), ("b", unit)].into(),
-                open,
-            ))));
-        assert!(matches!(
-            types.equal(open_record, extended_rigid, &mut 100),
-            Ok(Match::No)
-        ));
+        assert_ne!(types.0.find(first), types.0.find(second));
+        assert!(matches!(types.0.get(unknown).content, Content::FlexVar(_)));
     }
-
     #[test]
     fn outer_structure_carries_its_rank_to_unadjusted_children() {
         let mut uf = UnionFind::new();

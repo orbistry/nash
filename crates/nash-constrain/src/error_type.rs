@@ -27,7 +27,6 @@ pub enum ErrorType<'a> {
     },
     Record {
         fields: &'a [(&'a str, &'a ErrorType<'a>)],
-        ext: Extension<'a>,
     },
     Unit,
     Tuple(
@@ -41,13 +40,6 @@ pub enum ErrorType<'a> {
         args: &'a [(&'a str, &'a ErrorType<'a>)],
         real: &'a ErrorType<'a>,
     },
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum Extension<'a> {
-    Closed,
-    FlexOpen(&'a str),
-    RigidOpen(&'a str),
 }
 
 pub fn iterated_dealias<'a>(tipe: &'a ErrorType<'a>) -> &'a ErrorType<'a> {

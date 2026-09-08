@@ -118,6 +118,20 @@ the labels, and labels not mentioned become `_`. The alias form has both
 the record literal `{ a = .., b = .. }` (resolved to the alias by its field
 set) and the constructor function `Foo a b`.
 
+Record aliases are nominal types: different alias declarations do not unify,
+even when their fields are identical. A transparent alias of a record keeps
+the underlying record's identity. A record literal selects exactly one visible
+alias by its complete field-name set; zero matches or multiple distinct matches
+are errors. Qualified and unqualified exposure of the same alias counts once.
+Use the alias constructor function to choose between equal field sets.
+
+Accessors, access, updates and record patterns require a known record type.
+The solver retries field constraints as other constraints determine types,
+including chained accesses. An unresolved constraint cannot enter a generalized
+definition: add an annotation when the receiver is still unknown. A captured
+outer receiver keeps its field type in that outer scope until it is resolved.
+Empty record patterns still require a record type.
+
 Labels are part of a constructor, so they follow Elm's encapsulation:
 a module that imports `Datum` without `(..)` sees neither its constructors
 nor its labels, and `.owner` on it is a type error there. Export

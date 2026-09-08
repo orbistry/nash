@@ -114,7 +114,6 @@ expression: "(from, free_vars)"
                                 },
                             },
                         ],
-                        ext: None,
                     },
                 },
             ),

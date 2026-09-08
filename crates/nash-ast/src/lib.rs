@@ -133,6 +133,18 @@ pub struct Alias<'a> {
     pub typ: &'a Located<Type<'a>>,
 }
 
+impl<'a> Alias<'a> {
+    /// Direct record fields in declaration (wire) order.
+    pub fn record_fields(&self) -> Option<Vec<&'a FieldType<'a>>> {
+        let Type::Record { fields } = &self.typ.value else {
+            return None;
+        };
+        let mut ordered: Vec<_> = fields.iter().collect();
+        ordered.sort_by_key(|field| field.index);
+        Some(ordered)
+    }
+}
+
 #[derive(Debug)]
 pub struct Binop<'a> {
     pub symbol: &'a str,
@@ -232,7 +244,12 @@ pub enum Expr<'a> {
         base: &'a Located<Expr<'a>>,
         fields: &'a [FieldUpdate<'a>],
     },
-    Record(&'a [FieldValue<'a>]),
+    Record {
+        alias: QualifiedName<'a>,
+        annotation: &'a Annotation<'a>,
+        /// Fields in declaration (wire) order.
+        fields: &'a [FieldValue<'a>],
+    },
     Unit,
     Tuple {
         first: &'a Located<Expr<'a>>,
@@ -338,7 +355,6 @@ pub enum Type<'a> {
     },
     Record {
         fields: &'a [FieldType<'a>],
-        ext: Option<&'a str>,
     },
     Unit,
     Tuple {
@@ -374,6 +390,7 @@ pub struct AliasArgument<'a> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FieldType<'a> {
+    /// Declaration position in the Data.List, Data.Constr or term constr encoding.
     pub index: u16,
     pub field: &'a str,
     pub typ: &'a Located<Type<'a>>,
@@ -739,5 +756,53 @@ mod evidence_tests {
         assert_eq!(a, b);
         assert_ne!(a, c);
         assert_eq!(HashSet::from([a, b, c]).len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod record_tests {
+    use super::*;
+
+    #[test]
+    fn alias_record_fields_in_wire_order() {
+        let unit = Located::at_zero(Type::Named {
+            reference: QualifiedName {
+                home: primitives::builtin_home(),
+                name: "unit",
+            },
+            args: &[],
+        });
+        let fields = [
+            FieldType {
+                index: 1,
+                field: "a",
+                typ: &unit,
+            },
+            FieldType {
+                index: 0,
+                field: "z",
+                typ: &unit,
+            },
+        ];
+        let body = Located::at_zero(Type::Record { fields: &fields });
+        let name = Located::at_zero("point");
+        let alias = Alias {
+            kind: &Kind::Type,
+            context: &[],
+            name: &name,
+            parameters: &[],
+            typ: &body,
+        };
+        let ordered = alias.record_fields().unwrap();
+        assert_eq!(
+            ordered.iter().map(|field| field.field).collect::<Vec<_>>(),
+            ["z", "a"]
+        );
+        assert_eq!(fields[0].field, "a");
+        let transparent = Alias {
+            typ: &unit,
+            ..alias
+        };
+        assert!(transparent.record_fields().is_none());
     }
 }

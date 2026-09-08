@@ -29,18 +29,8 @@ fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
                 args: ba,
             },
         ) => ar == br && same_types(aa, ba),
-        (
-            Type::Record {
-                fields: af,
-                ext: ae,
-            },
-            Type::Record {
-                fields: bf,
-                ext: be,
-            },
-        ) => {
-            ae == be
-                && af.len() == bf.len()
+        (Type::Record { fields: af }, Type::Record { fields: bf }) => {
+            af.len() == bf.len()
                 && af.iter().zip(*bf).all(|(a, b)| {
                     a.index == b.index
                         && a.field == b.field
@@ -113,8 +103,7 @@ fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
             reference.hash(state);
             hash_types(args, state);
         }
-        Type::Record { fields, ext } => {
-            ext.hash(state);
+        Type::Record { fields } => {
             fields.len().hash(state);
             for f in *fields {
                 f.index.hash(state);

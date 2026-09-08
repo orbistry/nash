@@ -1,0 +1,27 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (bump)\n\nbump r = { r | x = 1 }\n"
+---
+[
+    AmbiguousRecordAccess {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 16,
+            },
+            end: Position {
+                line: 3,
+                column: 17,
+            },
+        },
+        context: Update {
+            record: "r",
+        },
+        field: Some(
+            "x",
+        ),
+        record: FlexVar(
+            "a",
+        ),
+    },
+]

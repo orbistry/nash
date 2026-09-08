@@ -263,16 +263,16 @@ fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
 
         CanType::Named { reference, args } => render_apply(reference.name, args, ctx),
 
-        CanType::Record { fields, ext } => {
+        CanType::Record { fields } => {
             let rendered_fields = fields
                 .iter()
                 .map(|field| format!("{} : {}", field.field, render_type(field.typ, Ctx::None)))
                 .collect::<Vec<_>>()
                 .join(", ");
-            match ext {
-                None if fields.is_empty() => "{}".to_string(),
-                None => format!("{{ {rendered_fields} }}"),
-                Some(ext_name) => format!("{{ {ext_name} | {rendered_fields} }}"),
+            if fields.is_empty() {
+                "{}".to_string()
+            } else {
+                format!("{{ {rendered_fields} }}")
             }
         }
 
@@ -932,13 +932,14 @@ fn expanding_impl_context_stops_with_a_diagnostic() {
 }
 
 #[test]
-fn structural_record_trait_argument_has_no_impl() {
+fn nominal_record_trait_argument_has_no_impl() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
         trait Keep 'a 'b where
             keep : 'a -> 'b -> 'a
-        value x = keep x { item = () }
+        type alias item = { item : unit }
+        value = keep () { item = () }
     "#
     );
 }
@@ -1543,6 +1544,7 @@ fn record_literal() {
         r#"
         module Main exposing (point)
 
+        type alias point = { x : int, y : int }
         keep value = value
         point = keep { x = 1, y = 2 }
     "#
@@ -1815,8 +1817,8 @@ fn cons_pattern() {
 // RECORD ACCESS AND UPDATE
 
 #[test]
-fn record_access() {
-    assert_inference_snapshot!(
+fn record_access_needs_known_type() {
+    assert_inference_error_snapshot!(
         r#"
         module Main exposing (getX)
 
@@ -1826,8 +1828,8 @@ fn record_access() {
 }
 
 #[test]
-fn record_accessor_function() {
-    assert_inference_snapshot!(
+fn record_accessor_needs_known_type() {
+    assert_inference_error_snapshot!(
         r#"
         module Main exposing (getName)
 
@@ -1837,8 +1839,8 @@ fn record_accessor_function() {
 }
 
 #[test]
-fn record_update() {
-    assert_inference_snapshot!(
+fn record_update_needs_known_type() {
+    assert_inference_error_snapshot!(
         r#"
         module Main exposing (bump)
 
@@ -1873,6 +1875,68 @@ fn typed_union_function() {
 
         rotate : Shape -> Shape
         rotate shape = shape
+    "#
+    );
+}
+
+#[test]
+fn nominal_records_do_not_unify() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        type alias other = { x : int }
+        f : point -> other
+        f r = r
+    "#
+    );
+}
+
+#[test]
+fn transparent_record_aliases_unify() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        type alias wrapped = point
+        type alias identity 'a = 'a
+        f : point -> wrapped
+        f r = r
+        g : wrapped -> point
+        g r = r
+        h : identity point -> point
+        h r = r
+        i : point -> identity point
+        i r = r
+    "#
+    );
+}
+
+#[test]
+fn transparent_wrappers_preserve_distinct_record_identity() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        type alias other = { x : int }
+        type alias wrapped = point
+        type alias wrappedOther = other
+        f : wrapped -> wrappedOther
+        f r = r
+    "#
+    );
+}
+
+#[test]
+fn parameterized_transparent_alias_preserves_record_identity() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        type alias other = { x : int }
+        type alias identity 'a = 'a
+        f : identity point -> identity other
+        f r = r
     "#
     );
 }
@@ -3363,4 +3427,223 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
             nash_can::from_module(&bump, &canonical.module, &annotations),
         );
     }
+}
+
+#[test]
+fn nominal_record_access_resolved_later() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        g : point -> int
+        g p = p.x
+        f p = (p.x, g p)
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_access_fixed_point() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        type alias outer = { inner : point }
+        g : outer -> int
+        g p = p.inner.x
+        f p = (p.inner.x, g p)
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_local_accessor_cannot_generalize() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        f p =
+            let
+                get r = r.x
+            in
+            get (point p)
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_captured_field_resolves_in_outer_scope() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        g : point -> int
+        g p = p.x
+        f p =
+            let
+                get ignored = p.x
+            in
+            (get (), g p)
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_captured_field_does_not_generalize_result() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        f : point -> (int, string)
+        f p =
+            let
+                get ignored = p.x
+            in
+            (get (), get ())
+    "#
+    );
+}
+
+#[test]
+fn empty_record_pattern_rejects_non_record() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        f : int -> ()
+        f {} = ()
+    "#
+    );
+}
+
+#[test]
+fn empty_record_pattern_accepts_known_record() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        f : point -> ()
+        f {} = ()
+    "#
+    );
+}
+
+#[test]
+fn empty_record_pattern_needs_known_record() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        f {} = ()
+    "#
+    );
+}
+
+#[test]
+fn deferred_captured_record_field_cannot_escape() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        g : point -> ()
+        g p = ()
+        asInt : int -> ()
+        asInt x = ()
+        asString : string -> ()
+        asString x = ()
+        f p =
+            let
+                get ignored = p.x
+            in
+            (asInt (get ()), asString (get ()), g p)
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_operations_preserve_parameters() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias box 'a = { item : 'a }
+        value = { item = () }
+        get : box 'a -> 'a
+        get b = b.item
+        accessor : box 'a -> 'a
+        accessor = .item
+        update : box 'a -> 'a -> box 'a
+        update b item = { b | item = item }
+        pattern : box 'a -> 'a
+        pattern { item } = item
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_missing_field_errors() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        get : point -> int
+        get p = p.y
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_update_preserves_field_type() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        change : point -> string -> point
+        change p s = { p | x = s }
+    "#
+    );
+}
+
+#[test]
+fn nominal_record_constructor_disambiguates_identical_fields() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias first = { x : unit }
+        type alias second = { x : unit }
+        a = first ()
+        b = second ()
+    "#
+    );
+}
+
+#[test]
+fn deferred_captured_field_preserves_trait_evidence() {
+    let bump = Bump::new();
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        type alias point = { x : int }
+        trait Read 'a where
+            read : 'a -> 'a
+        impl Read int where
+            read x = x
+        g : point -> ()
+        g p = ()
+        f p =
+            let
+                get ignored = read p.x
+            in
+            (get (), g p)
+    "#
+    );
+    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+        .module()
+        .unwrap();
+    let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
+    let mut uf = UnionFind::new();
+    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    assert_eq!(render_annotation(annotations["f"]), "point -> ( int, () )");
+    assert!(solved.instances.values().flat_map(|instance| instance.evidence).any(|evidence| {
+        matches!(evidence, nash_ast::Evidence::Impl { impl_, .. } if impl_.key.trait_.name == "Read")
+    }));
 }

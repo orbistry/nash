@@ -1,0 +1,21 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\nvalue = { x = () }\n"
+---
+[
+    RecordLiteralNoAlias {
+        region: Region {
+            start: Position {
+                line: 2,
+                column: 9,
+            },
+            end: Position {
+                line: 2,
+                column: 19,
+            },
+        },
+        fields: [
+            "x",
+        ],
+    },
+]

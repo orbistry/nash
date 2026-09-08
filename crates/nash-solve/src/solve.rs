@@ -42,6 +42,7 @@ pub fn run<'a>(
         value_roots: Vec::new(),
         kind_contracts: Vec::new(),
         kind_errors: Vec::new(),
+        fields: Vec::new(),
     };
 
     let mut state = solver.solve(
@@ -56,6 +57,8 @@ pub fn run<'a>(
         constraint,
     );
 
+    solver.retry_fields(uf, OUTERMOST_RANK, &mut state.errors);
+    solver.finish_fields(uf, OUTERMOST_RANK, &mut state.errors);
     state.errors.append(&mut solver.kind_errors);
     if state.errors.is_empty() {
         solver.finish(uf, &state.env)
@@ -120,6 +123,14 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
     state
 }
 
+#[derive(Clone, Copy)]
+struct DeferredField<'a> {
+    region: nash_region::Region,
+    context: type_::FieldContext<'a>,
+    record: Variable,
+    field: Option<(&'a str, Variable)>,
+}
+
 struct Solver<'a, 'tables> {
     bump: &'a Bump,
     tables: &'tables nash_can::environment::Tables<'a>,
@@ -136,6 +147,7 @@ struct Solver<'a, 'tables> {
     value_roots: Vec<(Variable, nash_region::Region)>,
     kind_contracts: Vec<crate::kind_check::Contract<'a>>,
     kind_errors: Vec<Error<'a>>,
+    fields: Vec<DeferredField<'a>>,
 }
 
 struct GivenFrame<'a> {
@@ -151,6 +163,133 @@ struct Given<'a> {
 }
 
 impl<'a> Solver<'a, '_> {
+    /// Field resolution may expose another receiver, so retry to a fixed point.
+    fn retry_fields(&mut self, uf: &mut UnionFind<'a>, rank: usize, errors: &mut Vec<Error<'a>>) {
+        loop {
+            let pending = std::mem::take(&mut self.fields);
+            let before = pending.len();
+            for field in pending {
+                if !self.try_field(uf, rank, field, errors) {
+                    self.fields.push(field);
+                }
+            }
+            if self.fields.len() == before {
+                break;
+            }
+        }
+    }
+
+    fn try_field(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        field: DeferredField<'a>,
+        errors: &mut Vec<Error<'a>>,
+    ) -> bool {
+        let mut receiver = field.record;
+        let mut seen = BTreeSet::new();
+        while seen.insert(uf.find(receiver)) {
+            let mut allocated = Vec::new();
+            nash_constrain::instantiate::normalize_variable(uf, receiver, &mut allocated);
+            self.introduce(uf, rank, &allocated);
+            match uf.get(receiver).content.clone() {
+                Content::FlexVar(_) => return false,
+                Content::Error => return true,
+                Content::Alias { body, real, .. } => {
+                    if !matches!(body.value, CanType::Record { .. }) {
+                        receiver = real;
+                        continue;
+                    }
+                    let Content::Structure(FlatType::Record1(fields)) =
+                        uf.get(real).content.clone()
+                    else {
+                        break;
+                    };
+                    let Some((name, field_type)) = field.field else {
+                        return true;
+                    };
+                    let Some(actual) = fields.get(name).copied() else {
+                        errors.push(Error::MissingField {
+                            region: field.region,
+                            context: field.context,
+                            field: name,
+                            record: to_error_type(self.bump, uf, field.record),
+                            available: self.bump.alloc_slice_fill_iter(fields.into_keys()),
+                        });
+                        return true;
+                    };
+                    return match unify::unify(self.bump, uf, actual, field_type) {
+                        unify::Answer::Ok(vars) => {
+                            self.introduce(uf, rank, &vars);
+                            true
+                        }
+                        unify::Answer::Err(vars, actual, expected) => {
+                            self.introduce(uf, rank, &vars);
+                            errors.push(Error::FieldMismatch {
+                                region: field.region,
+                                context: field.context,
+                                field: name,
+                                actual,
+                                expected,
+                            });
+                            true
+                        }
+                    };
+                }
+                Content::Structure(FlatType::AppV1(..)) => return false,
+                _ => break,
+            }
+        }
+        errors.push(Error::NotARecord {
+            region: field.region,
+            context: field.context,
+            field: field.field.map(|(name, _)| name),
+            record: to_error_type(self.bump, uf, field.record),
+        });
+        true
+    }
+
+    /// A captured receiver keeps its field type in the same outer scope.
+    /// No unresolved dependency may enter a generalized scheme.
+    fn finish_fields(&mut self, uf: &mut UnionFind<'a>, rank: usize, errors: &mut Vec<Error<'a>>) {
+        loop {
+            let mut changed = false;
+            for field in &self.fields {
+                let receiver_rank = uf.get(field.record).rank;
+                if receiver_rank != NO_RANK
+                    && receiver_rank < rank
+                    && let Some((_, field_type)) = field.field
+                {
+                    let mut variables = Self::type_variables(uf, vec![field_type]);
+                    variables.insert(uf.find(field_type));
+                    for var in variables {
+                        if uf.get(var).rank > receiver_rank {
+                            uf.modify(var, |desc| desc.rank = receiver_rank);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        let pending = std::mem::take(&mut self.fields);
+        for field in pending {
+            let receiver_rank = uf.get(field.record).rank;
+            if receiver_rank == NO_RANK || receiver_rank >= rank {
+                errors.push(Error::AmbiguousRecordAccess {
+                    region: field.region,
+                    context: field.context,
+                    field: field.field.map(|(name, _)| name),
+                    record: to_error_type(self.bump, uf, field.record),
+                });
+            } else {
+                self.fields.push(field);
+            }
+        }
+    }
+
     fn scope(&self, mut owner: nash_ast::NodeId) -> (nash_ast::NodeId, usize) {
         let mut depth = 0;
         loop {
@@ -709,6 +848,7 @@ impl<'a> Solver<'a, '_> {
             self.owners.push(binder.node());
         }
         let mut state = self.solve(uf, env, rank, state, constraint);
+        self.retry_fields(uf, rank, &mut state.errors);
         state = self.resolve_wanted(uf, rank, state, start, binder, annotated);
         self.givens.truncate(depth);
         self.owners.truncate(owner_depth);
@@ -1154,9 +1294,8 @@ impl<'a> Solver<'a, '_> {
                     pending.extend(rest);
                     Vec::new()
                 }
-                Content::Structure(FlatType::Record1(fields, extension)) => {
+                Content::Structure(FlatType::Record1(fields)) => {
                     pending.extend(fields.values());
-                    pending.push(*extension);
                     Vec::new()
                 }
                 _ => Vec::new(),
@@ -1191,6 +1330,41 @@ impl<'a> Solver<'a, '_> {
         constraint: &Constraint<'a>,
     ) -> State<'a> {
         match constraint {
+            Constraint::Record {
+                region,
+                context,
+                record,
+            } => {
+                let record = self.type_to_variable(uf, rank, record);
+                self.fields.push(DeferredField {
+                    region: *region,
+                    context: *context,
+                    record,
+                    field: None,
+                });
+                let mut state = state;
+                self.retry_fields(uf, rank, &mut state.errors);
+                state
+            }
+            Constraint::Field {
+                region,
+                context,
+                record,
+                field,
+                field_type,
+            } => {
+                let record = self.type_to_variable(uf, rank, record);
+                let field_type = self.type_to_variable(uf, rank, field_type);
+                self.fields.push(DeferredField {
+                    region: *region,
+                    context: *context,
+                    record,
+                    field: Some((field, field_type)),
+                });
+                let mut state = state;
+                self.retry_fields(uf, rank, &mut state.errors);
+                state
+            }
             Constraint::True => state,
 
             Constraint::SaveTheEnvironment => State {
@@ -1415,6 +1589,9 @@ impl<'a> Solver<'a, '_> {
                     let young_mark = state1.mark;
                     let visit_mark = young_mark.next();
                     let final_mark = visit_mark.next();
+
+                    self.retry_fields(uf, next_rank, &mut state1.errors);
+                    self.finish_fields(uf, next_rank, &mut state1.errors);
 
                     // pop pool
                     self.generalize(uf, young_mark, visit_mark, next_rank);
@@ -1729,21 +1906,12 @@ impl<'a> Solver<'a, '_> {
                 )
             }
 
-            Type::RecordN { fields, ext } => {
+            Type::RecordN { fields } => {
                 let field_vars: BTreeMap<&'a str, Variable> = fields
                     .iter()
                     .map(|(name, field_type)| (*name, self.type_to_variable(uf, rank, field_type)))
                     .collect();
-                let ext_var = self.type_to_variable(uf, rank, ext);
-                self.register(
-                    uf,
-                    rank,
-                    Content::Structure(FlatType::Record1(field_vars, ext_var)),
-                )
-            }
-
-            Type::EmptyRecordN => {
-                self.register(uf, rank, Content::Structure(FlatType::EmptyRecord1))
+                self.register(uf, rank, Content::Structure(FlatType::Record1(field_vars)))
             }
 
             Type::UnitN => self.register(uf, rank, Content::Structure(FlatType::Unit1)),
@@ -2279,9 +2447,8 @@ impl<'a> Solver<'a, '_> {
                     pending.extend([a, b]);
                     pending.extend(c);
                 }
-                Content::Structure(FlatType::Record1(fields, ext)) => {
+                Content::Structure(FlatType::Record1(fields)) => {
                     pending.extend(fields.values());
-                    pending.push(*ext);
                 }
                 Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
                     pending.extend(args.iter().map(|(_, var)| var))
@@ -2615,15 +2782,12 @@ impl<'a> Solver<'a, '_> {
                 FlatType::Fun1(a_copy, b_copy)
             }
 
-            FlatType::EmptyRecord1 => FlatType::EmptyRecord1,
-
-            FlatType::Record1(fields, ext) => {
+            FlatType::Record1(fields) => {
                 let field_copies: BTreeMap<&'a str, Variable> = fields
                     .iter()
                     .map(|(name, var)| (*name, self.make_copy_help(uf, max_rank, *var, quantified)))
                     .collect();
-                let ext_copy = self.make_copy_help(uf, max_rank, ext, quantified);
-                FlatType::Record1(field_copies, ext_copy)
+                FlatType::Record1(field_copies)
             }
 
             FlatType::Unit1 => FlatType::Unit1,
@@ -2726,15 +2890,9 @@ fn adjust_rank_content<'a>(
                 arg_rank.max(result_rank)
             }
 
-            // THEORY: an empty record never needs to get generalized
-            FlatType::EmptyRecord1 => OUTERMOST_RANK,
-
-            FlatType::Record1(fields, extension) => {
-                let ext_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *extension);
-                fields.values().fold(ext_rank, |rank, field| {
-                    rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *field))
-                })
-            }
+            FlatType::Record1(fields) => fields.values().fold(OUTERMOST_RANK, |rank, field| {
+                rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *field))
+            }),
 
             // THEORY: a unit never needs to get generalized
             FlatType::Unit1 => OUTERMOST_RANK,
@@ -2914,6 +3072,7 @@ mod copy_tests {
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
+            fields: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -2982,6 +3141,7 @@ mod copy_tests {
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
+            fields: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -3043,6 +3203,7 @@ mod copy_tests {
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
+            fields: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -3126,6 +3287,7 @@ mod copy_tests {
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
+            fields: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -3259,6 +3421,7 @@ mod copy_tests {
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
+            fields: Vec::new(),
         };
         let result = solver.solve(
             &mut uf,
@@ -3427,6 +3590,7 @@ mod copy_tests {
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
+            fields: Vec::new(),
         };
         let mut uf = UnionFind::new();
         let a = bump.alloc(Located::at_zero(CanType::Var("a")));
@@ -3505,6 +3669,7 @@ mod copy_tests {
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
+            fields: Vec::new(),
         };
         let mut uf = UnionFind::new();
         let result = uf.fresh(make_descriptor(Content::RigidVar("a")));

@@ -1,0 +1,9 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias box 'a = { item : 'a }\nvalue = { item = () }\nget : box 'a -> 'a\nget b = b.item\naccessor : box 'a -> 'a\naccessor = .item\nupdate : box 'a -> 'a -> box 'a\nupdate b item = { b | item = item }\npattern : box 'a -> 'a\npattern { item } = item\n"
+---
+accessor : forall a. box a -> a
+get : forall a. box a -> a
+pattern : forall a. box a -> a
+update : forall a. box a -> a -> box a
+value : box ()

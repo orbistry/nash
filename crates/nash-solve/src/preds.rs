@@ -6,7 +6,7 @@ use nash_constrain::type_::PredId;
 use nash_constrain::{Content, FlatType};
 use nash_constrain::{UnionFind, Variable};
 use nash_region::Region;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 #[derive(Clone, Copy, Debug)]
 pub struct UseSite<'a> {
@@ -352,27 +352,14 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
                 pending.extend([(a, d), (b, e)]);
                 pending.extend(c.into_iter().zip(f));
             }
-            (Content::Structure(FlatType::Unit1), Content::Structure(FlatType::Unit1))
-            | (
-                Content::Structure(FlatType::EmptyRecord1),
-                Content::Structure(FlatType::EmptyRecord1),
-            ) => {}
+            (Content::Structure(FlatType::Unit1), Content::Structure(FlatType::Unit1)) => {}
             (
-                Content::Structure(FlatType::Record1(..)),
-                Content::Structure(FlatType::Record1(..) | FlatType::EmptyRecord1),
-            )
-            | (
-                Content::Structure(FlatType::EmptyRecord1),
-                Content::Structure(FlatType::Record1(..)),
+                Content::Structure(FlatType::Record1(a)),
+                Content::Structure(FlatType::Record1(b)),
             ) => {
-                let (Some((a, ae)), Some((b, be))) = (record_fields(uf, a), record_fields(uf, b))
-                else {
-                    return false;
-                };
                 if !a.keys().eq(b.keys()) {
                     return false;
                 }
-                pending.push((ae, be));
                 pending.extend(a.into_values().zip(b.into_values()));
             }
             (
@@ -397,60 +384,28 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
     true
 }
 
-fn record_fields<'a>(
-    uf: &mut UnionFind<'a>,
-    mut variable: Variable,
-) -> Option<(BTreeMap<&'a str, Variable>, Variable)> {
-    let mut fields = BTreeMap::new();
-    let mut seen = BTreeSet::new();
-    loop {
-        variable = uf.find(variable);
-        if !seen.insert(variable) {
-            return None;
-        }
-        match uf.get(variable).content.clone() {
-            Content::Structure(FlatType::Record1(more, ext)) => {
-                for (name, typ) in more {
-                    fields.entry(name).or_insert(typ);
-                }
-                variable = ext;
-            }
-            Content::Alias { real, .. } => variable = real,
-            _ => return Some((fields, variable)),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use nash_constrain::type_::make_descriptor;
 
     #[test]
-    fn matching_normalizes_record_extensions_without_unifying_them() {
+    fn matching_compares_closed_record_fields_without_unifying_them() {
+        use std::collections::BTreeMap;
         let mut uf = UnionFind::new();
         let a = uf.fresh(make_descriptor(Content::RigidVar("a")));
-        let empty = uf.fresh(make_descriptor(Content::Structure(FlatType::EmptyRecord1)));
-        let y = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
-            BTreeMap::from([("y", a)]),
-            empty,
-        ))));
-        let nested = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
-            BTreeMap::from([("x", a)]),
-            y,
-        ))));
-        let flat = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+        let first = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
             BTreeMap::from([("x", a), ("y", a)]),
-            empty,
         ))));
-        assert!(same_args(&mut uf, &[nested], &[flat]));
-        let wrapped_empty = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
-            BTreeMap::new(),
-            empty,
+        let second = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            BTreeMap::from([("y", a), ("x", a)]),
         ))));
-        assert!(same_args(&mut uf, &[wrapped_empty], &[empty]));
-        assert!(!same_args(&mut uf, &[nested], &[y]));
-        assert!(!uf.equivalent(nested, flat));
+        let fewer = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
+            BTreeMap::from([("x", a)]),
+        ))));
+        assert!(same_args(&mut uf, &[first], &[second]));
+        assert!(!same_args(&mut uf, &[first], &[fewer]));
+        assert!(!uf.equivalent(first, second));
     }
 
     #[test]
@@ -617,7 +572,7 @@ mod formation_store_tests {
         };
         assert!(!left.same(&mut uf, &right));
         assert!(left.same(&mut uf, &left));
-        let mapping = BTreeMap::from([(f, g), (a, f)]);
+        let mapping = std::collections::BTreeMap::from([(f, g), (a, f)]);
         let copied = left.map_variables(|var| mapping[&var]);
         assert_eq!(copied.roots().collect::<Vec<_>>(), [g, f]);
     }

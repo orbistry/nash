@@ -382,7 +382,6 @@ mod tests {
                         typ: field_typ,
                     },
                 ]),
-                ext: None,
             },
         ));
         let ctor = match &record_type.value {

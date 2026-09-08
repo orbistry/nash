@@ -252,7 +252,7 @@ pub fn canonicalize_expr<'a>(
         }
 
         SourceExpr::Record(fields) => {
-            canonicalize_record(bump, env, fields, free_locals, warnings)?
+            canonicalize_record(bump, env, region, fields, free_locals, warnings)?
         }
 
         SourceExpr::Unit => CanExpr::Unit,
@@ -446,6 +446,10 @@ fn find_var<'a>(
             first_module: *first,
             other_modules: bump.alloc_slice_fill_iter(others.iter().copied()),
         }]),
+        None if env.ctors.contains_key(name) => {
+            let ctor = env.find_ctor(bump, region, name)?;
+            to_var_ctor(bump, env, name, &ctor)
+        }
         None => Err(vec![Error::NotFoundVar {
             region,
             prefix: None,
@@ -462,6 +466,18 @@ fn find_var_qual<'a>(
     prefix: &'a str,
     name: &'a str,
 ) -> Result<CanExpr<'a>, Vec<Error<'a>>> {
+    if !env
+        .q_vars
+        .get(prefix)
+        .is_some_and(|values| values.contains_key(name))
+        && env
+            .q_ctors
+            .get(prefix)
+            .is_some_and(|ctors| ctors.contains_key(name))
+    {
+        let ctor = env.find_ctor_qual(bump, region, prefix, name)?;
+        return to_var_ctor(bump, env, name, &ctor);
+    }
     let info = env
         .q_vars
         .get(prefix)
@@ -589,6 +605,7 @@ fn to_var_ctor<'a>(
             alias_name,
             type_vars,
             typ,
+            ..
         } => {
             // Like Elm's `Env.RecordCtor home vars tipe`: the curried type
             // was built when the ctor entered the env; the free vars are
@@ -795,11 +812,67 @@ fn check_field_assigns<'a>(
 fn canonicalize_record<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
+    region: Region,
     fields: &[&'a FieldAssign<'a>],
     free_locals: &mut FreeLocals<'a>,
     warnings: &mut Vec<Warning<'a>>,
 ) -> Result<CanExpr<'a>, Vec<Error<'a>>> {
     let field_dict = check_field_assigns(fields)?;
+    let mut candidates = BTreeMap::new();
+    for candidate in env
+        .ctors
+        .values()
+        .chain(env.q_ctors.values().flat_map(|m| m.values()))
+    {
+        if let Info::Specific(
+            _,
+            ctor @ EnvCtor::RecordCtor {
+                home,
+                alias_name,
+                fields,
+                ..
+            },
+        ) = candidate
+            && fields
+                .iter()
+                .map(|f| f.field)
+                .eq(field_dict.keys().copied())
+        {
+            candidates.insert(
+                QualifiedName {
+                    home: *home,
+                    name: alias_name,
+                },
+                *ctor,
+            );
+        }
+    }
+    let (alias, ctor) = match candidates.len() {
+        0 => {
+            return Err(vec![Error::RecordLiteralNoAlias {
+                region,
+                fields: bump.alloc_slice_fill_iter(field_dict.keys().copied()),
+            }]);
+        }
+        1 => candidates.into_iter().next().unwrap(),
+        _ => {
+            return Err(vec![Error::RecordLiteralAmbiguous {
+                region,
+                candidates: bump.alloc_slice_fill_iter(candidates.into_keys()),
+            }]);
+        }
+    };
+    let EnvCtor::RecordCtor {
+        fields: declared_fields,
+        ..
+    } = ctor
+    else {
+        unreachable!()
+    };
+    let CanExpr::VarConstructor { annotation, .. } = to_var_ctor(bump, env, alias.name, &ctor)?
+    else {
+        unreachable!()
+    };
     let mut can_fields = Vec::with_capacity(field_dict.len());
     let mut errors = Vec::new();
     for (_, field) in field_dict {
@@ -814,7 +887,18 @@ fn canonicalize_record<'a>(
     if !errors.is_empty() {
         return Err(errors);
     }
-    Ok(CanExpr::Record(bump.alloc_slice_fill_iter(can_fields)))
+    can_fields.sort_by_key(|field| {
+        declared_fields
+            .iter()
+            .find(|declared| declared.field == field.field.value)
+            .unwrap()
+            .index
+    });
+    Ok(CanExpr::Record {
+        alias,
+        annotation,
+        fields: bump.alloc_slice_fill_iter(can_fields),
+    })
 }
 
 fn canonicalize_update<'a>(

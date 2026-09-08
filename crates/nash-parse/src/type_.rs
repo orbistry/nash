@@ -13,7 +13,7 @@ use nash_source::{Annotation, Constraint, FieldType, Repr, Type, TypeParam};
 use crate::Parser;
 use crate::error::{self, TRecord, TTuple};
 
-/// Qualified or unqualified uppercase name (for types).
+/// Qualified or unqualified type name.
 enum TypeName<'a> {
     Unqualified(&'a str),
     Qualified(&'a str, &'a str), // (module, name)
@@ -581,7 +581,7 @@ impl<'a> Parser<'a> {
     // Helpers
     // -------------------------------------------------------------------------
 
-    /// Parse a possibly-qualified uppercase name (for types).
+    /// Parse a type name, with an uppercase module path and either type casing.
     ///
     /// Mirrors Elm's `Var.foreignUpper`.
     fn type_name<E>(&mut self, to_error: impl FnOnce(u16, u16) -> E) -> Result<TypeName<'a>, E> {
@@ -597,11 +597,8 @@ impl<'a> Parser<'a> {
                 self.chomp_inner_chars();
 
                 // Check for qualification
-                if self.is_dot_upper() {
-                    self.chomp_qualified_upper_for_type(start_pos)
-                } else if self.is_dot_lower() {
-                    // Can't have lowercase after dot for types
-                    Err(to_error(row, col))
+                if self.is_dot_upper() || self.is_dot_lower() {
+                    self.chomp_qualified_upper_for_type(start_pos, to_error)
                 } else {
                     let name = self.slice_from(start_pos);
                     Ok(TypeName::Unqualified(name))
@@ -612,12 +609,24 @@ impl<'a> Parser<'a> {
     }
 
     /// Chomp through Module.Module... chain for type names.
-    fn chomp_qualified_upper_for_type<E>(&mut self, start_pos: usize) -> Result<TypeName<'a>, E> {
+    fn chomp_qualified_upper_for_type<E>(
+        &mut self,
+        start_pos: usize,
+        to_error: impl FnOnce(u16, u16) -> E,
+    ) -> Result<TypeName<'a>, E> {
         loop {
             if self.is_dot_upper() {
                 self.advance(); // consume dot
                 self.advance(); // consume first uppercase char
                 self.chomp_inner_chars();
+            } else if self.is_dot_lower() {
+                let module_end = self.pos;
+                self.advance();
+                let name = self.lower_name(to_error)?;
+                return Ok(TypeName::Qualified(
+                    &self.slice_from(start_pos)[..module_end - start_pos],
+                    name,
+                ));
             } else {
                 // No more dots - split into module and name
                 let full = self.slice_from(start_pos);
@@ -817,6 +826,16 @@ mod tests {
     #[test]
     fn named_type_qualified() {
         assert_type_snapshot!("Dict.Dict");
+    }
+
+    #[test]
+    fn named_type_qualified_little() {
+        assert_type_snapshot!("Types.point");
+    }
+
+    #[test]
+    fn named_type_multi_qualified_little() {
+        assert_type_snapshot!("Some.Types.box 'a");
     }
 
     #[test]
