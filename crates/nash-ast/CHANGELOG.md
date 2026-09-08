@@ -1,5 +1,50 @@
 # nash-ast
 
+## 0.6.0 — 2026-09-08
+
+### Minor changes
+
+- [343b710](https://github.com/orbistry/nash/commit/343b71008b0e20789276e5f99d5e59abe7b26866) Desugar do statements through the checked core Monad.bind method with sequential pattern and let scope. Reject refutable bind patterns and missing core Monad declarations. Verify inferred constraints and evidence against explicit nested bind calls. — Thanks @MicroProofs!
+- [ec35b41](https://github.com/orbistry/nash/commit/ec35b41d9251a2363c6da87284e97bb5abbb09a2) Provide structural Eq for all Big types, reject explicit Big Eq overrides,
+  and retain compiler-owned equality evidence through inference and resolution. — Thanks @MicroProofs!
+- [011f4fc](https://github.com/orbistry/nash/commit/011f4fc68477dca94cf4b221f754c40ef8e843d8) Desugar prefix negation to the checked core Num.negate method with evidence on its generated method node. Remove the canonical Negate variant, fabricated method scheme, and dedicated negation constraints. Report a missing core Num method during canonicalization. — Thanks @MicroProofs!
+- [25ee81e](https://github.com/orbistry/nash/commit/25ee81ef0323798e595f3f3fedad6dc9775915c5) Add canonical trait declarations, predicates, method references, and impl evidence. Preserve predicate contexts when copying annotations and compare evidence type arguments independently of source locations. — Thanks @MicroProofs!
+- [3495cc5](https://github.com/orbistry/nash/commit/3495cc5c755ca5b81c315a1e5358df1888db31c3) Infer Haskell 98 kinds with occurs checks and defaulting. Check storage
+  requirements through separate representation predicates and inline
+  representation annotations. Infer datatype contexts with a terminating SCC
+  worklist and enforce them at declarations and local or imported uses.
+  
+  Preserve higher-kinded and partial alias applications, captured variables,
+  head-only impl coherence, superclass evidence and literal defaulting. Export
+  closed kinds and ordered predicate contexts through interfaces. Use
+  elementwise builtin-list Eq, structural Big Eq and reflexive Lift. — Thanks @MicroProofs!
+- [95c059e](https://github.com/orbistry/nash/commit/95c059ef0bb9b2ac7aca751b76efd152d6bd11c9) Infer partially applied aliases while preserving nominal impl identity and closed parameterized bodies across interfaces. Saturate aliases without capturing caller variables, and make evidence keys independent of alias body normalization. — Thanks @MicroProofs!
+- [c494bc8](https://github.com/orbistry/nash/commit/c494bc8bcd99ba92de24125fe015250543df74b2) Match recursive impl patterns consistently during inference, ground resolution
+  and superclass checks. Preserve repeated variables and full impl identity,
+  reject structural overlaps, and retain nested patterns in diagnostics. — Thanks @MicroProofs!
+- [6b3cf28](https://github.com/orbistry/nash/commit/6b3cf2808f14c5ca468a2eb32ed43856df9cb13f) Represent the compiler-owned reflexive Lift rule explicitly in evidence. Recognize only the exact core trait during superclass checking, prove Big without narrowing rigid types, and reject overlapping constructor impls. — Thanks @MicroProofs!
+- [1aa6f28](https://github.com/orbistry/nash/commit/1aa6f28cd299ee1b49faf967d426486c923e5852) Add the first real core Eq and Literal implementations and CLI acceptance.
+  Use little list for list literals and patterns, with Storable element predicates.
+  Put all compiler-known types in scope and count literal trait imports as used. — Thanks @MicroProofs!
+- [44f917f](https://github.com/orbistry/nash/commit/44f917f0e505d1c6b454d749a7ef746c6d52252c) Constrain integer, string and bytes literals through their core literal traits, retaining ordered literal and Eq evidence for patterns. Canonicalize bytes literals and preserve qualified polymorphic schemes for let-destructuring at the original pattern node. — Thanks @MicroProofs!
+- [84b506d](https://github.com/orbistry/nash/commit/84b506d74e2865176f295bcfdc0c77e190953062) Expose the specified representation cast bindings only inside nash/core, with
+  symbolic lowering operations and independent nominal source and target types. — Thanks @MicroProofs!
+- [719e577](https://github.com/orbistry/nash/commit/719e5775f250fc7ec2af82c118851d9db66b3d7e) Preserve the full tuple arity in impl keys and evidence lookup. Large tuple heads no longer wrap onto smaller tuple heads and produce false overlap errors. — Thanks @MicroProofs!
+- [fc9fe15](https://github.com/orbistry/nash/commit/fc9fe156a8cd4d7ec21df9327a4a12fe9efe1a72) Export the specified Builtin value schemes with checked representation predicates, including
+  the Storable list and pair APIs. Keep backend identifiers symbolic so the AST
+  does not depend on the Plutus runtime. Normalize builtin unit annotations and
+  impl heads to the same unit type as (). — Thanks @MicroProofs!
+- [e05004f](https://github.com/orbistry/nash/commit/e05004f9fe6a6f4414d89e3307004b06f304db83) Expose the real bool and Data constructors through the synthetic Builtin
+  interface. Recognize bool patterns by the exact core identity and count their
+  imports correctly, removing the old Basics.Bool special case. — Thanks @MicroProofs!
+- [5904496](https://github.com/orbistry/nash/commit/5904496926a7691655692b5dd044b27f88726a7a) Allow infix declarations backed by local or imported trait methods. Preserve
+  the operator provider, backing method identity, and checked scheme across
+  interfaces, with evidence attached to each operator use and section. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-source@0.5.0
+
 ## 0.5.0 — 2026-09-05
 
 ### Minor changes

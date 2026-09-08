@@ -1,5 +1,19 @@
 # nash-source
 
+## 0.5.0 — 2026-09-08
+
+### Minor changes
+
+- [3495cc5](https://github.com/orbistry/nash/commit/3495cc5c755ca5b81c315a1e5358df1888db31c3) Infer Haskell 98 kinds with occurs checks and defaulting. Check storage
+  requirements through separate representation predicates and inline
+  representation annotations. Infer datatype contexts with a terminating SCC
+  worklist and enforce them at declarations and local or imported uses.
+  
+  Preserve higher-kinded and partial alias applications, captured variables,
+  head-only impl coherence, superclass evidence and literal defaulting. Export
+  closed kinds and ordered predicate contexts through interfaces. Use
+  elementwise builtin-list Eq, structural Big Eq and reflexive Lift. — Thanks @MicroProofs!
+
 ## 0.4.0 — 2026-09-05
 
 ### Minor changes

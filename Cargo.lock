@@ -1847,7 +1847,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ast"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "bumpalo",
  "nash-region",
@@ -1856,7 +1856,7 @@ dependencies = [
 
 [[package]]
 name = "nash-can"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1869,7 +1869,7 @@ dependencies = [
 
 [[package]]
 name = "nash-cli"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "clap",
  "color-print",
@@ -1902,7 +1902,7 @@ dependencies = [
 
 [[package]]
 name = "nash-constrain"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "bumpalo",
  "nash-ast",
@@ -1911,7 +1911,7 @@ dependencies = [
 
 [[package]]
 name = "nash-driver"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "bincode",
@@ -1943,7 +1943,7 @@ dependencies = [
 
 [[package]]
 name = "nash-parse"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1984,7 +1984,7 @@ version = "0.2.0"
 
 [[package]]
 name = "nash-solve"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1999,7 +1999,7 @@ dependencies = [
 
 [[package]]
 name = "nash-source"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "bumpalo",
  "nash-region",
@@ -2738,9 +2738,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.43"
+version = "0.23.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+checksum = "6725596c3f2c3a0aef021139e145d4eafe314a6623e4680ca83852b2c67ab2ba"
 dependencies = [
  "log",
  "once_cell",
