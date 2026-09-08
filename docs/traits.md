@@ -797,8 +797,8 @@ Nash compiles each function once per set of impls it uses, so a function
 cannot call itself at a bigger type under a trait constraint.
 ```
 
-Also reported: unknown trait, wrong trait arity, bad instance head (nested
-type, repeated variable, function type, bare variable), unknown method in
+Also reported: unknown trait, wrong trait arity, bad instance head (bare
+variable, variable application, function type, record), unknown method in
 impl, duplicate trait, duplicate method, method signature missing a trait
 parameter, context mentioning a variable outside the type, cyclic
 superclasses, refutable pattern in `<-`, kind mismatch between head and
