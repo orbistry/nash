@@ -233,8 +233,8 @@ when it needs one that is missing.
 
 After checking givens, resolution recognizes the compiler-owned reflexive
 rule only for package `nash/core`, module `Lift`, trait `Lift`. Both arguments
-must already be equal and their kind must be proven Big. Resolution must
-not unify unknown arguments or narrow a rigid variable's kind to select
+must already be equal and their representation must be proven Big. Resolution must
+not unify unknown arguments or narrow a rigid variable's representation to select
 this rule. A same-named trait elsewhere receives no special behavior.
 Explicit impls that can overlap this rule are rejected: the same nominal
 constructor at the same application arity conflicts when corresponding
@@ -469,7 +469,8 @@ each argument's head constructor against the impl table, instantiate the
 impl's context at the argument's type arguments, recurse. A ground
 predicate never needs `Given`, so the result is a closed tree of `Impl` and
 exact-core `ReflexiveLift` evidence. Reflexive Lift requires nominally equal
-arguments with an already-proven Big kind; it does not select a kind.
+arguments with an already-proven Big representation; it does not choose
+a representation.
 Failures distinguish `MissingImpl`, `NonGround`, and `Limit`, retaining the
 failed predicate. Resolution and type traversal share a 16,384-step work
 budget, with a depth limit of 128. Context substitution is charged before
@@ -598,9 +599,12 @@ Notes:
   Interfaces retain the backing method's defining module independently of
   the module that declares the operator. Operator values and sections use
   the same scheme; each operator node owns its solved evidence.
-- Kinds: `ToData`/`FromData` parameters are `Big`; `Lift` pairs a `Const`
-  or `Term` type with a `Big` type; `Functor`/`Applicative`/`Monad` are
-  kind-polymorphic (`List`, `list`, `option`, `fuzzer`).
+- Kinds: `ToData`/`FromData` and both `Lift` parameters have kind `Type`.
+  `ToData`/`FromData` require `Big` through their superclass predicates.
+  `Lift` relates its concrete impl heads, with a compiler-owned reflexive
+  rule for Big types. `Functor`/`Applicative`/`Monad` parameters have the
+  fixed kind `Type -> Type`; their method formation contexts enforce each
+  constructor's representation requirements.
 - `@derive(Eq, Ord, Show, ToData, FromData)` generates impls as macros
   ([macros.md](macros.md)); the generated impls are ordinary impls subject
   to the orphan rule (always satisfied: the type is local). Each requested

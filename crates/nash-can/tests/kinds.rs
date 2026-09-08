@@ -19,16 +19,13 @@ macro_rules! assert_kinds_snapshot {
 }
 
 macro_rules! assert_kind_error_snapshot {
-    ($source:expr) => {
-        assert_kind_error_snapshot!($source, Error::KindMismatch { .. } | Error::KindInfinite { .. } | Error::RepresentationMismatch { .. } | Error::ContradictoryRepresentation { .. });
-    };
     ($source:expr, $expected:pat) => {{
         let bump = Bump::new();
         let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{}\n", $source));
         let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
-        let errors = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect_err("kind checking fails");
-        assert!(errors.iter().all(|error| matches!(error, $expected)), "wrong compiler phase: {errors:?}");
+        let errors = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect_err("declaration or annotation checking fails");
+        assert!(errors.iter().all(|error| matches!(error, $expected)), "wrong diagnostic: {errors:?}");
         insta::with_settings!({description => $source, omit_expression => true}, {
             insta::assert_debug_snapshot!(errors);
         });
@@ -36,12 +33,15 @@ macro_rules! assert_kind_error_snapshot {
 }
 
 #[test]
-fn inline_kind_bounds_reject_contradictory_repeated_variables() {
-    assert_kind_error_snapshot!("type small 'a = Small (pair ('a : Big) ('a : Const))");
+fn inline_representation_predicates_reject_contradictory_repeated_variables() {
+    assert_kind_error_snapshot!(
+        "type small 'a = Small (pair ('a : Big) ('a : Const))",
+        Error::ContradictoryRepresentation { .. }
+    );
 }
 
 #[test]
-fn ground_big_proof_preserves_constructor_bounds_and_aliases() {
+fn ground_representation_does_not_bypass_formation_contexts() {
     use nash_ast::{AliasType, Kind, QualifiedName, Type, primitives::Repr};
     use nash_region::Located;
     let bump = Bump::new();
@@ -154,29 +154,39 @@ fn labeled_fields() {
 }
 #[test]
 fn big_field_const() {
-    assert_kind_error_snapshot!("type Datum = Datum bytes");
+    assert_kind_error_snapshot!(
+        "type Datum = Datum bytes",
+        Error::RepresentationMismatch { .. }
+    );
 }
 #[test]
 fn big_field_tuple() {
-    assert_kind_error_snapshot!("type Datum = Datum (Int, Int)");
+    assert_kind_error_snapshot!(
+        "type Datum = Datum (Int, Int)",
+        Error::RepresentationMismatch { .. }
+    );
 }
 #[test]
 fn list_of_little() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\ntype alias xs = list (option int)"
+        "type option 'a = None | Some 'a\ntype alias xs = list (option int)",
+        Error::RepresentationMismatch { .. }
     );
 }
 #[test]
 fn lowercase_alias_big_body() {
-    assert_kind_error_snapshot!("type alias id = Int");
+    assert_kind_error_snapshot!("type alias id = Int", Error::RepresentationMismatch { .. });
 }
 #[test]
 fn uppercase_alias_little_body() {
-    assert_kind_error_snapshot!("type alias Count = int");
+    assert_kind_error_snapshot!(
+        "type alias Count = int",
+        Error::RepresentationMismatch { .. }
+    );
 }
 #[test]
 fn infinite_kind() {
-    assert_kind_error_snapshot!("type bad 'f = Bad (bad bad)");
+    assert_kind_error_snapshot!("type bad 'f = Bad (bad bad)", Error::KindInfinite { .. });
 }
 #[test]
 fn pair_of_const_and_const() {
@@ -191,13 +201,15 @@ fn pair_of_const_and_big() {
 #[test]
 fn pair_requires_storable() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\ntype alias p = pair (option int) Int"
+        "type option 'a = None | Some 'a\ntype alias p = pair (option int) Int",
+        Error::RepresentationMismatch { .. }
     );
 }
 #[test]
 fn pair_requires_storable_second_argument() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\ntype alias p = pair Int (option int)"
+        "type option 'a = None | Some 'a\ntype alias p = pair Int (option int)",
+        Error::RepresentationMismatch { .. }
     );
 }
 #[test]
@@ -208,16 +220,25 @@ fn pair_builtin_signatures() {
 }
 #[test]
 fn independent_errors() {
-    assert_kind_error_snapshot!("type Bad = Bad int\ntype Wrong = Wrong bytes");
+    assert_kind_error_snapshot!(
+        "type Bad = Bad int\ntype Wrong = Wrong bytes",
+        Error::RepresentationMismatch { .. }
+    );
 }
 #[test]
 fn dependent_on_invalid_declaration_does_not_panic() {
-    assert_kind_error_snapshot!("type Bad = Bad int\ntype Dependent = Dependent Bad");
+    assert_kind_error_snapshot!(
+        "type Bad = Bad int\ntype Dependent = Dependent Bad",
+        Error::RepresentationMismatch { .. }
+    );
 }
 
 #[test]
 fn base_kinded_parameter_cannot_be_applied() {
-    assert_kind_error_snapshot!("type wrong 'f = Wrong 'f ('f Int)");
+    assert_kind_error_snapshot!(
+        "type wrong 'f = Wrong 'f ('f Int)",
+        Error::KindMismatch { .. }
+    );
 }
 
 #[test]
@@ -229,7 +250,10 @@ fn named_partial_constructors_in_higher_kinded_arguments() {
 
 #[test]
 fn partial_constructor_is_not_a_value_type() {
-    assert_kind_error_snapshot!("value : list\nvalue = ()\nother : pair int\nother = ()");
+    assert_kind_error_snapshot!(
+        "value : list\nvalue = ()\nother : pair int\nother = ()",
+        Error::KindMismatch { .. }
+    );
 }
 
 #[test]
@@ -345,32 +369,41 @@ fn annotation_storable_parameter() {
 #[test]
 fn annotation_rejects_little_container_element_in_argument() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\nf : list (option int) -> int\nf x = 1"
+        "type option 'a = None | Some 'a\nf : list (option int) -> int\nf x = 1",
+        Error::RepresentationMismatch { .. }
     );
 }
 
 #[test]
 fn annotation_rejects_higher_kinded_value_position() {
-    assert_kind_error_snapshot!("f : ('f 'a, 'f) -> int\nf x = 1");
+    assert_kind_error_snapshot!(
+        "f : ('f 'a, 'f) -> int\nf x = 1",
+        Error::KindMismatch { .. }
+    );
 }
 
 #[test]
 fn let_annotation_rejects_little_container_element() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\nf =\n    let\n        g : list (option int) -> int\n        g x = 1\n    in\n    g"
+        "type option 'a = None | Some 'a\nf =\n    let\n        g : list (option int) -> int\n        g x = 1\n    in\n    g",
+        Error::RepresentationMismatch { .. }
     );
 }
 
 #[test]
 fn nested_annotation_in_lambda_is_checked() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\nf = \\x ->\n    let\n        g : list (option int) -> int\n        g y = 1\n    in\n    g x"
+        "type option 'a = None | Some 'a\nf = \\x ->\n    let\n        g : list (option int) -> int\n        g y = 1\n    in\n    g x",
+        Error::RepresentationMismatch { .. }
     );
 }
 
 #[test]
-fn annotation_parameter_occurrences_share_kind_bounds() {
-    assert_kind_error_snapshot!("f : list 'f -> 'f 'a -> int\nf xs g = 1");
+fn annotation_parameter_occurrences_share_one_kind() {
+    assert_kind_error_snapshot!(
+        "f : list 'f -> 'f 'a -> int\nf xs g = 1",
+        Error::KindMismatch { .. }
+    );
 }
 
 #[test]
@@ -386,9 +419,9 @@ fn imported_interfaces_retain_higher_kinded_types() {
         let canonical = canonicalize(source_arena, Context::default(), &module).unwrap();
         nash_can::from_module(source_arena, &canonical.module, &BTreeMap::new())
     };
-    let scheme = interface.unions[0].kind;
+    let kind = interface.unions[0].kind;
     assert_eq!(
-        scheme,
+        kind,
         &Kind::Arrow(
             &Kind::Arrow(&Kind::Type, &Kind::Type),
             &Kind::Arrow(&Kind::Type, &Kind::Type)
@@ -446,10 +479,6 @@ fn annotation_kinds_keep_application_parameters_correlated() {
     let kinds = nash_can::kinds::check_annotation(
         &bump,
         &nash_can::kinds::KindEnv::from_interfaces(None),
-        nash_ast::ModuleName {
-            package: None,
-            name: "Main",
-        },
         "identityK",
         &annotation,
     )
@@ -480,7 +509,7 @@ fn annotation_kinds_keep_application_parameters_correlated() {
 }
 
 #[test]
-fn annotation_returns_shared_storable_bound() {
+fn annotation_retains_one_storable_predicate() {
     let bump = Bump::new();
     let interface = nash_can::kinds::builtin_interface(&bump);
     let interfaces = BTreeMap::from([("Builtin", interface)]);
@@ -502,17 +531,7 @@ fn annotation_returns_shared_storable_bound() {
         free_vars: &["a"],
         typ,
     };
-    let kinds = nash_can::kinds::check_annotation(
-        &bump,
-        &env,
-        nash_ast::ModuleName {
-            package: None,
-            name: "Main",
-        },
-        "f",
-        &annotation,
-    )
-    .unwrap();
+    let kinds = nash_can::kinds::check_annotation(&bump, &env, "f", &annotation).unwrap();
     assert!(
         matches!(kinds.context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()) && matches!(pred.args()[0].value, nash_ast::Type::Var("a")))
     );
@@ -570,27 +589,33 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
 }
 
 #[test]
-fn kind_annotation_fix() {
+fn recursive_fix_infers_a_higher_kinded_parameter() {
     assert_kinds_snapshot!("type Fix 'f = Fix ('f (Fix 'f))");
 }
 
 #[test]
-fn kind_annotation_storable() {
+fn storable_annotation_adds_a_representation_predicate() {
     assert_kinds_snapshot!("type alias xs ('a : Storable) = list 'a");
 }
 
 #[test]
-fn kind_annotation_base_mismatch() {
-    assert_kind_error_snapshot!("type Box ('a : Const) = Box 'a");
+fn const_parameter_conflicts_with_a_big_field() {
+    assert_kind_error_snapshot!(
+        "type Box ('a : Const) = Box 'a",
+        Error::ContradictoryRepresentation { .. }
+    );
 }
 
 #[test]
-fn kind_annotation_arrow_mismatch() {
-    assert_kind_error_snapshot!("type wrap ('f : Big) 'a = Wrap ('f 'a)");
+fn representation_annotation_requires_a_type_kinded_parameter() {
+    assert_kind_error_snapshot!(
+        "type wrap ('f : Big) 'a = Wrap ('f 'a)",
+        Error::KindMismatch { .. }
+    );
 }
 
 #[test]
-fn storable_annotation_occurrences_are_independent() {
+fn parameter_and_application_have_separate_representation_predicates() {
     assert_kinds_snapshot!("type wrap 'f ('a : Storable) = Wrap (('f 'a) : Storable)");
 }
 
@@ -601,52 +626,67 @@ fn narrowed_function_alias_accepts_big_parameter() {
 
 #[test]
 fn narrowed_function_alias_rejects_const_parameter() {
-    assert_kind_error_snapshot!("type alias fn ('a : Big) = 'a -> 'a\nf : fn int\nf x = x");
+    assert_kind_error_snapshot!(
+        "type alias fn ('a : Big) = 'a -> 'a\nf : fn int\nf x = x",
+        Error::RepresentationMismatch { .. }
+    );
 }
 
 #[test]
 fn narrowed_function_alias_rejects_const_parameter_in_let() {
     assert_kind_error_snapshot!(
-        "type alias fn ('a : Big) = 'a -> 'a\nf =\n    let\n        g : fn int\n        g x = x\n    in\n    g"
+        "type alias fn ('a : Big) = 'a -> 'a\nf =\n    let\n        g : fn int\n        g x = x\n    in\n    g",
+        Error::RepresentationMismatch { .. }
     );
 }
 
 #[test]
 fn parameter_annotation_is_checked_after_all_recursive_uses() {
     assert_kind_error_snapshot!(
-        "type Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)"
+        "type Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)",
+        Error::ContradictoryRepresentation { .. }
     );
 }
 
 #[test]
 fn big_record_field_rejects_const() {
-    assert_kind_error_snapshot!("type alias Vault = { amount : int }");
-}
-
-#[test]
-fn little_record_field_rejects_an_arrow_kind() {
-    assert_kind_error_snapshot!("type alias record 'f 'a = { applied : 'f 'a, head : 'f }");
-}
-
-#[test]
-fn kind_annotation_term() {
-    assert_kinds_snapshot!("type wrapper ('a : Term) = Wrap 'a");
-}
-
-#[test]
-fn retained_self_application_terminates() {
-    assert_kind_error_snapshot!("type self 'f = Self ('f 'f)\ntype w = W (self self)");
-}
-
-#[test]
-fn retained_self_application_rejects_a_term_argument() {
     assert_kind_error_snapshot!(
-        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (self (self tag))"
+        "type alias Vault = { amount : int }",
+        Error::RepresentationMismatch { .. }
     );
 }
 
 #[test]
-fn retained_self_application_in_value_annotations() {
+fn little_record_field_rejects_an_arrow_kind() {
+    assert_kind_error_snapshot!(
+        "type alias record 'f 'a = { applied : 'f 'a, head : 'f }",
+        Error::KindMismatch { .. }
+    );
+}
+
+#[test]
+fn term_annotation_adds_a_representation_predicate() {
+    assert_kinds_snapshot!("type wrapper ('a : Term) = Wrap 'a");
+}
+
+#[test]
+fn self_application_is_rejected_at_declaration() {
+    assert_kind_error_snapshot!(
+        "type self 'f = Self ('f 'f)\ntype w = W (self self)",
+        Error::KindInfinite { .. }
+    );
+}
+
+#[test]
+fn nested_use_cannot_make_self_application_well_kinded() {
+    assert_kind_error_snapshot!(
+        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (self (self tag))",
+        Error::KindInfinite { .. }
+    );
+}
+
+#[test]
+fn self_application_fails_before_value_annotation_checking() {
     assert_kind_error_snapshot!(
         "type self 'f = Self ('f 'f)\nidentity : self self -> self self\nidentity x = x",
         Error::KindInfinite { .. }
@@ -654,14 +694,15 @@ fn retained_self_application_in_value_annotations() {
 }
 
 #[test]
-fn finite_self_application_in_value_annotations() {
+fn concrete_argument_cannot_make_self_application_well_kinded() {
     assert_kind_error_snapshot!(
-        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\nwitness : self tag\nwitness = Self (Tag ())"
+        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\nwitness : self tag\nwitness = Self (Tag ())",
+        Error::KindInfinite { .. }
     );
 }
 
 #[test]
-fn saturated_binary_self_application_is_inductively_invalid() {
+fn binary_self_application_fails_the_occurs_check() {
     assert_kind_error_snapshot!(
         "type s 'f 'a = S ('f 'f 'a)\ntype tag 'a = Tag\ntype w = W (s s tag)",
         Error::KindInfinite { .. }
@@ -669,7 +710,7 @@ fn saturated_binary_self_application_is_inductively_invalid() {
 }
 
 #[test]
-fn unused_declaration_checks_conflicting_parameter_bounds_eagerly() {
+fn unused_declaration_rejects_conflicting_parameter_kinds() {
     assert_kind_error_snapshot!(
         "type unused 'a = Unused (list 'a) ('a unit)",
         Error::KindMismatch { .. }
@@ -677,58 +718,63 @@ fn unused_declaration_checks_conflicting_parameter_bounds_eagerly() {
 }
 
 #[test]
-fn retained_application_preserves_three_arguments() {
+fn formation_context_preserves_three_application_arguments() {
     assert_kinds_snapshot!("type apply3 'f 'a 'b 'c = Apply3 ('f 'a 'b 'c)");
 }
 
 #[test]
-fn annotated_head_preserves_remaining_application_arguments() {
+fn representation_annotation_preserves_application_arguments() {
     assert_kinds_snapshot!(
         "type apply2 'f ('a : Storable) ('b : Storable) = Apply2 (('f 'a 'b) : Term)"
     );
 }
 
 #[test]
-fn retained_self_application_in_impl_heads() {
+fn self_application_fails_before_impl_head_checking() {
     assert_kind_error_snapshot!(
-        "type self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()"
+        "type self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()",
+        Error::KindInfinite { .. }
     );
 }
 
 #[test]
-fn retained_nested_self_application_terminates() {
+fn nested_self_application_and_independent_alias_error_are_reported() {
     assert_kind_error_snapshot!(
-        "type g 'f = G ('f ('f 'f))\ntype w = W (g g)\ntype alias Count = int"
+        "type g 'f = G ('f ('f 'f))\ntype w = W (g g)\ntype alias Count = int",
+        Error::KindInfinite { .. } | Error::RepresentationMismatch { .. }
     );
 }
 
 #[test]
-fn retained_finite_nested_constructor_application() {
+fn nested_partial_constructor_application_is_well_kinded() {
     assert_kinds_snapshot!("type app 'f 'a = App ('f 'a)\ntype w = W (app (app list) int)");
 }
 
 #[test]
-fn fresh_parameter_replay_in_declarations() {
+fn self_application_and_independent_alias_error_are_reported() {
     assert_kind_error_snapshot!(
-        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntype w = W (s s s)\ntype alias Count = int"
+        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntype w = W (s s s)\ntype alias Count = int",
+        Error::KindInfinite { .. } | Error::RepresentationMismatch { .. }
     );
 }
 
 #[test]
-fn fresh_parameter_replay_in_annotations() {
+fn ternary_self_application_fails_before_annotation_checking() {
     assert_kind_error_snapshot!(
-        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\nidentity : s s s tag -> s s s tag\nidentity value = value"
+        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\nidentity : s s s tag -> s s s tag\nidentity value = value",
+        Error::KindInfinite { .. }
     );
 }
 
 #[test]
-fn fresh_parameter_replay_in_impl_heads() {
+fn ternary_self_application_fails_before_impl_head_checking() {
     assert_kind_error_snapshot!(
-        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (s s tag tag) where\n    marker _ = ()"
+        "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (s s tag tag) where\n    marker _ = ()",
+        Error::KindInfinite { .. }
     );
 }
 
-macro_rules! supplied_obligation_cases {
+macro_rules! self_application_cases {
     ($($name:ident: $number:literal),* $(,)?) => {$(
         #[test]
         fn $name() {
@@ -745,47 +791,49 @@ macro_rules! supplied_obligation_cases {
     )*};
 }
 
-supplied_obligation_cases! {
-    supplied_obligation_01: 1,
-    supplied_obligation_02: 2,
-    supplied_obligation_03: 3,
-    supplied_obligation_04: 4,
-    supplied_obligation_05: 5,
-    supplied_obligation_06: 6,
-    supplied_obligation_07: 7,
-    supplied_obligation_08: 8,
-    supplied_obligation_09: 9,
-    supplied_obligation_10: 10,
-    supplied_obligation_11: 11,
-    supplied_obligation_12: 12,
-    supplied_obligation_13: 13,
-    supplied_obligation_14: 14,
-    supplied_obligation_15: 15,
-    supplied_obligation_16: 16,
-    supplied_obligation_17: 17,
-    supplied_obligation_18: 18,
-    supplied_obligation_19: 19,
-    supplied_obligation_20: 20,
-    supplied_obligation_21: 21,
-    supplied_obligation_22: 22,
+self_application_cases! {
+    self_application_case_01: 1,
+    self_application_case_02: 2,
+    self_application_case_03: 3,
+    self_application_case_04: 4,
+    self_application_case_05: 5,
+    self_application_case_06: 6,
+    self_application_case_07: 7,
+    self_application_case_08: 8,
+    self_application_case_09: 9,
+    self_application_case_10: 10,
+    self_application_case_11: 11,
+    self_application_case_12: 12,
+    self_application_case_13: 13,
+    self_application_case_14: 14,
+    self_application_case_15: 15,
+    self_application_case_16: 16,
+    self_application_case_17: 17,
+    self_application_case_18: 18,
+    self_application_case_19: 19,
+    self_application_case_20: 20,
+    self_application_case_21: 21,
+    self_application_case_22: 22,
 }
 
 #[test]
-fn partial_constructor_checks_closed_obligations() {
+fn self_application_fails_before_partial_constructor_use() {
     assert_kind_error_snapshot!(
-        "type self 'f = Self ('f 'f)\ntype p 'f 'a = P ('f 'f) 'a\ntype tag 'a = Tag\ntype w = W (tag (p self))"
+        "type self 'f = Self ('f 'f)\ntype p 'f 'a = P ('f 'f) 'a\ntype tag 'a = Tag\ntype w = W (tag (p self))",
+        Error::KindInfinite { .. }
     );
 }
 
 #[test]
-fn phantom_constructor_checks_saturated_argument_validity() {
+fn phantom_use_cannot_hide_an_infinite_declaration_kind() {
     assert_kind_error_snapshot!(
-        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag\ntype w = W (tag (self self))"
+        "type self 'f = Self ('f 'f)\ntype tag 'a = Tag\ntype w = W (tag (self self))",
+        Error::KindInfinite { .. }
     );
 }
 
 #[test]
-fn phantom_constructor_checks_supplied_partial_bounds() {
+fn partial_pair_application_checks_its_supplied_context() {
     assert_kind_error_snapshot!(
         "type option 'a = None | Some 'a\ntype use 'f = Use ('f int)\ntype w = W (use (pair (option int)))",
         Error::RepresentationMismatch { .. }
@@ -793,14 +841,15 @@ fn phantom_constructor_checks_supplied_partial_bounds() {
 }
 
 #[test]
-fn partial_constructor_projects_consumer_bounds_before_missing_arguments() {
+fn partial_constructor_rejects_a_higher_kinded_argument_mismatch() {
     assert_kind_error_snapshot!(
-        "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'a))\ntype w = W (tag (s s option))"
+        "type option 'a = None | Some 'a\ntype tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'a))\ntype w = W (tag (s s option))",
+        Error::KindMismatch { .. }
     );
 }
 
 #[test]
-fn generated_capture_outside_finite_fragment_is_not_an_infinite_kind() {
+fn composition_rejects_inconsistent_higher_kinded_arguments() {
     assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntype w = W (wrap (app tag) app option)",
         Error::KindMismatch { .. }
@@ -808,14 +857,15 @@ fn generated_capture_outside_finite_fragment_is_not_an_infinite_kind() {
 }
 
 #[test]
-fn explicit_capture_has_a_finite_inductive_proof() {
+fn phantom_parameter_defaults_to_type_before_higher_kinded_use() {
     assert_kind_error_snapshot!(
-        "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype w = W (app tag (app option))"
+        "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype w = W (app tag (app option))",
+        Error::KindMismatch { .. }
     );
 }
 
 #[test]
-fn fragment_restriction_cannot_validate_an_annotation() {
+fn annotation_rejects_inconsistent_higher_kinded_arguments() {
     assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\nidentity : wrap (app tag) app option -> wrap (app tag) app option\nidentity x = x",
         Error::KindMismatch { .. }
@@ -823,7 +873,7 @@ fn fragment_restriction_cannot_validate_an_annotation() {
 }
 
 #[test]
-fn fragment_restriction_cannot_validate_an_impl_head() {
+fn impl_head_rejects_inconsistent_higher_kinded_arguments() {
     assert_kind_error_snapshot!(
         "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (wrap (app tag) app option) where\n    marker x = ()",
         Error::KindMismatch { .. }

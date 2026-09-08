@@ -694,7 +694,7 @@ Write the APIs listed in docs/stdlib.md "Little-type modules" and "Twin
 modules". Every function takes the little twin (`list 'a`, `option 'a`,
 `int`, ...); the Big twins (`List 'a`, `Int`, `Option 'a`, ...) get no
 functions, only the impls from chunk 5. `String.nash` is the little
-`string` module; there is no Big `String`. `Cons.nash` is the Term-kind
+`string` module; there is no Big `String`. `Cons.nash` is the Term-representation
 linked list `type cons 'a = Nil | Cons 'a (cons 'a)` (docs/stdlib.md
 "`Cons`") that chunk 10's `Ast` and plans/11 depend on; its `fromList`
 and `toList` carry the `Storable` bound of `list`. All functions are
@@ -997,7 +997,7 @@ listBetween lo hi item =
     go 0
 ```
 
-`Seeded`/`Replayed` field kinds are Big (`Bytes`, `List Int`, `Int`), so
+`Seeded`/`Replayed` field representations are Big (`Bytes`, `List Int`, `Int`), so
 `choice` lowers them to work and lifts them back; the runner reads the
 returned `Prng` with `unwrap_constr`. The runner protocol (`draw`/`run`
 programs, `Prng::from_seed`, `Prng::from_choices`, replay returning `None`

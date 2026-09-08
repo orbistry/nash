@@ -486,23 +486,21 @@ pub enum Type<'a> {
 pub enum TypeParam<'a> {
     Start(Row, Col),
     Colon(Row, Col),
-    Kind(&'a Kind<'a>, Row, Col),
+    Repr(&'a Repr<'a>, Row, Col),
     End(Row, Col),
     Space(Space, Row, Col),
     IndentColon(Row, Col),
-    IndentKind(Row, Col),
+    IndentRepr(Row, Col),
     IndentEnd(Row, Col),
 }
 
 #[derive(Debug)]
-pub enum Kind<'a> {
+pub enum Repr<'a> {
+    /// Removed kind-arrow syntax, diagnosed at the arrow.
     Arrow(Row, Col),
     Start(Row, Col),
     Name(&'a str, Row, Col),
-    End(Row, Col),
     Space(Space, Row, Col),
-    IndentStart(Row, Col),
-    Paren(&'a Kind<'a>, Row, Col),
 }
 
 #[derive(Debug)]
@@ -522,8 +520,8 @@ pub enum TRecord<'a> {
 
 #[derive(Debug)]
 pub enum TTuple<'a> {
-    Kind(&'a Kind<'a>, Row, Col),
-    IndentKind(Row, Col),
+    Repr(&'a Repr<'a>, Row, Col),
+    IndentRepr(Row, Col),
     Open(Row, Col),
     End(Row, Col),
     Type(&'a Type<'a>, Row, Col),

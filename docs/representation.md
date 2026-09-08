@@ -88,7 +88,7 @@ lambda.
 | `'a -> 'b` | `lam` |
 
 Fields of a `constr` term may be constants, `Data`, other `constr` terms, or
-lambdas: little types hold values of any kind. `case` on a `constr` term is
+lambdas: little types hold values of any representation. `case` on a `constr` term is
 the UPLC `case` with one branch lambda per constructor; matching a tuple or a
 little record is a one-branch `case`.
 
@@ -133,7 +133,7 @@ The prelude defines each control-flow type twice, once per side of the
 boundary. The little twin is the one used in ordinary code; the Big twin is
 the on-chain encoding.
 
-| little (kind) | Big | Big encoding |
+| little (representation) | Big | Big encoding |
 |---|---|---|
 | `bool` (Const) `False \| True` | `type Bool = False \| True` | `Constr 0 []`, `Constr 1 []` |
 | `unit` (Const) `()` | `type Unit = Unit` | `Constr 0 []` |
@@ -226,7 +226,7 @@ Rules:
 - The reflexive impl `impl Big 'a => Lift 'a 'a` is provided by the
   compiler, not written in Nash: its head is a bare type variable, which
   the Haskell 98 head rules for user impls reject (see
-  [traits.md](traits.md)). It is restricted to Big types by the kind
+  [traits.md](traits.md)). It is restricted to Big types by the representation
   predicate `Big 'a` (see [kinds.md](kinds.md)) and is what makes
   `lift : list Int -> List Int` a single `listData`, because mapping the
   identity is removed by the optimizer.
@@ -292,8 +292,9 @@ Consequences:
 
 ## Interactions
 
-- **Kinds** decide the table row for every type; ground kinds reach codegen
-  on every `Core` type.
+- **Representations** decide the table row for every type; the ground
+  representation reaches codegen on every `Core` type. Haskell 98 kinds
+  check type application independently ([kinds.md](kinds.md)).
 - **Records** are nominal, so a record literal always has a known alias and
   hence a known encoding at canonicalization time
   (plans/04-representation.md).

@@ -1,5 +1,11 @@
 # Plan 01 — Surface syntax
 
+Status: historical implementation record for Plan 01. The later
+[Haskell 98 replacement](02-kind-predicates.md) supersedes the mixed kind
+annotation syntax below: source annotations now express representation
+predicates only, and arrow annotations are rejected. The grammar in
+[docs/syntax.md](../docs/syntax.md) is current.
+
 ## Goal
 
 Extend `nash-source` and `nash-parse` to the full surface syntax in

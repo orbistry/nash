@@ -5,6 +5,8 @@ retained kind obligations, and value-kind engine outright. The three work
 areas below form one delivery with the approved Plan 03 scope.
 
 Status: complete for the approved Haskell 98 and Plan 03 scope.
+The subsequent cleanup and its verification are recorded in
+[02-kind-rewrite-audit.md](02-kind-rewrite-audit.md).
 
 ## Declaration checking
 

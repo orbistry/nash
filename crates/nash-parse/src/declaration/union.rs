@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn union_with_kind() {
+    fn union_rejects_kind_arrow_annotation() {
         assert_decl_error_snapshot!("type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))");
     }
 
@@ -318,12 +318,12 @@ mod tests {
     }
 
     #[test]
-    fn error_empty_kind() {
+    fn error_empty_representation_annotation() {
         assert_decl_error_snapshot!("type T ('f : ) = A");
     }
 
     #[test]
-    fn error_unknown_kind() {
+    fn error_unknown_representation_annotation() {
         assert_decl_error_snapshot!("type T ('f : Foo) = A");
     }
 

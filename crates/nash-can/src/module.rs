@@ -321,7 +321,6 @@ fn to_node_one<'a>(
         (None, Some(annotation)) => Some(kinds::check_annotation(
             bump,
             &env.kinds,
-            env.home,
             src.name.value,
             annotation,
         )?),

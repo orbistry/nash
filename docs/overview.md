@@ -185,9 +185,9 @@ crates/
   nash-source          surface AST                       (extend: traits, tests, do, attrs, macros)
   nash-parse           parser                            (extend: same)
   nash-ast             canonical AST                     (extend: kinds, traits, evidence slots)
-  nash-can             canonicalization                  (extend: trait/impl env, orphan rules, tests block)
-  nash-constrain       constraint gen + kinds            (extend: predicates, kind inference)
-  nash-solve           solver                            (extend: qualified types, defaulting, evidence)
+  nash-can             canonicalization + Haskell 98 kinds + datatype contexts
+  nash-constrain       type and predicate constraint generation
+  nash-solve           type/trait solving + kind contracts + defaulting + evidence
   nash-nitpick         exhaustiveness (new)
   nash-report          diagnostics: Elm prose -> miette  (new)
   nash-ir              Core IR + Core->Core passes       (new)

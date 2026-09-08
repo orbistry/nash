@@ -280,8 +280,9 @@ exempt from the Big-field rule: they mirror `chooseData`.
   the impl's identity. Consequently core ships one `impl Eq 'a => Eq (list
   'a)` (elementwise), not a second `Big 'a => Eq (list 'a)`; the
   whole-list `equalsData` fast path is a codegen rewrite on ground types
-  whose element is Big ([codegen.md](codegen.md), plans/08). Same for
-  `Ord` and `Show`.
+  whose element is Big ([codegen.md](codegen.md), plans/08). This
+  optimization is restricted to `Eq`; representation alone cannot replace
+  user-defined `Ord` or `Show` behavior.
 
 ## Recursion and infinite kinds
 

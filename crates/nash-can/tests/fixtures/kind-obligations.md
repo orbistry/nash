@@ -1,4 +1,9 @@
-# Kind checker non-termination cases
+# Historical kind checker non-termination cases
+
+These sources are regression inputs for the replacement Haskell 98 checker.
+Every fenced case now rejects with `KindInfinite` at declaration checking;
+`tests/kinds.rs::self_application_cases` asserts that result. The timing and
+mechanism below describe the deleted engine, not the current compiler.
 
 Each block is a complete `src/Main.nash` for an application project
 (`{"type":"application","sourceDirectories":["src"]}` in `nash.jsonc`).
@@ -10,7 +15,7 @@ Found by generating 1,750 declarations of the form `type s 'f 'g 'a = S (<body>)
 over `'f`, `'g`, `'a`, `tag` and application depth <= 2, applied as `s s s`, `s s tag`, etc.
 19 of 1,750 hang; the rest report a kind error. All 19 are in the second section.
 
-## Mechanism
+## Historical mechanism
 
 `s` retains obligations `Apply(kf, kf, r1)`, `Apply(r1, ka, r2)`, `Apply(kg, r2, r3)`.
 Settling `Apply(kf, kf, r1)` at `kf := s` opens `s` with one argument, so the opened
@@ -42,7 +47,9 @@ type s 'f 'g 'a = S ('g ('f 'f 'a))
 type w = W (s s tag tag)
 ```
 
-Control: `type w = W (s tag s tag)` with the same `s` terminates with `KindMismatch`.
+Historical control: `type w = W (s tag s tag)` with the same `s` terminated
+with `KindMismatch` in the old engine. Haskell 98 rejects `s` itself with
+`KindInfinite`, independently of its uses.
 Control: the arity-2 cousin `type s 'f 'a = S ('f 'f 'a)` terminates at both `s s` and `s s tag`.
 
 ## All 19 fuzz hits

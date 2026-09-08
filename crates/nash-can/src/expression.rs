@@ -546,8 +546,7 @@ fn to_var_ctor<'a>(
                 typ,
             });
 
-            let annotation =
-                crate::kinds::check_annotation(bump, &env.kinds, env.home, name, annotation)?;
+            let annotation = crate::kinds::check_annotation(bump, &env.kinds, name, annotation)?;
             CanExpr::VarConstructor {
                 options: *options,
                 reference: ConstructorName {
@@ -603,8 +602,7 @@ fn to_var_ctor<'a>(
                 free_vars,
                 typ,
             });
-            let annotation =
-                crate::kinds::check_annotation(bump, &env.kinds, env.home, name, annotation)?;
+            let annotation = crate::kinds::check_annotation(bump, &env.kinds, name, annotation)?;
 
             CanExpr::VarConstructor {
                 options: CtorOpts::Normal,
@@ -1235,13 +1233,8 @@ fn canonicalize_let_def<'a>(
                 annotation
             {
                 let annotation_val = types::to_annotation(bump, env, ann)?;
-                let annotation_val = crate::kinds::check_annotation(
-                    bump,
-                    &env.kinds,
-                    env.home,
-                    name.value,
-                    annotation_val,
-                )?;
+                let annotation_val =
+                    crate::kinds::check_annotation(bump, &env.kinds, name.value, annotation_val)?;
                 let mut bound: Vec<(&'a str, Region)> = Vec::new();
                 let (typed_args, result_type) =
                     gather_typed_args(bump, env, name.value, args, annotation_val.typ, &mut bound)?;

@@ -174,7 +174,7 @@ impl<'a, 'env> Check<'a, 'env> {
 
     fn error(&mut self, region: Region, mismatch: Mismatch<'a>) -> Error<'a> {
         let reason = match mismatch {
-            Mismatch::Infinite(_) => KindProblem::Infinite,
+            Mismatch::Infinite => KindProblem::Infinite,
             Mismatch::Shapes { expected, actual } => KindProblem::Mismatch {
                 expected: self.infer.default_and_zonk(expected),
                 actual: self.infer.default_and_zonk(actual),
@@ -228,7 +228,7 @@ pub(crate) fn freeze<'a>(
     predicates: &[Body<'a>],
     quantified: &[Variable],
     contracts: &[Contract<'a>],
-) -> Result<Vec<Contract<'a>>, Vec<Error<'a>>> {
+) -> Result<Vec<Contract<'a>>, Box<Error<'a>>> {
     let region = root.region;
     let mut check = Check::new(bump, uf, env, contracts);
     let result = (|| {
@@ -247,5 +247,5 @@ pub(crate) fn freeze<'a>(
         }
         Ok(result)
     })();
-    result.map_err(|mismatch| vec![check.error(region, mismatch)])
+    result.map_err(|mismatch| Box::new(check.error(region, mismatch)))
 }

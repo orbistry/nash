@@ -387,18 +387,8 @@ pub enum Error<'a> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum KindHead<'a> {
-    Named(QualifiedName<'a>),
-    Variable(&'a str),
-}
-
-#[derive(Clone, Copy, Debug)]
 pub enum KindContext<'a> {
     TypeAnnotation,
-    TypeArg {
-        head: KindHead<'a>,
-        index: u16,
-    },
     BigField {
         union: &'a str,
         ctor: &'a str,
@@ -418,14 +408,8 @@ pub enum KindContext<'a> {
         alias: &'a str,
         big: bool,
     },
-    /// Function argument/result or tuple component: must be a base kind.
-    ValuePosition,
     Annotation {
         name: &'a str,
-    },
-    ParamAnnotation {
-        type_name: &'a str,
-        param: &'a str,
     },
     /// The `index`th type in an `impl Trait T1 .. Tn` head (plans/03).
     ImplHead {

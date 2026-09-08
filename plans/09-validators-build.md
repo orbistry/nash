@@ -3,8 +3,8 @@
 ## Goal
 
 `validator module Foo exposing (main)` is recognised end to end: the parser
-records the kind, canonicalization requires an exposed `main`, the kind
-checker rejects `Term` parameters, the driver strips `tests` blocks and compiles every
+records the kind, canonicalization requires an exposed `main`, representation
+checking rejects `Term` parameters, the driver strips `tests` blocks and compiles every
 validator module through `nash-codegen`, and `nash build` writes
 `build/<Module.Name>.{uplc,flat,cbor}`.
 
@@ -38,25 +38,14 @@ Spec: [docs/validators.md](../docs/validators.md), [docs/cli.md](../docs/cli.md)
   }
   ```
 
-- plans/02 (kinds) and plans/03 Chunk 9: `nash_ast::{BaseKind, Kind,
-  KindScheme, KindSet}`, and `nash_ast::Annotation.kinds` (one `KindScheme`
-  per free variable, name-sorted like `free_vars`). This plan consumes:
-
-  ```rust
-  // nash-ast, from plans/02 and plans/03 Chunk 9
-  pub enum BaseKind { Big, Const, Term }
-  pub enum Kind<'a> { Base(BaseKind), Var(u16), Arrow(&'a Kind<'a>, &'a Kind<'a>) }
-  pub struct Annotation<'a> {
-      pub free_vars: FreeVars<'a>,
-      pub context: &'a [Pred<'a>],
-      pub kinds: &'a [KindScheme<'a>],
-      pub typ: &'a Located<Type<'a>>,
-  }
-  ```
-
-  A named type's base kind follows from the casing of its head
-  (docs/kinds.md); `->`, tuples and little records are `Term`; a type
-  variable's kind bound comes from `Annotation.kinds`.
+- plans/02 Haskell 98 follow-up and plans/03: canonical kinds are
+  `nash_ast::Kind::{Type, Arrow}`. `Annotation` stores `free_vars`, `context`
+  and `typ`; it has no representation-kind metadata. Use constructor
+  metadata, substituted alias bodies and representation predicates in the
+  context to determine whether a parameter can be supplied as a UPLC
+  constant. `Storable` admits `Big` and `Const`; functions, tuples and
+  lowercase unions have representation `Term`; `unit` is `Const`.
+  See [docs/kinds.md](../docs/kinds.md).
 
 - plans/07 (codegen): `nash-codegen` compiles a solved module, with its
   dependency closure, into a UPLC program rooted at `main`. This plan
@@ -314,7 +303,7 @@ to the exposing list."
 
 After solving, the annotation of `main` is known
 (`Annotations<'a>`, `crates/nash-can/src/interface.rs:71`). Walk its
-`Type::Lambda` spine; every `from` type must have kind `Big` or `Const`
+`Type::Lambda` spine; every `from` type must have representation `Big` or `Const`
 (overview.md, codegen.md "Validators"). `Term` parameters are the error:
 nothing outside the script can supply a function, a little ADT or a tuple.
 This is a post-solve check because `main` may be unannotated.
@@ -325,7 +314,7 @@ This is a post-solve check because `main` may be unannotated.
 // crates/nash-constrain/src/error.rs
 pub enum Error<'a> {
     // ...
-    /// A parameter of a validator's `main` whose kind is `Term`.
+    /// A parameter of a validator's `main` whose representation is `Term`.
     MainParameterIsTerm {
         region: Region,
         index: usize,
@@ -334,47 +323,18 @@ pub enum Error<'a> {
 }
 ```
 
-```rust
-// crates/nash-constrain/src/module.rs
-/// Every parameter of a validator's `main` must be `Big` or `Const`: only constants can be applied from outside.
-pub fn check_main_parameters<'a>(
-    module: &nash_ast::Module<'a>,
-    annotations: &Annotations<'a>,
-) -> Result<(), Error<'a>> {
-    if !module.is_validator() {
-        return Ok(());
-    }
-    let main = annotations["main"];
-    let mut typ = main.typ;
-    let mut index = 0;
-    while let nash_ast::Type::Lambda { from, to } = &typ.value {
-        if param_is_term(main, from) {
-            return Err(Error::MainParameterIsTerm { region: from.region, index, typ: from });
-        }
-        typ = to;
-        index += 1;
-    }
-    Ok(())
-}
+The post-solve check walks `main`'s function parameters and uses the
+representation resolver with the solved annotation context. Substitute
+transparent aliases before deciding representation; preserve nominal record
+representation. A `Term` parameter reports `MainParameterIsTerm` at its
+source region. Unresolved parameters must be handled through their
+representation predicates, without using kind bounds. Preserve the existing codegen rule below for
+an unconstrained parameter.
+`unit` is a valid `Const` parameter. Do not infer representation from
+Haskell 98 `Kind`, or reintroduce the removed value-kind scheme API.
 
-/// `true` when the parameter type is definitely `Term`: an arrow, a tuple, a
-/// little record, a lowercase-headed ADT, or a variable whose kind bound
-/// (`Annotation.kinds`, plans/03 Chunk 9) excludes `Big` and `Const`.
-fn param_is_term<'a>(main: &Annotation<'a>, typ: &Located<nash_ast::Type<'a>>) -> bool {
-    use nash_ast::{BaseKind, Kind, KindSet, Type};
-    match &typ.value {
-        Type::Lambda { .. } | Type::Tuple { .. } | Type::Record { .. } | Type::Unit => true,
-        Type::Named { reference, .. } => nash_ast::base_kind_of_head(reference.name) == BaseKind::Term,
-        Type::Var(name) => {
-            let i = main.free_vars.index_of(name).expect("annotation var is free");
-            let scheme = &main.kinds[i];
-            matches!(scheme.kind, Kind::Base(BaseKind::Term))
-                || scheme.bounds.first().is_some_and(|b| *b == KindSet::TERM)
-        }
-        Type::Alias { real, .. } => param_is_term(main, real),
-    }
-}
-```
+This remains Plan 09 work; the Haskell 98 cleanup does not implement
+validator boundary checking or codegen.
 
 Prose:
 
@@ -400,7 +360,7 @@ hint:    Take `Data` (or a Big type like `Int` or a `type` with Big fields)
 - `validator module V exposing (main)\n\nmain : option int -> unit\nmain _ = ()` →
   `MainParameterIsTerm { index: 0 }`.
 - unannotated `main x = ()` where `x`'s type is a variable → Ok (a type
-  variable's kind is unconstrained; codegen instantiates it at `Data`).
+  variable's representation is unconstrained; codegen instantiates it at `Data`).
 
 **Done when** the checks pass and `nash-driver` calls
 `check_main_parameters` after `nash_solve::run` in `compile_module`.

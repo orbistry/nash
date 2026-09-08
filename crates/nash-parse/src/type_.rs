@@ -323,22 +323,16 @@ impl<'a> Parser<'a> {
                         vec![
                             Box::new(|p: &mut Parser<'a>| {
                                 p.word1(b':', TTuple::End)?;
-                                p.chomp_and_check_indent(TTuple::Space, TTuple::IndentKind)?;
-                                let (kind, end) = p.specialize(
+                                p.chomp_and_check_indent(TTuple::Space, TTuple::IndentRepr)?;
+                                let (repr, end) = p.specialize(
                                     |bump, error, row, col| {
-                                        TTuple::Kind(bump.alloc(error), row, col)
+                                        TTuple::Repr(bump.alloc(error), row, col)
                                     },
-                                    |p| p.kind_expr(),
+                                    |p| p.repr_annotation(),
                                 )?;
                                 p.check_indent(end.line, end.column, TTuple::IndentEnd)?;
                                 p.word1(b')', TTuple::End)?;
-                                Ok(p.add_end(
-                                    start,
-                                    Type::Repr {
-                                        typ: first,
-                                        repr: kind,
-                                    },
-                                ))
+                                Ok(p.add_end(start, Type::Repr { typ: first, repr }))
                             }),
                             Box::new(|p: &mut Parser<'a>| p.type_tuple_help(start, first)),
                         ],
@@ -543,17 +537,17 @@ impl<'a> Parser<'a> {
                     p.word1(b':', error::TypeParam::Colon)?;
                     p.chomp_and_check_indent(
                         error::TypeParam::Space,
-                        error::TypeParam::IndentKind,
+                        error::TypeParam::IndentRepr,
                     )?;
-                    let (kind, end) = p.specialize(
-                        |bump, e, row, col| error::TypeParam::Kind(bump.alloc(e), row, col),
-                        |p| p.kind_expr(),
+                    let (repr, end) = p.specialize(
+                        |bump, e, row, col| error::TypeParam::Repr(bump.alloc(e), row, col),
+                        |p| p.repr_annotation(),
                     )?;
                     p.check_indent(end.line, end.column, error::TypeParam::IndentEnd)?;
                     p.word1(b')', error::TypeParam::End)?;
                     Ok(p.alloc(TypeParam {
                         name,
-                        repr: Some(kind),
+                        repr: Some(repr),
                     }))
                 }),
             ],
@@ -561,24 +555,24 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse representation sugar and reject the removed kind-arrow syntax.
-    fn kind_expr(&mut self) -> Result<(&'a Located<Repr>, Position), error::Kind<'a>> {
+    fn repr_annotation(&mut self) -> Result<(&'a Located<Repr>, Position), error::Repr<'a>> {
         let start = self.get_position();
         let (row, col) = self.position();
-        let name = self.upper_name(error::Kind::Start)?;
+        let name = self.upper_name(error::Repr::Start)?;
         let repr = match name {
             "Big" => Repr::Big,
             "Const" => Repr::Const,
             "Term" => Repr::Term,
             "Storable" => Repr::Storable,
-            other => return Err(error::Kind::Name(other, row, col)),
+            other => return Err(error::Repr::Name(other, row, col)),
         };
         let value = self.add_end(start, repr);
         let end = self.get_position();
-        self.chomp(error::Kind::Space)?;
+        self.chomp(error::Repr::Space)?;
         if self.peek() == Some(b'-') {
             let (row, col) = self.position();
-            self.word2(b'-', b'>', error::Kind::Start)?;
-            return Err(error::Kind::Arrow(row, col));
+            self.word2(b'-', b'>', error::Repr::Start)?;
+            return Err(error::Repr::Arrow(row, col));
         }
         Ok((value, end))
     }
@@ -795,12 +789,12 @@ mod tests {
     }
 
     #[test]
-    fn inline_kind_bound_in_nested_type() {
+    fn inline_representation_annotation_in_nested_type() {
         assert_type_snapshot!("list (pair ('a : Big) ('b : Storable))");
     }
 
     #[test]
-    fn inline_kind_bound_reports_invalid_kind() {
+    fn inline_representation_annotation_reports_unknown_name() {
         assert_type_error_snapshot!("list ('a : Wrong)");
     }
 

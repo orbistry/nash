@@ -529,9 +529,9 @@ hoisted as lambdas over all their pattern variables.
 
 - `crates/nash-ir/src/fold.rs` (new)
 - `crates/nash-ir/src/fastpath.rs` (new): rewrites a monomorphized call of
-  core's elementwise `Eq (list 'a)` / `Ord (list 'a)` / `Show (list 'a)`
-  method at a ground Big element type into the single-builtin form
-  (`equalsData (listData a) (listData b)`, etc.). Keyed on the core impl's
+  core's elementwise `Eq (list 'a)` method at a ground Big element type
+  into `equalsData (listData a) (listData b)`. Do not apply this rewrite to
+  `Ord` or `Show`: Big representation does not fix user ordering or rendering. Keyed on the core impl's
   `ImplRef` plus the ground `MonoKey`; semantics identical because Big
   equality is structural `equalsData` per element. Budget test: `list Int`
   equality of 100 elements must cost one `equalsData` plus two `listData`.

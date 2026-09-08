@@ -14,7 +14,8 @@ Prerequisites:
   reified. This plan adds `macro`, `quote`, `~`. If plans/01 named the
   surface types differently, use its names; the shapes below are what this
   plan needs.
-- plans/02 (kinds): `Kind` and `kind_of(&CanType)` in `nash-constrain`.
+- plans/02 Haskell 98 follow-up: closed `nash_ast::Kind` and separate
+  representation queries and datatype contexts in `nash-can::kinds`.
 - plans/03 (traits): `trait`/`impl` in `nash-source`/`nash-ast`, predicate
   resolution with a hook to defer unresolved predicates.
 - plans/07 (codegen): `nash_codegen::lower_value(&ModuleSet, QualifiedName) -> &Term<DeBruijn>`
@@ -50,7 +51,7 @@ References:
 
 Conventions: `'a` is the module arena lifetime. `Arena` is
 `nash_plutus::arena::Arena`; `'p` is its lifetime. The `Ast` family is
-little (kind `Term`), so its runtime layout is representation.md's
+little (representation `Term`), so its runtime layout is representation.md's
 "Term types": constructor = `constr i [fields]` with `i` the declaration
 index and fields positional; a little record alias or labeled constructor
 is `constr 0 [..]`/`constr i [..]` in field order; `string`/`int`/`bytes`
@@ -58,7 +59,7 @@ fields are the UPLC constants `Constant::String`/`Integer`/`ByteString`;
 `option` = `Some` tag 0 / `None` tag 1; `cons` = `Nil` tag 0 /
 `Cons` tag 1 (`core/Cons.nash`). Nothing in the macro path is `Data`.
 `comptime` results (chunk 9) are unchanged: they must be UPLC constants
-(`Const` or `Big` kind) and are spliced as `Core::Const`.
+(`Const` or `Big` representation) and are spliced as `Core::Const`.
 
 ---
 
@@ -702,7 +703,7 @@ tests pass.
 
 **Files**
 
-- `crates/nash-macro/Cargo.toml` (new; deps: `nash-ast`, `nash-source`, `nash-region`, `nash-plutus`, `nash-solve`, `bumpalo`)
+- `crates/nash-macro/Cargo.toml` (new; deps: `nash-ast`, `nash-source`, `nash-region`, `nash-plutus`, `nash-can`, `nash-solve`, `bumpalo`)
 - `crates/nash-macro/src/lib.rs`, `tags.rs`, `reify.rs`
 - `core/src/Ast.nash`, `core/src/Cons.nash` (plans/12 chunks 10 and 6 — same PR)
 
@@ -725,7 +726,9 @@ declaration indices in `Ast.nash`; keep the two files side by side.
 // crates/nash-macro/src/tags.rs
 pub mod cons { pub const NIL: usize = 0; pub const CONS: usize = 1; }          // core/Cons.nash
 pub mod name { pub const LOCAL: u64 = 0; pub const RAW: u64 = 1; pub const GLOBAL: u64 = 2; }
-pub mod kind { pub const BIG: u64 = 0; pub const CONST: u64 = 1; pub const TERM: u64 = 2; pub const STORABLE: u64 = 3; pub const ANY: u64 = 4; pub const ARROW: u64 = 5; pub const VAR: u64 = 6; }
+pub mod kind { pub const TYPE: u64 = 0; pub const ARROW: u64 = 1; }
+pub mod repr { pub const BIG: u64 = 0; pub const CONST: u64 = 1; pub const TERM: u64 = 2; }
+pub mod repr_annotation { pub const REPR: u64 = 0; pub const STORABLE: u64 = 1; }
 pub mod expr {
     pub const INT: u64 = 0; pub const STR: u64 = 1; pub const BYTES: u64 = 2; pub const VAR: u64 = 3;
     pub const OP: u64 = 4; pub const LIST: u64 = 5; pub const NEGATE: u64 = 6; pub const BINOP: u64 = 7;
@@ -758,7 +761,9 @@ the full listing is docs/macros.md "What the macro sees"):
 ```elm
 type name = Local string | Raw string | Global modname string
 type alias modname = { package : option string, name : string }
-type kind = Big | Const | Term | Storable | Any | Arrow kind kind | KindVar string
+type kind = Type | Arrow kind kind
+type repr = Big | Const | Term
+type reprAnnotation = Repr repr | Storable
 type alias meta = { span : option span, typ : option typ }
 type expr = Expr meta exprNode
 type exprNode
@@ -797,7 +802,8 @@ type T<'p> = &'p Term<'p, DeBruijn>;
 pub struct Reifier<'p, 'a> {
     arena: &'p Arena,
     types: &'a NodeTypeMap<'a>,
-    kinds: &'a dyn Fn(&CanType<'a>) -> nash_constrain::Kind,
+    bump: &'a bumpalo::Bump,
+    type_env: &'a nash_can::kinds::KindEnv<'a>,
 }
 
 impl<'p, 'a> Reifier<'p, 'a> {
@@ -951,8 +957,8 @@ impl<'p, 'a> Reifier<'p, 'a> {
 ```
 
 `DeclSnapshot` is the canonical view of one decorated declaration
-(`Def` + annotation for values, `Union`/`Alias` with the kind from
-plans/02, `Trait`/`Impl` from plans/03). `surface_expr` reifies attribute
+(`Def` + annotation for values, `Union`/`Alias` with closed kinds and
+separate representation metadata from plans/02, `Trait`/`Impl` from plans/03). `surface_expr` reifies attribute
 arguments from `nash_source::Expr` with `typ = None` and `Raw` names.
 `typ` reifies `CanType` with `Alias` expanded through `AliasType::Filled`.
 
@@ -975,7 +981,7 @@ chunk 5):
 - `reify_lambda_local_binder`: `\x -> x` → binder and use both `Raw "x"`; the parameter list is `Cons (..) Nil`.
 - `reify_foreign_var`: `List.map` → `Global {package: Some "nash/core", name: "List"} "map"`.
 - `reify_if_chain`: `if a then 1 else if b then 2 else 3` → nested `If`.
-- `reify_union_decl`: `type Foo 'a = A 'a | B` → `Union` with `kind = Some Big`.
+- `reify_union_decl`: `type Foo 'a = A 'a | B` → `Union` with `kind = Some (Arrow Type Type)` and `representation = Some Big`.
 - `reify_no_data`: no `Constant::Data` anywhere in the tree for any input (walk and assert).
 
 **Done when** the crate builds in the workspace and the tests pass.
@@ -1452,7 +1458,7 @@ pub fn expand<'a, 's>(
         }
 
         let arena = Arena::new();
-        let reifier = Reifier::new(&arena, &node_types, kind_of);
+        let reifier = Reifier::new(&arena, &node_types, bump, &can.tables.kinds);
         let mut outputs: Vec<Output<'a>> = Vec::with_capacity(can.macro_uses.len());
         for (use_index, use_) in can.macro_uses.iter().enumerate() {
             let gensym = Gensym { round, use_index: use_index as u32 };
@@ -1535,14 +1541,13 @@ macros behaves exactly as before.
 **Files**
 
 - `crates/nash-can/src/expression.rs` (closed-term check)
-- `crates/nash-constrain/src/kind.rs` (plans/02; add `comptime` kind check)
-- `crates/nash-codegen/src/comptime.rs` (new)
+- `crates/nash-codegen/src/comptime.rs` (new; post-solve representation check and evaluation)
 - `crates/nash-ir/src/lib.rs` (`Core::Comptime`)
 
 **Change**
 
 1. Canonicalize `Expr::Comptime`; reject free locals.
-2. After solving, check the kind of the node's type is `Big` or `Const`.
+2. After solving, require `Big` or `Const` representation for the node's type.
 3. In lowering, compile the body to a program, run it, replace with
    `Core::Const`.
 
@@ -1568,18 +1573,14 @@ fn first_free_local<'a>(expr: &Located<CanExpr<'a>>, env: &Env<'a>) -> Option<&'
 free. Top-level names canonicalize to `VarTopLevel` so they are not
 `VarLocal` and never trip this.
 
-```rust
-// crates/nash-constrain/src/kind.rs (plans/02)
-pub fn check_comptime<'a>(node_types: &NodeTypeMap<'a>, comptimes: &[(Region, NodeId)]) -> Vec<KindError<'a>> {
-    comptimes.iter().filter_map(|(region, id)| {
-        let typ = node_types[id];
-        match kind_of(typ) {
-            Kind::Big | Kind::Const => None,
-            kind => Some(KindError::ComptimeNotConstant { region: *region, typ, kind }),
-        }
-    }).collect()
-}
-```
+Use the representation query over the solved type and constructor metadata,
+substituting transparent aliases before lookup. Report `ComptimeNotConstant`
+for a Term result or a result whose constant representation is unresolved;
+do not choose a type merely to make comptime succeed. Kinds remain `Type`
+and arrows. Do not introduce a separate kind engine or representation-kind
+callback. The reifier likewise reads declaration kinds and queries the same
+representation metadata; it never serializes inference variables.
+
 
 ```rust
 // crates/nash-ir/src/lib.rs
@@ -1630,7 +1631,7 @@ Aiken has no comptime. Its constant folding in
 **Tests**
 
 - nash-can: `f x = comptime (x + 1)` → `ComptimeNotClosed { name: "x" }`; `f x = comptime (let y = 1 in y + 1)` ok.
-- kinds: `comptime (\y -> y)` → `ComptimeNotConstant`; `comptime (Some 1)` with little `option` → `ComptimeNotConstant`; `comptime (Some 1 : Option Int)` ok.
+- representations: `comptime (\y -> y)` → `ComptimeNotConstant`; `comptime (Some 1)` with little `option` → `ComptimeNotConstant`; `comptime (Some 1 : Option Int)` ok.
 - codegen: `x = comptime (List.foldl (+) 0 (List.range 1 100))` lowers to `Const(5050)`; a failing body reports `ComptimeFailed` with the trace.
 
 **Done when** the tests pass and `nash build` of a module using `comptime`
@@ -1651,7 +1652,7 @@ emits the constant in the UPLC output.
 Write `derive` and the five derivations in Nash per docs/macros.md. `Eq`
 is in the doc; `Ord` compares constructor index then fields; `Show`
 renders `Ctor field1 field2` with parentheses for nested; `ToData` /
-`FromData` require `kind == Some Big` and generate identity `toData` /
+`FromData` require `representation == Some Big` and generate identity `toData` /
 `fromData` plus a `validateData` built from `Data.Decode`.
 
 **Code** (`core/src/Derive.nash`, excerpt beyond the doc's `deriveEq`)
@@ -1697,14 +1698,14 @@ deriveOrd decl =
 deriveToData : decl -> decl
 deriveToData decl =
     case decl of
-        Union { name, params, kind } ->
-            if kind /= Some Big then
+        Union { name, params, representation } ->
+            if representation /= Some Big then
                 fail ("derive(ToData): " ++ Ast.nameText name ++ " is not a Big type")
             else
                 Ast.impl (Raw "ToData") (Cons.singleton (selfType name params)) Nil
                     (Cons.singleton (Ast.def (Raw "toData") Nil (quote Builtin.identity)))
 
-        Alias { name, params, kind, typ } ->
+        Alias { name, params, representation, typ } ->
             ...
 
         _ ->
@@ -1770,7 +1771,7 @@ pub enum MacroDiagnostic {
     #[error("COMPTIME NOT CLOSED")]
     ComptimeNotClosed { /* region, name */ },
     #[error("COMPTIME NOT A CONSTANT")]
-    ComptimeNotConstant { /* region, typ, kind */ },
+    ComptimeNotConstant { /* region, typ, representation */ },
     #[error("COMPTIME FAILED")]
     ComptimeFailed { /* region, message, machine */ },
 }

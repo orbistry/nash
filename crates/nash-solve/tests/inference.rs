@@ -2112,7 +2112,7 @@ fn operator_methods_preserve_provider_and_backing_method() {
 }
 
 #[test]
-fn builtin_value_schemes_preserve_container_bounds() {
+fn builtin_value_schemes_preserve_container_contexts() {
     assert_inference_snapshot!(
         r#"
         module Main exposing (..)
@@ -2163,7 +2163,7 @@ fn abstract_map_rejects_non_storable_builtin_list_results() {
 }
 
 #[test]
-fn inline_kind_bounds_survive_aliases_and_function_annotations() {
+fn inline_representation_predicates_survive_aliases_and_function_annotations() {
     assert_inference_snapshot!(
         r#"
         module Main exposing (..)
@@ -2182,7 +2182,7 @@ fn inline_kind_bounds_survive_aliases_and_function_annotations() {
 }
 
 #[test]
-fn inline_kind_bounds_reject_const_at_a_big_use() {
+fn inline_representation_predicate_rejects_const_at_a_big_use() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
@@ -2526,7 +2526,7 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
 }
 
 #[test]
-fn kind_bound_is_enforced_at_an_inferred_call_site() {
+fn datatype_context_is_enforced_at_an_inferred_call_site() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
@@ -2540,7 +2540,7 @@ fn kind_bound_is_enforced_at_an_inferred_call_site() {
 }
 
 #[test]
-fn inferred_wrapper_preserves_the_callees_kind_requirement() {
+fn inferred_wrapper_preserves_the_callees_representation_requirement() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
@@ -2555,7 +2555,7 @@ fn inferred_wrapper_preserves_the_callees_kind_requirement() {
 }
 
 #[test]
-fn imported_values_retain_declared_and_inferred_kind_signatures() {
+fn imported_values_retain_declared_and_inferred_representation_contexts() {
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let source = bump.alloc_str(indoc!(

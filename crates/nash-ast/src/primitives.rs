@@ -132,7 +132,6 @@ impl ReprSet {
 #[derive(Debug)]
 pub struct Primitive {
     pub name: &'static str,
-    pub arity: usize,
     pub kind: &'static Kind<'static>,
     pub repr: Repr,
     /// Requirements on formal parameters, in declaration order.
@@ -196,10 +195,9 @@ const DATA_CTORS: &[&crate::Ctor<'static>] = &[
 ];
 
 macro_rules! primitive {
-    ($name:literal, $arity:literal, $kind:ident, $repr:ident, $context:expr, $ctors:expr) => {
+    ($name:literal, $kind:ident, $repr:ident, $context:expr, $ctors:expr) => {
         Primitive {
             name: $name,
-            arity: $arity,
             kind: $kind,
             repr: Repr::$repr,
             context: $context,
@@ -208,32 +206,30 @@ macro_rules! primitive {
     };
 }
 pub const PRIMITIVES: &[Primitive] = &[
-    primitive!("Data", 0, TYPE, Big, &[], DATA_CTORS),
-    primitive!("Int", 0, TYPE, Big, &[], &[]),
-    primitive!("Bytes", 0, TYPE, Big, &[], &[]),
-    primitive!("List", 1, UNARY, Big, &[(0, ReprTrait::Big)], &[]),
+    primitive!("Data", TYPE, Big, &[], DATA_CTORS),
+    primitive!("Int", TYPE, Big, &[], &[]),
+    primitive!("Bytes", TYPE, Big, &[], &[]),
+    primitive!("List", UNARY, Big, &[(0, ReprTrait::Big)], &[]),
     primitive!(
         "Map",
-        2,
         BINARY,
         Big,
         &[(0, ReprTrait::Big), (1, ReprTrait::Big)],
         &[]
     ),
-    primitive!("int", 0, TYPE, Const, &[], &[]),
-    primitive!("bytes", 0, TYPE, Const, &[], &[]),
-    primitive!("string", 0, TYPE, Const, &[], &[]),
-    primitive!("bool", 0, TYPE, Const, &[], BOOL_CTORS),
-    primitive!("unit", 0, TYPE, Const, &[], &[]),
-    primitive!("bls_g1", 0, TYPE, Const, &[], &[]),
-    primitive!("bls_g2", 0, TYPE, Const, &[], &[]),
-    primitive!("bls_mlr", 0, TYPE, Const, &[], &[]),
-    primitive!("value", 0, TYPE, Const, &[], &[]),
-    primitive!("list", 1, UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
-    primitive!("array", 1, UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
+    primitive!("int", TYPE, Const, &[], &[]),
+    primitive!("bytes", TYPE, Const, &[], &[]),
+    primitive!("string", TYPE, Const, &[], &[]),
+    primitive!("bool", TYPE, Const, &[], BOOL_CTORS),
+    primitive!("unit", TYPE, Const, &[], &[]),
+    primitive!("bls_g1", TYPE, Const, &[], &[]),
+    primitive!("bls_g2", TYPE, Const, &[], &[]),
+    primitive!("bls_mlr", TYPE, Const, &[], &[]),
+    primitive!("value", TYPE, Const, &[], &[]),
+    primitive!("list", UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
+    primitive!("array", UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
     primitive!(
         "pair",
-        2,
         BINARY,
         Const,
         &[(0, ReprTrait::Storable), (1, ReprTrait::Storable)],
@@ -249,12 +245,11 @@ mod tests {
         let mut names = std::collections::BTreeSet::new();
         for primitive in PRIMITIVES {
             assert!(names.insert(primitive.name));
-            assert_eq!(primitive.arity, primitive.kind.arity());
             assert!(
                 primitive
                     .context
                     .iter()
-                    .all(|(index, _)| *index < primitive.arity)
+                    .all(|(index, _)| *index < primitive.kind.arity())
             );
         }
         assert_eq!(names.len(), 17);

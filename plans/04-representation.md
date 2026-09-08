@@ -18,7 +18,9 @@ Make the type checker speak the representation model of
   grammar, so `nash_source::Type::Record` has no `ext`; `'a` variables;
   lowercase type names.
 - plans/02 (kinds): `nash-ast/src/primitives.rs` (`PRIMITIVES`,
-  `builtin_home()`), `KindScheme` on aliases.
+  `builtin_home()`), closed `Kind` and datatype `context` on aliases.
+  Representation is separate; use the Haskell 98 follow-up in
+  [02-kind-predicates.md](02-kind-predicates.md).
 - plans/03 (traits) is *not* required. Chunk B1 types literals
   monomorphically at `int`/`string`; plans/03 replaces that with `FromInt`
   and friends. If plans/03 lands first, skip the literal part of B1.
@@ -1079,15 +1081,13 @@ impl<'a> Alias<'a> {
             _ => None,
         }
     }
-
-    pub fn repr(&self) -> BaseKind {
-        match self.kind.result() {
-            Kind::Base(base) => *base,
-            _ => unreachable!("record alias kinds are Big or Term (docs/kinds.md)"),
-        }
-    }
 }
 ```
+
+Representation lookup uses the existing representation metadata and alias
+body rules in `nash-can::kinds`, not the alias's `Kind`. Record aliases use
+casing (`Big` or `Term`); transparent aliases substitute their bodies before
+lookup. Do not add a second representation classifier to `Alias`.
 
 - `nash_ast::Union` gets the matching helper for labeled single
   constructors, returning the fields in wire order:

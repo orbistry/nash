@@ -1,21 +1,20 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
-description: "type T ('f : Foo) = A"
+description: "type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))"
 ---
 Type(
     Union(
         Param(
-            Kind(
-                Name(
-                    "Foo",
+            Repr(
+                Arrow(
                     1,
-                    14,
+                    20,
                 ),
                 1,
-                14,
+                16,
             ),
             1,
-            8,
+            10,
         ),
         1,
         6,

@@ -44,7 +44,7 @@ fn recursive_overlap_combines_inferred_kind_bounds() {
         keys.push(*result.tables.impls.keys().next().unwrap());
     }
     let overlap = |a: usize, b: usize, budget: &mut usize| {
-        nash_ast::head::overlaps(keys[a].heads, keys[b].heads, budget, |_, _, _, _| true)
+        nash_ast::head::overlaps(keys[a].heads, keys[b].heads, budget)
     };
     assert!(
         overlap(0, 1, &mut 16_384).unwrap(),

@@ -102,7 +102,7 @@ of the target chain, not of Nash:
   argument types. Nash compiles whatever `main` is.
 
 One constraint follows from "arguments are applied from outside": every
-parameter type of `main` must have kind `Big` or `Const`. A `Big` parameter
+parameter type of `main` must have representation `Big` or `Const`. A `Big` parameter
 receives a `Data` constant, which is what a ledger passes. A `Const`
 parameter receives any other UPLC constant (`int`, `bytes`, `list Int`, ...),
 which only an off-chain tool or a test can apply; it exists for
@@ -111,7 +111,7 @@ value *is* its `Data`, a `Const` value is the constant itself. A Cardano
 ledger only applies `Data`, so a `Const` parameter must be filled off-chain;
 `nash build` does not warn about one in v1, because the compiler does not
 know the target. A parameter
-of kind `Term` (a function, a little ADT such as `option`, a tuple, a little
+with representation `Term` (a function, a little ADT such as `option`, a tuple, a little
 record) is an error on the parameter's type: "nothing outside the script can
 supply this" (see [kinds.md](kinds.md), [codegen.md](codegen.md)). The
 return type is free and is ignored.
@@ -176,9 +176,8 @@ under `nash build`.
 
 ## Interactions
 
-- **Kinds.** Parameter types of `main` must be `Big` or `Const`. That is the
-  only place where a value's kind is restricted by its role instead of its
-  type.
+- **Representations.** Parameter types of `main` must satisfy `Storable`
+  (`Big` or `Const`). The host can supply only UPLC constants at this boundary.
 - **Codegen.** `main` is the root of dead-code elimination. Only values in the
   transitive closure of `main` are lowered to Core and monomorphized; traits
   and impls that are never reached are not emitted.

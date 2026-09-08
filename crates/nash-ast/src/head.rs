@@ -208,15 +208,14 @@ fn resolve<'p, 'a>(
     Ok(term)
 }
 
-/// Check kind compatibility for each equation as structural unification runs.
-/// The boolean identifies the fresh binder: false is left, true is right.
-pub fn overlaps<'a>(
-    left: &[Head<'a>],
-    right: &[Head<'a>],
+/// Test structural overlap with independent variables for the two impl heads.
+/// Heads have already been checked against their trait's closed kinds.
+pub fn overlaps(
+    left: &[Head<'_>],
+    right: &[Head<'_>],
     remaining: &mut usize,
-    compatible: impl FnMut(bool, &Head<'a>, bool, &Head<'a>) -> bool,
 ) -> Result<bool, Limit> {
-    unifiable(left, right, remaining, true, compatible)
+    unifiable(left, right, remaining, true)
 }
 
 /// Equality within one impl preserves variables shared between its heads.
@@ -225,15 +224,14 @@ pub fn can_equal(
     right: &[Head<'_>],
     remaining: &mut usize,
 ) -> Result<bool, Limit> {
-    unifiable(left, right, remaining, false, |_, _, _, _| true)
+    unifiable(left, right, remaining, false)
 }
 
-fn unifiable<'a>(
-    left: &[Head<'a>],
-    right: &[Head<'a>],
+fn unifiable(
+    left: &[Head<'_>],
+    right: &[Head<'_>],
     remaining: &mut usize,
     freshen: bool,
-    mut compatible: impl FnMut(bool, &Head<'a>, bool, &Head<'a>) -> bool,
 ) -> Result<bool, Limit> {
     if left.len() != right.len() {
         return Ok(false);
@@ -259,9 +257,6 @@ fn unifiable<'a>(
         step(remaining)?;
         let left = resolve(left, &substitution, remaining)?;
         let right = resolve(right, &substitution, remaining)?;
-        if !compatible(left.side, left.pattern, right.side, right.pattern) {
-            return Ok(false);
-        }
         if let Head::Var(index) = left.pattern {
             let variable = (left.side, *index);
             if matches!(right.pattern, Head::Var(other) if variable == (right.side, *other)) {

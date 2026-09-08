@@ -665,7 +665,7 @@ mod kind_tests {
     }
 
     #[tokio::test]
-    async fn imported_fresh_parameter_replay_reports_kind_error() {
+    async fn producer_rejects_ternary_self_application_with_an_infinite_kind() {
         let result = compile_pair(
             "module Types exposing (type s)\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\n",
             "module Main exposing (..)\nimport Types exposing (type s)\ntype w = W (s s s)\n",
@@ -683,7 +683,7 @@ mod kind_tests {
     }
 
     #[tokio::test]
-    async fn imported_retained_self_application_terminates() {
+    async fn producer_rejects_self_application_before_consumer_checking() {
         for field in ["a a", "local a"] {
             let result = compile_pair(
                 "module Types exposing (type a)\ntype a 'f = A ('f 'f)\n",
@@ -701,7 +701,7 @@ mod kind_tests {
     }
 
     #[tokio::test]
-    async fn imported_residual_self_application_is_rejected_at_declaration() {
+    async fn concrete_consumer_cannot_hide_an_infinite_producer_kind() {
         let result = compile_pair(
             "module Types exposing (type s)\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\n",
             "module Main exposing (..)\nimport Types exposing (type s)\ntype tag 'a = Tag\ntype w = W (s s tag tag)\n",
@@ -770,7 +770,7 @@ mod kind_tests {
     }
 
     #[tokio::test]
-    async fn retained_argument_order_changes_the_interface_fingerprint() {
+    async fn application_context_argument_order_changes_the_interface_fingerprint() {
         let consumer = "module Main exposing (..)\nimport Types exposing (type app)\n";
         let forward = compile_pair(
             "module Types exposing (type app)\ntype app 'f 'a 'b = App ('f 'a 'b)\n",
@@ -789,7 +789,7 @@ mod kind_tests {
     }
 
     #[tokio::test]
-    async fn real_export_kind_changes_the_build_interface_fingerprint() {
+    async fn exported_alias_representation_changes_the_interface_fingerprint() {
         let big = compile_pair("module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = int\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
         let term = compile_pair("module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
         assert_eq!(big.success, 2, "{big:?}");
@@ -798,7 +798,7 @@ mod kind_tests {
         assert!(big.interfaces[&uri].differs_from(&term.interfaces[&uri]));
     }
     #[tokio::test]
-    async fn real_export_bound_changes_the_build_interface_fingerprint() {
+    async fn exported_datatype_context_changes_the_interface_fingerprint() {
         let consumer = "module Main exposing (..)\n\nimport Types exposing (type box)\n";
         let any = compile_pair("module Types exposing (type box)\n\nimport Builtin exposing (..)\n\ntype box 'a = Box 'a\n", consumer).await;
         let storable = compile_pair("module Types exposing (type box)\n\nimport Builtin exposing (..)\n\ntype box 'a = Box (list 'a)\n", consumer).await;

@@ -18,9 +18,9 @@ user type to `Data`. Nash does three things differently:
 1. **One tree IR.** `Core` is a monomorphized, explicitly-typed lambda
    calculus. Every pass is `Core -> Core` until the last one, which is
    `Core -> Term<Name>`. There is no linearized instruction stream.
-2. **Explicit kinds.** Every binder and every node carries a `Ty` whose base
-   kind is `Big`, `Const` or `Term` (see [kinds.md](kinds.md)). Codegen never
-   guesses a representation from a type name; it reads the kind.
+2. **Explicit representations.** Every binder and every node carries a
+   `Ty` tagged `Big`, `Const` or `Term` (see [kinds.md](kinds.md)). Codegen
+   reads this representation; Haskell 98 kinds have already been checked.
 3. **No `Data` by default.** A little type is never represented as `Data`.
    Conversions between representations are explicit `Cast` nodes that the
    front end inserted for `toData` / `fromData` / `validateData` / `lift` /
@@ -48,7 +48,7 @@ Core ::= Var(name)
 
 Every binder is `Binder { name: Name, ty: Ty }` where `Name { text, unique }`
 is globally unique after the hygiene pass (see `plans/08-optimizer.md`,
-chunk 1). `Ty` is a fully monomorphic type with its base kind exposed:
+chunk 1). `Ty` is a fully monomorphic type with its representation exposed:
 
 ```rust
 pub enum Ty<'a> {
@@ -58,7 +58,7 @@ pub enum Ty<'a> {
 }
 ```
 
-`Ty::kind()` is the only thing most passes need. `BigTy` records enough
+`Ty::repr()` is the only thing most passes need. `BigTy` records enough
 structure to generate `validateData` for the type (constructor count and
 field types); `TermTy` records constructor arities so `Case` and `Field` can
 be lowered; `ConstTy` maps one-to-one onto nash-plutus `typ::Type` so
@@ -241,7 +241,7 @@ Maranget decision tree, ported from Aiken's
 
 The `Switch` node lowers to the `Case` kind matching the scrutinee's `Ty`:
 
-| Scrutinee kind / type | `Case` kind | Test |
+| Scrutinee representation / type | `Case` kind | Test |
 |---|---|---|
 | little ADT (`Term`) | `Tag` | UPLC `case` on the constr |
 | `bool` | `Bool` | `ifThenElse` |
@@ -361,7 +361,7 @@ pass has usually already replaced the head with a variable.
 
 ## How each Nash type lowers
 
-| Nash type | Kind | Runtime value | Build | Take apart |
+| Nash type | Representation | Runtime value | Build | Take apart |
 |---|---|---|---|---|
 | `int` `bytes` `string` `bool` `unit` | Const | constant | `Lit` | builtins |
 | `list 'a` (`'a` Storable) | Const | `list t` constant | `mkCons` / `Lit []` | `chooseList` `headList` `tailList` |
@@ -498,13 +498,13 @@ Trace strings are hoisted: each distinct message becomes one top-level
 
 For `validator module Foo exposing (main)`, `main`'s arguments become
 lambdas in order and its body is the program body. The caller applies
-UPLC constants to the program, so an argument of `main` may be of kind
+UPLC constants to the program, so an argument of `main` may have representation
 `Big` (a `Data` constant, what the ledger passes) or `Const` (any other
-UPLC constant, for parameterized scripts and tests). An argument of kind
+UPLC constant, for parameterized scripts and tests). An argument with representation
 `Term` (a function, a little ADT, a tuple) is a compile error, "nothing
 outside the script can supply this", reported before codegen (see
 [validators.md](validators.md) and [plans/09-validators-build.md](../plans/09-validators-build.md)).
-No boundary conversion is inserted for either kind: a Big value *is* its
+No boundary conversion is inserted for either representation: a Big value *is* its
 `Data`, and a Const value is the constant itself.
 `main : Datum -> Redeemer -> Data -> unit` lowers to
 `\datum redeemer ctx -> body`. Pattern matches inside `body` are what check
@@ -535,7 +535,7 @@ run  : Prng -> option Prng
 `draw` threads the PRNG through the `via` generators and returns the shown
 values; `run` draws the same values, evaluates the body with them in scope,
 and returns the next PRNG. The drawn values never cross the program
-boundary (they may be of any kind), so the body is compiled together with
+boundary (they may have any representation), so the body is compiled together with
 the generators, and `nash-test` only ever applies a `Prng` as `Data`.
 
 ## Comptime hook
@@ -548,13 +548,13 @@ Evaluation errors and non-constant results are compile errors. Constant
 folding uses the same function on any closed `Builtin` subterm, so the
 comptime hook is not a special path. Macros (see [macros.md](macros.md))
 use the same CEK machine but not the constant rule: the `Ast` family is
-`Term` kind, so the host applies the macro program to a `Term::Constr`
+`Term` representation, so the host applies the macro program to a `Term::Constr`
 tree and reads the output `Ast` from the result `Value`, never through
 `Data`.
 
 ## Interactions
 
-- **Kinds** ([kinds.md](kinds.md)): `Ty::kind()` decides every
+- **Representations** ([kinds.md](kinds.md)): `Ty::repr()` decides every
   representation choice; codegen never inspects casing.
 - **Traits** ([traits.md](traits.md)): evidence drives phase 2; literal
   traits (`FromInt` ...) resolve to `Lit` or to a `Lift` cast.

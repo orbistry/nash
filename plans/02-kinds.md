@@ -81,8 +81,8 @@ Historical implementation record. The coinductive rules below are superseded
 by [inductive residual obligations](02-kind-obligations.md), which rejects
 required self/self cycles and adopts a finite expansion fragment with separate
 restriction and limit diagnostics.
-The next replacement is [Haskell 98 kinds + representation predicates](02-kind-predicates.md);
-chunk 1 is written for review and has not replaced that engine.
+Both earlier engines have since been replaced by
+[Haskell 98 kinds and representation predicates](02-kind-predicates.md).
 
 - [x] Close the retained-obligation self-application hang and verify acceptance.
 

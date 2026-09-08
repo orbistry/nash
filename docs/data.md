@@ -112,7 +112,7 @@ trait Lift 'small 'big where
     lower : 'big -> 'small
 ```
 
-`ToData` and `FromData` are only implementable for Big types (kind
+`ToData` and `FromData` are only implementable for Big types (representation
 `Big`); the impl is derived by `@derive(ToData, FromData)` (see
 [macros.md](macros.md)) and the stdlib provides impls for `Int`, `Bytes`,
 `Data`, `List 'a`, `Map 'k 'v`. Because every Big value is already `Data`,
@@ -340,9 +340,9 @@ impl Functor decoder where ...
 impl Monad decoder where ...                     -- enables `do`
 ```
 
-`list` inherits the kind constraint of `list`: `'a` must be Storable, so
+`list` inherits the datatype context of `list`: `'a` must be Storable, so
 `list int`, `list Int` and `list Data` decode, but a `list (option int)`
-decoder is a kind error. Decoding a `List` into a little container is done
+decoder fails the `Storable` representation predicate. Decoding a `List` into a little container is done
 with `andThen` and a fold over `list Data`.
 
 Example, a decoder for the `Datum` of [overview.md](overview.md) that
@@ -390,7 +390,7 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 
 | Situation | Where reported |
 |---|---|
-| `impl ToData` / `impl FromData` for a non-Big type | kinds check |
+| `impl ToData` / `impl FromData` for a non-Big type | representation superclass check |
 | `Constr` pattern with a Big field type (e.g. `Constr 0 [x : Int]`) | type check (fields of `Data` are `Const`) |
 | `fromData d` where the node shape is wrong | runtime `error` with compiler trace |
 | `validateData d` on a recursive type with a cycle in the data | cannot happen; `Data` is a finite tree |
@@ -399,7 +399,8 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 
 ## Interactions
 
-- **Kinds** ([kinds.md](kinds.md)): `Data : Big`; its constructor fields
+- **Kinds and representation** ([kinds.md](kinds.md)): `Data` has kind
+  `Type` and representation `Big`; its constructor fields
   are `Const`.
 - **Traits** ([traits.md](traits.md)): `ToData`, `FromData`, `Lift` are
   ordinary traits with stdlib impls; deriving is a macro.

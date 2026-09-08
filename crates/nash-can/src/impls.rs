@@ -62,7 +62,7 @@ pub(crate) fn tables<'a>(
             );
         }
         for impl_ in interface.impls {
-            insert_impl(bump, kind_env, &mut tables.impls, impl_)?;
+            insert_impl(bump, &mut tables.impls, impl_)?;
         }
     }
     for trait_ in module.traits {
@@ -90,7 +90,6 @@ pub(crate) fn tables<'a>(
     for impl_ in module.impls {
         insert_impl(
             bump,
-            kind_env,
             &mut tables.impls,
             bump.alloc(info(bump, module.name, impl_)),
         )?;
@@ -103,7 +102,6 @@ pub(crate) fn tables<'a>(
 
 fn insert_impl<'a>(
     bump: &'a Bump,
-    _kind_env: &kinds::KindEnv<'a>,
     table: &mut crate::environment::ImplTable<'a>,
     impl_: &'a crate::environment::ImplInfo<'a>,
 ) -> Result<(), Vec<Error<'a>>> {
@@ -116,10 +114,7 @@ fn insert_impl<'a>(
         .iter()
         .filter(|(candidate, _)| candidate.trait_ == key.trait_)
     {
-        let overlaps =
-            nash_ast::head::overlaps(candidate.heads, key.heads, &mut remaining, |_, _, _, _| {
-                true
-            })
+        let overlaps = nash_ast::head::overlaps(candidate.heads, key.heads, &mut remaining)
             .map_err(|_| {
                 vec![Error::ImplPatternLimit {
                     region: impl_.region,
@@ -520,11 +515,5 @@ fn instantiate_method<'a>(
         context: bump.alloc_slice_fill_iter(predicates),
         typ,
     };
-    kinds::check_annotation(
-        bump,
-        kind_env,
-        info.home,
-        method.name,
-        bump.alloc(annotation),
-    )
+    kinds::check_annotation(bump, kind_env, method.name, bump.alloc(annotation))
 }

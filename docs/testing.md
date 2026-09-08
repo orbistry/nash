@@ -261,7 +261,7 @@ impl Monad fuzzer where
   count and the choices still to replay, next first.
 - `fuzzer 'a` is a **little** ADT with one constructor wrapping the
   function. The result tuple is a UPLC `constr 0 [prng, value]` because `pair`
-  only takes `Storable` components and `'a` is any kind. The wrapper exists because
+  only takes `Storable` components and `'a` may have any representation. The wrapper exists because
   impls attach to nominal types, not to function aliases.
 - Choices are non-negative integers, one per primitive draw, as in
   MiniThesis. Aiken uses bytes; Nash uses `Int` so a primitive can draw a
@@ -307,7 +307,7 @@ the next PRNG with the `show` of each drawn value (`"?"` when the type has no
 scope, and returns the next PRNG. Both take a `Prng` as `Data`.
 
 The value never crosses the program boundary. A drawn value can be of any
-kind (an `int`, an `option`, a function), and only `Data` can be handed from
+representation (an `int`, an `option`, a function), and only `Data` can be handed from
 one CEK evaluation to the next. So the body is compiled together with the
 draw, and the generator runs again inside `run`. Generation is deterministic
 and cheap next to the body, and the happy path costs one evaluation per
@@ -479,7 +479,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - **Traits.** `Show` for power-assert and counterexamples; `Functor`,
   `Applicative`, `Monad` for `fuzzer`; `@derive(Show)` from
   [macros.md](macros.md).
-- **Kinds.** `(Prng, 'a)` is a tuple (kind `Term`) because `pair` requires
+- **Representations.** `(Prng, 'a)` is a tuple (`Term`) because `pair` requires
   `Storable` components, while `'a` may be `Term`; `list string` is a `Const` list of `Const` strings.
 - **Codegen.** Each test program is a standalone UPLC program that inlines
   the module's dependency closure ([codegen.md](codegen.md)).

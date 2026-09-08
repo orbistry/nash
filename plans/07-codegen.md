@@ -16,8 +16,9 @@ Specification: [docs/codegen.md](../docs/codegen.md),
 
 ## Prerequisites
 
-- [02-kinds.md](02-kinds.md): every type has a base kind; `Ty::kind()` is derivable
-  from the Can type plus the union/alias tables.
+- [02-kind-predicates.md](02-kind-predicates.md): kinds are closed Haskell
+  98 kinds. `Ty::repr()` records the separate ground representation from
+  constructor metadata and substituted alias bodies.
 - [03-traits.md](03-traits.md): `nash-solve` returns, in addition to
   `nash_can::Annotations`, the solved type of every expression, pattern and
   binder, and the resolved evidence at every variable occurrence
@@ -148,17 +149,10 @@ insta.workspace = true
 `crates/nash-ir/src/ty.rs`:
 
 ```rust
-//! Monomorphic types with their base kind exposed. `Ty` is the only type
+//! Monomorphic types with their representation exposed. `Ty` is the only type
 //! codegen ever looks at; casing of the source name has been resolved.
 
-use nash_ast::QualifiedName;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Kind {
-    Big,
-    Const,
-    Term,
-}
+use nash_ast::{QualifiedName, primitives::Repr};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Ty<'a> {
@@ -211,11 +205,11 @@ pub struct AdtRef<'a> {
 }
 
 impl<'a> Ty<'a> {
-    pub fn kind(self) -> Kind {
+    pub fn repr(self) -> Repr {
         match self {
-            Ty::Big(_) => Kind::Big,
-            Ty::Const(_) => Kind::Const,
-            Ty::Term(_) => Kind::Term,
+            Ty::Big(_) => Repr::Big,
+            Ty::Const(_) => Repr::Const,
+            Ty::Term(_) => Repr::Term,
         }
     }
 
@@ -1406,7 +1400,7 @@ Core::Cast { kind: CastKind::Lift, from, arg, .. } => match from {
     Ty::Big(_) => self.term(arg),                                             // reflexive `Lift 'a 'a`
     Ty::Const(ConstTy::Int) => Term::i_data(a).apply(a, self.term(arg)),
     Ty::Const(ConstTy::Bytes) => Term::b_data(a).apply(a, self.term(arg)),
-    Ty::Const(ConstTy::List(elem)) if elem.kind() == Kind::Big => Term::list_data(a).apply(a, self.term(arg)),
+    Ty::Const(ConstTy::List(elem)) if elem.repr() == Repr::Big => Term::list_data(a).apply(a, self.term(arg)),
     Ty::Const(ConstTy::List(_)) => Term::map_data(a).apply(a, self.term(arg)),   // list (pair Data Data)
     _ => unreachable!("only the intrinsic Lift impls reach a Cast node"),
 },
@@ -1488,7 +1482,7 @@ per distinct type across all uses (asserted by a `Core` snapshot with two
 
 **Change**
 
-By the kind of the solved type: Big record literal ->
+By the representation of the solved type: Big record literal ->
 `Builtin(ListData, [mkCons chain])`; little -> `Constr(0, fields)`.
 `Access` -> `Field(r, i, n)` (little) or the accessor chain
 `headList (tailList^i (unListData r))` (Big). `Accessor(".x")` -> a
@@ -1502,20 +1496,20 @@ the named fields through `Path::RecordField` / `Path::Tuple`.
 Expr::Record { alias, annotation: _, fields } => {          // 04-representation.md A3: nominal, fields in declaration order
     let ty = self.tys.alias_ty(*alias);
     let values = fields.iter().map(|f| self.expr(f.value));
-    match ty.kind() {
-        Kind::Term => self.build.constr(0, values),
-        Kind::Big => self.build.builtin(ListData, &[self.const_list(Ty::Big(Data), values)]),
-        Kind::Const => unreachable!("records are never Const"),
+    match ty.repr() {
+        Repr::Term => self.build.constr(0, values),
+        Repr::Big => self.build.builtin(ListData, &[self.const_list(Ty::Big(Data), values)]),
+        Repr::Const => unreachable!("records are never Const"),
     }
 }
 Expr::Access { record, field } => {
     let r = self.expr(record);
     let (ty, order) = self.record_layout(record);
     let i = order.iter().position(|f| f == &field.value).unwrap() as u16;
-    match ty.kind() {
-        Kind::Term => self.build.field(r, i, order.len() as u16),
-        Kind::Big => self.big_index(self.build.builtin(UnListData, &[r]), i),
-        Kind::Const => unreachable!(),
+    match ty.repr() {
+        Repr::Term => self.build.field(r, i, order.len() as u16),
+        Repr::Big => self.big_index(self.build.builtin(UnListData, &[r]), i),
+        Repr::Const => unreachable!(),
     }
 }
 Expr::Update { record, base, fields } => {
@@ -2103,7 +2097,7 @@ pub enum Error {
 
 `validator` returns `Result<Compiled<'a>, Error>`, and
 09-validators-build.md converts the error to a `ModuleResult::Failed` for
-the module. The Term-kind `main` argument check is not here: it is
+the module. The Term-representation `main` argument check is not here: it is
 09-validators-build.md's post-solve `MainParameterIsTerm` check, so
 `validator` may assume every parameter of `main` is Big or Const.
 

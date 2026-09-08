@@ -178,7 +178,6 @@ pub(crate) fn canonicalize<'a>(
                     annotation: kinds::check_annotation(
                         bump,
                         kind_env,
-                        env.home,
                         method.name.value,
                         method.annotation,
                     )?,

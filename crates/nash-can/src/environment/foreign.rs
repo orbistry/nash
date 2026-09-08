@@ -68,7 +68,7 @@ pub fn create_initial_env<'a>(
             Info::Specific(
                 builtin_home,
                 Type::Union {
-                    arity: primitive.arity,
+                    arity: primitive.kind.arity(),
                     home: builtin_home,
                 },
             ),
@@ -597,7 +597,7 @@ mod tests {
             match env.types.get(primitive.name) {
                 Some(Info::Specific(module, Type::Union { arity, .. })) => {
                     assert_eq!(*module, nash_ast::primitives::builtin_home());
-                    assert_eq!(*arity, primitive.arity);
+                    assert_eq!(*arity, primitive.kind.arity());
                 }
                 other => panic!("Expected primitive {}, got {other:?}", primitive.name),
             }

@@ -130,14 +130,9 @@ fn context(value: &nash_can::KindContext<'_>) -> String {
             "the {}case name of alias {alias}",
             if *big { "upper" } else { "lower" }
         ),
-        KindContext::ValuePosition => "a value type".into(),
-        KindContext::ParamAnnotation { type_name, param } => {
-            format!("parameter '{param} of {type_name}")
-        }
         KindContext::ImplHead { trait_, index } => {
             format!("head {} of impl {}", usize::from(*index) + 1, trait_.name)
         }
-        KindContext::TypeArg { index, .. } => format!("type argument {}", usize::from(*index) + 1),
     }
 }
 

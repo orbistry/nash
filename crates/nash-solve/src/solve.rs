@@ -1338,32 +1338,18 @@ impl<'a> Solver<'a, '_> {
                 {
                     self.introduce(uf, rank, flex_vars);
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let mut state1 = self
+                    let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
                     if state1.errors.is_empty() {
-                        state1.errors.extend(self.record_definitions(
-                            uf,
-                            rank,
-                            definitions,
-                            &declared,
-                            &[],
-                            *binder,
-                        ));
+                        self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
                     }
                     state1
                 } else if definitions.is_empty() && rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let mut state1 = self
+                    let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
                     if state1.errors.is_empty() {
-                        state1.errors.extend(self.record_definitions(
-                            uf,
-                            rank,
-                            definitions,
-                            &declared,
-                            &[],
-                            *binder,
-                        ));
+                        self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
                     }
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
@@ -1500,14 +1486,7 @@ impl<'a> Solver<'a, '_> {
 
                     let mut new_env = env.clone();
                     if state1.errors.is_empty() {
-                        state1.errors.extend(self.record_definitions(
-                            uf,
-                            rank,
-                            definitions,
-                            &declared,
-                            context,
-                            *binder,
-                        ));
+                        self.record_definitions(uf, rank, definitions, &declared, context, *binder);
                     }
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
@@ -1861,7 +1840,7 @@ impl<'a> Solver<'a, '_> {
             self.wanted.push((rank, id));
             predicates.push(id);
         }
-        self.freeze_kind_scheme(
+        self.freeze_kind_contracts(
             uf,
             typ,
             &predicates,
@@ -1901,7 +1880,7 @@ impl<'a> Solver<'a, '_> {
 
     // COPY
 
-    fn freeze_kind_scheme(
+    fn freeze_kind_contracts(
         &mut self,
         uf: &mut UnionFind<'a>,
         root: Variable,
@@ -1923,7 +1902,7 @@ impl<'a> Solver<'a, '_> {
             &self.kind_contracts,
         ) {
             Ok(contracts) => self.kind_contracts.extend(contracts),
-            Err(errors) => self.kind_errors.extend(errors),
+            Err(error) => self.kind_errors.push(*error),
         }
     }
 
@@ -1935,8 +1914,7 @@ impl<'a> Solver<'a, '_> {
         declared: &BTreeMap<&'a str, &'a [type_::PredId]>,
         inferred: &'a [type_::PredId],
         binder: Option<type_::Binder<'a>>,
-    ) -> Vec<Error<'a>> {
-        let errors = Vec::new();
+    ) {
         for definition in definitions {
             let binding = Binding {
                 declared_quantifiers: &[],
@@ -1956,7 +1934,7 @@ impl<'a> Solver<'a, '_> {
                 .into_iter()
                 .filter(|var| uf.get(*var).rank == NO_RANK)
                 .collect();
-            self.freeze_kind_scheme(
+            self.freeze_kind_contracts(
                 uf,
                 binding.variable,
                 binding.context,
@@ -2018,7 +1996,6 @@ impl<'a> Solver<'a, '_> {
                 self.uses[use_index].predicates.push(id);
             }
         }
-        errors
     }
 
     fn declared_contexts(
@@ -2054,7 +2031,7 @@ impl<'a> Solver<'a, '_> {
                 roots.extend(self.predicates.get(*id).body.roots());
             }
             let quantified: Vec<_> = Self::type_variables(uf, roots).into_iter().collect();
-            self.freeze_kind_scheme(uf, root, &ids, &quantified, definition.site.name().region);
+            self.freeze_kind_contracts(uf, root, &ids, &quantified, definition.site.name().region);
             contexts.insert(
                 definition.site.name().value,
                 &*self.bump.alloc_slice_copy(&ids),

@@ -1,10 +1,10 @@
 # Follow-up to Plan 02: inductive residual kind obligations
 
-Status: historical implemented plan. The retained-obligation engine remains
-in the checkout. Its replacement is
-[02-kind-predicates](02-kind-predicates.md) (Haskell 98 kinds +
-representation predicates), specified in [kinds](../docs/kinds.md). No
-production replacement has landed.
+Status: historical implementation record. The retained-obligation engine
+was deleted and replaced by [02-kind-predicates](02-kind-predicates.md)
+(Haskell 98 kinds and representation predicates), specified in
+[kinds](../docs/kinds.md). The algorithms and APIs below are obsolete;
+they are not instructions for the current compiler.
 
 The former `docs/kind-obligations.md` design was removed. The checked items
 below record the earlier implementation, including its finite admission

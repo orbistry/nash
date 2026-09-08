@@ -42,7 +42,7 @@ core/
     Bytes.nash            bytes functions; Big Bytes
     String.nash           string (little only; no Big twin)
     List.nash             list functions; Big List
-    Cons.nash             cons: Term-kind linked list (elements of any kind)
+    Cons.nash             cons: Term linked list (elements of any representation)
     Pair.nash             pair
     Array.nash            array
     Map.nash              Map (Big; its little form is `list (pair 'k 'v)`)
@@ -167,11 +167,11 @@ Differences from Elm's list: no `Char`, `Tuple`, `Platform`, `Cmd`, `Sub`.
 ## Compiler-known types
 
 The `Builtin` module is seeded by the compiler with every builtin type
-constructor (kinds.md "Kinds of the builtin constructors", plans/02's
+constructor (kinds.md "Datatype contexts", plans/02's
 `nash-ast/src/primitives.rs`). They have no Nash declaration and every
 one is in scope everywhere:
 
-| Kind | Types |
+| Representation | Types |
 |---|---|
 | `Const` | `int`, `bytes`, `string`, `bool`, `unit`, `bls_g1`, `bls_g2`, `bls_mlr`, `value`, `list 'a`, `array 'a`, `pair 'a 'b` |
 | `Big` | `Int`, `Bytes`, `Data`, `List 'a`, `Map 'k 'v` |
@@ -291,7 +291,7 @@ The shipping hierarchy provides Functor for `list`, `List`, `cons`, `option`
 and `result 'e`, and Applicative/Monad for `option` and `result 'e`.
 Big List mapping uses an explicitly typed little-list helper between Lift
 conversions, keeping the intermediate container unambiguous. Builtin list
-mapping can change element kinds within Storable; it cannot produce Term
+mapping can change element representations within Storable; it cannot produce Term
 elements. Builtin pair has no Functor impl: `mkPairData` constructs only
 `pair Data Data`, not the arbitrary pair needed by `map`. Pair.fst,
 Pair.snd and Pair.make remain the specified projection/construction helpers.
@@ -302,7 +302,7 @@ The `fuzzer` impls require the real Fuzz implementation from plan 10.
 Every Big type uses structural Data equality. User Eq impls for Big types
 are forbidden; a custom Eq method cannot change equality of a Big value.
 The compiler supplies Eq for Big types, including user-defined ADTs and
-nominal aliases, through the shared kind/evidence contract.
+nominal aliases, through the shared kind, representation and evidence contracts.
 
 For builtin `list 'a` with `'a : Big`, the stdlib equality route is
 `equalsData (listData left) (listData right)` *as a codegen rewrite*: there
@@ -569,7 +569,7 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 | `Builtin.bool`, `False`, `True` | `if` scrutinee type; UPLC `bool` constants; `Ctor::Bool` in `nash-can` (`crates/nash-can/src/environment/foreign.rs`, `make_union_ctor`) |
 | `Builtin.unit`, `()` | UPLC `unit` constant |
 | `Builtin.Data` and its constructors | pattern-matchable Big type (data.md) |
-| `Builtin.list`, `[..]`, `::` patterns | list literals and patterns; element kind `Storable` |
+| `Builtin.list`, `[..]`, `::` patterns | list literals and patterns; element predicate `Storable` |
 | `Bool.and`, `Bool.or` | second argument delayed (`&&`, `||` are lazy) |
 | `Literal.FromInt`, `FromString`, `FromBytes` | literal desugaring and defaulting to `int`, `string`, `bytes` |
 | `Eq.Eq` | literal patterns |
@@ -847,10 +847,10 @@ other `Term` value) is a `cons`, below.
 
 ### `Cons`
 
-A Term-kind linked list for elements `list` cannot hold (functions,
+A Term linked list for elements `list` cannot hold (functions,
 tuples, little ADTs such as `Ast` nodes). Each cell is a UPLC `constr`
 (`Nil` = `constr 0 []`, `Cons x xs` = `constr 1 [x, xs]`), so elements
-may be of any kind. It is the list type of the macro `Ast` family
+may have any representation. It is the list type of the macro `Ast` family
 (macros.md) and is default-imported with its constructors open.
 
 ```elm
@@ -961,7 +961,7 @@ fail : decoder 'a
 andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
 ```
 
-`decoder` is a little alias of a function type (`Term` kind), so it has no
+`decoder` is a little alias of a function type (`Term` representation), so it has no
 `Functor`/`Monad` impls (impls attach to nominal types); v1 uses
 `andThen`. `Data.Encode` is the inverse: `int : int -> Data`, `bytes`,
 `string`, `bool`, `list : ('a -> Data) -> list 'a -> Data`,
@@ -1089,7 +1089,7 @@ handled by the runner.
 ## `Ast` and `Derive`
 
 See [macros.md](macros.md). `Ast` holds the macro AST as **little** ADTs
-(kind `Term`: `constr` trees with `string`/`int`/`bytes` leaves and
+(representation `Term`: `constr` trees with `string`/`int`/`bytes` leaves and
 `cons` child lists) plus the builders; `Derive` holds the `derive` macro
 and the per-trait derivations. Both are plain Nash with no `Data` or
 `Lift` involvement. `Derive` imports `Ast`, `Cons`, `String`; `Ast`

@@ -37,9 +37,9 @@ derive decl traits =
     Cons decl (Cons.map (deriveOne decl) traits)
 ```
 
-Every `Ast` type is a little ADT (kind `Term`). Argument lists, result
+Every `Ast` type is a little ADT (representation `Term`). Argument lists, result
 lists, and the child lists inside `Ast` nodes are `cons 'a`, the
-Term-kind linked list from the core `Cons` module
+Term linked list from the core `Cons` module
 (`type cons 'a = Nil | Cons 'a (cons 'a)`, [stdlib.md](stdlib.md)); `list`
 cannot hold Term elements. No `Data`, `lift`, or `lower` appears anywhere
 in macro code.
@@ -215,7 +215,7 @@ predicateAll p xs =
 ## What the macro sees: the `Ast` module
 
 `nash/core` ships an `Ast` module. Every type in it is a **little** ADT
-(kind `Term`): a value is a UPLC `constr` tree whose leaves are `string`,
+(representation `Term`): a value is a UPLC `constr` tree whose leaves are `string`,
 `int`, and `bytes` constants, exactly the layout of any user little type
 ([representation.md](representation.md)). The compiler builds that tree
 directly as `nash_plutus::Term::Constr` nodes, applies the macro program
@@ -241,14 +241,14 @@ type name
 
 type alias modname = { package : option string, name : string }
 
-type kind
-    = Big
-    | Const
-    | Term
-    | Storable                -- Big or Const, for `list`/`array` elements
-    | Any
-    | Arrow kind kind
-    | KindVar string
+-- Closed inferred kinds; there are no kind variables or bounds on input.
+type kind = Type | Arrow kind kind
+
+-- Runtime representations are independent of kinds.
+type repr = Big | Const | Term
+
+-- Source annotation sugar; Little is written as an ordinary constraint.
+type reprAnnotation = Repr repr | Storable
 
 type alias meta = { span : option span, typ : option typ }
 
@@ -309,13 +309,13 @@ type typ
     | TUnit
 
 type alias field = { name : string, typ : typ }
-type alias param = { name : string, kind : option kind }
+type alias param = { name : string, kind : option kind, repr : option reprAnnotation }
 type alias constraint = { traitName : name, args : cons typ }
 
 type decl
     = Value { name : name, args : cons pattern, body : expr, annotation : option typ }
-    | Union { name : name, params : cons param, kind : option kind, ctors : cons ctor }
-    | Alias { name : name, params : cons param, kind : option kind, typ : typ }
+    | Union { name : name, params : cons param, kind : option kind, representation : option repr, ctors : cons ctor }
+    | Alias { name : name, params : cons param, kind : option kind, representation : option repr, typ : typ }
     | Trait traitDef
     | Impl implDef
     | Infix { op : string, assoc : assoc, prec : int, function : name }
@@ -352,7 +352,10 @@ that reads them.
 Input conventions (reification, `nash-macro`):
 
 - Every `expr` and `pattern` has `span = Some` and `typ = Some` (the
-  solved type). `Union`/`Alias` carry `kind = Some`.
+  solved type). `Union`/`Alias` and their parameters carry closed inferred
+  `kind = Some`. `representation` is `Some` where known, independently of
+  the kind. A transparent alias uses its substituted body. Parameter
+  `repr` preserves the source representation annotation, if present.
 - Local variables and their binders are `Raw "x"`. Copying an input
   subtree into output keeps it resolving as the user wrote it.
 - Top-level, foreign, constructor, and operator references are
@@ -372,7 +375,10 @@ Output conventions (the walk back to surface AST):
   so diagnostics point at the `@derive(..)` or `name!(..)`.
 - `typ` is ignored.
 - `name` decides resolution as described under Hygiene.
-- `Union.kind`/`Alias.kind` are ignored; the name's casing decides.
+- Inferred `kind` and `representation` slots are ignored. Kinds and
+  datatype contexts are inferred again after splicing; the name's casing
+  imposes the normal representation rules. Parameter `repr` emits source
+  representation annotation sugar; it never emits a kind annotation.
 - The result must be a pure constructor tree: a lambda, delayed term, or
   partially applied builtin where a node is expected is `MacroBadOutput`.
 
@@ -613,8 +619,8 @@ comptime_expr    = 'comptime' term ;
 Semantics:
 
 - `comptime e` has the type of `e`.
-- After solving, the kind of that type must be `Const` or `Big`. A `Term`
-  kind (functions, little ADTs, tuples) is an error (`ComptimeNotConstant`)
+- After solving, that type must have representation `Const` or `Big`. A
+  `Term` representation (functions, little ADTs, tuples) is an error (`ComptimeNotConstant`)
   because the result must be representable as a UPLC constant. This is
   the one place the two mechanisms differ: a macro result is an `Ast`
   `constr` tree that the compiler walks, while a `comptime` result is
@@ -650,7 +656,8 @@ generator is `comptime` is a constant and is a warning.
 dispatches on the trait name and appends one `impl` per trait after the
 original declaration.
 
-Requested traits must satisfy the declared type's kind restrictions. Eq
+Requested traits must satisfy the declared type's Haskell 98 kinds and
+representation predicates. Eq
 derivation applies to little types. Big types already receive structural Eq
 from the compiler; deriving must not emit an Eq override for them. Generated
 impls go through the same checks as handwritten impls, including rejection
@@ -735,14 +742,15 @@ Notes on the sketch:
 - `x0`, `y0`, `a`, `b` are `Local` and get renamed, so a field named `a`
   cannot interfere.
 - `Union { name, params, ctors }` is the labeled-constructor pattern sugar
-  (representation.md); `kind` is not mentioned, so it becomes `_`.
+  (representation.md); the unmentioned `kind` and `representation` fields
+  become `_`.
 - Everything is a little value: `cons` lists are walked with `Cons.map`,
   `Cons.map2`, `Cons.indexedMap`, `Cons.append`; there is no `Data`
   conversion at any point.
 - The `fallthrough` arm is omitted for single-constructor types by the
   real implementation to avoid a redundant-pattern warning.
-- `ToData`/`FromData` derivations check `union.kind == Some Big` and fail
-  otherwise; `Show` and `Ord` work on any kind. `Ord` derives `compare` by
+- `ToData`/`FromData` derivations check `union.representation == Some Big` and fail
+  otherwise; `Show` and `Ord` work on any representation. `Ord` derives `compare` by
   constructor index then lexicographic fields.
 
 ## Interactions with other components
@@ -755,7 +763,9 @@ Notes on the sketch:
   `MacroWrongKind` without the body.
 - **Solver**: lenient mode for predicates; per-node type map for the
   encoder (`NodeTypes`).
-- **Kinds**: `comptime` kind check; `Union.kind` in the reified AST.
+- **Kinds and representation**: closed `Union.kind` and separate
+  `Union.representation` in the reified AST; `comptime` requires a
+  representation that can be returned as a UPLC constant.
 - **Codegen**: compiles macro programs and comptime programs; consumes
   `Core::Const` splices.
 - **Driver**: owns the expansion loop; macro programs are part of a

@@ -20,7 +20,7 @@ pub enum Mismatch<'a> {
         expected: &'a K<'a>,
         actual: &'a K<'a>,
     },
-    Infinite(KindVar),
+    Infinite,
 }
 
 pub struct Infer<'a> {
@@ -85,7 +85,7 @@ impl<'a> Infer<'a> {
                 (K::Var(a), K::Var(b)) if a == b => {}
                 (K::Var(variable), kind) | (kind, K::Var(variable)) => {
                     if self.occurs(*variable, kind) {
-                        return Err(Mismatch::Infinite(*variable));
+                        return Err(Mismatch::Infinite);
                     }
                     self.bindings[variable.0 as usize] = Some(kind);
                 }
@@ -168,7 +168,7 @@ mod tests {
         let bump = Bump::new();
         let mut infer = Infer::new(&bump);
         let f = infer.fresh();
-        assert!(matches!(infer.apply(f, &[f]), Err(Mismatch::Infinite(_))));
+        assert!(matches!(infer.apply(f, &[f]), Err(Mismatch::Infinite)));
     }
 
     #[test]
@@ -180,7 +180,7 @@ mod tests {
         infer.unify(a, b).unwrap();
         assert!(matches!(
             infer.unify(b, infer.arrow(&K::Type, a)),
-            Err(Mismatch::Infinite(_))
+            Err(Mismatch::Infinite)
         ));
     }
 
@@ -242,7 +242,7 @@ impl<'a> TypeInfo<'a> {
     }
     pub fn parameters(self) -> &'a [&'a str] {
         match self {
-            Self::Builtin(p) => &["p0", "p1"][..p.arity],
+            Self::Builtin(p) => &["p0", "p1"][..p.kind.arity()],
             Self::Defined { parameters, .. } => parameters,
         }
     }
@@ -1423,7 +1423,7 @@ fn kind_error<'a>(
     context: &'a crate::error::KindContext<'a>,
 ) -> crate::Error<'a> {
     match mismatch.mismatch {
-        Mismatch::Infinite(_) => crate::Error::KindInfinite {
+        Mismatch::Infinite => crate::Error::KindInfinite {
             region: mismatch.region,
             context,
         },
@@ -1740,7 +1740,6 @@ fn check_representation_consistency<'a>(
 pub fn check_annotation<'a>(
     bump: &'a Bump,
     env: &KindEnv<'a>,
-    _home: nash_ast::ModuleName<'a>,
     name: &'a str,
     annotation: &'a nash_ast::Annotation<'a>,
 ) -> Result<&'a nash_ast::Annotation<'a>, Vec<crate::Error<'a>>> {
@@ -2043,7 +2042,6 @@ pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
                 annotation: check_annotation(
                     bump,
                     &env,
-                    primitives::builtin_home(),
                     builtin.name,
                     bump.alloc(nash_ast::Annotation {
                         free_vars: builtin.free_vars,

@@ -2277,7 +2277,7 @@ gutter), `json_no_snippet_report`.
 - `crates/nash-report/src/canonicalize.rs` (new arms for the kind errors
   plan 02 adds and the trait/impl declaration errors plan 03 adds to
   `nash_can::Error`; both flow through `ModuleError::Names`)
-- `crates/nash-report/src/kind.rs` (new; `KindScheme` and `KindContext`
+- `crates/nash-report/src/kind.rs` (new; closed `Kind` and `KindContext`
   rendering helpers used by `canonicalize.rs`)
 
 **Change**
@@ -2285,15 +2285,19 @@ gutter), `json_no_snippet_report`.
 No Elm source. Titles and prose per `docs/diagnostics.md`. The real
 variants:
 
-- `nash_can::Error` (plan 02 chunk 4): `KindMismatch { region,
-  context: KindContext, expected: KindScheme, actual: KindScheme }`,
-  `KindInfinite { region, context }`, `KindTooManyArgs { region, head,
-  applied, accepted }`. `KindContext` variants (`BigField`, `LittleField`,
-  `AliasCasing`, `TypeArg`, `ValuePosition`, `RecordField`, `Annotation`)
-  choose the sentence. Titles: `KIND MISMATCH`, `INFINITE KIND`,
-  `TOO MANY TYPE ARGS`. Impl heads that do not instantiate the trait's
-  kind scheme are `KindMismatch` with `KindContext::ImplHead`. These are
-  rendered in `canonicalize.rs`, since kind inference runs in `nash-can`.
+- `nash_can::Error`: `KindMismatch { region, context, expected, actual }`
+  contains closed Haskell 98 `Kind` values (`Type` and arrows).
+  `KindInfinite { region, context }` reports an occurs-check failure.
+  `BadArity` reports excess arguments to a named constructor.
+  `KindContext` describes a type annotation, Big/little constructor field,
+  record field, alias casing, named value annotation, or impl head. Impl
+  heads are checked against their trait's closed parameter kinds.
+  Representation failures use `RepresentationMismatch { region, context,
+  required, actual }` and `ContradictoryRepresentation`; growing recursive
+  contexts use `IrregularRecursion`. Keep these separate from kind mismatch.
+  Use the current enums in `nash-can/src/error.rs` and diagnostic prose in
+  `nash-driver/src/diagnostics.rs`; do not restore obsolete kind-bound or
+  kind-application diagnostic variants.
 - `nash_constrain::Error` (plan 03 chunk 4): `MissingImpl { region, name,
   trait_, args, available }`, `MissingConstraint { region, name, trait_,
   args, binder }`, `AmbiguousType { region, binder, var, preds }`,
