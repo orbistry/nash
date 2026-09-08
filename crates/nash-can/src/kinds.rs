@@ -458,7 +458,7 @@ pub(crate) fn representation_subject<'a>(
 pub fn repr_of<'a>(bump: &'a Bump, env: &KindEnv<'a>, typ: &'a Located<Type<'a>>) -> Option<Repr> {
     match &typ.value {
         Type::Var(_) => None,
-        Type::Unit => Some(Repr::Const),
+
         Type::Lambda { .. } | Type::Tuple { .. } => Some(Repr::Term),
         Type::Record { .. } => None,
         Type::App { head, args } => {
@@ -634,7 +634,6 @@ impl<'a, 'env> TypeChecker<'a, 'env> {
                 }
                 Ok(&K::Type)
             }
-            Type::Unit => Ok(&K::Type),
         }
     }
 
@@ -815,7 +814,7 @@ impl<'a, 'env> Formation<'a, 'env> {
 
     pub fn typ(&mut self, typ: &'a Located<Type<'a>>) -> Result<(), RepresentationFailure<'a>> {
         match &typ.value {
-            Type::Var(_) | Type::Unit => {}
+            Type::Var(_) => {}
             Type::Named { reference, args } => {
                 for arg in *args {
                     self.typ(arg)?;
@@ -913,7 +912,6 @@ pub fn predicate_variables(pred: Pred<'_>) -> std::collections::BTreeSet<&str> {
             Type::Record { fields } => {
                 pending.extend(fields.iter().map(|f| f.typ));
             }
-            Type::Unit => {}
         }
     }
     result
@@ -1071,7 +1069,7 @@ fn contains_variable_application(pred: Pred<'_>) -> bool {
                 pending.extend(rest.iter().copied());
             }
             Type::Record { fields, .. } => pending.extend(fields.iter().map(|f| f.typ)),
-            Type::Var(_) | Type::Unit => {}
+            Type::Var(_) => {}
         }
     }
     false
@@ -1492,7 +1490,7 @@ pub(crate) fn infer_declarations<'a>(
                         pending.extend(rest.iter().copied());
                     }
                     Type::Record { fields, .. } => pending.extend(fields.iter().map(|f| f.typ)),
-                    Type::Unit | Type::Var(_) => {}
+                    Type::Var(_) => {}
                 }
             }
             crate::scc::Node {

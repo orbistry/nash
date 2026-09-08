@@ -27,7 +27,21 @@ Some(
                     column: 0,
                 },
             },
-            value: Unit,
+            value: Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                },
+                args: [],
+            },
         },
         visibility: Public,
     },

@@ -19,7 +19,19 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\nfirst x = (s
                 "second",
             ),
         ),
-        Unit,
+        Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "unit",
+            args: [],
+        },
         FromAnnotation(
             "bad",
             1,

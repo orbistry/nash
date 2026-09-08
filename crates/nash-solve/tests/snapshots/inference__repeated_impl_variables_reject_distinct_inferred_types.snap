@@ -30,10 +30,46 @@ description: "Code:\n\nmodule Main exposing (..)\ntype pairish 'a 'b = Both 'a '
                 },
                 name: "pairish",
                 args: [
-                    Unit,
+                    Type {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                        args: [],
+                    },
                     Tuple(
-                        Unit,
-                        Unit,
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "unit",
+                            args: [],
+                        },
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "unit",
+                            args: [],
+                        },
                         [],
                     ),
                 ],

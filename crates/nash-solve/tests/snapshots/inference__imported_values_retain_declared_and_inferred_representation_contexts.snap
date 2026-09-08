@@ -40,7 +40,19 @@ wrapper : forall a. Storable a => a -> list a -> a
                         },
                         name: "option",
                         args: [
-                            Unit,
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
                         ],
                     },
                 ],
@@ -66,7 +78,19 @@ wrapper : forall a. Storable a => a -> list a -> a
                                     },
                                     name: "option",
                                     args: [
-                                        Unit,
+                                        Type {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "unit",
+                                            args: [],
+                                        },
                                     ],
                                 },
                             ],
@@ -106,7 +130,19 @@ wrapper : forall a. Storable a => a -> list a -> a
                         },
                         name: "option",
                         args: [
-                            Unit,
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
                         ],
                     },
                 ],
@@ -150,7 +186,19 @@ wrapper : forall a. Storable a => a -> list a -> a
                         },
                         name: "option",
                         args: [
-                            Unit,
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
                         ],
                     },
                 ],
@@ -176,7 +224,19 @@ wrapper : forall a. Storable a => a -> list a -> a
                                     },
                                     name: "option",
                                     args: [
-                                        Unit,
+                                        Type {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "unit",
+                                            args: [],
+                                        },
                                     ],
                                 },
                             ],
@@ -216,7 +276,19 @@ wrapper : forall a. Storable a => a -> list a -> a
                         },
                         name: "option",
                         args: [
-                            Unit,
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
                         ],
                     },
                 ],

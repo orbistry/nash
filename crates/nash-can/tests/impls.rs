@@ -33,7 +33,7 @@ fn inline_impl_bounds_are_retained_for_superclasses() {
 }
 
 #[test]
-fn recursive_overlap_combines_inferred_kind_bounds() {
+fn recursive_overlap_ignores_representation_contexts() {
     let bump = Bump::new();
     let mut keys = Vec::new();
     for bound in ["Big", "Const", "Storable"] {

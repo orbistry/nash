@@ -23,7 +23,19 @@ description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a 'b where\n    ke
             name: "Keep",
         },
         args: [
-            Unit,
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
             Alias {
                 home: ModuleName {
                     package: None,
@@ -35,7 +47,19 @@ description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a 'b where\n    ke
                     fields: [
                         (
                             "item",
-                            Unit,
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
                         ),
                     ],
                 },

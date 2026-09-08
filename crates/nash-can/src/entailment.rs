@@ -23,7 +23,6 @@ pub enum Failure {
 enum Constructor<'a> {
     Var(&'a str),
     Named(QualifiedName<'a>),
-    Unit,
     Tuple(usize),
     Function,
     Record { fields: &'a [&'a str] },
@@ -46,7 +45,6 @@ struct Resolver<'t, 'a> {
     bump: &'a Bump,
     tables: &'t Tables<'a>,
     remaining: usize,
-    kinds: &'t crate::kinds::KindEnv<'a>,
 }
 
 impl<'a> Resolver<'_, 'a> {
@@ -68,7 +66,7 @@ impl<'a> Resolver<'_, 'a> {
                 head: self.bump.alloc(Located::at_zero(Type::Var(name))),
                 args,
             },
-            Constructor::Unit => Type::Unit,
+
             Constructor::Tuple(_) => Type::Tuple {
                 first: args[0],
                 second: args[1],
@@ -126,7 +124,7 @@ impl<'a> Resolver<'_, 'a> {
                 Constructor::Named(*reference),
                 arguments.iter().map(|a| a.typ).collect(),
             ),
-            Type::Unit => (Constructor::Unit, Vec::new()),
+
             Type::Tuple {
                 first,
                 second,
@@ -199,7 +197,7 @@ impl<'a> Resolver<'_, 'a> {
             for term in left.iter_mut().chain(&mut right) {
                 let canonical = self.canonical(term, 0)?;
                 let subject =
-                    crate::kinds::representation_subject(self.bump, self.kinds, canonical);
+                    crate::kinds::representation_subject(self.bump, &self.tables.kinds, canonical);
                 *term = self.term(subject, &BTreeMap::new(), 0)?;
             }
         }
@@ -273,7 +271,7 @@ impl<'a> Resolver<'_, 'a> {
         }
         if let Some(required) = wanted.trait_.and_then(nash_ast::primitives::ReprTrait::of) {
             let typ = self.canonical(wanted.args[0], 0)?;
-            return match crate::kinds::repr_of(self.bump, self.kinds, typ) {
+            return match crate::kinds::repr_of(self.bump, &self.tables.kinds, typ) {
                 Some(actual) if required.admits().contains(actual) => Ok(()),
                 _ => Err(Failure::Missing),
             };
@@ -285,7 +283,7 @@ impl<'a> Resolver<'_, 'a> {
                 .map(|arg| self.canonical(arg, 0))
                 .collect::<Result<_, _>>()?;
             let group = Default::default();
-            let mut formation = crate::kinds::Formation::new(self.bump, self.kinds, &group);
+            let mut formation = crate::kinds::Formation::new(self.bump, &self.tables.kinds, &group);
             formation
                 .reduce(Pred::Apply {
                     head,
@@ -387,7 +385,6 @@ impl<'a> Resolver<'_, 'a> {
 pub(crate) fn check<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
-    kind_env: &crate::kinds::KindEnv<'a>,
     impl_: &ImplInfo<'a>,
 ) -> Result<(), Vec<Error<'a>>> {
     let trait_ = tables.traits[&impl_.trait_];
@@ -409,7 +406,6 @@ pub(crate) fn check<'a>(
         bump,
         tables,
         remaining: WORK_LIMIT,
-        kinds: kind_env,
     };
     let givens = resolver.givens(impl_.context);
     for (index, superclass) in trait_.supers.iter().enumerate() {

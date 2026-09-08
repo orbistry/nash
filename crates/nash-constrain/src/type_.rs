@@ -172,7 +172,6 @@ pub enum FlatType<'a> {
     AppV1(Variable, Vec<Variable>),
     Fun1(Variable, Variable),
     Record1(BTreeMap<&'a str, Variable>),
-    Unit1,
     Tuple1(Variable, Variable, Vec<Variable>),
 }
 
@@ -205,7 +204,6 @@ pub enum Type<'a> {
     RecordN {
         fields: &'a [(&'a str, &'a Type<'a>)],
     },
-    UnitN,
     TupleN(&'a Type<'a>, &'a Type<'a>, &'a [&'a Type<'a>]),
 }
 
@@ -304,15 +302,6 @@ impl Mark {
     }
 }
 
-// BUILT-IN MODULES
-//
-// List uses the canonical nash/core Builtin identity. Other primitive
-// representations are handled by the representation plan.
-
-pub const fn list_home<'a>() -> ModuleName<'a> {
-    nash_ast::primitives::builtin_home()
-}
-
 // PRIMITIVE TYPES
 
 pub const fn literal_trait(name: &str) -> QualifiedName<'_> {
@@ -365,6 +354,22 @@ pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<Type<'stat
         name,
         args: &[],
     })
+}
+
+pub fn list<'a>(bump: &'a bumpalo::Bump, element: &'a Type<'a>) -> Type<'a> {
+    Type::AppN {
+        home: nash_ast::primitives::builtin_home(),
+        name: "list",
+        args: bump.alloc_slice_copy(&[element]),
+    }
+}
+
+pub const fn unit<'a>() -> Type<'a> {
+    Type::AppN {
+        home: nash_ast::primitives::builtin_home(),
+        name: "unit",
+        args: &[],
+    }
 }
 
 pub const fn bool<'a>() -> Type<'a> {

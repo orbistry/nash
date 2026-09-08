@@ -95,7 +95,7 @@ pub(crate) fn tables<'a>(
         )?;
     }
     for impl_ in tables.impls.values().filter(|i| i.home == module.name) {
-        crate::entailment::check(bump, &tables, kind_env, impl_)?;
+        crate::entailment::check(bump, &tables, impl_)?;
     }
     Ok(tables)
 }
@@ -186,8 +186,13 @@ pub(crate) fn canonicalize<'a>(
         }
         if trait_.home != env.home
             && !heads.iter().any(|h| match &h.value {
-                Head::Named { reference, .. } => reference.home == env.home,
-                Head::Unit | Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::CORE),
+                Head::Named { reference, .. } => {
+                    reference.home == env.home
+                        || (reference.home == nash_ast::primitives::builtin_home()
+                            && reference.name == "unit"
+                            && env.home.package == Some(nash_ast::primitives::CORE))
+                }
+                Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::CORE),
                 Head::Var(_) | Head::Function(..) => false,
             })
         {
@@ -379,23 +384,13 @@ pub(crate) fn canonicalize_pattern<'a>(
             Head::Var(index.try_into().expect("impl variable count exceeds u16"))
         }
         Type::Named { reference, args } => {
-            if *reference
-                == (QualifiedName {
-                    home: nash_ast::primitives::builtin_home(),
-                    name: "unit",
-                })
-                && args.is_empty()
-            {
-                Head::Unit
-            } else {
-                let args = args
-                    .iter()
-                    .map(|arg| canonicalize_pattern(bump, arg, variables, order))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Head::Named {
-                    reference: *reference,
-                    args: bump.alloc_slice_fill_iter(args),
-                }
+            let args = args
+                .iter()
+                .map(|arg| canonicalize_pattern(bump, arg, variables, order))
+                .collect::<Result<Vec<_>, _>>()?;
+            Head::Named {
+                reference: *reference,
+                args: bump.alloc_slice_fill_iter(args),
             }
         }
         Type::Alias {
@@ -412,7 +407,7 @@ pub(crate) fn canonicalize_pattern<'a>(
                 args: bump.alloc_slice_fill_iter(args),
             }
         }
-        Type::Unit => Head::Unit,
+
         Type::Tuple {
             first,
             second,
@@ -481,8 +476,8 @@ fn instantiate_method<'a>(
     }
     let typ = types::substitute_type(bump, &substitution, annotation.typ);
     let mut predicates = context.to_vec();
-    // Remove the owner predicate by identity; hidden formation predicates do
-    // not have a dictionary slot and must not affect this selection.
+    // Remove the owner predicate by identity. Apply predicates have no evidence
+    // slot; implied representation traits do, so position is not sufficient.
     let owner = QualifiedName {
         home: info.home,
         name: info.name,

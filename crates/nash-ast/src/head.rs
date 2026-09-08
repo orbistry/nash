@@ -1,8 +1,8 @@
 //! Recursive impl-pattern operations shared by canonicalization and resolution.
 use std::collections::BTreeMap;
 
+use crate::Type;
 use crate::{Head, HeadCon};
-use crate::{QualifiedName, Type};
 use nash_region::Located;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -56,7 +56,7 @@ fn canonical_view<'a>(
             arguments.iter().map(|arg| arg.typ).collect(),
         ),
         Type::Var(name) => (CanonicalCon::Var(name), Vec::new()),
-        Type::Unit => (CanonicalCon::Known(HeadCon::Unit), Vec::new()),
+
         Type::Tuple {
             first,
             second,
@@ -77,15 +77,6 @@ fn canonical_view<'a>(
     };
     for suffix in suffixes.into_iter().rev() {
         args.extend_from_slice(suffix);
-    }
-    if con
-        == CanonicalCon::Known(HeadCon::Named(QualifiedName {
-            home: crate::primitives::builtin_home(),
-            name: "unit",
-        }))
-        && args.is_empty()
-    {
-        return (CanonicalCon::Known(HeadCon::Unit), args);
     }
     (con, args)
 }
@@ -129,7 +120,7 @@ pub fn children<'p, 'a>(head: &'p Head<'a>) -> Vec<&'p Head<'a>> {
     match head {
         Head::Named { args, .. } | Head::Tuple(args) => args.iter().collect(),
         Head::Function(from, to) => vec![from, to],
-        Head::Var(_) | Head::Unit => Vec::new(),
+        Head::Var(_) => Vec::new(),
     }
 }
 

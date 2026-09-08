@@ -2,9 +2,9 @@
 source: crates/nash-solve/tests/inference.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype option 'a = Some 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (option 'a) where\n    keep xs = xs\nsame : Keep 'a => 'a -> ()\nsame x = same x\nclosed : Keep 'a => 'a -> ()\nclosed x = closed ()\nplain : 'a -> ()\nplain x = plain (Some x)\nwrap : Keep 'a => 'a -> option 'a\nwrap x = keep (Some x)\nreset : (Keep 'a, Keep 'b) => 'a -> 'b -> ()\nreset x y = reset (Some y) ()\nnested : Keep 'a => 'a -> ()\nnested x =\n    let\n        helper : Keep 'b => 'b -> ()\n        helper y = nested (Some y)\n    in\n    helper ()\n"
 ---
-closed : forall a. Keep a => a -> ()
-nested : forall a. Keep a => a -> ()
-plain : forall a. a -> ()
-reset : forall a b. (Keep a, Keep b) => a -> b -> ()
-same : forall a. Keep a => a -> ()
+closed : forall a. Keep a => a -> unit
+nested : forall a. Keep a => a -> unit
+plain : forall a. a -> unit
+reset : forall a b. (Keep a, Keep b) => a -> b -> unit
+same : forall a. Keep a => a -> unit
 wrap : forall a. Keep a => a -> option a

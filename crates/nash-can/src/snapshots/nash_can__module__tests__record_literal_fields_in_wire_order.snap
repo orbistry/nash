@@ -95,7 +95,21 @@ Module {
                                             column: 30,
                                         },
                                     },
-                                    value: Unit,
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "unit",
+                                        },
+                                        args: [],
+                                    },
                                 },
                                 to: Located {
                                     region: Region {
@@ -120,7 +134,21 @@ Module {
                                                     column: 40,
                                                 },
                                             },
-                                            value: Unit,
+                                            value: Named {
+                                                reference: QualifiedName {
+                                                    home: ModuleName {
+                                                        package: Some(
+                                                            PackageName {
+                                                                author: "nash",
+                                                                project: "core",
+                                                            },
+                                                        ),
+                                                        name: "Builtin",
+                                                    },
+                                                    name: "unit",
+                                                },
+                                                args: [],
+                                            },
                                         },
                                         to: Located {
                                             region: Region {
@@ -171,7 +199,21 @@ Module {
                                                                                 column: 40,
                                                                             },
                                                                         },
-                                                                        value: Unit,
+                                                                        value: Named {
+                                                                            reference: QualifiedName {
+                                                                                home: ModuleName {
+                                                                                    package: Some(
+                                                                                        PackageName {
+                                                                                            author: "nash",
+                                                                                            project: "core",
+                                                                                        },
+                                                                                    ),
+                                                                                    name: "Builtin",
+                                                                                },
+                                                                                name: "unit",
+                                                                            },
+                                                                            args: [],
+                                                                        },
                                                                     },
                                                                 },
                                                                 FieldType {
@@ -188,7 +230,21 @@ Module {
                                                                                 column: 30,
                                                                             },
                                                                         },
-                                                                        value: Unit,
+                                                                        value: Named {
+                                                                            reference: QualifiedName {
+                                                                                home: ModuleName {
+                                                                                    package: Some(
+                                                                                        PackageName {
+                                                                                            author: "nash",
+                                                                                            project: "core",
+                                                                                        },
+                                                                                    ),
+                                                                                    name: "Builtin",
+                                                                                },
+                                                                                name: "unit",
+                                                                            },
+                                                                            args: [],
+                                                                        },
                                                                     },
                                                                 },
                                                             ],
@@ -322,7 +378,21 @@ Module {
                                             column: 40,
                                         },
                                     },
-                                    value: Unit,
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "unit",
+                                        },
+                                        args: [],
+                                    },
                                 },
                             },
                             FieldType {
@@ -339,7 +409,21 @@ Module {
                                             column: 30,
                                         },
                                     },
-                                    value: Unit,
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "core",
+                                                    },
+                                                ),
+                                                name: "Builtin",
+                                            },
+                                            name: "unit",
+                                        },
+                                        args: [],
+                                    },
                                 },
                             },
                         ],

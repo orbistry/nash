@@ -5,9 +5,9 @@ expression: render_annotations(&annotations)
 bigBytes : Bytes
 bigInteger : Int
 bytes : forall a. FromBytes a => a
-discardedBytes : ()
-discardedInteger : ()
-discardedString : ()
+discardedBytes : unit
+discardedInteger : unit
+discardedString : unit
 integer : forall a. FromInt a => a
 string : forall a. FromString a => a
 utf8 : bytes

@@ -28,7 +28,6 @@ pub enum ErrorType<'a> {
     Record {
         fields: &'a [(&'a str, &'a ErrorType<'a>)],
     },
-    Unit,
     Tuple(
         &'a ErrorType<'a>,
         &'a ErrorType<'a>,

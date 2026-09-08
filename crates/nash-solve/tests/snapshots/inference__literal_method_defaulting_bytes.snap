@@ -2,6 +2,6 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
-chain : bytes -> ()
-run : forall a. (Permit a, Big a) => bytes -> Box a -> ()
+chain : bytes -> unit
+run : forall a. (Permit a, Big a) => bytes -> Box a -> unit
 same : forall a. a -> a -> a

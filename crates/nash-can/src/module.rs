@@ -1344,7 +1344,7 @@ fn collect_from_type<'a>(
                 collect_from_type(&arg.value, home, used);
             }
         }
-        Var(_) | Unit => {}
+        Var(_) => {}
         Lambda { from, to } => {
             collect_from_type(&from.value, home, used);
             collect_from_type(&to.value, home, used);
@@ -2362,7 +2362,7 @@ mod tests {
     #[test]
     fn to_public_alias_public_passes_through() {
         let bump = Bump::new();
-        let typ = bump.alloc(Located::at(Region::zero(), CanType::Unit));
+        let typ = bump.alloc(Located::at(Region::zero(), CanType::unit()));
         let alias = InterfaceAlias {
             context: &[],
             kind: test_constructor_kind(&bump, 2),
@@ -2381,7 +2381,7 @@ mod tests {
     #[test]
     fn to_public_alias_private_returns_none() {
         let bump = Bump::new();
-        let typ = bump.alloc(Located::at(Region::zero(), CanType::Unit));
+        let typ = bump.alloc(Located::at(Region::zero(), CanType::unit()));
         let alias = InterfaceAlias {
             context: &[],
             kind: &nash_ast::Kind::Type,
@@ -4619,5 +4619,41 @@ mod tests {
         assert_module_error_snapshot!(
             "module Main exposing (..)\n\ntests\n    test \"truth\" = do\n        assert True\n"
         );
+    }
+    #[test]
+    fn builtin_types_resolve_qualified_without_import() {
+        assert_module_snapshot!(
+            "module Main exposing (..)\n\nidentity : Builtin.list Builtin.unit -> list unit\nidentity x = x\n"
+        );
+    }
+
+    #[test]
+    fn unit_syntax_is_named_builtin_type() {
+        let bump = Bump::new();
+        let result = parse_and_canonicalize(
+            &bump,
+            "module Main exposing (..)\n\nidentity : () -> unit\nidentity x = x\n",
+            Context {
+                package: None,
+                interfaces: None,
+            },
+        )
+        .expect("unit annotation canonicalizes");
+        let (nash_ast::Decls::Declare { definition, .. }
+        | nash_ast::Decls::DeclareRec { definition, .. }) = result.decls
+        else {
+            panic!("expected declaration group")
+        };
+        let nash_ast::Def::TypedDef { annotation, .. } = definition else {
+            panic!("expected typed definition")
+        };
+        let nash_ast::Type::Lambda { from, to } = annotation.value else {
+            panic!("expected function")
+        };
+        for typ in [from, to] {
+            assert!(
+                matches!(typ.value, nash_ast::Type::Named { reference, args } if reference.home == nash_ast::primitives::builtin_home() && reference.name == "unit" && args.is_empty())
+            );
+        }
     }
 }

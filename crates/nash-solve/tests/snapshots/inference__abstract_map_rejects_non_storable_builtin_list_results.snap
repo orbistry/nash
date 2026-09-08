@@ -29,8 +29,32 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
         },
         args: [
             Tuple(
-                Unit,
-                Unit,
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
                 [],
             ),
         ],
@@ -50,8 +74,32 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
                     name: "list",
                     args: [
                         Tuple(
-                            Unit,
-                            Unit,
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
                             [],
                         ),
                     ],
@@ -73,8 +121,32 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
                 },
                 args: [
                     Tuple(
-                        Unit,
-                        Unit,
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "unit",
+                            args: [],
+                        },
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "unit",
+                            args: [],
+                        },
                         [],
                     ),
                 ],
@@ -107,8 +179,32 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
         },
         args: [
             Tuple(
-                Unit,
-                Unit,
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
                 [],
             ),
         ],
@@ -130,8 +226,32 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
                 },
                 args: [
                     Tuple(
-                        Unit,
-                        Unit,
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "unit",
+                            args: [],
+                        },
+                        Type {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "unit",
+                            args: [],
+                        },
                         [],
                     ),
                 ],
@@ -164,8 +284,32 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
         },
         args: [
             Tuple(
-                Unit,
-                Unit,
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
                 [],
             ),
         ],
@@ -185,8 +329,32 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 
                     name: "list",
                     args: [
                         Tuple(
-                            Unit,
-                            Unit,
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
+                            Type {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                                args: [],
+                            },
                             [],
                         ),
                     ],

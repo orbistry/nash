@@ -517,10 +517,6 @@ fn unify_structure<'a>(
                 )
             }
 
-            (FlatType::Unit1, FlatType::Unit1) => {
-                merge(uf, context, Content::Structure(FlatType::Unit1))
-            }
-
             _ => Err(()),
         },
 
@@ -649,7 +645,16 @@ mod predicate_tests {
         };
         let bump = Bump::new();
         assert!(matches!(unify(&bump, &mut uf, a, c), Answer::Ok(_)));
-        merge(&mut uf, &context, Content::Structure(FlatType::Unit1)).unwrap();
+        merge(
+            &mut uf,
+            &context,
+            Content::Structure(FlatType::App1(
+                nash_ast::primitives::builtin_home(),
+                "unit",
+                Vec::new(),
+            )),
+        )
+        .unwrap();
         for var in [a, b, c] {
             assert_eq!(uf.get(var).preds, [PredId(0), PredId(1), PredId(2)]);
         }

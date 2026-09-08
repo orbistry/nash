@@ -3,11 +3,11 @@ source: crates/nash-solve/tests/inference.rs
 expression: "output.join(\"\\n\")"
 ---
 Main:
-left : ()
+left : unit
 operator : forall a. Select a => a -> a -> a
 pick : forall a. Select a => a -> a -> a
-right : ()
-section : () -> ()
+right : unit
+section : unit -> unit
 OnlyOperators:
-ordinary : ()
-value : ()
+ordinary : unit
+value : unit

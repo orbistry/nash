@@ -352,7 +352,7 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
                 pending.extend([(a, d), (b, e)]);
                 pending.extend(c.into_iter().zip(f));
             }
-            (Content::Structure(FlatType::Unit1), Content::Structure(FlatType::Unit1)) => {}
+
             (
                 Content::Structure(FlatType::Record1(a)),
                 Content::Structure(FlatType::Record1(b)),
@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn matching_preserves_unknown_variables_and_nominal_alias_identity() {
         let bump = bumpalo::Bump::new();
-        let body = bump.alloc(nash_region::Located::at_zero(nash_ast::Type::Unit));
+        let body = bump.alloc(nash_region::Located::at_zero(nash_ast::Type::unit()));
         let mut uf = UnionFind::new();
         let a = uf.fresh(make_descriptor(Content::RigidVar("a")));
         let another_a = uf.fresh(make_descriptor(Content::RigidVar("a")));

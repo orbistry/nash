@@ -37,7 +37,6 @@ pub fn resolve<'a>(
 #[derive(PartialEq, Eq)]
 enum Constructor<'a> {
     Named(QualifiedName<'a>),
-    Unit,
     Tuple(usize),
     Function,
     Record(Vec<&'a str>),
@@ -122,7 +121,7 @@ impl<'a> Resolver<'_, 'a> {
                     self.substitution_work(&field.typ.value, depth + 1)?;
                 }
             }
-            Type::Unit | Type::Var(_) => {}
+            Type::Var(_) => {}
         }
         Ok(())
     }
@@ -158,7 +157,7 @@ impl<'a> Resolver<'_, 'a> {
                 Constructor::Named(*reference),
                 arguments.iter().map(|arg| arg.typ).collect(),
             ),
-            Type::Unit => (Constructor::Unit, Vec::new()),
+
             Type::Tuple {
                 first,
                 second,

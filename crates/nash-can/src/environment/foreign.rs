@@ -75,6 +75,8 @@ pub fn create_initial_env<'a>(
         );
     }
 
+    env.q_types.insert("Builtin", env.types.clone());
+
     let mut errors = Vec::new();
 
     for import in imports {

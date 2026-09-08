@@ -28,7 +28,19 @@ description: "Code:\n\nmodule Main exposing (..)\nidentity : ('a : Big) -> 'a\ni
             name: "Big",
         },
         args: [
-            Unit,
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
         ],
         available: [],
         because: [],

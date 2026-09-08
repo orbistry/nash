@@ -56,7 +56,6 @@ pub(crate) enum Selection<'a> {
 #[derive(PartialEq, Eq)]
 enum View<'a> {
     Named(QualifiedName<'a>),
-    Unit,
     Tuple(usize),
     Function,
     Record(Vec<&'a str>),
@@ -99,7 +98,7 @@ impl<'a> InferenceTypes<'_, 'a> {
                 View::Named(QualifiedName { home, name }),
                 args.into_iter().map(|(_, var)| var).collect(),
             ),
-            Content::Structure(FlatType::Unit1) => (View::Unit, Vec::new()),
+
             Content::Structure(FlatType::Tuple1(a, b, rest)) => (
                 View::Tuple(2 + rest.len()),
                 [a, b].into_iter().chain(rest).collect(),
@@ -130,7 +129,7 @@ impl<'a> nash_ast::head::Types<'a> for InferenceTypes<'_, 'a> {
         let (view, args) = self.view(node);
         let actual = match view {
             View::Named(name) => HeadCon::Named(name),
-            View::Unit => HeadCon::Unit,
+
             View::Tuple(arity) => HeadCon::Tuple(arity),
             View::Function => HeadCon::Fun,
             View::Application | View::Flexible | View::Error => return Match::Deferred,
@@ -239,7 +238,11 @@ mod tests {
     fn repeated_patterns_compare_closed_records_without_unifying_them() {
         use nash_ast::head::{Match, Types};
         let mut uf = UnionFind::new();
-        let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::Unit1)));
+        let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
+            nash_ast::primitives::builtin_home(),
+            "unit",
+            Vec::new(),
+        ))));
         let unknown = uf.fresh(make_descriptor(Content::FlexVar(None)));
         let first = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
             [("a", unit), ("b", unit)].into(),
@@ -278,7 +281,11 @@ mod tests {
         let outer = uf.fresh(outer_desc);
         assert!(has_outer_flex(&mut uf, &[outer], 3));
         uf.modify(child, |desc| {
-            desc.content = Content::Structure(FlatType::Unit1)
+            desc.content = Content::Structure(FlatType::App1(
+                nash_ast::primitives::builtin_home(),
+                "unit",
+                Vec::new(),
+            ))
         });
         assert!(
             !has_outer_flex(&mut uf, &[outer], 3),

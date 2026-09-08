@@ -15,7 +15,19 @@ description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep 
             },
         },
         Unit,
-        Unit,
+        Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "unit",
+            args: [],
+        },
         FromAnnotation(
             "keep",
             1,

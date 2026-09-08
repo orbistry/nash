@@ -12,6 +12,33 @@ Make the type checker speak the representation model of
 - (d) make record encoding decisions (field order, alias identity)
   available in the canonical AST for codegen.
 
+### Integration audit required for completion
+
+Audit the complete Haskell 98 engine replacement against `docs/kinds.md` as
+part of this work. Assess each affected API, state field, helper and control
+path as if implementing the approved design from scratch. Remove obsolete
+engine code, abstractions, metadata, compatibility hooks and callers. Start
+with disabled overlap-compatibility callbacks, unused kind-environment/module
+arguments and stale regression descriptions, but audit beyond those examples.
+Do not retain old interfaces through ignored arguments, unconditional
+callbacks, wrappers or adapters.
+
+Cover declaration checking, type inference, trait resolution, specialization,
+generalization, evidence, interfaces, diagnostics and tests. Preserve Haskell
+98 semantics, representation predicates, terminating datatype-context
+inference and Plan 03 behavior. Keep the existing trait-resolution policy and
+search limits; do not add Paterson-style restrictions. Preserve later-plan
+deferrals and unrelated work.
+
+Replace obsolete tests and descriptions with explicit assertions of the new
+semantics, preserving local and imported positive and negative regression
+coverage. Mark historical documents clearly. Complete formatting, strict
+Clippy, the full test suite, reviewed snapshots and snapshot hygiene, the
+real core CLI fixture and focused cross-module acceptance. The final audit
+must explain what was removed, what remains and why the approved design needs
+it, and any unresolved gaps. Passing tests or finding no old symbol names is
+not sufficient evidence. Do not commit, push or publish.
+
 ## Prerequisites
 
 ### Current implementation reconciliation (2026-09-08)
@@ -23,8 +50,9 @@ shapes are not current APIs. In particular:
 - Preserve trait-based literals, negation, real trait tables and solver mode.
   B1's magic supertypes are already removed; legitimate superclass evidence
   named `Super` remains. Verify the obsolete variants specifically.
-- C1 already seeds unqualified primitive types. Finish qualified primitive
-  lookup and replace the remaining special unit variants with `Builtin.unit`.
+- C1 uses the primitive inventory for unqualified and qualified type lookup.
+  Unit is the named `Builtin.unit` throughout canonicalization and inference;
+  source expressions and patterns keep their syntax variants.
 - A1 must preserve representation annotations and reject nested anonymous
   record types as well as anonymous records in value annotations.
 - A2 must use the retained alias body to distinguish a nominal record alias
@@ -1022,59 +1050,24 @@ is empty and all snapshots are re-accepted.
 `crates/nash-can/src/module.rs`, `crates/nash-driver/src/compile.rs`,
 `crates/nash-solve/tests/inference.rs`.
 
-**Change**:
+**Implemented change**:
 
-- `type_.rs:175-240`: replace `basics()`, `list_home()`, `string_home()`
-  with `nash_ast::primitives::builtin_home()` (the table from plans/02
-  chunk 3). Then:
-
-```rust
-// PRIMITIVE TYPES (docs/representation.md)
-
-const fn prim<'a>(name: &'a str) -> Type<'a> {
-    Type::AppN { home: builtin_home(), name, args: &[] }
-}
-
-pub const fn int<'a>() -> Type<'a> { prim("int") }
-pub const fn bytes<'a>() -> Type<'a> { prim("bytes") }
-pub const fn string<'a>() -> Type<'a> { prim("string") }
-pub const fn bool<'a>() -> Type<'a> { prim("bool") }
-pub const fn unit<'a>() -> Type<'a> { prim("unit") }
-pub const fn data<'a>() -> Type<'a> { prim("Data") }
-pub const fn big_int<'a>() -> Type<'a> { prim("Int") }
-pub const fn big_bytes<'a>() -> Type<'a> { prim("Bytes") }
-
-pub fn list<'a>(bump: &'a Bump, elem: &'a Type<'a>) -> Type<'a> {
-    Type::AppN { home: builtin_home(), name: "list", args: bump.alloc_slice_copy(&[elem]) }
-}
-
-pub fn big_list<'a>(bump: &'a Bump, elem: &'a Type<'a>) -> Type<'a> {
-    Type::AppN { home: builtin_home(), name: "List", args: bump.alloc_slice_copy(&[elem]) }
-}
-```
-
-- `error_type.rs:71-89`: `is_int`, `is_string`, `is_list` compare against
-  `builtin_home()` and the lowercase names; `is_big_int`, `is_data` added
-  for future hints.
-- `expression.rs` list literal (`constrain_list`) and `pattern.rs` list
-  patterns build `type_::list`; `if` uses `type_::bool()`; `Unit`
-  expressions and patterns use `type_::unit()` instead of `Type::UnitN`.
-  `()` in a type is `unit` (plans/01), so `CanType::Unit`, `Type::UnitN`
-  and `FlatType::Unit1` are deleted and `nash-can` canonicalizes the
-  source unit type to `Type::Named` on `Builtin.unit`.
-- `nash-can`: the implicit prelude. `foreign::create_initial_env`
-  (`foreign.rs`) adds every `PRIMITIVES` entry to `env.types` unqualified
-  and under the `Builtin` prefix, homed at `builtin_home()`, before user
-  imports; user declarations still shadow them (`insert_local_type`).
-  `local.rs:78` keys `Ctor::Bool` on `builtin_home()` + `bool` and
-  `foreign.rs:43` on `builtin_home()` + `list`; the `Basics`/`List`
-  special cases go away. `bool`'s `True`/`False` and `unit`'s `()` are
-  seeded as constructors of the primitive `bool`/`unit` unions
-  (`InterfaceUnion { ctors: [False, True] }`), so `Pattern::Bool` and the
-  `Ctor::Bool` path keep working unchanged.
-- `compile.rs`: nothing; the prelude comes from `create_initial_env`.
-- `inference.rs`: tests stop declaring `type Int = Int`; snapshots show
-  `int`, `string`, `list int`, `bool`.
+- All `PRIMITIVES` entries are available unqualified and under `Builtin`
+  before user imports. Local declarations shadow only the unqualified name.
+  Value imports and core-only intrinsic visibility retain their existing rules.
+- `()` in a type canonicalizes to `Type::Named` on `Builtin.unit`.
+  Canonical, constraint, union-find, impl-head and diagnostic unit variants
+  are removed. Expression and pattern syntax nodes remain and generate
+  `type_::unit()` constraints. Core ownership of unit instances is preserved
+  by exact builtin identity, as required by `docs/traits.md`.
+- List expressions and patterns share `type_::list`; the obsolete
+  `list_home` wrapper is removed. Bool retains its existing builtin identity.
+  The primitive interface already supplies `True` and `False` constructors;
+  `()` is syntax and needs no identifier in the constructor environment.
+- Keep trait-based literal typing and its defaulting rules. Do not add unused
+  primitive helpers or diagnostic predicates for hypothetical future hints.
+  The earlier concrete `int()`/`string()` literal sketch is superseded by the
+  completed trait implementation.
 
 **Elm reference**: `Type/Type.hs` primitive section (`int`, `float`,
 `string`, `char`, `bool`, `never`); `Canonicalize/Environment/Foreign.hs`

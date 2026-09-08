@@ -207,9 +207,12 @@ pub fn constrain<'a>(
             bump, uf, rtv, region, node, *alias, annotation, fields, expected,
         ),
 
-        CanExpr::Unit => {
-            Constraint::Equal(region, Category::Unit, bump.alloc(Type::UnitN), expected)
-        }
+        CanExpr::Unit => Constraint::Equal(
+            region,
+            Category::Unit,
+            bump.alloc(crate::type_::unit()),
+            expected,
+        ),
 
         CanExpr::Tuple {
             first,
@@ -461,11 +464,7 @@ fn constrain_list<'a>(
 ) -> Constraint<'a> {
     let entry_var = mk_flex_var(uf);
     let entry_type: &'a Type<'a> = bump.alloc(Type::VarN(entry_var));
-    let list_type: &'a Type<'a> = bump.alloc(Type::AppN {
-        home: type_::list_home(),
-        name: "list",
-        args: bump.alloc_slice_copy(&[entry_type]),
-    });
+    let list_type: &'a Type<'a> = bump.alloc(type_::list(bump, entry_type));
 
     let entry_cons = entries
         .iter()
@@ -1488,7 +1487,7 @@ mod node_tests {
         let annotation = bump.alloc(Annotation {
             context: &[],
             free_vars: &[],
-            typ: bump.alloc(Located::at(region, nash_ast::Type::Unit)),
+            typ: bump.alloc(Located::at(region, nash_ast::Type::unit())),
         });
         let local = bump.alloc(Located::at(region, CanExpr::VarLocal("x")));
         let method = bump.alloc(Located::at(
@@ -1516,7 +1515,7 @@ mod node_tests {
             &mut uf,
             &Rtv::new(),
             operator,
-            Expected::NoExpectation(bump.alloc(Type::UnitN)),
+            Expected::NoExpectation(bump.alloc(crate::type_::unit())),
         );
         let mut nodes = Vec::new();
         uses(&constraint, &mut nodes);

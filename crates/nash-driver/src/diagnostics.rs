@@ -65,7 +65,6 @@ fn typ(value: &nash_constrain::error_type::ErrorType<'_>) -> String {
             home, name, args, ..
         } => application(qualified(*home, name), args.iter().map(|(_, arg)| typ(arg))),
         ErrorType::VarApp(head, args) => application(typ(head), args.iter().map(|arg| typ(arg))),
-        ErrorType::Unit => "()".into(),
         ErrorType::Tuple(first, second, rest) => format!(
             "({})",
             [*first, *second]

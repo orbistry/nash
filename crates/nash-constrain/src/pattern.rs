@@ -56,7 +56,7 @@ pub fn add<'a>(
             let unit_con = Constraint::Pattern(
                 region,
                 PCategory::Unit,
-                bump.alloc(Type::UnitN),
+                bump.alloc(crate::type_::unit()),
                 expectation,
             );
             state.rev_cons.push(unit_con);
@@ -74,11 +74,7 @@ pub fn add<'a>(
         CanPattern::List(patterns) => {
             let entry_var = mk_flex_var(uf);
             let entry_type: &'a Type<'a> = bump.alloc(Type::VarN(entry_var));
-            let list_type: &'a Type<'a> = bump.alloc(Type::AppN {
-                home: type_::list_home(),
-                name: "list",
-                args: bump.alloc_slice_copy(&[entry_type]),
-            });
+            let list_type: &'a Type<'a> = bump.alloc(type_::list(bump, entry_type));
 
             let mut state =
                 patterns
@@ -99,11 +95,7 @@ pub fn add<'a>(
         CanPattern::Cons { head, tail } => {
             let entry_var = mk_flex_var(uf);
             let entry_type: &'a Type<'a> = bump.alloc(Type::VarN(entry_var));
-            let list_type: &'a Type<'a> = bump.alloc(Type::AppN {
-                home: type_::list_home(),
-                name: "list",
-                args: bump.alloc_slice_copy(&[entry_type]),
-            });
+            let list_type: &'a Type<'a> = bump.alloc(type_::list(bump, entry_type));
 
             let head_expectation = PExpected::NoExpectation(entry_type);
             let tail_expectation = PExpected::FromContext(region, PContext::Tail, list_type);

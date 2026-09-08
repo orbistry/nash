@@ -1914,8 +1914,6 @@ impl<'a> Solver<'a, '_> {
                 self.register(uf, rank, Content::Structure(FlatType::Record1(field_vars)))
             }
 
-            Type::UnitN => self.register(uf, rank, Content::Structure(FlatType::Unit1)),
-
             Type::TupleN(a, b, rest) => {
                 let a_var = self.type_to_variable(uf, rank, a);
                 let b_var = self.type_to_variable(uf, rank, b);
@@ -2790,8 +2788,6 @@ impl<'a> Solver<'a, '_> {
                 FlatType::Record1(field_copies)
             }
 
-            FlatType::Unit1 => FlatType::Unit1,
-
             FlatType::Tuple1(a, b, rest) => {
                 let a_copy = self.make_copy_help(uf, max_rank, a, quantified);
                 let b_copy = self.make_copy_help(uf, max_rank, b, quantified);
@@ -2894,9 +2890,6 @@ fn adjust_rank_content<'a>(
                 rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *field))
             }),
 
-            // THEORY: a unit never needs to get generalized
-            FlatType::Unit1 => OUTERMOST_RANK,
-
             FlatType::Tuple1(a, b, rest) => {
                 let a_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *a);
                 let b_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *b);
@@ -2935,7 +2928,6 @@ mod copy_tests {
     fn evidence_type(typ: &nash_region::Located<nash_ast::Type<'_>>) -> String {
         match &typ.value {
             nash_ast::Type::Var(name) => name.to_string(),
-            nash_ast::Type::Unit => "()".into(),
             nash_ast::Type::Named { reference, args } => {
                 let args = args
                     .iter()

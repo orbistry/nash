@@ -16,12 +16,72 @@ description: "Code:\n\nmodule Main exposing (..)\nvalue : (unit, unit, unit, uni
         },
         Tuple,
         Tuple(
-            Unit,
-            Unit,
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
             [
-                Unit,
-                Unit,
-                Unit,
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
             ],
         ),
         FromAnnotation(
@@ -29,11 +89,59 @@ description: "Code:\n\nmodule Main exposing (..)\nvalue : (unit, unit, unit, uni
             0,
             TypedBody,
             Tuple(
-                Unit,
-                Unit,
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
+                Type {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "unit",
+                    args: [],
+                },
                 [
-                    Unit,
-                    Unit,
+                    Type {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                        args: [],
+                    },
+                    Type {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                        args: [],
+                    },
                 ],
             ),
         ),

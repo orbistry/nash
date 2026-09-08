@@ -41,8 +41,6 @@ fn occurs_help(
                     .values()
                     .fold(found_cycle, |acc, field| occurs_help(uf, seen, *field, acc)),
 
-                FlatType::Unit1 => found_cycle,
-
                 FlatType::Tuple1(a, b, rest) => {
                     let acc = rest
                         .into_iter()

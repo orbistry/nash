@@ -297,7 +297,7 @@ fn alias_substitution_preserves_application_head_and_argument() {
         },
         args: &[],
     }));
-    let unit = bump.alloc(Located::at_zero(Type::Unit));
+    let unit = bump.alloc(Located::at_zero(Type::unit()));
     let args = bump.alloc_slice_fill_iter([
         AliasArgument {
             name: "f",

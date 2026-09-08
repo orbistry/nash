@@ -579,7 +579,7 @@ compiler-known ADTs).
 
 - `core` compiles (`nash check core/` via the driver test `test_core_compiles`, kept green from here on).
 - nash-can: `if` on `bool` uses `Ctor::Bool`; `type t = A | B` little and `type T = A | B` Big in one user module is a dup-ctor error; `Some 1` and `Option.Some (lift 1)` from the defaults resolve to the little and the Big constructor.
-- kinds: `list (option int)` is a kind error; `list Int` and `list int` are fine.
+- kinds: `list (option int)` has kind `Type` but fails `Storable` storage formation; `list Int` and `list int` are fine.
 
 **Done when** `test_core_compiles` passes and the little/Big pairs are
 usable side by side in one user module.

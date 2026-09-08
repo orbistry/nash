@@ -141,7 +141,7 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
         })
         .collect::<Vec<_>>();
     rendered.sort();
-    let mut expected = vec!["()".to_owned(), outer_var.to_owned()];
+    let mut expected = vec!["unit".to_owned(), outer_var.to_owned()];
     expected.sort();
     assert_eq!(rendered, expected);
 }
@@ -275,8 +275,6 @@ fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
                 format!("{{ {rendered_fields} }}")
             }
         }
-
-        CanType::Unit => "()".to_string(),
 
         CanType::Tuple {
             first,
@@ -979,7 +977,11 @@ fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
         "List",
         vec![result],
     ))));
-    let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::Unit1)));
+    let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
+        nash_ast::primitives::builtin_home(),
+        "unit",
+        Vec::new(),
+    ))));
     let context: &[(QualifiedName<'_>, &[nash_constrain::Variable])] = &[
         (QualifiedName { home, name: "Show" }, &[list]),
         (QualifiedName { home, name: "Keep" }, &[context_only]),
@@ -1223,7 +1225,7 @@ fn type_variable_names_do_not_imply_constraints() {
         );
         let annotations = infer(&bump, &source).expect("ordinary type variable accepts unit");
         assert!(annotations["identity"].context.is_empty());
-        assert!(matches!(annotations["main"].typ.value, CanType::Unit));
+        assert!((annotations["main"].typ.value == CanType::unit()));
     }
 }
 
@@ -2409,7 +2411,7 @@ fn nested_operator_sections_apply() {
         .expect("nested sections infer");
     let rendered = render_annotations(&annotations);
     assert!(rendered.contains("FromString a => a"), "{rendered}");
-    assert!(rendered.contains("left : ()"), "{rendered}");
+    assert!(rendered.contains("left : unit"), "{rendered}");
     insta::assert_snapshot!(rendered);
 }
 
@@ -2815,7 +2817,7 @@ fn higher_kinded_bind_chain_retains_its_monad_constraint() {
 }
 
 #[test]
-fn nested_use_cannot_narrow_its_owners_declared_kind() {
+fn nested_use_requires_owners_storable_constraint() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
@@ -2991,7 +2993,7 @@ fn incompatible_representations_cannot_escape_in_an_inferred_scheme() {
 }
 
 #[test]
-fn declared_body_combines_kinds_of_hidden_variables() {
+fn declared_body_rejects_big_term_representation() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
@@ -3055,7 +3057,7 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
             map f (Box x) = Box (f x)
         twice f xs = map f (map f xs)
         little = map (\x -> x) (Some ())
-        changedKind = map (\x -> (x, x)) (Some ())
+        changedRepresentation = map (\x -> (x, x)) (Some ())
         big = map (\x -> x) (Box Red)
     "#
     );
@@ -3082,7 +3084,7 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
     while let nash_ast::Decls::Declare { definition, next } = decls {
         if let nash_ast::Def::Def { name, body, .. } = definition {
             let expected = match name.value {
-                "little" | "changedKind" => Some("option"),
+                "little" | "changedRepresentation" => Some("option"),
                 "big" => Some("Box"),
                 _ => None,
             };
@@ -3642,8 +3644,50 @@ fn deferred_captured_field_preserves_trait_evidence() {
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
     let (annotations, solved) =
         nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
-    assert_eq!(render_annotation(annotations["f"]), "point -> ( int, () )");
+    assert_eq!(
+        render_annotation(annotations["f"]),
+        "point -> ( int, unit )"
+    );
     assert!(solved.instances.values().flat_map(|instance| instance.evidence).any(|evidence| {
         matches!(evidence, nash_ast::Evidence::Impl { impl_, .. } if impl_.key.trait_.name == "Read")
     }));
+}
+
+#[test]
+fn big_builtin_types_in_scope() {
+    assert_inference_snapshot!(
+        "module Main exposing (..)\nf : Builtin.List Builtin.Int -> List Int\nf x = x\n"
+    );
+}
+
+#[test]
+fn user_type_shadows_builtin_unqualified() {
+    let bump = Bump::new();
+    let annotations = infer(&bump, "module Main exposing (..)\ntype int = Mine\nmain = Mine\nidentity : Builtin.int -> Builtin.int\nidentity x = x\n").unwrap();
+    assert!(
+        matches!(annotations["main"].typ.value, CanType::Named { reference, .. } if reference.home.name == "Main" && reference.name == "int")
+    );
+    let CanType::Lambda { from, to } = annotations["identity"].typ.value else {
+        panic!("expected identity")
+    };
+    for typ in [from, to] {
+        assert!(
+            matches!(typ.value, CanType::Named { reference, .. } if reference.home == nash_ast::primitives::builtin_home() && reference.name == "int")
+        );
+    }
+}
+
+#[test]
+fn unit_impl_syntax_matches_named_builtin() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep () where
+            keep x = x
+        main : Builtin.unit
+        main = keep ()
+    "#
+    );
 }

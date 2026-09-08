@@ -241,7 +241,7 @@ fn canonicalize_type_value<'a>(
             canonicalize_env_type(bump, env, region, name, args, info)?
         }
         SourceType::Record(_) => return Err(vec![Error::RecordTypeOutsideAlias { region }]),
-        SourceType::Unit => CanType::Unit,
+        SourceType::Unit => CanType::unit(),
         SourceType::Tuple {
             first,
             second,
@@ -397,9 +397,6 @@ fn canonicalize_env_type<'a>(
         }
         environment::Type::Union { arity, home } => {
             check_max_arity(region, name, arity, args.len())?;
-            if home == nash_ast::primitives::builtin_home() && name == "unit" {
-                return Ok(CanType::Unit);
-            }
             Ok(CanType::Named {
                 reference: QualifiedName { home, name },
                 args: can_args,
@@ -472,7 +469,7 @@ pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
                 collect_free_vars(&arg.typ.value, vars);
             }
         }
-        CanType::Unit => {}
+
         CanType::Tuple {
             first,
             second,
@@ -591,7 +588,7 @@ pub fn substitute_type<'a>(
                 .alloc_slice_fill_iter(args.iter().map(|arg| substitute_type(bump, table, arg)));
             return apply_type(bump, typ.region, head, args);
         }
-        CanType::Unit => return typ,
+
         CanType::Lambda { from, to } => CanType::Lambda {
             from: substitute_type(bump, table, from),
             to: substitute_type(bump, table, to),
@@ -704,7 +701,7 @@ mod tests {
         };
         let partial = interface.values[0].annotation.typ;
         assert!(std::ptr::eq(iterated_dealias(&bump, partial), partial));
-        let unit = bump.alloc(Located::at_zero(CanType::Unit));
+        let unit = bump.alloc(Located::at_zero(CanType::unit()));
         let applied = apply_type(
             &bump,
             Region::zero(),
@@ -716,7 +713,7 @@ mod tests {
             panic!("alias body")
         };
         assert!(matches!(from.value, CanType::Var("right")));
-        assert!(matches!(to.value, CanType::Unit));
+        assert!((to.value == CanType::unit()));
         let excess = apply_type(
             &bump,
             Region::zero(),
@@ -767,7 +764,7 @@ mod tests {
         );
         let replaced = iterated_dealias(&bump, replaced);
         assert!(
-            matches!(&replaced.value, CanType::Lambda { from, to } if matches!(from.value, CanType::Unit) && matches!(to.value, CanType::Unit))
+            matches!(&replaced.value, CanType::Lambda { from, to } if (from.value == CanType::unit()) && (to.value == CanType::unit()))
         );
         insta::assert_debug_snapshot!((partial, applied, expanded));
     }

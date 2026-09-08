@@ -77,7 +77,7 @@ pub fn known<'a>(
             }
         }
         Content::Structure(FlatType::Fun1(..) | FlatType::Tuple1(..)) => Some(Repr::Term),
-        Content::Structure(FlatType::Unit1) => Some(Repr::Const),
+
         _ => None,
     }
 }

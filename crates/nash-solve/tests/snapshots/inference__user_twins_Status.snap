@@ -5,8 +5,8 @@ expression: render_annotations(&annotations)
 big : Status
 bigPayload : forall a. Big a => Int -> a -> Payload a
 little : status
-localBig : Status -> ()
-localLittle : status -> ()
+localBig : Status -> unit
+localLittle : status -> unit
 readBig : forall a. Big a => Payload a -> ( Int, a )
 readSmall : forall a. payload a -> ( int, a )
 smallPayload : forall a. int -> a -> payload a

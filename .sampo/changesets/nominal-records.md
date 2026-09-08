@@ -13,3 +13,6 @@ visible field sets, preserve declaration-order metadata, and resolve record
 operations before generalization. Support qualified lowercase type names and
 alias constructor functions while preserving trait-based literals and
 representation predicates.
+Use the complete primitive type inventory under the Builtin qualifier and
+represent unit uniformly as a named builtin type throughout inference and
+instance selection.

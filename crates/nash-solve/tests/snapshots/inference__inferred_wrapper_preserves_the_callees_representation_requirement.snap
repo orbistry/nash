@@ -35,7 +35,19 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                 },
                 name: "option",
                 args: [
-                    Unit,
+                    Type {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                        args: [],
+                    },
                 ],
             },
         ],
@@ -61,7 +73,19 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                             },
                             name: "option",
                             args: [
-                                Unit,
+                                Type {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "core",
+                                            },
+                                        ),
+                                        name: "Builtin",
+                                    },
+                                    name: "unit",
+                                    args: [],
+                                },
                             ],
                         },
                     ],
@@ -101,7 +125,19 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
                 },
                 name: "option",
                 args: [
-                    Unit,
+                    Type {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                        args: [],
+                    },
                 ],
             },
         ],

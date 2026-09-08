@@ -2,10 +2,10 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotations(&annotations)
 ---
-bigPattern : Status -> ()
+bigPattern : Status -> unit
 bigPayload : forall a. Big a => Int -> a -> Payload a
 bigUse : Status
-littlePattern : status -> ()
+littlePattern : status -> unit
 littleUse : status
 readBig : forall a. Big a => Payload a -> ( Int, a )
 readSmall : forall a. payload a -> ( int, a )

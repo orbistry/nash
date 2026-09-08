@@ -2,4 +2,4 @@
 source: crates/nash-solve/tests/inference.rs
 expression: render_annotation(annotation)
 ---
-forall a b. (Show (List b), Keep a, Ground ()) => b
+forall a b. (Show (List b), Keep a, Ground unit) => b

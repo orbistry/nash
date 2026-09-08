@@ -122,8 +122,6 @@ pub fn from_src_type<'a>(
             ),
         )),
 
-        CanType::Unit => bump.alloc(Type::UnitN),
-
         CanType::Record { fields } => bump.alloc(Type::RecordN {
             fields: bump.alloc_slice_fill_iter(
                 fields
@@ -347,8 +345,6 @@ pub fn canonical_to_variable<'a>(
             )
         }
 
-        CanType::Unit => register(uf, rank, variables, Content::Structure(FlatType::Unit1)),
-
         CanType::Tuple {
             first,
             second,
@@ -491,7 +487,11 @@ mod tests {
             &mut uf,
             2,
             &mut variables,
-            Content::Structure(FlatType::Unit1),
+            Content::Structure(FlatType::App1(
+                nash_ast::primitives::builtin_home(),
+                "unit",
+                Vec::new(),
+            )),
         );
         let applied = register(
             &mut uf,

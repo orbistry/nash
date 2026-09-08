@@ -38,7 +38,21 @@ expression: results
                                 column: 18,
                             },
                         },
-                        value: Unit,
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "core",
+                                        },
+                                    ),
+                                    name: "Builtin",
+                                },
+                                name: "unit",
+                            },
+                            args: [],
+                        },
                     },
                 ],
                 superclass: Trait {
@@ -66,7 +80,21 @@ expression: results
                                     column: 18,
                                 },
                             },
-                            value: Unit,
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "core",
+                                            },
+                                        ),
+                                        name: "Builtin",
+                                    },
+                                    name: "unit",
+                                },
+                                args: [],
+                            },
                         },
                         Located {
                             region: Region {
@@ -79,7 +107,21 @@ expression: results
                                     column: 18,
                                 },
                             },
-                            value: Unit,
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "core",
+                                            },
+                                        ),
+                                        name: "Builtin",
+                                    },
+                                    name: "unit",
+                                },
+                                args: [],
+                            },
                         },
                     ],
                 },

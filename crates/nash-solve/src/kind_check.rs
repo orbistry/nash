@@ -113,7 +113,6 @@ impl<'a, 'env> Check<'a, 'env> {
                     self.values(uf, fields.into_values())?;
                     &K::Type
                 }
-                FlatType::Unit1 => &K::Type,
             },
         };
         self.infer.unify(kind, actual)?;

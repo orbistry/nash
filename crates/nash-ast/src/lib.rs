@@ -356,7 +356,6 @@ pub enum Type<'a> {
     Record {
         fields: &'a [FieldType<'a>],
     },
-    Unit,
     Tuple {
         first: &'a Located<Type<'a>>,
         second: &'a Located<Type<'a>>,
@@ -369,6 +368,18 @@ pub enum Type<'a> {
         remaining: &'a [&'a str],
         target: AliasType<'a>,
     },
+}
+
+impl Type<'_> {
+    pub const fn unit() -> Self {
+        Self::Named {
+            reference: QualifiedName {
+                home: primitives::builtin_home(),
+                name: "unit",
+            },
+            args: &[],
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -516,7 +527,6 @@ pub enum Head<'a> {
         reference: QualifiedName<'a>,
         args: &'a [Head<'a>],
     },
-    Unit,
     Tuple(&'a [Head<'a>]),
     Function(&'a Head<'a>, &'a Head<'a>),
 }
@@ -536,7 +546,6 @@ pub struct Impl<'a> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HeadCon<'a> {
     Named(QualifiedName<'a>),
-    Unit,
     Tuple(usize),
     /// Function types never have impls; a wanted `Show (a -> b)` fails lookup.
     Fun,
@@ -585,7 +594,7 @@ impl<'a> Head<'a> {
         match self {
             Head::Var(_) => None,
             Head::Named { reference, .. } => Some(HeadCon::Named(*reference)),
-            Head::Unit => Some(HeadCon::Unit),
+
             Head::Tuple(args) => Some(HeadCon::Tuple(args.len())),
             Head::Function(..) => Some(HeadCon::Fun),
         }
@@ -605,7 +614,7 @@ impl<'a> Head<'a> {
                     args.iter().map(|arg| arg.to_type(bump, variables, region)),
                 ),
             },
-            Head::Unit => Type::Unit,
+
             Head::Tuple(args) => Type::Tuple {
                 first: args[0].to_type(bump, variables, region),
                 second: args[1].to_type(bump, variables, region),
@@ -639,7 +648,7 @@ mod evidence_tests {
             name: "Identity",
         };
         let body = Located::at_zero(Type::Var("a"));
-        let unit = Located::at_zero(Type::Unit);
+        let unit = Located::at_zero(Type::unit());
         let args = [AliasArgument {
             name: "a",
             typ: &unit,
@@ -699,8 +708,8 @@ mod evidence_tests {
             home,
             name: "Value",
         };
-        let first_element = Located::at_zero(Type::Unit);
-        let second_element = Located::at(Region::one(), Type::Unit);
+        let first_element = Located::at_zero(Type::unit());
+        let second_element = Located::at(Region::one(), Type::unit());
         let first_elements = [&first_element];
         let second_elements = [&second_element];
         let first = Located::at_zero(Type::Named {

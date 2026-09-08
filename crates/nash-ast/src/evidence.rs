@@ -12,7 +12,7 @@ fn same_types(a: &[&Located<Type<'_>>], b: &[&Located<Type<'_>>]) -> bool {
 fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
     match (a, b) {
         (Type::Var(a), Type::Var(b)) => a == b,
-        (Type::Unit, Type::Unit) => true,
+
         (Type::Lambda { from: af, to: at }, Type::Lambda { from: bf, to: bt }) => {
             same_type(&af.value, &bf.value) && same_type(&at.value, &bt.value)
         }
@@ -90,7 +90,7 @@ fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
     std::mem::discriminant(typ).hash(state);
     match typ {
         Type::Var(name) => name.hash(state),
-        Type::Unit => {}
+
         Type::Lambda { from, to } => {
             hash_type(&from.value, state);
             hash_type(&to.value, state);

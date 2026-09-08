@@ -266,8 +266,6 @@ fn term_to_can_type<'a>(
             )),
         })),
 
-        FlatType::Unit1 => bump.alloc(Located::at_zero(CanType::Unit)),
-
         FlatType::Tuple1(a, b, rest) => {
             let first = variable_to_can_type(bump, uf, state, a);
             let second = variable_to_can_type(bump, uf, state, b);
@@ -431,8 +429,6 @@ fn term_to_error_type<'a>(
             ),
         }),
 
-        FlatType::Unit1 => bump.alloc(ErrorType::Unit),
-
         FlatType::Tuple1(a, b, rest) => {
             let first = variable_to_error_type(bump, uf, state, a);
             let second = variable_to_error_type(bump, uf, state, b);
@@ -565,8 +561,6 @@ fn get_var_names<'a>(
             FlatType::Record1(fields) => fields.values().rev().fold(taken_names, |taken, field| {
                 get_var_names(bump, uf, seen, *field, taken)
             }),
-
-            FlatType::Unit1 => taken_names,
 
             FlatType::Tuple1(a, b, rest) => {
                 let taken = rest.into_iter().rev().fold(taken_names, |taken, c| {

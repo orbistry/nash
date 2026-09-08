@@ -39,6 +39,28 @@ description: "Code:\n\nmodule Main exposing (..)\n\ntype Foo\n    = Bar a b\n"
             ],
             qualified: [
                 (
+                    "Builtin",
+                    [
+                        "Bytes",
+                        "Data",
+                        "Int",
+                        "List",
+                        "Map",
+                        "array",
+                        "bls_g1",
+                        "bls_g2",
+                        "bls_mlr",
+                        "bool",
+                        "bytes",
+                        "int",
+                        "list",
+                        "pair",
+                        "string",
+                        "unit",
+                        "value",
+                    ],
+                ),
+                (
                     "Main",
                     [
                         "Foo",
@@ -82,6 +104,28 @@ description: "Code:\n\nmodule Main exposing (..)\n\ntype Foo\n    = Bar a b\n"
                 "value",
             ],
             qualified: [
+                (
+                    "Builtin",
+                    [
+                        "Bytes",
+                        "Data",
+                        "Int",
+                        "List",
+                        "Map",
+                        "array",
+                        "bls_g1",
+                        "bls_g2",
+                        "bls_mlr",
+                        "bool",
+                        "bytes",
+                        "int",
+                        "list",
+                        "pair",
+                        "string",
+                        "unit",
+                        "value",
+                    ],
+                ),
                 (
                     "Main",
                     [

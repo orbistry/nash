@@ -23,7 +23,20 @@ expression: "(ordinary, heads)"
                 name: "Keep",
             },
             heads: [
-                Unit,
+                Named(
+                    QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                    },
+                ),
             ],
         },
     ],
@@ -40,7 +53,21 @@ expression: "(ordinary, heads)"
                         column: 13,
                     },
                 },
-                value: Unit,
+                value: Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                    },
+                    args: [],
+                },
             },
         ],
         [

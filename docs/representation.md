@@ -34,6 +34,12 @@ element's Nash type: a `Const` element erases to its own UPLC `Type`; a
 `list Int` and `list Data` and `list (List Int)` are all `List(Data)`, and
 `list (list bytes)` is `List(List(ByteString))`.
 
+All primitive type names are in scope both unqualified and under `Builtin`,
+without a value import. Local type declarations can shadow the unqualified
+name. `()` in a source type canonicalizes to the named type `Builtin.unit`;
+canonical types, inference, instance heads and diagnostics use this same
+identity. Unit expressions and patterns keep their dedicated syntax nodes.
+
 `bool` and `unit` are Const types with constructors: `True`/`False` and
 `()` are the constants `(con bool True)`, `(con bool False)`, `(con unit ())`.
 A `case` on `bool` lowers to `ifThenElse`; a `case` on `unit` has one branch.

@@ -68,7 +68,7 @@ macro_rules! builtin {
 
 const A: &Located<Type<'static>> = &Located::at_zero(Type::Var("a"));
 const B: &Located<Type<'static>> = &Located::at_zero(Type::Var("b"));
-const UNIT: &Located<Type<'static>> = &Located::at_zero(Type::Unit);
+const UNIT: &Located<Type<'static>> = &named("unit", &[]);
 const INT: &Located<Type<'static>> = &named("int", &[]);
 const BOOL: &Located<Type<'static>> = &named("bool", &[]);
 const BYTES: &Located<Type<'static>> = &named("bytes", &[]);

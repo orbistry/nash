@@ -55,7 +55,21 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep '
                 },
             ],
             [
-                Unit,
+                Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "unit",
+                    },
+                    args: [],
+                },
             ],
         ],
         because: [
