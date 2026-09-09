@@ -1942,6 +1942,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "nash-nitpick"
+version = "0.1.0"
+dependencies = [
+ "bumpalo",
+ "hex",
+ "indoc",
+ "insta",
+ "nash-ast",
+ "nash-can",
+ "nash-constrain",
+ "nash-parse",
+ "nash-region",
+ "nash-solve",
+]
+
+[[package]]
 name = "nash-parse"
 version = "0.4.0"
 dependencies = [

@@ -1,0 +1,22 @@
+[package]
+name = "nash-nitpick"
+version = "0.1.0"
+edition.workspace = true
+description = "Exhaustiveness and redundancy checking for Nash pattern matches"
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+bumpalo.workspace = true
+hex.workspace = true
+nash-ast = { path = "../nash-ast", version = "0.6.0" }
+nash-region = { path = "../nash-region", version = "0.2.0" }
+
+[dev-dependencies]
+indoc.workspace = true
+insta.workspace = true
+nash-can = { path = "../nash-can", version = "0.5.0" }
+nash-constrain = { path = "../nash-constrain", version = "0.3.0" }
+nash-parse = { path = "../nash-parse", version = "0.4.0" }
+nash-solve = { path = "../nash-solve", version = "0.3.0" }
