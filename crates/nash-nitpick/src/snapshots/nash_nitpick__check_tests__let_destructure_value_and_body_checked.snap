@@ -1,0 +1,10 @@
+---
+source: crates/nash-nitpick/src/check_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf flag =\n    let\n        True = (case flag of\n                    True -> True)\n    in\n    case flag of\n        False -> ()\n"
+expression: errors
+---
+[
+    "Incomplete BadDestruct 7:9-7:13 [False]",
+    "Incomplete BadCase 7:17-8:33 [False]",
+    "Incomplete BadCase 10:5-12:1 [True]",
+]

@@ -1,0 +1,6 @@
+---
+source: crates/nash-nitpick/src/check_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\ntype box 'a = Box 'a\ntype alias point = { x : unit }\nf : point -> unit -> (unit, unit) -> box unit -> unit\nf { x } () (a, b) (Box c) = x\n"
+expression: value
+---
+()

@@ -1,0 +1,5 @@
+module Monad exposing (Monad)
+
+-- Minimal provider for traversal tests of the generated bind call.
+trait Monad 'm where
+    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b

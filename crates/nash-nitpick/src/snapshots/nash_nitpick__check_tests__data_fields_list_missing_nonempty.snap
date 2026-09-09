@@ -1,0 +1,8 @@
+---
+source: crates/nash-nitpick/src/check_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf : Data -> unit\nf d =\n    case d of\n        Constr _ [] -> ()\n        Map _ -> ()\n        List _ -> ()\n        I _ -> ()\n        B _ -> ()\n"
+expression: errors
+---
+[
+    "Incomplete BadCase 7:5-13:1 [Constr _ (_ :: _)]",
+]

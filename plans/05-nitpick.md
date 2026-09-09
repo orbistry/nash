@@ -71,6 +71,12 @@ Preserve Elm's base cases, specialization rules and constructor order:
   are not an exact, disjoint complement of preceding patterns.
 - Constructor names can be compared within a column because successful type
   solving guarantees a single type per column. Do not run on untyped input.
+  Unlike Elm, this does not exclude literal/constructor mixtures: Nash's
+  conversion traits allow literals of user-defined types. Ignore opaque
+  literals when establishing constructor coverage. Identical literals or
+  complete structural coverage can prove a literal redundant; unknown
+  constructor/literal overlaps remain potentially useful. Never evaluate
+  user trait methods during this pass or panic on a solved mixed column.
 - Keep the first redundant branch per case and suppress that case's
   incomplete error, matching Elm. Still visit all nested branch bodies.
 
@@ -98,35 +104,35 @@ not retain either reversal. Unicode escapes require four to six hex digits.
 
 ## Chunk 2 — pattern matrices
 
-- [ ] Port `isExhaustive`, `isUseful`, constructor/literal/wildcard
+- [x] Port `isExhaustive`, `isUseful`, constructor/literal/wildcard
   specialization, completeness and missing-constructor recovery.
-- [ ] Test empty/zero-column matrices, nil/cons, partial nested lists,
+- [x] Test empty/zero-column matrices, nil/cons, partial nested lists,
   literal domains, partial tuples, constructor recovery and wildcard
   usefulness both before and after complete constructor coverage.
-- [ ] Independently compare finite-domain usefulness/exhaustiveness against
+- [x] Independently compare finite-domain usefulness/exhaustiveness against
   direct enumeration, including multi-column correlations.
-- [ ] Keep runtime functions warning-free when this lands with traversal.
+- [x] Keep runtime functions warning-free when this lands with traversal.
 
 ## Chunk 3 — all executable AST roots and expressions
 
-- [ ] Add `check`, definition/argument checking, complete expression traversal
+- [x] Add `check`, definition/argument checking, complete expression traversal
   and source-order diagnostics, including traits, impls and recursive groups.
-- [ ] Source tests must parse, canonicalize and solve successfully before
+- [x] Source tests must parse, canonicalize and solve successfully before
   nitpick. Use separate success/error snapshot helpers.
-- [ ] Test safe/unsafe typed and untyped arguments, lambda arguments,
+- [x] Test safe/unsafe typed and untyped arguments, lambda arguments,
   destructures, nested case scrutinees/bodies, redundancy and its precedence,
   recursive definitions, call function/arguments, if conditions/branches,
   lists/tuples, record/update values and access receivers.
-- [ ] Test source order across dependency-sorted declarations, method bodies,
+- [x] Test source order across dependency-sorted declarations, method bodies,
   reordered record fields and labeled constructor arguments.
-- [ ] Test record patterns and labeled subset patterns, including reordered
+- [x] Test record patterns and labeled subset patterns, including reordered
   labels, omitted-label wildcards and multi-constructor unions.
 
 ## Chunk 4 — Nash unions, cross-module behavior and driver
 
-- [ ] Test every `Data` constructor, partial literal tags, partial field lists,
+- [x] Test every `Data` constructor, partial literal tags, partial field lists,
   and a redundant specific tag after a wildcard tag.
-- [ ] Test bytes needing a wildcard, literal duplicates, Bool, Big/little
+- [x] Test bytes needing a wildcard, literal duplicates, Bool, Big/little
   coverage, aliases and imported/qualified constructor unions.
 - [ ] Hook into the driver after solving, before interface publication. CLI
   checks must reject incomplete and redundant matches with useful witnesses.
@@ -146,3 +152,11 @@ Chunk 1 (2026-09-09 UTC): `cargo fmt --all`,
 `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test`
 pass (2,105 tests, including 13 nitpick tests). Reviewed and accepted the
 escaped-string snapshot; the other renderer expectations are inline snapshots.
+
+Chunks 2–3: strict Clippy and all 2,200 workspace tests pass, including
+108 nitpick tests. Reviewed and accepted source/error snapshots. The finite
+Boolean oracle checks all 512 subsets of nine two-column rows, with all
+nine candidate rows, both flat and tuple-wrapped. Regression tests cover a
+solved user-ADT literal/constructor mixture and source ordering after SCC,
+let, labeled-argument and do-bind desugaring. Test providers are packaged
+fixtures; final driver validation uses the actual core package.

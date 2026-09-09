@@ -7,3 +7,12 @@ pub use pattern::{Context, Error, Literal, Pattern};
 
 #[cfg(test)]
 mod render_tests;
+
+mod matrix;
+#[cfg(test)]
+mod matrix_tests;
+
+mod check;
+pub use check::check;
+#[cfg(test)]
+mod check_tests;

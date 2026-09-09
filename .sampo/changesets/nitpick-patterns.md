@@ -2,4 +2,6 @@
 cargo/nash-nitpick: minor
 ---
 
-Add canonical pattern simplification and missing-pattern rendering for exhaustiveness checks.
+Add Maranget exhaustiveness and redundancy checking across declarations,
+trait defaults, impl methods and nested expressions. Render missing-pattern
+examples and handle trait-overloaded literals conservatively.

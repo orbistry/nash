@@ -104,6 +104,13 @@ exhaustiveness checking reports missing-pattern examples and usefulness
 checking reports redundant branches. This is Plan 05 work; diagnostic prose
 and rendering belong to Plan 06.
 
+Literal patterns use conversion and equality traits, so they may coexist
+with constructors of a user-defined type. Coverage checking treats their
+values as opaque: literals do not establish constructor coverage, and it
+does not evaluate trait methods to prove that distinct patterns are equal.
+An identical literal or complete structural coverage can make a later
+literal branch redundant. Other unknown overlaps remain potentially useful.
+
 ```elm
 validator module Vesting exposing (main)
 

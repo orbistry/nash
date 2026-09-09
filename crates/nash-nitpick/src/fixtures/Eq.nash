@@ -1,0 +1,39 @@
+module Eq exposing (Eq)
+
+import Builtin exposing (..)
+
+trait Eq 'a where
+    eq : 'a -> 'a -> bool
+
+    neq : 'a -> 'a -> bool
+    neq a b = if eq a b then False else True
+
+impl Eq int where
+    eq = Builtin.equalsInteger
+
+impl Eq bytes where
+    eq = Builtin.equalsByteString
+
+impl Eq string where
+    eq = Builtin.equalsString
+
+impl Eq bool where
+    eq a b = if a then b else if b then False else True
+
+impl Eq unit where
+    eq _ _ = True
+
+impl Eq 'a => Eq (list 'a) where
+    eq xs ys =
+        if Builtin.nullList xs then Builtin.nullList ys
+        else if Builtin.nullList ys then False
+        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)
+        else False
+
+impl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where
+    eq a b =
+        if eq (Builtin.fstPair a) (Builtin.fstPair b) then
+            eq (Builtin.sndPair a) (Builtin.sndPair b)
+        else False
+impl Eq value where
+    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)

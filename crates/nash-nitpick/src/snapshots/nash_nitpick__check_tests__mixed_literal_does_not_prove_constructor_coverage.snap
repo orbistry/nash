@@ -1,0 +1,8 @@
+---
+source: crates/nash-nitpick/src/check_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\ntype Token = A | B\nimpl FromInt Token where\n    fromInt _ = B\nf x =\n    case x of\n        A -> ()\n        0 -> ()\n"
+expression: errors
+---
+[
+    "Incomplete BadCase 9:5-12:1 [B]",
+]

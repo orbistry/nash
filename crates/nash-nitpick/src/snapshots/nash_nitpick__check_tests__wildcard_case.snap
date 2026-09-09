@@ -1,0 +1,6 @@
+---
+source: crates/nash-nitpick/src/check_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf x =\n    case x of\n        _ -> ()\n"
+expression: value
+---
+()
