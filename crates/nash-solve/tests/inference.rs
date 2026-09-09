@@ -3824,3 +3824,68 @@ fn labeled_ctor_empty_pattern_and_missing_projection() {
     "#
     );
 }
+
+#[test]
+fn labeled_ctor_big_construction_projection_and_pattern() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Datum = Datum { owner : Bytes, deadline : Int }
+        make : Bytes -> Int -> Datum
+        make o d = Datum { deadline = d, owner = o }
+        positional : Bytes -> Int -> Datum
+        positional o d = Datum o d
+        owner : Datum -> Bytes
+        owner d = d.owner
+        due (Datum { deadline }) = deadline
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_multi_constructor_sugar_and_case() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type choice = First { x : unit, y : unit } | Second { x : unit }
+        first = First { y = (), x = () }
+        second = Second { x = () }
+        pick : choice -> unit
+        pick c =
+            case c of
+                First { y } -> y
+                Second { x } -> x
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_big_multi_constructor_sugar_and_case() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Redeemer = Claim { owner : Bytes, amount : Int } | Cancel { owner : Bytes }
+        claim : Bytes -> Int -> Redeemer
+        claim o a = Claim { amount = a, owner = o }
+        cancel : Bytes -> Redeemer
+        cancel o = Cancel { owner = o }
+        who : Redeemer -> Bytes
+        who r =
+            case r of
+                Claim { owner } -> owner
+                Cancel { owner } -> owner
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_big_multi_access_error() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type Redeemer = Claim { owner : Bytes } | Cancel { owner : Bytes }
+        who : Redeemer -> Bytes
+        who r = r.owner
+    "#
+    );
+}

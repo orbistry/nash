@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype Redeemer = Claim { owner : Bytes, amount : Int } | Cancel { owner : Bytes }\nclaim : Bytes -> Int -> Redeemer\nclaim o a = Claim { amount = a, owner = o }\ncancel : Bytes -> Redeemer\ncancel o = Cancel { owner = o }\nwho : Redeemer -> Bytes\nwho r =\n    case r of\n        Claim { owner } -> owner\n        Cancel { owner } -> owner\n"
+---
+cancel : Bytes -> Redeemer
+claim : Bytes -> Int -> Redeemer
+who : Redeemer -> Bytes
