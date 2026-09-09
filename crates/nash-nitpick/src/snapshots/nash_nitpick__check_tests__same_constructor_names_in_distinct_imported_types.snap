@@ -1,5 +1,0 @@
----
-source: crates/nash-nitpick/src/check_tests.rs
-expression: result
----
-()

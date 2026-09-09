@@ -1,0 +1,7 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+expression: errors
+---
+[
+    "Incomplete BadCase 4:5-6:1 [Other]",
+]

@@ -1,8 +1,0 @@
----
-source: crates/nash-nitpick/src/check_tests.rs
-description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\ntype Packet = Packet { z : Int, a : Bytes } | Empty\nf value =\n    case value of\n        Empty -> ()\n"
-expression: errors
----
-[
-    "Incomplete BadCase 7:5-9:1 [Packet _ _]",
-]

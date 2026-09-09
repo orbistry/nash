@@ -1,8 +1,0 @@
----
-source: crates/nash-nitpick/src/check_tests.rs
-description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf bytes =\n    case bytes of\n        #\"00ff\" -> ()\n        #\"00ff\" -> ()\n"
-expression: errors
----
-[
-    "Redundant #2 8:9-8:16 (case 6:5-9:1)",
-]

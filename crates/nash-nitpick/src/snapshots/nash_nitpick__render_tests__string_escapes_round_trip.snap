@@ -1,5 +1,0 @@
----
-source: crates/nash-nitpick/src/render_tests.rs
-expression: rendered
----
-"a\"\\\n\r\t\u{0000}\u{001b}λ"

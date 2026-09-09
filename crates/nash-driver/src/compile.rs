@@ -1,7 +1,7 @@
 //! Module compilation orchestration.
 //!
 //! Each module runs Elm's full pipeline: parse -> canonicalize ->
-//! constrain -> solve -> `Interface::from_module` with the solver's
+//! constrain -> solve -> nitpick -> `Interface::from_module` with the solver's
 //! annotations. Modules compile in dependency order, and each solved
 //! module and solved evidence remain in the build scope. Canonical nodes
 //! live in a shared arena, so interfaces borrow them without moving the
@@ -18,6 +18,11 @@ use url::Url;
 use crate::database::Database;
 use crate::error::DriverError;
 use crate::graph::DepGraph;
+
+#[cfg(test)]
+mod nitpick_source_tests;
+#[cfg(test)]
+mod nitpick_tests;
 
 /// Result of compiling a single module.
 #[derive(Debug)]
@@ -230,6 +235,10 @@ fn compile_module<'s>(
         Ok(solved) => solved,
         Err(errors) => return failed(crate::diagnostics::inference(src, &errors)),
     };
+
+    if let Err(errors) = nash_nitpick::check(bump, &can_result.module) {
+        return failed(format!("{errors:?}"));
+    }
 
     let module = bump.alloc(can_result.module);
     let interface = nash_can::from_module(bump, module, &annotations);

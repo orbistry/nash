@@ -1,0 +1,8 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf flag =\n    if flag then () else\n        case flag of\n            True -> ()\n"
+expression: errors
+---
+[
+    "Incomplete BadCase 7:9-9:1 [False]",
+]

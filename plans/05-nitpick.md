@@ -75,7 +75,9 @@ Preserve Elm's base cases, specialization rules and constructor order:
   conversion traits allow literals of user-defined types. Ignore opaque
   literals when establishing constructor coverage. Identical literals or
   complete structural coverage can prove a literal redundant; unknown
-  constructor/literal overlaps remain potentially useful. Never evaluate
+  constructor/literal overlaps remain potentially useful. Witnesses describe
+  coverage not proven statically, rather than guaranteeing an uncovered runtime
+  value when a conversion method is opaque. Never evaluate
   user trait methods during this pass or panic on a solved mixed column.
 - Keep the first redundant branch per case and suppress that case's
   incomplete error, matching Elm. Still visit all nested branch bodies.
@@ -118,7 +120,10 @@ not retain either reversal. Unicode escapes require four to six hex digits.
 - [x] Add `check`, definition/argument checking, complete expression traversal
   and source-order diagnostics, including traits, impls and recursive groups.
 - [x] Source tests must parse, canonicalize and solve successfully before
-  nitpick. Use separate success/error snapshot helpers.
+  nitpick. Use separate success/error snapshot helpers. These pipeline tests
+  live in `nash-driver/src/compile/nitpick_source_tests.rs`; nitpick itself
+  keeps matrix and renderer unit tests. This avoids a test-only solver
+  dependency on a crate that Sampo can publish after nitpick.
 - [x] Test safe/unsafe typed and untyped arguments, lambda arguments,
   destructures, nested case scrutinees/bodies, redundancy and its precedence,
   recursive definitions, call function/arguments, if conditions/branches,
@@ -134,16 +139,16 @@ not retain either reversal. Unicode escapes require four to six hex digits.
   and a redundant specific tag after a wildcard tag.
 - [x] Test bytes needing a wildcard, literal duplicates, Bool, Big/little
   coverage, aliases and imported/qualified constructor unions.
-- [ ] Hook into the driver after solving, before interface publication. CLI
+- [x] Hook into the driver after solving, before interface publication. CLI
   checks must reject incomplete and redundant matches with useful witnesses.
-- [ ] Test failed-module propagation: no public/canonical interface or solved
+- [x] Test failed-module propagation: no public/canonical interface or solved
   module from a rejected module, including importing dependents.
-- [ ] Build the real core package and investigate newly rejected patterns.
-- [ ] Complete `cargo fmt --all`, strict all-target/all-feature Clippy,
+- [x] Build the real core package and investigate newly rejected patterns.
+- [x] Complete `cargo fmt --all`, strict all-target/all-feature Clippy,
   `cargo test`, `cargo insta test`, review/accept snapshots and check snapshot
   hygiene. Update Sampo changesets with compatible dependency ranges and
   preserve publication order. Mark SPEC complete only after these gates pass.
-- [ ] Create incremental `jj` commits. Keep scratch examples out of the
+- [x] Create incremental `jj` commits. Keep scratch examples out of the
   implementation history and leave ignored local scratch files intact.
 
 ## Validation record
@@ -160,3 +165,38 @@ nine candidate rows, both flat and tuple-wrapped. Regression tests cover a
 solved user-ADT literal/constructor mixture and source ordering after SCC,
 let, labeled-argument and do-bind desugaring. Test providers are packaged
 fixtures; final driver validation uses the actual core package.
+
+
+Final integration (2026-09-09 UTC):
+
+| Gate | Evidence |
+| --- | --- |
+| Formatting | `cargo fmt --all -- --check` passes. |
+| Lint | `cargo clippy --all-targets --all-features -- -D warnings` passes. |
+| Workspace tests | `cargo test`: 2,209 passed, zero failures; existing ignored doctests unchanged. |
+| Snapshots | `cargo insta test --workspace --check --unreferenced delete`: pass, no unreferenced or pending snapshots. |
+| New regression coverage | 32 nitpick unit tests, 76 driver-hosted source/renderer tests, and nine driver integration tests. Source fixtures parse, canonicalize and solve before checking coverage. |
+| Real core | `cargo run -p nash-cli -- check tests/core`: 23 modules, 215 declarations; no core fixes required. |
+| Actual CLI | Ten isolated workspaces using the real core: two successes and eight expected diagnostic failures, including defaults, impls, unsafe arguments/destructures, Data and bytes. |
+| Rejected-module isolation | Driver tests verify no returned interface/solved module, no public interface, and an importing dependent fails. |
+| Packaging | `cargo package -p nash-nitpick --list --allow-dirty` confirms the standalone crate has no compiler pipeline test dependencies or external source includes. |
+| Sampo release | Sampo 0.21.0 dry-run and applied release in an isolated clone produce compatible ranges. All 31 internal runtime/build/dev dependency edges were checked against the actual publish plan. |
+| Scope | No changes to core or scratch examples. Scratch remains ignored and separate from implementation history. |
+
+The release plan (including the existing nominal-record changeset) orders:
+`nash-source -> nash-ast -> nash-parse -> nash-can -> nash-constrain ->
+nash-nitpick -> nash-solve -> nash-driver -> nash-cli`.
+Nitpick's compiler pipeline tests live in the driver so the new crate does
+not require a later-published solver version during packaging.
+
+The publish dry-run verifies/packages `nash-source`, then stops because the
+new source version is intentionally not uploaded and therefore cannot yet
+satisfy the next crate's registry dependency. This is a dry-run boundary;
+actual registry publication is outside this plan. No packages, tags or
+branches were pushed.
+
+Incremental history separates pattern/rendering, matrix/traversal checking,
+and driver integration/release-safe test placement. Source-order regressions
+and the solved mixed literal/constructor panic were reproduced before their
+fixes. Independent read-only reviews checked the matrix and traversal/driver
+integration; no unresolved findings remain.

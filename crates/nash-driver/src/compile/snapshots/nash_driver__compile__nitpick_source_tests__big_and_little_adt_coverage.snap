@@ -1,0 +1,8 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\ntype Redeemer = Claim | Cancel\ntype step = Go | Stop\nf : Redeemer -> step -> unit\nf r s =\n    case (r, s) of\n        (Claim, Go) -> ()\n        (Cancel, _) -> ()\n"
+expression: errors
+---
+[
+    "Incomplete BadCase 9:5-12:1 [( Claim, Stop )]",
+]

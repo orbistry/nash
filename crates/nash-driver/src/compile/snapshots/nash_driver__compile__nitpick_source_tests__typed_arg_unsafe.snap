@@ -1,0 +1,8 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf : bool -> unit\nf True = ()\n"
+expression: errors
+---
+[
+    "Incomplete BadArg 6:3-6:7 [False]",
+]

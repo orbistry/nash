@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/src/compile/nitpick_tests.rs
+expression: message
+---
+[Incomplete { region: Region { start: Position { line: 6, column: 9 }, end: Position { line: 8, column: 1 } }, context: BadCase, unhandled: [False] }]

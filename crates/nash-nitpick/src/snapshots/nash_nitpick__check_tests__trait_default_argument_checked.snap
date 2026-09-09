@@ -1,8 +1,0 @@
----
-source: crates/nash-nitpick/src/check_tests.rs
-description: "module Main exposing (..)\nimport Builtin exposing (type bool(..))\ntrait Choose 'a where\n    choose : bool -> 'a -> unit\n    choose True _ = ()\n"
-expression: errors
----
-[
-    "Incomplete BadArg 5:12-5:16 [False]",
-]

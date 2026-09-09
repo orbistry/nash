@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+expression: result
+---
+()

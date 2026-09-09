@@ -1,0 +1,8 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf flag =\n    case flag of\n        _ -> ()\n        True -> ()\n"
+expression: errors
+---
+[
+    "Redundant #2 8:9-8:14 (case 6:5-9:1)",
+]

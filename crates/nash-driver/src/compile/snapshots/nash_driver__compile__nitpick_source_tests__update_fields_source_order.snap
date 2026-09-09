@@ -1,0 +1,9 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\ntype alias point = { z : unit, a : unit }\nf : point -> bool -> point\nf p flag =\n    { p | a = (case flag of\n                   True -> ())\n        , z = (case flag of\n                   False -> ())\n    }\n"
+expression: errors
+---
+[
+    "Incomplete BadCase 8:16-9:30 [False]",
+    "Incomplete BadCase 10:16-11:31 [True]",
+]

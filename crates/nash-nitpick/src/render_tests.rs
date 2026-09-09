@@ -102,30 +102,6 @@ fn bytes() {
 }
 
 #[test]
-fn string_escapes_round_trip() {
-    let bump = Bump::new();
-    let original = "a\"\\\n\r\t\0\u{1b}λ";
-    let rendered = text(Pattern::Literal(Literal::Str(original)));
-    let source = bump.alloc_str(&format!("module Main exposing (..)\nf {rendered} = ()\n"));
-    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
-    let can = nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
-    let nash_ast::Decls::Declare {
-        definition: nash_ast::Def::Def { args, .. },
-        ..
-    } = can.module.decls
-    else {
-        panic!("expected definition")
-    };
-    let CanPattern::Str(value) = args[0].value else {
-        panic!("expected string pattern")
-    };
-    assert_eq!(value, original);
-    insta::assert_snapshot!(rendered);
-}
-
-#[test]
 fn simplify_record_is_irrefutable() {
     let bump = Bump::new();
     let pat = Located::at_zero(CanPattern::Record(&["x"]));

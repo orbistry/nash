@@ -1,7 +1,0 @@
----
-source: crates/nash-nitpick/src/check_tests.rs
-expression: errors
----
-[
-    "Incomplete BadCase 4:5-6:1 [Other]",
-]

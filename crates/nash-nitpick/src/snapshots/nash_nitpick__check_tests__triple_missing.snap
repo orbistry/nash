@@ -1,8 +1,0 @@
----
-source: crates/nash-nitpick/src/check_tests.rs
-description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf triple =\n    case triple of\n        (True, (), False) -> ()\n"
-expression: errors
----
-[
-    "Incomplete BadCase 6:5-8:1 [( False, _, _ )]",
-]

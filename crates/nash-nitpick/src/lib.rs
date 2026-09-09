@@ -14,5 +14,3 @@ mod matrix_tests;
 
 mod check;
 pub use check::check;
-#[cfg(test)]
-mod check_tests;

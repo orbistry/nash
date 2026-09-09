@@ -1924,6 +1924,7 @@ dependencies = [
  "nash-can",
  "nash-config",
  "nash-constrain",
+ "nash-nitpick",
  "nash-parse",
  "nash-region",
  "nash-solve",
@@ -1947,14 +1948,9 @@ version = "0.1.0"
 dependencies = [
  "bumpalo",
  "hex",
- "indoc",
  "insta",
  "nash-ast",
- "nash-can",
- "nash-constrain",
- "nash-parse",
  "nash-region",
- "nash-solve",
 ]
 
 [[package]]

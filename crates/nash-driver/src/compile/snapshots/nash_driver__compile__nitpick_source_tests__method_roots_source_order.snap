@@ -1,0 +1,11 @@
+---
+source: crates/nash-driver/src/compile/nitpick_source_tests.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nimport Eq exposing (Eq)\nimport Literal exposing (FromInt, FromString, FromBytes)\nf True = ()\ntrait Choose 'a where\n    choose : 'a -> unit\n    choose _ =\n        case False of\n            True -> ()\ng False = ()\nimpl Choose bool where\n    choose True = ()\n"
+expression: errors
+---
+[
+    "Incomplete BadArg 5:3-5:7 [False]",
+    "Incomplete BadCase 9:9-11:1 [False]",
+    "Incomplete BadArg 11:3-11:8 [True]",
+    "Incomplete BadArg 13:12-13:16 [False]",
+]
