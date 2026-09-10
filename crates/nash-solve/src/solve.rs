@@ -1402,10 +1402,8 @@ impl<'a> Solver<'a, '_> {
                             .collect();
                         let available: Vec<_> = self
                             .tables
-                            .impls
-                            .keys()
-                            .filter(|key| key.trait_ == trait_)
-                            .map(|key| key.heads)
+                            .impls_for(trait_)
+                            .map(|(key, _)| key.heads)
                             .collect();
                         self.failed_predicates.insert(id);
                         state.errors.push(Error::MissingImpl {

@@ -10,7 +10,7 @@ Implement the six Nash/Alder comparison findings, then evaluate a direct inferen
 - [x] Guard mutually recursive parsing with a measured nesting limit and remove flat-sequence recursion.
 - [x] Delete unused driver interface-cache machinery and orphaned dependencies.
 - [x] Separate canonical module data from local scopes without cloning the whole environment.
-- [ ] Bound trait selection and evidence lookup using existing map ordering.
+- [x] Bound trait selection and evidence lookup using existing map ordering.
 - [ ] Replace the constraint tree and intermediate inference Type with direct AST inference, subject to the adoption gates below.
 
 ## Verification and commits
@@ -36,6 +36,10 @@ Chunk 4 verification passed: formatting, workspace check, clippy, full tests inc
 Chunk 5 removes Env cloning and the local-variable variant from module lookup. Five scope entry points now borrow module data and binding maps through a parent chain. Shadowing checks, let-group visibility, generated section names, free-variable bookkeeping, and sorted suggestions preserve their prior behavior. Three new snapshots captured against the original implementation verify sibling reuse, recovery after missing names, and recovery after rejected shadowing; all canonicalizer tests pass unchanged after replacement.
 
 Chunk 5 verification passed: formatting, workspace check, clippy, full tests, positive scratch compilation, and a negative CLI JSON case retaining both independent missing-name diagnostics after scope exit. The three new baseline snapshots were reviewed individually; existing snapshots stayed unchanged.
+
+Chunk 6 replaces full-map trait filters in selection, evidence, canonical entailment, and missing-impl suggestions with a single ordered range helper. ImplKey compares trait identity before its head slice; the empty slice is its lower bound. An equivalence regression compares every candidate key and payload identity against the old filter across 18 package/module/name combinations, prefix-adjacent trait names, multiple head keys, empty heads, and missing traits.
+
+Chunk 6 verification passed: formatting, workspace check, clippy, full tests (including ordered candidate equivalence and existing matching/evidence/ambiguity regressions), and scratch compilation. Existing snapshots are unchanged.
 
 ## Direct inference adoption gates
 

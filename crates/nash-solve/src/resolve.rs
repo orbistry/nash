@@ -202,7 +202,7 @@ pub(crate) fn select<'a>(
     let mut remaining = 16_384;
     let mut selected = None;
     let mut deferred = false;
-    for (key, info) in tables.impls.iter().filter(|(key, _)| key.trait_ == trait_) {
+    for (key, info) in tables.impls_for(trait_) {
         match matches(
             &mut types,
             key.heads,

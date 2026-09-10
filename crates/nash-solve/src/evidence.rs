@@ -302,12 +302,7 @@ impl<'a> Resolver<'_, 'a> {
             }));
         }
         let mut selected = None;
-        for (key, info) in self
-            .tables
-            .impls
-            .iter()
-            .filter(|(key, _)| key.trait_ == trait_)
-        {
+        for (key, info) in self.tables.impls_for(trait_) {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
                 &mut nash_ast::head::Canonical,
                 key.heads,

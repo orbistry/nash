@@ -350,9 +350,7 @@ impl<'a> Resolver<'_, 'a> {
         let mut selected = None;
         for (key, info) in self
             .tables
-            .impls
-            .iter()
-            .filter(|(key, _)| Some(key.trait_) == wanted.trait_)
+            .impls_for(wanted.trait_.ok_or(Failure::Missing)?)
         {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
                 &mut nash_ast::head::Canonical,

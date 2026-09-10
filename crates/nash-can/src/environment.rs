@@ -104,7 +104,18 @@ pub fn visible_fields<'a>(
     fields
 }
 
-impl Tables<'_> {
+impl<'a> Tables<'a> {
+    /// ImplKey orders the trait before its head slice. The empty slice is the
+    /// first possible head key, so lookup visits only this trait's candidates.
+    pub fn impls_for(
+        &self,
+        trait_: nash_ast::QualifiedName<'a>,
+    ) -> impl Iterator<Item = (&nash_ast::ImplKey<'a>, &&'a ImplInfo<'a>)> {
+        self.impls
+            .range(nash_ast::ImplKey { trait_, heads: &[] }..)
+            .take_while(move |(key, _)| key.trait_ == trait_)
+    }
+
     pub fn has_structural_eq(&self) -> bool {
         self.traits.contains_key(&nash_ast::primitives::eq_trait())
     }
@@ -594,4 +605,82 @@ pub fn merge_qualified<'a, T: Clone>(
 ) {
     let inner = table.entry(prefix).or_default();
     merge_exposed(inner, name, home, value);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nash_ast::{Head, ImplKey, PackageName, QualifiedName};
+
+    #[test]
+    fn trait_candidates_match_full_map_filter_in_order() {
+        let bump = Bump::new();
+        let mut tables = Tables::default();
+        let mut traits = Vec::new();
+        for package in [
+            None,
+            Some(PackageName {
+                author: "a",
+                project: "b",
+            }),
+        ] {
+            for module in ["A", "AA", "B"] {
+                for name in ["A", "AA", "B"] {
+                    let trait_ = QualifiedName {
+                        home: ModuleName {
+                            package,
+                            name: module,
+                        },
+                        name,
+                    };
+                    traits.push(trait_);
+                    for heads in [
+                        vec![],
+                        vec![Head::Var(0)],
+                        vec![Head::Var(1)],
+                        vec![Head::Var(0), Head::Var(1)],
+                    ] {
+                        let key = ImplKey {
+                            trait_,
+                            heads: bump.alloc_slice_copy(&heads),
+                        };
+                        let info = bump.alloc(ImplInfo {
+                            variables: &[],
+                            home: trait_.home,
+                            region: Region::zero(),
+                            trait_,
+                            context: &[],
+                            heads: &[],
+                            methods: &[],
+                        });
+                        tables.impls.insert(key, info);
+                    }
+                }
+            }
+        }
+        for module in ["", "AB", "Z"] {
+            traits.push(QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: module,
+                },
+                name: "Missing",
+            });
+        }
+        for trait_ in traits {
+            let expected: Vec<_> = tables
+                .impls
+                .iter()
+                .filter(|(key, _)| key.trait_ == trait_)
+                .collect();
+            let actual: Vec<_> = tables.impls_for(trait_).collect();
+            assert_eq!(
+                actual.iter().map(|(key, _)| *key).collect::<Vec<_>>(),
+                expected.iter().map(|(key, _)| *key).collect::<Vec<_>>()
+            );
+            for ((_, actual), (_, expected)) in actual.into_iter().zip(expected) {
+                assert!(std::ptr::eq(*actual, *expected));
+            }
+        }
+    }
 }

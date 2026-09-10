@@ -822,3 +822,8 @@ for it. `Mode::Strict`, the default, is everything above.
   own `infix` declarations do not enter its env (Elm rule); operators
   bound to local methods therefore need the method called by name in the
   defining module. `nash/core` is written that way.
+
+Implementation lookup uses the existing `ImplKey` map ordering: start at the
+requested trait with an empty head slice and stop when the trait changes.
+Selection, evidence, entailment, and missing-impl suggestions share this traversal,
+preserving candidate order without a separate index.
