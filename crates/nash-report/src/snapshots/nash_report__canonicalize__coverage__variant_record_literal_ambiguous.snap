@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-AMBIGUOUS RECORD
+nash::names::record_literal_ambiguous
 
   × Several visible record aliases have exactly these fields:
    ╭─[Main.nash:1:1]

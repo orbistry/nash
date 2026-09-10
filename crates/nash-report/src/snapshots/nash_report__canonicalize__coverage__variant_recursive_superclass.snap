@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-TRAIT PROBLEM
+nash::names::recursive_superclass
 
   × These superclass declarations form a cycle:
    ╭─[Main.nash:1:1]
@@ -16,5 +16,4 @@ TRAIT PROBLEM
             │    Second
             └─────┘
 
-        Remove a superclass dependency to break the cycle. A trait cannot require itself
-        through its superclasses.
+        Remove a superclass dependency to break the cycle.

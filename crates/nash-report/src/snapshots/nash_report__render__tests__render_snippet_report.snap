@@ -2,7 +2,7 @@
 source: crates/nash-report/src/render.rs
 expression: plain(&snippet())
 ---
-TEST
+nash::diagnostic
 
   × Before:
    ╭─[Main.nash:1:5]

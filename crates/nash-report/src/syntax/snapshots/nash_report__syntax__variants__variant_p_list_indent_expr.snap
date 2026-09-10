@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-UNFINISHED LIST PATTERN
+nash::diagnostic
 
   × I am partway through parsing a list pattern, but I got stuck here:
    ╭─[src/Main.nash:1:3]

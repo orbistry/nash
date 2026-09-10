@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : { x int }\nf = 1"
 ---
-UNFINISHED RECORD TYPE
+nash::diagnostic
 
   × I am partway through parsing a record type, but I got stuck here:
    ╭─[src/Main.nash:1:9]

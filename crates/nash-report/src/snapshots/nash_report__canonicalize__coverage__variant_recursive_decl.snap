@@ -2,23 +2,14 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-CYCLIC DEFINITION
+nash::names::recursive_decl
 
-  × The `name` value is defined directly in terms of itself, causing an infinite
-  │ loop.
+  × Value `name` depends on itself.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: Are you trying to mutate a variable? Nash does not have mutation, so when I see
-        name defined in terms of name, I treat it as a recursive definition. Try giving
-        the new value a new name!
+  help:
 
-        Maybe you DO want a recursive value? To define name we need to know what name
-        is, so let’s expand it. Wait, but now we need to know what name is, so let’s
-        expand it... This will keep going infinitely!
-
-        Hint: The root problem is often a typo in some variable name, but I recommend
-        reading <https://nash-script.dev/hints/bad-recursion> for more detailed advice,
-        especially if you actually do need a recursive value.
+        Break the cycle between these value definitions.

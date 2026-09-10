@@ -83,10 +83,7 @@ fn unfinished(title: &str, thing: &str, r: Row, c: Col, sr: Row, sc: Col, hint: 
 }
 fn width(mut report: Report, amount: usize) -> Report {
     report.region.end.column = report.region.start.column.saturating_add(amount);
-    report.snippet = crate::Snippet::Region {
-        region: report.region,
-        highlight: None,
-    };
+    report.context = Some(report.region);
     report
 }
 fn example(mut report: Report, lines: &[&str], note: &str) -> Report {

@@ -9,36 +9,53 @@ expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(),
       "path": "<project>/app/src/Ledger.nash",
       "problems": [
         {
+          "code": "nash::type::mismatch",
+          "labels": [
+            {
+              "primary": true,
+              "region": {
+                "end": {
+                  "column": 27,
+                  "line": 11
+                },
+                "start": {
+                  "column": 5,
+                  "line": 11
+                }
+              },
+              "text": "body of `settle`"
+            },
+            {
+              "primary": false,
+              "region": {
+                "end": {
+                  "column": 34,
+                  "line": 9
+                },
+                "start": {
+                  "column": 10,
+                  "line": 9
+                }
+              },
+              "text": "declared type"
+            }
+          ],
           "message": [
-            "Something is off with the body of the `settle` definition:\n\n11|     map balanceOf accounts\n        ",
-            {
-              "bold": false,
-              "color": "RED",
-              "string": "^^^^^^^^^^^^^^^^^^^^^^",
-              "underline": false
-            },
-            "\nThis `map` call produces:\n\n    list ",
-            {
-              "bold": false,
-              "color": "yellow",
-              "string": "Int",
-              "underline": false
-            },
-            "\n\nBut the type annotation on `settle` says it should be:\n\n    list ",
+            "Type mismatch: expected `list ",
             {
               "bold": false,
               "color": "yellow",
               "string": "int",
               "underline": false
             },
-            "\n\n",
+            "`, found `list ",
             {
               "bold": false,
-              "color": null,
-              "string": "Hint",
-              "underline": true
+              "color": "yellow",
+              "string": "Int",
+              "underline": false
             },
-            ": `Int` is the Big (Data) type and `int` is the little type. They never\nconvert implicitly. Where an appropriate `Lift` impl is available, use `lower`\nto go from `Int` to `int`, or `lift` to go the other way."
+            "`.\n\nUse `lower` to convert `Int` to `int` where a `Lift` impl is available."
           ],
           "region": {
             "end": {
@@ -50,6 +67,9 @@ expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(),
               "line": 11
             }
           },
+          "related": [],
+          "severity": "error",
+          "suggestions": [],
           "title": "TYPE MISMATCH"
         }
       ]
@@ -59,22 +79,25 @@ expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(),
       "path": "<project>/app/src/Steps.nash",
       "problems": [
         {
+          "code": "nash::type::missing_impl",
+          "labels": [
+            {
+              "primary": true,
+              "region": {
+                "end": {
+                  "column": 21,
+                  "line": 8
+                },
+                "start": {
+                  "column": 12,
+                  "line": 8
+                }
+              },
+              "text": "required by `==`"
+            }
+          ],
           "message": [
-            "I cannot find an `Eq` impl for `step`:\n\n8| isDone s = s == Done\n              ",
-            {
-              "bold": false,
-              "color": "RED",
-              "string": "^^^^^^^^^",
-              "underline": false
-            },
-            "\nThe (==) operator needs its arguments to implement `Eq`, and here they are:\n\n    step\n\nBut there is no `impl Eq step` in this module or in any import.\n\n`Eq` is implemented for these heads:\n\n    bool\n    bytes\n    int\n    (list 'a0)\n\n",
-            {
-              "bold": false,
-              "color": null,
-              "string": "Hint",
-              "underline": true
-            },
-            ": This local datatype is a candidate for `@derive(Eq)`, but automatic\nderiving is not available yet. Write the impl by hand:\n\n    impl Eq step where\n        eq a b = ..."
+            "No impl for `Eq step`.\n\nAvailable impl heads:\n\n    bool\n    bytes\n    int\n    (list 'a0)\n\n…\n\nImport or define an impl for `Eq step`."
           ],
           "region": {
             "end": {
@@ -86,6 +109,9 @@ expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(),
               "line": 8
             }
           },
+          "related": [],
+          "severity": "error",
+          "suggestions": [],
           "title": "MISSING IMPL"
         }
       ]
@@ -95,36 +121,25 @@ expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(),
       "path": "<project>/app/src/Tag.nash",
       "problems": [
         {
+          "code": "nash::pattern::incomplete",
+          "labels": [
+            {
+              "primary": true,
+              "region": {
+                "end": {
+                  "column": 1,
+                  "line": 10
+                },
+                "start": {
+                  "column": 5,
+                  "line": 7
+                }
+              },
+              "text": ""
+            }
+          ],
           "message": [
-            "This `case` does not have branches for all possibilities:\n\n 7|",
-            {
-              "bold": false,
-              "color": "RED",
-              "string": ">",
-              "underline": false
-            },
-            "    case d of\n 8|",
-            {
-              "bold": false,
-              "color": "RED",
-              "string": ">",
-              "underline": false
-            },
-            "        Constr n _ -> n\n 9|",
-            {
-              "bold": false,
-              "color": "RED",
-              "string": ">",
-              "underline": false
-            },
-            "        List _ -> 0\n10|",
-            {
-              "bold": false,
-              "color": "RED",
-              "string": ">",
-              "underline": false
-            },
-            "\n\nMissing possibilities include:\n\n    ",
+            "Case expression is not exhaustive.\n\nMissing patterns:\n\n    ",
             {
               "bold": false,
               "color": "yellow",
@@ -145,14 +160,7 @@ expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(),
               "string": "B _",
               "underline": false
             },
-            "\n\nI would have to crash if I saw one of those. Add branches for them!\n\n",
-            {
-              "bold": false,
-              "color": null,
-              "string": "Hint",
-              "underline": true
-            },
-            ": If you want to write the code for each branch later, use `todo` as a\nplaceholder. Read <https://nash-script.dev/hints/missing-patterns> for more\nguidance on this workflow."
+            "\n\nAdd the missing branches; use `todo` for unfinished bodies."
           ],
           "region": {
             "end": {
@@ -164,6 +172,9 @@ expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(),
               "line": 7
             }
           },
+          "related": [],
+          "severity": "error",
+          "suggestions": [],
           "title": "MISSING PATTERNS"
         }
       ]

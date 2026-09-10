@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-UNFINISHED RECORD TYPE
+nash::diagnostic
 
   × I am partway through parsing a record type. I just saw a record field, so I was
   │ expecting to see a colon next:

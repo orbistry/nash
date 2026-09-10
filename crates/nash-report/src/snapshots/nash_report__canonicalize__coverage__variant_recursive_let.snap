@@ -2,22 +2,18 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-CYCLIC VALUE
+nash::names::recursive_let
 
-  × I do not allow cyclic values in `let` expressions.
+  × Value `name` depends on itself.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: The `name` value depends on itself through the following chain of definitions:
-
-            ┌─────┐
+  help:     ┌─────┐
             │    name
             │     ↓
             │    other
             └─────┘
 
-        Hint: The root problem is often a typo in some variable name, but I recommend
-        reading <https://nash-script.dev/hints/bad-recursion> for more detailed advice,
-        especially if you actually do need a recursive value.
+        Break the cycle between these value definitions.

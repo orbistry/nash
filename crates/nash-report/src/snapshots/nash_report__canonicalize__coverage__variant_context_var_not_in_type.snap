@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-TRAIT PROBLEM
+nash::names::context_var_not_in_type
 
   × The context mentions 'name, but this variable does not occur in the annotated
   │ type:

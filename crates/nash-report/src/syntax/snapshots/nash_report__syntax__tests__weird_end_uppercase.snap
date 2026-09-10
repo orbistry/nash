@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: Thing
 ---
-UNEXPECTED NAME
+nash::diagnostic
 
   × I got stuck on this name:
    ╭─[src/Main.nash:1:1]

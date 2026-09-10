@@ -9,29 +9,53 @@ expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes()
       "path": "<project>/src/Main.nash",
       "problems": [
         {
+          "code": "nash::type::mismatch",
+          "labels": [
+            {
+              "primary": true,
+              "region": {
+                "end": {
+                  "column": 26,
+                  "line": 3
+                },
+                "start": {
+                  "column": 7,
+                  "line": 3
+                }
+              },
+              "text": "body of `bad`"
+            },
+            {
+              "primary": false,
+              "region": {
+                "end": {
+                  "column": 15,
+                  "line": 2
+                },
+                "start": {
+                  "column": 7,
+                  "line": 2
+                }
+              },
+              "text": "declared type"
+            }
+          ],
           "message": [
-            "Something is off with the body of the `bad` definition:\n\n3| bad = (().field, \\x -> x)\n         ",
-            {
-              "bold": false,
-              "color": "RED",
-              "string": "^^^^^^^^^^^^^^^^^^^",
-              "underline": false
-            },
-            "\nThe body is a tuple of type:\n\n    ( ?, ",
-            {
-              "bold": false,
-              "color": "yellow",
-              "string": "'a -> 'a",
-              "underline": false
-            },
-            " )\n\nBut the type annotation on `bad` says it should be:\n\n    ( ?, ",
+            "Type mismatch: expected `( ?, ",
             {
               "bold": false,
               "color": "yellow",
               "string": "unit",
               "underline": false
             },
-            " )"
+            " )`, found `( ?, ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "'a -> 'a",
+              "underline": false
+            },
+            " )`.\n\n"
           ],
           "region": {
             "end": {
@@ -43,18 +67,31 @@ expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes()
               "line": 3
             }
           },
+          "related": [],
+          "severity": "error",
+          "suggestions": [],
           "title": "TYPE MISMATCH"
         },
         {
-          "message": [
-            "This value is not a record, so I cannot use it when accessing the `field` field\nof this value:\n\n3| bad = (().field, \\x -> x)\n          ",
+          "code": "nash::type::not_a_record",
+          "labels": [
             {
-              "bold": false,
-              "color": "RED",
-              "string": "^^^^^^^^",
-              "underline": false
-            },
-            "\nIt has type:\n\n    unit\n\nBut I need a value with record fields!"
+              "primary": true,
+              "region": {
+                "end": {
+                  "column": 16,
+                  "line": 3
+                },
+                "start": {
+                  "column": 8,
+                  "line": 3
+                }
+              },
+              "text": "field `field` access"
+            }
+          ],
+          "message": [
+            "Expected a record, found `unit`.\n\n"
           ],
           "region": {
             "end": {
@@ -66,6 +103,9 @@ expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes()
               "line": 3
             }
           },
+          "related": [],
+          "severity": "error",
+          "suggestions": [],
           "title": "TYPE MISMATCH"
         }
       ]

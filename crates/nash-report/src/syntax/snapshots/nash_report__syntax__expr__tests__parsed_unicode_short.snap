@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-BAD UNICODE ESCAPE
+nash::diagnostic
 
   × This code point has the wrong number of digits:
    ╭─[Main.nash:1:11]

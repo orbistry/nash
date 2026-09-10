@@ -2,12 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadExpr(region(), Category::List, &list,\nExpected::FromContext(region(), Context::OpRight(\"++\"), &string())))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × The (++) operator needs the same type of value on both sides:
+  × Type mismatch: expected `string`, found `list int`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── right operand of (++)
    ╰────
-  help: I see a string on the left and a list on the right. Which should it be? Does the
-        string need [] around it to become a list?

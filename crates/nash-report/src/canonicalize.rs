@@ -1,6 +1,6 @@
 //! Canonicalization reports, adapted from Elm's Reporting/Error/Canonicalize.hs.
 //! Nash adds trait, kind, representation, and nominal-record diagnostics.
-use crate::{Doc, Label, Report, Snippet, Source, suggest};
+use crate::{Doc, Label, Report, Source, suggest};
 use nash_ast::{Kind, ModuleName, QualifiedName};
 use nash_can::{
     BadArityContext, DuplicatePatternContext, Error, KindContext, PossibleNames, VarKind,
@@ -74,7 +74,7 @@ pub fn to_report(source: &Source<'_>, error: &Error<'_>) -> Report {
 }
 
 pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name: &str) -> Report {
-    match error {
+    let report = match error {
         Error::MissingModuleHeader => crate::syntax::to_report(
             source,
             &nash_parse::error::Error::ModuleNameUnspecified(expected_name),
@@ -319,12 +319,10 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             second,
         } => Report::pair(
             "REDUNDANT EXPORT",
-            label(*first, "once here"),
-            label(*second, "and again right here"),
-            Doc::reflow(&format!(
-                "You are trying to expose `{name}` multiple times! Once here:"
-            )),
-            Doc::text("Remove one of them and you should be all set!"),
+            label(*first, "first export"),
+            label(*second, "duplicate export"),
+            Doc::reflow(&format!("Duplicate export `{name}`.")),
+            Doc::text("Remove the duplicate export."),
         ),
         Error::ExportNotFound {
             region,
@@ -332,36 +330,31 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             name,
             suggestions,
         } => {
-            let (article, thing, display) = to_kind_info(*kind, name);
+            let (_article, thing, display) = to_kind_info(*kind, name);
             let nearby = nearby(name, suggestions, 4);
             let mut report = simple(
                 "UNKNOWN EXPORT",
                 *region,
-                &format!(
-                    "You are trying to expose {article} {thing} named {display} but I cannot find its definition."
-                ),
+                &format!("Unknown exported {thing} {display}."),
                 "",
             );
-            report.snippet = Snippet::None;
             report.after = suggestion_details(
                 &nearby,
-                "I do not see any super similar names in this file. Is the definition missing?",
+                "Define the name or remove it from the exposing list.",
             );
             report.with_suggestions(nearby)
         }
         Error::ExportOpenAlias { region, name } => simple(
             "BAD EXPORT",
             *region,
-            &format!(
-                "The (..) syntax is for exposing variants of a custom type. It cannot be used with a type alias like `{name}` though."
-            ),
-            "Remove the (..) and you should be fine!",
+            &format!("Type alias `{name}` has no variants to expose."),
+            "Remove `(..)`.",
         ),
         Error::ImportOpenAlias { region, name } => simple(
             "BAD IMPORT",
             *region,
-            &format!("The `{name}` type alias cannot be followed by (..) like this:"),
-            "Remove the (..) and it should work.",
+            &format!("Type alias `{name}` has no variants to import."),
+            "Remove `(..)`.",
         ),
         Error::ImportCtorByName {
             region,
@@ -370,15 +363,13 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         } => simple(
             "BAD IMPORT",
             *region,
-            &format!("You are trying to import the `{name}` variant by name:"),
-            &format!(
-                "Try importing {type_name}(..) instead. The dots mean “expose the {type_name} type and all its variants” so it gives you access to {name}."
-            ),
+            &format!("Cannot import variant `{name}` directly."),
+            &format!("Import `{type_name}(..)` to make its variants available."),
         ),
         Error::ImportNotFound { region, module } => simple(
             "UNKNOWN IMPORT",
             *region,
-            &format!("I could not find a `{module}` module to import!"),
+            &format!("Unknown module `{module}`."),
             "",
         ),
         Error::ImportExposingNotFound {
@@ -395,10 +386,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 &format!("The `{}` module does not expose `{name}`:", module.name),
                 "",
             );
-            report.after = suggestion_details(
-                &nearby,
-                "I cannot find any super similar exposed names. Maybe it is private?",
-            );
+            report.after = suggestion_details(&nearby, "Check that the module exposes this name.");
             report.with_suggestions(nearby)
         }
         Error::BinopFunctionNotFound {
@@ -408,16 +396,14 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         } => simple(
             "INFIX PROBLEM",
             *region,
-            &format!(
-                "The ({op}) operator says it is implemented by `{function}`, but I cannot find a `{function}` definition in this file."
-            ),
+            &format!("Operator `({op})` refers to undefined function `{function}`."),
             "Define it, or point the `infix` declaration at an existing top-level value.",
         ),
         Error::BinopConflict { region, op1, op2 } => simple(
             "INFIX PROBLEM",
             *region,
             &format!("You cannot mix ({op1}) and ({op2}) without parentheses."),
-            "I do not know how to group these expressions. Add parentheses for me!",
+            "Add parentheses to specify the grouping.",
         ),
         Error::NotFoundBinop {
             region,
@@ -427,10 +413,8 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         Error::PatternHasRecordCtor { region, name } => simple(
             "BAD PATTERN",
             *region,
-            &format!(
-                "You can construct records by using `{name}` as a function, but it is not available in pattern matching like this:"
-            ),
-            "I recommend matching the record as a variable and unpacking it later.",
+            &format!("Record constructor `{name}` cannot be used in a pattern."),
+            "Bind the record to a variable and access its fields.",
         ),
         Error::Shadowing {
             name,
@@ -439,19 +423,9 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         } => Report::pair(
             "SHADOWING",
             label(*original, "first defined here"),
-            label(*new, "defined AGAIN here"),
-            Doc::reflow(&format!("The name `{name}` is first defined here:")),
-            Doc::stack([
-                Doc::reflow(
-                    "Think of a more helpful name for one of them and you should be all set!",
-                ),
-                Doc::link(
-                    "Note",
-                    "Linters advise against shadowing, so Nash makes “best practices” the default. Read",
-                    "shadowing",
-                    "for more details on this choice.",
-                ),
-            ]),
+            label(*new, "shadows this name"),
+            Doc::reflow(&format!("Name `{name}` is already defined.")),
+            Doc::text("Rename one of these bindings."),
         ),
         Error::RecursiveDecl { name, others } => {
             recursive_value(name.region, name.value, others, false)
@@ -468,12 +442,12 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             "BAD TYPE ANNOTATION",
             *region,
             &format!(
-                "The type annotation for `{name}` says it can accept {}, but the definition says it has {}:",
+                "Annotation for `{name}` expects {}; definition has {}.",
                 args(*index),
                 args(index + leftovers)
             ),
             &format!(
-                "Is the type annotation missing something? Should some argument{} be deleted? Maybe some parentheses are missing?",
+                "Match the annotation to the definition's argument{}.",
                 if *leftovers == 1 { "" } else { "s" }
             ),
         ),
@@ -506,9 +480,9 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         } => simple(
             "KIND MISMATCH",
             *region,
-            &format!("I found a kind mismatch in {}:", kind_context(context)),
+            &format!("Kind mismatch in {}.", kind_context(context)),
             &format!(
-                "This position needs kind `{}`, but the type has kind `{}`. Type arguments must have matching kinds.",
+                "Expected kind `{}`, found `{}`.",
                 kind(expected),
                 kind(actual)
             ),
@@ -520,7 +494,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 "This application in {} would require an infinite kind:",
                 kind_context(context)
             ),
-            "A type constructor cannot be applied to itself. Check which type is being applied and the kinds of its arguments.",
+            "Check the type application and the kinds of its arguments.",
         ),
         Error::RepresentationMismatch {
             region,
@@ -546,7 +520,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             "CONTRADICTORY REPRESENTATION",
             *region,
             &format!("The representation requirements on '{variable} are incompatible:"),
-            "No type can satisfy all of these requirements. Change the constraints or the positions where this type variable is used.",
+            "Change the incompatible constraints or uses of this variable.",
         ),
         Error::IrregularRecursion {
             region,
@@ -559,7 +533,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 "This recursive use of `{}` constructs the parameter '{parameter}:",
                 qualified(*constructor)
             ),
-            "This parameter controls the constraints needed to form the type. Pass a type variable here so context inference can terminate.",
+            "Pass a type variable for this parameter so context inference can terminate.",
         ),
         Error::ImplOfBuiltinTrait { region, trait_ } => simple(
             "BUILTIN TRAIT",
@@ -578,9 +552,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             "MISSING METHOD",
             *region,
             &format!("This `{trait_}` impl does not define `{name}`:"),
-            &format!(
-                "The `{trait_}` trait requires this method and does not provide a default. Add a `{name}` definition to this impl."
-            ),
+            &format!("Add a `{name}` definition to this impl."),
         ),
         Error::UnknownMethod {
             region,
@@ -590,7 +562,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             "UNKNOWN METHOD",
             *region,
             &format!("The `{trait_}` trait has no `{name}` method:"),
-            "Check the method name against the trait declaration. Remove this definition or rename it to the method you intended to implement.",
+            "Remove or rename this method to match the trait declaration.",
         ),
         Error::BadInstanceHead { region, reason } => {
             use nash_can::BadHead;
@@ -640,7 +612,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 key.heads.iter().map(head).collect::<Vec<_>>().join(" ")
             )),
             Doc::reflow(
-                "I cannot choose which impl to use. Remove one of them, or change their heads so they cannot match the same trait arguments. Adding different context constraints does not disambiguate overlapping heads.",
+                "Remove one impl or make their heads disjoint; context constraints do not disambiguate heads.",
             ),
         ),
         Error::MissingSuperclass {
@@ -734,9 +706,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                     first.map_or("trait", |n| n.value),
                     &names.iter().skip(1).map(|n| n.value).collect::<Vec<_>>(),
                 ),
-                Doc::reflow(
-                    "Remove a superclass dependency to break the cycle. A trait cannot require itself through its superclasses.",
-                ),
+                Doc::reflow("Remove a superclass dependency to break the cycle."),
             ]);
             report
         }
@@ -762,7 +732,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             "UNKNOWN RECORD",
             *region,
             &format!(
-                "I cannot find a visible record alias with exactly these fields: {}.",
+                "No visible record alias has exactly these fields: {}.",
                 fields.join(", ")
             ),
             "Declare or import an alias for this record.",
@@ -814,25 +784,25 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             "IMPL PATTERN LIMIT",
             *region,
             "This impl pattern is too large or deeply nested:",
-            "Simplify the impl head so the compiler can compare and resolve its patterns within the supported limit.",
+            "Simplify the impl head.",
         ),
         Error::NegateWithoutNum { region } => simple(
             "NAMING ERROR",
             *region,
-            "I cannot resolve numeric negation here:",
-            "Negation requires the `Num` trait. Import the module that defines `Num` before using a negative expression.",
+            "Numeric negation requires `Num`.",
+            "Import the module that defines `Num`.",
         ),
         Error::DoWithoutMonad { region } => simple(
             "NAMING ERROR",
             *region,
-            "I cannot resolve this `do` expression:",
-            "A `do` expression requires the `Monad` trait. Import the module that defines `Monad`.",
+            "A `do` expression requires `Monad`.",
+            "Import the module that defines `Monad`.",
         ),
         Error::RefutableBindPattern { region } => simple(
             "UNSAFE PATTERN",
             *region,
             "This `do` binding has a pattern that can fail to match:",
-            "Use a variable or another irrefutable pattern here. Match individual variants in a `case` expression so every possibility is handled.",
+            "Bind a variable here, then use `case` to handle every variant.",
         ),
         Error::StructuralEqOverride { head } => simple(
             "STRUCTURAL EQUALITY",
@@ -855,10 +825,85 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         Error::Unsupported { feature, region } => simple(
             "NOT SUPPORTED",
             *region,
-            &format!("I cannot canonicalize {feature} yet:"),
+            &format!("Unsupported feature: {feature}."),
             "This syntax is recognized, but its compiler implementation is not available yet.",
         ),
-    }
+    };
+    report.with_code(match error {
+        Error::RecordLiteralNoAlias { .. } => "nash::names::record_literal_no_alias",
+        Error::RecordLiteralAmbiguous { .. } => "nash::names::record_literal_ambiguous",
+        Error::RecordTypeOutsideAlias { .. } => "nash::names::record_type_outside_alias",
+        Error::ImplPatternLimit { .. } => "nash::names::impl_pattern_limit",
+        Error::NegateWithoutNum { .. } => "nash::names::negate_without_num",
+        Error::DoWithoutMonad { .. } => "nash::names::do_without_monad",
+        Error::RefutableBindPattern { .. } => "nash::names::refutable_bind_pattern",
+        Error::StructuralEqOverride { .. } => "nash::names::structural_eq_override",
+        Error::ReflexiveLiftOverlap { .. } => "nash::names::reflexive_lift_overlap",
+        Error::MissingSuperclass { .. } => "nash::names::missing_superclass",
+        Error::BadInstanceHead { .. } => "nash::names::bad_instance_head",
+        Error::ImplContextVarNotInHead { .. } => "nash::names::impl_context_var_not_in_head",
+        Error::MissingMethod { .. } => "nash::names::missing_method",
+        Error::UnknownMethod { .. } => "nash::names::unknown_method",
+        Error::OrphanImpl { .. } => "nash::names::orphan_impl",
+        Error::OverlappingImpls { .. } => "nash::names::overlapping_impls",
+        Error::ImportOpenTrait { .. } => "nash::names::import_open_trait",
+        Error::DuplicateTrait { .. } => "nash::names::duplicate_trait",
+        Error::DuplicateMethod { .. } => "nash::names::duplicate_method",
+        Error::DuplicateTraitParameter { .. } => "nash::names::duplicate_trait_parameter",
+        Error::SuperclassBadArg { .. } => "nash::names::superclass_bad_arg",
+        Error::MethodMissingParameter { .. } => "nash::names::method_missing_parameter",
+        Error::RecursiveSuperclass { .. } => "nash::names::recursive_superclass",
+        Error::ExportOpenTrait { .. } => "nash::names::export_open_trait",
+        Error::NotFoundTrait { .. } => "nash::names::not_found_trait",
+        Error::AmbiguousTrait { .. } => "nash::names::ambiguous_trait",
+        Error::TraitArity { .. } => "nash::names::trait_arity",
+        Error::ContextVarNotInType { .. } => "nash::names::context_var_not_in_type",
+        Error::KindMismatch { .. } => "nash::names::kind_mismatch",
+        Error::KindInfinite { .. } => "nash::names::kind_infinite",
+        Error::RepresentationMismatch { .. } => "nash::names::representation_mismatch",
+        Error::ContradictoryRepresentation { .. } => "nash::names::contradictory_representation",
+        Error::ImplOfBuiltinTrait { .. } => "nash::names::impl_of_builtin_trait",
+        Error::IrregularRecursion { .. } => "nash::names::irregular_recursion",
+        Error::Unsupported { .. } => "nash::names::unsupported",
+        Error::MissingModuleHeader => "nash::names::missing_module_header",
+        Error::NotFoundType { .. } => "nash::names::not_found_type",
+        Error::ImportNotFound { .. } => "nash::names::import_not_found",
+        Error::AmbiguousType { .. } => "nash::names::ambiguous_type",
+        Error::BadArity { .. } => "nash::names::bad_arity",
+        Error::ExportNotFound { .. } => "nash::names::export_not_found",
+        Error::ExportOpenAlias { .. } => "nash::names::export_open_alias",
+        Error::DuplicateDecl { .. } => "nash::names::duplicate_decl",
+        Error::DuplicateType { .. } => "nash::names::duplicate_type",
+        Error::DuplicateCtor { .. } => "nash::names::duplicate_ctor",
+        Error::DuplicateBinop { .. } => "nash::names::duplicate_binop",
+        Error::BinopFunctionNotFound { .. } => "nash::names::binop_function_not_found",
+        Error::DuplicateUnionArg { .. } => "nash::names::duplicate_union_arg",
+        Error::DuplicateAliasArg { .. } => "nash::names::duplicate_alias_arg",
+        Error::RecursiveAlias { .. } => "nash::names::recursive_alias",
+        Error::TypeVarsUnboundInUnion { .. } => "nash::names::type_vars_unbound_in_union",
+        Error::TypeVarsMessedUpInAlias { .. } => "nash::names::type_vars_messed_up_in_alias",
+        Error::LabeledCtorMissingField { .. } => "nash::names::labeled_ctor_missing_field",
+        Error::LabeledCtorExtraField { .. } => "nash::names::labeled_ctor_extra_field",
+        Error::LabeledCtorUnknownField { .. } => "nash::names::labeled_ctor_unknown_field",
+        Error::DuplicateField { .. } => "nash::names::duplicate_field",
+        Error::ExportDuplicate { .. } => "nash::names::export_duplicate",
+        Error::NotFoundCtor { .. } => "nash::names::not_found_ctor",
+        Error::AmbiguousCtor { .. } => "nash::names::ambiguous_ctor",
+        Error::PatternHasRecordCtor { .. } => "nash::names::pattern_has_record_ctor",
+        Error::DuplicatePattern { .. } => "nash::names::duplicate_pattern",
+        Error::NotFoundVar { .. } => "nash::names::not_found_var",
+        Error::AmbiguousVar { .. } => "nash::names::ambiguous_var",
+        Error::NotFoundBinop { .. } => "nash::names::not_found_binop",
+        Error::AmbiguousBinop { .. } => "nash::names::ambiguous_binop",
+        Error::BinopConflict { .. } => "nash::names::binop_conflict",
+        Error::Shadowing { .. } => "nash::names::shadowing",
+        Error::RecursiveLet { .. } => "nash::names::recursive_let",
+        Error::RecursiveDecl { .. } => "nash::names::recursive_decl",
+        Error::AnnotationTooShort { .. } => "nash::names::annotation_too_short",
+        Error::ImportExposingNotFound { .. } => "nash::names::import_exposing_not_found",
+        Error::ImportCtorByName { .. } => "nash::names::import_ctor_by_name",
+        Error::ImportOpenAlias { .. } => "nash::names::import_open_alias",
+    })
 }
 
 fn simple(title: &str, region: Region, before: &str, after: &str) -> Report {
@@ -873,10 +918,10 @@ fn label(region: Region, text: &str) -> Label {
 fn name_clash(first: Region, second: Region, message: &str) -> Report {
     Report::pair(
         "NAME CLASH",
-        label(first, "one here"),
-        label(second, "and another one here"),
-        Doc::reflow(&format!("{message} One here:")),
-        Doc::text("How can I know which one you want? Rename one of them!"),
+        label(first, "first definition"),
+        label(second, "and another first definition"),
+        Doc::reflow(message),
+        Doc::text("Rename one of the definitions."),
     )
 }
 fn qualified(name: QualifiedName<'_>) -> String {
@@ -899,12 +944,12 @@ fn suggestion_details(nearby: &[String], empty: &str) -> Doc {
     match nearby {
         [] => Doc::reflow(empty),
         [one] => Doc::hsep([
-            Doc::text("Maybe you want"),
+            Doc::text("Try"),
             Doc::text(one).dullyellow(),
-            Doc::text("instead?"),
+            Doc::text("instead."),
         ]),
         _ => Doc::stack([
-            Doc::text("These names seem close though:"),
+            Doc::text("Similar names:"),
             Doc::indent(
                 4,
                 Doc::vcat(nearby.iter().map(|n| Doc::text(n).dullyellow())),
@@ -936,49 +981,19 @@ fn not_found(
         .into_iter()
         .take(4)
         .collect();
-    let details = match prefix {
-        None => {
-            if nearby.is_empty() {
-                "Is there an `import` or `exposing` missing up top?".into()
-            } else {
-                "These names seem close though:".into()
-            }
+    let hint = match prefix {
+        Some(p) if !possible.qualified.iter().any(|(m, _)| *m == p) => {
+            format!("Import `{p}` or check its alias.")
         }
-        Some(p) if possible.qualified.iter().any(|(m, _)| *m == p) => format!(
-            "The `{p}` module does not expose a `{name}` {thing}.{}",
-            if nearby.is_empty() {
-                ""
-            } else {
-                " These names seem close though:"
-            }
-        ),
-        Some(p) => {
-            if nearby.is_empty() {
-                format!("I cannot find a `{p}` module. Is there an `import` for it?")
-            } else {
-                format!("I cannot find a `{p}` import. These names seem close though:")
-            }
-        }
+        Some(p) => format!("Check that `{p}` exposes `{name}`."),
+        None => "Define or import this name.".into(),
     };
-    let mut docs = vec![Doc::reflow(&details)];
-    if !nearby.is_empty() {
-        docs.push(Doc::indent(
-            4,
-            Doc::vcat(nearby.iter().map(|n| Doc::text(n).dullyellow())),
-        ));
-    }
-    docs.push(Doc::link(
-        "Hint",
-        "Read",
-        "imports",
-        "to see how `import` declarations work in Nash.",
-    ));
     Report::snippet(
         "NAMING ERROR",
         region,
         None,
-        Doc::reflow(&format!("I cannot find a `{given}` {thing}:")),
-        Doc::stack(docs),
+        Doc::text(format!("Unknown {thing} `{given}`.")),
+        suggestion_details(&nearby, &hint),
     )
     .with_suggestions(nearby)
 }
@@ -993,65 +1008,30 @@ fn ambiguous_name(
     let mut homes = vec![first];
     homes.extend_from_slice(others);
     homes.sort();
-    match prefix {
-        None => Report::snippet(
-            "AMBIGUOUS NAME",
-            region,
-            None,
-            Doc::reflow(&format!("This usage of `{name}` is ambiguous:")),
-            Doc::stack([
-                Doc::reflow(&format!(
-                    "This name is exposed by {} of your imports, so I am not sure which one to use:",
-                    homes.len()
-                )),
-                Doc::indent(
-                    4,
-                    Doc::vcat(
-                        homes
-                            .iter()
-                            .map(|h| Doc::text(to_qual_string(h.name, name)).dullyellow()),
-                    ),
+    let given = prefix.map_or_else(|| name.to_string(), |p| to_qual_string(p, name));
+    Report::snippet(
+        "AMBIGUOUS NAME",
+        region,
+        None,
+        Doc::text(format!("Ambiguous {thing} `{given}`.")),
+        Doc::stack([
+            Doc::indent(
+                4,
+                Doc::vcat(
+                    homes
+                        .iter()
+                        .map(|h| Doc::text(to_qual_string(h.name, name))),
                 ),
-                Doc::reflow(
-                    "I recommend using qualified names for imported values. I also recommend having at most one `exposing (..)` per file to make name clashes like this less common in the long run.",
-                ),
-                Doc::link(
-                    "Note",
-                    "Check out",
-                    "imports",
-                    "for more info on the import syntax.",
-                ),
-            ]),
-        ),
-        Some(prefix) => Report::snippet(
-            "AMBIGUOUS NAME",
-            region,
-            None,
-            Doc::reflow(&format!("This usage of `{prefix}.{name}` is ambiguous.")),
-            Doc::stack([
-                Doc::reflow(&format!(
-                    "It could refer to a {thing} from {} of these imports:",
-                    if homes.len() == 2 { "either" } else { "any" }
-                )),
-                Doc::indent(
-                    4,
-                    Doc::vcat(homes.iter().map(|h| {
-                        Doc::text(if prefix == h.name {
-                            format!("import {}", h.name)
-                        } else {
-                            format!("import {} as {prefix}", h.name)
-                        })
-                    })),
-                ),
-                Doc::reflow_link(
-                    "Read",
-                    "imports",
-                    "to learn how to clarify which one you want.",
-                ),
-            ]),
-        ),
-    }
+            ),
+            Doc::text(if prefix.is_some() {
+                "Give these imports distinct aliases."
+            } else {
+                "Use a qualified name."
+            }),
+        ]),
+    )
 }
+
 fn args(n: usize) -> String {
     format!("{n} argument{}", if n == 1 { "" } else { "s" })
 }
@@ -1070,58 +1050,37 @@ fn arity(region: Region, name: &str, thing: &str, expected: usize, actual: usize
             args(expected)
         ),
         if actual < expected {
-            "What is missing? Are some parentheses misplaced?"
-        } else if actual - expected == 1 {
-            "Which is the extra one? Maybe some parentheses are missing?"
+            "Supply the missing arguments."
         } else {
-            "Which are the extra ones? Maybe some parentheses are missing?"
+            "Remove the extra arguments or check the grouping."
         },
     )
 }
 fn not_found_binop(region: Region, name: &str, available: &[&str]) -> Report {
-    let (before,after,suggestions) = match name {
-        "===" => ("Nash does not have a (===) operator like JavaScript.".into(),"Switch to (==) instead.".into(),vec!["==".into()]),
-        "!="|"!==" => ("Nash uses a different name for the “not equal” operator:".into(),format!("Switch to (/=) instead. Our (/=) operator is supposed to look like a real “not equal” sign (≠). I hope that history will remember ({name}) as a weird and temporary choice."),vec!["/=".into()]),
-        "**" => ("I do not recognize the (**) operator:".into(),"Switch to (^) for exponentiation. Or switch to (*) for multiplication.".into(),vec!["^".into(),"*".into()]),
-        // The stdlib names Int.rem and Int.mod are provisional in Plan 06.
-        "%" => ("Nash does not use (%) as the remainder operator:".into(),"If you want the behavior of (%) like in JavaScript, use the integer remainder function. If you want modular arithmetic like in math, use the integer modulus function. The difference is how things work when negative numbers are involved.".into(),vec![]),
-        _ => {let choices=nearby(name,available,2); let mut after="Is there an `import` and `exposing` entry for it?".to_string(); if !choices.is_empty() {after.push_str(&format!(" Maybe you want {} instead?",choices.iter().map(|s|format!("({s})")).collect::<Vec<_>>().join(" or ")));} (format!("I do not recognize the ({name}) operator."),after,choices)}
+    let suggestions = match name {
+        "===" => vec!["==".into()],
+        "!=" | "!==" => vec!["/=".into()],
+        "**" => vec!["^".into(), "*".into()],
+        "%" => vec![],
+        _ => nearby(name, available, 2),
     };
-    simple("UNKNOWN OPERATOR", region, &before, &after).with_suggestions(suggestions)
+    let mut report = simple(
+        "UNKNOWN OPERATOR",
+        region,
+        &format!("Unknown operator `({name})`."),
+        "",
+    );
+    report.after = suggestion_details(
+        &suggestions,
+        if name == "%" {
+            "Use an integer remainder or modulus function."
+        } else {
+            "Import and expose the operator."
+        },
+    );
+    report.with_suggestions(suggestions)
 }
 fn recursive_value(region: Region, name: &str, others: &[&str], is_let: bool) -> Report {
-    let before = if others.is_empty() {
-        format!(
-            "The `{name}` value is defined directly in terms of itself, causing an infinite loop."
-        )
-    } else if is_let {
-        "I do not allow cyclic values in `let` expressions.".into()
-    } else {
-        format!("The `{name}` definition is causing a very tricky infinite loop.")
-    };
-    let mut docs = if others.is_empty() {
-        vec![
-            Doc::reflow(&format!(
-                "Are you trying to mutate a variable? Nash does not have mutation, so when I see {name} defined in terms of {name}, I treat it as a recursive definition. Try giving the new value a new name!"
-            )),
-            Doc::reflow(&format!(
-                "Maybe you DO want a recursive value? To define {name} we need to know what {name} is, so let’s expand it. Wait, but now we need to know what {name} is, so let’s expand it... This will keep going infinitely!"
-            )),
-        ]
-    } else {
-        vec![
-            Doc::reflow(&format!(
-                "The `{name}` value depends on itself through the following chain of definitions:"
-            )),
-            Doc::cycle(4, name, others),
-        ]
-    };
-    docs.push(Doc::link(
-        "Hint",
-        "The root problem is often a typo in some variable name, but I recommend reading",
-        "bad-recursion",
-        "for more detailed advice, especially if you actually do need a recursive value.",
-    ));
     Report::snippet(
         if is_let {
             "CYCLIC VALUE"
@@ -1130,8 +1089,15 @@ fn recursive_value(region: Region, name: &str, others: &[&str], is_let: bool) ->
         },
         region,
         None,
-        Doc::reflow(&before),
-        Doc::stack(docs),
+        Doc::text(format!("Value `{name}` depends on itself.")),
+        Doc::stack([
+            if others.is_empty() {
+                Doc::Empty
+            } else {
+                Doc::cycle(4, name, others)
+            },
+            Doc::text("Break the cycle between these value definitions."),
+        ]),
     )
 }
 fn alias_recursion_report(
@@ -1141,41 +1107,23 @@ fn alias_recursion_report(
     typ: &nash_region::Located<nash_source::Type<'_>>,
     others: &[&str],
 ) -> Report {
-    let (before, after) = if others.is_empty() {
-        (
-            "This type alias is recursive, forming an infinite type!",
-            Doc::stack([
-                Doc::reflow(
-                    "When I expand a recursive type alias, it just keeps getting bigger and bigger. So dealiasing results in an infinitely large type! Try this instead:",
-                ),
+    Report::snippet(
+        "ALIAS PROBLEM",
+        region,
+        None,
+        Doc::text(format!("Type alias `{name}` expands recursively.")),
+        Doc::stack(if others.is_empty() {
+            vec![
+                Doc::text("Use a custom type:"),
                 Doc::indent(4, alias_to_union_doc(name, args, typ)),
-                Doc::link(
-                    "Hint",
-                    "This is kind of a subtle distinction. I suggested the naive fix, but I recommend reading",
-                    "recursive-alias",
-                    "for ideas on how to do better.",
-                ),
-            ]),
-        )
-    } else {
-        (
-            "This type alias is part of a mutually recursive set of type aliases.",
-            Doc::stack([
-                Doc::text("It is part of this cycle of type aliases:"),
+            ]
+        } else {
+            vec![
                 Doc::cycle(4, name, others),
-                Doc::reflow(
-                    "You need to convert at least one of these type aliases into a `type`.",
-                ),
-                Doc::link(
-                    "Note",
-                    "Read",
-                    "recursive-alias",
-                    "to learn why this `type` vs `type alias` distinction matters. It is subtle but important!",
-                ),
-            ]),
-        )
-    };
-    Report::snippet("ALIAS PROBLEM", region, None, Doc::text(before), after)
+                Doc::text("Convert at least one alias in this cycle to a custom type."),
+            ]
+        }),
+    )
 }
 fn alias_to_union_doc(
     name: &str,
@@ -1230,12 +1178,8 @@ fn unbound_type_vars(
         others.is_empty().then_some(first.1),
         Doc::reflow(&before),
         Doc::stack([
-            Doc::reflow("You probably need to change the declaration to something like this:"),
+            Doc::text("Declare the type variables:"),
             declaration(decl, name, args, &names),
-            Doc::reflow(&format!(
-                "Why? Well, imagine one `{name}` where `{}` is an Int and another where it is a Bool. When we explicitly list the type variables, the type checker can see that they are actually different types.",
-                first.0
-            )),
         ]),
     )
 }
@@ -1295,13 +1239,10 @@ fn alias_vars(
             }),
             Doc::stack([
                 Doc::reflow(&format!(
-                    "I recommend removing {} from the declaration, like this:",
+                    "Remove {} from the declaration:",
                     unused_names.join(" and ")
                 )),
                 declaration("type alias", name, &kept, &[]),
-                Doc::reflow(
-                    "Why? Well, if I allowed `type alias Height 'a = Int` I would need to answer some weird questions. Is `Height Bool` the same as `Int`? Is `Height Bool` the same as `Height Int`? My solution is to not need to ask them!",
-                ),
             ]),
         )
     } else {
@@ -1335,7 +1276,7 @@ fn alias_vars(
                         )
                     }
                 )),
-                Doc::reflow("My guess is that a definition like this will work better:"),
+                Doc::reflow("Match the declaration to the variables used:"),
                 declaration("type alias", name, &kept, &unbound_names),
             ]),
         )
@@ -2721,9 +2662,7 @@ mod branches {
         let report = to_report(&source, error);
         assert_eq!(report.title, "OVERLAPPING IMPL");
         assert_eq!(report.region, *second);
-        assert!(
-            matches!(&report.snippet, Snippet::Pair { first: a, second: b } if a.region == *first && b.region == *second)
-        );
+        assert!(report.labels[0].region == *first && report.region == *second);
         let rendered = crate::render_plain(&report, &source, "Bad.nash");
         assert!(!rendered.contains("Rename"));
         assert!(rendered.contains("context constraints"));

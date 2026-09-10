@@ -2,19 +2,13 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\nf = if A then A else A\\n\")"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × This `if` condition does not evaluate to a boolean value, `True` or `False`.
+  × Type mismatch: expected `bool`, found `A`.
    ╭─[Main.nash:3:8]
  2 │ type A = A
  3 │ f = if A then A else A
-   ·        ─
+   ·        ┬
+   ·        ╰── if condition
    ╰────
-  help: This `A` value is a:
-
-            A
-
-        But I need this `if` condition to be a `bool` value.
-
-        Hint: Nash does not have “truthiness” such that ints and strings and lists are
-        automatically converted to booleans. Do that conversion explicitly!
+  help: Use an explicit comparison to produce a `bool`.

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf (x = 1"
 ---
-UNEXPECTED SYMBOL
+nash::diagnostic
 
   × I ran into the = symbol unexpectedly in this pattern:
    ╭─[src/Main.nash:1:6]

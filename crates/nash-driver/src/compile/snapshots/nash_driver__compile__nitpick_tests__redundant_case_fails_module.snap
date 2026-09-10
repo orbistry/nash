@@ -2,9 +2,9 @@
 source: crates/nash-driver/src/compile/nitpick_tests.rs
 expression: message
 ---
-REDUNDANT PATTERN
+nash::pattern::redundant
 
-  × The 2nd pattern is redundant:
+  × The 2nd pattern is unreachable.
    ╭─[/Main.nash:6:9]
  3 │ f x =
  4 │     case x of
@@ -12,5 +12,4 @@ REDUNDANT PATTERN
  6 │         True -> ()
    ·         ─────
    ╰────
-  help: Any value with this shape will be handled by a previous pattern, so it should be
-        removed.
+  help: Remove it; earlier patterns cover every matching value.

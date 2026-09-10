@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-RESERVED WORD
+nash::diagnostic
 
   × I am partway through parsing a record, but I got stuck on this field name:
    ╭─[Main.nash:1:11]

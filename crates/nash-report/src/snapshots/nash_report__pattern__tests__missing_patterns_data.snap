@@ -2,23 +2,19 @@
 source: crates/nash-report/src/pattern.rs
 expression: "render(indoc::indoc!\n{r#\"\n            module Main exposing (..)\n            import Builtin exposing (Data(..))\n            tag d =\n                case d of\n                    Constr _ _ -> ()\n                    List _ -> ()\n        \"#})"
 ---
-MISSING PATTERNS
+nash::pattern::incomplete
 
-  × This `case` does not have branches for all possibilities:
+  × Case expression is not exhaustive.
    ╭─[src/Main.nash:4:5]
  3 │     tag d =
  4 │ ╭─▶     case d of
  5 │ │           Constr _ _ -> ()
  6 │ ╰─▶         List _ -> ()
    ╰────
-  help: Missing possibilities include:
+  help: Missing patterns:
 
             Map _
             I _
             B _
 
-        I would have to crash if I saw one of those. Add branches for them!
-
-        Hint: If you want to write the code for each branch later, use `todo` as a
-        placeholder. Read <https://nash-script.dev/hints/missing-patterns> for more
-        guidance on this workflow.
+        Add the missing branches; use `todo` for unfinished bodies.

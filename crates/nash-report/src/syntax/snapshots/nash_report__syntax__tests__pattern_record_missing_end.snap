@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf {x = 1"
 ---
-UNFINISHED RECORD PATTERN
+nash::diagnostic
 
   × I was partway through parsing a record pattern, but I got stuck here:
    ╭─[src/Main.nash:1:6]

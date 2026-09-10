@@ -2,5 +2,4 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "Doc::stack(problem_to_hint(&problem)).render(80, false)"
 ---
-Hint: Use Option.withDefault to handle possible errors. Longer term, it is
-usually better to write out the full `case` though!
+Use `case` to handle both option variants.

@@ -37,7 +37,7 @@ fn incomplete_case_fails_module() {
     );
     let message = rejected(source);
     assert!(
-        message.contains("MISSING PATTERNS") && message.contains("False"),
+        message.contains("nash::pattern::incomplete") && message.contains("False"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -57,7 +57,7 @@ fn redundant_case_fails_module() {
     );
     let message = rejected(source);
     assert!(
-        message.contains("REDUNDANT PATTERN") && message.contains("2nd pattern"),
+        message.contains("nash::pattern::redundant") && message.contains("2nd pattern"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -66,7 +66,10 @@ fn redundant_case_fails_module() {
 #[test]
 fn unsafe_argument_fails_module() {
     let message = rejected("module Main exposing (..)\nf (x :: _) = x\n");
-    assert!(message.contains("function arguments"), "{message}");
+    assert!(
+        message.contains("Argument pattern is not exhaustive"),
+        "{message}"
+    );
     insta::assert_snapshot!(message);
 }
 
@@ -83,7 +86,7 @@ fn unsafe_destructure_fails_module() {
     "#
     ));
     assert!(
-        message.contains("only if there is ONE possibility"),
+        message.contains("Binding pattern is not exhaustive"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -103,7 +106,7 @@ fn trait_default_without_top_level_definitions_fails_module() {
     "#
     ));
     assert!(
-        message.contains("MISSING PATTERNS") && message.contains("False"),
+        message.contains("nash::pattern::incomplete") && message.contains("False"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -122,7 +125,8 @@ fn impl_method_fails_module() {
     "#
     ));
     assert!(
-        message.contains("UNSAFE PATTERN") && message.contains("function arguments"),
+        message.contains("nash::pattern::incomplete")
+            && message.contains("Argument pattern is not exhaustive"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -138,8 +142,8 @@ fn type_errors_precede_nitpick() {
         f True = True
     "#
     ));
-    assert!(message.contains("TYPE MISMATCH"), "{message}");
-    assert!(!message.contains("MISSING PATTERNS"), "{message}");
+    assert!(message.contains("nash::type::mismatch"), "{message}");
+    assert!(!message.contains("nash::pattern::incomplete"), "{message}");
 }
 
 #[test]
@@ -173,7 +177,7 @@ fn rejected_module_publishes_no_interface_to_dependents() {
         panic!("base must fail")
     };
     let message = report_text(reports);
-    assert!(message.contains("UNSAFE PATTERN"), "{message}");
+    assert!(message.contains("nash::pattern::incomplete"), "{message}");
     assert!(
         matches!(&result.modules[&url("Main")], ModuleResult::Blocked { dependencies } if dependencies == &[url("Base")])
     );

@@ -277,13 +277,13 @@ impl<'a> Solver<'a, '_> {
     ) -> PreparedDefinition<'a> {
         let mut rtv = rtv.clone();
         let mut rigids = Vec::new();
-        let (name, arguments, result, context) = match def {
+        let (name, arguments, result, context, annotation_region) = match def {
             Def::Def { name, args, .. } => {
                 let arguments: Arguments<'a> = args
                     .iter()
                     .map(|pattern| (*pattern, PExpected::NoExpectation(self.fresh(uf, rank))))
                     .collect();
-                (*name, arguments, self.fresh(uf, rank), None)
+                (*name, arguments, self.fresh(uf, rank), None, None)
             }
             Def::TypedDef {
                 name,
@@ -291,6 +291,7 @@ impl<'a> Solver<'a, '_> {
                 context,
                 args,
                 typ,
+                annotation,
                 ..
             } => {
                 let mut names: Vec<_> = free_vars
@@ -313,7 +314,7 @@ impl<'a> Solver<'a, '_> {
                             arg.pattern,
                             PExpected::FromContext(
                                 arg.pattern.region,
-                                PContext::TypedArg(name.value, index),
+                                PContext::TypedArg(name.value, index, annotation.region),
                                 typ,
                             ),
                         )
@@ -329,6 +330,7 @@ impl<'a> Solver<'a, '_> {
                     arguments,
                     result,
                     Some(&*self.bump.alloc_slice_fill_iter(context)),
+                    Some(annotation.region),
                 )
             }
         };
@@ -341,8 +343,14 @@ impl<'a> Solver<'a, '_> {
                 };
                 self.structure(uf, rank, FlatType::Fun1(arg, result))
             });
-        let expected = if context.is_some() {
-            Expected::FromAnnotation(name.value, arguments.len(), SubContext::TypedBody, result)
+        let expected = if let Some(annotation_region) = annotation_region {
+            Expected::FromAnnotation(
+                name.value,
+                annotation_region,
+                arguments.len(),
+                SubContext::TypedBody,
+                result,
+            )
         } else {
             Expected::NoExpectation(result)
         };
@@ -387,6 +395,7 @@ impl<'a> Solver<'a, '_> {
                 args,
                 body,
                 typ,
+                annotation,
                 ..
             } => {
                 let scope = self.infer_typed_patterns(
@@ -395,6 +404,7 @@ impl<'a> Solver<'a, '_> {
                     rank,
                     state,
                     name.value,
+                    annotation.region,
                     args,
                     &prepared.rtv,
                 );
@@ -420,6 +430,7 @@ impl<'a> Solver<'a, '_> {
         rank: usize,
         mut state: State<'a>,
         name: &'a str,
+        annotation_region: Region,
         args: &[nash_ast::TypedPattern<'a>],
         rtv: &Rtv<'a>,
     ) -> ScopeResult<'a> {
@@ -437,7 +448,7 @@ impl<'a> Solver<'a, '_> {
                 arg.pattern,
                 PExpected::FromContext(
                     arg.pattern.region,
-                    PContext::TypedArg(name, index),
+                    PContext::TypedArg(name, index, annotation_region),
                     arg.typ,
                 ),
                 rtv,
@@ -682,7 +693,7 @@ pub(super) fn expectation_type(expected: Expected<'_, Variable>) -> Variable {
     match expected {
         Expected::NoExpectation(t)
         | Expected::FromContext(_, _, t)
-        | Expected::FromAnnotation(_, _, _, t) => t,
+        | Expected::FromAnnotation(_, _, _, _, t) => t,
     }
 }
 

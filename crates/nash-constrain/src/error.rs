@@ -163,19 +163,19 @@ pub struct AmbiguousPredicate<'a> {
 pub enum Expected<'a, T> {
     NoExpectation(T),
     FromContext(Region, Context<'a>, T),
-    FromAnnotation(&'a str, usize, SubContext, T),
+    FromAnnotation(&'a str, Region, usize, SubContext, T),
 }
 
 /// Indexes are zero-based, mirroring Elm's `Index.ZeroBased`.
 #[derive(Clone, Copy, Debug)]
 pub enum Context<'a> {
     RecordField(&'a str, &'a str),
-    ListEntry(usize),
+    ListEntry(usize, Option<Region>),
     OpLeft(&'a str),
     OpRight(&'a str),
     IfCondition,
-    IfBranch(usize),
-    CaseBranch(usize),
+    IfBranch(usize, Option<Region>),
+    CaseBranch(usize, Option<Region>),
     CallArity(MaybeName<'a>, usize),
     CallArg(MaybeName<'a>, usize),
     RecordAccess {
@@ -233,7 +233,7 @@ pub enum PExpected<'a, T> {
 
 #[derive(Clone, Copy, Debug)]
 pub enum PContext<'a> {
-    TypedArg(&'a str, usize),
+    TypedArg(&'a str, usize, Region),
     CaseMatch(usize),
     CtorArg(&'a str, usize),
     ListEntry(usize),
@@ -265,8 +265,8 @@ impl<'a, T> Expected<'a, T> {
             Expected::FromContext(region, context, _) => {
                 Expected::FromContext(*region, *context, tipe)
             }
-            Expected::FromAnnotation(name, arity, context, _) => {
-                Expected::FromAnnotation(name, *arity, *context, tipe)
+            Expected::FromAnnotation(name, region, arity, context, _) => {
+                Expected::FromAnnotation(name, *region, *arity, *context, tipe)
             }
         }
     }

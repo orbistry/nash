@@ -2,9 +2,9 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-NOT SUPPORTED
+nash::names::unsupported
 
-  × I cannot canonicalize a yet:
+  × Unsupported feature: a.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────

@@ -2,13 +2,12 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-BAD PATTERN
+nash::names::pattern_has_record_ctor
 
-  × You can construct records by using `name` as a function, but it is not available
-  │ in pattern matching like this:
+  × Record constructor `name` cannot be used in a pattern.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: I recommend matching the record as a variable and unpacking it later.
+  help: Bind the record to a variable and access its fields.

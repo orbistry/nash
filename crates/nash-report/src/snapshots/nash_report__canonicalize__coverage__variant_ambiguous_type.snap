@@ -2,22 +2,15 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-AMBIGUOUS NAME
+nash::names::ambiguous_type
 
-  × This usage of `name` is ambiguous:
+  × Ambiguous type `name`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: This name is exposed by 2 of your imports, so I am not sure which one to use:
-
-            First.name
+  help:     First.name
             Second.name
 
-        I recommend using qualified names for imported values. I also recommend having
-        at most one `exposing (..)` per file to make name clashes like this less common
-        in the long run.
-
-        Note: Check out <https://nash-script.dev/hints/imports> for more info on the
-        import syntax.
+        Use a qualified name.

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-UNFINISHED DO
+nash::diagnostic
 
   × I was partway through parsing a `do` block, but I got stuck here:
    ╭─[Main.nash:2:5]

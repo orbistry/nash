@@ -2,20 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::OpRight(\"==\"), & int())))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × I need both sides of (==) to be the same type:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── right operand of (==)
    ╰────
-  help: The left side of (==) is:
-
-            int
-
-        But the right side is:
-
-            string
-
-        Different types can never be equal though! Which side is messed up? The type
-        must implement `Eq`.

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
-MISSING SUPERCLASS
+nash::names::missing_superclass
 
   × The `Core.Equal` impl for 'a0 does not establish superclass 1:
    ╭─[Main.nash:1:1]

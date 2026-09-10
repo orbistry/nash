@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 expression: "render_plain(&to_report(&Source::new(input), &error), &Source::new(input),\n\"src/Main.nash\")"
 ---
-MODULE NAME MISMATCH
+nash::diagnostic
 
   × It looks like this module name is out of sync:
    ╭─[src/Main.nash:1:8]

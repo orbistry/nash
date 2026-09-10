@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "f : { x : int\n}"
 ---
-NEED MORE INDENTATION
+nash::diagnostic
 
   × I was partway through parsing a record type, but I got stuck here:
    ╭─[src/Main.nash:2:1]

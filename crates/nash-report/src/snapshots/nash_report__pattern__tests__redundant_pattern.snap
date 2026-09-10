@@ -2,9 +2,9 @@
 source: crates/nash-report/src/pattern.rs
 expression: "render_plain(report, &Source::new(input), \"src/Main.nash\")"
 ---
-REDUNDANT PATTERN
+nash::pattern::redundant
 
-  × The 2nd pattern is redundant:
+  × The 2nd pattern is unreachable.
    ╭─[src/Main.nash:5:9]
  2 │ f xs =
  3 │     case xs of
@@ -12,5 +12,4 @@ REDUNDANT PATTERN
  5 │         [] -> 1
    ·         ──
    ╰────
-  help: Any value with this shape will be handled by a previous pattern, so it should be
-        removed.
+  help: Remove it; earlier patterns cover every matching value.

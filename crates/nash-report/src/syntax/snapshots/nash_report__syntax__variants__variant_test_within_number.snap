@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-WEIRD NUMBER
+nash::diagnostic
 
   × I thought I was reading a number, but I ran into some weird stuff here:
    ╭─[src/Main.nash:1:3]

@@ -69,6 +69,16 @@ description: "Code:\n\nmodule Main exposing (..)\nvalue : (unit, unit, unit, uni
         ),
         FromAnnotation(
             "value",
+            Region {
+                start: Position {
+                    line: 2,
+                    column: 9,
+                },
+                end: Position {
+                    line: 2,
+                    column: 33,
+                },
+            },
             0,
             TypedBody,
             Tuple(

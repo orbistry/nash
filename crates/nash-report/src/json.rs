@@ -1,16 +1,15 @@
-//! Elm's `Reporting/Error.hs` JSON schema and complete styled messages.
+//! Structured diagnostics in the Elm compile-error envelope.
 
-use crate::{Doc, ModuleReports, Report, Snippet, Source};
+use crate::{Doc, ModuleReports, Report, Severity};
 use nash_region::Region;
 use serde_json::{Value, json};
 
 /// Elm's `toJson`. Report ordering is established by `ModuleReports::sort`.
 pub fn module_to_json(module: &ModuleReports) -> Value {
-    let source = Source::new(&module.source);
     json!({
         "path": module.path,
         "name": module.name,
-        "problems": module.reports.iter().map(|report| report_to_json(&source, report)).collect::<Vec<_>>(),
+        "problems": module.reports.iter().map(report_to_json).collect::<Vec<_>>(),
     })
 }
 
@@ -24,17 +23,31 @@ pub fn compile_warnings(modules: &[ModuleReports]) -> Value {
     json!({"type": "compile-warnings", "errors": modules.iter().map(module_to_json).collect::<Vec<_>>()})
 }
 
-fn report_to_json(source: &Source<'_>, report: &Report) -> Value {
-    let message = match report.snippet {
-        Snippet::None => Doc::stack([report.before.clone(), report.after.clone()]),
-        _ => Doc::vcat([
-            report.before.clone(),
-            Doc::Empty,
-            source.snippet_doc(&report.snippet),
-            report.after.clone(),
-        ]),
-    };
-    json!({"title": report.title, "region": encode_region(report.region), "message": message.encode()})
+pub fn report_to_json(report: &Report) -> Value {
+    let labels: Vec<_> = report
+        .primary_label
+        .iter()
+        .map(|text| {
+            json!({
+                "region": encode_region(report.region), "text": text, "primary": true,
+            })
+        })
+        .chain(report.labels.iter().map(|label| {
+            json!({
+                "region": encode_region(label.region), "text": label.text, "primary": false,
+            })
+        }))
+        .collect();
+    json!({
+        "code": report.code,
+        "title": report.title,
+        "severity": match report.severity { Severity::Error => "error", Severity::Warning => "warning" },
+        "region": encode_region(report.region),
+        "message": Doc::stack([report.before.clone(), report.after.clone()]).encode(),
+        "labels": labels,
+        "suggestions": report.suggestions,
+        "related": report.related.iter().map(module_to_json).collect::<Vec<_>>(),
+    })
 }
 
 /// Elm's one-based, half-open source region schema.
@@ -48,7 +61,7 @@ pub fn encode_region(region: Region) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Doc, Label, Snippet};
+    use crate::{Doc, Label};
     use nash_region::Position;
 
     fn region(sr: usize, sc: usize, er: usize, ec: usize) -> Region {
@@ -84,7 +97,7 @@ mod tests {
             encode_region(region(2, 5, 2, 12))
         );
         assert_eq!(value.as_object().unwrap().len(), 3);
-        assert_eq!(value["problems"][0].as_object().unwrap().len(), 3);
+        assert_eq!(value["problems"][0]["suggestions"], json!(["found"]));
         insta::assert_snapshot!(serde_json::to_string_pretty(&value).unwrap());
     }
 
@@ -97,9 +110,9 @@ mod tests {
             Doc::text("First."),
             Doc::text("Second."),
         );
-        report.snippet = Snippet::None;
+        report = report.without_source();
         assert_eq!(
-            report_to_json(&Source::new(""), &report)["message"],
+            report_to_json(&report)["message"],
             serde_json::json!(["First.\n\nSecond."])
         );
     }
@@ -119,9 +132,7 @@ mod tests {
             Doc::text("Both names occur here:"),
             Doc::text("Choose another name."),
         );
-        insta::assert_snapshot!(
-            serde_json::to_string_pretty(&report_to_json(&Source::new("x\nx"), &report)).unwrap()
-        );
+        insta::assert_snapshot!(serde_json::to_string_pretty(&report_to_json(&report)).unwrap());
     }
 
     #[test]
@@ -134,5 +145,60 @@ mod tests {
             compile_warnings(&[]),
             serde_json::json!({"type":"compile-warnings","errors":[]})
         );
+    }
+}
+
+#[cfg(test)]
+mod structured_tests {
+    use super::*;
+    use crate::Label;
+    #[test]
+    fn labels_codes_and_related_reports_are_structured() {
+        let mut report = Report::snippet(
+            "OLD TITLE",
+            Region::zero(),
+            None,
+            Doc::text("Problem."),
+            Doc::text("Hint."),
+        )
+        .with_code("nash::type::mismatch")
+        .with_suggestions(vec!["replacement".into()]);
+        report.title = "NEW TITLE".into();
+        report.primary_label = Some("failing argument".into());
+        for text in ["annotation", "earlier argument"] {
+            report.labels.push(Label {
+                region: Region::zero(),
+                text: text.into(),
+            });
+        }
+        report.related.push(ModuleReports {
+            name: "Other".into(),
+            path: "Other.nash".into(),
+            source: "other".into(),
+            reports: vec![
+                Report::snippet(
+                    "RELATED",
+                    Region::zero(),
+                    None,
+                    Doc::text("Origin."),
+                    Doc::Empty,
+                )
+                .with_code("nash::type::origin"),
+            ],
+        });
+        let value = report_to_json(&report);
+        assert_eq!(value["code"], "nash::type::mismatch");
+        assert_eq!(value["title"], "NEW TITLE");
+        assert_eq!(value["labels"].as_array().unwrap().len(), 3);
+        assert_eq!(value["labels"][0]["primary"], true);
+        assert_eq!(value["labels"][1]["text"], "annotation");
+        assert_eq!(value["labels"][2]["primary"], false);
+        assert_eq!(value["related"][0]["path"], "Other.nash");
+        assert_eq!(
+            value["related"][0]["problems"][0]["code"],
+            "nash::type::origin"
+        );
+        assert_eq!(value["suggestions"], json!(["replacement"]));
+        assert_eq!(value["message"], json!(["Problem.\n\nHint."]));
     }
 }

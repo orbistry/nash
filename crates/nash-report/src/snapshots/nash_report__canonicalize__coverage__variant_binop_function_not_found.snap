@@ -2,10 +2,9 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-INFIX PROBLEM
+nash::names::binop_function_not_found
 
-  × The (a) operator says it is implemented by `a`, but I cannot find a `a`
-  │ definition in this file.
+  × Operator `(a)` refers to undefined function `a`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────

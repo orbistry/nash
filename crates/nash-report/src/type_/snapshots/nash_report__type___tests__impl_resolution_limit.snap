@@ -2,17 +2,13 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::ImplResolutionLimit\n{ region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait() })"
 ---
-IMPL RESOLUTION LIMIT
+nash::type::impl_resolution_limit
 
-  × I reached the impl resolution limit while checking `f`:
+  × Impl resolution for `Eq` in `f` exceeded the work limit.
    ╭─[Main.nash:1:1]
  1 │ value
    · ─────
    ╰────
-  help: The search for `Eq` evidence exceeded the compiler's work limit.
+  help: This requirement remains unchecked; other reported errors still apply.
 
-        This requirement has not been checked completely. The other diagnostics from
-        this compilation still apply.
-
-        Hint: Check for a cycle or a growing chain of impl constraints, and simplify the
-        requirement before trying again.
+        Simplify cyclic or growing impl constraints.

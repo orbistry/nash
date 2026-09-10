@@ -2,21 +2,16 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-ALIAS PROBLEM
+nash::names::recursive_alias
 
-  × This type alias is recursive, forming an infinite type!
+  × Type alias `Loop` expands recursively.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: When I expand a recursive type alias, it just keeps getting bigger and bigger.
-        So dealiasing results in an infinitely large type! Try this instead:
+  help: Use a custom type:
 
             type Loop 'a =
                 Loop
                     'a
-
-        Hint: This is kind of a subtle distinction. I suggested the naive fix, but I
-        recommend reading <https://nash-script.dev/hints/recursive-alias> for ideas on
-        how to do better.

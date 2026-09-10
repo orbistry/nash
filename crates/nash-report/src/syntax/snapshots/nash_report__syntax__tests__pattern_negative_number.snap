@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "-1"
 ---
-UNEXPECTED SYMBOL
+nash::diagnostic
 
   × I ran into a minus sign unexpectedly in this pattern:
    ╭─[src/Main.nash:1:1]

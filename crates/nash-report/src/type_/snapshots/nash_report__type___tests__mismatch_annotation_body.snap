@@ -1,18 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadExpr(region(), Category::String, &string(),\nExpected::FromAnnotation(\"value\", 0, SubContext::TypedBody, &int())))"
+expression: "show(&Error::BadExpr(region(), Category::String, &string(),\nExpected::FromAnnotation(\"value\", Region::zero(), 0, SubContext::TypedBody,\n&int())))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × Something is off with the body of the `value` definition:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──┬
+   ·   │  ╰── declared type
+   ·   ╰── body of `value`
    ╰────
-  help: The body is a string of type:
-
-            string
-
-        But the type annotation on `value` says it should be:
-
-            int

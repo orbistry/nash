@@ -2,37 +2,28 @@
 source: crates/nash-driver/src/compile/nitpick_tests.rs
 expression: message
 ---
-UNSAFE PATTERN
+nash::pattern::incomplete
 
-  × This pattern does not cover all possible values:
+  × Binding pattern is not exhaustive.
    ╭─[/Main.nash:4:10]
  3 │     let
  4 │         (x :: rest) = xs
    ·          ─────────
  5 │     in
    ╰────
-  help: Other possibilities include:
+  help: Missing patterns:
 
             []
 
-        I would have to crash if I saw one of those! You can use `let` to deconstruct
-        values only if there is ONE possibility. Switch to a `case` expression to
-        account for all possibilities.
+        Use a case expression to handle the missing patterns.
 
-        Hint: Are you calling a function that definitely returns values with a very
-        specific shape? Try making the return type of that function more specific!
+nash::warning::unused_definition
 
-unused definition
-
-  ⚠ You are not using `rest` anywhere.
+  ⚠ Unused definition `rest`.
    ╭─[/Main.nash:4:15]
  3 │     let
  4 │         (x :: rest) = xs
    ·               ────
  5 │     in
    ╰────
-  help: Is there a typo? Maybe you intended to use `rest` somewhere but typed another
-        name instead?
-
-        If you are sure there is no typo, remove the definition. This way future readers
-        will not have to wonder why it is there!
+  help: Remove the definition if it is not needed.

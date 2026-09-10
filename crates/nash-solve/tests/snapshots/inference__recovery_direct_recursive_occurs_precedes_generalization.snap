@@ -26,6 +26,16 @@ description: "Code:\n\nmodule Main exposing (..)\nf x = f\nuse = f ()\nbad : ()\
         ),
         FromAnnotation(
             "bad",
+            Region {
+                start: Position {
+                    line: 4,
+                    column: 7,
+                },
+                end: Position {
+                    line: 4,
+                    column: 9,
+                },
+            },
             0,
             TypedBody,
             Type {

@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/render.rs
+expression: output
+---
+nash::test::source_edges
+
+  × Missing value.
+   ╭─[Main.nash:3:1]
+ 1 │ a😀é
+   ·  ─┬
+   ·   ╰── Unicode origin
+ 2 │     x
+   ·     ┬
+   ·     ╰── tabbed origin
+ 3 │ 
+   · ─
+   ╰────

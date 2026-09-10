@@ -2,18 +2,16 @@
 source: crates/nash-driver/src/compile/nitpick_tests.rs
 expression: message
 ---
-UNSAFE PATTERN
+nash::pattern::incomplete
 
-  × This pattern does not cover all possibilities:
+  × Argument pattern is not exhaustive.
    ╭─[/Main.nash:6:12]
  5 │ impl Choose bool where
  6 │     choose True = ()
    ·            ────
    ╰────
-  help: Other possibilities include:
+  help: Missing patterns:
 
             False
 
-        I would have to crash if I saw one of those! So rather than pattern matching in
-        function arguments, put a `case` in the function body to account for all
-        possibilities.
+        Use a case expression in the function body to handle the missing patterns.

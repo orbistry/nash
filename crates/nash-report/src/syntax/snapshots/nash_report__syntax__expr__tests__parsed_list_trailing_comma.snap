@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-UNFINISHED LIST
+nash::diagnostic
 
   × I was partway through parsing a list, but I got stuck here:
    ╭─[Main.nash:1:13]

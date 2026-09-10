@@ -2,17 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::CallArg(MaybeName::FuncName(\"f\"), 0), &\nint())))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × The 1st argument to `f` is not what I expect:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── argument 1 of `f`
    ╰────
-  help: This argument is a string of type:
-
-            string
-
-        But `f` needs the 1st argument to be:
-
-            int

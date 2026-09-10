@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: Thing
 ---
-UNEXPECTED CAPITAL LETTER
+nash::diagnostic
 
   × Declarations always start with a lower-case letter, so I am getting stuck here:
    ╭─[src/Main.nash:1:1]

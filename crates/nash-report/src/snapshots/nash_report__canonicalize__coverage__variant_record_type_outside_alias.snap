@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-RECORD TYPE
+nash::names::record_type_outside_alias
 
   × This record type needs a name:
    ╭─[Main.nash:1:1]

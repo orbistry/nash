@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-NO TABS
+nash::diagnostic
 
   × I ran into a tab, but tabs are not allowed in Nash files.
    ╭─[src/Main.nash:1:3]

@@ -2,8 +2,4 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "Doc::stack(problem_to_hint(&problem)).render(80, false)"
 ---
-Hint: Your type annotation uses `'a` and `'b` as separate type variables. Your
-code seems to be saying they are the same though. Maybe they should be the same
-in your type annotation? Maybe your code uses them in a weird way?
-
-Read <https://nash-script.dev/hints/type-annotations> for more advice!
+The annotation keeps `'a` and `'b` independent; use one variable if they must be equal.

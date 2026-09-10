@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-MISSING FIELD
+nash::names::labeled_ctor_missing_field
 
   × The `a` constructor needs a `a` field:
    ╭─[Main.nash:1:1]

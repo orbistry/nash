@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-MISSING TEST BODY
+nash::diagnostic
 
   × I was expecting the test body here:
    ╭─[src/Main.nash:1:3]

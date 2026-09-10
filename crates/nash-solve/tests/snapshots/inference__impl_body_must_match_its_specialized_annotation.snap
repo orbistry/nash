@@ -30,6 +30,16 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep '
         },
         FromAnnotation(
             "keep",
+            Region {
+                start: Position {
+                    line: 4,
+                    column: 12,
+                },
+                end: Position {
+                    line: 4,
+                    column: 20,
+                },
+            },
             1,
             TypedBody,
             Type {

@@ -2,7 +2,4 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "Doc::stack(problem_to_hint(&problem)).render(80, false)"
 ---
-Hint: `Int` is the Big (Data) type and `int` is the little type. They never
-convert implicitly. Where an appropriate `Lift` impl is available, use `lower`
-to go from `Int` to `int`, or `lift` to go the other way. If this value comes
-from a validator argument, decode it with `fromData` first.
+Use `lift` to convert `int` to `Int` where a `Lift` impl is available.

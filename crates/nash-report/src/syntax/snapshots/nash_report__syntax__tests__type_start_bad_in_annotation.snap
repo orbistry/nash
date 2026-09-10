@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : 42\nf = 1"
 ---
-PROBLEM IN TYPE ANNOTATION
+nash::diagnostic
 
   × I was partway through parsing the `f` type annotation, but I got stuck here:
    ╭─[src/Main.nash:1:5]

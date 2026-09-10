@@ -2,18 +2,12 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadExpr(region(), Category::String, &string(),\nExpected::FromContext(region(), Context::IfCondition, &boolean)))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × This `if` condition does not evaluate to a boolean value, `True` or `False`.
+  × Type mismatch: expected `bool`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── if condition
    ╰────
-  help: It is a string of type:
-
-            string
-
-        But I need this `if` condition to be a `bool` value.
-
-        Hint: Nash does not have “truthiness” such that ints and strings and lists are
-        automatically converted to booleans. Do that conversion explicitly!
+  help: Use an explicit comparison to produce a `bool`.

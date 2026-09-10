@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\ntype alias account"
 ---
-PROBLEM IN TYPE ALIAS
+nash::diagnostic
 
   × I am partway through parsing a type alias, but I got stuck here:
    ╭─[src/Main.nash:1:19]

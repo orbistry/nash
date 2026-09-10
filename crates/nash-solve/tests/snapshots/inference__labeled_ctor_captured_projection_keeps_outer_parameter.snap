@@ -26,6 +26,16 @@ description: "Code:\n\nmodule Main exposing (..)\ntype box 'a = Box { value : 'a
         ),
         FromAnnotation(
             "bad",
+            Region {
+                start: Position {
+                    line: 3,
+                    column: 7,
+                },
+                end: Position {
+                    line: 3,
+                    column: 27,
+                },
+            },
             1,
             TypedBody,
             Tuple(

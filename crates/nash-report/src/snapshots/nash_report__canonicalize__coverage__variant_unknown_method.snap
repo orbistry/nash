@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-UNKNOWN METHOD
+nash::names::unknown_method
 
   × The `Equal` trait has no `name` method:
    ╭─[Main.nash:1:1]
@@ -10,5 +10,4 @@ UNKNOWN METHOD
    · ────
  2 │ other = name
    ╰────
-  help: Check the method name against the trait declaration. Remove this definition or
-        rename it to the method you intended to implement.
+  help: Remove or rename this method to match the trait declaration.

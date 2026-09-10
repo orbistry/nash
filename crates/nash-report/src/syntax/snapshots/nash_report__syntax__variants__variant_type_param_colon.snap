@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-MISSING REPRESENTATION COLON
+nash::diagnostic
 
   × I have the type parameter name, but I got stuck here:
    ╭─[src/Main.nash:1:3]

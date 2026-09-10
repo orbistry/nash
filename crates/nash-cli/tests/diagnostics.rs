@@ -56,7 +56,7 @@ fn terminal_and_json_type_mismatch() {
     assert!(human.stdout.is_empty());
     let text = normalized(&human.stderr, &root);
     assert!(!text.contains('\u{1b}'));
-    assert!(text.contains("TYPE MISMATCH"));
+    assert!(text.contains("nash::type::mismatch"));
     insta::assert_snapshot!("type_mismatch_terminal", text);
     let json = check(&root, &["--report=json"]);
     assert_eq!(json.status.code(), Some(1));
@@ -118,7 +118,7 @@ fn independent_errors_are_stable_and_dependents_are_blocked() {
     assert_eq!(modules[0]["problems"].as_array().unwrap().len(), 2);
     let human = check(&project.0, &[]);
     let text = String::from_utf8(human.stderr).unwrap();
-    assert_eq!(text.matches("NAMING ERROR").count(), 3);
+    assert_eq!(text.matches("nash::names::not_found_var").count(), 3);
     assert!(text.contains("Skipped"));
     assert!(!text.contains("IMPORT PROBLEM"));
 }
@@ -142,12 +142,12 @@ fn documented_examples_run_through_the_real_core_package() {
     let human = check(&root, &["--no-warnings"]);
     assert_eq!(human.status.code(), Some(1));
     let text = normalized(&human.stderr, &root);
-    assert!(text.contains("This `map` call produces:"), "{text}");
+    assert!(text.contains("found `list Int`"), "{text}");
     let docs = include_str!("../../../docs/diagnostics.md");
     let names = [
-        "TYPE MISMATCH",
-        "MISSING IMPL",
-        "MISSING PATTERNS",
+        "nash::type::mismatch",
+        "nash::type::missing_impl",
+        "nash::pattern::incomplete",
         "Compilation failed:",
     ];
     for pair in names.windows(2) {
@@ -229,7 +229,7 @@ async fn mixed_errors_match_across_terminal_json_and_lsp() {
         let text = String::from_utf8(human.stderr).unwrap();
         let mut previous = 0;
         for problem in problems {
-            let title = problem["title"].as_str().unwrap();
+            let title = problem["code"].as_str().unwrap();
             assert_eq!(text.matches(&format!("{title}\n")).count(), 1);
             let position = text.find(&format!("{title}\n")).unwrap();
             assert!(position >= previous);
@@ -269,7 +269,7 @@ async fn mixed_errors_match_across_terminal_json_and_lsp() {
                 "{rendered}\nExpected {location}"
             );
             let lsp = nash_language_server::diagnostics::to_lsp(report, &source, &uri);
-            assert_eq!(serde_json::to_value(&lsp).unwrap()["code"], json["title"]);
+            assert_eq!(serde_json::to_value(&lsp).unwrap()["code"], json["code"]);
             assert_eq!(
                 u64::from(lsp.range.start.line) + 1,
                 json["region"]["start"]["line"]
@@ -313,5 +313,89 @@ fn poisoned_tuple_child_keeps_independent_type_mismatch() {
             serde_json::to_string_pretty(&value).unwrap().as_bytes(),
             &project.0
         )
+    );
+}
+
+#[test]
+fn type_expectation_origins_reach_json_and_terminal() {
+    let project = Project::new(&[
+        (
+            "Annotation",
+            "module Annotation exposing (..)\nvalue :\n    ()\nvalue = ((), ())\n",
+        ),
+        (
+            "Elements",
+            "module Elements exposing (..)\nvalue = [(), ((), ())]\n",
+        ),
+        (
+            "Branches",
+            "module Branches exposing (..)\nvalue flag = if flag then () else ((), ())\n",
+        ),
+        (
+            "Cases",
+            "module Cases exposing (..)\nvalue x =\n    case x of\n        () -> ()\n        _ -> ((), ())\n",
+        ),
+    ]);
+    let output = check(&project.0, &["--report=json"]);
+    assert_eq!(output.status.code(), Some(1));
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let modules = json["errors"].as_array().unwrap();
+    assert_eq!(modules.len(), 4, "{json}");
+    for (name, line, column, text) in [
+        ("Annotation", 3, 5, "declared type"),
+        ("Elements", 2, 10, "previous list element"),
+        ("Branches", 2, 27, "previous branch"),
+        ("Cases", 4, 15, "previous branch"),
+    ] {
+        let module = modules
+            .iter()
+            .find(|module| module["name"] == name)
+            .unwrap();
+        let problems = module["problems"].as_array().unwrap();
+        assert_eq!(problems.len(), 1, "{module}");
+        let labels = problems[0]["labels"].as_array().unwrap();
+        let origin = labels
+            .iter()
+            .find(|label| label["text"] == text)
+            .expect("origin label");
+        assert_eq!(origin["primary"], false);
+        assert_eq!(
+            origin["region"]["start"],
+            serde_json::json!({"line": line, "column": column})
+        );
+    }
+    let output = check(&project.0, &[]);
+    let text = String::from_utf8(output.stderr).unwrap();
+    for label in ["declared type", "previous list element", "previous branch"] {
+        assert!(text.contains(label), "{text}");
+    }
+}
+
+#[test]
+fn imported_function_alias_labels_the_local_annotation() {
+    let project = Project::new(&[
+        (
+            "Types",
+            "module Types exposing (type callback)\n\n\n\ntype alias callback = () -> ()\n",
+        ),
+        (
+            "Main",
+            "module Main exposing (..)\nimport Types exposing (type callback)\nf : callback\nf (x, y) = ()\n",
+        ),
+    ]);
+    let output = check(&project.0, &["--report=json", "--no-warnings"]);
+    assert_eq!(output.status.code(), Some(1));
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let problem = &json["errors"][0]["problems"][0];
+    assert_eq!(problem["code"], "nash::type::pattern_mismatch");
+    let origin = problem["labels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|label| label["text"] == "declared argument type")
+        .unwrap();
+    assert_eq!(
+        origin["region"]["start"],
+        serde_json::json!({"line": 3, "column": 5})
     );
 }

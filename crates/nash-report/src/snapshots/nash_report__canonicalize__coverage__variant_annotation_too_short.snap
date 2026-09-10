@@ -2,14 +2,12 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-BAD TYPE ANNOTATION
+nash::names::annotation_too_short
 
-  × The type annotation for `name` says it can accept 1 argument, but the definition
-  │ says it has 3 arguments:
+  × Annotation for `name` expects 1 argument; definition has 3 arguments.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: Is the type annotation missing something? Should some arguments be deleted?
-        Maybe some parentheses are missing?
+  help: Match the annotation to the definition's arguments.

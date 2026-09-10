@@ -29,6 +29,16 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Box 'a = Box 'a\nwrong : 
         ),
         FromAnnotation(
             "wrong",
+            Region {
+                start: Position {
+                    line: 3,
+                    column: 9,
+                },
+                end: Position {
+                    line: 3,
+                    column: 24,
+                },
+            },
             1,
             TypedBody,
             Type {

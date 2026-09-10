@@ -2,22 +2,12 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf : A -> A -> A\\nf x y = x\\ng = f A B\\n\")"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × The 2nd argument to `f` is not what I expect:
+  × Type mismatch: expected `A`, found `B`.
    ╭─[Main.nash:6:9]
  5 │ f x y = x
  6 │ g = f A B
-   ·         ─
+   ·         ┬
+   ·         ╰── argument 2 of `f`
    ╰────
-  help: This `B` value is a:
-
-            B
-
-        But `f` needs the 2nd argument to be:
-
-            A
-
-        Hint: I always figure out the argument types from left to right. If an argument
-        is acceptable, I assume it is “correct” and move on. So the problem may actually
-        be in one of the previous arguments!

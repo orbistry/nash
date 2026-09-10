@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : (int, int\nf = 1"
 ---
-UNFINISHED PARENTHESES
+nash::diagnostic
 
   × I was expecting to see a closing parenthesis next:
    ╭─[src/Main.nash:1:14]

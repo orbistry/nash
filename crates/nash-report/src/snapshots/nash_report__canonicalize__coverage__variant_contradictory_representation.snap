@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-CONTRADICTORY REPRESENTATION
+nash::names::contradictory_representation
 
   × The representation requirements on 'a are incompatible:
    ╭─[Main.nash:1:1]
@@ -10,5 +10,4 @@ CONTRADICTORY REPRESENTATION
    · ────
  2 │ other = name
    ╰────
-  help: No type can satisfy all of these requirements. Change the constraints or the
-        positions where this type variable is used.
+  help: Change the incompatible constraints or uses of this variable.

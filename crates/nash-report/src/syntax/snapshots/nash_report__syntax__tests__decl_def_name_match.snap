@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : int\ng = 1"
 ---
-NAME MISMATCH
+nash::diagnostic
 
   × I just saw a type annotation for `f`, but it is followed by a definition for
   │ `g`:

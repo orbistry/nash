@@ -2,15 +2,15 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-NAME CLASH
+nash::names::duplicate_ctor
 
-  × This file defines multiple `name` type constructors. One here:
+  × This file defines multiple `name` type constructors.
    ╭─[Main.nash:2:1]
  1 │ name = other
    · ──┬─
-   ·   ╰── one here
+   ·   ╰── first definition
  2 │ other = name
    · ──┬──
-   ·   ╰── and another one here
+   ·   ╰── and another first definition
    ╰────
-  help: How can I know which one you want? Rename one of them!
+  help: Rename one of the definitions.

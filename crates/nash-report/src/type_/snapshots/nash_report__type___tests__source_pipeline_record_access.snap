@@ -2,17 +2,16 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype alias Person = { age : A }\\nf : Person -> A\\nf p = p.aeg\\n\")"
 ---
-TYPE MISMATCH
+nash::type::missing_field
 
-  × I cannot find `aeg` when accessing the `aeg` field of `p`:
+  × Record has no field `aeg`.
    ╭─[Main.nash:5:7]
  4 │ f : Person -> A
  5 │ f p = p.aeg
-   ·       ─────
+   ·       ──┬──
+   ·         ╰── field `aeg` of `p`
    ╰────
-  help: This is usually a typo. Here are the `p` fields that are most similar:
+  help: Did you mean `age`?
 
-            { age : A
-            }
-
-        So maybe aeg should be age?
+        Available fields: { age : A
+        }

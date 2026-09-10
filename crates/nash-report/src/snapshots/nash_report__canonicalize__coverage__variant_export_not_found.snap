@@ -2,7 +2,12 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-UNKNOWN EXPORT
+nash::names::export_not_found
 
-  × You are trying to expose a value named `naem` but I cannot find its definition.
-  help: Maybe you want name instead?
+  × Unknown exported value `naem`.
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Try name instead.

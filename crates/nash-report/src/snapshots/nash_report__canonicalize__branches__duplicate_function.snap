@@ -2,13 +2,13 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
-NAME CLASH
+nash::names::duplicate_pattern
 
-  × The `map` function has multiple `x` arguments. One here:
+  × The `map` function has multiple `x` arguments.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ──┬─┬
-   ·   │ ╰── and another one here
-   ·   ╰── one here
+   ·   │ ╰── first definition
+   ·   ╰── and another first definition
    ╰────
-  help: How can I know which one you want? Rename one of them!
+  help: Rename one of the definitions.

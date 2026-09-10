@@ -1,24 +1,41 @@
 ---
 source: crates/nash-report/src/json.rs
-expression: "serde_json::to_string_pretty(&report_to_json(&Source::new(\"x\\nx\"),\n&report)).unwrap()"
+expression: "serde_json::to_string_pretty(&report_to_json(&report)).unwrap()"
 ---
 {
+  "code": "nash::diagnostic",
+  "labels": [
+    {
+      "primary": true,
+      "region": {
+        "end": {
+          "column": 2,
+          "line": 2
+        },
+        "start": {
+          "column": 1,
+          "line": 2
+        }
+      },
+      "text": "second"
+    },
+    {
+      "primary": false,
+      "region": {
+        "end": {
+          "column": 2,
+          "line": 1
+        },
+        "start": {
+          "column": 1,
+          "line": 1
+        }
+      },
+      "text": "first"
+    }
+  ],
   "message": [
-    "Both names occur here:\n\n1| x\n   ",
-    {
-      "bold": false,
-      "color": "RED",
-      "string": "^",
-      "underline": false
-    },
-    "\n\n2| x\n   ",
-    {
-      "bold": false,
-      "color": "RED",
-      "string": "^",
-      "underline": false
-    },
-    "\nChoose another name."
+    "Both names occur here:\n\nChoose another name."
   ],
   "region": {
     "end": {
@@ -30,5 +47,8 @@ expression: "serde_json::to_string_pretty(&report_to_json(&Source::new(\"x\\nx\"
       "line": 2
     }
   },
+  "related": [],
+  "severity": "error",
+  "suggestions": [],
   "title": "NAME CLASH"
 }

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: import
 ---
-RESERVED WORD
+nash::diagnostic
 
   × I was not expecting to run into the `import` keyword here:
    ╭─[src/Main.nash:1:1]

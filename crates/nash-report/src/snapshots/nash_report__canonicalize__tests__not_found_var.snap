@@ -2,14 +2,11 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
-NAMING ERROR
+nash::names::not_found_var
 
-  × I cannot find a `name` variable:
+  × Unknown variable `name`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
    ╰────
-  help: Is there an `import` or `exposing` missing up top?
-
-        Hint: Read <https://nash-script.dev/hints/imports> to see how `import`
-        declarations work in Nash.
+  help: Define or import this name.

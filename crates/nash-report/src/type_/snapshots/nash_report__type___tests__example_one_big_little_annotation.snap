@@ -2,22 +2,23 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "crate::render_plain(&report, &crate::Source::new(source), \"src/Ledger.nash\")"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × Something is off with the body of the `settle` definition:
+  × Type mismatch: expected `list int`, found `list Int`.
     ╭─[src/Ledger.nash:10:5]
+  1 │ module Ledger exposing (settle)
+    · ┬
+    · ╰── declared type
+  2 │ 
+  3 │ type alias Account = { owner : Bytes, balance : Int }
+  4 │ 
+  5 │ balanceOf : Account -> Int
+  6 │ balanceOf account = account.balance
+  7 │ 
+  8 │ settle : list Account -> list int
   9 │ settle accounts =
  10 │     List.map balanceOf accounts
-    ·     ───────────────────────────
+    ·     ─────────────┬─────────────
+    ·                  ╰── body of `settle`
     ╰────
-  help: This `List.map` call produces:
-
-            list Int
-
-        But the type annotation on `settle` says it should be:
-
-            list int
-
-        Hint: `Int` is the Big (Data) type and `int` is the little type. They never
-        convert implicitly. Where an appropriate `Lift` impl is available, use `lower`
-        to go from `Int` to `int`, or `lift` to go the other way.
+  help: Use `lower` to convert `Int` to `int` where a `Lift` impl is available.

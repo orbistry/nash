@@ -9,7 +9,7 @@ mod tests;
 mod type_;
 
 use crate::code::{Source, to_region, to_wider_region};
-use crate::{Doc, Report, Snippet};
+use crate::{Doc, Report};
 use nash_parse::error::{Error, Space};
 use nash_parse::{Col, Row};
 use nash_region::{Position, Region};
@@ -18,7 +18,7 @@ pub fn to_report(source: &Source<'_>, error: &Error<'_>) -> Report {
     match error {
         Error::ModuleNameUnspecified(name) => Report {
             title: "MODULE NAME MISSING".into(), severity: crate::Severity::Error,
-            region: to_region(1, 1), snippet: Snippet::None,
+            region: to_region(1, 1), code: "nash::syntax::missing_module_name", primary_label: None, labels: Vec::new(), context: None, related: Vec::new(),
             before: Doc::stack([
                 Doc::reflow("I need the module name to be declared at the top of this file, like this:"),
                 Doc::indent(4, Doc::hsep([Doc::text("module").cyan(), Doc::text(*name), Doc::text("exposing").cyan(), Doc::text("(..)")])),
@@ -53,10 +53,7 @@ pub(crate) fn problem(title: &str, row: Row, col: Col, before: &str, after: &str
 pub(crate) fn wide(mut report: Report, row: Row, col: Col) -> Report {
     let highlight = report.region;
     let start = Position::new(row, col).min(highlight.start);
-    report.snippet = Snippet::Region {
-        region: Region::new(start, highlight.end),
-        highlight: Some(highlight),
-    };
+    report.context = Some(Region::new(start, highlight.end));
     report
 }
 

@@ -2,17 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::Destructure, & int())))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × This definition is causing issues:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── destructuring pattern
    ╰────
-  help: You are defining a string of type:
-
-            string
-
-        But then trying to destructure it as:
-
-            int

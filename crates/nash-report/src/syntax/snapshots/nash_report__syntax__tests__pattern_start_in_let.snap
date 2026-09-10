@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: if
 ---
-RESERVED WORD
+nash::diagnostic
 
   × It looks like you are trying to use `if` in this pattern:
    ╭─[src/Main.nash:1:1]

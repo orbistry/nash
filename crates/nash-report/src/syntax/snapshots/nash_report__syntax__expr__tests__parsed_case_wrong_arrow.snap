@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-UNEXPECTED OPERATOR
+nash::diagnostic
 
   × I was partway through parsing a `case` expression, but I got stuck here:
    ╭─[Main.nash:2:16]

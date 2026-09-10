@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nimport Cardano.Tx as tx"
 ---
-EXPECTING IMPORT ALIAS
+nash::diagnostic
 
   × I was parsing an `import` until I got stuck here:
    ╭─[src/Main.nash:1:22]

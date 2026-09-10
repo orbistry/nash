@@ -2,17 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadPattern(region(), PCategory::Str, &string(),\nPExpected::NoExpectation(&int())))"
 ---
-TYPE MISMATCH
+nash::type::pattern_mismatch
 
-  × This pattern is being used in an unexpected way:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── string pattern
    ╰────
-  help: It is strings:
-
-            string
-
-        But it needs to match:
-
-            int

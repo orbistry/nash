@@ -2,17 +2,13 @@
 source: crates/nash-report/src/warning.rs
 expression: "render_plain(&only_warning(input), &Source::new(input), \"src/Main.nash\")"
 ---
-unused definition
+nash::warning::unused_definition
 
-  ⚠ You are not using `unused` anywhere.
+  ⚠ Unused definition `unused`.
    ╭─[src/Main.nash:4:9]
  3 │     let
  4 │         unused = 1
    ·         ──────
  5 │     in
    ╰────
-  help: Is there a typo? Maybe you intended to use `unused` somewhere but typed another
-        name instead?
-
-        If you are sure there is no typo, remove the definition. This way future readers
-        will not have to wonder why it is there!
+  help: Remove the definition if it is not needed.

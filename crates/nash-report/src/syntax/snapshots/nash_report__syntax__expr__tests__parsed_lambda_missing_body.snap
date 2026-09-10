@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-MISSING EXPRESSION
+nash::diagnostic
 
   × I was partway through parsing an anonymous function, but I got stuck here:
    ╭─[Main.nash:1:14]

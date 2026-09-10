@@ -9,28 +9,53 @@ expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes()
       "path": "<project>/src/Main.nash",
       "problems": [
         {
+          "code": "nash::type::mismatch",
+          "labels": [
+            {
+              "primary": true,
+              "region": {
+                "end": {
+                  "column": 21,
+                  "line": 5
+                },
+                "start": {
+                  "column": 17,
+                  "line": 5
+                }
+              },
+              "text": "body of `identity`"
+            },
+            {
+              "primary": false,
+              "region": {
+                "end": {
+                  "column": 24,
+                  "line": 4
+                },
+                "start": {
+                  "column": 12,
+                  "line": 4
+                }
+              },
+              "text": "declared type"
+            }
+          ],
           "message": [
-            "Something is off with the body of the `identity` definition:\n\n5| identity flag = flag\n                   ",
+            "Type mismatch: expected `",
             {
               "bold": false,
-              "color": "RED",
-              "string": "^^^^",
+              "color": "yellow",
+              "string": "unit",
               "underline": false
             },
-            "\nThis `flag` value is a:\n\n    ",
+            "`, found `",
             {
               "bold": false,
               "color": "yellow",
               "string": "bool",
               "underline": false
             },
-            "\n\nBut the type annotation on `identity` says it should be:\n\n    ",
-            {
-              "bold": false,
-              "color": "yellow",
-              "string": "unit",
-              "underline": false
-            }
+            "`.\n\n"
           ],
           "region": {
             "end": {
@@ -42,6 +67,9 @@ expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes()
               "line": 5
             }
           },
+          "related": [],
+          "severity": "error",
+          "suggestions": [],
           "title": "TYPE MISMATCH"
         }
       ]

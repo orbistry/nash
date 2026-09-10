@@ -54,33 +54,42 @@ share a region; deduplicate only diagnostics known to have the same cause.
 
 ### Report
 
-Elm's `Reporting.Report.Report` is a title, a region, suggestions, and a
-`Doc` that already contains the rendered code snippet. miette draws
-snippets itself from labelled spans, so the Nash `Report` keeps the
-snippet *placement* separate from the prose:
+Nash uses concise, direct messages inspired by Alder: state the problem,
+show expected and actual types, and add at most one useful hint. Source labels
+carry context instead of repeating it in paragraphs.
 
 ```rust
 pub struct Report {
-    pub title: String,          // "TYPE MISMATCH", "MISSING PATTERNS", ...
-    pub severity: Severity,     // Error | Warning
-    pub region: Region,         // Elm's `_region`: JSON + LSP range
-    pub snippet: Snippet,       // what miette underlines
-    pub before: Doc,            // Elm's preHint: the sentence ending in ":"
-    pub after: Doc,             // Elm's postHint: details, hints, notes
-    pub suggestions: Vec<String>, // Elm's `_sgstns` (editor quick-fix names)
+    pub code: &'static str,       // stable machine identity, independent of title
+    pub title: String,           // short display title
+    pub severity: Severity,
+    pub region: Region,          // primary span in all output formats
+    pub primary_label: Option<String>,
+    pub labels: Vec<Label>,      // secondary locations in this source
+    pub context: Option<Region>, // optional surrounding source, never a label
+    pub related: Vec<ModuleReports>, // reports with their own source files
+    pub before: Doc,             // direct problem and full type comparison
+    pub after: Doc,              // supporting details and one useful hint
+    pub suggestions: Vec<String>,
 }
-
-pub enum Snippet {
-    /// `Code.toSnippet source region highlight`.
-    Region { region: Region, highlight: Option<Region> },
-    /// `Code.toPair source r1 r2`: two labelled spans in one snippet.
-    Pair { first: Label, second: Label },
-    /// No code shown (`ModuleNameUnspecified`).
-    None,
-}
-
 pub struct Label { pub region: Region, pub text: String }
 ```
+
+Codes use explicit `nash::names::*`, `nash::type::*`, `nash::pattern::*`,
+`nash::warning::*`, and `nash::syntax` identifiers. Syntax has specific codes
+for module names, closing delimiters, and indentation. Editing a report's
+display title does not change its code. `nash::diagnostic` is the default for
+manually constructed reports; compiler phase entry points assign codes.
+
+Annotations retain their type region, and list/branch expectations retain the
+previous sibling's region. Reports label these as `declared type`, `previous
+list element`, or `previous branch`. A sibling label shows the comparison
+context; it does not claim that every part of an inferred type originated there.
+Delimiter errors retain opening positions from the parser, including attribute,
+macro, exposing, type-parameter, constructor-field, and test-budget parentheses
+or braces. Lexer errors also retain the opening quote or block-comment marker
+and the insertion boundary. Indentation errors distinguish an existing closer
+from a missing one.
 
 `Report` owns everything. It is produced from arena-allocated error values
 and outlives the module's `Bump`, so the driver can collect reports for
@@ -180,15 +189,14 @@ swaps the problem set:
 | `BadFlexSuper`, `BadRigidSuper` | removed with `Super`; the trait solver reports unsatisfied constraints as `MISSING IMPL` (below) |
 | — | `BigLittle { name }`: `Int` vs `int`, `Bytes` vs `bytes`, `List Int` vs `list int`, `Map`/`pair`, Big record vs little record |
 
-The comparison is rendered into the report's `after` doc (miette `help`):
-"It is ... / But you are trying to use it as ..." with the two indented
-type blocks, then hints from the first problem.
+The full comparison is rendered in `before` as expected and actual types.
+Structural differences retain their colors and full type detail. `after` uses
+the first applicable type-difference hint, or one context-specific hint.
 
 ### Suggest
 
 `Reporting/Suggest.hs`: restricted Damerau-Levenshtein distance,
-case-insensitive `sort` and `rank`. Used for "These names seem close
-though:" lists (naming errors, record field typos, unknown exports,
+case-insensitive `sort` and `rank`. Used for "Similar names:" lists (naming errors, record field typos, unknown exports,
 unknown module imports). No external crate; the distance is ~25 lines.
 
 ## Rendering to the terminal
@@ -198,10 +206,11 @@ produces a value implementing `miette::Diagnostic`:
 
 | miette | from `Report` |
 |---|---|
-| `code()` | `title` |
+| `code()` | `code` |
 | `severity()` | `severity` |
 | `Display` (the `×` line) | `before` rendered at 80 columns |
-| `labels()` | `snippet` regions, converted to byte offsets via `Source` (zero-width regions become width 1, like Elm's `max 1` caret) |
+| `labels()` | primary region and secondary labels, converted to byte spans by `Source` |
+| `related()` | related reports rendered with their own source files |
 | `help()` | `after` rendered at 80 columns, multi-line |
 | `source_code()` | `NamedSource::new(path, source)` |
 
@@ -235,51 +244,23 @@ settle : list Account -> list int
 settle accounts =
     map balanceOf accounts
 ```
-TYPE MISMATCH
 
-  × Something is off with the body of the `settle` definition:
+```text
+nash::type::mismatch
+
+  × Type mismatch: expected `list int`, found `list Int`.
     ╭─[src/Ledger.nash:11:5]
+  8 │ 
+  9 │ settle : list Account -> list int
+    ·          ────────────┬───────────
+    ·                      ╰── declared type
  10 │ settle accounts =
  11 │     map balanceOf accounts
-    ·     ──────────────────────
+    ·     ───────────┬──────────
+    ·                ╰── body of `settle`
     ╰────
-  help: This `map` call produces:
-
-            list Int
-
-        But the type annotation on `settle` says it should be:
-
-            list int
-
-        Hint: `Int` is the Big (Data) type and `int` is the little type. They never
-        convert implicitly. Where an appropriate `Lift` impl is available, use `lower`
-        to go from `Int` to `int`, or `lift` to go the other way.
+  help: Use `lower` to convert `Int` to `int` where a `Lift` impl is available.
 ```
-Error: TYPE MISMATCH
-
-  × Something is off with the body of the `settle` definition:
-    ╭─[src/Ledger.nash:10:5]
-  9 │ settle accounts =
- 10 │     List.map balanceOf accounts
-    ·     ─────────────┬─────────────
-    ·                  ╰── this `List.map` call
-    ╰────
-  help: This `List.map` call produces:
-
-            list Int
-
-        But the type annotation on `settle` says it should be:
-
-            list int
-
-        Hint: `Int` is the Big (Data) integer and `int` is the little
-        type. They never convert implicitly. Use `lower` or `lift` where
-        an appropriate `Lift` impl is available.
-```
-
-`Int` and `int` in the two type blocks are `dullyellow` on a color
-terminal; the rest of each type is plain. The hint is
-`Problem::BigLittle`.
 
 ### Example 2 — missing impl
 
@@ -293,54 +274,27 @@ type step = Done | Next int
 isDone : step -> bool
 isDone s = s == Done
 ```
-MISSING IMPL
 
-  × I cannot find an `Eq` impl for `step`:
+```text
+nash::type::missing_impl
+
+  × No impl for `Eq step`.
    ╭─[src/Steps.nash:8:12]
  7 │ isDone : step -> bool
  8 │ isDone s = s == Done
-   ·            ─────────
+   ·            ────┬────
+   ·                ╰── required by `==`
    ╰────
-  help: The (==) operator needs its arguments to implement `Eq`, and here they are:
-
-            step
-
-        But there is no `impl Eq step` in this module or in any import.
-
-        `Eq` is implemented for these heads:
+  help: Available impl heads:
 
             bool
             bytes
             int
             (list 'a0)
 
-        Hint: This local datatype is a candidate for `@derive(Eq)`, but automatic
-        deriving is not available yet. Write the impl by hand:
+        …
 
-            impl Eq step where
-                eq a b = ...
-```
-Error: MISSING IMPL
-
-  × I cannot find an `Eq` impl for `step`:
-    ╭─[src/Steps.nash:6:12]
-  6 │ isDone s = s == Done
-    ·            ────┬────
-    ·                ╰── needs `Eq step`
-    ╰────
-  help: The (==) operator needs its arguments to implement `Eq`, and here
-        they are:
-
-            step
-
-        But there is no `impl Eq step` in this module or in any import,
-        and no matching impl is available.
-
-        Hint: Write the impl by hand. Deriving with `@derive(Eq)`
-        belongs to the later macro-expansion plan:
-
-            impl Eq step where
-                eq a b = ...
+        Import or define an impl for `Eq step`.
 ```
 
 ### Example 3 — non-exhaustive case
@@ -356,52 +310,25 @@ tag d =
         Constr n _ -> n
         List _ -> 0
 ```
-MISSING PATTERNS
 
-  × This `case` does not have branches for all possibilities:
+```text
+nash::pattern::incomplete
+
+  × Case expression is not exhaustive.
    ╭─[src/Tag.nash:7:5]
  6 │     tag d =
  7 │ ╭─▶     case d of
  8 │ │           Constr n _ -> n
  9 │ ╰─▶         List _ -> 0
    ╰────
-  help: Missing possibilities include:
+  help: Missing patterns:
 
             Map _
             I _
             B _
 
-        I would have to crash if I saw one of those. Add branches for them!
-
-        Hint: If you want to write the code for each branch later, use `todo` as a
-        placeholder. Read <https://nash-script.dev/hints/missing-patterns> for more
-        guidance on this workflow.
+        Add the missing branches; use `todo` for unfinished bodies.
 ```
-Error: MISSING PATTERNS
-
-  × This `case` does not have branches for all possibilities:
-    ╭─[src/Tag.nash:5:5]
-  5 │ ╭─▶     case d of
-  6 │ │           Constr n _ -> n
-  7 │ ├─▶         List _ -> 0
-    · ╰──── 
-    ╰────
-  help: Missing possibilities include:
-
-            Map _
-            I _
-            B _
-
-        I would have to crash if I saw one of those. Add branches for them!
-
-        Hint: If you want to write the code for each branch later, use
-        `todo` as a placeholder. Read
-        <https://nash-script.dev/hints/missing-patterns> for more guidance
-        on this workflow.
-```
-
-The missing-pattern block is `dullyellow`. Pattern text comes from
-`nash_nitpick::render::pattern_to_string`.
 
 ## Warnings
 
@@ -414,38 +341,32 @@ miette's `Warning:` header, never fail the build, and are suppressed by
 
 ## JSON output
 
-`nash check --report=json` emits Elm's `--report=json` shape so existing
-editor tooling for Elm can be adapted with a rename:
+`nash check --report=json` uses the Elm compile-error envelope with structured
+Nash problem fields. Each problem contains `code`, `title`, `severity`, `region`,
+`message`, `labels`, `suggestions`, and `related`.
 
 ```json
 {
-  "type": "compile-errors",
-  "errors": [
-    {
-      "path": "src/Ledger.nash",
-      "name": "Ledger",
-      "problems": [
-        {
-          "title": "TYPE MISMATCH",
-          "region": { "start": { "line": 10, "column": 5 }, "end": { "line": 10, "column": 32 } },
-          "message": [
-            "Something is off with the body of the `settle` definition:\n\n",
-            { "bold": false, "underline": false, "color": "yellow", "string": "Int" },
-            "..."
-          ]
-        }
-      ]
-    }
-  ]
+  "code": "nash::type::mismatch",
+  "title": "TYPE MISMATCH",
+  "severity": "error",
+  "region": { "start": { "line": 11, "column": 5 }, "end": { "line": 11, "column": 27 } },
+  "message": ["Type mismatch: expected `list int`, found `list Int`."],
+  "labels": [
+    { "region": { "start": { "line": 11, "column": 5 }, "end": { "line": 11, "column": 27 } }, "text": "body of `settle`", "primary": true },
+    { "region": { "start": { "line": 9, "column": 10 }, "end": { "line": 9, "column": 34 } }, "text": "declared type", "primary": false }
+  ],
+  "suggestions": [],
+  "related": []
 }
 ```
 
-`message` is Elm's `Doc.encode`: an array of plain strings and styled
-chunks. Because miette does not draw JSON, the JSON `message` is the full
-Elm-style document: `before`, blank line, an Elm-style code snippet
-rendered by `nash-report` itself (`Render/Code.hs` port, kept for this
-purpose only), then `after`. Driver errors serialize as
-`{"type":"error","path":..,"title":..,"message":[..]}`.
+`message` contains styled text chunks from `before` and `after`. Source labels
+are separate structured data; it no longer embeds an ASCII source drawing.
+Clients must render `labels` to show source context. `related` contains module
+objects with `path`, `name`, and `problems`, recursively using the same schema.
+This is a deliberate schema extension and a change to the content of `message`.
+Driver errors retain `{"type":"error","path":..,"title":..,"message":[..]}`.
 
 Warnings use `"type": "compile-warnings"` with the same problem shape
 (Elm has no JSON warnings; this is an addition). `--report=json` writes one
@@ -466,10 +387,10 @@ terminal capability. JSON never contains ANSI sequences.
 |---|---|
 | `range` | `region`, converted from 1-based line/column to 0-based UTF-16 positions |
 | `severity` | `severity` |
-| `code` | `title` |
+| `code` | stable `code` |
 | `source` | `"nash"` |
-| `message` | `before` + `"\n\n"` + `after`, rendered plain at width 80 |
-| `related_information` | `Snippet::Pair` first label (the second is primary), and the non-primary highlight of `Snippet::Region` |
+| `message` | `before`, primary label text, and `after`, rendered plain at width 80 |
+| `related_information` | all secondary labels and related reports, with their own file URIs and UTF-16 ranges |
 | `data` | `suggestions` (for a future quick-fix code action) |
 
 The server uses full-text synchronization and snapshots unsaved buffers over
@@ -504,7 +425,7 @@ pub fn to_reports(source: &Source, error: &ModuleError<'_>) -> Vec<Report>;
 | Source | Elm file ported | Titles (examples) | Notes |
 |---|---|---|---|
 | `nash_parse::error::Error` / `Module` / `Decl` / `Expr` / `Pattern` / `Type` ... | `Reporting/Error/Syntax.hs` | `UNFINISHED CASE`, `MISSING ARROW`, `UNEXPECTED SYMBOL`, `NO TABS`, `ENDLESS COMMENT`, `EXPECTING MODULE NAME` | Row/col points become width-1 labels. Port/effect/shader/char variants are dropped with their AST cases. `Expr::Char` keeps a short `NO CHARACTERS` report until the lexer stops producing it. |
-| `nash_can::Error::MissingModuleHeader` | `Syntax.hs` `ModuleNameUnspecified` | `MODULE NAME MISSING` | `Snippet::None`, example shows `module Main exposing (..)`. |
+| `nash_can::Error::MissingModuleHeader` | `Syntax.hs` `ModuleNameUnspecified` | `MODULE NAME MISSING` | No source labels, example shows `module Main exposing (..)`. |
 | `nash_can::Error` (rest) | `Reporting/Error/Canonicalize.hs` | `NAMING ERROR`, `AMBIGUOUS NAME`, `NAME CLASH`, `SHADOWING`, `CYCLIC DEFINITION`, `BAD TYPE ANNOTATION`, `TOO FEW ARGS`, `ALIAS PROBLEM`, `UNBOUND TYPE VARIABLE`, `BAD IMPORT`, `UNKNOWN EXPORT`, `UNKNOWN OPERATOR` | `BinopFunctionNotFound` is new: `INFIX PROBLEM`, "The `(<+>)` operator refers to `combine`, but I cannot find that definition in this file." Elm's `%`, `===`, `!=` operator hints are kept (they are JS-isms users still type). |
 | `nash_constrain::Error` | `Reporting/Error/Type.hs` + `Type/Error.hs` | `TYPE MISMATCH`, `TOO MANY ARGS`, `INFINITE TYPE` | Operator-specific prose (`badMath`, `badBool`, `badCompLeft`, ...) is kept for the core operators; `//` and `^` hints lose their `Float` halves; `(::)`, `(++)`, `(|>)`, `(<|)` unchanged. |
 | `nash_can::Error::{KindMismatch, KindInfinite, BadArity}` (plan 02) | none (new) | `KIND MISMATCH`, `INFINITE KIND`, `TOO MANY TYPE ARGS` | Kinds are `Type` and arrows. `BadArity` reports too many arguments to a named constructor. |
@@ -535,13 +456,3 @@ pub fn to_reports(source: &Source, error: &ModuleError<'_>) -> Vec<Report>;
   *failures* (assertion output, shrunk counterexamples) are not reports.
   They are rendered by `nash-test` (`docs/testing.md`).
 
-## Open questions
-
-1. **Hint URLs.** `https://nash-script.dev/hints/<name>` is assumed. The
-   pages do not exist yet.
-2. **miette fallback.** If the pinned miette lacks
-   `MietteHandlerOpts::wrap_lines`, `after` goes through a custom
-   `miette::ReportHandler` that delegates header and snippet to the
-   graphical handler and appends the help text verbatim.
-3. **`Option.withDefault` name.** `AnythingFromOption`'s hint names a
-   stdlib function; fill in once `docs/stdlib.md` fixes it.

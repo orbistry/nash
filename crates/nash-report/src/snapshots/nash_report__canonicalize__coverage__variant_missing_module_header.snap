@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-MODULE NAME MISSING
+nash::names::missing_module_header
 
   × I need the module name to be declared at the top of this file, like this:
   │

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule Main exposing (..)\n\n)"
 ---
-STRAY PARENTHESIS
+nash::diagnostic
 
   × I was not expecting to see a parenthesis here:
    ╭─[src/Main.nash:3:1]

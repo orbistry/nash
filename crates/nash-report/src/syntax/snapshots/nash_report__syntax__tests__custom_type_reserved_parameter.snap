@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: if
 ---
-RESERVED WORD
+nash::diagnostic
 
   × I ran into a reserved word unexpectedly while parsing this custom type:
    ╭─[src/Main.nash:1:1]

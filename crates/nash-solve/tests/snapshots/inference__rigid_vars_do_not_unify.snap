@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (cast)\n\ncast : a -> b\ncast x = x\n"
+description: "Code:\n\nmodule Main exposing (cast)\n\ncast : 'a -> 'b\ncast x = x\n"
 ---
 [
     BadExpr(
@@ -22,6 +22,16 @@ description: "Code:\n\nmodule Main exposing (cast)\n\ncast : a -> b\ncast x = x\
         ),
         FromAnnotation(
             "cast",
+            Region {
+                start: Position {
+                    line: 3,
+                    column: 8,
+                },
+                end: Position {
+                    line: 3,
+                    column: 16,
+                },
+            },
             1,
             TypedBody,
             RigidVar(

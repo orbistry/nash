@@ -1,18 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(& Error ::\nBadPattern(region(), PCategory :: Str, & string(), PExpected ::\nFromContext(region(), PContext::TypedArg(\"f\", 0), & int())))"
+expression: "show(& Error ::\nBadPattern(region(), PCategory :: Str, & string(), PExpected ::\nFromContext(region(), PContext::TypedArg(\"f\", 0, Region::zero()), & int())))"
 ---
-TYPE MISMATCH
+nash::type::pattern_mismatch
 
-  × The 1st argument to `f` is weird.
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──┬
+   ·   │  ╰── declared argument type
+   ·   ╰── argument 1 of `f`
    ╰────
-  help: The argument is a pattern that matches strings:
-
-            string
-
-        But the type annotation on `f` says the 1st argument should be:
-
-            int

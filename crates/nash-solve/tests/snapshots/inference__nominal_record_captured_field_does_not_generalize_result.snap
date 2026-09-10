@@ -46,6 +46,16 @@ description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }
         ),
         FromAnnotation(
             "f",
+            Region {
+                start: Position {
+                    line: 3,
+                    column: 5,
+                },
+                end: Position {
+                    line: 3,
+                    column: 27,
+                },
+            },
             1,
             TypedBody,
             Tuple(

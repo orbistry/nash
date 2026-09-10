@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: if
 ---
-RESERVED WORD
+nash::diagnostic
 
   × I just started parsing a record type, but I got stuck on this field name:
    ╭─[src/Main.nash:1:1]

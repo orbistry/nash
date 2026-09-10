@@ -2,13 +2,12 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-UNKNOWN OPERATOR
+nash::names::not_found_binop
 
-  × I do not recognize the (name) operator.
+  × Unknown operator `(name)`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: Is there an `import` and `exposing` entry for it? Maybe you want (other)
-        instead?
+  help: Try other instead.

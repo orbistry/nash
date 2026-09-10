@@ -30,6 +30,16 @@ description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep 
         },
         FromAnnotation(
             "keep",
+            Region {
+                start: Position {
+                    line: 3,
+                    column: 12,
+                },
+                end: Position {
+                    line: 3,
+                    column: 20,
+                },
+            },
             1,
             TypedBody,
             RigidVar(

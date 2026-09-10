@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-BAD BYTE STRING
+nash::diagnostic
 
   × I ran into an invalid hexadecimal digit in this byte string:
    ╭─[Main.nash:1:12]

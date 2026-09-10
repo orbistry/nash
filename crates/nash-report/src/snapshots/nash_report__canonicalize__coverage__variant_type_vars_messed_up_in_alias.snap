@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-TYPE VARIABLE PROBLEMS
+nash::names::type_vars_messed_up_in_alias
 
   × Type alias `Box` has some type variable problems.
    ╭─[Main.nash:1:1]
@@ -13,6 +13,6 @@ TYPE VARIABLE PROBLEMS
   help: Type variable `b` appears in the definition, but I do not see it declared.
         Likewise, type variable `a` is declared, but not used.
 
-        My guess is that a definition like this will work better:
+        Match the declaration to the variables used:
 
             type alias Box 'b = ...

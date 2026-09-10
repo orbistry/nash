@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-UNFINISHED RECORD PATTERN
+nash::diagnostic
 
   × I was partway through parsing a record pattern, but I got stuck here:
    ╭─[src/Main.nash:1:3]

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-MISSING METHOD
+nash::names::missing_method
 
   × This `Equal` impl does not define `name`:
    ╭─[Main.nash:1:1]
@@ -10,5 +10,4 @@ MISSING METHOD
    · ────
  2 │ other = name
    ╰────
-  help: The `Equal` trait requires this method and does not provide a default. Add a
-        `name` definition to this impl.
+  help: Add a `name` definition to this impl.

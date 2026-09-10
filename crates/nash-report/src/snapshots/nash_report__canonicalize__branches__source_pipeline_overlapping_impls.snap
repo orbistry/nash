@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: rendered
 ---
-OVERLAPPING IMPL
+nash::names::overlapping_impls
 
   × These `Bad.Keep` impls can both match the same trait arguments. The overlapping
   │ head is Builtin.unit:
@@ -15,6 +15,5 @@ OVERLAPPING IMPL
  7 │ ├─▶     keep x = x
    · ╰──── overlapping impl in `Bad`
    ╰────
-  help: I cannot choose which impl to use. Remove one of them, or change their heads so
-        they cannot match the same trait arguments. Adding different context constraints
-        does not disambiguate overlapping heads.
+  help: Remove one impl or make their heads disjoint; context constraints do not
+        disambiguate heads.

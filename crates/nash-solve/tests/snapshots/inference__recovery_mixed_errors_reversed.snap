@@ -118,6 +118,16 @@ expression: errors
         ),
         FromAnnotation(
             "mismatch",
+            Region {
+                start: Position {
+                    line: 13,
+                    column: 12,
+                },
+                end: Position {
+                    line: 13,
+                    column: 14,
+                },
+            },
             0,
             TypedBody,
             Type {

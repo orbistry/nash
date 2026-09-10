@@ -2,12 +2,12 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-BAD IMPORT
+nash::names::import_open_alias
 
-  × The `name` type alias cannot be followed by (..) like this:
+  × Type alias `name` has no variants to import.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: Remove the (..) and it should work.
+  help: Remove `(..)`.

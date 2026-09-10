@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nimport Cardano.Tx exposing x"
 ---
-PROBLEM IN EXPOSING
+nash::diagnostic
 
   × I want to parse exposed values, but I am getting stuck here:
    ╭─[src/Main.nash:1:28]

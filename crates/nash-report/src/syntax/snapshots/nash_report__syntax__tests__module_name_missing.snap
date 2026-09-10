@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 expression: "render_plain(&to_report(&Source::new(\"\"),\n&Error::ModuleNameUnspecified(\"Main\")), &Source::new(\"\"), \"src/Main.nash\")"
 ---
-MODULE NAME MISSING
+nash::syntax::missing_module_name
 
   × I need the module name to be declared at the top of this file, like this:
   │

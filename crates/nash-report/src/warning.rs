@@ -2,39 +2,41 @@
 use crate::{Doc, Report};
 use nash_can::{Warning, WarningContext};
 pub fn to_report(warning: &Warning<'_>) -> Report {
-    match warning {
+    let (title, code, region, message, hint) = match warning {
         Warning::UnusedImport {
             region,
             module_name,
-        } => Report::snippet(
+        } => (
             "unused import",
+            "nash::warning::unused_import",
             *region,
-            None,
-            Doc::reflow(&format!(
-                "Nothing from the `{module_name}` module is used in this file."
-            )),
-            Doc::text("I recommend removing unused imports."),
-        )
-        .warning(),
+            format!("Unused import `{module_name}`."),
+            "Remove the import.".into(),
+        ),
         Warning::UnusedVariable {
             region,
             context,
             name,
-        } => {
-            let (title, advice) = match context {
-                WarningContext::Def => ("unused definition", "If you are sure there is no typo, remove the definition. This way future readers will not have to wonder why it is there!".to_string()),
-                WarningContext::Pattern => ("unused variable", format!("If you are sure there is no typo, replace `{name}` with _ so future readers will not have to wonder why it is there!")),
-            };
-            Report::snippet(
-                title, *region, None,
-                Doc::reflow(&format!("You are not using `{name}` anywhere.")),
-                Doc::stack([
-                    Doc::reflow(&format!("Is there a typo? Maybe you intended to use `{name}` somewhere but typed another name instead?")),
-                    Doc::reflow(&advice),
-                ]),
-            ).warning()
-        }
-    }
+        } => match context {
+            WarningContext::Def => (
+                "unused definition",
+                "nash::warning::unused_definition",
+                *region,
+                format!("Unused definition `{name}`."),
+                "Remove the definition if it is not needed.".into(),
+            ),
+            WarningContext::Pattern => (
+                "unused variable",
+                "nash::warning::unused_variable",
+                *region,
+                format!("Unused variable `{name}`."),
+                format!("Replace `{name}` with `_`."),
+            ),
+        },
+    };
+    Report::snippet(title, region, None, Doc::text(message), Doc::text(hint))
+        .with_code(code)
+        .warning()
 }
 
 #[cfg(test)]

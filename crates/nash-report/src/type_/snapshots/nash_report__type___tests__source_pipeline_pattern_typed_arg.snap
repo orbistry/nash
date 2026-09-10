@@ -2,18 +2,15 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf : B -> B\\nf A = B\\n\")"
 ---
-TYPE MISMATCH
+nash::type::pattern_mismatch
 
-  × The 1st argument to `f` is weird.
+  × Type mismatch: expected `B`, found `A`.
    ╭─[Main.nash:5:3]
+ 3 │ type B = B
  4 │ f : B -> B
+   ·     ───┬──
+   ·        ╰── declared argument type
  5 │ f A = B
-   ·   ─
+   ·   ┬
+   ·   ╰── argument 1 of `f`
    ╰────
-  help: The argument is a pattern that matches `A` values of type:
-
-            A
-
-        But the type annotation on `f` says the 1st argument should be:
-
-            B

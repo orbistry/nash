@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf =\n1"
 ---
-UNFINISHED DEFINITION
+nash::diagnostic
 
   × I got stuck while parsing the `f` definition:
    ╭─[src/Main.nash:1:4]

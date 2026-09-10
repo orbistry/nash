@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-STRUCTURAL EQUALITY
+nash::names::structural_eq_override
 
   × This impl would replace structural equality:
    ╭─[Main.nash:1:1]

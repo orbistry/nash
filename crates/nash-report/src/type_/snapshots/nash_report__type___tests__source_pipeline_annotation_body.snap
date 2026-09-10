@@ -2,18 +2,15 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf : A\\nf = B\\n\")"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × Something is off with the body of the `f` definition:
+  × Type mismatch: expected `A`, found `B`.
    ╭─[Main.nash:5:5]
+ 3 │ type B = B
  4 │ f : A
+   ·     ┬
+   ·     ╰── declared type
  5 │ f = B
-   ·     ─
+   ·     ┬
+   ·     ╰── body of `f`
    ╰────
-  help: This `B` value is a:
-
-            B
-
-        But the type annotation on `f` says it should be:
-
-            A

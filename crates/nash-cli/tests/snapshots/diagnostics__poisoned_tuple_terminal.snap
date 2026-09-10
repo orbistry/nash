@@ -2,35 +2,27 @@
 source: crates/nash-cli/tests/diagnostics.rs
 expression: "normalized(&human.stderr, &project.0)"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × Something is off with the body of the `bad` definition:
+  × Type mismatch: expected `( ?, unit )`, found `( ?, 'a -> 'a )`.
    ╭─[<project>/src/Main.nash:3:7]
+ 1 │ module Main exposing (..)
  2 │ bad : ((), ())
+   ·       ────┬───
+   ·           ╰── declared type
  3 │ bad = (().field, \x -> x)
-   ·       ───────────────────
+   ·       ─────────┬─────────
+   ·                ╰── body of `bad`
    ╰────
-  help: The body is a tuple of type:
 
-            ( ?, 'a -> 'a )
+nash::type::not_a_record
 
-        But the type annotation on `bad` says it should be:
-
-            ( ?, unit )
-
-TYPE MISMATCH
-
-  × This value is not a record, so I cannot use it when accessing the `field` field
-  │ of this value:
+  × Expected a record, found `unit`.
    ╭─[<project>/src/Main.nash:3:8]
  2 │ bad : ((), ())
  3 │ bad = (().field, \x -> x)
-   ·        ────────
+   ·        ────┬───
+   ·            ╰── field `field` access
    ╰────
-  help: It has type:
-
-            unit
-
-        But I need a value with record fields!
 
 Compilation failed: 0 succeeded, 1 failed or blocked.

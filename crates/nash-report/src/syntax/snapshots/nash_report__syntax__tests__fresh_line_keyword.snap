@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: module
 ---
-TOO MUCH INDENTATION
+nash::diagnostic
 
   × This `module` should not have any spaces before it:
    ╭─[src/Main.nash:1:1]

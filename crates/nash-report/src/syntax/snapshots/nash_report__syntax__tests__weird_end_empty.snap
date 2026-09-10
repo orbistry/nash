@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ""
 ---
-UNFINISHED FILE
+nash::diagnostic
 
   × I got to the end of the file, but I was expecting more.
    ╭─[src/Main.nash:1:1]

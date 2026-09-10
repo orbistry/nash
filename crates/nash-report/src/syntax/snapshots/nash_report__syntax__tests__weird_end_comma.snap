@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ","
 ---
-UNEXPECTED COMMA
+nash::diagnostic
 
   × I got stuck on this comma:
    ╭─[src/Main.nash:1:1]

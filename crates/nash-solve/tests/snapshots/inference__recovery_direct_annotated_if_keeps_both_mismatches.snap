@@ -26,6 +26,16 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
         ),
         FromAnnotation(
             "f",
+            Region {
+                start: Position {
+                    line: 3,
+                    column: 5,
+                },
+                end: Position {
+                    line: 3,
+                    column: 7,
+                },
+            },
             0,
             TypedIfBranch(
                 1,
@@ -68,6 +78,16 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
         ),
         FromAnnotation(
             "f",
+            Region {
+                start: Position {
+                    line: 3,
+                    column: 5,
+                },
+                end: Position {
+                    line: 3,
+                    column: 7,
+                },
+            },
             0,
             TypedIfBranch(
                 0,

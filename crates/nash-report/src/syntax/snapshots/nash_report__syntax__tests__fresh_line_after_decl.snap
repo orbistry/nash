@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nx = 1 y = 2"
 ---
-UNEXPECTED EQUALS
+nash::diagnostic
 
   × I was not expecting this equals sign:
    ╭─[src/Main.nash:1:9]

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-ENDLESS BYTE STRING
+nash::diagnostic
 
   × I cannot find the end of this byte string:
    ╭─[src/Main.nash:1:3]

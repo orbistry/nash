@@ -2,21 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error ::\nBadPattern(region(), PCategory :: Str, & string(), PExpected ::\nFromContext(region(), PContext::ListEntry(1), & int())))"
 ---
-TYPE MISMATCH
+nash::type::pattern_mismatch
 
-  × The 2nd pattern in this list does not match all the previous ones:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── list pattern 2
    ╰────
-  help: The 2nd pattern is trying to match strings:
-
-            string
-
-        But all the previous patterns in the list are:
-
-            int
-
-        Hint: Everything in a list must be the same type of value. This way, we never
-        run into unexpected values partway through a List.map, List.foldl, etc. Read
-        <https://nash-script.dev/hints/custom-types> to learn how to “mix” types.

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ___
 ---
-UNEXPECTED NAME
+nash::diagnostic
 
   × Variable names cannot start with underscores like this:
    ╭─[src/Main.nash:1:1]

@@ -2,15 +2,15 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-REDUNDANT EXPORT
+nash::names::export_duplicate
 
-  × You are trying to expose `name` multiple times! Once here:
+  × Duplicate export `name`.
    ╭─[Main.nash:2:1]
  1 │ name = other
    · ──┬─
-   ·   ╰── once here
+   ·   ╰── first export
  2 │ other = name
    · ──┬──
-   ·   ╰── and again right here
+   ·   ╰── duplicate export
    ╰────
-  help: Remove one of them and you should be all set!
+  help: Remove the duplicate export.

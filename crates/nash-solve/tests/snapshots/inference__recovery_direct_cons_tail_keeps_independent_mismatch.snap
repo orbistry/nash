@@ -139,6 +139,16 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\n
             TypedArg(
                 "f",
                 0,
+                Region {
+                    start: Position {
+                        line: 3,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 13,
+                    },
+                },
             ),
             Type {
                 home: ModuleName {

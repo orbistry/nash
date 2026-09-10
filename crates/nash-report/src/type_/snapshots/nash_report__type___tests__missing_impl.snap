@@ -2,24 +2,16 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::MissingImpl\n{\n    region: region(), name: \"==\", trait_: nash_ast::primitives::eq_trait(),\n    args:\n    &[&ErrorType::Type\n    {\n        home: nash_ast::ModuleName { package: None, name: \"Main\" }, name:\n        \"step\", args: &[]\n    }], available:\n    &[&[nash_ast::Head::Named\n    {\n        reference: nash_ast::QualifiedName\n        { home: nash_ast::primitives::builtin_home(), name: \"int\" }, args: &[]\n    }]], because: &[]\n})"
 ---
-MISSING IMPL
+nash::type::missing_impl
 
-  × I cannot find an `Eq` impl for `step`:
+  × No impl for `Eq step`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── required by `==`
    ╰────
-  help: The (==) operator needs its arguments to implement `Eq`, and here they are:
-
-            step
-
-        But there is no `impl Eq step` in this module or in any import.
-
-        `Eq` is implemented for these heads:
+  help: Available impl heads:
 
             int
 
-        Hint: Write an `impl Eq step` that provides the trait's methods:
-
-            impl Eq step where
-                eq a b = ...
+        Import or define an impl for `Eq step`.

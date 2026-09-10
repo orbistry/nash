@@ -2,72 +2,56 @@
 source: crates/nash-cli/tests/diagnostics.rs
 expression: text
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × Something is off with the body of the `settle` definition:
+  × Type mismatch: expected `list int`, found `list Int`.
     ╭─[<project>/app/src/Ledger.nash:11:5]
+  8 │ 
+  9 │ settle : list Account -> list int
+    ·          ────────────┬───────────
+    ·                      ╰── declared type
  10 │ settle accounts =
  11 │     map balanceOf accounts
-    ·     ──────────────────────
+    ·     ───────────┬──────────
+    ·                ╰── body of `settle`
     ╰────
-  help: This `map` call produces:
+  help: Use `lower` to convert `Int` to `int` where a `Lift` impl is available.
 
-            list Int
+nash::type::missing_impl
 
-        But the type annotation on `settle` says it should be:
-
-            list int
-
-        Hint: `Int` is the Big (Data) type and `int` is the little type. They never
-        convert implicitly. Where an appropriate `Lift` impl is available, use `lower`
-        to go from `Int` to `int`, or `lift` to go the other way.
-
-MISSING IMPL
-
-  × I cannot find an `Eq` impl for `step`:
+  × No impl for `Eq step`.
    ╭─[<project>/app/src/Steps.nash:8:12]
  7 │ isDone : step -> bool
  8 │ isDone s = s == Done
-   ·            ─────────
+   ·            ────┬────
+   ·                ╰── required by `==`
    ╰────
-  help: The (==) operator needs its arguments to implement `Eq`, and here they are:
-
-            step
-
-        But there is no `impl Eq step` in this module or in any import.
-
-        `Eq` is implemented for these heads:
+  help: Available impl heads:
 
             bool
             bytes
             int
             (list 'a0)
 
-        Hint: This local datatype is a candidate for `@derive(Eq)`, but automatic
-        deriving is not available yet. Write the impl by hand:
+        …
 
-            impl Eq step where
-                eq a b = ...
+        Import or define an impl for `Eq step`.
 
-MISSING PATTERNS
+nash::pattern::incomplete
 
-  × This `case` does not have branches for all possibilities:
+  × Case expression is not exhaustive.
    ╭─[<project>/app/src/Tag.nash:7:5]
  6 │     tag d =
  7 │ ╭─▶     case d of
  8 │ │           Constr n _ -> n
  9 │ ╰─▶         List _ -> 0
    ╰────
-  help: Missing possibilities include:
+  help: Missing patterns:
 
             Map _
             I _
             B _
 
-        I would have to crash if I saw one of those. Add branches for them!
-
-        Hint: If you want to write the code for each branch later, use `todo` as a
-        placeholder. Read <https://nash-script.dev/hints/missing-patterns> for more
-        guidance on this workflow.
+        Add the missing branches; use `todo` for unfinished bodies.
 
 Compilation failed: 22 succeeded, 3 failed or blocked.

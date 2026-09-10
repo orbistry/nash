@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nimport"
 ---
-EXPECTING IMPORT NAME
+nash::diagnostic
 
   × I was parsing an `import` until I got stuck here:
    ╭─[src/Main.nash:1:7]

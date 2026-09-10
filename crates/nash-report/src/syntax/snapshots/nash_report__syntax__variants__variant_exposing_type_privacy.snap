@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-PROBLEM EXPOSING CUSTOM TYPE VARIANTS
+nash::diagnostic
 
   × It looks like you are trying to expose the variants of a custom type:
    ╭─[src/Main.nash:1:3]

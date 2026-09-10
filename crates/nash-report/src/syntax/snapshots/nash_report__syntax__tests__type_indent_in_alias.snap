@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "42"
 ---
-UNFINISHED TYPE ALIAS
+nash::diagnostic
 
   × I was partway through parsing a type alias, but I got stuck here:
    ╭─[src/Main.nash:1:1]

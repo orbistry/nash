@@ -2,19 +2,13 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::ContradictoryRepresentation\n{\n    region: region(), name: \"f\", typ: &ErrorType::RigidVar(\"a\"), requirements:\n    &[nash_ast::primitives::ReprTrait::Big,\n    nash_ast::primitives::ReprTrait::Little]\n})"
 ---
-CONTRADICTORY REPRESENTATION
+nash::type::contradictory_representation
 
-  × `f` requires incompatible representations:
+  × `f` requires incompatible representations for `'a`.
    ╭─[Main.nash:1:1]
  1 │ value
    · ─────
    ╰────
-  help: This type is required to satisfy all of the following representation
-        constraints:
+  help: Required: Big, Little.
 
-            'a
-
-            Big, Little
-
-        No type can satisfy all of them. Check where this value is used as Big Data and
-        where a little builtin representation is required.
+        Use a consistent representation or convert the value explicitly.

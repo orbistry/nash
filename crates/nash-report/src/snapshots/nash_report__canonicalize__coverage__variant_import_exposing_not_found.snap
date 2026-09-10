@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-BAD IMPORT
+nash::names::import_exposing_not_found
 
   × The `First` module does not expose `name`:
    ╭─[Main.nash:1:1]
@@ -10,4 +10,4 @@ BAD IMPORT
    · ────
  2 │ other = name
    ╰────
-  help: Maybe you want other instead?
+  help: Try other instead.

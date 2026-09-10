@@ -7,15 +7,25 @@ expression: "serde_json::to_string_pretty(&value).unwrap()"
   "path": "src/Main.nash",
   "problems": [
     {
-      "message": [
-        "I cannot find this name:\n\n1| main =\n2|     missing\n       ",
+      "code": "nash::diagnostic",
+      "labels": [
         {
-          "bold": false,
-          "color": "RED",
-          "string": "^^^^^^^",
-          "underline": false
-        },
-        "\nTry ",
+          "primary": true,
+          "region": {
+            "end": {
+              "column": 12,
+              "line": 2
+            },
+            "start": {
+              "column": 5,
+              "line": 2
+            }
+          },
+          "text": ""
+        }
+      ],
+      "message": [
+        "I cannot find this name:\n\nTry ",
         {
           "bold": false,
           "color": "GREEN",
@@ -34,6 +44,11 @@ expression: "serde_json::to_string_pretty(&value).unwrap()"
           "line": 2
         }
       },
+      "related": [],
+      "severity": "error",
+      "suggestions": [
+        "found"
+      ],
       "title": "NAMING ERROR"
     }
   ]

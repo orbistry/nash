@@ -36,7 +36,7 @@ fn mismatch_annotation_body() {
         region(),
         Category::String,
         &string(),
-        Expected::FromAnnotation("value", 0, SubContext::TypedBody, &int())
+        Expected::FromAnnotation("value", Region::zero(), 0, SubContext::TypedBody, &int())
     )));
 }
 
@@ -53,9 +53,9 @@ macro_rules! context_snapshot {
         }
     };
 }
-context_snapshot!(mismatch_if_branches, Context::IfBranch(1));
-context_snapshot!(mismatch_case_branches, Context::CaseBranch(1));
-context_snapshot!(mismatch_list_entries, Context::ListEntry(1));
+context_snapshot!(mismatch_if_branches, Context::IfBranch(1, None));
+context_snapshot!(mismatch_case_branches, Context::CaseBranch(1, None));
+context_snapshot!(mismatch_list_entries, Context::ListEntry(1, None));
 #[test]
 fn mismatch_if_condition_not_bool() {
     let boolean = ErrorType::Type {
@@ -119,7 +119,10 @@ macro_rules! pattern_snapshot {
 pattern_snapshot!(pattern_case_first_mismatch, PContext::CaseMatch(0));
 pattern_snapshot!(pattern_case_later_mismatch, PContext::CaseMatch(1));
 pattern_snapshot!(pattern_ctor_arg_mismatch, PContext::CtorArg("Some", 0));
-pattern_snapshot!(pattern_typed_arg_mismatch, PContext::TypedArg("f", 0));
+pattern_snapshot!(
+    pattern_typed_arg_mismatch,
+    PContext::TypedArg("f", 0, Region::zero())
+);
 pattern_snapshot!(pattern_list_entry, PContext::ListEntry(1));
 #[test]
 fn pattern_list_tail() {
@@ -166,7 +169,13 @@ fn rigid_var_mismatch() {
         region(),
         Category::CallResult(MaybeName::NoName),
         &int(),
-        Expected::FromAnnotation("f", 0, SubContext::TypedBody, &ErrorType::RigidVar("a"))
+        Expected::FromAnnotation(
+            "f",
+            Region::zero(),
+            0,
+            SubContext::TypedBody,
+            &ErrorType::RigidVar("a")
+        )
     )));
 }
 #[test]
@@ -492,7 +501,7 @@ fn every_category() {
     insta::assert_snapshot!(
         categories
             .into_iter()
-            .map(|category| add_category("It is", category))
+            .map(|category| category_label(category))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -513,7 +522,7 @@ fn every_pattern_category() {
     insta::assert_snapshot!(
         categories
             .into_iter()
-            .map(|category| add_pattern_category("It matches", category))
+            .map(|category| pattern_label(category))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -530,7 +539,7 @@ fn every_subcontext() {
                 region(),
                 Category::String,
                 &string(),
-                Expected::FromAnnotation("f", 0, context, &int())
+                Expected::FromAnnotation("f", Region::zero(), 0, context, &int())
             ))
         );
     }
@@ -691,7 +700,13 @@ fn example_one_big_little_annotation() {
         Region::new(Position::new(10, 5), Position::new(10, 32)),
         Category::CallResult(MaybeName::FuncName("List.map")),
         &actual,
-        Expected::FromAnnotation("settle", 1, SubContext::TypedBody, &expected),
+        Expected::FromAnnotation(
+            "settle",
+            Region::zero(),
+            1,
+            SubContext::TypedBody,
+            &expected,
+        ),
     );
     let report = to_report(&Localizer::from_names(["Builtin"]), &error);
     insta::assert_snapshot!(crate::render_plain(
@@ -781,7 +796,7 @@ fn problem_hints() {
 }
 
 #[test]
-fn missing_impl_local_union_deriving_not_yet_available() {
+fn missing_impl_local_union_suggests_a_supported_impl() {
     let source = "module Main exposing (..)\ntype step = Done | Next Builtin.int\n";
     let bump = bumpalo::Bump::new();
     let module = nash_parse::Parser::new(&bump, source).module().unwrap();
@@ -804,13 +819,9 @@ fn missing_impl_local_union_deriving_not_yet_available() {
     };
     let report = to_report(&l, &error);
     let text = report.after.render(80, false);
-    assert!(
-        text.split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
-            .contains("automatic deriving is not available yet")
-    );
-    assert!(text.contains("eq a b = ..."));
+    assert!(text.contains("Import or define an impl for"), "{text}");
+    assert!(text.contains("step"), "{text}");
+    assert!(!text.contains("@derive"));
     insta::assert_snapshot!(text);
 }
 
@@ -878,4 +889,26 @@ fn append_number_hints_wrap() {
         );
         insta::assert_snapshot!(name, show(&error));
     }
+}
+
+#[test]
+fn pipe_argument_mismatch_does_not_blame_the_function_operand() {
+    let unit = ErrorType::Type {
+        home: nash_ast::primitives::builtin_home(),
+        name: "unit",
+        args: &[],
+    };
+    let function = ErrorType::Lambda(&unit, &unit, &[]);
+    let error = Error::BadExpr(
+        region(),
+        Category::Unit,
+        &unit,
+        Expected::FromContext(region(), Context::OpRight("<|"), &function),
+    );
+    let report = to_report(&Localizer::from_names([]), &error);
+    assert!(!report.after.render(80, false).contains("left operand"));
+    assert_eq!(
+        report.primary_label.as_deref(),
+        Some("right operand of (<|)")
+    );
 }

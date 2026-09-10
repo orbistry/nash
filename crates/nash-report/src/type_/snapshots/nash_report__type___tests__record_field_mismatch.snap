@@ -2,17 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::RecordField(\"value\", \"name\"), & int())))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × The `name` field of `value` is not what I expect:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── field `name` of `value`
    ╰────
-  help: This field is a string of type:
-
-            string
-
-        But the record declaration says it should be:
-
-            int

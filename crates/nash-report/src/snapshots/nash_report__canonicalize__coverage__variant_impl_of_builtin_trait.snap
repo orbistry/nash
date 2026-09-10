@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-BUILTIN TRAIT
+nash::names::impl_of_builtin_trait
 
   × The `First.Equal` trait is owned by the compiler:
    ╭─[Main.nash:1:1]

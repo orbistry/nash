@@ -2,11 +2,11 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
-UNKNOWN OPERATOR
+nash::names::not_found_binop
 
-  × I do not recognize the (<+>) operator.
+  × Unknown operator `(<+>)`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
    ╰────
-  help: Is there an `import` and `exposing` entry for it?
+  help: Import and expose the operator.

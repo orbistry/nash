@@ -329,7 +329,7 @@ mod tests {
         for (diagnostic, problem) in lsp.iter().zip(problems) {
             assert_eq!(
                 serde_json::to_value(&diagnostic.code).unwrap(),
-                problem["title"]
+                problem["code"]
             );
             assert_eq!(
                 diagnostic.range.start.line + 1,

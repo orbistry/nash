@@ -2,9 +2,9 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-UNKNOWN IMPORT
+nash::names::import_not_found
 
-  × I could not find a `Missing` module to import!
+  × Unknown module `Missing`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────

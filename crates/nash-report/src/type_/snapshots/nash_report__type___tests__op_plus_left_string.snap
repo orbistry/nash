@@ -2,15 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::OpLeft(\"+\"), & int())))"
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × Addition does not work with this value:
+  × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── left operand of (+)
    ╰────
-  help: The left side of (+) is a string of type:
-
-            string
-
-        But (+) only works with values whose type implements `Num`.

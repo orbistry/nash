@@ -1,9 +1,0 @@
----
-source: crates/nash-report/src/code/snippet.rs
-expression: "source.snippet_doc(&snippet).render(80, false)"
----
-1| a = x
-       ^
-
-2| b = y
-       ^

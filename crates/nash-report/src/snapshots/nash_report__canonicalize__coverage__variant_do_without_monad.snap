@@ -2,13 +2,12 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-NAMING ERROR
+nash::names::do_without_monad
 
-  × I cannot resolve this `do` expression:
+  × A `do` expression requires `Monad`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
  2 │ other = name
    ╰────
-  help: A `do` expression requires the `Monad` trait. Import the module that defines
-        `Monad`.
+  help: Import the module that defines `Monad`.

@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "->"
 ---
-MISSING COLON?
+nash::diagnostic
 
   × I was not expecting to see an arrow here:
    ╭─[src/Main.nash:1:1]

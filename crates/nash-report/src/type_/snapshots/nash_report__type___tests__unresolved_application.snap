@@ -2,17 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::UnresolvedApplication\n{\n    region: region(), name: \"f\", head: &ErrorType::FlexVar(\"f\"), args:\n    &[&int()]\n})"
 ---
-UNRESOLVED TYPE APPLICATION
+nash::type::unresolved_application
 
-  × I could not establish the datatype context required by `f`:
+  × Cannot establish the datatype context for `f`: 'f int
    ╭─[Main.nash:1:1]
  1 │ value
    · ─────
    ╰────
-  help: The unresolved type application is:
-
-            'f int
-
-        Hint: Add a type annotation that determines the type constructor and its
-        arguments. Its datatype constraints must be satisfied before this value can be
-        used.
+  help: Add an annotation that determines the type constructor and its arguments.

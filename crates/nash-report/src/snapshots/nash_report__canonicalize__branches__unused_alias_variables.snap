@@ -2,17 +2,13 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
-UNUSED TYPE VARIABLES
+nash::names::type_vars_messed_up_in_alias
 
   × Type variables a and b are unused in the `Box` definition.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
    ╰────
-  help: I recommend removing a and b from the declaration, like this:
+  help: Remove a and b from the declaration:
 
             type alias Box = ...
-
-        Why? Well, if I allowed `type alias Height 'a = Int` I would need to answer some
-        weird questions. Is `Height Bool` the same as `Int`? Is `Height Bool` the same
-        as `Height Int`? My solution is to not need to ask them!

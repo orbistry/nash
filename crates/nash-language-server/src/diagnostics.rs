@@ -1,6 +1,6 @@
 //! Convert compiler reports to LSP without changing their primary spans.
 use nash_region::{Position as NashPosition, Region};
-use nash_report::{Report, Severity, Snippet, Source};
+use nash_report::{Report, Severity, Source};
 use tower_lsp_server::ls_types::{
     Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
     Position, Range, Uri,
@@ -16,41 +16,72 @@ pub fn to_lsp(report: &Report, source: &Source<'_>, uri: &Uri) -> Diagnostic {
 }
 
 fn checked_to_lsp(report: &Report, source: &Source<'_>, uri: &Uri) -> Option<Diagnostic> {
-    let related = match &report.snippet {
-        Snippet::Pair { first, .. } => Some((first.region, first.text.clone())),
-        Snippet::Region {
-            highlight: Some(highlight),
-            ..
-        } if *highlight != report.region => Some((*highlight, "Related source".into())),
-        _ => None,
-    };
-    let related_information = match related {
-        Some((region, message)) => Some(vec![DiagnosticRelatedInformation {
+    let mut related = Vec::new();
+    for label in &report.labels {
+        related.push(DiagnosticRelatedInformation {
             location: Location {
                 uri: uri.clone(),
-                range: to_range(region, source)?,
+                range: to_range(label.region, source)?,
             },
-            message,
-        }]),
-        None => None,
-    };
+            message: label.text.clone(),
+        });
+    }
+    related_reports(&report.related, uri, &mut related)?;
+    let related_information = (!related.is_empty()).then_some(related);
     Some(Diagnostic {
         range: to_range(report.region, source)?,
         severity: Some(match report.severity {
             Severity::Error => DiagnosticSeverity::ERROR,
             Severity::Warning => DiagnosticSeverity::WARNING,
         }),
-        code: Some(NumberOrString::String(report.title.clone())),
+        code: Some(NumberOrString::String(report.code.to_string())),
         source: Some("nash".into()),
-        message: format!(
-            "{}\n\n{}",
-            report.before.render(80, false),
-            report.after.render(80, false)
-        ),
+        message: report.message(),
         related_information,
         data: (!report.suggestions.is_empty()).then(|| serde_json::json!(report.suggestions)),
         ..Diagnostic::default()
     })
+}
+
+fn related_reports(
+    modules: &[nash_report::ModuleReports],
+    base_uri: &Uri,
+    output: &mut Vec<DiagnosticRelatedInformation>,
+) -> Option<()> {
+    for module in modules {
+        let path = std::path::Path::new(&module.path);
+        let path = if path.is_absolute() {
+            path.to_owned()
+        } else {
+            let base = url::Url::parse(base_uri.as_str())
+                .ok()?
+                .to_file_path()
+                .ok()?;
+            base.parent()?.join(path)
+        };
+        let uri: Uri = url::Url::from_file_path(path).ok()?.as_str().parse().ok()?;
+        let source = Source::new(&module.source);
+        for report in &module.reports {
+            output.push(DiagnosticRelatedInformation {
+                location: Location {
+                    uri: uri.clone(),
+                    range: to_range(report.region, &source)?,
+                },
+                message: report.message(),
+            });
+            for label in &report.labels {
+                output.push(DiagnosticRelatedInformation {
+                    location: Location {
+                        uri: uri.clone(),
+                        range: to_range(label.region, &source)?,
+                    },
+                    message: label.text.clone(),
+                });
+            }
+            related_reports(&report.related, &uri, output)?;
+        }
+    }
+    Some(())
 }
 
 pub fn to_range(region: Region, source: &Source<'_>) -> Option<Range> {
@@ -134,7 +165,10 @@ mod tests {
             diagnostic.related_information.unwrap()[0].location.range,
             to_range(region(1, 1, 1, 2), &source).unwrap()
         );
-        assert_eq!(diagnostic.message, "Duplicate names:\n\nRename one.");
+        assert_eq!(
+            diagnostic.message,
+            "Duplicate names:\n\nsecond name\n\nRename one."
+        );
     }
     #[test]
     fn highlighted_region_and_suggestions_survive() {
@@ -152,8 +186,75 @@ mod tests {
         let diagnostic = to_lsp(&report, &source, &uri);
         assert_eq!(diagnostic.severity, Some(DiagnosticSeverity::WARNING));
         assert_eq!(diagnostic.data, Some(serde_json::json!(["known"])));
-        assert!(diagnostic.related_information.is_some());
-        report.snippet = Snippet::None;
+        assert_eq!(
+            diagnostic.range,
+            to_range(region(1, 5, 1, 12), &source).unwrap()
+        );
+        report = report.without_source();
         assert!(to_lsp(&report, &source, &uri).related_information.is_none());
+    }
+}
+
+#[cfg(test)]
+mod structured_tests {
+    use super::*;
+    use nash_report::{Doc, Label, ModuleReports};
+    fn region(column: usize) -> Region {
+        Region::new(
+            NashPosition::new(1, column),
+            NashPosition::new(1, column + 1),
+        )
+    }
+    #[test]
+    fn labels_related_files_and_codes_survive_conversion() {
+        let mut report = Report::snippet(
+            "OLD TITLE",
+            region(5),
+            None,
+            Doc::text("Type mismatch."),
+            Doc::Empty,
+        )
+        .with_code("nash::type::mismatch")
+        .with_label(Label {
+            region: region(1),
+            text: "first requirement".into(),
+        })
+        .with_label(Label {
+            region: region(3),
+            text: "second requirement".into(),
+        });
+        report.title = "A new display title".into();
+        report.primary_label = Some("argument 2 of `f`".into());
+        let mut origin = Report::snippet(
+            "ORIGIN",
+            region(5),
+            None,
+            Doc::text("Declared here."),
+            Doc::Empty,
+        );
+        origin.primary_label = Some("annotation for `f`".into());
+        let report = report.with_related(ModuleReports {
+            name: "Other".into(),
+            path: "Other #.nash".into(),
+            source: "a b c".into(),
+            reports: vec![origin],
+        });
+        let uri: Uri = "file:///project/Main.nash".parse().unwrap();
+        let diagnostic = to_lsp(&report, &Source::new("a b c"), &uri);
+        assert_eq!(
+            diagnostic.code,
+            Some(NumberOrString::String("nash::type::mismatch".into()))
+        );
+        assert!(
+            diagnostic.message.contains("argument 2 of `f`"),
+            "{diagnostic:?}"
+        );
+        let related = diagnostic.related_information.unwrap();
+        assert_eq!(related.len(), 3);
+        assert_eq!(
+            related[2].location.uri.as_str(),
+            "file:///project/Other%20%23.nash"
+        );
+        assert!(related[2].message.contains("annotation for `f`"));
     }
 }

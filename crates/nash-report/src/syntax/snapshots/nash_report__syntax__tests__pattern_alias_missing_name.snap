@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf (x as) = x"
 ---
-UNFINISHED PATTERN
+nash::diagnostic
 
   × I was expecting to see a variable name after the `as` keyword:
    ╭─[src/Main.nash:1:8]

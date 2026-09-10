@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule main exposing (..)"
 ---
-EXPECTING MODULE NAME
+nash::diagnostic
 
   × I was parsing a `module` declaration until I got stuck here:
    ╭─[src/Main.nash:1:8]

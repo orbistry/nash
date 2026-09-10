@@ -1,0 +1,5 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: text
+---
+Import or define an impl for `Eq.Eq step`.

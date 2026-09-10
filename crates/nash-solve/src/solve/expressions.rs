@@ -112,7 +112,14 @@ impl<'a> Solver<'a, '_> {
                         state,
                         rtv,
                         entry,
-                        Expected::FromContext(region, Context::ListEntry(index), element),
+                        Expected::FromContext(
+                            region,
+                            Context::ListEntry(
+                                index,
+                                index.checked_sub(1).map(|i| entries[i].region),
+                            ),
+                            element,
+                        ),
                     );
                 }
                 let list = self.structure(
@@ -280,15 +287,20 @@ impl<'a> Solver<'a, '_> {
                         Expected::FromContext(region, Context::IfCondition, boolean),
                     );
                 }
+                let mut previous_branch = None;
                 for (index, branch) in branches
                     .iter()
                     .map(|branch| branch.then_branch)
                     .chain(std::iter::once(*final_else))
                     .enumerate()
                 {
-                    let branch_expected =
-                        Expected::FromContext(region, Context::IfBranch(index), branch_var);
+                    let branch_expected = Expected::FromContext(
+                        region,
+                        Context::IfBranch(index, previous_branch),
+                        branch_var,
+                    );
                     state = self.infer_expr(uf, env, rank, state, rtv, branch, branch_expected);
+                    previous_branch = Some(branch.region);
                 }
                 self.equal(uf, rank, state, region, Category::If, branch_var, expected)
             }
@@ -318,8 +330,14 @@ impl<'a> Solver<'a, '_> {
                             PExpected::FromContext(region, PContext::CaseMatch(index), matched),
                         )],
                     );
-                    let branch_expected =
-                        Expected::FromContext(region, Context::CaseBranch(index), branch_var);
+                    let branch_expected = Expected::FromContext(
+                        region,
+                        Context::CaseBranch(
+                            index,
+                            index.checked_sub(1).map(|i| branches[i].body.region),
+                        ),
+                        branch_var,
+                    );
                     state = self.infer_expr(
                         uf,
                         &scope.env,
@@ -618,7 +636,7 @@ impl<'a> Solver<'a, '_> {
         expr: &Located<CanExpr<'a>>,
         expected: Expected<'a, &'a Located<CanType<'a>>>,
     ) -> State<'a> {
-        let Expected::FromAnnotation(name, arity, _, typ) = expected else {
+        let Expected::FromAnnotation(name, annotation_region, arity, _, typ) = expected else {
             unreachable!("annotated expression has its canonical expectation")
         };
         let region = expr.region;
@@ -658,6 +676,7 @@ impl<'a> Solver<'a, '_> {
                         branch,
                         Expected::FromAnnotation(
                             name,
+                            annotation_region,
                             arity,
                             SubContext::TypedIfBranch(index),
                             typ,
@@ -701,6 +720,7 @@ impl<'a> Solver<'a, '_> {
                         branch.body,
                         Expected::FromAnnotation(
                             name,
+                            annotation_region,
                             arity,
                             SubContext::TypedCaseBranch(index),
                             typ,

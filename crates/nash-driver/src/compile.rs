@@ -749,12 +749,12 @@ mod trait_tests {
             (
                 "orphan",
                 "module Bad exposing (..)\nimport Methods exposing (Keep)\nimport Types exposing (Token)\nimpl Keep Token where\n    keep x = x\n",
-                "ORPHAN IMPL",
+                "nash::names::orphan_impl",
             ),
             (
                 "overlap",
                 "module Bad exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep () where\n    keep x = x\n",
-                "OVERLAPPING IMPL",
+                "nash::names::overlapping_impls",
             ),
         ] {
             let result = compile_sources(&[
@@ -828,7 +828,7 @@ mod kind_tests {
             panic!("consumer must reject hidden label")
         };
         let message = report_text(reports);
-        assert!(message.contains("not a record"), "{message}");
+        assert!(message.contains("nash::type::not_a_record"), "{message}");
     }
 
     #[tokio::test]
@@ -845,7 +845,7 @@ mod kind_tests {
         };
         let message = report_text(reports);
         assert!(
-            message.contains("does not support record updates"),
+            message.contains("nash::type::update_not_record"),
             "{message}"
         );
     }
@@ -864,7 +864,7 @@ mod kind_tests {
             panic!("private constructor labels must remain hidden")
         };
         let message = report_text(reports);
-        assert!(message.contains("not a record"), "{message}");
+        assert!(message.contains("nash::type::not_a_record"), "{message}");
     }
 
     #[tokio::test]
@@ -944,7 +944,7 @@ mod kind_tests {
             panic!("producer must report a kind error");
         };
         let message = report_text(reports);
-        assert!(message.contains("INFINITE KIND"), "{message}");
+        assert!(message.contains("nash::names::kind_infinite"), "{message}");
         assert!(message.contains("infinite kind"), "{message}");
     }
 
@@ -963,7 +963,7 @@ mod kind_tests {
                 panic!("producer must fail")
             };
             let message = report_text(reports);
-            assert!(message.contains("INFINITE KIND"), "{message}");
+            assert!(message.contains("nash::names::kind_infinite"), "{message}");
         }
     }
 
@@ -999,7 +999,8 @@ mod kind_tests {
                 };
                 let message = report_text(reports);
                 assert!(
-                    message.contains("REPRESENTATION MISMATCH") && message.contains("Storable"),
+                    message.contains("nash::names::representation_mismatch")
+                        && message.contains("Storable"),
                     "{message}"
                 );
             }
@@ -1029,7 +1030,8 @@ mod kind_tests {
         };
         let message = report_text(reports);
         assert!(
-            message.contains("REPRESENTATION MISMATCH") && message.contains("Storable"),
+            message.contains("nash::names::representation_mismatch")
+                && message.contains("Storable"),
             "{message}"
         );
         assert!(

@@ -2,7 +2,7 @@
 source: crates/nash-driver/src/compile.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-orphan: ORPHAN IMPL
+orphan: nash::names::orphan_impl
 
   × This module cannot define an impl of `Methods.Keep` for Types.Token:
    ╭─[/Bad.nash:4:1]
@@ -13,7 +13,7 @@ orphan: ORPHAN IMPL
   help: An impl must be defined in the module that defines its trait or one of its head
         types. Move this impl to one of those modules.
 
-overlap: OVERLAPPING IMPL
+overlap: nash::names::overlapping_impls
 
   × These `Bad.Keep` impls can both match the same trait arguments. The overlapping
   │ head is Builtin.unit:
@@ -26,6 +26,5 @@ overlap: OVERLAPPING IMPL
  7 │ ├─▶     keep x = x
    · ╰──── overlapping impl in `Bad`
    ╰────
-  help: I cannot choose which impl to use. Remove one of them, or change their heads so
-        they cannot match the same trait arguments. Adding different context constraints
-        does not disambiguate overlapping heads.
+  help: Remove one impl or make their heads disjoint; context constraints do not
+        disambiguate heads.

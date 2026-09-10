@@ -1,4 +1,4 @@
-//! Error reports: Elm's `Reporting/*` prose as miette diagnostics.
+//! Concise, source-aware diagnostics shared by terminal, JSON, and LSP.
 //!
 //! Each phase's error data (`nash_parse::error`, `nash_can::Error`, ...)
 //! is turned into an owned `Report` that outlives the module arena. A
@@ -27,14 +27,19 @@ pub use code::Source;
 pub use doc::Doc;
 pub use render::{Rendered, handler, render_plain};
 
-/// Elm's `Reporting.Report.Report` with the snippet placement split out
-/// so miette can draw the code.
+/// An owned diagnostic with one primary span, arbitrary secondary labels, and
+/// related reports that can refer to other source files.
 #[derive(Clone, Debug)]
 pub struct Report {
+    pub code: &'static str,
     pub title: String,
     pub severity: Severity,
     pub region: Region,
-    pub snippet: Snippet,
+    /// Text on the primary region, or None for a report without a source label.
+    pub primary_label: Option<String>,
+    pub labels: Vec<Label>,
+    pub context: Option<Region>,
+    pub related: Vec<ModuleReports>,
     pub before: Doc,
     pub after: Doc,
     pub suggestions: Vec<String>,
@@ -44,19 +49,6 @@ pub struct Report {
 pub enum Severity {
     Error,
     Warning,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Snippet {
-    /// `Code.toSnippet source region highlight`.
-    Region {
-        region: Region,
-        highlight: Option<Region>,
-    },
-    /// `Code.toPair source r1 r2`.
-    Pair { first: Label, second: Label },
-    /// No code shown.
-    None,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -75,10 +67,14 @@ impl Report {
         after: Doc,
     ) -> Report {
         Report {
+            code: "nash::diagnostic",
             title: title.to_string(),
             severity: Severity::Error,
-            region,
-            snippet: Snippet::Region { region, highlight },
+            region: highlight.unwrap_or(region),
+            primary_label: Some(String::new()),
+            labels: Vec::new(),
+            context: Some(region),
+            related: Vec::new(),
             before,
             after,
             suggestions: Vec::new(),
@@ -91,10 +87,14 @@ impl Report {
     pub fn pair(title: &str, first: Label, second: Label, before: Doc, after: Doc) -> Report {
         let region = second.region;
         Report {
+            code: "nash::diagnostic",
             title: title.to_string(),
             severity: Severity::Error,
             region,
-            snippet: Snippet::Pair { first, second },
+            primary_label: Some(second.text),
+            labels: vec![first],
+            context: None,
+            related: Vec::new(),
             before,
             after,
             suggestions: Vec::new(),
@@ -103,10 +103,39 @@ impl Report {
 
     /// Set the surrounding snippet while retaining the primary diagnostic region.
     pub fn with_region(mut self, surroundings: Region) -> Report {
-        if let Snippet::Region { region, highlight } = &mut self.snippet {
-            *highlight = Some(highlight.unwrap_or(self.region));
-            *region = surroundings;
-        }
+        self.context = Some(surroundings);
+        self
+    }
+
+    /// Plain text for clients that cannot draw source labels inline.
+    pub fn message(&self) -> String {
+        Doc::stack([
+            self.before.clone(),
+            self.primary_label.as_ref().map_or(Doc::Empty, Doc::text),
+            self.after.clone(),
+        ])
+        .render(80, false)
+    }
+
+    pub fn with_code(mut self, code: &'static str) -> Report {
+        self.code = code;
+        self
+    }
+
+    pub fn with_label(mut self, label: Label) -> Report {
+        self.labels.push(label);
+        self
+    }
+
+    pub fn with_related(mut self, related: ModuleReports) -> Report {
+        self.related.push(related);
+        self
+    }
+
+    pub fn without_source(mut self) -> Report {
+        self.primary_label = None;
+        self.labels.clear();
+        self.context = None;
         self
     }
 
@@ -144,15 +173,35 @@ impl ModuleReports {
 
     /// Stable presentation order without removing distinct errors at one span.
     pub fn sort(&mut self) {
+        for report in &mut self.reports {
+            for module in &mut report.related {
+                module.sort();
+            }
+            report.related.sort_by_cached_key(|module| {
+                (
+                    module.path.clone(),
+                    module.name.clone(),
+                    module.json().to_string(),
+                )
+            });
+        }
         self.reports.sort_by_cached_key(|report| {
             (
                 report.region,
+                report.code,
                 report.title.clone(),
                 report.before.render(80, false),
                 report.after.render(80, false),
                 report.severity,
-                report.snippet.clone(),
+                report.primary_label.clone(),
+                report.labels.clone(),
+                report.context,
                 report.suggestions.clone(),
+                report
+                    .related
+                    .iter()
+                    .map(|module| module.json().to_string())
+                    .collect::<Vec<_>>(),
             )
         });
     }

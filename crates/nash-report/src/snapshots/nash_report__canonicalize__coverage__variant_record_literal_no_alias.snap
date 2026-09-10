@@ -2,9 +2,9 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-UNKNOWN RECORD
+nash::names::record_literal_no_alias
 
-  × I cannot find a visible record alias with exactly these fields: x, y.
+  × No visible record alias has exactly these fields: x, y.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────

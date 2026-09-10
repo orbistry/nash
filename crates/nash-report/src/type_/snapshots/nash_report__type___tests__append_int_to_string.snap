@@ -2,11 +2,11 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: show(&error)
 ---
-TYPE MISMATCH
+nash::type::mismatch
 
-  × I thought I was appending string values here, not int values like this:
+  × Type mismatch: expected `string`, found `int`.
    ╭─[Main.nash:1:1]
  1 │ value
-   · ─────
+   · ──┬──
+   ·   ╰── right operand of (++)
    ╰────
-  help: Hint: Try using Int.toString to turn it into a string?

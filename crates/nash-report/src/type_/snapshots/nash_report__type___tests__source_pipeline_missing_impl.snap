@@ -2,21 +2,13 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntrait Eq 'a where\\n    eq : 'a -> 'a -> Builtin.bool\\nf : A -> Builtin.bool\\nf a = eq a a\\n\")"
 ---
-MISSING IMPL
+nash::type::missing_impl
 
-  × I cannot find an `Eq` impl for `A`:
+  × No impl for `Eq A`.
    ╭─[Main.nash:6:7]
  5 │ f : A -> Builtin.bool
  6 │ f a = eq a a
-   ·       ──
+   ·       ─┬
+   ·        ╰── required by `eq`
    ╰────
-  help: `eq` needs its arguments to implement `Eq`, and here they are:
-
-            A
-
-        But there is no `impl Eq A` in this module or in any import.
-
-        Hint: Write an `impl Eq A` that provides the trait's methods:
-
-            impl Eq A where
-                ...
+  help: Import or define an impl for `Eq A`.

@@ -34,6 +34,16 @@ description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\nfirst x = (s
         },
         FromAnnotation(
             "bad",
+            Region {
+                start: Position {
+                    line: 6,
+                    column: 7,
+                },
+                end: Position {
+                    line: 6,
+                    column: 18,
+                },
+            },
             1,
             TypedBody,
             Type {

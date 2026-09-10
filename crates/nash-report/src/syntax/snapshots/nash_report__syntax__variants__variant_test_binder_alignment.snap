@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-PROPERTY BINDER ALIGNMENT
+nash::diagnostic
 
   × This generated input does not line up with the others:
    ╭─[src/Main.nash:1:3]

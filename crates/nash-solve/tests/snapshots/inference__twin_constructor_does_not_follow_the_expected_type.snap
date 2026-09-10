@@ -27,6 +27,16 @@ description: "Code:\n\nmodule Main exposing (..)\ntype status = Ready\ntype Stat
         },
         FromAnnotation(
             "wrong",
+            Region {
+                start: Position {
+                    line: 4,
+                    column: 9,
+                },
+                end: Position {
+                    line: 4,
+                    column: 15,
+                },
+            },
             0,
             TypedBody,
             Type {

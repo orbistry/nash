@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-TRAIT PROBLEM
+nash::names::superclass_bad_arg
 
   × The `Equal` superclass has an invalid argument:
    ╭─[Main.nash:1:1]

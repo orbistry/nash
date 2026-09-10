@@ -1,8 +1,6 @@
 //! Source text access for reports, from Elm's `Reporting/Render/Code.hs`.
 //! Columns are byte-based, matching `nash_parse::Parser::advance`.
 
-mod snippet;
-
 use miette::SourceSpan;
 use nash_parse::{Col, Row};
 use nash_region::{Position, Region};

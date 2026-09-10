@@ -2,18 +2,13 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::MissingConstraint\n{\n    region: region(), name: \"==\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::RigidVar(\"a\")], binder:\n    &nash_region::Located::at(region(), \"f\")\n})"
 ---
-MISSING CONSTRAINT
+nash::type::missing_constraint
 
-  × `==` needs a constraint that the annotation for `f` does not promise:
+  × `==` requires undeclared constraint `Eq 'a`.
    ╭─[Main.nash:1:1]
  1 │ value
    · ──┬──┬
-   ·   │  ╰── needs `Eq 'a`
-   ·   ╰── annotation for `f`
+   ·   │  ╰── annotation for `f`
+   ·   ╰── constraint required here
    ╰────
-  help:     Eq 'a
-
-        The type variables in `f` must work for every type allowed by its annotation. I
-        cannot assume this constraint without it being declared.
-
-        Hint: Add `Eq 'a` to the context of the `f` type annotation.
+  help: Add `Eq 'a` to the annotation for `f`.

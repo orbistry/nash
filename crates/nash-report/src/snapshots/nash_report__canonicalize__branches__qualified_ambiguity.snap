@@ -2,17 +2,14 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
-AMBIGUOUS NAME
+nash::names::ambiguous_type
 
-  × This usage of `A.Box` is ambiguous.
+  × Ambiguous type `A.Box`.
    ╭─[Main.nash:1:1]
  1 │ name = other
    · ────
    ╰────
-  help: It could refer to a type from either of these imports:
+  help:     First.Box
+            Second.Box
 
-            import First as A
-            import Second as A
-
-        Read <https://nash-script.dev/hints/imports> to learn how to clarify which one
-        you want.
+        Give these imports distinct aliases.

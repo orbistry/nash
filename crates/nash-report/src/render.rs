@@ -8,19 +8,20 @@ use miette::{
 };
 
 use crate::code::Source;
-use crate::{Report, Severity, Snippet};
+use crate::{Report, Severity};
 
 pub const WIDTH: usize = 80;
 
 /// A `Report` bound to its file, owning everything miette needs.
 #[derive(Debug)]
 pub struct Rendered {
-    title: String,
+    code: &'static str,
     severity: Severity,
     message: String,
     help: Option<String>,
     labels: Vec<LabeledSpan>,
     source: RenderSource,
+    related: Vec<Rendered>,
 }
 
 /// Expand miette's source read to the report's requested surrounding region.
@@ -64,17 +65,19 @@ impl Report {
                 raw
             }
         };
-        let labels = match &self.snippet {
-            Snippet::Region { region, highlight } => vec![LabeledSpan::new_with_span(
-                None,
-                span(highlight.unwrap_or(*region)),
-            )],
-            Snippet::Pair { first, second } => vec![
-                LabeledSpan::new_with_span(Some(first.text.clone()), span(first.region)),
-                LabeledSpan::new_primary_with_span(Some(second.text.clone()), span(second.region)),
-            ],
-            Snippet::None => Vec::new(),
-        };
+        let labels: Vec<_> = self
+            .primary_label
+            .iter()
+            .map(|text| {
+                LabeledSpan::new_primary_with_span(
+                    (!text.is_empty()).then(|| text.clone()),
+                    span(self.region),
+                )
+            })
+            .chain(self.labels.iter().map(|label| {
+                LabeledSpan::new_with_span(Some(label.text.clone()), span(label.region))
+            }))
+            .collect();
         let mut display_source = source.text().to_string();
         if labels
             .iter()
@@ -84,17 +87,19 @@ impl Report {
         }
         let after = self.after.render(WIDTH, color);
         Rendered {
-            title: self.title.clone(),
+            code: self.code,
             severity: self.severity,
             message: self.before.render(WIDTH, color),
             help: (!after.is_empty()).then_some(after),
             labels,
+            related: self
+                .related
+                .iter()
+                .flat_map(|module| module.render(color))
+                .collect(),
             source: RenderSource {
                 source: NamedSource::new(path, display_source),
-                surroundings: match self.snippet {
-                    Snippet::Region { region, .. } => Some(span(region)),
-                    _ => None,
-                },
+                surroundings: self.context.map(span),
             },
         }
     }
@@ -110,7 +115,7 @@ impl std::error::Error for Rendered {}
 
 impl Diagnostic for Rendered {
     fn code(&self) -> Option<Box<dyn fmt::Display + '_>> {
-        Some(Box::new(&self.title))
+        Some(Box::new(self.code))
     }
 
     fn severity(&self) -> Option<miette::Severity> {
@@ -128,6 +133,13 @@ impl Diagnostic for Rendered {
 
     fn source_code(&self) -> Option<&dyn SourceCode> {
         Some(&self.source)
+    }
+
+    fn related(&self) -> Option<Box<dyn Iterator<Item = &dyn Diagnostic> + '_>> {
+        (!self.related.is_empty()).then(|| {
+            Box::new(self.related.iter().map(|report| report as &dyn Diagnostic))
+                as Box<dyn Iterator<Item = &dyn Diagnostic>>
+        })
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
@@ -182,6 +194,41 @@ mod tests {
         render_plain(report, &Source::new("f = x + 1"), "Main.nash")
     }
     #[test]
+    fn arbitrary_labels_and_related_sources_are_rendered() {
+        let report = snippet()
+            .with_label(Label {
+                region: region(1, 2),
+                text: "first requirement".into(),
+            })
+            .with_label(Label {
+                region: region(9, 10),
+                text: "second requirement".into(),
+            })
+            .with_related(crate::ModuleReports {
+                name: "Other".into(),
+                path: "Other.nash".into(),
+                source: "x = y".into(),
+                reports: vec![Report::snippet(
+                    "RELATED",
+                    region(5, 6),
+                    None,
+                    Doc::text("Declared here."),
+                    Doc::Empty,
+                )],
+            });
+        let output = plain(&report);
+        for expected in [
+            "first requirement",
+            "second requirement",
+            "Other.nash",
+            "Declared here.",
+            "[Main.nash:1:5]",
+        ] {
+            assert!(output.contains(expected), "{output}");
+        }
+    }
+
+    #[test]
     fn render_snippet_report() {
         insta::assert_snapshot!(plain(&snippet()));
     }
@@ -211,7 +258,7 @@ mod tests {
     #[test]
     fn render_no_snippet_report() {
         let mut none = snippet();
-        none.snippet = Snippet::None;
+        none = none.without_source();
         insta::assert_snapshot!(plain(&none));
     }
     #[test]
@@ -241,9 +288,7 @@ mod tests {
         let report = snippet().with_region(region(1, 10));
         assert_eq!(report.region, region(5, 6));
         assert!(plain(&report).contains("[Main.nash:1:5]"));
-        assert!(
-            matches!(report.snippet, Snippet::Region { region: wide, highlight: Some(narrow) } if wide == region(1,10) && narrow == region(5,6))
-        );
+        assert_eq!(report.context, Some(region(1, 10)));
         let source = Source::new("f =\n    case x of\n        _ -> ()\n        () -> ()");
         let narrow = Region::new(Position::new(4, 9), Position::new(4, 11));
         let wide = Region::new(Position::new(2, 5), Position::new(4, 17));
@@ -252,5 +297,42 @@ mod tests {
         let output = render_plain(&report, &source, "Main.nash");
         assert!(output.contains("[Main.nash:4:9]"), "{output}");
         assert!(output.contains("case x of"), "{output}");
+    }
+}
+
+#[cfg(test)]
+mod source_edge_tests {
+    use super::*;
+    use crate::{Doc, Label};
+    use nash_region::{Position, Region};
+    #[test]
+    fn unicode_crlf_tabs_and_final_empty_line_render_without_losing_labels() {
+        let source = Source::new("a😀é\r\n\tx\r\n");
+        let region = |r, c, e| Region::new(Position::new(r, c), Position::new(r, e));
+        let report = Report::snippet(
+            "SOURCE EDGES",
+            region(3, 1, 1),
+            None,
+            Doc::text("Missing value."),
+            Doc::Empty,
+        )
+        .with_code("nash::test::source_edges")
+        .with_label(Label {
+            region: region(1, 2, 6),
+            text: "Unicode origin".into(),
+        })
+        .with_label(Label {
+            region: region(2, 2, 3),
+            text: "tabbed origin".into(),
+        });
+        let rendered = report.render(&source, "Main.nash", false);
+        let labels = rendered.labels().unwrap().collect::<Vec<_>>();
+        assert_eq!((labels[1].offset(), labels[1].len()), (1, 4));
+        assert_eq!((labels[2].offset(), labels[2].len()), (10, 1));
+        let output = render_plain(&report, &source, "Main.nash");
+        for expected in ["Unicode origin", "tabbed origin", "Main.nash:3:1"] {
+            assert!(output.contains(expected), "{output}");
+        }
+        insta::assert_snapshot!(output);
     }
 }

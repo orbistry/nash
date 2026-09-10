@@ -7,67 +7,57 @@ use nash_nitpick::{Context, Error, Pattern};
 
 pub fn to_report(error: &Error<'_>) -> Report {
     match error {
-        Error::Redundant { case_region, pattern_region, index } => Report::snippet(
+        Error::Redundant {
+            case_region,
+            pattern_region,
+            index,
+        } => Report::snippet(
             "REDUNDANT PATTERN",
             *pattern_region,
-            Some(*pattern_region),
-            Doc::reflow(&format!("The {} pattern is redundant:", int_to_ordinal(*index))),
-            Doc::reflow("Any value with this shape will be handled by a previous pattern, so it should be removed."),
+            None,
+            Doc::text(format!(
+                "The {} pattern is unreachable.",
+                int_to_ordinal(*index)
+            )),
+            Doc::text("Remove it; earlier patterns cover every matching value."),
         )
-        .with_region(*case_region),
-
-        Error::Incomplete { region, context, unhandled } => match context {
-            Context::BadArg => Report::snippet(
-                "UNSAFE PATTERN",
+        .with_region(*case_region)
+        .with_code("nash::pattern::redundant"),
+        Error::Incomplete {
+            region,
+            context,
+            unhandled,
+        } => {
+            let (title, message, hint) = match context {
+                Context::BadArg => (
+                    "UNSAFE PATTERN",
+                    "Argument pattern is not exhaustive.",
+                    "Use a case expression in the function body to handle the missing patterns.",
+                ),
+                Context::BadDestruct => (
+                    "UNSAFE PATTERN",
+                    "Binding pattern is not exhaustive.",
+                    "Use a case expression to handle the missing patterns.",
+                ),
+                Context::BadCase => (
+                    "MISSING PATTERNS",
+                    "Case expression is not exhaustive.",
+                    "Add the missing branches; use `todo` for unfinished bodies.",
+                ),
+            };
+            Report::snippet(
+                title,
                 *region,
                 None,
-                Doc::text("This pattern does not cover all possibilities:"),
+                Doc::text(message),
                 Doc::stack([
-                    Doc::text("Other possibilities include:"),
+                    Doc::text("Missing patterns:"),
                     unhandled_patterns_to_doc_block(unhandled),
-                    Doc::reflow(
-                        "I would have to crash if I saw one of those! So rather than pattern matching in \
-                         function arguments, put a `case` in the function body to account for all possibilities.",
-                    ),
+                    Doc::text(hint),
                 ]),
-            ),
-            Context::BadDestruct => Report::snippet(
-                "UNSAFE PATTERN",
-                *region,
-                None,
-                Doc::text("This pattern does not cover all possible values:"),
-                Doc::stack([
-                    Doc::text("Other possibilities include:"),
-                    unhandled_patterns_to_doc_block(unhandled),
-                    Doc::reflow(
-                        "I would have to crash if I saw one of those! You can use `let` to deconstruct values \
-                         only if there is ONE possibility. Switch to a `case` expression to account for all \
-                         possibilities.",
-                    ),
-                    Doc::to_simple_hint(
-                        "Are you calling a function that definitely returns values with a very specific shape? \
-                         Try making the return type of that function more specific!",
-                    ),
-                ]),
-            ),
-            Context::BadCase => Report::snippet(
-                "MISSING PATTERNS",
-                *region,
-                None,
-                Doc::text("This `case` does not have branches for all possibilities:"),
-                Doc::stack([
-                    Doc::text("Missing possibilities include:"),
-                    unhandled_patterns_to_doc_block(unhandled),
-                    Doc::reflow("I would have to crash if I saw one of those. Add branches for them!"),
-                    Doc::link(
-                        "Hint",
-                        "If you want to write the code for each branch later, use `todo` as a placeholder. Read",
-                        "missing-patterns",
-                        "for more guidance on this workflow.",
-                    ),
-                ]),
-            ),
-        },
+            )
+            .with_code("nash::pattern::incomplete")
+        }
     }
 }
 
@@ -86,7 +76,7 @@ fn unhandled_patterns_to_doc_block(unhandled: &[Pattern<'_>]) -> Doc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Snippet, Source, render_plain};
+    use crate::{Source, render_plain};
 
     fn reports(input: &str) -> Vec<Report> {
         let bump = bumpalo::Bump::new();
@@ -171,9 +161,7 @@ mod tests {
         assert_eq!(reports.len(), 1);
         let report = &reports[0];
         assert_eq!(report.region.start.line, 5);
-        assert!(
-            matches!(report.snippet, Snippet::Region{region,highlight:Some(h)} if region.start.line == 3 && h == report.region)
-        );
+        assert!(report.context.is_some_and(|region| region.start.line == 3));
         insta::assert_snapshot!(render_plain(report, &Source::new(input), "src/Main.nash"));
     }
     #[test]

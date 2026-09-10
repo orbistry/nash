@@ -2,7 +2,7 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "]"
 ---
-STRAY SQUARE BRACKET
+nash::diagnostic
 
   × I ran into an unexpected square bracket in this pattern:
    ╭─[src/Main.nash:1:1]

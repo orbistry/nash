@@ -2,7 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-BAD EXPORT
+nash::names::export_open_trait
 
   × The `name` trait cannot be followed by (..) like this:
    ╭─[Main.nash:1:1]

@@ -2,19 +2,13 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::PolymorphicRecursion\n{\n    region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::FlexVar(\"a\")]\n})"
 ---
-POLYMORPHIC RECURSION
+nash::type::polymorphic_recursion
 
-  × The recursive use of `f` keeps changing its trait arguments:
+  × Recursive call to `f` grows its trait requirement.
    ╭─[Main.nash:1:1]
  1 │ value
    · ─────
    ╰────
-  help: The growing requirement is:
+  help: Eq 'a
 
-            Eq 'a
-
-        Each trip around this recursive call adds another impl wrapper. I cannot
-        construct a finite set of evidence arguments for it.
-
-        Hint: Keep the trait arguments the same across recursive calls, or split the
-        work into functions with explicit type annotations.
+        Keep trait arguments stable across recursive calls, or split the recursion.
