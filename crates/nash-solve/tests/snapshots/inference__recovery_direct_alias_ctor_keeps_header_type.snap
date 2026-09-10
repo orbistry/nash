@@ -1,0 +1,118 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\ntype box = Box bool\nf : box -> ()\nf (Box (() as whole)) = whole ()\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 5,
+                column: 25,
+            },
+            end: Position {
+                line: 5,
+                column: 30,
+            },
+        },
+        CallResult(
+            FuncName(
+                "whole",
+            ),
+        ),
+        Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "bool",
+            args: [],
+        },
+        FromContext(
+            Region {
+                start: Position {
+                    line: 5,
+                    column: 25,
+                },
+                end: Position {
+                    line: 5,
+                    column: 33,
+                },
+            },
+            CallArity(
+                FuncName(
+                    "whole",
+                ),
+                1,
+            ),
+            Lambda(
+                FlexVar(
+                    "a",
+                ),
+                FlexVar(
+                    "b",
+                ),
+                [],
+            ),
+        ),
+    ),
+    BadPattern(
+        Region {
+            start: Position {
+                line: 5,
+                column: 9,
+            },
+            end: Position {
+                line: 5,
+                column: 11,
+            },
+        },
+        Unit,
+        Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "unit",
+            args: [],
+        },
+        FromContext(
+            Region {
+                start: Position {
+                    line: 5,
+                    column: 4,
+                },
+                end: Position {
+                    line: 5,
+                    column: 21,
+                },
+            },
+            CtorArg(
+                "Box",
+                0,
+            ),
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "bool",
+                args: [],
+            },
+        ),
+    ),
+]

@@ -42,8 +42,8 @@ fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can:
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(bump, &mut uf, &can.module);
-    let (annotations, _) = nash_solve::run(bump, &mut uf, &constraint, &can.tables).unwrap();
+    let module = &can.module;
+    let (annotations, _) = nash_solve::run(bump, &mut uf, module, &can.tables).unwrap();
     interfaces.insert(
         "Literal",
         nash_can::from_module(bump, &can.module, &annotations),
@@ -67,9 +67,8 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
     .expect("expected successful canonicalization");
 
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(bump, &mut uf, &can_result.module);
-    nash_solve::run(bump, &mut uf, &constraint, &can_result.tables)
-        .map(|(annotations, _)| annotations)
+    let module = &can_result.module;
+    nash_solve::run(bump, &mut uf, module, &can_result.tables).map(|(annotations, _)| annotations)
 }
 
 #[test]
@@ -518,9 +517,8 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
     let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) =
-        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     assert_eq!(solved.schemes.len(), 2);
     assert_eq!(
         solved.instances.len(),
@@ -603,8 +601,8 @@ fn builtin_list_annotations_match_literals_and_patterns() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, _) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
+    let module = &canonical.module;
+    let (annotations, _) = nash_solve::run(&bump, &mut uf, module, &canonical.tables)
         .expect("annotations, list literals, and patterns use the same builtin type");
     insta::assert_snapshot!(render_annotations(&annotations));
 }
@@ -823,9 +821,9 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             )
             .unwrap();
             let mut uf = UnionFind::new();
-            let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+            let module = &canonical.module;
             let (annotations, _) =
-                nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+                nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
             let interfaces = std::collections::BTreeMap::from([
                 ("Builtin", nash_can::kinds::builtin_interface(&bump)),
                 (
@@ -875,8 +873,8 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             )
             .unwrap();
             let mut uf = UnionFind::new();
-            let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-            let result = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables);
+            let module = &canonical.module;
+            let result = nash_solve::run(&bump, &mut uf, module, &canonical.tables);
             if !trusted {
                 let errors =
                     result.expect_err("a same-named trait from another package cannot default");
@@ -1429,32 +1427,6 @@ fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
 
 #[test]
 fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
-    use nash_constrain::Constraint;
-    use nash_constrain::type_::Type;
-
-    fn definitions<'a, 'b>(constraint: &'b Constraint<'a>, found: &mut Vec<&'b Constraint<'a>>) {
-        match constraint {
-            Constraint::Let {
-                definitions: defs,
-                header_con,
-                body_con,
-                ..
-            } => {
-                if !defs.is_empty() {
-                    found.push(constraint);
-                }
-                definitions(header_con, found);
-                definitions(body_con, found);
-            }
-            Constraint::And(constraints) => {
-                for constraint in *constraints {
-                    definitions(constraint, found);
-                }
-            }
-            _ => {}
-        }
-    }
-
     let bump = Bump::new();
     let source = indoc!(
         "
@@ -1470,7 +1442,8 @@ fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
     );
     let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
-    let mut original_names = Vec::new();
+    let mut definitions = std::collections::BTreeMap::new();
+    let mut inferred_group_first = None;
     let mut decls = canonical.module.decls;
     loop {
         let (defs, next) = match decls {
@@ -1489,73 +1462,105 @@ fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
         };
         for def in defs {
             let (nash_ast::Def::Def { name, .. } | nash_ast::Def::TypedDef { name, .. }) = def;
-            original_names.push(*name);
+            if matches!(def, nash_ast::Def::Def { .. }) {
+                inferred_group_first.get_or_insert(nash_ast::NodeId::def(name));
+            }
+            definitions.insert(name.value, def);
         }
         decls = next;
     }
-    let nash_ast::Def::TypedDef { name, .. } =
-        canonical.module.traits[0].value.methods[0].default.unwrap()
+    let method = canonical.module.traits[0].value.methods[0].default.unwrap();
+    let nash_ast::Def::TypedDef {
+        name: method_name, ..
+    } = method
     else {
         panic!("typed default")
     };
-    original_names.push(*name);
+    definitions.insert(method_name.value, method);
+    assert_eq!(
+        definitions.keys().copied().collect::<Vec<_>>(),
+        ["f", "g", "h", "keep"]
+    );
+
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let mut found = Vec::new();
-    definitions(&constraint, &mut found);
-    let mut names = Vec::new();
-    for constraint in found {
-        let Constraint::Let {
-            given,
-            binder: Some(binder),
-            definitions,
-            header,
-            rigid_vars,
-            ..
-        } = constraint
+    let (annotations, solved) =
+        nash_solve::run(&bump, &mut uf, &canonical.module, &canonical.tables)
+            .expect("recursive schemes and default method solve");
+    assert_eq!(
+        annotations.keys().copied().collect::<Vec<_>>(),
+        ["f", "g", "h"]
+    );
+    assert!(
+        !annotations.contains_key("keep"),
+        "method must not be published as a lexical binding"
+    );
+    assert_eq!(
+        solved.schemes.len(),
+        4,
+        "one scheme per original definition"
+    );
+    let group_binder = inferred_group_first.expect("two inferred recursive members");
+
+    for (text, definition) in definitions {
+        let (nash_ast::Def::Def { name, body, .. } | nash_ast::Def::TypedDef { name, body, .. }) =
+            definition;
+        // Lookup through the original arena name, not a rebuilt name or region.
+        let node = nash_ast::NodeId::def(name);
+        let scheme = &solved.schemes[&node];
+        assert_eq!(
+            scheme.binder,
+            if text == "g" || text == "h" {
+                group_binder
+            } else {
+                node
+            }
+        );
+        let annotation = scheme.annotation;
+        let CanType::Lambda {
+            from: argument,
+            to: result,
+        } = annotation.typ.value
         else {
-            panic!("each definition scope must have an evidence binder");
+            panic!("{text}: preserve the full function type")
         };
-        assert!(std::ptr::eq(binder.name(), definitions[0].site.name()));
-        for definition in *definitions {
-            assert!(
-                original_names
-                    .iter()
-                    .any(|name| std::ptr::eq(*name, definition.site.name()))
-            );
-            names.push(definition.site.name().value);
-            assert!(
-                matches!(definition.typ, Type::FunN(..)),
-                "retain the full function type"
-            );
-        }
-        if binder.name().value == "f" || binder.name().value == "keep" {
-            assert_eq!(given.len(), 1);
-            let Type::VarN(predicate_var) = given[0].types().next().unwrap() else {
-                panic!("predicate variable")
+        let (CanType::Var(argument), CanType::Var(result)) = (&argument.value, &result.value)
+        else {
+            panic!("{text}: polymorphic identity arguments")
+        };
+        assert_eq!(
+            argument, result,
+            "{text}: input and output share one quantified variable"
+        );
+        assert_eq!(
+            annotation.free_vars,
+            [*argument],
+            "{text}: preserve its quantified variable"
+        );
+        let [predicate] = annotation.context else {
+            panic!("{text}: retain the declared or inferred Keep context")
+        };
+        assert_eq!(predicate.trait_ref().expect("Keep predicate").name, "Keep");
+        let [context_argument] = predicate.args() else {
+            panic!("unary Keep")
+        };
+        assert!(
+            matches!(context_argument.value, CanType::Var(variable) if variable == *argument),
+            "{text}: predicate, argument, and result share the signature substitution"
+        );
+        if text != "keep" {
+            let nash_ast::Expr::Call { function, .. } = body.value else {
+                panic!("recursive call")
             };
-            let Type::FunN(Type::VarN(argument), Type::VarN(result)) = definitions[0].typ else {
-                panic!("function type")
+            let instance = &solved.instances[&nash_ast::NodeId::expr(function)];
+            let [nash_ast::Evidence::Given { binder, index: 0 }] = instance.evidence else {
+                panic!("{text}: recursive call must use the enclosing context slot")
             };
-            assert_eq!(predicate_var, argument);
-            assert_eq!(predicate_var, result);
-            assert!(rigid_vars.contains(predicate_var));
-            assert!(
-                header.is_empty(),
-                "methods and recursive typed bodies have no lexical header"
-            );
-        } else {
-            assert!(given.is_empty());
             assert_eq!(
-                definitions.len(),
-                2,
-                "both untyped recursive members share the group binder"
+                *binder, scheme.binder,
+                "{text}: recursive evidence uses the final owning binder"
             );
-            assert_eq!(header.len(), 2);
         }
     }
-    names.sort_unstable();
-    assert_eq!(names, ["f", "g", "h", "keep"]);
 }
 
 #[test]
@@ -1682,8 +1687,8 @@ fn negation_retains_num_evidence() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
-    let (annotations, solved) = nash_solve::run(&bump, &mut uf, &constraint, &can.tables).unwrap();
+    let module = &can.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &can.tables).unwrap();
     let [predicate] = annotations["flip"].context else {
         panic!("Num constraint")
     };
@@ -1778,9 +1783,8 @@ fn literal_syntax_records_impls_and_pattern_givens() {
         )
         .unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
-        let (annotations, solved) =
-            nash_solve::run(&bump, &mut uf, &constraint, &can.tables).unwrap();
+        let module = &can.module;
+        let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &can.tables).unwrap();
         let mut decls = can.module.decls;
         while let nash_ast::Decls::Declare { definition, next } = decls {
             match definition {
@@ -1866,9 +1870,8 @@ fn user_twins_preserve_local_imported_and_pattern_identity() {
         )
         .unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-        let (annotations, _) =
-            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+        let module = &canonical.module;
+        let (annotations, _) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
         insta::assert_snapshot!(
             format!("user_twins_{}", canonical.module.name.name),
             render_annotations(&annotations)
@@ -2085,8 +2088,8 @@ fn destructured_bindings_preserve_contexts_and_polymorphism() {
     let parsed = nash_parse::Parser::new(&bump, input).module().unwrap();
     let can = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
-    let (polymorphic, solved) = nash_solve::run(&bump, &mut uf, &constraint, &can.tables)
+    let module = &can.module;
+    let (polymorphic, solved) = nash_solve::run(&bump, &mut uf, module, &can.tables)
         .expect("destructured functions remain polymorphic");
     assert!(polymorphic["main"].context.is_empty());
     let nash_ast::Decls::Declare { definition, .. } = can.module.decls else {
@@ -2512,9 +2515,9 @@ fn operator_methods_preserve_provider_and_backing_method() {
             canonical.warnings
         );
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let module = &canonical.module;
         let (annotations, solved) =
-            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+            nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
         let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
         for binop in interface.binops {
             assert_eq!(binop.function.home.name, "Methods");
@@ -2808,9 +2811,9 @@ fn nested_operator_sections_apply() {
     )
     .expect("nested sections canonicalize");
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, _) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
-        .expect("nested sections infer");
+    let module = &canonical.module;
+    let (annotations, _) =
+        nash_solve::run(&bump, &mut uf, module, &canonical.tables).expect("nested sections infer");
     let rendered = render_annotations(&annotations);
     assert!(rendered.contains("FromString a => a"), "{rendered}");
     assert!(rendered.contains("left : unit"), "{rendered}");
@@ -2917,8 +2920,8 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
         )
         .unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-        let result = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables);
+        let module = &canonical.module;
+        let result = nash_solve::run(&bump, &mut uf, module, &canonical.tables);
         if module_name == "Reject" {
             let errors =
                 result.expect_err("structurally identical aliases retain distinct impl heads");
@@ -3044,9 +3047,8 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) =
-        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     let context = annotations["first"].context;
     assert!(
         matches!(context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()))
@@ -3094,8 +3096,8 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
         )
         .unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-        let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap_err();
+        let module = &canonical.module;
+        let errors = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap_err();
         assert!(
             errors.iter().all(|error| matches!(error, Error::MissingImpl { trait_, .. } if *trait_ == nash_ast::primitives::ReprTrait::Storable.qualified())) && errors.iter().any(|error| matches!(error, Error::MissingImpl { name: actual, .. } if *actual == name)),
             "{errors:?}"
@@ -3159,9 +3161,8 @@ fn do_infers_monad() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) =
-        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     assert!(
         annotations["run"]
             .context
@@ -3239,8 +3240,8 @@ fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(bump, &mut uf, &canonical.module);
-    let (annotations, _) = nash_solve::run(bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, _) = nash_solve::run(bump, &mut uf, module, &canonical.tables).unwrap();
     nash_can::from_module(bump, &canonical.module, &annotations)
 }
 
@@ -3282,9 +3283,8 @@ fn reflexive_lift_retains_big_evidence() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) =
-        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     assert!(
         ["concrete", "explicit", "nested"]
             .iter()
@@ -3355,8 +3355,8 @@ fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
         )
         .unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-        let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap_err();
+        let module = &canonical.module;
+        let errors = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap_err();
         assert!(matches!(
             errors.as_slice(),
             [Error::MissingConstraint { .. }] | [Error::MissingImpl { .. }]
@@ -3462,9 +3462,8 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) =
-        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     let mut decls = canonical.module.decls;
     let mut checked = 0;
     while let nash_ast::Decls::Declare { definition, next } = decls {
@@ -3522,8 +3521,8 @@ fn imported_higher_kinded_value_preserves_application() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (producer, _) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (producer, _) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     let annotation = producer["value"];
     let a = annotation
         .free_vars
@@ -3555,8 +3554,8 @@ fn imported_higher_kinded_value_preserves_application() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables)
         .expect("imported higher-kinded applications infer");
     let nash_ast::Decls::Declare { definition, .. } = canonical.module.decls else {
         panic!("value declaration")
@@ -3614,9 +3613,8 @@ fn core_cast_schemes_preserve_nominal_source_and_target_types() {
     )
     .unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) =
-        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     assert_eq!(solved.instances.len(), 5);
     insta::assert_snapshot!(render_annotations(&annotations));
 }
@@ -3689,9 +3687,9 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
         )
         .unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let module = &canonical.module;
         let (annotations, solved) =
-            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+            nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
         if name == "Main" {
             for (trait_name, primitive) in [
                 ("FromInt", "int"),
@@ -3765,9 +3763,9 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
         )
         .unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
+        let module = &canonical.module;
         let (annotations, solved) =
-            nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+            nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
         if name == "Main" {
             let mut evidence: Vec<_> = solved
                 .instances
@@ -4017,9 +4015,8 @@ fn deferred_captured_field_preserves_trait_evidence() {
     let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
     let mut uf = UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let (annotations, solved) =
-        nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     assert_eq!(
         render_annotation(annotations["f"]),
         "point -> ( int, unit )"
@@ -4263,5 +4260,86 @@ fn labeled_ctor_big_multi_access_error() {
         who : Redeemer -> Bytes
         who r = r.owner
     "#
+    );
+}
+
+#[test]
+fn recovery_direct_recursive_occurs_precedes_generalization() {
+    assert_inference_error_snapshot!(
+        r#"module Main exposing (..)
+f x = f
+use = f ()
+bad : ()
+bad = \x -> x
+"#
+    );
+}
+
+#[test]
+fn recovery_direct_annotated_if_keeps_both_mismatches() {
+    assert_inference_error_snapshot!(
+        r#"module Main exposing (..)
+import Builtin exposing (..)
+f : ()
+f = if True then (\x -> x) else (\y -> y)
+"#
+    );
+}
+
+#[test]
+fn recovery_direct_annotated_case_keeps_both_mismatches() {
+    assert_inference_error_snapshot!(
+        r#"module Main exposing (..)
+import Builtin exposing (..)
+f : ()
+f = case True of
+    True -> (\x -> x)
+    False -> (\y -> y)
+"#
+    );
+}
+
+#[test]
+fn recovery_direct_cons_tail_keeps_independent_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"module Main exposing (..)
+import Builtin exposing (..)
+f : () -> ()
+f (x :: ()) = ()
+"#
+    );
+}
+
+#[test]
+fn recovery_direct_alias_bool_keeps_header_type() {
+    assert_inference_error_snapshot!(
+        r#"module Main exposing (..)
+import Builtin exposing (..)
+f : () -> ()
+f (True as whole) = whole ()
+"#
+    );
+}
+
+#[test]
+fn recovery_direct_alias_nested_keeps_header_type() {
+    assert_inference_error_snapshot!(
+        r#"module Main exposing (..)
+import Builtin exposing (..)
+f : ((), ()) -> ()
+f (((True as a), (() as b)) as whole) = whole ()
+"#
+    );
+}
+
+#[test]
+fn recovery_direct_alias_ctor_keeps_header_type() {
+    assert_inference_error_snapshot!(
+        r#"module Main exposing (..)
+import Builtin exposing (..)
+type box = Box bool
+f : box -> ()
+f (Box (() as whole)) = whole ()
+"#
     );
 }

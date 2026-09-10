@@ -1,0 +1,158 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nf : () -> ()\nf (x :: ()) = ()\n"
+---
+[
+    AmbiguousType {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 1,
+            },
+            end: Position {
+                line: 4,
+                column: 2,
+            },
+        },
+        name: "f",
+        variable: FlexVar(
+            "a",
+        ),
+        predicates: [
+            AmbiguousPredicate {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Storable",
+                },
+                args: [
+                    FlexVar(
+                        "a",
+                    ),
+                ],
+            },
+        ],
+    },
+    BadPattern(
+        Region {
+            start: Position {
+                line: 4,
+                column: 9,
+            },
+            end: Position {
+                line: 4,
+                column: 11,
+            },
+        },
+        Unit,
+        Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "unit",
+            args: [],
+        },
+        FromContext(
+            Region {
+                start: Position {
+                    line: 4,
+                    column: 4,
+                },
+                end: Position {
+                    line: 4,
+                    column: 11,
+                },
+            },
+            Tail,
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "list",
+                args: [
+                    FlexVar(
+                        "a",
+                    ),
+                ],
+            },
+        ),
+    ),
+    BadPattern(
+        Region {
+            start: Position {
+                line: 4,
+                column: 4,
+            },
+            end: Position {
+                line: 4,
+                column: 11,
+            },
+        },
+        List,
+        Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "list",
+            args: [
+                FlexVar(
+                    "a",
+                ),
+            ],
+        },
+        FromContext(
+            Region {
+                start: Position {
+                    line: 4,
+                    column: 4,
+                },
+                end: Position {
+                    line: 4,
+                    column: 11,
+                },
+            },
+            TypedArg(
+                "f",
+                0,
+            ),
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+        ),
+    ),
+]

@@ -1,7 +1,7 @@
 //! Module compilation orchestration.
 //!
 //! Each module runs Elm's full pipeline: parse -> canonicalize ->
-//! constrain -> solve -> nitpick -> `Interface::from_module` with the solver's
+//! direct inference -> nitpick -> `Interface::from_module` with the solver's
 //! annotations. Modules compile in dependency order, and each solved
 //! module and solved evidence remain in the build scope. Canonical nodes
 //! live in a shared arena, so interfaces borrow them without moving the
@@ -345,9 +345,8 @@ fn compile_module<'s>(
         )]
     };
     let mut uf = nash_constrain::UnionFind::new();
-    let constraint = nash_constrain::constrain(bump, &mut uf, &can_result.module);
-    let (annotations, types) = match nash_solve::run(bump, &mut uf, &constraint, &can_result.tables)
-    {
+    let module = &can_result.module;
+    let (annotations, types) = match nash_solve::run(bump, &mut uf, module, &can_result.tables) {
         Ok(solved) => solved,
         Err(errors) => {
             return failed(

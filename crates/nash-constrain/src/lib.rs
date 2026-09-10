@@ -1,25 +1,15 @@
-//! Constraint generation for nash type inference: a port of Elm's
-//! `Type.Constrain.*` plus the shared vocabulary from `Type.Type`,
-//! `Type.UnionFind`, `Type.Error`, and `Reporting.Error.Type`.
-//!
-//! Where Elm creates unification variables in ambient `IO`, nash threads an
-//! explicit [`UnionFind`] store: `constrain` fills it with fresh variables
-//! and `nash-solve` mutates it while solving the returned [`Constraint`].
+//! Shared union-find types, canonical instantiation, and inference diagnostics.
 
 pub mod error;
 pub mod error_type;
 pub mod instantiate;
-pub mod pattern;
 pub mod type_;
 
-mod expression;
-mod module;
 mod union_find;
 
 pub use crate::error::{
     Category, Context, Error, Expected, MaybeName, PCategory, PContext, PExpected, SubContext,
 };
 pub use crate::error_type::ErrorType;
-pub use crate::module::constrain;
-pub use crate::type_::{Constraint, Content, Descriptor, FlatType, Mark, Type};
+pub use crate::type_::{Content, Descriptor, FlatType, Mark};
 pub use crate::union_find::{UnionFind, Variable};

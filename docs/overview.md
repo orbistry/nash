@@ -43,7 +43,7 @@ Done (ported from the Elm compiler, Haskell -> Rust):
 
 - `nash-parse` — recursive-descent parser with Elm's full error hierarchy
 - `nash-can` — canonicalization (name resolution, SCC ordering, interfaces)
-- `nash-constrain` + `nash-solve` — HM inference (Elm's rank-based solver)
+- `nash-constrain` + `nash-solve` — direct AST inference with Elm's rank-based solver
 - `nash-driver` / `nash-config` / `nash-cli` — build graph, `nash.jsonc`, `nash check`
 - `nash-plutus` — complete UPLC: terms, flat codec, CEK machine, cost models
 
@@ -192,7 +192,7 @@ tests
 ## Pipeline
 
 ```
-source ─parse─> Source AST ─canonicalize─> Can AST ─constrain/solve─> types + trait evidence
+source ─parse─> Source AST ─canonicalize─> Can AST ─infer─> types + trait evidence
    ▲                                                                           │
    └──────────── macro expansion (typed AST in, source AST out) ◄──────────────┘
                                                                                │
@@ -214,8 +214,8 @@ crates/
   nash-parse           parser                            (extend: same)
   nash-ast             canonical AST                     (extend: kinds, traits, evidence slots)
   nash-can             canonicalization + Haskell 98 kinds + datatype contexts
-  nash-constrain       type and predicate constraint generation
-  nash-solve           type/trait solving + kind contracts + defaulting + evidence
+  nash-constrain       union-find types + canonical instantiation + type errors
+  nash-solve           direct AST inference + traits + kind contracts + evidence
   nash-nitpick         exhaustiveness (new)
   nash-report          diagnostics: Elm prose -> miette  (new)
   nash-ir              Core IR + Core->Core passes       (new)

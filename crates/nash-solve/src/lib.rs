@@ -2,9 +2,9 @@
 //! `Type.Unify`, and `Type.Occurs`, plus the `toAnnotation`/`toErrorType`
 //! half of `Type.Type`.
 //!
-//! The driver runs `nash_constrain::constrain` to build a constraint tree
-//! (filling a `UnionFind` store with fresh variables), then [`run`] to solve
-//! it. Success returns the annotations used by `nash_can::from_module`
+//! The driver passes the canonical module to [`run`], which infers directly
+//! into the existing union-find and predicate stores. Success returns the
+//! annotations used by `nash_can::from_module`
 //! together with definition schemes and use-site instances in [`SolvedTypes`].
 
 mod annotation;

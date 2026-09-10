@@ -1,0 +1,120 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nf : ((), ()) -> ()\nf (((True as a), (() as b)) as whole) = whole ()\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 4,
+                column: 41,
+            },
+            end: Position {
+                line: 4,
+                column: 46,
+            },
+        },
+        CallResult(
+            FuncName(
+                "whole",
+            ),
+        ),
+        Tuple(
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+            [],
+        ),
+        FromContext(
+            Region {
+                start: Position {
+                    line: 4,
+                    column: 41,
+                },
+                end: Position {
+                    line: 4,
+                    column: 49,
+                },
+            },
+            CallArity(
+                FuncName(
+                    "whole",
+                ),
+                1,
+            ),
+            Lambda(
+                FlexVar(
+                    "a",
+                ),
+                FlexVar(
+                    "b",
+                ),
+                [],
+            ),
+        ),
+    ),
+    BadPattern(
+        Region {
+            start: Position {
+                line: 4,
+                column: 6,
+            },
+            end: Position {
+                line: 4,
+                column: 11,
+            },
+        },
+        Bool,
+        Type {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                    },
+                ),
+                name: "Builtin",
+            },
+            name: "bool",
+            args: [],
+        },
+        NoExpectation(
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+        ),
+    ),
+]

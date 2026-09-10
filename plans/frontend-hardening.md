@@ -11,13 +11,15 @@ Implement the six Nash/Alder comparison findings, then evaluate a direct inferen
 - [x] Delete unused driver interface-cache machinery and orphaned dependencies.
 - [x] Separate canonical module data from local scopes without cloning the whole environment.
 - [x] Bound trait selection and evidence lookup using existing map ordering.
-- [ ] Replace the constraint tree and intermediate inference Type with direct AST inference, subject to the adoption gates below.
+- [x] Replace the constraint tree and intermediate inference Type with direct AST inference, subject to the adoption gates below.
 
 ## Verification and commits
 
 Use a separate reviewed jj commit for each verified logical chunk. Before each commit run cargo fmt --all, cargo check --workspace --all-targets --all-features, cargo clippy --all-targets --all-features -- -D warnings, and cargo test. Add focused regressions first, inspect snapshots, and run relevant scratch cases. Update this record and Sampo changesets with each chunk. Do not push.
 
 Parser allocation regression: before the first change, 1,000 and 2,000 operands retained 4,192,960 and 16,775,744 arena bytes. Afterward 1,000 / 2,000 / 4,000 operands retain 130,048 / 261,056 / 523,136 bytes in both debug and release probes. The test checks complete consumption, operand count, and bounded growth. Function application and negative-argument paths now append a single parsed argument instead of copying the accumulated list.
+
+After widening Region, the final measurements are 261,056 / 523,136 / 1,047,360 bytes for the same 1,000 / 2,000 / 4,000 operands, identical in debug and release. Each doubling uses approximately twice the arena memory. The earlier measurements describe the smaller Region representation at chunk 1.
 
 Chunk 1 verification passed: formatting, workspace check (all targets/features), clippy (all targets/features, warnings denied), full workspace tests, `nash check scratch`, and the release allocation test. Existing snapshots were unchanged.
 
@@ -47,6 +49,14 @@ Retain the existing union-find and predicate engines. Preserve ranks, generaliza
 
 Remove both Constraint and the intermediate inference Type without introducing a delayed replacement IR. Count all production Rust changes across the affected pipeline, including helpers and moved code; tests are counted separately. Adopt only with demonstrated behavioral parity and a net production-code reduction. If a gate fails, keep the original engine and document concrete evidence. Do not retain dual engines in the final implementation.
 
+The replacement passes these gates. The driver now passes the canonical module to the solver. Expressions, patterns, definitions, recursive groups, and annotated branches infer directly into the existing union-find and predicate engine. Both old representations and their construction/conversion paths are deleted. Canonical annotation structures remain available for independent equations; only their variables share the lexical substitution.
+
+The differential audit compares 426 complete records byte for byte, with two identical original-engine runs. It preserves all 411 original records, adds a complete scheme/evidence metadata fixture, and adds seven original-engine diagnostic regressions. Only pointer NodeIds and unordered map iteration are normalized. Twenty-two additional targeted probes also match. The new regressions were observed failing before the fixes; they preserve recursive occurs-check timing, separate annotated branch expectations, Cons tail expectations, and canonical alias headers. Existing snapshots remain unchanged. Representation-level tests were migrated to direct operations and solved-output assertions.
+
+Production Rust across nash-constrain, nash-solve, nash-driver, and nash-report decreases from 21,208 to 20,574 physical lines (634 removed), including all replacement helpers. Test Rust increases from 14,757 to 14,908 lines (151 added); total Rust decreases by 483 lines. The count parses cfg(test) items and includes production below test modules. See [the verification record](../docs/frontend-hardening-verification.md) for per-crate counts, artifacts, and scope.
+
 ## Final verification
 
 Check Unicode and escape behavior, coordinates in debug and release, mixed recursive forms on a fixed stack, scope errors and shadowing, trait-selection equivalence, and inference differential cases. Re-run workspace checks against the final state. Report jj commits, measurements, parity results, net code changes, and any unmet adoption gate. Leave no unintended or uncommitted task changes.
+
+Final formatting, all-target/all-feature workspace check, clippy with warnings denied, full workspace tests, positive scratch compilation, and the full release parser suite passed. Refreshed debug/release allocation probes passed. Seven negative CLI scratch projects retain their expected diagnostics, and a qualified recursive-group scratch project compiles. All adoption gates are met; Plan 07 remains untouched.

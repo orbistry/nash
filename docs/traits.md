@@ -268,7 +268,25 @@ Context reduction: a retained context never contains both `Ord 'a` and
 ## Inference
 
 Nash keeps Elm's rank-based solver (`nash-solve`). Predicates ride along
-with unification variables.
+with unification variables. Inference walks the canonical AST directly;
+there is no allocated constraint tree or intermediate inference type.
+Canonical types instantiate directly into union-find variables.
+
+Each definition owns its young rank, wanted predicates, and evidence binder.
+Pattern scopes introduce a younger rank only when they own fresh variables.
+Field obligations finish before generalization. Recursive typed declarations
+are available before checking the inferred group; inferred bodies run in
+reverse group order, then typed bodies run in reverse order with their own
+givens. Recursive headers are checked for infinite types before group
+generalization, and lexical headers are checked again after their continuation.
+
+Structural expectations from annotations are instantiated for each branch
+equation. They share the annotation's rigid variables, but a failed branch
+cannot poison another branch's structural expectation. Cons patterns likewise
+create separate outer and tail list structures while sharing the element
+variable. Alias bindings from canonical argument types instantiate their
+headers separately from pattern equations; inferred pattern variables retain
+their identity. This preserves independent diagnostics and their order.
 
 ### Where predicates live
 
@@ -281,8 +299,8 @@ int)`.
 
 ### Producing wanted predicates
 
-- A use of a name with scheme `forall vs. C => t` (a `Constraint::Local`
-  on a generalized variable, or a `Constraint::Foreign` with an annotation)
+- A use of a name with scheme `forall vs. C => t` (a local generalized
+  binding, or a foreign name with an annotation)
   instantiates `vs` with fresh variables and creates one wanted predicate
   per element of `C`, tagged with the use site's region and its index in
   `C`.

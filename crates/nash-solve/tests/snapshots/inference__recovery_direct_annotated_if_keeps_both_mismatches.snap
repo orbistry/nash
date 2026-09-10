@@ -1,0 +1,90 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nf : ()\nf = if True then (\\x -> x) else (\\y -> y)\n"
+---
+[
+    BadExpr(
+        Region {
+            start: Position {
+                line: 4,
+                column: 34,
+            },
+            end: Position {
+                line: 4,
+                column: 41,
+            },
+        },
+        Lambda,
+        Lambda(
+            FlexVar(
+                "a",
+            ),
+            FlexVar(
+                "a",
+            ),
+            [],
+        ),
+        FromAnnotation(
+            "f",
+            0,
+            TypedIfBranch(
+                1,
+            ),
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+        ),
+    ),
+    BadExpr(
+        Region {
+            start: Position {
+                line: 4,
+                column: 19,
+            },
+            end: Position {
+                line: 4,
+                column: 26,
+            },
+        },
+        Lambda,
+        Lambda(
+            FlexVar(
+                "a",
+            ),
+            FlexVar(
+                "a",
+            ),
+            [],
+        ),
+        FromAnnotation(
+            "f",
+            0,
+            TypedIfBranch(
+                0,
+            ),
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+        ),
+    ),
+]

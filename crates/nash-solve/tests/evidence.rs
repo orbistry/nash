@@ -17,8 +17,8 @@ fn fixture<'a>(bump: &'a Bump, source: &str) -> (Tables<'a>, Annotations<'a>) {
     )
     .unwrap();
     let mut uf = nash_constrain::UnionFind::new();
-    let constraint = nash_constrain::constrain(bump, &mut uf, &canonical.module);
-    let (annotations, _) = nash_solve::run(bump, &mut uf, &constraint, &canonical.tables).unwrap();
+    let module = &canonical.module;
+    let (annotations, _) = nash_solve::run(bump, &mut uf, module, &canonical.tables).unwrap();
     (canonical.tables, annotations)
 }
 

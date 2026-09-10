@@ -21,8 +21,8 @@ fn solve_source<'a>(
     )
     .expect("source must canonicalize");
     let mut uf = nash_constrain::UnionFind::new();
-    let constraint = nash_constrain::constrain(bump, &mut uf, &can.module);
-    let (annotations, _) = nash_solve::run(bump, &mut uf, &constraint, &can.tables)
+    let module = &can.module;
+    let (annotations, _) = nash_solve::run(bump, &mut uf, module, &can.tables)
         .expect("source must type check before nitpick");
     (bump.alloc(can.module), annotations)
 }

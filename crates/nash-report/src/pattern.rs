@@ -108,8 +108,8 @@ mod tests {
         )
         .expect("canonicalize");
         let mut uf = nash_constrain::UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
-        nash_solve::run(&bump, &mut uf, &constraint, &can.tables)
+        let module = &can.module;
+        nash_solve::run(&bump, &mut uf, module, &can.tables)
             .expect("solve before checking coverage");
         nash_nitpick::check(&bump, &can.module)
             .expect_err("expected pattern errors")

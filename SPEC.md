@@ -8,7 +8,7 @@ component specs in [`docs/`](docs/); chunked implementation plans in
 ## Pipeline
 
 ```
-parse -> canonicalize -> kinds -> constrain/solve (+ traits) -> nitpick
+parse -> canonicalize -> kinds -> direct inference (+ traits) -> nitpick
       -> macro expansion (loop) -> Core IR -> optimize -> UPLC
 ```
 
@@ -24,8 +24,8 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-parse` | parser + Elm error hierarchy | extend ([plans/01](plans/01-syntax.md)) |
 | `nash-ast` | canonical AST | extend |
 | `nash-can` | canonicalization, interfaces | extend |
-| `nash-constrain` | constraint generation, kinds | extend |
-| `nash-solve` | solver, traits, defaulting | extend |
+| `nash-constrain` | union-find types, canonical instantiation, type errors | done |
+| `nash-solve` | direct AST inference, traits, defaulting | extend |
 | `nash-nitpick` | exhaustiveness and redundancy | done ([plans/05](plans/05-nitpick.md)) |
 | `nash-report` | diagnostics (Elm prose -> miette) | done ([plans/06](plans/06-diagnostics.md)) |
 | `nash-ir` | Core IR + passes | new ([plans/07](plans/07-codegen.md), [08](plans/08-optimizer.md)) |
@@ -46,7 +46,8 @@ Done:
 
 - [x] Parser (Elm `Parse/*` port, full syntax error hierarchy)
 - [x] Canonicalization (Elm `Canonicalize/*` port, SCC, interfaces)
-- [x] Type inference (Elm `Type/*` port: constraints, rank-based solver, records, aliases)
+- [x] Type inference (direct AST inference, rank-based solver, records, aliases)
+- [x] Frontend hardening and direct-inference parity ([verification](docs/frontend-hardening-verification.md))
 - [x] Project config, driver, dependency-ordered builds, interface cache
 - [x] `nash check`
 - [x] UPLC runtime (`nash-plutus`): conformance suite passes
@@ -80,7 +81,7 @@ Later: LSP features, web playground, package registry (pubgrub), TypeScript code
 | `AST/Source.hs` | `crates/nash-source/src/lib.rs` |
 | `AST/Canonical.hs` | `crates/nash-ast/src/lib.rs` |
 | `Canonicalize/*` | `crates/nash-can/src/*` |
-| `Type/Type.hs`, `Type/Constrain/*` | `crates/nash-constrain/src/*` |
+| `Type/Type.hs`, `Type/Constrain/*` | `crates/nash-constrain/src/*`, `crates/nash-solve/src/solve/*` |
 | `Type/{Solve,Unify,Occurs}.hs` | `crates/nash-solve/src/*` |
 | `Nitpick/PatternMatches.hs` | `crates/nash-nitpick` |
 | `Reporting/{Doc,Report,Render,Suggest}.hs`, `Reporting/Error/*` | `crates/nash-report` |

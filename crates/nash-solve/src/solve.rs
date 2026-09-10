@@ -1,5 +1,5 @@
-//! Port of Elm's `Type.Solve`: solve a constraint tree with rank-based
-//! generalization, producing an annotation per top-level value.
+//! Direct canonical AST inference with Elm's rank-based generalization,
+//! producing annotations, definition schemes, and use-site evidence.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -8,10 +8,15 @@ use nash_ast::Type as CanType;
 use nash_can::Annotations;
 use nash_constrain::error::{Category, Error, Expected, PExpected};
 use nash_constrain::type_::{
-    self, Constraint, Content, Descriptor, FlatType, Mark, NO_MARK, NO_RANK, OUTERMOST_RANK, Type,
+    self, Content, Descriptor, FlatType, Mark, NO_MARK, NO_RANK, OUTERMOST_RANK,
 };
 use nash_constrain::{UnionFind, Variable};
-use nash_region::Located;
+use nash_region::{Located, Region};
+
+mod expressions;
+mod infer;
+mod patterns;
+use infer::Definition;
 
 use crate::annotation::to_error_type;
 use crate::occurs;
@@ -23,57 +28,22 @@ use crate::unify;
 pub fn run<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
-    constraint: &Constraint<'a>,
+    module: &nash_ast::Module<'a>,
     tables: &nash_can::environment::Tables<'a>,
 ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
-    let mut solver = Solver {
-        bump,
-        tables,
-        pools: vec![Vec::new(); 8],
-        copied: Vec::new(),
-        predicates: Store::default(),
-        wanted: Vec::new(),
-        givens: Vec::new(),
-        schemes: Vec::new(),
-        recursive_uses: Vec::new(),
-        uses: Vec::new(),
-        owners: Vec::new(),
-        resolution_work: std::collections::HashMap::new(),
-        has_poison: false,
-        dependencies: crate::recovery::Dependencies::default(),
-        failed_lineages: BTreeSet::new(),
-        failed_predicates: BTreeSet::new(),
-        failed_definitions: std::collections::HashSet::new(),
-        value_roots: Vec::new(),
-        kind_contracts: Vec::new(),
-        kind_errors: Vec::new(),
-        fields: Vec::new(),
-    };
+    let mut solver = Solver::new(bump, tables);
 
-    let mut state = solver.solve(
+    let state = solver.infer_module(
         uf,
-        &Env::new(),
-        OUTERMOST_RANK,
+        module,
         State {
             env: Env::new(),
             mark: NO_MARK.next(),
             errors: Vec::new(),
         },
-        constraint,
     );
 
-    solver.retry_fields(uf, OUTERMOST_RANK, &mut state.errors);
-    solver.finish_fields(uf, OUTERMOST_RANK, &mut state.errors);
-    state.errors.append(&mut solver.kind_errors);
-    if state.errors.is_empty() {
-        solver.finish(uf, &state.env)
-    } else {
-        // Elm accumulates errors by prepending; match its final order.
-        let mut errors = state.errors;
-        errors.extend(solver.final_errors(uf));
-        errors.reverse();
-        Err(errors)
-    }
+    solver.finish_state(uf, state)
 }
 
 // SOLVER
@@ -172,6 +142,53 @@ struct Given<'a> {
     body: Body<'a>,
     index: Option<usize>,
     path: Vec<usize>,
+}
+
+impl<'a, 'tables> Solver<'a, 'tables> {
+    fn new(bump: &'a Bump, tables: &'tables nash_can::environment::Tables<'a>) -> Self {
+        Self {
+            bump,
+            tables,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            givens: Vec::new(),
+            schemes: Vec::new(),
+            recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
+            value_roots: Vec::new(),
+            kind_contracts: Vec::new(),
+            kind_errors: Vec::new(),
+            fields: Vec::new(),
+        }
+    }
+
+    fn finish_state(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        mut state: State<'a>,
+    ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
+        self.retry_fields(uf, OUTERMOST_RANK, &mut state.errors);
+        self.finish_fields(uf, OUTERMOST_RANK, &mut state.errors);
+        state.errors.append(&mut self.kind_errors);
+        if state.errors.is_empty() {
+            self.finish(uf, &state.env)
+        } else {
+            // Elm accumulates errors by prepending; match its final order.
+            let mut errors = state.errors;
+            errors.extend(self.final_errors(uf));
+            errors.reverse();
+            Err(errors)
+        }
+    }
 }
 
 impl<'a> Solver<'a, '_> {
@@ -964,35 +981,6 @@ impl<'a> Solver<'a, '_> {
         }
     }
 
-    fn constraint_predicate(
-        &mut self,
-        uf: &mut UnionFind<'a>,
-        rank: usize,
-        predicate: type_::Pred<'a>,
-    ) -> Body<'a> {
-        match predicate {
-            type_::Pred::Trait {
-                trait_,
-                args,
-                hidden,
-            } => Body::Trait {
-                trait_,
-                hidden,
-                args: args
-                    .iter()
-                    .map(|arg| self.type_to_variable(uf, rank, arg))
-                    .collect(),
-            },
-            type_::Pred::Apply { head, args } => Body::Apply {
-                head: self.type_to_variable(uf, rank, head),
-                args: args
-                    .iter()
-                    .map(|arg| self.type_to_variable(uf, rank, arg))
-                    .collect(),
-            },
-        }
-    }
-
     fn expand_givens(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -1035,53 +1023,16 @@ impl<'a> Solver<'a, '_> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn solve_header(
-        &mut self,
-        uf: &mut UnionFind<'a>,
-        env: &Env<'a>,
-        rank: usize,
-        state: State<'a>,
-        constraint: &Constraint<'a>,
-        given: &[type_::Pred<'a>],
-        binder: Option<type_::Binder<'a>>,
-        annotated: bool,
-    ) -> State<'a> {
-        // Attribute new failures to their owning binding. This count does not
-        // gate any independent constraint or reset the collected diagnostics.
-        let errors_before = state.errors.len();
-        let depth = self.enter_givens(uf, rank, given, binder);
-        let start = self.wanted.len();
-        let owner_depth = self.owners.len();
-        if let Some(binder) = binder {
-            self.owners.push(binder.node());
-        }
-        let mut state = self.solve(uf, env, rank, state, constraint);
-        self.retry_fields(uf, rank, &mut state.errors);
-        state = self.resolve_wanted(uf, rank, state, start, binder, annotated);
-        if state.errors.len() > errors_before
-            && let Some(binder) = binder
-        {
-            self.fail_definition(uf, binder.node());
-        }
-        self.givens.truncate(depth);
-        self.owners.truncate(owner_depth);
-        state
-    }
-
     fn enter_givens(
         &mut self,
         uf: &mut UnionFind<'a>,
         rank: usize,
-        given: &[type_::Pred<'a>],
+        given: &[Body<'a>],
         binder: Option<type_::Binder<'a>>,
     ) -> usize {
         let depth = self.givens.len();
         if let Some(binder) = binder.filter(|_| !given.is_empty()) {
-            let bodies: Vec<_> = given
-                .iter()
-                .map(|pred| self.constraint_predicate(uf, rank, *pred))
-                .collect();
+            let bodies = given.to_vec();
             let slots = crate::preds::ContextSlots::new(bodies.iter());
             let mut predicates: Vec<_> = bodies
                 .into_iter()
@@ -1550,430 +1501,6 @@ impl<'a> Solver<'a, '_> {
         }
     }
 
-    fn solve(
-        &mut self,
-        uf: &mut UnionFind<'a>,
-        env: &Env<'a>,
-        rank: usize,
-        state: State<'a>,
-        constraint: &Constraint<'a>,
-    ) -> State<'a> {
-        match constraint {
-            Constraint::Record {
-                region,
-                context,
-                record,
-            } => {
-                let record = self.type_to_variable(uf, rank, record);
-                self.fields.push(DeferredField {
-                    region: *region,
-                    context: *context,
-                    record,
-                    field: None,
-                });
-                let mut state = state;
-                self.retry_fields(uf, rank, &mut state.errors);
-                state
-            }
-            Constraint::Field {
-                region,
-                context,
-                record,
-                field,
-                field_type,
-            } => {
-                let record = self.type_to_variable(uf, rank, record);
-                let field_type = self.type_to_variable(uf, rank, field_type);
-                self.dependencies.field(field_type, record);
-                self.fields.push(DeferredField {
-                    region: *region,
-                    context: *context,
-                    record,
-                    field: Some((field, field_type)),
-                });
-                let mut state = state;
-                self.retry_fields(uf, rank, &mut state.errors);
-                state
-            }
-            Constraint::True => state,
-
-            Constraint::SaveTheEnvironment => State {
-                env: env.clone(),
-                ..state
-            },
-
-            Constraint::Equal(region, category, tipe, expectation) => {
-                let actual = self.type_to_variable(uf, rank, tipe);
-                let expected = self.expected_to_variable(uf, rank, expectation);
-                if let Expected::FromContext(
-                    _,
-                    nash_constrain::error::Context::CallArity(_, arity),
-                    _,
-                ) = expectation
-                {
-                    let mut result = expected;
-                    let mut inputs = vec![actual];
-                    for _ in 0..*arity {
-                        let Content::Structure(FlatType::Fun1(argument, output)) =
-                            uf.get(result).content
-                        else {
-                            break;
-                        };
-                        inputs.push(argument);
-                        result = output;
-                    }
-                    self.dependencies.computation(result, inputs);
-                }
-                self.formed_at(uf, rank, &[actual, expected], *region);
-                match self.unify(uf, actual, expected) {
-                    unify::Answer::Ok(vars) => {
-                        self.introduce(uf, rank, &vars);
-                        state
-                    }
-                    unify::Answer::Err(vars, actual_type, expected_type) => {
-                        self.introduce(uf, rank, &vars);
-                        add_error(
-                            state,
-                            Error::BadExpr(
-                                *region,
-                                *category,
-                                actual_type,
-                                expectation.type_replace(expected_type),
-                            ),
-                        )
-                    }
-                }
-            }
-
-            Constraint::Local(region, node, name, expectation) => {
-                let binding = *env
-                    .get(name)
-                    .expect("constraint generator only references bound locals");
-                let actual = self.instantiate_binding(
-                    uf,
-                    rank,
-                    binding,
-                    UseSite {
-                        node: *node,
-                        region: *region,
-                        name,
-                    },
-                );
-                let expected = self.expected_to_variable(uf, rank, expectation);
-                self.formed_at(uf, rank, &[actual, expected], *region);
-                match self.unify(uf, actual, expected) {
-                    unify::Answer::Ok(vars) => {
-                        self.introduce(uf, rank, &vars);
-                        state
-                    }
-                    unify::Answer::Err(vars, actual_type, expected_type) => {
-                        self.introduce(uf, rank, &vars);
-                        add_error(
-                            state,
-                            Error::BadExpr(
-                                *region,
-                                Category::Local(name),
-                                actual_type,
-                                expectation.type_replace(expected_type),
-                            ),
-                        )
-                    }
-                }
-            }
-
-            Constraint::Foreign(region, node, name, annotation, expectation) => {
-                let actual = self.src_type_to_variable(
-                    uf,
-                    rank,
-                    UseSite {
-                        node: *node,
-                        region: *region,
-                        name,
-                    },
-                    annotation,
-                );
-                let expected = self.expected_to_variable(uf, rank, expectation);
-                self.formed_at(uf, rank, &[actual, expected], *region);
-                match self.unify(uf, actual, expected) {
-                    unify::Answer::Ok(vars) => {
-                        self.introduce(uf, rank, &vars);
-                        state
-                    }
-                    unify::Answer::Err(vars, actual_type, expected_type) => {
-                        self.introduce(uf, rank, &vars);
-                        add_error(
-                            state,
-                            Error::BadExpr(
-                                *region,
-                                Category::Foreign(name),
-                                actual_type,
-                                expectation.type_replace(expected_type),
-                            ),
-                        )
-                    }
-                }
-            }
-
-            Constraint::Pattern(region, category, tipe, expectation) => {
-                let actual = self.type_to_variable(uf, rank, tipe);
-                let expected = self.pattern_expectation_to_variable(uf, rank, expectation);
-                self.formed_at(uf, rank, &[actual, expected], *region);
-                match self.unify(uf, actual, expected) {
-                    unify::Answer::Ok(vars) => {
-                        self.introduce(uf, rank, &vars);
-                        state
-                    }
-                    unify::Answer::Err(vars, actual_type, expected_type) => {
-                        self.introduce(uf, rank, &vars);
-                        add_error(
-                            state,
-                            Error::BadPattern(
-                                *region,
-                                *category,
-                                actual_type,
-                                expectation.type_replace(expected_type),
-                            ),
-                        )
-                    }
-                }
-            }
-
-            Constraint::And(constraints) => constraints
-                .iter()
-                .fold(state, |state, sub| self.solve(uf, env, rank, state, sub)),
-
-            Constraint::Let {
-                declarations,
-                given,
-                binder,
-                definitions,
-                rigid_vars,
-                flex_vars,
-                header,
-                header_con,
-                body_con,
-            } => {
-                let errors_before = state.errors.len();
-                let wanted_start = self.wanted.len();
-                let annotated = definitions.iter().any(|def| def.context.is_some());
-                if definitions.is_empty()
-                    && rigid_vars.is_empty()
-                    && matches!(body_con, Constraint::True)
-                {
-                    self.introduce(uf, rank, flex_vars);
-                    let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let state1 = self
-                        .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
-                    state1
-                } else if definitions.is_empty() && rigid_vars.is_empty() && flex_vars.is_empty() {
-                    let declared = self.declared_contexts(uf, rank, definitions, declarations);
-                    let state1 = self
-                        .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
-                    let locals: Vec<(&'a str, Located<Variable>)> = header
-                        .iter()
-                        .map(|(name, loc_type)| {
-                            let var = self.type_to_variable(uf, rank, loc_type.value);
-                            (*name, Located::at(loc_type.region, var))
-                        })
-                        .collect();
-                    let mut new_env = env.clone();
-                    for (name, loc) in &locals {
-                        new_env.entry(name).or_insert(Binding {
-                            declared_quantifiers: &[],
-                            variable: loc.value,
-                            context: declared.get(name).copied().unwrap_or(&[]),
-                            context_is_final: !declarations
-                                .iter()
-                                .any(|def| def.site.name().value == *name && def.context.is_none()),
-                            definition: definitions
-                                .iter()
-                                .chain(declarations.iter())
-                                .find(|def| def.site.name().value == *name)
-                                .map(|def| def.site.node())
-                                .or_else(|| {
-                                    binder
-                                        .filter(|b| matches!(b, type_::Binder::Pattern { .. }))
-                                        .map(type_::Binder::node)
-                                }),
-                        });
-                    }
-                    let state2 = self.solve(uf, &new_env, rank, state1, body_con);
-                    locals.into_iter().fold(state2, |state, (name, loc)| {
-                        self.check_occurs(uf, state, name, loc)
-                    })
-                } else {
-                    // work in the next pool to localize header
-                    let next_rank = rank + 1;
-                    if next_rank >= self.pools.len() {
-                        let pools_length = self.pools.len();
-                        self.pools.resize(pools_length * 2, Vec::new());
-                    }
-
-                    // introduce variables
-                    let vars: Vec<Variable> =
-                        rigid_vars.iter().chain(flex_vars.iter()).copied().collect();
-                    for var in &vars {
-                        uf.modify(*var, |desc| desc.rank = next_rank);
-                    }
-                    self.pools[next_rank] = vars;
-
-                    // run solver in next pool
-                    let locals: Vec<(&'a str, Located<Variable>)> = header
-                        .iter()
-                        .map(|(name, loc_type)| {
-                            let var = self.type_to_variable(uf, next_rank, loc_type.value);
-                            (*name, Located::at(loc_type.region, var))
-                        })
-                        .collect();
-                    let declared = self.declared_contexts(uf, next_rank, definitions, declarations);
-                    let mut state1 = self.solve_header(
-                        uf, env, next_rank, state, header_con, given, *binder, annotated,
-                    );
-
-                    let young_mark = state1.mark;
-                    let visit_mark = young_mark.next();
-                    let final_mark = visit_mark.next();
-
-                    self.retry_fields(uf, next_rank, &mut state1.errors);
-                    self.finish_fields(uf, next_rank, &mut state1.errors);
-
-                    // pop pool
-                    self.generalize(uf, young_mark, visit_mark, next_rank);
-                    self.pools[next_rank] = Vec::new();
-
-                    // An unrelated error must not suppress an escaping annotation.
-                    for rigid in rigid_vars.iter() {
-                        if uf.get(*rigid).rank != NO_RANK
-                            && !crate::recovery::is_poisoned(uf, [*rigid])
-                        {
-                            let owner = binder
-                                .map(|name| (name.name().region, name.name().value))
-                                .or_else(|| header.first().map(|(name, typ)| (typ.region, *name)));
-                            state1.errors.push(Error::AnnotationVariableEscapes {
-                                region: owner
-                                    .map_or_else(nash_region::Region::zero, |(region, _)| region),
-                                name: owner.map(|(_, name)| name),
-                                variable: to_error_type(self.bump, uf, *rigid),
-                            });
-                        }
-                    }
-
-                    if let Some(binder) = *binder {
-                        let depth = self.enter_givens(uf, rank, given, Some(binder));
-                        loop {
-                            let (errors, defaulted) = self.check_ambiguity(
-                                uf,
-                                rank,
-                                wanted_start,
-                                definitions,
-                                binder.name(),
-                            );
-                            state1.errors.extend(errors);
-                            if !defaulted {
-                                break;
-                            }
-                            state1 = self.resolve_wanted(
-                                uf,
-                                next_rank,
-                                state1,
-                                wanted_start,
-                                Some(binder),
-                                annotated,
-                            );
-                        }
-                        self.givens.truncate(depth);
-                    }
-                    let context = if !definitions.is_empty()
-                        && definitions.iter().all(|def| def.context.is_none())
-                    {
-                        self.retain_wanted(
-                            uf,
-                            rank,
-                            wanted_start,
-                            binder.expect("inferred definition binder").node(),
-                        )
-                    } else {
-                        &[]
-                    };
-
-                    let mut new_env = env.clone();
-                    if state1.errors.len() > errors_before
-                        && let Some(binder) = *binder
-                    {
-                        self.fail_definition(uf, binder.node());
-                    }
-                    self.record_definitions(uf, rank, definitions, &declared, context, *binder);
-                    for (name, loc) in &locals {
-                        new_env.entry(name).or_insert(Binding {
-                            declared_quantifiers: if declarations
-                                .iter()
-                                .any(|def| def.site.name().value == *name && def.context.is_some())
-                            {
-                                rigid_vars
-                            } else {
-                                &[]
-                            },
-                            variable: loc.value,
-                            context: declared.get(name).copied().unwrap_or(context),
-                            context_is_final: true,
-                            definition: definitions
-                                .iter()
-                                .chain(declarations.iter())
-                                .find(|def| def.site.name().value == *name)
-                                .map(|def| def.site.node())
-                                .or_else(|| {
-                                    binder
-                                        .filter(|b| matches!(b, type_::Binder::Pattern { .. }))
-                                        .map(type_::Binder::node)
-                                }),
-                        });
-                    }
-                    let temp_state = State {
-                        env: state1.env,
-                        mark: final_mark,
-                        errors: state1.errors,
-                    };
-                    let new_state = self.solve(uf, &new_env, rank, temp_state, body_con);
-
-                    locals.into_iter().fold(new_state, |state, (name, loc)| {
-                        self.check_occurs(uf, state, name, loc)
-                    })
-                }
-            }
-        }
-    }
-
-    // EXPECTATIONS TO VARIABLE
-
-    fn expected_to_variable(
-        &mut self,
-        uf: &mut UnionFind<'a>,
-        rank: usize,
-        expectation: &Expected<'a, &'a Type<'a>>,
-    ) -> Variable {
-        let tipe = match expectation {
-            Expected::NoExpectation(tipe) => tipe,
-            Expected::FromContext(_, _, tipe) => tipe,
-            Expected::FromAnnotation(_, _, _, tipe) => tipe,
-        };
-        self.type_to_variable(uf, rank, tipe)
-    }
-
-    fn pattern_expectation_to_variable(
-        &mut self,
-        uf: &mut UnionFind<'a>,
-        rank: usize,
-        expectation: &PExpected<'a, &'a Type<'a>>,
-    ) -> Variable {
-        let tipe = match expectation {
-            PExpected::NoExpectation(tipe) => tipe,
-            PExpected::FromContext(_, _, tipe) => tipe,
-        };
-        self.type_to_variable(uf, rank, tipe)
-    }
-
     // OCCURS CHECK
 
     fn check_occurs(
@@ -2056,118 +1583,6 @@ impl<'a> Solver<'a, '_> {
         self.pools[rank].extend_from_slice(variables);
         for var in variables {
             uf.modify(*var, |desc| desc.rank = rank);
-        }
-    }
-
-    // TYPE TO VARIABLE
-
-    fn type_to_variable(
-        &mut self,
-        uf: &mut UnionFind<'a>,
-        rank: usize,
-        tipe: &Type<'a>,
-    ) -> Variable {
-        match tipe {
-            Type::PartialAliasN {
-                home,
-                name,
-                args,
-                remaining,
-                body,
-            } => {
-                let args = args
-                    .iter()
-                    .map(|(name, typ)| (*name, self.type_to_variable(uf, rank, typ)))
-                    .collect();
-                self.register(
-                    uf,
-                    rank,
-                    Content::PartialAlias {
-                        home: *home,
-                        name,
-                        args,
-                        remaining: remaining.to_vec(),
-                        body,
-                    },
-                )
-            }
-            Type::VarN(var) => *var,
-
-            Type::AppVarN(head, args) => {
-                let head = self.type_to_variable(uf, rank, head);
-                let args = args
-                    .iter()
-                    .map(|arg| self.type_to_variable(uf, rank, arg))
-                    .collect();
-                self.register(uf, rank, Content::Structure(FlatType::AppV1(head, args)))
-            }
-
-            Type::AppN { home, name, args } => {
-                let arg_vars: Vec<Variable> = args
-                    .iter()
-                    .map(|arg| self.type_to_variable(uf, rank, arg))
-                    .collect();
-                self.register(
-                    uf,
-                    rank,
-                    Content::Structure(FlatType::App1(*home, name, arg_vars)),
-                )
-            }
-
-            Type::FunN(a, b) => {
-                let a_var = self.type_to_variable(uf, rank, a);
-                let b_var = self.type_to_variable(uf, rank, b);
-                self.register(uf, rank, Content::Structure(FlatType::Fun1(a_var, b_var)))
-            }
-
-            Type::AliasN {
-                home,
-                name,
-                args,
-                real,
-                body,
-            } => {
-                let arg_vars: Vec<(&'a str, Variable)> = args
-                    .iter()
-                    .map(|(arg_name, arg_type)| {
-                        (*arg_name, self.type_to_variable(uf, rank, arg_type))
-                    })
-                    .collect();
-                let alias_var = self.type_to_variable(uf, rank, real);
-                self.register(
-                    uf,
-                    rank,
-                    Content::Alias {
-                        home: *home,
-                        name,
-                        args: arg_vars,
-                        real: alias_var,
-                        body,
-                    },
-                )
-            }
-
-            Type::RecordN { fields } => {
-                let field_vars: BTreeMap<&'a str, Variable> = fields
-                    .iter()
-                    .map(|(name, field_type)| (*name, self.type_to_variable(uf, rank, field_type)))
-                    .collect();
-                self.register(uf, rank, Content::Structure(FlatType::Record1(field_vars)))
-            }
-
-            Type::TupleN(a, b, rest) => {
-                let a_var = self.type_to_variable(uf, rank, a);
-                let b_var = self.type_to_variable(uf, rank, b);
-                let c_var = rest
-                    .iter()
-                    .map(|c| self.type_to_variable(uf, rank, c))
-                    .collect();
-                self.register(
-                    uf,
-                    rank,
-                    Content::Structure(FlatType::Tuple1(a_var, b_var, c_var)),
-                )
-            }
         }
     }
 
@@ -2326,8 +1741,8 @@ impl<'a> Solver<'a, '_> {
     fn record_definitions(
         &mut self,
         uf: &mut UnionFind<'a>,
-        rank: usize,
-        definitions: &[type_::Definition<'a>],
+        _rank: usize,
+        definitions: &[Definition<'a>],
         declared: &BTreeMap<&'a str, &'a [type_::PredId]>,
         inferred: &'a [type_::PredId],
         binder: Option<type_::Binder<'a>>,
@@ -2335,7 +1750,7 @@ impl<'a> Solver<'a, '_> {
         for definition in definitions {
             let binding = Binding {
                 declared_quantifiers: &[],
-                variable: self.type_to_variable(uf, rank, definition.typ),
+                variable: definition.typ,
                 context: declared
                     .get(definition.site.name().value)
                     .copied()
@@ -2427,9 +1842,9 @@ impl<'a> Solver<'a, '_> {
     fn declared_contexts(
         &mut self,
         uf: &mut UnionFind<'a>,
-        rank: usize,
-        definitions: &[type_::Definition<'a>],
-        declarations: &[type_::Definition<'a>],
+        _rank: usize,
+        definitions: &[Definition<'a>],
+        declarations: &[Definition<'a>],
     ) -> BTreeMap<&'a str, &'a [type_::PredId]> {
         let mut contexts = BTreeMap::new();
         for definition in definitions.iter().chain(declarations) {
@@ -2438,7 +1853,7 @@ impl<'a> Solver<'a, '_> {
             };
             let mut ids = Vec::new();
             for (index, pred) in context.iter().enumerate() {
-                let body = self.constraint_predicate(uf, rank, *pred);
+                let body = pred.clone();
                 ids.push(self.predicates.push(
                     uf,
                     Predicate {
@@ -2451,7 +1866,7 @@ impl<'a> Solver<'a, '_> {
                     },
                 ));
             }
-            let root = self.type_to_variable(uf, rank, definition.typ);
+            let root = definition.typ;
             let mut roots = vec![root];
             for id in &ids {
                 roots.extend(self.predicates.get(*id).body.roots());
@@ -2537,7 +1952,7 @@ impl<'a> Solver<'a, '_> {
         uf: &mut UnionFind<'a>,
         rank: usize,
         start: usize,
-        definitions: &[type_::Definition<'a>],
+        definitions: &[Definition<'a>],
         binder: &'a Located<&'a str>,
     ) -> (Vec<Error<'a>>, bool) {
         use nash_ast::primitives::ReprTrait;
@@ -2589,10 +2004,7 @@ impl<'a> Solver<'a, '_> {
             }
         }
         self.propagate_poison(uf);
-        let roots: Vec<_> = definitions
-            .iter()
-            .map(|def| self.type_to_variable(uf, rank, def.typ))
-            .collect();
+        let roots: Vec<_> = definitions.iter().map(|def| def.typ).collect();
         let reachable = Self::type_variables(uf, roots);
         let mut ambiguous: BTreeMap<_, Vec<_>> = BTreeMap::new();
         for (_, id) in &self.wanted[start..] {
@@ -2645,8 +2057,8 @@ impl<'a> Solver<'a, '_> {
                 })
                 .collect();
             if defaults.len() == 1 && matches!(uf.get(var).content, Content::FlexVar(_)) {
-                let typ = self.bump.alloc(defaults.into_values().next().unwrap());
-                let target = self.type_to_variable(uf, rank, typ);
+                let typ = defaults.into_values().next().unwrap();
+                let target = self.structure(uf, rank, typ);
                 if matches!(self.unify(uf, var, target), unify::Answer::Ok(_)) {
                     defaulted = true;
                     continue;
@@ -3187,6 +2599,190 @@ fn adjust_rank_content<'a>(
 #[cfg(test)]
 mod copy_tests {
     use super::*;
+    // Insert in solve.rs tests module; use Solver::new and finish_state.
+    fn primitive_state<'a>() -> State<'a> {
+        State {
+            env: Env::new(),
+            mark: NO_MARK.next(),
+            errors: Vec::new(),
+        }
+    }
+
+    fn primitive_nullary<'a>(
+        solver: &mut Solver<'a, '_>,
+        uf: &mut UnionFind<'a>,
+        name: &'a str,
+    ) -> Variable {
+        solver.structure(
+            uf,
+            OUTERMOST_RANK,
+            FlatType::App1(nash_ast::primitives::builtin_home(), name, Vec::new()),
+        )
+    }
+
+    fn primitive_unit_function<'a>(
+        solver: &mut Solver<'a, '_>,
+        uf: &mut UnionFind<'a>,
+    ) -> Variable {
+        // Each occurrence of the old structural source type was converted afresh,
+        // including its two identical unit children.
+        let input = primitive_nullary(solver, uf, "unit");
+        let output = primitive_nullary(solver, uf, "unit");
+        solver.structure(uf, OUTERMOST_RANK, FlatType::Fun1(input, output))
+    }
+
+    #[test]
+    fn a_partial_constructor_cannot_be_a_value_type() {
+        let bump = Bump::new();
+        let tables = nash_can::environment::Tables::default();
+        let mut solver = Solver::new(&bump, &tables);
+        let mut uf = UnionFind::new();
+        let actual = primitive_nullary(&mut solver, &mut uf, "list");
+        let expected = primitive_nullary(&mut solver, &mut uf, "list");
+        let state = solver.equal(
+            &mut uf,
+            OUTERMOST_RANK,
+            primitive_state(),
+            nash_region::Region::zero(),
+            Category::List,
+            actual,
+            Expected::NoExpectation(expected),
+        );
+        let errors = solver.finish_state(&mut uf, state).unwrap_err();
+        assert!(
+            errors
+                .iter()
+                .any(|error| matches!(error, Error::BadKind { .. })),
+            "{errors:#?}"
+        );
+    }
+
+    #[test]
+    fn recovery_collects_final_kind_errors_after_independent_type_failures() {
+        let bump = Bump::new();
+        let tables = nash_can::environment::Tables::default();
+        let mut solver = Solver::new(&bump, &tables);
+        let mut uf = UnionFind::new();
+        let at = |line| nash_region::Region {
+            start: nash_region::Position { line, column: 1 },
+            end: nash_region::Position { line, column: 2 },
+        };
+        let function = primitive_unit_function(&mut solver, &mut uf);
+        let unit = primitive_nullary(&mut solver, &mut uf, "unit");
+        let mut state = solver.equal(
+            &mut uf,
+            OUTERMOST_RANK,
+            primitive_state(),
+            at(1),
+            Category::Lambda,
+            function,
+            Expected::NoExpectation(unit),
+        );
+        for line in [2, 3] {
+            // Four separate list nodes across these two equalities: sharing the
+            // source description never meant sharing its materialized UF graph.
+            let actual = primitive_nullary(&mut solver, &mut uf, "list");
+            let expected = primitive_nullary(&mut solver, &mut uf, "list");
+            state = solver.equal(
+                &mut uf,
+                OUTERMOST_RANK,
+                state,
+                at(line),
+                Category::List,
+                actual,
+                Expected::NoExpectation(expected),
+            );
+        }
+        let errors = solver.finish_state(&mut uf, state).unwrap_err();
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::BadExpr(..)))
+                .count(),
+            1,
+            "{errors:#?}"
+        );
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::BadKind { .. }))
+                .count(),
+            2,
+            "{errors:#?}"
+        );
+    }
+
+    #[test]
+    fn recovery_retains_shared_heads_removed_by_successful_normalization() {
+        let bump = Bump::new();
+        let tables = nash_can::environment::Tables::default();
+        let mut solver = Solver::new(&bump, &tables);
+        let mut uf = UnionFind::new();
+        let rank = OUTERMOST_RANK;
+        let head = solver.fresh(&mut uf, rank);
+        let result = solver.fresh(&mut uf, rank);
+        let region = nash_region::Region::zero();
+
+        let argument = primitive_nullary(&mut solver, &mut uf, "unit");
+        let applied = solver.structure(&mut uf, rank, FlatType::AppV1(head, vec![argument]));
+        let mut state = solver.equal(
+            &mut uf,
+            rank,
+            primitive_state(),
+            region,
+            Category::List,
+            result,
+            Expected::NoExpectation(applied),
+        );
+
+        let argument = primitive_nullary(&mut solver, &mut uf, "unit");
+        let list = solver.structure(
+            &mut uf,
+            rank,
+            FlatType::App1(nash_ast::primitives::builtin_home(), "list", vec![argument]),
+        );
+        state = solver.equal(
+            &mut uf,
+            rank,
+            state,
+            region,
+            Category::List,
+            result,
+            Expected::NoExpectation(list),
+        );
+
+        let function = primitive_unit_function(&mut solver, &mut uf);
+        state = solver.equal(
+            &mut uf,
+            rank,
+            state,
+            region,
+            Category::List,
+            result,
+            Expected::NoExpectation(function),
+        );
+
+        // Rebuild this entire function graph after the previous failing equality.
+        // Only the explicit head/result variables are shared between operations.
+        let function = primitive_unit_function(&mut solver, &mut uf);
+        state = solver.equal(
+            &mut uf,
+            rank,
+            state,
+            region,
+            Category::List,
+            head,
+            Expected::NoExpectation(function),
+        );
+        let errors = solver.finish_state(&mut uf, state).unwrap_err();
+        assert_eq!(
+            errors.len(),
+            1,
+            "normalization must not sever the dependency from the applied type to its shared head: {errors:#?}"
+        );
+        assert!(matches!(errors[0], Error::BadExpr(..)), "{errors:#?}");
+    }
+
     use nash_constrain::type_::{PredId, make_descriptor};
 
     fn evidence_name(name: nash_ast::QualifiedName<'_>) -> String {
@@ -3342,14 +2938,10 @@ mod copy_tests {
         let binder = type_::Binder::Named(name);
         let mut ids = Vec::new();
         for trait_name in ["Expanding", "Missing"] {
-            let variable = solver.type_to_variable(
+            let variable = solver.structure(
                 &mut uf,
                 OUTERMOST_RANK,
-                &Type::AppN {
-                    home: nash_ast::primitives::builtin_home(),
-                    name: "unit",
-                    args: &[],
-                },
+                FlatType::App1(nash_ast::primitives::builtin_home(), "unit", Vec::new()),
             );
             let id = solver.predicates.push(
                 &mut uf,
@@ -3408,7 +3000,6 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3432,16 +3023,14 @@ mod copy_tests {
             kind_errors: Vec::new(),
             fields: Vec::new(),
         };
-        let result = solver.solve(
+        let result = solver.infer_module(
             &mut uf,
-            &Env::new(),
-            OUTERMOST_RANK,
+            &canonical.module,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
-            &constraint,
         );
         assert!(result.errors.is_empty());
         assert!(
@@ -3480,7 +3069,6 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3504,16 +3092,14 @@ mod copy_tests {
             kind_errors: Vec::new(),
             fields: Vec::new(),
         };
-        let result = solver.solve(
+        let result = solver.infer_module(
             &mut uf,
-            &Env::new(),
-            OUTERMOST_RANK,
+            &canonical.module,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
-            &constraint,
         );
         assert!(
             matches!(&result.errors[..], [Error::MissingImpl { region, .. }] if region.start.line == 8)
@@ -3545,7 +3131,6 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3569,16 +3154,14 @@ mod copy_tests {
             kind_errors: Vec::new(),
             fields: Vec::new(),
         };
-        let result = solver.solve(
+        let result = solver.infer_module(
             &mut uf,
-            &Env::new(),
-            OUTERMOST_RANK,
+            &canonical.module,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
-            &constraint,
         );
         assert!(result.errors.is_empty());
         let local = solver
@@ -3632,7 +3215,6 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3656,16 +3238,14 @@ mod copy_tests {
             kind_errors: Vec::new(),
             fields: Vec::new(),
         };
-        let result = solver.solve(
+        let result = solver.infer_module(
             &mut uf,
-            &Env::new(),
-            OUTERMOST_RANK,
+            &canonical.module,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
-            &constraint,
         );
         assert!(result.errors.is_empty(), "{:?}", result.errors);
         assert!(result.env["value"].context.is_empty());
@@ -3769,7 +3349,6 @@ mod copy_tests {
         let group_binder = group_binder.unwrap();
         let h_binder = h_binder.unwrap();
         let mut uf = UnionFind::new();
-        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3793,16 +3372,14 @@ mod copy_tests {
             kind_errors: Vec::new(),
             fields: Vec::new(),
         };
-        let result = solver.solve(
+        let result = solver.infer_module(
             &mut uf,
-            &Env::new(),
-            OUTERMOST_RANK,
+            &canonical.module,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
-            &constraint,
         );
         assert!(result.errors.is_empty(), "{:?}", result.errors);
         assert!(solver.wanted.is_empty());

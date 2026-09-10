@@ -567,8 +567,8 @@ fn type_error_reports(input: &str) -> String {
     let canonical = nash_can::canonicalize(&bump, nash_can::Context::default(), &module)
         .expect("canonicalize fixture");
     let mut uf = nash_constrain::UnionFind::new();
-    let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
-    let errors = nash_solve::run(&bump, &mut uf, &constraint, &canonical.tables)
+    let module = &canonical.module;
+    let errors = nash_solve::run(&bump, &mut uf, module, &canonical.tables)
         .expect_err("fixture must type-fail");
     assert!(!errors.is_empty());
     errors
