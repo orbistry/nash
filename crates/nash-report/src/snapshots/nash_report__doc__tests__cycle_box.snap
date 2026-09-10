@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/doc.rs
+expression: "Doc::cycle(4, \"a\", &[\"b\", \"c\"]).render(80, false)"
+---
+    ┌─────┐
+    │    a
+    │     ↓
+    │    b
+    │     ↓
+    │    c
+    └─────┘

@@ -1,0 +1,5 @@
+---
+source: crates/nash-report/src/doc.rs
+expression: "Doc::sep([\"a\", \"->\", \"b\"].map(Doc::text)).render(80, false)"
+---
+a -> b

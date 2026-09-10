@@ -1,0 +1,34 @@
+---
+source: crates/nash-report/src/json.rs
+expression: "serde_json::to_string_pretty(&report_to_json(&Source::new(\"x\\nx\"),\n&report)).unwrap()"
+---
+{
+  "message": [
+    "Both names occur here:\n\n1| x\n   ",
+    {
+      "bold": false,
+      "color": "RED",
+      "string": "^",
+      "underline": false
+    },
+    "\n\n2| x\n   ",
+    {
+      "bold": false,
+      "color": "RED",
+      "string": "^",
+      "underline": false
+    },
+    "\nChoose another name."
+  ],
+  "region": {
+    "end": {
+      "column": 2,
+      "line": 2
+    },
+    "start": {
+      "column": 1,
+      "line": 2
+    }
+  },
+  "title": "NAME CLASH"
+}

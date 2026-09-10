@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/src/doc.rs
+expression: "Doc::cat([Doc::text(\"0123456789\"),\nDoc::hang(4,\nDoc::sep([\"argument\", \"result\"].map(Doc::text)))]).render(20, false)"
+---
+0123456789argument
+              result

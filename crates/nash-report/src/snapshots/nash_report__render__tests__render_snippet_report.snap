@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/render.rs
+expression: plain(&snippet())
+---
+TEST
+
+  × Before:
+   ╭─[Main.nash:1:5]
+ 1 │ f = x + 1
+   ·     ─
+   ╰────
+  help: After.

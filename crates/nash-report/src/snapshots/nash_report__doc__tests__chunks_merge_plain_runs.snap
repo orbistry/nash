@@ -1,0 +1,25 @@
+---
+source: crates/nash-report/src/doc.rs
+expression: "Doc::cat([Doc::text(\"a\"), Doc::text(\"b\"), Doc::text(\"c\").dullyellow(),\nDoc::text(\"d\").dullyellow(), Doc::text(\"e\")]).chunks(80)"
+---
+[
+    Plain(
+        "ab",
+    ),
+    Styled {
+        style: Style {
+            bold: false,
+            underline: false,
+            color: Some(
+                Color {
+                    base: Yellow,
+                    vivid: false,
+                },
+            ),
+        },
+        text: "cd",
+    },
+    Plain(
+        "e",
+    ),
+]

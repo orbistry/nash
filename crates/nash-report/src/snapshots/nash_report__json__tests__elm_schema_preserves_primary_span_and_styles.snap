@@ -1,0 +1,40 @@
+---
+source: crates/nash-report/src/json.rs
+expression: "serde_json::to_string_pretty(&value).unwrap()"
+---
+{
+  "name": "Main",
+  "path": "src/Main.nash",
+  "problems": [
+    {
+      "message": [
+        "I cannot find this name:\n\n1| main =\n2|     missing\n       ",
+        {
+          "bold": false,
+          "color": "RED",
+          "string": "^^^^^^^",
+          "underline": false
+        },
+        "\nTry ",
+        {
+          "bold": false,
+          "color": "GREEN",
+          "string": "found",
+          "underline": false
+        },
+        "."
+      ],
+      "region": {
+        "end": {
+          "column": 12,
+          "line": 2
+        },
+        "start": {
+          "column": 5,
+          "line": 2
+        }
+      },
+      "title": "NAMING ERROR"
+    }
+  ]
+}

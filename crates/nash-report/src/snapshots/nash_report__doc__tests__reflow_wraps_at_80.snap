@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/src/doc.rs
+expression: "Doc::reflow(PARAGRAPH).render(80, false)"
+---
+I cannot find this variable in the current module. Check the spelling of its
+name and make sure that the module which defines it is imported. These
+suggestions may help you find the value you intended to use.

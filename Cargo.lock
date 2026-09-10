@@ -2040,6 +2040,27 @@ name = "nash-region"
 version = "0.2.0"
 
 [[package]]
+name = "nash-report"
+version = "0.1.0"
+dependencies = [
+ "bumpalo",
+ "indoc",
+ "insta",
+ "miette",
+ "nash-ast",
+ "nash-can",
+ "nash-constrain",
+ "nash-nitpick",
+ "nash-parse",
+ "nash-region",
+ "nash-solve",
+ "nash-source",
+ "serde",
+ "serde_json",
+ "unicode-width 0.1.14",
+]
+
+[[package]]
 name = "nash-solve"
 version = "0.4.0"
 dependencies = [

@@ -1,0 +1,34 @@
+---
+source: crates/nash-report/src/doc.rs
+expression: "Doc::sep((0..30).map(|_| Doc::text(\"longword\"))).render(80, false)"
+---
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword
+longword

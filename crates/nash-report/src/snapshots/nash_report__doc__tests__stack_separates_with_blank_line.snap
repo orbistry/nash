@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/src/doc.rs
+expression: "Doc::stack([Doc::text(\"First.\"), Doc::text(\"Second.\")]).render(80, false)"
+---
+First.
+
+Second.

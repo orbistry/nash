@@ -1,0 +1,9 @@
+---
+source: crates/nash-report/src/code/snippet.rs
+expression: "Source::new(\"é x\\n界\\ty\").pair_doc(region(1, 4, 1, 5),\nregion(2, 5, 2, 6)).render(80, false)"
+---
+1| é x
+     ^
+
+2| 界  y
+       ^

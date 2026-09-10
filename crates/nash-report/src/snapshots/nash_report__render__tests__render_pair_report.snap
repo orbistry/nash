@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/render.rs
+expression: output
+---
+TEST
+
+  × Before:
+   ╭─[Main.nash:1:5]
+ 1 │ f = x + 1
+   · ┬   ┬
+   · │   ╰── second
+   · ╰── first
+   ╰────
+  help: After.
