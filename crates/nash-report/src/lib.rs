@@ -9,8 +9,12 @@
 pub mod code;
 pub mod doc;
 pub mod json;
-mod render;
+pub mod localizer;
+pub mod render_type;
 pub mod suggest;
+pub mod type_diff;
+pub use localizer::Localizer;
+mod render;
 
 use nash_region::Region;
 
