@@ -1,5 +1,27 @@
 # nash-cli
 
+## 0.2.6 — 2026-09-10
+
+### Patch changes
+
+- [c4b63fd](https://github.com/orbistry/nash/commit/c4b63fd02e77d5549f182ababf59fd5f1d792aa4) Add Maranget exhaustiveness and redundancy checking across declarations,
+  trait defaults, impl methods and nested expressions. Render missing-pattern
+  examples and handle trait-overloaded literals conservatively.
+  Reject modules with incomplete or redundant patterns after type solving,
+  before publishing interfaces or retaining solved modules for dependents. — Thanks @MicroProofs!
+- [adf37e3](https://github.com/orbistry/nash/commit/adf37e3ead0ba83dbe2690252687294603f487ba) Replace row polymorphism with nominal record aliases. Resolve literals by
+  visible field sets, preserve declaration-order metadata, and resolve record
+  operations before generalization. Support qualified lowercase type names and
+  alias constructor functions while preserving trait-based literals and
+  representation predicates.
+  Use the complete primitive type inventory under the Builtin qualifier and
+  represent unit uniformly as a named builtin type throughout inference and
+  instance selection.
+  Preserve labeled constructor metadata, support construction and pattern sugar,
+  and permit field projection only through visible single-constructor unions.
+  Keep parenthesized record literals as positional constructor arguments. — Thanks @MicroProofs!
+- Updated dependencies: nash-driver@0.4.0
+
 ## 0.2.5 — 2026-09-08
 
 ### Patch changes
