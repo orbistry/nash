@@ -263,7 +263,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Helper for eating multi-line comments with nesting.
-    fn eat_multi_comment_help(&mut self, open_comments: usize) -> SpaceStatus {
+    fn eat_multi_comment_help(&mut self, mut open_comments: usize) -> SpaceStatus {
         loop {
             match self.peek() {
                 // Newline
@@ -284,7 +284,7 @@ impl<'a> Parser<'a> {
                         if open_comments == 1 {
                             return SpaceStatus::Good;
                         } else {
-                            return self.eat_multi_comment_help(open_comments - 1);
+                            open_comments -= 1;
                         }
                     } else {
                         self.advance();
@@ -296,7 +296,7 @@ impl<'a> Parser<'a> {
                     if self.peek_at(1) == Some(0x2D) {
                         self.advance();
                         self.advance();
-                        return self.eat_multi_comment_help(open_comments + 1);
+                        open_comments += 1;
                     } else {
                         self.advance();
                     }

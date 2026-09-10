@@ -62,6 +62,13 @@ pub(crate) fn wide(mut report: Report, row: Row, col: Col) -> Report {
 
 pub(crate) fn to_space_report(_source: &Source<'_>, space: &Space, row: Row, col: Col) -> Report {
     match space {
+        Space::TooDeep => problem(
+            "EXCESSIVE NESTING",
+            row,
+            col,
+            "This expression, pattern, or type is nested too deeply.",
+            "Split it into smaller definitions or simplify its nesting.",
+        ),
         Space::HasTab => problem(
             "NO TABS",
             row,

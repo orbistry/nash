@@ -47,26 +47,22 @@ impl<'a> Parser<'a> {
         start: Position,
         expr: &'a Located<Expr<'a>>,
     ) -> Result<&'a Located<Expr<'a>>, error::Expr<'a>> {
-        self.one_of_with_fallback(
-            vec![Box::new(|p: &mut Parser<'a>| {
-                p.word1(b'.', error::Expr::Dot)?;
-                let pos = p.get_position();
-                let field = p.lower_name(error::Expr::Access)?;
-                let end = p.get_position();
-
-                let located_field = p.alloc(Located::at(Region::new(pos, end), field));
-                let access_expr = p.alloc(Located::at(
-                    Region::new(start, end),
-                    Expr::Access {
-                        record: expr,
-                        field: located_field,
-                    },
-                ));
-
-                p.accessible(start, access_expr)
-            })],
-            expr,
-        )
+        let mut expr = expr;
+        while self.peek() == Some(b'.') {
+            self.advance();
+            let pos = self.get_position();
+            let field = self.lower_name(error::Expr::Access)?;
+            let end = self.get_position();
+            let field = self.alloc(Located::at(Region::new(pos, end), field));
+            expr = self.alloc(Located::at(
+                Region::new(start, end),
+                Expr::Access {
+                    record: expr,
+                    field,
+                },
+            ));
+        }
+        Ok(expr)
     }
 }
 

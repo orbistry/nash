@@ -91,30 +91,29 @@ impl<'a> Parser<'a> {
         &mut self,
         mut args: Vec<&'a Located<nash_source::Pattern<'a>>>,
     ) -> Result<Vec<&'a Located<nash_source::Pattern<'a>>>, Func<'a>> {
-        // Clone for second closure - cheap since it's just a Vec of references
-        let args_for_arrow = args.clone();
-
-        // Use one_of to match Elm's error behavior: fallback error is FuncArrow
-        self.one_of(
-            Func::Arrow,
-            vec![
-                // Try to parse another pattern arg (Elm tries this first)
-                Box::new(|p: &mut Parser<'a>| {
-                    let arg = p.specialize(
-                        |bump, e, r, c| Func::Arg(bump.alloc(e), r, c),
-                        |p| p.pattern_term(),
-                    )?;
-                    args.push(arg);
-                    p.chomp_and_check_indent(Func::Space, Func::IndentArrow)?;
-                    p.chomp_lambda_args(args)
-                }),
-                // Or parse the arrow to finish
-                Box::new(|p: &mut Parser<'a>| {
-                    p.word2(b'-', b'>', Func::Arrow)?;
-                    Ok(args_for_arrow)
-                }),
-            ],
-        )
+        loop {
+            let next = self.one_of(
+                Func::Arrow,
+                vec![
+                    Box::new(|p: &mut Parser<'a>| {
+                        let arg = p.specialize(
+                            |bump, e, r, c| Func::Arg(bump.alloc(e), r, c),
+                            |p| p.pattern_term(),
+                        )?;
+                        p.chomp_and_check_indent(Func::Space, Func::IndentArrow)?;
+                        Ok(Some(arg))
+                    }),
+                    Box::new(|p: &mut Parser<'a>| {
+                        p.word2(b'-', b'>', Func::Arrow)?;
+                        Ok(None)
+                    }),
+                ],
+            )?;
+            match next {
+                Some(arg) => args.push(arg),
+                None => return Ok(args),
+            }
+        }
     }
 }
 

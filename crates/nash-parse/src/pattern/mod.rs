@@ -33,6 +33,10 @@ impl<'a> Parser<'a> {
     ///         ]
     /// ```
     pub fn pattern_term(&mut self) -> Result<&'a Located<Pattern<'a>>, error::Pattern<'a>> {
+        self.with_depth(error::Pattern::Space, Self::pattern_term_inner)
+    }
+
+    fn pattern_term_inner(&mut self) -> Result<&'a Located<Pattern<'a>>, error::Pattern<'a>> {
         let start = self.get_position();
 
         self.one_of(
@@ -60,6 +64,12 @@ impl<'a> Parser<'a> {
     ///       exprHelp start [] ePart
     /// ```
     pub fn pattern_expr(
+        &mut self,
+    ) -> Result<(&'a Located<Pattern<'a>>, Position), error::Pattern<'a>> {
+        self.with_depth(error::Pattern::Space, Self::pattern_expr_inner)
+    }
+
+    fn pattern_expr_inner(
         &mut self,
     ) -> Result<(&'a Located<Pattern<'a>>, Position), error::Pattern<'a>> {
         let start = self.get_position();

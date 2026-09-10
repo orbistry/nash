@@ -4,6 +4,14 @@ use crate::render_plain;
 use nash_parse::error::*;
 
 #[test]
+fn variant_excessive_nesting() {
+    let source = Source::new("f = (((1)))");
+    let error = Module::Space(Space::TooDeep, 1, 7);
+    let report = module::to_parse_error_report(&source, &error);
+    insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
+}
+
+#[test]
 fn variant_module_space() {
     let source = Source::new("f = value");
     let error = Module::Space(Space::HasTab, 1, 3);

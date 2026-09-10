@@ -7,7 +7,7 @@ Implement the six Nash/Alder comparison findings, then evaluate a direct inferen
 - [x] Remove expression-parser accumulator copies. A successful attempt returns one new argument or operator; only then does the loop change its accumulators. Existing parsing and error snapshots stay unchanged.
 - [x] Require valid UTF-8 at the parser boundary and remove unchecked conversions.
 - [x] Widen coordinates with a safe source bound.
-- [ ] Guard mutually recursive parsing with a measured nesting limit and remove flat-sequence recursion.
+- [x] Guard mutually recursive parsing with a measured nesting limit and remove flat-sequence recursion.
 - [ ] Delete unused driver interface-cache machinery and orphaned dependencies.
 - [ ] Separate canonical module data from local scopes without cloning the whole environment.
 - [ ] Bound trait selection and evidence lookup using existing map ordering.
@@ -24,6 +24,10 @@ Chunk 1 verification passed: formatting, workspace check (all targets/features),
 Chunk 2 requires `Parser::new` source text to be `&str`; all callers are updated directly, with no byte-input adapter. All seven unchecked UTF-8 conversions are replaced with checked conversions. Added snapshots preserve raw Unicode, mixed Unicode/escapes, and CRLF normalization. A compile-fail doctest rejects arbitrary bytes. Formatting, workspace check, clippy, full tests (including the doctest), and `nash check scratch` passed. Only the three reviewed new Unicode snapshots were added.
 
 Chunk 3a uses usize coordinates and indentation, bounded by the source string allocation (at most isize::MAX bytes). This avoids a fallible constructor and removes coordinate casts; Region grows to 32 bytes on 64-bit hosts. LSP explicitly reports positions beyond its 32-bit range. Source bounds, arbitrary lookahead, and oversized Unicode escape widths are covered by regressions. The Unicode numeric accumulator saturates only as an invalid-code marker, preventing overflow while retaining full diagnostic width. Larger error payloads prompted removal of a trivial header adapter and arena storage of the rare irregular-recursion reference; no lint was suppressed. Formatting, check, clippy, all workspace tests, the positive scratch project, and all 441 parser tests plus doctests in release passed. CLI JSON negative scratch cases report the exact missing-name positions at line 65,539 and column 65,544.
+
+Chunk 3b bounds combined recursive expression, pattern, and type entries at 64. Exhaustion remains committed across backtracking and the counter resets after returning. The original 512-parenthesis input aborted on a 2 MiB stack; guarded parsing reports excessive nesting. Fixed-stack regressions cover ordinary and negative parentheses, lists, lambdas, constructor patterns, type parentheses, and arrows. Flat access chains, lambda arguments, else-if branches, let definitions, case arms, and union variants now iterate without accumulator copies; 2,000-element cases and 65,536 nested comments use bounded stack.
+
+Chunk 3b verification passed: formatting, workspace check, clippy, full tests, all 444 parser tests plus doctests in release, positive scratch compilation, and a CLI JSON negative scratch case reporting EXCESSIVE NESTING. Existing snapshots are unchanged; the new nesting report was reviewed.
 
 ## Direct inference adoption gates
 

@@ -87,24 +87,24 @@ impl<'a> Parser<'a> {
     pub(crate) fn chomp_let_defs(
         &mut self,
         mut defs: Vec<&'a Located<Def<'a>>>,
-        end: Position,
+        mut end: Position,
     ) -> Result<(Vec<&'a Located<Def<'a>>>, Position), Let<'a>> {
-        let defs_for_fallback = defs.clone();
-
-        self.one_of_with_fallback(
-            vec![Box::new(|p: &mut Parser<'a>| {
-                // Check alignment for next definition
-                p.check_aligned(Let::DefAlignment)?;
-
-                // Parse the next definition
-                let (def, new_end) = p.chomp_let_def()?;
-                defs.push(def);
-
-                // Continue parsing more definitions
-                p.chomp_let_defs(defs, new_end)
-            })],
-            (defs_for_fallback, end),
-        )
+        loop {
+            let next = self.one_of_with_fallback(
+                vec![Box::new(|p: &mut Parser<'a>| {
+                    p.check_aligned(Let::DefAlignment)?;
+                    p.chomp_let_def().map(Some)
+                })],
+                None,
+            )?;
+            match next {
+                Some((def, new_end)) => {
+                    defs.push(def);
+                    end = new_end;
+                }
+                None => return Ok((defs, end)),
+            }
+        }
     }
 
     /// Parse a single let definition (value or destructure).

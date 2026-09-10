@@ -45,6 +45,10 @@ impl<'a> Parser<'a> {
     /// Currently implements: lambda, possiblyNegativeTerm + function application.
     /// TODO: let, if, case, operators
     pub fn expression(&mut self) -> Result<(&'a Located<Expr<'a>>, Position), error::Expr<'a>> {
+        self.with_depth(error::Expr::Space, Self::expression_inner)
+    }
+
+    fn expression_inner(&mut self) -> Result<(&'a Located<Expr<'a>>, Position), error::Expr<'a>> {
         let start = self.get_position();
 
         self.one_of(
@@ -314,6 +318,10 @@ impl<'a> Parser<'a> {
     ///         ]
     /// ```
     pub fn term(&mut self) -> Result<&'a Located<Expr<'a>>, error::Expr<'a>> {
+        self.with_depth(error::Expr::Space, Self::term_inner)
+    }
+
+    fn term_inner(&mut self) -> Result<&'a Located<Expr<'a>>, error::Expr<'a>> {
         let start = self.get_position();
 
         self.one_of(

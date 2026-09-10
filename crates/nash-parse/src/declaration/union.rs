@@ -213,23 +213,26 @@ impl<'a> Parser<'a> {
     fn chomp_variants(
         &mut self,
         mut variants: Vec<&'a Ctor<'a>>,
-        end: Position,
+        mut end: Position,
     ) -> Result<(Vec<&'a Ctor<'a>>, Position), CustomType<'a>> {
-        let variants_for_fallback = variants.clone();
-
-        self.one_of_with_fallback(
-            vec![Box::new(|p: &mut Parser<'a>| {
-                p.check_indent(end.line, end.column, CustomType::IndentBar)?;
-                p.word1(b'|', CustomType::Bar)?;
-                p.chomp_and_check_indent(CustomType::Space, CustomType::IndentAfterBar)?;
-
-                let (variant, new_end) = p.variant()?;
-                variants.push(variant);
-
-                p.chomp_variants(variants, new_end)
-            })],
-            (variants_for_fallback, end),
-        )
+        loop {
+            let next = self.one_of_with_fallback(
+                vec![Box::new(|p: &mut Parser<'a>| {
+                    p.check_indent(end.line, end.column, CustomType::IndentBar)?;
+                    p.word1(b'|', CustomType::Bar)?;
+                    p.chomp_and_check_indent(CustomType::Space, CustomType::IndentAfterBar)?;
+                    p.variant().map(Some)
+                })],
+                None,
+            )?;
+            match next {
+                Some((variant, new_end)) => {
+                    variants.push(variant);
+                    end = new_end;
+                }
+                None => return Ok((variants, end)),
+            }
+        }
     }
 }
 

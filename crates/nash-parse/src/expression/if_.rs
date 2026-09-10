@@ -5,7 +5,6 @@
 //! Parses: `if cond then branch else branch`
 //! Also handles: `if c1 then b1 else if c2 then b2 else b3`
 
-use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position, Region};
 use nash_source::{Expr, IfBranch};
 
@@ -60,68 +59,54 @@ impl<'a> Parser<'a> {
         start: Position,
         mut branches: Vec<&'a IfBranch<'a>>,
     ) -> Result<(&'a Located<Expr<'a>>, Position), If<'a>> {
-        // Parse condition
-        self.chomp_and_check_indent(If::Space, If::IndentCondition)?;
-        let (condition, cond_end) = self.if_condition()?;
+        loop {
+            // Parse condition
+            self.chomp_and_check_indent(If::Space, If::IndentCondition)?;
+            let (condition, cond_end) = self.if_condition()?;
 
-        // Parse `then`
-        self.check_indent(cond_end.line, cond_end.column, If::IndentThen)?;
-        self.keyword_then(If::Then)?;
+            // Parse `then`
+            self.check_indent(cond_end.line, cond_end.column, If::IndentThen)?;
+            self.keyword_then(If::Then)?;
 
-        // Parse then branch
-        self.chomp_and_check_indent(If::Space, If::IndentThenBranch)?;
-        let (then_branch, then_end) = self.if_then_branch()?;
+            // Parse then branch
+            self.chomp_and_check_indent(If::Space, If::IndentThenBranch)?;
+            let (then_branch, then_end) = self.if_then_branch()?;
 
-        // Parse `else`
-        self.check_indent(then_end.line, then_end.column, If::IndentElse)?;
-        self.keyword_else(If::Else)?;
+            // Parse `else`
+            self.check_indent(then_end.line, then_end.column, If::IndentElse)?;
+            self.keyword_else(If::Else)?;
 
-        // Create the new branch
-        let branch = self.bump.alloc(IfBranch {
-            condition,
-            then_branch,
-        });
-        branches.push(branch);
+            // Create the new branch
+            let branch = self.bump.alloc(IfBranch {
+                condition,
+                then_branch,
+            });
+            branches.push(branch);
 
-        // Parse else branch: either `else if ...` or final else expression
-        self.chomp_and_check_indent(If::Space, If::IndentElseBranch)?;
+            // Parse else branch: either `else if ...` or final else expression
+            self.chomp_and_check_indent(If::Space, If::IndentElseBranch)?;
 
-        // Clone for second closure
-        let branches_for_else = branches.clone();
-
-        self.one_of(
-            If::ElseBranchStart,
-            vec![
-                // `else if ...` - continue the chain
-                Box::new(|p: &mut Parser<'a>| {
-                    p.keyword_if(If::ElseBranchStart)?;
-                    p.chomp_if_end(start, branches)
-                }),
-                // Final else expression
-                Box::new(|p: &mut Parser<'a>| {
-                    let (else_branch, else_end) = p.if_else_branch()?;
-
-                    // Convert branches to bump slice
-                    // Note: Elm reverses because it uses `:` (prepend), we use push (append)
-                    // so our branches are already in correct order
-                    let mut branch_vec: BumpVec<'a, &'a IfBranch<'a>> = BumpVec::new_in(p.bump);
-                    for b in branches_for_else {
-                        branch_vec.push(b);
-                    }
-                    let branches_slice = branch_vec.into_bump_slice();
-
-                    let if_expr = Expr::If {
-                        branches: branches_slice,
-                        final_else: else_branch,
-                    };
-
-                    Ok((
-                        p.alloc(Located::at(Region::new(start, else_end), if_expr)),
-                        else_end,
-                    ))
-                }),
-            ],
-        )
+            let final_else = self.one_of(
+                If::ElseBranchStart,
+                vec![
+                    Box::new(|p: &mut Parser<'a>| {
+                        p.keyword_if(If::ElseBranchStart)?;
+                        Ok(None)
+                    }),
+                    Box::new(|p: &mut Parser<'a>| p.if_else_branch().map(Some)),
+                ],
+            )?;
+            if let Some((else_branch, else_end)) = final_else {
+                let if_expr = Expr::If {
+                    branches: self.bump.alloc_slice_copy(&branches),
+                    final_else: else_branch,
+                };
+                return Ok((
+                    self.alloc(Located::at(Region::new(start, else_end), if_expr)),
+                    else_end,
+                ));
+            }
+        }
     }
 
     /// Parse condition expression in an if.

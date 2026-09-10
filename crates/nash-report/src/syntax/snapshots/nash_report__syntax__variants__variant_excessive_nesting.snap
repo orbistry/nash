@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+EXCESSIVE NESTING
+
+  × This expression, pattern, or type is nested too deeply.
+   ╭─[src/Main.nash:1:7]
+ 1 │ f = (((1)))
+   ·       ─
+   ╰────
+  help: Split it into smaller definitions or simplify its nesting.

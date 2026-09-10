@@ -51,6 +51,8 @@ pub struct Parser<'a> {
     row: Row,
     /// Current column (1-indexed)
     col: Col,
+    depth: usize,
+    depth_error: Option<(Row, Col)>,
 }
 
 impl<'a> Parser<'a> {
@@ -73,7 +75,37 @@ impl<'a> Parser<'a> {
             indent: 1,
             row: 1,
             col: 1,
+            depth: 0,
+            depth_error: None,
         }
+    }
+
+    /// Count recursive expression, pattern, and type entries together. This state
+    /// is deliberately outside ParserState: backtracking cannot undo exhaustion.
+    fn with_depth<T, E>(
+        &mut self,
+        to_error: impl FnOnce(error::Space, Row, Col) -> E,
+        parse: impl FnOnce(&mut Self) -> Result<T, E>,
+    ) -> Result<T, E> {
+        const MAX_DEPTH: usize = 64;
+        if self.depth == MAX_DEPTH || self.depth_error.is_some() {
+            let position = self.position();
+            let (row, col) = *self.depth_error.get_or_insert(position);
+            return Err(to_error(error::Space::TooDeep, row, col));
+        }
+        self.depth += 1;
+        let result = parse(self);
+        self.depth -= 1;
+        // A speculative parser may swallow an error. Never turn exhaustion into
+        // a successful prefix parse, even when it restored the input position.
+        let result = match (result, self.depth_error) {
+            (Ok(_), Some((row, col))) => Err(to_error(error::Space::TooDeep, row, col)),
+            (result, _) => result,
+        };
+        if self.depth == 0 {
+            self.depth_error = None;
+        }
+        result
     }
 
     // -------------------------------------------------------------------------
@@ -235,7 +267,7 @@ impl<'a> Parser<'a> {
                 Ok(value) => return Ok(value),
                 Err(e) => {
                     // Did we consume any input?
-                    if self.pos != before.pos {
+                    if self.pos != before.pos || self.depth_error.is_some() {
                         // Committed - propagate error
                         return Err(e);
                     }
@@ -271,7 +303,7 @@ impl<'a> Parser<'a> {
                 Ok(value) => return Ok(value),
                 Err(e) => {
                     // Did we consume any input?
-                    if self.pos != before.pos {
+                    if self.pos != before.pos || self.depth_error.is_some() {
                         // Committed - propagate error
                         return Err(e);
                     }
@@ -477,6 +509,116 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn nesting_is_bounded_on_a_small_stack() {
+        std::thread::Builder::new()
+            .stack_size(2 * 1024 * 1024)
+            .spawn(|| {
+                for depth in [8, 512] {
+                    for (open, leaf, close, kind) in [
+                        ("(", "1", ")", 0),
+                        ("(-", "1", ")", 0),
+                        ("[", "1", "]", 0),
+                        ("\\x -> ", "1", "", 0),
+                        ("Just (", "x", ")", 1),
+                        ("(", "x", ")", 2),
+                        ("Int -> ", "Int", "", 3),
+                        ("(", "Int", ")", 4),
+                    ] {
+                        let bump = Bump::new();
+                        let source =
+                            format!("{}{}{}", open.repeat(depth), leaf, close.repeat(depth));
+                        let mut parser = Parser::new(&bump, &source);
+                        let result = match kind {
+                            0 => parser
+                                .expression()
+                                .map(|_| ())
+                                .map_err(|e| format!("{e:?}")),
+                            1 => parser
+                                .pattern_expr()
+                                .map(|_| ())
+                                .map_err(|e| format!("{e:?}")),
+                            2 => parser
+                                .pattern_term()
+                                .map(|_| ())
+                                .map_err(|e| format!("{e:?}")),
+                            3 => parser.type_expr().map(|_| ()).map_err(|e| format!("{e:?}")),
+                            _ => parser.type_term().map(|_| ()).map_err(|e| format!("{e:?}")),
+                        };
+                        if depth == 8 {
+                            assert!(result.is_ok(), "{open}: {result:?}");
+                            assert!(parser.is_eof());
+                        } else {
+                            assert!(result.unwrap_err().contains("TooDeep"), "{open}");
+                        }
+                        assert_eq!(parser.depth, 0);
+                        assert_eq!(parser.depth_error, None);
+                    }
+                }
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+    }
+
+    #[test]
+    fn nesting_exhaustion_survives_backtracking_and_resets() {
+        let bump = Bump::new();
+        let mut parser = Parser::new(&bump, "x");
+        let result = parser.with_depth(error::Expr::Space, |p| {
+            let saved = p.save_state();
+            p.depth_error = Some((1, 1));
+            p.restore_state(saved);
+            p.one_of_with_fallback(
+                vec![Box::new(|_| {
+                    Err(error::Expr::Space(error::Space::TooDeep, 1, 1))
+                })],
+                (),
+            )
+        });
+        assert!(matches!(
+            result,
+            Err(error::Expr::Space(error::Space::TooDeep, 1, 1))
+        ));
+        parser.expression().unwrap();
+        assert!(parser.is_eof());
+    }
+
+    #[test]
+    fn flat_sequences_use_bounded_stack() {
+        std::thread::Builder::new()
+            .stack_size(2 * 1024 * 1024)
+            .spawn(|| {
+                let expressions = [
+                    format!("x{}", ".field".repeat(2_000)),
+                    format!("\\{}-> x", "x ".repeat(2_000)),
+                    format!("{}0", "if True then 1 else ".repeat(2_000)),
+                    format!("let\n{}in x", "    x = 1\n".repeat(2_000)),
+                    format!("case x of\n{}", "    _ -> 1\n".repeat(2_000)),
+                ];
+                for source in expressions {
+                    let source = crate::test_support::indent_fragment(&source);
+                    let bump = Bump::new();
+                    let mut parser = Parser::new(&bump, &source);
+                    parser.chomp(|_, _, _| ()).unwrap();
+                    parser.expression().unwrap();
+                    assert!(parser.is_eof());
+                }
+                let bump = Bump::new();
+                let source = format!("type Many = A{}", " | A".repeat(2_000));
+                let mut parser = Parser::new(&bump, &source);
+                parser.declaration().unwrap();
+                assert!(parser.is_eof());
+                let source = format!("{}{}", "{-".repeat(65_536), "-}".repeat(65_536));
+                let mut parser = Parser::new(&bump, &source);
+                parser.chomp(|_, _, _| ()).unwrap();
+                assert!(parser.is_eof());
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+    }
+
     #[test]
     fn coordinates_cover_large_sources() {
         let bump = Bump::new();

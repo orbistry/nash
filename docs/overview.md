@@ -22,6 +22,12 @@ EOF fit without a separate parser input-size failure. This makes `Region`
 32 bytes on a 64-bit host. Protocol boundaries such as LSP check their narrower
 coordinate limits explicitly; they must not truncate positions.
 
+The parser permits at most 64 simultaneous recursive expression, pattern, and
+type entries, counted together. Beyond this limit it reports excessive nesting
+at the first exhausted position. Backtracking cannot clear that failure. This
+limit is checked on a 2 MiB stack in debug and release tests. Flat sequences and
+nested comments iterate instead of consuming stack per item.
+
 ## Status
 
 Done (ported from the Elm compiler, Haskell -> Rust):

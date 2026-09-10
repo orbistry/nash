@@ -125,25 +125,24 @@ impl<'a> Parser<'a> {
     fn chomp_case_end(
         &mut self,
         mut arms: Vec<&'a CaseArm<'a>>,
-        end: Position,
+        mut end: Position,
     ) -> Result<(Vec<&'a CaseArm<'a>>, Position), Case<'a>> {
-        // Clone for the fallback
-        let arms_for_fallback = arms.clone();
-
-        self.one_of_with_fallback(
-            vec![Box::new(|p: &mut Parser<'a>| {
-                // Check alignment for next pattern
-                p.check_aligned(Case::PatternAlignment)?;
-
-                // Parse the next branch
-                let (arm, new_end) = p.chomp_case_branch()?;
-                arms.push(arm);
-
-                // Continue parsing more branches
-                p.chomp_case_end(arms, new_end)
-            })],
-            (arms_for_fallback, end),
-        )
+        loop {
+            let next = self.one_of_with_fallback(
+                vec![Box::new(|p: &mut Parser<'a>| {
+                    p.check_aligned(Case::PatternAlignment)?;
+                    p.chomp_case_branch().map(Some)
+                })],
+                None,
+            )?;
+            match next {
+                Some((arm, new_end)) => {
+                    arms.push(arm);
+                    end = new_end;
+                }
+                None => return Ok((arms, end)),
+            }
+        }
     }
 }
 
