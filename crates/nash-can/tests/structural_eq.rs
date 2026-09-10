@@ -19,9 +19,7 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                 nash_can::kinds::builtin_interface(&bump),
             )]);
             let source = "module Eq exposing (Eq)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n";
-            let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-                .module()
-                .unwrap();
+            let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
             let canonical = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -37,9 +35,7 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                 nash_can::from_module(&bump, &canonical.module, &Default::default()),
             );
             let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = {{ item : Int }}\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq {head} where\n    eq _ _ = Builtin.True\n"));
-            let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-                .module()
-                .unwrap();
+            let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
             let result = nash_can::canonicalize(
                 &bump,
                 Context {

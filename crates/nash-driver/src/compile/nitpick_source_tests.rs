@@ -8,7 +8,7 @@ fn solve_source<'a>(
     package: Option<nash_ast::PackageName<'a>>,
 ) -> (&'a nash_ast::Module<'a>, nash_can::Annotations<'a>) {
     let source = bump.alloc_str(source);
-    let parsed = nash_parse::Parser::new(bump, source.as_bytes())
+    let parsed = nash_parse::Parser::new(bump, source)
         .module()
         .expect("source must parse");
     let can = nash_can::canonicalize(
@@ -1412,9 +1412,7 @@ fn string_escapes_round_trip() {
         nash_nitpick::Pattern::Literal(nash_nitpick::Literal::Str(original)),
     );
     let source = bump.alloc_str(&format!("module Main exposing (..)\nf {rendered} = ()\n"));
-    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let can = nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
     let nash_ast::Decls::Declare {
         definition: nash_ast::Def::Def { args, .. },

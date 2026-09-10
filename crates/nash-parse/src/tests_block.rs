@@ -253,7 +253,7 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let source = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, source.as_bytes());
+            let mut parser = Parser::new(&bump, source);
             let module = parser.module().expect("expected successful module parse");
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),
@@ -269,7 +269,7 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let source = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, source.as_bytes());
+            let mut parser = Parser::new(&bump, source);
             let error = parser.module().expect_err("expected module parse error");
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),

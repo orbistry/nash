@@ -560,7 +560,7 @@ fn expression_and_pattern_without_expectation() {
 fn type_error_reports(input: &str) -> String {
     let bump = bumpalo::Bump::new();
     let source = bump.alloc_str(input);
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
+    let module = nash_parse::Parser::new(&bump, source)
         .module()
         .expect("parse fixture");
     let localizer = Localizer::from_module(&module, &[]);
@@ -784,9 +784,7 @@ fn problem_hints() {
 fn missing_impl_local_union_deriving_not_yet_available() {
     let source = "module Main exposing (..)\ntype step = Done | Next Builtin.int\n";
     let bump = bumpalo::Bump::new();
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let l = Localizer::from_module(&module, &[]);
     let typ = ErrorType::Type {
         home: nash_ast::ModuleName {
@@ -820,9 +818,7 @@ fn missing_impl_local_union_deriving_not_yet_available() {
 fn missing_impl_imported_or_custom_trait_has_no_derive_hint() {
     let source = "module Main exposing (..)\ntype step = Done\n";
     let bump = bumpalo::Bump::new();
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let l = Localizer::from_module(&module, &[]);
     for (home, trait_) in [
         (

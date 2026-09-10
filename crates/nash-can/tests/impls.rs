@@ -82,9 +82,7 @@ fn impl_cannot_own_an_imported_trait_and_imported_heads() {
             lower x = x
     "
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let result = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -141,9 +139,7 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
         ("type alias Alias 'a = 'a", "(Alias 'a) (Alias 'b)"),
     ] {
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\n{declaration}\nimpl Lift {heads} where\n    lift x = x\n    lower x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         results.push(
             nash_can::canonicalize(
                 &bump,
@@ -173,7 +169,7 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
 }
 
 fn core_lift<'a>(bump: &'a Bump) -> nash_can::Interface<'a> {
-    let module = nash_parse::Parser::new(bump, b"module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n").module().unwrap();
+    let module = nash_parse::Parser::new(bump, "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n").module().unwrap();
     let result = nash_can::canonicalize(
         bump,
         nash_can::Context {
@@ -197,9 +193,7 @@ fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
         ("container", "(List 'a)"),
     ] {
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype {container} 'a = Wrap 'a\ntrait Tag 'a where\n    tag : 'a -> 'a\ntrait Tag 'a => Top 'a where\n    top : 'a -> 'a\nimpl Lift {lifted} {lifted} => Tag ({container} 'a) where\n    tag x = x\nimpl Top ({container} 'a) where\n    top x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         results.push(
             nash_can::canonicalize(
                 &bump,
@@ -225,9 +219,7 @@ fn reflexive_lift_accepts_big_but_not_const() {
     let mut results = Vec::new();
     for head in ["Color", "()"] {
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntrait Lift 'a 'a => RoundTrip 'a where\n    roundTrip : 'a -> 'a\nimpl RoundTrip {head} where\n    roundTrip x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         results.push(
             nash_can::canonicalize(
                 &bump,
@@ -262,9 +254,7 @@ fn reflexive_lift_requires_the_exact_core_trait_identity() {
         ),
     ] {
         let source = bump.alloc_str(&format!("module {module_name} exposing (..)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n"));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         let result = nash_can::canonicalize(
             &bump,
             nash_can::Context {
@@ -386,9 +376,7 @@ fn superclass_impl_is_available_from_an_interface() {
             compare x = x
     "
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let result = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -540,9 +528,7 @@ fn global_overlap_between_core_modules() {
         ("Second", "(list int, list int)"),
     ] {
         let source = bump.alloc_str(&format!("module {name} exposing (..)\nimport Keep exposing (Keep)\nimpl Keep {head} where\n    keep x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         let result = nash_can::canonicalize(
             &bump,
             nash_can::Context {
@@ -559,7 +545,7 @@ fn global_overlap_between_core_modules() {
     }
     let mut all_interfaces = interfaces.clone();
     all_interfaces.extend(compiled);
-    let module = nash_parse::Parser::new(&bump, b"module Main exposing (..)\n")
+    let module = nash_parse::Parser::new(&bump, "module Main exposing (..)\n")
         .module()
         .unwrap();
     let result = nash_can::canonicalize(
@@ -597,9 +583,7 @@ fn global_impl_metadata_is_available_without_imports() {
     };
     let interfaces = std::collections::BTreeMap::from([("Instances", interface)]);
     let source = "module Main exposing (..)\n";
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let result = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -641,9 +625,7 @@ fn unit_and_tuple_impls_belong_to_core() {
             keep x = x
     "
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let ordinary = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -856,9 +838,7 @@ fn canonicalize<'a>(
     source: &str,
 ) -> Result<nash_can::CanResult<'a>, Vec<nash_can::Error<'a>>> {
     let source = bump.alloc_str(source);
-    let module = nash_parse::Parser::new(bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(bump, source).module().unwrap();
     nash_can::canonicalize(bump, nash_can::Context::default(), &module)
 }
 

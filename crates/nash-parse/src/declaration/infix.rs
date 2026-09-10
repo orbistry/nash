@@ -129,7 +129,7 @@ mod tests {
             let bump = bumpalo::Bump::new();
             let src = concat!($src, "\n");
             let src_in_arena = bump.alloc_str(src);
-            let mut parser = Parser::new(&bump, src_in_arena.as_bytes());
+            let mut parser = Parser::new(&bump, src_in_arena);
             match parser.infix_decl() {
                 Ok(infix) => {
                     insta::with_settings!({

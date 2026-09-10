@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn source_module_does_not_invent_default_imports() {
         let arena = bumpalo::Bump::new();
-        let module = nash_parse::Parser::new(&arena, b"module Local exposing (..)\nx = 1\n")
+        let module = nash_parse::Parser::new(&arena, "module Local exposing (..)\nx = 1\n")
             .module()
             .unwrap();
         let localizer = Localizer::from_module(&module, &[]);
@@ -202,7 +202,7 @@ mod tests {
         let bump = bumpalo::Bump::new();
         let module = nash_parse::Parser::new(
             &bump,
-            b"module Local exposing (..)\ntype Token = Token\ntype alias Wrapper = Token\n",
+            "module Local exposing (..)\ntype Token = Token\ntype alias Wrapper = Token\n",
         )
         .module()
         .unwrap();
@@ -233,7 +233,7 @@ mod tests {
     fn shadowed_primitive_keeps_qualified_builtin_identity() {
         let bump = bumpalo::Bump::new();
         let module =
-            nash_parse::Parser::new(&bump, b"module Local exposing (..)\ntype Int = Custom\n")
+            nash_parse::Parser::new(&bump, "module Local exposing (..)\ntype Int = Custom\n")
                 .module()
                 .unwrap();
         let localizer = Localizer::from_module(&module, &[]);

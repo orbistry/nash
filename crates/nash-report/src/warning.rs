@@ -45,7 +45,7 @@ mod tests {
     fn only_warning(input: &str) -> Report {
         let bump = bumpalo::Bump::new();
         let text = bump.alloc_str(input);
-        let module = nash_parse::Parser::new(&bump, text.as_bytes())
+        let module = nash_parse::Parser::new(&bump, text)
             .module()
             .expect("parse");
         let can = nash_can::canonicalize(&bump, nash_can::Context::default(), &module)
@@ -75,7 +75,7 @@ mod tests {
             },
         )]);
         let text = bump.alloc_str(input);
-        let module = nash_parse::Parser::new(&bump, text.as_bytes())
+        let module = nash_parse::Parser::new(&bump, text)
             .module()
             .expect("parse");
         let can = nash_can::canonicalize(

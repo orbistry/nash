@@ -7,7 +7,7 @@ macro_rules! assert_kinds_snapshot {
     ($source:expr) => {{
         let bump = Bump::new();
         let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{}\n", $source));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
+        let module = nash_parse::Parser::new(&bump, source).module().expect("source parses");
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let result = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect("kind checking succeeds");
         let unions: Vec<_> = result.module.unions.iter().map(|u| (u.value.name.value, u.value.kind, u.value.context)).collect();
@@ -22,7 +22,7 @@ macro_rules! assert_kind_error_snapshot {
     ($source:expr, $expected:pat) => {{
         let bump = Bump::new();
         let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{}\n", $source));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
+        let module = nash_parse::Parser::new(&bump, source).module().expect("source parses");
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let errors = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect_err("declaration or annotation checking fails");
         assert!(errors.iter().all(|error| matches!(error, $expected)), "wrong diagnostic: {errors:?}");
@@ -262,9 +262,7 @@ fn named_constructor_arity_remains_a_canonicalization_error() {
     let source = bump.alloc_str(
         "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias x = int Int\n",
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
     let errors = canonicalize(
         &bump,
@@ -322,9 +320,7 @@ fn alias_substitution_preserves_application_head_and_argument() {
 fn applied_head_is_a_free_variable() {
     let bump = Bump::new();
     let source = bump.alloc_str("module Main exposing (..)\n\ntype wrap 'a = Wrap ('f 'a)\n");
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let errors = canonicalize(&bump, Context::default(), &module).unwrap_err();
     assert!(matches!(
         errors.as_slice(),
@@ -338,9 +334,7 @@ fn annotation_storable_parameter() {
     assert_kinds_snapshot!("f : 'a -> list 'a -> list 'a\nf x xs = xs");
     let bump = Bump::new();
     let source = "module Main exposing (..)\nimport Builtin exposing (..)\nf : 'a -> list 'a -> list 'a\nf x xs = xs\n";
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
     let result = canonicalize(
         &bump,
@@ -413,7 +407,7 @@ fn imported_interfaces_retain_higher_kinded_types() {
     let interface = {
         let source_arena = &destination;
         let source = source_arena.alloc_str("module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 'f 'a = Wrap ('f 'a)\ntype alias applied 'f 'a = 'f 'a\n");
-        let module = nash_parse::Parser::new(source_arena, source.as_bytes())
+        let module = nash_parse::Parser::new(source_arena, source)
             .module()
             .unwrap();
         let canonical = canonicalize(source_arena, Context::default(), &module).unwrap();
@@ -434,7 +428,7 @@ fn imported_interfaces_retain_higher_kinded_types() {
     assert!(matches!(interface.aliases[0].typ.value, Type::App { .. }));
     let interfaces = BTreeMap::from([("Shapes", interface)]);
     let source = destination.alloc_str("module Main exposing (..)\n\nimport Shapes exposing (type wrap)\n\ntype holder 'f 'a = Holder (wrap 'f 'a)\n");
-    let module = nash_parse::Parser::new(&destination, source.as_bytes())
+    let module = nash_parse::Parser::new(&destination, source)
         .module()
         .unwrap();
     let canonical = canonicalize(
@@ -569,9 +563,7 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
     };
     let interfaces = BTreeMap::from([("Restricted", interface)]);
     let source = bump.alloc_str("module Main exposing (..)\n\nimport Restricted exposing (type restricted)\n\nf : restricted ()\nf x = x\n");
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let errors = canonicalize(
         &bump,
         Context {
@@ -782,7 +774,7 @@ macro_rules! self_application_cases {
                 .split("```").nth(2 * $number - 1).expect("supplied case").trim();
             let bump = Bump::new();
             let source = bump.alloc_str(source);
-            let module = nash_parse::Parser::new(&bump, source.as_bytes()).module().expect("source parses");
+            let module = nash_parse::Parser::new(&bump, source).module().expect("source parses");
             let result = canonicalize(&bump, Context { package: None, interfaces: None }, &module);
             let errors = result.expect_err("self application fails the H98 occurs check");
             assert!(errors.iter().all(|error| matches!(error, Error::KindInfinite { .. })), "declaration-time occurs check: {errors:?}");

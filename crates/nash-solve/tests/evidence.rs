@@ -6,9 +6,7 @@ use nash_solve::evidence::{Failure, resolve};
 
 fn fixture<'a>(bump: &'a Bump, source: &str) -> (Tables<'a>, Annotations<'a>) {
     let source = bump.alloc_str(source);
-    let parsed = nash_parse::Parser::new(bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         bump,
         Context {

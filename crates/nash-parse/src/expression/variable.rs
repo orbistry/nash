@@ -210,7 +210,7 @@ impl<'a> Parser<'a> {
     /// Get a str slice from start_pos to current position.
     pub(crate) fn slice_from(&self, start_pos: usize) -> &'a str {
         let bytes = &self.src[start_pos..self.pos];
-        unsafe { std::str::from_utf8_unchecked(bytes) }
+        std::str::from_utf8(bytes).expect("source slice must end at UTF-8 boundaries")
     }
 
     /// Check if current position is a dot followed by uppercase.
@@ -239,8 +239,10 @@ impl<'a> Parser<'a> {
         self.advance(); // consume first lowercase char
         self.chomp_inner_chars();
 
-        let module = unsafe { std::str::from_utf8_unchecked(&self.src[start_pos..module_end]) };
-        let name = unsafe { std::str::from_utf8_unchecked(&self.src[name_start..self.pos]) };
+        let module = std::str::from_utf8(&self.src[start_pos..module_end])
+            .expect("source slice must end at UTF-8 boundaries");
+        let name = std::str::from_utf8(&self.src[name_start..self.pos])
+            .expect("source slice must end at UTF-8 boundaries");
 
         if keyword::is_reserved(name) {
             return Err(to_error(row, col));

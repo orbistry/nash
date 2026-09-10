@@ -3,7 +3,7 @@ use crate::render_plain;
 
 fn parse_error_report(input: &str) -> String {
     let bump = bumpalo::Bump::new();
-    let error = nash_parse::Parser::new(&bump, input.as_bytes())
+    let error = nash_parse::Parser::new(&bump, input)
         .module()
         .expect_err("expected parse error");
     render_plain(

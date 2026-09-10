@@ -856,7 +856,7 @@ mod tests {
 
     fn parse_type<'a>(bump: &'a Bump, input: &str) -> &'a Located<SourceType<'a>> {
         let src = bump.alloc_str(input);
-        let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
+        let mut parser = nash_parse::Parser::new(bump, src);
         let (typ, _end) = parser.type_expr().expect("expected successful parse");
         typ
     }
@@ -1028,7 +1028,7 @@ mod context_tests {
         let source = bump.alloc_str(&format!(
             "module Main exposing (..)\n\nf : {annotation}\nf x = x\n"
         ));
-        let mut parser = nash_parse::Parser::new(bump, source.as_bytes());
+        let mut parser = nash_parse::Parser::new(bump, source);
         parser.module().unwrap().values[0].value.annotation.unwrap()
     }
 

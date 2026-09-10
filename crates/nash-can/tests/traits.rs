@@ -3,11 +3,7 @@ use indoc::indoc;
 
 fn parse<'a>(bump: &'a Bump, source: &str) -> &'a nash_source::Module<'a> {
     let source = bump.alloc_str(source);
-    bump.alloc(
-        nash_parse::Parser::new(bump, source.as_bytes())
-            .module()
-            .unwrap(),
-    )
+    bump.alloc(nash_parse::Parser::new(bump, source).module().unwrap())
 }
 
 #[test]

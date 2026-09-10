@@ -391,7 +391,7 @@ macro_rules! assert_expr_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         let result = parser.term().expect("expected successful parse");
         parser.chomp(|_, _, _| ()).expect("expected trailing space");
         assert!(parser.is_eof(), "expression parser left trailing input");
@@ -411,7 +411,7 @@ macro_rules! assert_expr_error_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         let result = parser.term().expect_err("expected parse error");
 
         insta::with_settings!({
@@ -429,7 +429,7 @@ macro_rules! assert_expression_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         let (result, _end) = parser.expression().expect("expected successful parse");
         parser.chomp(|_, _, _| ()).expect("expected trailing space");
         assert!(parser.is_eof(), "expression parser left trailing input");
@@ -449,7 +449,7 @@ macro_rules! assert_expression_error_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         let result = parser.expression().expect_err("expected parse error");
 
         insta::with_settings!({
@@ -471,7 +471,7 @@ macro_rules! assert_indented_expr_snapshot {
         let fragment = indoc::indoc!($code);
         let indented = $crate::test_support::indent_fragment(fragment);
         let src = bump.alloc_str(&indented);
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         parser
             .chomp(|_, _, _| "space error")
             .expect("expected leading indent");
@@ -496,7 +496,7 @@ macro_rules! assert_indented_expression_snapshot {
         let fragment = indoc::indoc!($code);
         let indented = $crate::test_support::indent_fragment(fragment);
         let src = bump.alloc_str(&indented);
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         parser
             .chomp(|_, _, _| "space error")
             .expect("expected leading indent");
@@ -534,7 +534,7 @@ mod tests {
         for count in [1000, 2000, 4000] {
             let source = vec!["x"; count].join(" + ");
             let bump = bumpalo::Bump::new();
-            let mut parser = crate::Parser::new(&bump, source.as_bytes());
+            let mut parser = crate::Parser::new(&bump, &source);
             let (expression, _) = parser.expression().expect("operator chain");
             assert!(parser.is_eof());
             let nash_source::Expr::BinOps { operands, .. } = expression.value else {

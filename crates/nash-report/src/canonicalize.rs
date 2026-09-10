@@ -2599,7 +2599,7 @@ mod branches {
         let input = "module Main exposing (..)\nfirst = missing\nsecond = absent\n";
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(input);
-        let mut parser = nash_parse::Parser::new(&bump, src.as_bytes());
+        let mut parser = nash_parse::Parser::new(&bump, src);
         let module = parser.module().expect("parse");
         let errors = nash_can::canonicalize(&bump, nash_can::Context::default(), &module)
             .expect_err("canonical errors");
@@ -2710,7 +2710,7 @@ mod branches {
         let input = "module Bad exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep () where\n    keep x = x\n";
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(input);
-        let mut parser = nash_parse::Parser::new(&bump, src.as_bytes());
+        let mut parser = nash_parse::Parser::new(&bump, src);
         let module = parser.module().expect("parse");
         let errors = nash_can::canonicalize(&bump, nash_can::Context::default(), &module)
             .expect_err("overlapping impls");

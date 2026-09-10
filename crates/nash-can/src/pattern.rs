@@ -439,7 +439,7 @@ mod tests {
     fn env_with_bool<'a>(bump: &'a Bump) -> Env<'a> {
         let module = nash_parse::Parser::new(
             bump,
-            b"module Main exposing (..)\nimport Builtin exposing (type bool(..))\n",
+            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\n",
         )
         .module()
         .unwrap();
@@ -456,7 +456,7 @@ mod tests {
 
     fn parse_pattern<'a>(bump: &'a Bump, input: &str) -> &'a Located<SourcePattern<'a>> {
         let src = bump.alloc_str(input);
-        let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
+        let mut parser = nash_parse::Parser::new(bump, src);
         let (pat, _end) = parser.pattern_expr().expect("expected successful parse");
         pat
     }

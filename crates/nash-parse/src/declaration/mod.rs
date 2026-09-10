@@ -150,7 +150,7 @@ macro_rules! assert_decl_snapshot {
         let bump = bumpalo::Bump::new();
         let src = indoc::indoc!($src);
         let src_in_arena = bump.alloc_str(src);
-        let mut parser = crate::Parser::new(&bump, src_in_arena.as_bytes());
+        let mut parser = crate::Parser::new(&bump, src_in_arena);
         match parser.declaration() {
             Ok((decl, _end)) => {
                 parser.chomp(|_, _, _| ()).expect("expected trailing space");
@@ -173,7 +173,7 @@ macro_rules! assert_decl_error_snapshot {
         let bump = bumpalo::Bump::new();
         let src = indoc::indoc!($src);
         let src_in_arena = bump.alloc_str(src);
-        let mut parser = crate::Parser::new(&bump, src_in_arena.as_bytes());
+        let mut parser = crate::Parser::new(&bump, src_in_arena);
         let error = parser.declaration().expect_err("expected declaration parse error");
         insta::with_settings!({
             description => src,

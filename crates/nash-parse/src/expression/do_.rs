@@ -173,7 +173,7 @@ mod tests {
             let bump = bumpalo::Bump::new();
             let indented = crate::test_support::indent_fragment(indoc::indoc!($code));
             let source = bump.alloc_str(&indented);
-            let mut parser = crate::Parser::new(&bump, source.as_bytes());
+            let mut parser = crate::Parser::new(&bump, source);
             parser
                 .chomp(|_, _, _| "space error")
                 .expect("expected leading indent");

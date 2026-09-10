@@ -87,8 +87,8 @@ impl<'a> Parser<'a> {
                     } else {
                         // Return slice directly
                         let bytes = &self.src[start_pos..end_pos];
-                        // SAFETY: We've verified this is valid UTF-8 by scanning byte-by-byte
-                        let s = unsafe { std::str::from_utf8_unchecked(bytes) };
+                        let s = std::str::from_utf8(bytes)
+                            .expect("source slice must end at UTF-8 boundaries");
                         return StringResult::Ok(s);
                     }
                 }
@@ -149,7 +149,8 @@ impl<'a> Parser<'a> {
                             return self.build_escaped_string(start_pos, end_pos, true);
                         } else {
                             let bytes = &self.src[start_pos..end_pos];
-                            let s = unsafe { std::str::from_utf8_unchecked(bytes) };
+                            let s = std::str::from_utf8(bytes)
+                                .expect("source slice must end at UTF-8 boundaries");
                             return StringResult::Ok(s);
                         }
                     } else {
@@ -248,8 +249,8 @@ impl<'a> Parser<'a> {
                             while pos < end && self.src[pos] != b'}' {
                                 pos += 1;
                             }
-                            let hex_str =
-                                unsafe { std::str::from_utf8_unchecked(&self.src[hex_start..pos]) };
+                            let hex_str = std::str::from_utf8(&self.src[hex_start..pos])
+                                .expect("source slice must end at UTF-8 boundaries");
                             if let Ok(code) = u32::from_str_radix(hex_str, 16)
                                 && let Some(c) = char::from_u32(code)
                             {
@@ -272,7 +273,8 @@ impl<'a> Parser<'a> {
                 // Regular UTF-8 character
                 let width = utf8_char_width(b);
                 let char_bytes = &self.src[pos..pos + width];
-                let s = unsafe { std::str::from_utf8_unchecked(char_bytes) };
+                let s = std::str::from_utf8(char_bytes)
+                    .expect("source slice must end at UTF-8 boundaries");
                 result.push_str(s);
                 pos += width;
             }

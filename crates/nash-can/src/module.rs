@@ -1495,7 +1495,7 @@ mod tests {
         context: Context<'a, '_>,
     ) -> Result<CanModule<'a>, Vec<Error<'a>>> {
         let src = bump.alloc_str(input);
-        let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
+        let mut parser = nash_parse::Parser::new(bump, src);
         let module = parser.module().expect("expected successful parse");
         canonicalize(bump, context, &module).map(|r| r.module)
     }
@@ -2297,7 +2297,7 @@ mod tests {
         let bump = Bump::new();
         let module = nash_parse::Parser::new(
             &bump,
-            b"module Main exposing (..)\nimport Builtin exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
+            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
         ).module().unwrap();
         let interfaces = BTreeMap::from([("Builtin", crate::kinds::builtin_interface(&bump))]);
         let result = canonicalize(
@@ -2613,7 +2613,7 @@ mod tests {
         context: Context<'a, '_>,
     ) -> Result<(CanModule<'a>, Vec<crate::Warning<'a>>), Vec<Error<'a>>> {
         let src = bump.alloc_str(input);
-        let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
+        let mut parser = nash_parse::Parser::new(bump, src);
         let module = parser.module().expect("expected successful parse");
         canonicalize(bump, context, &module).map(|r| (r.module, r.warnings))
     }

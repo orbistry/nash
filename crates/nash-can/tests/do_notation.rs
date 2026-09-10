@@ -2,7 +2,7 @@ use bumpalo::Bump;
 use indoc::indoc;
 
 fn monad(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
-    let module = nash_parse::Parser::new(bump, b"module Monad exposing (Monad)\ntrait Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n").module().unwrap();
+    let module = nash_parse::Parser::new(bump, "module Monad exposing (Monad)\ntrait Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n").module().unwrap();
     let canonical = nash_can::canonicalize(
         bump,
         nash_can::Context {
@@ -34,9 +34,7 @@ fn do_scopes_statements_and_uses_the_core_method() {
             x
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -62,9 +60,7 @@ fn do_rejects_missing_core_and_refutable_patterns() {
     ] {
         let interfaces = std::collections::BTreeMap::from([("Monad", monad(&bump, core))]);
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Monad\ntype option 'a = Some 'a\nrun m = do\n    {pattern} <- {rhs}\n    m\n"));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         let errors = nash_can::canonicalize(
             &bump,
             nash_can::Context {

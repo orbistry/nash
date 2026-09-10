@@ -324,7 +324,7 @@ mod tests {
     fn parse_and_chomp(input: &str) -> (SpaceStatus, usize, Row, Col) {
         let bump = Bump::new();
         let src = bump.alloc_str(input);
-        let mut parser = Parser::new(&bump, src.as_bytes());
+        let mut parser = Parser::new(&bump, src);
 
         let (status, row, col) = parser.eat_spaces();
         (status, parser.pos, row, col)
@@ -405,7 +405,7 @@ mod tests {
     fn doc_comment_simple() {
         let bump = Bump::new();
         let src = bump.alloc_str("{-| hello -}");
-        let mut parser = Parser::new(&bump, src.as_bytes());
+        let mut parser = Parser::new(&bump, src);
 
         let result = parser.doc_comment(|_, _| "expected", |_, _, _| "space error");
         assert!(result.is_ok());
@@ -420,7 +420,7 @@ mod tests {
     fn doc_comment_multiline() {
         let bump = Bump::new();
         let src = bump.alloc_str("{-| line one\nline two -}");
-        let mut parser = Parser::new(&bump, src.as_bytes());
+        let mut parser = Parser::new(&bump, src);
 
         let result = parser.doc_comment(|_, _| "expected", |_, _, _| "space error");
         assert!(result.is_ok());
@@ -432,7 +432,7 @@ mod tests {
     fn doc_comment_not_doc() {
         let bump = Bump::new();
         let src = bump.alloc_str("{- not a doc comment -}");
-        let mut parser = Parser::new(&bump, src.as_bytes());
+        let mut parser = Parser::new(&bump, src);
 
         let result = parser.doc_comment(|_, _| "expected", |_, _, _| "space error");
         assert!(result.is_err());

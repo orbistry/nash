@@ -9,9 +9,7 @@ fn infer<'a>(
     let source = bump.alloc_str(&format!(
         "module Main exposing (..)\nimport Builtin exposing (..)\n{body}\n"
     ));
-    let parsed = nash_parse::Parser::new(bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
     let canonical = nash_can::canonicalize(
         bump,
@@ -283,9 +281,7 @@ fn imported_scheme_defaults_are_fixed_before_instantiation() {
         let source = bump.alloc_str(&format!(
             "module {name} exposing (..)\nimport Builtin exposing (..)\n{body}\n"
         ));
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             nash_can::Context {
@@ -333,9 +329,7 @@ fn representation_givens_follow_transparent_alias_bodies() {
         let source = bump.alloc_str(&format!(
             "module {name} exposing (..)\nimport Builtin exposing (..)\n{body}\n"
         ));
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             nash_can::Context {

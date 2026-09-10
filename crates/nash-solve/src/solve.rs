@@ -3406,9 +3406,7 @@ mod copy_tests {
     fn superclass_givens_record_transitive_paths_and_substitute_arguments() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\ntype Container 'a = Wrap 'a\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    ord : 'a -> 'a\ntrait Ord 'a => Top 'a where\n    top : 'a -> 'a\ntrait Eq 'b => Select 'a 'b where\n    select : 'a -> 'b -> 'a\nf : Top 'a => 'a -> 'a\nf x = eq x\ng : Select 'a 'b => 'a -> 'b -> 'b\ng x y = eq y\nh : (Top 'a, Eq 'a) => 'a -> 'a\nh x = eq x\n";
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
@@ -3480,9 +3478,7 @@ mod copy_tests {
     fn givens_discharge_body_uses_without_escaping_their_scope() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nf : Keep 'a => 'a -> 'a\nf x = keep x\ng : Keep () => ()\ng = keep ()\nh = keep ()\n";
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
@@ -3547,9 +3543,7 @@ mod copy_tests {
     fn scheme_records_freeze_local_quantifiers_before_outer_generalization() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\nouter x =\n    let\n        local y = (x, y)\n    in\n    local ()\n";
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
@@ -3636,9 +3630,7 @@ mod copy_tests {
     fn nested_impl_solutions_preserve_substitution_and_child_origins() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = x\nimpl Keep 'a => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [[Red]]\n";
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
@@ -3751,9 +3743,7 @@ mod copy_tests {
     fn retained_impl_children_and_recursive_uses_reference_final_context_slots() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (list 'a) where\n    base xs = xs\nf x = (base [let local y = g y in local x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n";
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut group_binder = None;

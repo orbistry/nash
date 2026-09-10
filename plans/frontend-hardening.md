@@ -5,7 +5,7 @@ Implement the six Nash/Alder comparison findings, then evaluate a direct inferen
 ## Chunks
 
 - [x] Remove expression-parser accumulator copies. A successful attempt returns one new argument or operator; only then does the loop change its accumulators. Existing parsing and error snapshots stay unchanged.
-- [ ] Require valid UTF-8 at the parser boundary and remove unchecked conversions.
+- [x] Require valid UTF-8 at the parser boundary and remove unchecked conversions.
 - [ ] Widen coordinates with a safe input bound; guard mutually recursive parsing with a measured nesting limit.
 - [ ] Delete unused driver interface-cache machinery and orphaned dependencies.
 - [ ] Separate canonical module data from local scopes without cloning the whole environment.
@@ -19,6 +19,8 @@ Use a separate reviewed jj commit for each verified logical chunk. Before each c
 Parser allocation regression: before the first change, 1,000 and 2,000 operands retained 4,192,960 and 16,775,744 arena bytes. Afterward 1,000 / 2,000 / 4,000 operands retain 130,048 / 261,056 / 523,136 bytes in both debug and release probes. The test checks complete consumption, operand count, and bounded growth. Function application and negative-argument paths now append a single parsed argument instead of copying the accumulated list.
 
 Chunk 1 verification passed: formatting, workspace check (all targets/features), clippy (all targets/features, warnings denied), full workspace tests, `nash check scratch`, and the release allocation test. Existing snapshots were unchanged.
+
+Chunk 2 requires `Parser::new` source text to be `&str`; all callers are updated directly, with no byte-input adapter. All seven unchecked UTF-8 conversions are replaced with checked conversions. Added snapshots preserve raw Unicode, mixed Unicode/escapes, and CRLF normalization. A compile-fail doctest rejects arbitrary bytes. Formatting, workspace check, clippy, full tests (including the doctest), and `nash check scratch` passed. Only the three reviewed new Unicode snapshots were added.
 
 ## Direct inference adoption gates
 

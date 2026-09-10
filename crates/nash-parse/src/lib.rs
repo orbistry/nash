@@ -36,7 +36,7 @@ struct ParserState {
 /// Combines the arena allocator with parsing state for a unified API.
 /// All parsed AST nodes are allocated in the provided bump arena.
 ///
-/// The source bytes should already be allocated in the arena (via `bump.alloc_str`),
+/// The source text should already be allocated in the arena (via `bump.alloc_str`),
 /// so all string slices in the resulting AST share the `'a` lifetime.
 pub struct Parser<'a> {
     /// Arena allocator for AST nodes
@@ -54,13 +54,19 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    /// Create a new parser for the given source bytes.
+    /// Create a new parser for valid UTF-8 source text.
     ///
     /// The source should already be allocated in the arena.
-    pub fn new(bump: &'a Bump, src: &'a [u8]) -> Self {
+    ///
+    /// Arbitrary byte buffers are not a parser input:
+    /// ```compile_fail
+    /// let bump = bumpalo::Bump::new();
+    /// nash_parse::Parser::new(&bump, &[b'"', 0xff, b'"']);
+    /// ```
+    pub fn new(bump: &'a Bump, src: &'a str) -> Self {
         Parser {
             bump,
-            src,
+            src: src.as_bytes(),
             pos: 0,
             // Elm starts at 0; 1 is behaviorally identical because
             // `checkIndent`'s `col > 1` guard dominates at top level.
@@ -477,7 +483,7 @@ mod tests {
     fn test_parser_new() {
         let bump = Bump::new();
         let src = bump.alloc_str("hello");
-        let parser = Parser::new(&bump, src.as_bytes());
+        let parser = Parser::new(&bump, src);
 
         assert_eq!(parser.row(), 1);
         assert_eq!(parser.col(), 1);
@@ -489,7 +495,7 @@ mod tests {
     fn test_parser_advance() {
         let bump = Bump::new();
         let src = bump.alloc_str("ab\ncd");
-        let mut parser = Parser::new(&bump, src.as_bytes());
+        let mut parser = Parser::new(&bump, src);
 
         assert_eq!(parser.position(), (1, 1));
         parser.advance(); // 'a'
@@ -506,7 +512,7 @@ mod tests {
     fn test_parser_eof() {
         let bump = Bump::new();
         let src = bump.alloc_str("x");
-        let mut parser = Parser::new(&bump, src.as_bytes());
+        let mut parser = Parser::new(&bump, src);
 
         assert!(!parser.is_eof());
         parser.advance();

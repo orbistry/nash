@@ -23,7 +23,7 @@ We use **bumpalo** for arena allocation:
 ```rust
 let bump = Bump::new();
 let src: &str = bump.alloc_str(&file_contents);
-let mut parser = Parser::new(&bump, src.as_bytes());
+let mut parser = Parser::new(&bump, src);
 ```
 
 ### AST Type Guidelines

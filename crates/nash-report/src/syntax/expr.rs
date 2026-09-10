@@ -1583,7 +1583,7 @@ mod tests {
             fn $name() {
                 let input = $input;
                 let bump = bumpalo::Bump::new();
-                let error = nash_parse::Parser::new(&bump, input.as_bytes())
+                let error = nash_parse::Parser::new(&bump, input)
                     .module()
                     .expect_err("expected syntax error");
                 let source = Source::new(input);

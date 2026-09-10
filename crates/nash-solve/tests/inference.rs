@@ -31,9 +31,7 @@ fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can:
             fromBytes x = x
     "
     ));
-    let module = nash_parse::Parser::new(bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(bump, source).module().unwrap();
     let can = nash_can::canonicalize(
         bump,
         Context {
@@ -55,7 +53,7 @@ fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can:
 
 fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'a>>> {
     let src = bump.alloc_str(input);
-    let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
+    let mut parser = nash_parse::Parser::new(bump, src);
     let module = parser.module().expect("expected successful parse");
     let interfaces = literal_interfaces(bump);
     let can_result = nash_can::canonicalize(
@@ -517,9 +515,7 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
             (local (), local x)
     "#
     );
-    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
@@ -594,9 +590,7 @@ fn builtin_list_annotations_match_literals_and_patterns() {
                 head :: tail -> head
     "#
     ));
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
     let canonical = nash_can::canonicalize(
@@ -818,9 +812,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             .replace("FromInt", trait_name)
             .replace("fromInt", method)
             .replace("int", primitive);
-            let parsed = nash_parse::Parser::new(&bump, literal.as_bytes())
-                .module()
-                .unwrap();
+            let parsed = nash_parse::Parser::new(&bump, &literal).module().unwrap();
             let canonical = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -872,9 +864,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             .replace("FromInt", trait_name)
             .replace("fromInt", method)
             .replace("int", primitive);
-            let parsed = nash_parse::Parser::new(&bump, main.as_bytes())
-                .module()
-                .unwrap();
+            let parsed = nash_parse::Parser::new(&bump, &main).module().unwrap();
             let canonical = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -1478,9 +1468,7 @@ fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
         h x = f x
     "
     );
-    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
     let mut original_names = Vec::new();
     let mut decls = canonical.module.decls;
@@ -1665,7 +1653,7 @@ fn negation_retains_num_evidence() {
     let mut interfaces = literal_interfaces(&bump);
     let num = nash_parse::Parser::new(
         &bump,
-        b"module Num exposing (Num)\ntrait Num 'a where\n    negate : 'a -> 'a\n",
+        "module Num exposing (Num)\ntrait Num 'a where\n    negate : 'a -> 'a\n",
     )
     .module()
     .unwrap();
@@ -1683,9 +1671,7 @@ fn negation_retains_num_evidence() {
         nash_can::from_module(&bump, &num.module, &Default::default()),
     );
     let source = bump.alloc_str("module Main exposing (..)\nimport Num as N\nimport Literal exposing (..)\nnegate x = x\nflip x = -x\nnegative = -7\n");
-    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let can = nash_can::canonicalize(
         &bump,
         Context {
@@ -1761,9 +1747,7 @@ fn literal_syntax_records_impls_and_pattern_givens() {
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where eq : 'a -> 'a -> bool\n");
-    let eq_module = nash_parse::Parser::new(&bump, eq_source.as_bytes())
-        .module()
-        .unwrap();
+    let eq_module = nash_parse::Parser::new(&bump, eq_source).module().unwrap();
     let eq = nash_can::canonicalize(
         &bump,
         Context {
@@ -1783,9 +1767,7 @@ fn literal_syntax_records_impls_and_pattern_givens() {
         ("bytes", "#\"00ff\"", "FromBytes"),
     ] {
         let input = bump.alloc_str(&format!("module Main exposing (..)\nimport Builtin exposing (..)\nfixed : {primitive}\nfixed = {literal}\nmatch value =\n    case value of\n        {literal} -> ()\n        _ -> ()\n"));
-        let parsed = nash_parse::Parser::new(&bump, input.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, input).module().unwrap();
         let can = nash_can::canonicalize(
             &bump,
             Context {
@@ -1873,9 +1855,7 @@ fn user_twins_preserve_local_imported_and_pattern_identity() {
         "module Main exposing (..)\nimport Status as S exposing (..)\nsmallPayload x y = Payload x y\nbigPayload x y = S.Payload x y\nreadSmall (Payload x y) = (x, y)\nreadBig (S.Payload x y) = (x, y)\nlittleUse = Ready\nbigUse = S.Ready\nlittlePattern x = case x of\n    Ready -> ()\n    Waiting -> ()\nbigPattern x = case x of\n    S.Ready -> ()\n    S.Waiting -> ()\n",
     ] {
         let source = bump.alloc_str(source);
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -2102,9 +2082,7 @@ fn destructured_bindings_preserve_contexts_and_polymorphism() {
             (identity (), identity (\x -> x))
     "#
     ));
-    let parsed = nash_parse::Parser::new(&bump, input.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(&bump, input).module().unwrap();
     let can = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &can.module);
@@ -2518,9 +2496,7 @@ fn operator_methods_preserve_provider_and_backing_method() {
     ];
     let mut output = Vec::new();
     for (name, source) in sources {
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -2805,9 +2781,7 @@ fn nested_operator_sections_apply() {
     let operators = "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n";
     let annotations = infer(&bump, operators).expect("operator module infers");
     let source = bump.alloc_str(operators);
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
     let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
     let mut interfaces = literal_interfaces(&bump);
@@ -2823,9 +2797,7 @@ fn nested_operator_sections_apply() {
     "#
     );
     let source = bump.alloc_str(input);
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -2934,9 +2906,7 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
         ),
     ] {
         let source = bump.alloc_str(source);
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3063,9 +3033,7 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
         wrapper x xs = first x xs
     "
     ));
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3115,9 +3083,7 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
             ),
             name = name
         ));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3157,9 +3123,7 @@ fn do_infers_monad() {
             bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3184,9 +3148,7 @@ fn do_infers_monad() {
         expanded m = bind m (\x -> bind m (\y -> pure (x, y)))
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3266,7 +3228,7 @@ fn nested_use_requires_owners_storable_constraint() {
 }
 
 fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
-    let module = nash_parse::Parser::new(bump, b"module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n").module().unwrap();
+    let module = nash_parse::Parser::new(bump, "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n").module().unwrap();
     let canonical = nash_can::canonicalize(
         bump,
         Context {
@@ -3309,9 +3271,7 @@ fn reflexive_lift_retains_big_evidence() {
         nested = keep (Box Red)
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3384,9 +3344,7 @@ fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
     ] {
         let interfaces = std::collections::BTreeMap::from([("Lift", lift_interface(&bump, core))]);
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : {annotation}\nbad x = lift x\n"));
-        let module = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3493,9 +3451,7 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
     );
     let bump = Bump::new();
     let source = bump.alloc_str(source);
-    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3552,7 +3508,7 @@ fn imported_higher_kinded_value_preserves_application() {
     let bump = Bump::new();
     let module = nash_parse::Parser::new(
         &bump,
-        b"module Higher exposing (value)\nvalue : 'f 'a -> 'f 'a\nvalue x = x\n",
+        "module Higher exposing (value)\nvalue : 'f 'a -> 'f 'a\nvalue x = x\n",
     )
     .module()
     .unwrap();
@@ -3588,9 +3544,7 @@ fn imported_higher_kinded_value_preserves_application() {
     let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
     let source =
         bump.alloc_str("module Main exposing (..)\n\nimport Higher\n\nvalue = Higher.value\n");
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3648,9 +3602,7 @@ fn core_cast_schemes_preserve_nominal_source_and_target_types() {
         validate = Builtin.castValidateData
     "
     );
-    let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
     let interfaces = literal_interfaces(&bump);
     let canonical = nash_can::canonicalize(
         &bump,
@@ -3726,9 +3678,7 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
             None,
         ),
     ] {
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3804,9 +3754,7 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
             None,
         ),
     ] {
-        let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-            .module()
-            .unwrap();
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -4066,9 +4014,7 @@ fn deferred_captured_field_preserves_trait_evidence() {
             (get (), g p)
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
     let mut uf = UnionFind::new();
     let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);

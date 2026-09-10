@@ -299,7 +299,7 @@ fn compile_module<'s>(
 
     let bump = store;
     let src: &str = bump.alloc_str(source);
-    let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
+    let mut parser = nash_parse::Parser::new(bump, src);
     let module = match parser.module() {
         Ok(module) => module,
         Err(error) => {
@@ -425,7 +425,7 @@ fn extract_imports(source: &str, current: &Url, known_modules: &[Url]) -> Vec<Ur
     // Parse to get imports
     let bump = Bump::new();
     let src = bump.alloc_str(source);
-    let mut parser = nash_parse::Parser::new(&bump, src.as_bytes());
+    let mut parser = nash_parse::Parser::new(&bump, src);
 
     if let Ok(module) = parser.module() {
         for import in module.imports {

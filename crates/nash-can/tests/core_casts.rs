@@ -36,9 +36,7 @@ fn casts_require_exact_core_package_for_every_import_route() {
                 let source = bump.alloc_str(&format!(
                     "module Main exposing (..)\n{import}\nlift : int -> Int\nlift = {reference}\n"
                 ));
-                let parsed = nash_parse::Parser::new(&bump, source.as_bytes())
-                    .module()
-                    .unwrap();
+                let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
                 let interfaces = std::collections::BTreeMap::from([(
                     "Builtin",
                     nash_can::kinds::builtin_interface(&bump),

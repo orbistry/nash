@@ -324,7 +324,7 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let src = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, src.as_bytes());
+            let mut parser = Parser::new(&bump, src);
             let result = parser.module_header();
             match result {
                 Ok((kind, name, exposing)) => {
@@ -381,7 +381,7 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let src = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, src.as_bytes());
+            let mut parser = Parser::new(&bump, src);
             let result = parser.module();
             match result {
                 Ok(module) => {
@@ -404,7 +404,7 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let src = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, src.as_bytes());
+            let mut parser = Parser::new(&bump, src);
             let error = parser.module().expect_err("expected module parse error");
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),

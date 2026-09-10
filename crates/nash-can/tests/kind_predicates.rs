@@ -8,7 +8,7 @@ fn check<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, Vec<
     let source = bump.alloc_str(&format!(
         "module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{body}\n"
     ));
-    let module = nash_parse::Parser::new(bump, source.as_bytes())
+    let module = nash_parse::Parser::new(bump, source)
         .module()
         .expect("fixture parses");
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
@@ -221,9 +221,7 @@ fn imported<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, V
     let builtin = nash_can::kinds::builtin_interface(bump);
     let interfaces = BTreeMap::from([("Builtin", builtin)]);
     let source = bump.alloc_str("module Types exposing (..)\nimport Builtin exposing (..)\ntype Box 'a = Box 'a\ntype wrap 'f 'a = Wrap ('f 'a)\ntype option 'a = None | Some 'a\ntype alias count = int\n");
-    let parsed = nash_parse::Parser::new(bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     let checked = nash_can::canonicalize(
         bump,
         Context {
@@ -236,9 +234,7 @@ fn imported<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, V
     let interface = nash_can::from_module(bump, &checked.module, &BTreeMap::new());
     let interfaces = BTreeMap::from([("Builtin", builtin), ("Types", interface)]);
     let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (..)\n{body}\n"));
-    let parsed = nash_parse::Parser::new(bump, source.as_bytes())
-        .module()
-        .unwrap();
+    let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     nash_can::canonicalize(
         bump,
         Context {

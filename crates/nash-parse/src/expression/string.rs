@@ -54,6 +54,21 @@ mod tests {
     }
 
     #[test]
+    fn raw_unicode() {
+        assert_expr_snapshot!(r#""é漢😀""#);
+    }
+
+    #[test]
+    fn unicode_with_escape() {
+        assert_expr_snapshot!(r#""é\n漢\u{1F600}""#);
+    }
+
+    #[test]
+    fn unicode_multiline() {
+        assert_expr_snapshot!("\"\"\"é\r\n漢😀\"\"\"");
+    }
+
+    #[test]
     fn error_endless() {
         assert_expr_error_snapshot!(r#""hello"#);
     }

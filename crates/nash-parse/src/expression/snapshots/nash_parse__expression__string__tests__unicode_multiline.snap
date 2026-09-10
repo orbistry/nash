@@ -1,0 +1,19 @@
+---
+source: crates/nash-parse/src/expression/string.rs
+description: "Code:\n\n\"\"\"é\r\n漢😀\"\"\""
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 2,
+            column: 11,
+        },
+    },
+    value: Str(
+        "é\n漢😀",
+    ),
+}

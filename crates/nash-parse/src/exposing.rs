@@ -187,7 +187,7 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let src = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, src.as_bytes());
+            let mut parser = Parser::new(&bump, src);
             let result = parser.exposing();
             match result {
                 Ok(ref exposing) => {
@@ -212,7 +212,7 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let src = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, src.as_bytes());
+            let mut parser = Parser::new(&bump, src);
             let error = parser.exposing().expect_err("expected exposing parse error");
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),

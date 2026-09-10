@@ -324,7 +324,7 @@ macro_rules! assert_pattern_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         let (result, _end) = parser.pattern_expr().expect("expected successful parse");
         parser.chomp(|_, _, _| ()).expect("expected trailing space");
         assert!(parser.is_eof(), "pattern parser left trailing input");
@@ -344,7 +344,7 @@ macro_rules! assert_pattern_error_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         let result = parser.pattern_expr().expect_err("expected parse error");
 
         insta::with_settings!({
@@ -365,7 +365,7 @@ macro_rules! assert_indented_pattern_snapshot {
         let fragment = indoc::indoc!($code);
         let indented = $crate::test_support::indent_fragment(fragment);
         let src = bump.alloc_str(&indented);
-        let mut parser = $crate::Parser::new(&bump, src.as_bytes());
+        let mut parser = $crate::Parser::new(&bump, src);
         parser
             .chomp(|_, _, _| "space error")
             .expect("expected leading indent");
