@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: ___
+---
+UNEXPECTED NAME
+
+  × Variable names cannot start with underscores like this:
+   ╭─[src/Main.nash:1:1]
+ 1 │ ___
+   · ───
+   ╰────
+  help: You can either have an underscore like _ to ignore the value, or you can have a
+        name like x or age to use the matched value.

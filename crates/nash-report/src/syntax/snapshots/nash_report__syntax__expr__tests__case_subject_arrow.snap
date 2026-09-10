@@ -1,0 +1,10 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Case(&Case::Expr(&Expr::OperatorReserved(BadOperator::Arrow, 1,\n9), 1, 9), 1, 9), \"value = ->\")"
+---
+UNEXPECTED ARROW
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+
+I am parsing a `case` expression right now, but this arrow is confusing me:
+
+Maybe the `of` keyword is missing on a previous line?

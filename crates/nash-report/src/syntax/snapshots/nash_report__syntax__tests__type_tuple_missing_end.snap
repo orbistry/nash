@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nf : (int, int\nf = 1"
+---
+UNFINISHED PARENTHESES
+
+  × I was expecting to see a closing parenthesis next:
+   ╭─[src/Main.nash:1:14]
+ 1 │ f : (int, int
+   ·              ─
+ 2 │ f = 1
+   ╰────
+  help: Try adding a ) to see if that helps!
+
+        Note: I can get confused by indentation in cases like this, so maybe you have a
+        closing parenthesis but it is not indented enough?

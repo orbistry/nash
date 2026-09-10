@@ -1,0 +1,20 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Let(&Let::IndentBody(1, 9), 1, 9), \"value = \")"
+---
+UNFINISHED LET
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing a `let` expression, but I got stuck here:
+
+I was expecting an expression next. Tell me what should happen with the value
+you just defined!
+
+    let
+        fullName =
+            first ++ " " ++ last
+    in
+    fullName
+
+The definition is indented more than the `let` keyword, and its value is
+indented a bit more than that. That is important!

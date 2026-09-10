@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Number(Number::End, 1, 9), \"value = \")"
+---
+WEIRD NUMBER
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I thought I was reading a number, but I ran into some weird stuff here:
+
+I recognize integers like 42 and 0x002B. Is there a way to write it like one of
+those? Nash has no floating point numbers.

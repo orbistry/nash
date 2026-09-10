@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nimport"
+---
+EXPECTING IMPORT NAME
+
+  × I was parsing an `import` until I got stuck here:
+   ╭─[src/Main.nash:1:7]
+ 1 │ import
+   ·       ─
+   ╰────
+  help: I was expecting to see a module name next, like in these examples:
+
+            import Dict
+            import Option
+            import Cardano.Tx as Tx
+            import Data.Decoder exposing (..)
+
+        Notice that the module names all start with capital letters. That is required!

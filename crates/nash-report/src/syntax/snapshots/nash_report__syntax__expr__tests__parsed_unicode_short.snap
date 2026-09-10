@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+---
+BAD UNICODE ESCAPE
+
+  × This code point has the wrong number of digits:
+   ╭─[Main.nash:1:11]
+ 1 │ value = "\u{1}"
+   ·           ────
+   ╰────
+  help: I expected 4 digits, but found 1. Unicode escapes need between four and six
+        hexadecimal digits. Add leading zeros if there are too few, or trim leading
+        zeros if there are too many.

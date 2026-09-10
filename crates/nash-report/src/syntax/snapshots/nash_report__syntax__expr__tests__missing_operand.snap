@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::OperatorRight(\"+\", 1, 13), \"value = 1 + \")"
+---
+MISSING EXPRESSION
+Region { start: Position { line: 1, column: 13 }, end: Position { line: 1, column: 13 } }
+
+I just saw a + sign, so I am getting stuck here:
+
+I was expecting to see an expression next. Something like 42 or 1000 that makes
+sense with a + sign.

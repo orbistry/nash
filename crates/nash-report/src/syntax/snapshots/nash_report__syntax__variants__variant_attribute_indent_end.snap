@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+UNFINISHED ATTRIBUTE
+
+  × I was parsing an attribute, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: I was expecting a comma between arguments or a closing parenthesis after the
+        final argument.

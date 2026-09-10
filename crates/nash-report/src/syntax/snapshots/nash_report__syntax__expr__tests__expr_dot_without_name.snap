@@ -1,0 +1,10 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Dot(1, 9), \"value = \")"
+---
+EXPECTING RECORD ACCESSOR
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was expecting to see a record accessor here:
+
+Something like .name or .price that accesses a value from a record.

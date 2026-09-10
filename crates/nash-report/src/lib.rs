@@ -12,6 +12,7 @@ pub mod json;
 pub mod localizer;
 pub mod render_type;
 pub mod suggest;
+pub mod syntax;
 pub mod type_diff;
 pub use localizer::Localizer;
 mod render;

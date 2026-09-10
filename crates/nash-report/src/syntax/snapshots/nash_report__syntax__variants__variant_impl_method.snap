@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+UNFINISHED DEFINITION
+
+  × I got stuck while parsing the `f` definition:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: I was expecting to see an expression next. What is it equal to?
+
+            greet : string -> string
+            greet name =
+                "Hello " ++ name
+
+        The top line is an optional type annotation. It works as compiler-verified
+        documentation and often improves error messages!

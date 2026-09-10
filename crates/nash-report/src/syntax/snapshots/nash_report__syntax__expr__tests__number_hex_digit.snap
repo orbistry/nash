@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Number(Number::HexDigit, 1, 9), \"value = \")"
+---
+WEIRD HEXADECIMAL
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I thought I was reading a hexadecimal number until I got here:
+
+Valid hexadecimal digits include 0123456789abcdefABCDEF, so I can only recognize
+things like 0x2B, 0x002B, or 0x00ffb3.

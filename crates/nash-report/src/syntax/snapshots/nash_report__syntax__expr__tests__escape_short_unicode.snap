@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::String(StringError::Escape(Escape::BadUnicodeLength\n{ code: 5, expected: 4, actual: 1 }), 1, 9), \"value = \")"
+---
+BAD UNICODE ESCAPE
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 14 } }
+
+This code point has the wrong number of digits:
+
+I expected 4 digits, but found 1. Unicode escapes need between four and six
+hexadecimal digits. Add leading zeros if there are too few, or trim leading
+zeros if there are too many.

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: +
+---
+UNEXPECTED SYMBOL
+
+  × I got stuck on this symbol:
+   ╭─[src/Main.nash:1:1]
+ 1 │ +
+   · ─
+   ╰────
+  help: If you are trying to expose an operator, add parentheses around it like this:
+
+            + -> (+)

@@ -1,0 +1,10 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Number(Number::Dot(42), 1, 11), \"value = 42.\")"
+---
+WEIRD NUMBER
+Region { start: Position { line: 1, column: 11 }, end: Position { line: 1, column: 11 } }
+
+Numbers cannot end with a dot like this:
+
+Switching to 42 will work though! Nash has no floating point numbers.

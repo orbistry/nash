@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Record(&Record::Field(1, 9), 1, 9), \"value = }\")"
+---
+EXTRA COMMA
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing a record, but I got stuck here:
+
+Trailing commas are not allowed in records. Try deleting the comma that appears
+before this closing curly brace.
+
+    { name = "Nash"
+      , age = 1
+      }
+
+Notice that each line starts with some indentation. Usually two or four spaces.

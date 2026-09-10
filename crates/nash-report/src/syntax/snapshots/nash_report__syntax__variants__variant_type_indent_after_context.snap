@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+UNFINISHED CONSTRAINED TYPE
+
+  × I just saw => after the type constraints, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: Add the type after => and indent it farther than the start of the annotation.

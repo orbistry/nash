@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+---
+MISSING EXPRESSION
+
+  × I was partway through parsing an anonymous function, but I got stuck here:
+   ╭─[Main.nash:1:14]
+ 1 │ value = \x ->
+   ·              ─
+   ╰────
+  help: I was expecting to see an expression like 42 or "hello". Once there is something
+        there, I can probably give a more specific hint! This can also happen if I run
+        into reserved words like `let` or `as` unexpectedly, or operators in unexpected
+        spots.

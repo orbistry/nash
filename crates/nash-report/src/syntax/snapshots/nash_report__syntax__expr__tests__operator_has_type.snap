@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::OperatorReserved(BadOperator::HasType, 1, 9), \"value = \")"
+---
+UNEXPECTED COLON
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
+
+I was not expecting this colon:
+
+Colons appear in type annotations. A type annotation must appear directly above
+its definition.

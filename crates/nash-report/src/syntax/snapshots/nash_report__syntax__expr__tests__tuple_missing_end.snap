@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Tuple(&Tuple::End(1, 9), 1, 9), \"value = \")"
+---
+UNFINISHED PARENTHESES
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing some parentheses, but I got stuck here:
+
+I was expecting to see a closing parenthesis next. Try adding a ) to see if that
+helps?

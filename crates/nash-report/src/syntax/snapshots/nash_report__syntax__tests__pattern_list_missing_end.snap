@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nf [x = 1"
+---
+UNFINISHED LIST PATTERN
+
+  × I was expecting a closing square bracket to end this list pattern:
+   ╭─[src/Main.nash:1:6]
+ 1 │ f [x = 1
+   ·      ─
+   ╰────
+  help: Try adding a ] to see if that helps?

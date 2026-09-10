@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::OperatorReserved(BadOperator::Arrow, 1, 9), \"value = \")"
+---
+UNEXPECTED ARROW
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+
+I was not expecting this arrow:
+
+Arrows belong in `case` branches, anonymous functions, and function types. Maybe
+an earlier expression is unfinished?

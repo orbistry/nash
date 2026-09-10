@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nf : 42\nf = 1"
+---
+PROBLEM IN TYPE ANNOTATION
+
+  × I was partway through parsing the `f` type annotation, but I got stuck here:
+   ╭─[src/Main.nash:1:5]
+ 1 │ f : 42
+   ·     ─
+ 2 │ f = 1
+   ╰────
+  help: I was expecting to see a type next. Try putting int or string for now?

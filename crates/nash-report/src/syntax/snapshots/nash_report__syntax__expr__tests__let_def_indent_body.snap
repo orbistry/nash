@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::IndentBody(1, 9), 1, 9), 1, 9),\n\"value = \")"
+---
+UNFINISHED DEFINITION
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I got stuck while parsing the `x` definition:
+
+I was expecting to see an expression next. What is it equal to?
+
+    greet : string -> string
+    greet name =
+        "Hello " ++ name
+
+The top line is an optional type annotation. It works as compiler-verified
+documentation and often improves error messages!

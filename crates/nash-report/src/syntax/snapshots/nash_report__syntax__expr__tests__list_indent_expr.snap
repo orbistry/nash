@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::List(&List::IndentExpr(1, 9), 1, 9), \"value = \")"
+---
+UNFINISHED LIST
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing a list, but I got stuck here:
+
+I was expecting to see another list entry after this comma. Trailing commas are
+not allowed in lists, so the fix may be to delete the comma?
+
+    [ 1
+      , 2
+      ]
+
+Notice that each line starts with some indentation. Usually two or four spaces.

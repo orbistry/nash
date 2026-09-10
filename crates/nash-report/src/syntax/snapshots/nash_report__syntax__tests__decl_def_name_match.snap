@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nf : int\ng = 1"
+---
+NAME MISMATCH
+
+  × I just saw a type annotation for `f`, but it is followed by a definition for
+  │ `g`:
+   ╭─[src/Main.nash:2:2]
+ 1 │ f : int
+ 2 │ g = 1
+   ·  ─
+   ╰────
+  help: These names do not match! Is there a typo?
+
+            g -> f

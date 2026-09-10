@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+UNFINISHED VALIDATOR
+
+  × I was parsing a validator declaration, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: A validator module starts with `validator module`, followed by its module name
+        and exposing list. For example: `validator module Vesting exposing (main)`.

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nmodule Main exposing (..)\n\nif"
+---
+RESERVED WORD
+
+  × I was not expecting to run into the `if` keyword here:
+   ╭─[src/Main.nash:3:1]
+ 2 │ 
+ 3 │ if
+   · ──
+   ╰────
+  help: It is reserved for writing `if` expressions. Try using a different name? If you
+        are trying to write an `if` expression, it needs to be part of a definition.

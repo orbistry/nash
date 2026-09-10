@@ -1,0 +1,10 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::Equals(1, 9), 1, 9), 1, 9),\n\"value = if\")"
+---
+RESERVED WORD
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+
+The name `if` is reserved, so it cannot be used as an argument:
+
+Try renaming it to something else.

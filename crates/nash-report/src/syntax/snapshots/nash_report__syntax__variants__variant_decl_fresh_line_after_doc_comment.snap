@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+EXPECTING DECLARATION
+
+  × I just saw a doc comment, but then I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: I was expecting to see the corresponding declaration next, starting on a fresh
+        line with no indentation.

@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: ""
+---
+UNFINISHED FILE
+
+  × I got to the end of the file, but I was expecting more.
+   ╭─[src/Main.nash:1:1]
+ 1 │ 
+   · ─
+   ╰────
+  help: Maybe a declaration or an expression is incomplete?

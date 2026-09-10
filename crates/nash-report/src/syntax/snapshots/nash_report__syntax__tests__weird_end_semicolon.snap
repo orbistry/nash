@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: ;
+---
+UNEXPECTED SEMICOLON
+
+  × I got stuck on this semicolon:
+   ╭─[src/Main.nash:1:1]
+ 1 │ ;
+   · ─
+   ╰────
+  help: Try removing it?
+
+        Note: Some languages require semicolons at the end of each statement. Nash uses
+        indentation to separate declarations and statements in do blocks, so there is no
+        need to use semicolons to separate them.

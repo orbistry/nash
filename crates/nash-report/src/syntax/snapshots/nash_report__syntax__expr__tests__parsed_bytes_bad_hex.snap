@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+---
+BAD BYTE STRING
+
+  × I ran into an invalid hexadecimal digit in this byte string:
+   ╭─[Main.nash:1:12]
+ 1 │ value = #"ag"
+   ·            ─
+   ╰────
+  help: Use pairs of digits from 0123456789abcdefABCDEF, one pair for each byte.

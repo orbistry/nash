@@ -1,0 +1,25 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "`"
+---
+UNEXPECTED CHARACTER
+
+  × I got stuck on this character:
+   ╭─[src/Main.nash:1:1]
+ 1 │ `
+   · ─
+   ╰────
+  help: It is not used for anything in Nash syntax. It is used for multi-line strings in
+        some languages though, so if you want a string that spans multiple lines, you
+        can use Nash's multi-line string syntax like this:
+
+            """
+            # Multi-line Strings
+
+            - start with triple double quotes
+            - write whatever you want
+            - no need to escape newlines or double quotes
+            - end with triple double quotes
+            """
+
+        Otherwise I do not know what is going on! Try removing the character?

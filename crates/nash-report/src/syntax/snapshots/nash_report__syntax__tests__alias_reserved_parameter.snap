@@ -1,0 +1,22 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: if
+---
+RESERVED WORD
+
+  × I ran into a reserved word unexpectedly while parsing this type alias:
+   ╭─[src/Main.nash:1:1]
+ 1 │ if
+   · ──
+   ╰────
+  help: It looks like you are trying to use `if` as a type variable, but it is a
+        reserved word. Try using a different name?
+
+        Note: Here is an example of a valid `type alias` for reference:
+
+            type alias Account = { owner : Bytes, balance : Int }
+
+        This would let us use `Account` as a shorthand for that record type. Using this
+        shorthand makes type annotations much easier to read, and makes changing code
+        easier if you decide later that there is more to an account than owner and
+        balance!

@@ -1,0 +1,18 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::Equals(1, 9), 1, 9), 1, 9),\n\"value = ->\")"
+---
+MISSING COLON?
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I got stuck while parsing the `x` definition:
+
+I was not expecting to see an arrow here. Maybe this is a type annotation
+missing its colon?
+
+    greet : string -> string
+    greet name =
+        "Hello " ++ name
+
+The top line is an optional type annotation. It works as compiler-verified
+documentation and often improves error messages!

@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+BAD TYPE CONSTRAINT
+
+  × I was parsing a type constraint, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: Write a trait followed by its type arguments before =>. For example: `Eq 'a =>
+        'a -> 'a -> bool`. Separate multiple constraints with commas inside parentheses.

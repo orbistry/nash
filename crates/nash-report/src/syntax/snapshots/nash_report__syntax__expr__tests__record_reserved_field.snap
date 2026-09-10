@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Record(&Record::Open(1, 11), 1, 9), \"value = { if = 1 }\")"
+---
+RESERVED WORD
+Region { start: Position { line: 1, column: 11 }, end: Position { line: 1, column: 13 } }
+
+I am partway through parsing a record, but I got stuck on this field name:
+
+It looks like you are trying to use `if` as a field name, but that is a reserved
+word. Try using a different name!

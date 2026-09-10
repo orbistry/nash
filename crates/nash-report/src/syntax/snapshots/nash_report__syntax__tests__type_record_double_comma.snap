@@ -1,0 +1,24 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: ","
+---
+EXTRA COMMA
+
+  × I am partway through parsing a record type, but I got stuck here:
+   ╭─[src/Main.nash:1:1]
+ 1 │ ,
+   · ─
+   ╰────
+  help: I am seeing two commas in a row. This is the second one! Just delete one of the
+        commas and you should be all set!
+
+        Note: If you are trying to define a record type across multiple lines, I
+        recommend using this format:
+
+            { name : string
+            , age : int
+            , value : 'a
+            }
+
+        Notice that each line starts with some indentation. Usually two or four spaces.
+        This is the stylistic convention in the Nash ecosystem.

@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+expression: "render_plain(&to_report(&Source::new(\"\"),\n&Error::ModuleNameUnspecified(\"Main\")), &Source::new(\"\"), \"src/Main.nash\")"
+---
+MODULE NAME MISSING
+
+  × I need the module name to be declared at the top of this file, like this:
+  │
+  │     module Main exposing (..)
+  │
+  │ Try adding that as the first line of your file!
+  help: Note: It is best to replace (..) with an explicit list of types and functions
+        you want to expose. When you know a value is only used within this module, you
+        can refactor without worrying about uses elsewhere. Limiting exposed values can
+        also speed up compilation because I can skip a bunch of work if I see that the
+        exposed API has not changed.

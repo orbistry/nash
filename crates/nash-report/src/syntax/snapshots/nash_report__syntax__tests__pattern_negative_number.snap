@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "-1"
+---
+UNEXPECTED SYMBOL
+
+  × I ran into a minus sign unexpectedly in this pattern:
+   ╭─[src/Main.nash:1:1]
+ 1 │ -1
+   · ─
+   ╰────
+  help: It is not possible to pattern match on negative numbers at this time. Try using
+        an `if` expression for that sort of thing for now.

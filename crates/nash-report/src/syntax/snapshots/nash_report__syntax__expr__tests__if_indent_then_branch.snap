@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::If(&If::IndentThenBranch(1, 9), 1, 9), \"value = \")"
+---
+UNFINISHED IF
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was expecting to see more of this `if` expression, but I got stuck here:
+
+I was expecting to see an expression next. If the `then` branch is already
+present, it may not be indented enough for me to recognize it.

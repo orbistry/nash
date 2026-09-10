@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "]"
+---
+STRAY SQUARE BRACKET
+
+  × I ran into an unexpected square bracket in this pattern:
+   ╭─[src/Main.nash:1:1]
+ 1 │ ]
+   · ─
+   ╰────
+  help: This ] does not match up with an earlier open square bracket. Try deleting it?

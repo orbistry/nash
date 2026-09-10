@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: if
+---
+RESERVED WORD
+
+  × I just started parsing a record type, but I got stuck on this field name:
+   ╭─[src/Main.nash:1:1]
+ 1 │ if
+   · ──
+   ╰────
+  help: It looks like you are trying to use `if` as a field name, but that is a reserved
+        word. Try using a different name!

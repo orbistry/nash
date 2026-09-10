@@ -1,0 +1,10 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::OperatorReserved(BadOperator::LeftArrow, 1, 9), \"value = \")"
+---
+UNEXPECTED ARROW
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+
+I was not expecting this left arrow:
+
+The <- arrow binds the result of an action inside a `do` block.

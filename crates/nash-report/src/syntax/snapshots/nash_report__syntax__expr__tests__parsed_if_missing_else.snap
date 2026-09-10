@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+---
+UNFINISHED IF
+
+  × I was expecting to see more of this `if` expression, but I got stuck here:
+   ╭─[Main.nash:1:24]
+ 1 │ value = if True then 42
+   ·                        ─
+   ╰────
+  help: I was expecting to see the `else` keyword next. All `if` expressions need an
+        `else` branch.

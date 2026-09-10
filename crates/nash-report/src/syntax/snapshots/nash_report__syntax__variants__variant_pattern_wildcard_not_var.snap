@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+UNEXPECTED NAME
+
+  × Variable names cannot start with underscores like this:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ────
+   ╰────
+  help: You can either have an underscore like _ to ignore the value, or you can have a
+        name like foo to use the matched value.

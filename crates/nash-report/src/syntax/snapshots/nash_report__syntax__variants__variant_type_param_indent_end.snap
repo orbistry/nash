@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+UNFINISHED TYPE PARAMETER
+
+  × I was parsing an annotated type parameter, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: Add a closing parenthesis after the representation bound, as in ('a : Storable).

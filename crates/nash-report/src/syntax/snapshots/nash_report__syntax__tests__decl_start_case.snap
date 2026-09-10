@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: case
+---
+RESERVED WORD
+
+  × I was not expecting to run into the `case` keyword here:
+   ╭─[src/Main.nash:1:1]
+ 1 │ case
+   · ────
+   ╰────
+  help: It is reserved for writing `case` expressions. Try using a different name? If
+        you are trying to write a `case` expression, it needs to be part of a
+        definition.

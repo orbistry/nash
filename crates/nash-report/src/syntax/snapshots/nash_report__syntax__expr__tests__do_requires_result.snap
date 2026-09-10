@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Do(&Do::LastNotExpr(2, 5), 1, 9), \"value = do\\n    let x = 1\")"
+---
+UNFINISHED DO
+Region { start: Position { line: 2, column: 5 }, end: Position { line: 2, column: 5 } }
+
+I was partway through parsing a `do` block, but I got stuck here:
+
+A `do` block must end with an expression. Add the final expression after this
+binding.

@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::OperatorReserved(BadOperator::FatArrow, 1, 9), \"value = \")"
+---
+UNEXPECTED ARROW
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+
+I was not expecting this fat arrow:
+
+Use -> for a `case` branch or an anonymous function. The => arrow belongs in
+trait constraints.

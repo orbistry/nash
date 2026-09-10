@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Case(&Case::Branch(&Expr::OperatorReserved(BadOperator::Arrow,\n1, 9), 1, 9), 1, 9), \"value = ->\")"
+---
+UNEXPECTED ARROW
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+
+I am parsing a `case` expression right now, but this arrow is confusing me:
+
+Maybe this branch is not indented enough? Each pattern must line up with the
+other patterns.

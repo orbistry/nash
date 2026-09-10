@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "42"
+---
+PROBLEM IN CUSTOM TYPE
+
+  × I was partway through parsing a custom type, but I got stuck here:
+   ╭─[src/Main.nash:1:1]
+ 1 │ 42
+   · ─
+   ╰────
+  help: I was expecting to see a type next. Try putting int or string for now?

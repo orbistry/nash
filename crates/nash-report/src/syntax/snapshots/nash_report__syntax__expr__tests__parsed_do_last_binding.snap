@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+---
+UNFINISHED DO
+
+  × I was partway through parsing a `do` block, but I got stuck here:
+   ╭─[Main.nash:2:5]
+ 1 │ value = do
+ 2 │     x <- action
+   ·     ─
+   ╰────
+  help: A `do` block must end with an expression. Add the final expression after this
+        binding.

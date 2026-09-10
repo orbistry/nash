@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+MISSING TEST NAME
+
+  × I was parsing a test declaration, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: Give this test a name in double quotes, such as `test "adds two numbers"`.

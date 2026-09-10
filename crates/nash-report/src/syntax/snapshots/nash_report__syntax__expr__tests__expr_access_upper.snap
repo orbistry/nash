@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Access(1, 9), \"value = \")"
+---
+EXPECTING RECORD ACCESSOR
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I am trying to parse a record accessor here:
+
+Something like .name or .price that accesses a value from a record. Record field
+names must start with a lower case letter!

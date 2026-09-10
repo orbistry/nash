@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Func(&Func::IndentArg(1, 9), 1, 9), \"value = \")"
+---
+MISSING ARGUMENT
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing an anonymous function, but I got stuck here:
+
+I just saw the beginning of an anonymous function, so I was expecting to see an
+argument next. It may need more indentation.

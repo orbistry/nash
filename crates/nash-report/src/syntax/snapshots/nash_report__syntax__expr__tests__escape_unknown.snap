@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::String(StringError::Escape(Escape::Unknown), 1, 9), \"value = \")"
+---
+UNKNOWN ESCAPE
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+
+Backslashes always start escaped characters, but I do not recognize this one:
+
+Valid escape characters include \n, \r, \t, \", \', \\, and \u{003D}. Do you
+want one of those instead? Maybe you need \\ to escape a backslash?

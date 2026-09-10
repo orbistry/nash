@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: if
+---
+RESERVED WORD
+
+  × It looks like you are trying to use `if` to name an element of a list:
+   ╭─[src/Main.nash:1:1]
+ 1 │ if
+   · ──
+   ╰────
+  help: This is a reserved word! Try using some other name?

@@ -1,0 +1,21 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::String(StringError::EndlessMulti, 1, 9), \"value = \")"
+---
+ENDLESS STRING
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 12 } }
+
+I cannot find the end of this multi-line string:
+
+Add a """ somewhere after this to end the string.
+
+    """
+    # Multi-line Strings
+
+    - start with triple double quotes
+    - write whatever you want
+    - no need to escape newlines or double quotes
+    - end with triple double quotes
+    """
+
+Here is a valid multi-line string for reference.

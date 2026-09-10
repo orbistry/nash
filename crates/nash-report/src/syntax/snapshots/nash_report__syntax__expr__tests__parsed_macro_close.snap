@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+---
+UNFINISHED MACRO
+
+  × I was partway through parsing a macro invocation, but I got stuck here:
+   ╭─[Main.nash:1:15]
+ 1 │ value = foo!(1
+   ·               ─
+   ╰────
+  help: I was expecting a comma or a closing parenthesis after this macro argument.

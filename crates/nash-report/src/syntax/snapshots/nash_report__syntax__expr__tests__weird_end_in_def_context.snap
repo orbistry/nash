@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::OperatorReserved(BadOperator::Equals, 1, 9), \"value = \")"
+---
+UNEXPECTED EQUALS
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
+
+I was not expecting this equals sign:
+
+Maybe you want == instead? To check if two values are equal? I may be getting
+confused by your indentation. I think I am still parsing the `value` definition.
+Is this supposed to be part of a definition after that? If so, the problem may
+be a bit before the equals sign. I need all definitions to be indented exactly
+the same amount, so the problem may be that this new definition has too many
+spaces in front of it.

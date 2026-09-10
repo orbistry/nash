@@ -1,0 +1,10 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Do(&Do::Arrow(1, 9), 1, 9), \"value = \")"
+---
+UNFINISHED DO
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing a `do` block, but I got stuck here:
+
+I was expecting to see <- after this binding pattern.

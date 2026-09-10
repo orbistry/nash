@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+UNFINISHED TEST BUDGET
+
+  × I saw `within`, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: Put the budget inside parentheses, with a budget kind and an integer limit.

@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: if
+---
+RESERVED WORD
+
+  × The name `if` is reserved in Nash, so it cannot be used as an argument here:
+   ╭─[src/Main.nash:1:1]
+ 1 │ if
+   · ──
+   ╰────
+  help: Try renaming it to something else.
+
+        Note: The `if` keyword has a special meaning in Nash, so it can only be used in
+        certain situations.

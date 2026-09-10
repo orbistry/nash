@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::String(StringError::Escape(Escape::BadUnicodeCode(8)), 1, 10),\n\"value = \\\"\\\\u{D800}\\\"\")"
+---
+BAD UNICODE ESCAPE
+Region { start: Position { line: 1, column: 10 }, end: Position { line: 1, column: 18 } }
+
+This is not a valid code point:
+
+The valid Unicode scalar values are between 0 and 10FFFF inclusive, excluding
+the surrogate range D800 through DFFF.

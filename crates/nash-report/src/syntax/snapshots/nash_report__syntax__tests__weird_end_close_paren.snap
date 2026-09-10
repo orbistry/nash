@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nmodule Main exposing (..)\n\n)"
+---
+STRAY PARENTHESIS
+
+  × I was not expecting to see a parenthesis here:
+   ╭─[src/Main.nash:3:1]
+ 2 │ 
+ 3 │ )
+   · ─
+   ╰────
+  help: This ) does not match up with an earlier open parenthesis. Try deleting it?

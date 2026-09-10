@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nmodule main exposing (..)"
+---
+EXPECTING MODULE NAME
+
+  × I was parsing a `module` declaration until I got stuck here:
+   ╭─[src/Main.nash:1:8]
+ 1 │ module main exposing (..)
+   ·        ─
+   ╰────
+  help: I was expecting to see the module name next, like in these examples:
+
+            module Dict exposing (..)
+            module Option exposing (..)
+            module Cardano.Tx exposing (..)
+            module Data.Decoder exposing (..)
+
+        Notice that the module names all start with capital letters. That is required!

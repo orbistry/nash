@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+BAD INFIX
+
+  × Something went wrong in this infix operator declaration:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: An infix declaration gives associativity, precedence, an operator in
+        parentheses, and its implementation name. For example: `infix left 6 (+) = add`.

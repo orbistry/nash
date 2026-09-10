@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+RESERVED SYMBOL
+
+  × I cannot expose this as an operator:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: Maybe you want (==) instead?

@@ -1,0 +1,24 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "f : { x : int\n}"
+---
+NEED MORE INDENTATION
+
+  × I was partway through parsing a record type, but I got stuck here:
+   ╭─[src/Main.nash:2:1]
+ 1 │ f : { x : int
+ 2 │ }
+   · ─
+   ╰────
+  help: I need this curly brace to be indented more. Try adding some spaces before it!
+
+        Note: If you are trying to define a record type across multiple lines, I
+        recommend using this format:
+
+            { name : string
+            , age : int
+            , value : 'a
+            }
+
+        Notice that each line starts with some indentation. Usually two or four spaces.
+        This is the stylistic convention in the Nash ecosystem.

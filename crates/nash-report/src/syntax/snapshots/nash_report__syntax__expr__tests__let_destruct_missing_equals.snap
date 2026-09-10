@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Let(&Let::Destruct(&Destruct::Equals(1, 9), 1, 9), 1, 9),\n\"value = \")"
+---
+UNFINISHED DEFINITION
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing this definition, but I got stuck here:
+
+I was expecting to see an equals sign next, followed by an expression telling me
+what to compute.

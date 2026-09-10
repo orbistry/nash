@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+expression: "render_plain(&to_report(&Source::new(input), &error), &Source::new(input),\n\"src/Main.nash\")"
+---
+MODULE NAME MISMATCH
+
+  × It looks like this module name is out of sync:
+   ╭─[src/Main.nash:1:8]
+ 1 │ module Other exposing (..)
+   ·        ─────
+   ╰────
+  help: I need it to match the file path, so I was expecting to see `Main` here. Make
+        the following change, and you should be all set!
+
+            Other -> Main
+
+        Note: I require that module names correspond to file paths. This makes it much
+        easier to explore unfamiliar codebases! So if you want to keep the current
+        module name, try renaming the file instead.

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: import
+---
+RESERVED WORD
+
+  × I was not expecting to run into the `import` keyword here:
+   ╭─[src/Main.nash:1:1]
+ 1 │ import
+   · ──────
+   ╰────
+  help: It is reserved for declaring imports at the top of your module. If you want
+        another import, try moving it up top with the other imports. If you want to
+        define a value or function, try changing the name to something else!

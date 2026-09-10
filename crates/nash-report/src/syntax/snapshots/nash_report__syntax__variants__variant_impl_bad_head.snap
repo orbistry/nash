@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+BAD IMPL HEAD
+
+  × I was parsing an impl declaration, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: I was expecting a trait name followed by its type arguments. For example: `impl
+        Show int where`.

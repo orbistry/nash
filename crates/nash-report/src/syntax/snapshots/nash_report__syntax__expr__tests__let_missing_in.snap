@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Let(&Let::In(1, 9), 1, 9), \"value = \")"
+---
+LET PROBLEM
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing a `let` expression, but I got stuck here:
+
+Based on the indentation, I was expecting to see the `in` keyword next. Is there
+a typo? This can also happen if you are trying to define another value within
+the `let` but it is not indented enough. Make sure each definition has exactly
+the same amount of spaces before it. They should line up exactly!

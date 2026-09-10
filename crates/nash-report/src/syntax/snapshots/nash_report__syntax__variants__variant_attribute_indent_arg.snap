@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/syntax/variants.rs
+expression: "render_plain(&report, &source, \"src/Main.nash\")"
+---
+MISSING ATTRIBUTE ARGUMENT
+
+  × I was parsing an attribute argument, but I got stuck here:
+   ╭─[src/Main.nash:1:3]
+ 1 │ f = value
+   ·   ─
+   ╰────
+  help: Add the argument expression and indent it farther than the start of the
+        attribute.

@@ -1,0 +1,10 @@
+---
+source: crates/nash-report/src/syntax/expr.rs
+expression: "snapshot(Expr::Macro(&Macro::IndentArg(1, 9), 1, 9), \"value = \")"
+---
+UNFINISHED MACRO
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+
+I was partway through parsing a macro invocation, but I got stuck here:
+
+I was expecting a macro argument next. It may need more indentation.

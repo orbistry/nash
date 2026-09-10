@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "Code:\n\nx =\t1"
+---
+NO TABS
+
+  × I ran into a tab, but tabs are not allowed in Nash files.
+   ╭─[src/Main.nash:1:4]
+ 1 │ x = 1
+   ·    ─
+   ╰────
+  help: Replace the tab with spaces.
