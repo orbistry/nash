@@ -3,7 +3,7 @@
 //! Builds a graph of module dependencies by parsing import statements,
 //! performs topological sorting for compilation order, and detects cycles.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use url::Url;
 
 use crate::error::DriverError;
@@ -62,7 +62,7 @@ impl DepGraph {
         }
 
         // Start with nodes that have no dependencies (out-degree = 0)
-        let mut queue: VecDeque<&Url> = out_degree
+        let mut queue: BTreeSet<&Url> = out_degree
             .iter()
             .filter(|&(_, deg)| *deg == 0)
             .map(|(&node, _)| node)
@@ -72,7 +72,7 @@ impl DepGraph {
         let mut depths: HashMap<Url, usize> = HashMap::new();
 
         // Process nodes in order
-        while let Some(node) = queue.pop_front() {
+        while let Some(node) = queue.pop_first() {
             // Calculate depth: max depth of imports + 1
             let depth = self
                 .edges
@@ -97,7 +97,7 @@ impl DepGraph {
                     if let Some(deg) = out_degree.get_mut(importer) {
                         *deg -= 1;
                         if *deg == 0 {
-                            queue.push_back(importer);
+                            queue.insert(importer);
                         }
                     }
                 }
@@ -124,7 +124,7 @@ impl DepGraph {
         let mut stack: HashSet<&Url> = HashSet::new();
         let mut path: Vec<&Url> = Vec::new();
 
-        for start in self.edges.keys() {
+        for start in self.edges.keys().collect::<BTreeSet<_>>() {
             if self.dfs_cycle(start, &mut visited, &mut stack, &mut path) {
                 // Format cycle as: A -> B -> C -> A
                 let cycle_str: Vec<String> = path.iter().map(|u| module_name_from_uri(u)).collect();
@@ -160,7 +160,7 @@ impl DepGraph {
         path.push(node);
 
         if let Some(imports) = self.edges.get(node) {
-            for import in imports {
+            for import in imports.iter().collect::<BTreeSet<_>>() {
                 if self.dfs_cycle(import, visited, stack, path) {
                     return true;
                 }
@@ -188,6 +188,9 @@ impl DepGraph {
             levels[depth].push(module);
         }
 
+        for level in &mut levels {
+            level.sort();
+        }
         levels
     }
 
@@ -234,6 +237,33 @@ mod tests {
 
     fn url(path: &str) -> Url {
         Url::parse(&format!("file:///{}", path)).unwrap()
+    }
+
+    #[test]
+    fn discovery_order_does_not_change_compile_order() {
+        let nodes = ["D.nash", "B.nash", "A.nash", "C.nash"];
+        let make = |reverse: bool| {
+            let mut graph = DepGraph::new();
+            let mut input = nodes.to_vec();
+            if reverse {
+                input.reverse();
+            }
+            for name in input {
+                let imports = if name == "D.nash" {
+                    vec![url("B.nash"), url("C.nash")]
+                } else {
+                    vec![]
+                };
+                graph.add_module(url(name), imports);
+            }
+            graph.compute_order().unwrap();
+            graph
+        };
+        let a = make(false);
+        let b = make(true);
+        assert_eq!(a.order, b.order);
+        assert_eq!(a.levels(), b.levels());
+        assert_eq!(a.order, ["A.nash", "B.nash", "C.nash", "D.nash"].map(url));
     }
 
     #[test]

@@ -2,5 +2,30 @@
 source: crates/nash-driver/src/compile.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-orphan: OrphanImpl { region: Region { start: Position { line: 4, column: 1 }, end: Position { line: 5, column: 15 } }, trait_: QualifiedName { home: ModuleName { package: None, name: "Methods" }, name: "Keep" }, heads: [Named(QualifiedName { home: ModuleName { package: None, name: "Types" }, name: "Token" })] }
-overlap: OverlappingImpls { key: ImplKey { trait_: QualifiedName { home: ModuleName { package: None, name: "Bad" }, name: "Keep" }, heads: [Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "unit" }, args: [] }] }, first: Region { start: Position { line: 4, column: 1 }, end: Position { line: 5, column: 15 } }, second: Region { start: Position { line: 6, column: 1 }, end: Position { line: 7, column: 15 } }, first_home: ModuleName { package: None, name: "Bad" }, second_home: ModuleName { package: None, name: "Bad" } }
+orphan: ORPHAN IMPL
+
+  × This module cannot define an impl of `Methods.Keep` for Types.Token:
+   ╭─[/Bad.nash:4:1]
+ 3 │     import Types exposing (Token)
+ 4 │ ╭─▶ impl Keep Token where
+ 5 │ ╰─▶     keep x = x
+   ╰────
+  help: An impl must be defined in the module that defines its trait or one of its head
+        types. Move this impl to one of those modules.
+
+overlap: OVERLAPPING IMPL
+
+  × These `Bad.Keep` impls can both match the same trait arguments. The overlapping
+  │ head is Builtin.unit:
+   ╭─[/Bad.nash:6:1]
+ 3 │         keep : 'a -> 'a
+ 4 │ ╭─▶ impl Keep () where
+ 5 │ ├─▶     keep x = x
+   · ╰──── first impl in `Bad`
+ 6 │ ╭─▶ impl Keep () where
+ 7 │ ├─▶     keep x = x
+   · ╰──── overlapping impl in `Bad`
+   ╰────
+  help: I cannot choose which impl to use. Remove one of them, or change their heads so
+        they cannot match the same trait arguments. Adding different context constraints
+        does not disambiguate overlapping heads.

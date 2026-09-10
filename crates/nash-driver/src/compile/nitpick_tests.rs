@@ -18,10 +18,10 @@ fn rejected(source: &str) -> String {
         compiled.is_none(),
         "rejected module must not publish an interface or solved module"
     );
-    let ModuleResult::Failed { message } = output.result else {
+    let ModuleResult::Failed(reports) = output.result else {
         panic!("expected a failed module")
     };
-    message
+    report_text(&reports)
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn incomplete_case_fails_module() {
     );
     let message = rejected(source);
     assert!(
-        message.contains("Incomplete") && message.contains("False"),
+        message.contains("MISSING PATTERNS") && message.contains("False"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -57,7 +57,7 @@ fn redundant_case_fails_module() {
     );
     let message = rejected(source);
     assert!(
-        message.contains("Redundant") && message.contains("index: 2"),
+        message.contains("REDUNDANT PATTERN") && message.contains("2nd pattern"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -66,7 +66,7 @@ fn redundant_case_fails_module() {
 #[test]
 fn unsafe_argument_fails_module() {
     let message = rejected("module Main exposing (..)\nf (x :: _) = x\n");
-    assert!(message.contains("BadArg"), "{message}");
+    assert!(message.contains("function arguments"), "{message}");
     insta::assert_snapshot!(message);
 }
 
@@ -82,7 +82,10 @@ fn unsafe_destructure_fails_module() {
             x
     "#
     ));
-    assert!(message.contains("BadDestruct"), "{message}");
+    assert!(
+        message.contains("only if there is ONE possibility"),
+        "{message}"
+    );
     insta::assert_snapshot!(message);
 }
 
@@ -100,7 +103,7 @@ fn trait_default_without_top_level_definitions_fails_module() {
     "#
     ));
     assert!(
-        message.contains("Incomplete") && message.contains("False"),
+        message.contains("MISSING PATTERNS") && message.contains("False"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -119,7 +122,7 @@ fn impl_method_fails_module() {
     "#
     ));
     assert!(
-        message.contains("Incomplete") && message.contains("BadArg"),
+        message.contains("UNSAFE PATTERN") && message.contains("function arguments"),
         "{message}"
     );
     insta::assert_snapshot!(message);
@@ -135,8 +138,8 @@ fn type_errors_precede_nitpick() {
         f True = True
     "#
     ));
-    assert!(message.contains("BadExpr"), "{message}");
-    assert!(!message.contains("Incomplete"), "{message}");
+    assert!(message.contains("TYPE MISMATCH"), "{message}");
+    assert!(!message.contains("MISSING PATTERNS"), "{message}");
 }
 
 #[test]
@@ -166,14 +169,14 @@ fn rejected_module_publishes_no_interface_to_dependents() {
     assert_eq!(result.success, 1, "{result:?}");
     assert_eq!(result.interfaces.len(), 1);
     assert!(result.interfaces.contains_key(&url("Good")));
-    let ModuleResult::Failed { message } = &result.modules[&url("Base")] else {
+    let ModuleResult::Failed(reports) = &result.modules[&url("Base")] else {
         panic!("base must fail")
     };
-    assert!(message.contains("Incomplete"), "{message}");
-    let ModuleResult::Failed { message } = &result.modules[&url("Main")] else {
-        panic!("dependent must fail")
-    };
-    assert!(message.contains("ImportNotFound"), "{message}");
+    let message = report_text(reports);
+    assert!(message.contains("UNSAFE PATTERN"), "{message}");
+    assert!(
+        matches!(&result.modules[&url("Main")], ModuleResult::Blocked { dependencies } if dependencies == &[url("Base")])
+    );
 }
 
 #[test]

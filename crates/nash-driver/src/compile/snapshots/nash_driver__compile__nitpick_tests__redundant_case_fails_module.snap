@@ -2,4 +2,15 @@
 source: crates/nash-driver/src/compile/nitpick_tests.rs
 expression: message
 ---
-[Redundant { case_region: Region { start: Position { line: 4, column: 5 }, end: Position { line: 7, column: 1 } }, pattern_region: Region { start: Position { line: 6, column: 9 }, end: Position { line: 6, column: 14 } }, index: 2 }]
+REDUNDANT PATTERN
+
+  × The 2nd pattern is redundant:
+   ╭─[/Main.nash:6:9]
+ 3 │ f x =
+ 4 │     case x of
+ 5 │         _ -> ()
+ 6 │         True -> ()
+   ·         ─────
+   ╰────
+  help: Any value with this shape will be handled by a previous pattern, so it should be
+        removed.

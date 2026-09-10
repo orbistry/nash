@@ -301,7 +301,7 @@ mod tests {
         modules.insert(literal.clone(), Some("example/literals".parse().unwrap()));
         let result = build(db.clone(), &graph, &modules).await;
         assert!(
-            matches!(&result.modules[&main], ModuleResult::Failed { message } if message.contains("AmbiguousType"))
+            matches!(&result.modules[&main], ModuleResult::Failed(reports) if reports.reports.iter().any(|report| report.title == "AMBIGUOUS TYPE"))
         );
         // An application can name a source directory outside its own root.
         let overlap = nash_config::parse(

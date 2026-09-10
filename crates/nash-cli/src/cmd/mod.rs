@@ -11,9 +11,9 @@ pub enum Cmd {
 }
 
 impl Cmd {
-    pub async fn exec(self) -> miette::Result<()> {
+    pub async fn exec(self, color: bool) -> miette::Result<()> {
         match self {
-            Cmd::Check(args) => args.exec().await,
+            Cmd::Check(args) => args.exec(color).await,
             Cmd::Lsp(args) => lsp::exec(args).await,
         }
     }

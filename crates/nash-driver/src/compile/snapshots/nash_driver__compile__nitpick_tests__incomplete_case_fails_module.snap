@@ -2,4 +2,20 @@
 source: crates/nash-driver/src/compile/nitpick_tests.rs
 expression: message
 ---
-[Incomplete { region: Region { start: Position { line: 4, column: 5 }, end: Position { line: 6, column: 1 } }, context: BadCase, unhandled: [False] }]
+MISSING PATTERNS
+
+  × This `case` does not have branches for all possibilities:
+   ╭─[/Main.nash:4:5]
+ 3 │     f x =
+ 4 │ ╭─▶     case x of
+ 5 │ ╰─▶         True -> ()
+   ╰────
+  help: Missing possibilities include:
+
+            False
+
+        I would have to crash if I saw one of those. Add branches for them!
+
+        Hint: If you want to write the code for each branch later, use `todo` as a
+        placeholder. Read <https://nash-script.dev/hints/missing-patterns> for more
+        guidance on this workflow.

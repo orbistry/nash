@@ -20,6 +20,8 @@ use crate::error::DriverError;
 use crate::graph::DepGraph;
 
 #[cfg(test)]
+mod collection_tests;
+#[cfg(test)]
 mod nitpick_source_tests;
 #[cfg(test)]
 mod nitpick_tests;
@@ -32,11 +34,12 @@ pub enum ModuleResult {
         /// Number of declarations in the module.
         decl_count: usize,
     },
-    /// Module failed to compile.
-    Failed {
-        /// Parse or other error message.
-        message: String,
-    },
+    /// Compilation was skipped because these original root dependencies failed.
+    Blocked { dependencies: Vec<Url> },
+    /// Structured errors produced while the module arena was alive.
+    Failed(nash_report::ModuleReports),
+    /// Source I/O failed before a compiler phase could run.
+    SourceUnavailable { message: String },
 }
 
 /// Result of a full build.
@@ -58,10 +61,25 @@ pub struct BuildResult {
     pub failed: usize,
 
     /// Warnings collected during canonicalization.
-    pub warnings: Vec<String>,
+    pub warnings: Vec<nash_report::ModuleReports>,
 }
 
 impl BuildResult {
+    /// Compiler errors and warnings in a common order for every frontend.
+    pub fn ordered_reports(&self) -> Vec<&nash_report::ModuleReports> {
+        let mut reports: Vec<_> = self
+            .modules
+            .values()
+            .filter_map(|result| match result {
+                ModuleResult::Failed(reports) => Some(reports),
+                _ => None,
+            })
+            .chain(self.warnings.iter())
+            .collect();
+        reports.sort_by(|a, b| a.path.cmp(&b.path).then(a.name.cmp(&b.name)));
+        reports
+    }
+
     /// Check if the build was completely successful.
     pub fn is_success(&self) -> bool {
         self.failed == 0
@@ -82,7 +100,7 @@ pub struct SolvedModule<'a> {
 struct CompileOutput {
     uri: Url,
     result: ModuleResult,
-    warnings: Vec<String>,
+    warnings: Vec<nash_report::ModuleReports>,
 }
 
 /// Compile all modules through the full pipeline, in dependency order.
@@ -106,7 +124,8 @@ pub async fn build(
         })
         .collect();
 
-    tokio::task::spawn_blocking(move || build_sync(sources))
+    let edges = graph.edges.clone();
+    tokio::task::spawn_blocking(move || build_sync_with_edges(sources, &edges))
         .await
         .expect("compile task panicked")
 }
@@ -116,12 +135,13 @@ pub async fn build(
 ///
 /// Type checking is inherently dependency-ordered, so within-build
 /// compilation is sequential within a build.
-fn build_sync(
+fn build_sync_with_edges(
     sources: Vec<(
         Url,
         Option<nash_config::PackageName>,
         Result<String, String>,
     )>,
+    edges: &HashMap<Url, Vec<Url>>,
 ) -> BuildResult {
     let store = Bump::new();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
@@ -129,9 +149,30 @@ fn build_sync(
     let mut solved = BTreeMap::new();
 
     let mut results: HashMap<Url, ModuleResult> = HashMap::new();
-    let mut all_warnings: Vec<String> = Vec::new();
+    let mut all_warnings: Vec<nash_report::ModuleReports> = Vec::new();
 
     for (uri, package, source) in &sources {
+        let mut dependencies = std::collections::BTreeSet::new();
+        for dependency in edges.get(uri).into_iter().flatten() {
+            match results.get(dependency) {
+                Some(ModuleResult::Success { .. }) => {}
+                Some(ModuleResult::Blocked {
+                    dependencies: roots,
+                }) => dependencies.extend(roots.iter().cloned()),
+                _ => {
+                    dependencies.insert(dependency.clone());
+                }
+            }
+        }
+        if !dependencies.is_empty() {
+            results.insert(
+                uri.clone(),
+                ModuleResult::Blocked {
+                    dependencies: dependencies.into_iter().collect(),
+                },
+            );
+            continue;
+        }
         let (output, compiled) = compile_module(uri, package.as_ref(), source, &store, &interfaces);
         if let Some((interface, module)) = compiled {
             public_interfaces.insert(
@@ -161,6 +202,27 @@ fn build_sync(
     }
 }
 
+#[cfg(test)]
+fn build_sync(
+    sources: Vec<(
+        Url,
+        Option<nash_config::PackageName>,
+        Result<String, String>,
+    )>,
+) -> BuildResult {
+    let known: Vec<_> = sources.iter().map(|(uri, _, _)| uri.clone()).collect();
+    let edges = sources
+        .iter()
+        .map(|(uri, _, source)| {
+            let dependencies = source
+                .as_ref()
+                .map_or_else(|_| vec![], |source| extract_imports(source, uri, &known));
+            (uri.clone(), dependencies)
+        })
+        .collect();
+    build_sync_with_edges(sources, &edges)
+}
+
 /// Fetch source content in dependency order, retaining failed reads in place.
 async fn fetch_sources(
     db: &Arc<Mutex<Database>>,
@@ -186,31 +248,79 @@ fn compile_module<'s>(
     store: &'s Bump,
     interfaces: &BTreeMap<&'s str, Interface<'s>>,
 ) -> (CompileOutput, Option<(Interface<'s>, SolvedModule<'s>)>) {
-    let failed = |message: String| {
+    let source = match source {
+        Ok(source) => source,
+        Err(message) => {
+            return (
+                CompileOutput {
+                    uri: uri.clone(),
+                    result: ModuleResult::SourceUnavailable {
+                        message: message.clone(),
+                    },
+                    warnings: vec![],
+                },
+                None,
+            );
+        }
+    };
+    let path = uri.to_file_path().map_or_else(
+        |_| uri.path().to_owned(),
+        |path| path.to_string_lossy().into_owned(),
+    );
+    let expected_name = std::path::Path::new(&path)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or("Main");
+    let source_view = nash_report::Source::new(source);
+    let owned = |name: &str, reports: Vec<nash_report::Report>| {
+        let mut reports = nash_report::ModuleReports {
+            name: name.to_owned(),
+            path: path.clone(),
+            source: source.clone(),
+            reports,
+        };
+        reports.sort();
+        reports
+    };
+    let failed = |name: &str,
+                  error: nash_report::ModuleError<'_>,
+                  warnings: Vec<nash_report::ModuleReports>| {
+        let mut reports = nash_report::to_reports(&source_view, expected_name, &error);
+        reports.extend(warnings.into_iter().flat_map(|module| module.reports));
         (
             CompileOutput {
                 uri: uri.clone(),
-                result: ModuleResult::Failed { message },
+                result: ModuleResult::Failed(owned(name, reports)),
                 warnings: vec![],
             },
             None,
         )
     };
 
-    let source = match source {
-        Ok(s) => s,
-        Err(e) => return failed(e.clone()),
-    };
-
     let bump = store;
     let src: &str = bump.alloc_str(source);
     let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
-
     let module = match parser.module() {
         Ok(module) => module,
-        Err(e) => return failed(format!("{:?}", e)),
+        Err(error) => {
+            return failed(
+                expected_name,
+                nash_report::ModuleError::Syntax(nash_parse::error::Error::ParseError(
+                    bump.alloc(error),
+                )),
+                vec![],
+            );
+        }
     };
-
+    let name = module.name.map_or(expected_name, |name| name.value);
+    // Default imports belong to Plan 12; localize exactly the imports in use.
+    let localizer =
+        nash_report::Localizer::from_module(&module, &[]).with_package(package.map(|package| {
+            nash_ast::PackageName {
+                author: bump.alloc_str(package.author()),
+                project: bump.alloc_str(package.project()),
+            }
+        }));
     let context = nash_can::Context {
         package: package.map(|package| nash_ast::PackageName {
             author: bump.alloc_str(package.author()),
@@ -220,26 +330,36 @@ fn compile_module<'s>(
     };
     let can_result = match nash_can::canonicalize(bump, context, &module) {
         Ok(can_result) => can_result,
-        Err(errors) => return failed(crate::diagnostics::canonical(src, &errors)),
+        Err(errors) => return failed(name, nash_report::ModuleError::Names(errors), vec![]),
     };
-    let warnings: Vec<String> = can_result
-        .warnings
-        .iter()
-        .map(|w| format!("{:?}", w))
-        .collect();
-
+    let warnings = if can_result.warnings.is_empty() {
+        vec![]
+    } else {
+        vec![owned(
+            name,
+            can_result
+                .warnings
+                .iter()
+                .map(nash_report::warning::to_report)
+                .collect(),
+        )]
+    };
     let mut uf = nash_constrain::UnionFind::new();
     let constraint = nash_constrain::constrain(bump, &mut uf, &can_result.module);
     let (annotations, types) = match nash_solve::run(bump, &mut uf, &constraint, &can_result.tables)
     {
         Ok(solved) => solved,
-        Err(errors) => return failed(crate::diagnostics::inference(src, &errors)),
+        Err(errors) => {
+            return failed(
+                name,
+                nash_report::ModuleError::Types(localizer, errors),
+                warnings,
+            );
+        }
     };
-
     if let Err(errors) = nash_nitpick::check(bump, &can_result.module) {
-        return failed(format!("{errors:?}"));
+        return failed(name, nash_report::ModuleError::Patterns(errors), warnings);
     }
-
     let module = bump.alloc(can_result.module);
     let interface = nash_can::from_module(bump, module, &annotations);
     let solved = SolvedModule {
@@ -247,17 +367,14 @@ fn compile_module<'s>(
         annotations,
         types,
     };
-
-    (
-        CompileOutput {
-            uri: uri.clone(),
-            result: ModuleResult::Success {
-                decl_count: count_decls(module.decls),
-            },
-            warnings,
+    let output = CompileOutput {
+        uri: uri.clone(),
+        result: ModuleResult::Success {
+            decl_count: count_decls(module.decls),
         },
-        Some((interface, solved)),
-    )
+        warnings,
+    };
+    (output, Some((interface, solved)))
 }
 
 fn count_decls(decls: &nash_ast::Decls<'_>) -> usize {
@@ -284,10 +401,14 @@ pub async fn build_graph(
         // Parse module to get imports
         let source = {
             let mut db = db.lock().await;
-            db.source(uri).await?.to_string()
+            db.source(uri).await.map(str::to_owned)
         };
 
-        let imports = extract_imports(&source, uri, modules);
+        // Retain unreadable nodes: the build reports their I/O failure and
+        // blocks dependents while continuing independent modules.
+        let imports = source
+            .as_ref()
+            .map_or_else(|_| vec![], |source| extract_imports(source, uri, modules));
         graph.add_module(uri.clone(), imports);
     }
 
@@ -336,6 +457,17 @@ fn resolve_import(name: &str, _current: &Url, known_modules: &[Url]) -> Option<U
         .iter()
         .find(|uri| uri.path().ends_with(&path_pattern))
         .cloned()
+}
+
+#[cfg(test)]
+fn report_text(reports: &nash_report::ModuleReports) -> String {
+    let source = nash_report::Source::new(&reports.source);
+    reports
+        .reports
+        .iter()
+        .map(|report| nash_report::render_plain(report, &source, &reports.path))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[cfg(test)]
@@ -520,7 +652,7 @@ main = Utils.helper "not a function argument"
         assert_eq!(result.failed, 1);
         assert!(matches!(
             result.modules[&url("Main.nash")],
-            ModuleResult::Failed { .. }
+            ModuleResult::Failed(_)
         ));
     }
 
@@ -618,12 +750,12 @@ mod trait_tests {
             (
                 "orphan",
                 "module Bad exposing (..)\nimport Methods exposing (Keep)\nimport Types exposing (Token)\nimpl Keep Token where\n    keep x = x\n",
-                "OrphanImpl",
+                "ORPHAN IMPL",
             ),
             (
                 "overlap",
                 "module Bad exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep () where\n    keep x = x\n",
-                "OverlappingImpls",
+                "OVERLAPPING IMPL",
             ),
         ] {
             let result = compile_sources(&[
@@ -640,11 +772,12 @@ mod trait_tests {
             .await;
             assert_eq!(result.success, 2, "{result:?}");
             assert_eq!(result.failed, 1, "{result:?}");
-            let ModuleResult::Failed { message } =
+            let ModuleResult::Failed(reports) =
                 &result.modules[&Url::parse("file:///Bad.nash").unwrap()]
             else {
                 panic!("impl module must fail")
             };
+            let message = report_text(reports);
             assert!(message.contains(expected), "{message}");
             diagnostics.push(format!("{case}: {message}"));
         }
@@ -690,12 +823,13 @@ mod kind_tests {
         )
         .await;
         assert_eq!(result.success, 1, "{result:?}");
-        let ModuleResult::Failed { message } =
+        let ModuleResult::Failed(reports) =
             &result.modules[&Url::parse("file:///Main.nash").unwrap()]
         else {
             panic!("consumer must reject hidden label")
         };
-        assert!(message.contains("NotARecord"), "{message}");
+        let message = report_text(reports);
+        assert!(message.contains("not a record"), "{message}");
     }
 
     #[tokio::test]
@@ -705,12 +839,16 @@ mod kind_tests {
             "module Main exposing (..)\nimport Types\nchange : Types.box -> Types.box\nchange x = { x | value = () }\n",
         ).await;
         assert_eq!(result.success, 1, "{result:?}");
-        let ModuleResult::Failed { message } =
+        let ModuleResult::Failed(reports) =
             &result.modules[&Url::parse("file:///Main.nash").unwrap()]
         else {
             panic!("consumer must reject union update")
         };
-        assert!(message.contains("UpdateNotRecord"), "{message}");
+        let message = report_text(reports);
+        assert!(
+            message.contains("does not support record updates"),
+            "{message}"
+        );
     }
 
     #[tokio::test]
@@ -721,12 +859,13 @@ mod kind_tests {
         )
         .await;
         assert_eq!(result.success, 1, "{result:?}");
-        let ModuleResult::Failed { message } =
+        let ModuleResult::Failed(reports) =
             &result.modules[&Url::parse("file:///Main.nash").unwrap()]
         else {
             panic!("private constructor labels must remain hidden")
         };
-        assert!(message.contains("NotARecord"), "{message}");
+        let message = report_text(reports);
+        assert!(message.contains("not a record"), "{message}");
     }
 
     #[tokio::test]
@@ -800,12 +939,13 @@ mod kind_tests {
         .await;
         assert_eq!(result.success, 0, "{result:?}");
         assert_eq!(result.failed, 2, "{result:?}");
-        let ModuleResult::Failed { message } =
+        let ModuleResult::Failed(reports) =
             &result.modules[&Url::parse("file:///Types.nash").unwrap()]
         else {
             panic!("producer must report a kind error");
         };
-        assert!(message.contains("KindInfinite"), "{message}");
+        let message = report_text(reports);
+        assert!(message.contains("INFINITE KIND"), "{message}");
         assert!(message.contains("infinite kind"), "{message}");
     }
 
@@ -818,12 +958,13 @@ mod kind_tests {
             ).await;
             assert_eq!(result.success, 0, "{result:?}");
             assert_eq!(result.failed, 2, "{result:?}");
-            let ModuleResult::Failed { message } =
+            let ModuleResult::Failed(reports) =
                 &result.modules[&Url::parse("file:///Types.nash").unwrap()]
             else {
                 panic!("producer must fail")
             };
-            assert!(message.contains("KindInfinite"), "{message}");
+            let message = report_text(reports);
+            assert!(message.contains("INFINITE KIND"), "{message}");
         }
     }
 
@@ -852,13 +993,14 @@ mod kind_tests {
             assert_eq!(result.success, if succeeds { 2 } else { 1 }, "{result:?}");
             assert_eq!(result.failed, usize::from(!succeeds), "{result:?}");
             if !succeeds {
-                let ModuleResult::Failed { message } =
+                let ModuleResult::Failed(reports) =
                     &result.modules[&Url::parse("file:///Main.nash").unwrap()]
                 else {
                     panic!("consumer must reject the supplied Term argument")
                 };
+                let message = report_text(reports);
                 assert!(
-                    message.contains("RepresentationMismatch") && message.contains("Storable"),
+                    message.contains("REPRESENTATION MISMATCH") && message.contains("Storable"),
                     "{message}"
                 );
             }
@@ -881,13 +1023,14 @@ mod kind_tests {
             "module Main exposing (..)\n\nimport Builtin exposing (..)\nimport Types exposing (type item)\n\ntype alias items = list item\n",
         ).await;
         assert_eq!(result.success, 1, "{result:?}");
-        let ModuleResult::Failed { message } =
+        let ModuleResult::Failed(reports) =
             &result.modules[&Url::parse("file:///Main.nash").unwrap()]
         else {
             panic!("invalid consumer compiled");
         };
+        let message = report_text(reports);
         assert!(
-            message.contains("RepresentationMismatch") && message.contains("Storable"),
+            message.contains("REPRESENTATION MISMATCH") && message.contains("Storable"),
             "{message}"
         );
         assert!(

@@ -43,7 +43,6 @@
 
 pub mod compile;
 pub mod database;
-mod diagnostics;
 pub mod error;
 pub mod graph;
 pub mod interface;

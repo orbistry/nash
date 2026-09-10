@@ -2,4 +2,18 @@
 source: crates/nash-driver/src/compile/nitpick_tests.rs
 expression: message
 ---
-[Incomplete { region: Region { start: Position { line: 2, column: 4 }, end: Position { line: 2, column: 10 } }, context: BadArg, unhandled: [[]] }]
+UNSAFE PATTERN
+
+  × This pattern does not cover all possibilities:
+   ╭─[/Main.nash:2:4]
+ 1 │ module Main exposing (..)
+ 2 │ f (x :: _) = x
+   ·    ──────
+   ╰────
+  help: Other possibilities include:
+
+            []
+
+        I would have to crash if I saw one of those! So rather than pattern matching in
+        function arguments, put a `case` in the function body to account for all
+        possibilities.
