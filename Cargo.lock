@@ -1988,7 +1988,14 @@ dependencies = [
 name = "nash-language-server"
 version = "0.2.0"
 dependencies = [
+ "nash-driver",
+ "nash-region",
+ "nash-report",
+ "serde_json",
+ "tempfile",
+ "tokio",
  "tower-lsp-server",
+ "url",
 ]
 
 [[package]]

@@ -9,3 +9,12 @@ license.workspace = true
 
 [dependencies]
 tower-lsp-server.workspace = true
+nash-driver = { path = "../nash-driver", version = "0.4.0" }
+nash-report = { path = "../nash-report", version = "0.1.0" }
+nash-region = { path = "../nash-region", version = "0.2.0" }
+serde_json.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
