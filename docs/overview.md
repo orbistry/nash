@@ -81,7 +81,7 @@ implementation, default imports, Fuzz and the full validator example.
 | Pattern matching | Maranget decision trees, hoisted leaves, memoized accessors. Exhaustiveness from Elm's `Nitpick/PatternMatches`. |
 | Recursion | Self-application with static-parameter lifting; mutual recursion via a combined dispatcher. No Y combinator. |
 | Runtime errors | `fail`, `todo`, `trace`, `assert`. Trace levels silent / compact / verbose; compiler-generated traces separate switch. |
-| Diagnostics | Elm's `Reporting/*` prose ported into miette `Diagnostic`s. One `nash-report` crate. |
+| Diagnostics | Concise diagnostics with expected/actual types, source labels, stable codes, and shared terminal/JSON/LSP output. One `nash-report` crate. |
 | Stdlib | `nash/core` package in-repo (`core/`), implicit default imports like Elm's `core`. `Builtin` module exposes raw UPLC builtins. One module per type pair named by the uppercase name (`List`, `Int`, ...); functions operate on the little twin; Big twins only carry `Lift`/`ToData`/`FromData`. No Big `String`. |
 | Exposing little types | `exposing (type option(..), map)` — the `type` prefix marks a lowercase type in exposing/import lists. |
 | Target | Plutus V3, latest builtins (`case`/`constr`, bitwise, BLS, arrays, ledger `Value`). |
@@ -217,7 +217,7 @@ crates/
   nash-constrain       union-find types + canonical instantiation + type errors
   nash-solve           direct AST inference + traits + kind contracts + evidence
   nash-nitpick         exhaustiveness (new)
-  nash-report          diagnostics: Elm prose -> miette  (new)
+  nash-report          diagnostics: source labels -> terminal / JSON / LSP
   nash-ir              Core IR + Core->Core passes       (new)
   nash-codegen         Can AST -> Core -> UPLC           (new)
   nash-test            test runner, fuzz driver, shrinker(new)

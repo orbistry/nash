@@ -27,7 +27,7 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-constrain` | union-find types, canonical instantiation, type errors | done |
 | `nash-solve` | direct AST inference, traits, defaulting | extend |
 | `nash-nitpick` | exhaustiveness and redundancy | done ([plans/05](plans/05-nitpick.md)) |
-| `nash-report` | diagnostics (Elm prose -> miette) | done ([plans/06](plans/06-diagnostics.md)) |
+| `nash-report` | concise diagnostics (terminal, JSON, LSP) | done ([plans/06](plans/06-diagnostics.md)) |
 | `nash-ir` | Core IR + passes | new ([plans/07](plans/07-codegen.md), [08](plans/08-optimizer.md)) |
 | `nash-codegen` | Can -> Core -> UPLC | new ([plans/07](plans/07-codegen.md)) |
 | `nash-test` | test runner, fuzzing, shrinking | new ([plans/10](plans/10-testing.md)) |
@@ -61,7 +61,7 @@ Planned, in execution order (each links to its plan):
 - [x] 03 Traits: qualified types, resolution, superclasses, defaults, multi-param, orphan rules, literal traits + defaulting, evidence — [plans/03-traits.md](plans/03-traits.md) (default imports deferred to Plan 12)
 - [x] 04 Representation: remove row polymorphism and Elm supertypes, builtin type inventory, record encoding — [plans/04-representation.md](plans/04-representation.md)
 - [x] 05 Exhaustiveness (`Nitpick/PatternMatches` port) — [plans/05-nitpick.md](plans/05-nitpick.md)
-- [x] 06 Diagnostics (`nash-report`, Elm `Reporting/*` port onto miette) — [plans/06-diagnostics.md](plans/06-diagnostics.md)
+- [x] 06 Diagnostics (`nash-report`, concise source labels, stable codes, JSON/LSP) — [plans/06-diagnostics.md](plans/06-diagnostics.md); [concise diagnostics refactor](plans/diagnostics-refactor.md) complete
 - [ ] 07 Codegen: Core IR, monomorphization, decision trees, recursion, Data casts, UPLC lowering — [plans/07-codegen.md](plans/07-codegen.md)
 - [ ] 08 Optimizer: inlining, builtin force caching, DCE, case-of-known-ctor/constant folding — [plans/08-optimizer.md](plans/08-optimizer.md)
 - [ ] 09 Validators + `nash build` — [plans/09-validators-build.md](plans/09-validators-build.md)

@@ -1,5 +1,7 @@
 # Plan 06 — `nash-report`: Elm prose, miette rendering
 
+> Historical implementation plan. The report model and prose policy are superseded by [the diagnostics refactor](diagnostics-refactor.md) and [the current specification](../docs/diagnostics.md).
+
 ## Goal
 
 Build the `nash-report` crate described in `docs/diagnostics.md`: every
