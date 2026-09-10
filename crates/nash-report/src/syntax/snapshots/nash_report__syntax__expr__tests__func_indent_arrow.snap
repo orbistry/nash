@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Func(&Func::IndentArrow(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED ANONYMOUS FUNCTION
+MISSING ARROW
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing an anonymous function, but I got stuck here:
+Expected `->` after the arguments.
 
-I was expecting to see an arrow next. It may need more indentation.
+Separate the argument patterns and function body with `->`.

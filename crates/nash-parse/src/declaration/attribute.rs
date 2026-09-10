@@ -1,5 +1,5 @@
 use bumpalo::collections::Vec as BumpVec;
-use nash_region::Located;
+use nash_region::{Located, Position};
 use nash_source::{Attribute, Expr};
 
 use crate::Parser;
@@ -36,17 +36,18 @@ impl<'a> Parser<'a> {
         let name = self.add_end(name_start, name);
         let args = self.one_of_with_fallback(
             vec![Box::new(|parser: &mut Parser<'a>| {
-                parser.word1(b'(', error::Attribute::End)?;
+                let opening = parser.get_position();
+                parser.word1(b'(', |r, c| error::Attribute::End(opening, r, c))?;
                 parser
                     .chomp_and_check_indent(error::Attribute::Space, error::Attribute::IndentArg)?;
                 parser.one_of(
-                    error::Attribute::End,
+                    |r, c| error::Attribute::End(opening, r, c),
                     vec![
                         Box::new(|parser: &mut Parser<'a>| {
-                            parser.word1(b')', error::Attribute::End)?;
+                            parser.word1(b')', |r, c| error::Attribute::End(opening, r, c))?;
                             Ok(&[][..])
                         }),
-                        Box::new(|parser| parser.attribute_args()),
+                        Box::new(|parser| parser.attribute_args(opening)),
                     ],
                 )
             })],
@@ -57,7 +58,10 @@ impl<'a> Parser<'a> {
         Ok(self.alloc(Attribute { name, args }))
     }
 
-    fn attribute_args(&mut self) -> Result<&'a [&'a Located<Expr<'a>>], error::Attribute<'a>> {
+    fn attribute_args(
+        &mut self,
+        opening: Position,
+    ) -> Result<&'a [&'a Located<Expr<'a>>], error::Attribute<'a>> {
         let mut args = BumpVec::new_in(self.bump);
         loop {
             let (arg, end) = self.specialize(
@@ -65,12 +69,14 @@ impl<'a> Parser<'a> {
                 |parser| parser.expression(),
             )?;
             args.push(arg);
-            self.check_indent(end.line, end.column, error::Attribute::IndentEnd)?;
+            self.check_indent(end.line, end.column, |r, c| {
+                error::Attribute::IndentEnd(opening, r, c)
+            })?;
             let done = self.one_of(
-                error::Attribute::End,
+                |r, c| error::Attribute::End(opening, r, c),
                 vec![
                     Box::new(|parser: &mut Parser<'a>| {
-                        parser.word1(b',', error::Attribute::End)?;
+                        parser.word1(b',', |r, c| error::Attribute::End(opening, r, c))?;
                         parser.chomp_and_check_indent(
                             error::Attribute::Space,
                             error::Attribute::IndentArg,
@@ -78,7 +84,7 @@ impl<'a> Parser<'a> {
                         Ok(false)
                     }),
                     Box::new(|parser| {
-                        parser.word1(b')', error::Attribute::End)?;
+                        parser.word1(b')', |r, c| error::Attribute::End(opening, r, c))?;
                         Ok(true)
                     }),
                 ],

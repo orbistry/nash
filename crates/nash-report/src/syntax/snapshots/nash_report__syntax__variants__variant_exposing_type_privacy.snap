@@ -2,18 +2,12 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × It looks like you are trying to expose the variants of a custom type:
+  × Invalid constructor exposure.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: You need to write something like Status(..) or Entity(..) though. It is all or
-        nothing, otherwise `case` expressions could miss a variant and crash!
-
-        Note: It is often best to keep the variants hidden! If someone pattern matches
-        on the variants, it is a MAJOR change if any new variants are added. Suddenly
-        their `case` expressions do not cover all variants! So if you do not need people
-        to pattern match, keep the variants hidden and expose functions to construct
-        values of this type. This way you can add new variants as a MINOR change!
+  help: Write `Type(..)` to expose all constructors, or omit `(..)` to keep them
+        private.

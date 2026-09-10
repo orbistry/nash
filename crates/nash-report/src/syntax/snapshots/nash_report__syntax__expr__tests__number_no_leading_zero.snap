@@ -5,7 +5,6 @@ expression: "snapshot(Expr::Number(Number::NoLeadingZero, 1, 9), \"value = \")"
 LEADING ZEROS
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I do not accept numbers with leading zeros:
+Integer has leading zeros.
 
-Just delete the leading zeros and it should work! Some languages use a leading
-zero to specify octal numbers. Nash avoids this ambiguity.
+Remove the leading zeros.

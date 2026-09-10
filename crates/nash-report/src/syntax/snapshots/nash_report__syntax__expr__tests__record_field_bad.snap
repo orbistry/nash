@@ -2,16 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Record(&Record::Field(1, 9), 1, 9), \"value = \")"
 ---
-PROBLEM IN RECORD
+EXPECTED FIELD
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a record, but I got stuck here:
+Expected a record field.
 
-I was expecting to see a record field next. Record field names must start with a
-lower case letter.
-
-    { name = "Nash"
-      , age = 1
-      }
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Write `name = value`; separate fields with commas.

@@ -2,10 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Func(&Func::IndentBody(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED ANONYMOUS FUNCTION
+MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing an anonymous function, but I got stuck here:
+Expected a function body after `->`.
 
-I was expecting to see an expression after the arrow. It may need more
-indentation.
+Add an indented expression.

@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::If(&If::IndentThen(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED IF
+MISSING THEN
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was expecting to see more of this `if` expression, but I got stuck here:
+Expected `then` after the condition.
 
-I was expecting to see the `then` keyword next. It may need more indentation.
+Add `then` before the first branch.

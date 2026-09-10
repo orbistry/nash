@@ -2,15 +2,14 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : (int, int\nf = 1"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I was expecting to see a closing parenthesis next:
+  × Expected `)` to close `(`.
    ╭─[src/Main.nash:1:14]
  1 │ f : (int, int
-   ·              ─
+   ·     ┬        ┬
+   ·     │        ╰── expected `)`
+   ·     ╰── opened here
  2 │ f = 1
    ╰────
-  help: Try adding a ) to see if that helps!
-
-        Note: I can get confused by indentation in cases like this, so maybe you have a
-        closing parenthesis but it is not indented enough?
+  help: Add `)` here.

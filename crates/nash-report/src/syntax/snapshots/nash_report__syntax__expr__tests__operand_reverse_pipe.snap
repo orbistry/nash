@@ -5,6 +5,6 @@ expression: "snapshot(Expr::OperatorRight(\"<|\", 1, 9), \"value = \")"
 MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I just saw a <| operator, so I am getting stuck here:
+Expected an operand after `(<|)`.
 
-I was expecting to see an argument next.
+Add an expression on the same line or indent it on the next line.

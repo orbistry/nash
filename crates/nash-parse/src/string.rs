@@ -41,7 +41,7 @@ impl<'a> Parser<'a> {
             if self.peek() == Some(b'"') {
                 self.advance(); // consume third "
                 // Multi-line string
-                let result = self.chomp_multi_string();
+                let result = self.chomp_multi_string(nash_region::Position::new(row, col));
                 match result {
                     StringResult::Ok(s) => Ok(s),
                     StringResult::Err(e, r, c) => Err(to_error(e, r, c)),
@@ -52,7 +52,7 @@ impl<'a> Parser<'a> {
             }
         } else {
             // Single-line string
-            let result = self.chomp_single_string();
+            let result = self.chomp_single_string(nash_region::Position::new(row, col));
             match result {
                 StringResult::Ok(s) => Ok(s),
                 StringResult::Err(e, r, c) => Err(to_error(e, r, c)),
@@ -61,20 +61,27 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a single-line string (content after opening `"`).
-    fn chomp_single_string(&mut self) -> StringResult<'a> {
+    fn chomp_single_string(&mut self, opening: nash_region::Position) -> StringResult<'a> {
         let start_pos = self.pos;
-        let (start_row, start_col) = self.position();
         let mut needs_escape = false;
 
         loop {
             match self.peek() {
                 None => {
                     // End of file without closing quote
-                    return StringResult::Err(StringError::EndlessSingle, start_row, start_col);
+                    return StringResult::Err(
+                        StringError::EndlessSingle(opening),
+                        self.row(),
+                        self.col(),
+                    );
                 }
                 Some(b'\n') => {
                     // Newline in single-line string
-                    return StringResult::Err(StringError::EndlessSingle, self.row(), self.col());
+                    return StringResult::Err(
+                        StringError::EndlessSingle(opening),
+                        self.row(),
+                        self.col(),
+                    );
                 }
                 Some(b'"') => {
                     // End of string
@@ -112,9 +119,9 @@ impl<'a> Parser<'a> {
                         }
                         EscapeResult::EndOfFile => {
                             return StringResult::Err(
-                                StringError::EndlessSingle,
-                                start_row,
-                                start_col,
+                                StringError::EndlessSingle(opening),
+                                self.row(),
+                                self.col(),
                             );
                         }
                     }
@@ -129,15 +136,18 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a multi-line string (content after opening `"""`).
-    fn chomp_multi_string(&mut self) -> StringResult<'a> {
+    fn chomp_multi_string(&mut self, opening: nash_region::Position) -> StringResult<'a> {
         let start_pos = self.pos;
-        let (start_row, start_col) = self.position();
         let mut needs_escape = false;
 
         loop {
             match self.peek() {
                 None => {
-                    return StringResult::Err(StringError::EndlessMulti, start_row, start_col);
+                    return StringResult::Err(
+                        StringError::EndlessMulti(opening),
+                        self.row(),
+                        self.col(),
+                    );
                 }
                 Some(b'"') => {
                     // Check for closing """
@@ -187,9 +197,9 @@ impl<'a> Parser<'a> {
                         }
                         EscapeResult::EndOfFile => {
                             return StringResult::Err(
-                                StringError::EndlessMulti,
-                                start_row,
-                                start_col,
+                                StringError::EndlessMulti(opening),
+                                self.row(),
+                                self.col(),
                             );
                         }
                     }

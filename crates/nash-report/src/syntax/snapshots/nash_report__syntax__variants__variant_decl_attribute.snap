@@ -2,11 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I just saw @, but I got stuck here:
+  × Expected a name after `@`.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: Write the attribute name immediately after @, such as `@derive(Eq)`.
+  help: Write the attribute name directly after `@`.

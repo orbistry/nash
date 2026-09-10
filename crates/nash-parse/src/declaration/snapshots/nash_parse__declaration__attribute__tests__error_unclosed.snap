@@ -4,6 +4,10 @@ description: "@derive(Eq\ntype T = A"
 ---
 Attribute(
     IndentEnd(
+        Position {
+            line: 1,
+            column: 8,
+        },
         1,
         11,
     ),

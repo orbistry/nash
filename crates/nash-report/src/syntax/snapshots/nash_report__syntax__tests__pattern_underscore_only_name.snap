@@ -4,10 +4,9 @@ description: ___
 ---
 nash::diagnostic
 
-  × Variable names cannot start with underscores like this:
+  × Variable `___` starts with an underscore.
    ╭─[src/Main.nash:1:1]
  1 │ ___
    · ───
    ╰────
-  help: You can either have an underscore like _ to ignore the value, or you can have a
-        name like x or age to use the matched value.
+  help: Use `_` to ignore the value, or a name without a leading underscore.

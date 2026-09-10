@@ -5,10 +5,6 @@ expression: "snapshot(Expr::IndentOperatorRight(\"+\", 1, 9), \"value = \")"
 MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was expecting to see an expression after this + operator:
+Expected an operand after `(+)`.
 
-You can just put anything for now, like 42 or "hello". Once there is something
-there, I can probably give a more specific hint! I may be getting confused by
-your indentation? The easiest way to make sure this is not an indentation
-problem is to put the expression on the right of the + operator on the same
-line.
+Add an expression on the same line or indent it on the next line.

@@ -2,18 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf x"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got stuck while parsing the `f` definition:
+  × Expected `=` in the definition of `f`.
    ╭─[src/Main.nash:1:4]
  1 │ f x
    ·    ─
    ╰────
-  help: I am not sure what is going wrong exactly, so here is a valid definition (with
-        an optional type annotation) for reference:
-
-            greet : string -> string
-            greet name =
-              "Hello " ++ name ++ "!"
-
-        Try to use that format with your `f` definition!
+  help: Separate the arguments and body with `=`.

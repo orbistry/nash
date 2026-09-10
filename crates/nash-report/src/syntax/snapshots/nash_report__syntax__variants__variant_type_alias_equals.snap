@@ -2,20 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I am partway through parsing a type alias, but I got stuck here:
+  × Expected `=` in the type alias.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: I was expecting to see a type variable or an equals sign next.
-
-        Note: Here is an example of a valid `type alias` for reference:
-
-            type alias Account = { owner : Bytes, balance : Int }
-
-        This would let us use `Account` as a shorthand for that record type. Using this
-        shorthand makes type annotations much easier to read, and makes changing code
-        easier if you decide later that there is more to an account than owner and
-        balance!
+  help: Write `type alias Name = Type`.

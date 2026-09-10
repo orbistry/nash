@@ -2,17 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::Alignment(4, 1, 9), 1, 9), 1, 9),\n\"value = \")"
 ---
-PROBLEM IN DEFINITION
+INDENTATION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I got stuck while parsing the `x` definition:
+Definition and annotation must align.
 
-I just saw a type annotation indented 4 spaces, so I was expecting to see the
-corresponding definition next with the exact same amount of indentation.
-
-    greet : string -> string
-    greet name =
-        "Hello " ++ name
-
-The top line is an optional type annotation. It works as compiler-verified
-documentation and often improves error messages!
+Indent the definition with 4 spaces.

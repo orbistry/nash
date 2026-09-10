@@ -2,12 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I have the type parameter name, but I got stuck here:
+  × Expected `:` after the type parameter.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: Put a colon between the type parameter and its representation bound, as in ('a :
-        Storable).
+  help: Write `('a : Storable)` to specify a representation bound.

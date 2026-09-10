@@ -5,7 +5,6 @@ expression: "snapshot(Expr::Bytes(Bytes::OddLength, 1, 12), \"value = #\\\"a\\\"
 INCOMPLETE BYTE
 Region { start: Position { line: 1, column: 12 }, end: Position { line: 1, column: 12 } }
 
-This byte string has an odd number of hexadecimal digits:
+Byte string has an odd number of hexadecimal digits.
 
-Each byte needs two hexadecimal digits. Add the missing digit or remove the
-extra one.
+Use two hexadecimal digits per byte.

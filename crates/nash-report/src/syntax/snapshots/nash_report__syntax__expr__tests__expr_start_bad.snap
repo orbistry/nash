@@ -5,9 +5,6 @@ expression: "snapshot(Expr::Start(1, 9), \"value = \")"
 MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing the `value` definition, but I got stuck here:
+Expected an expression in the `value` definition.
 
-I was expecting to see an expression like 42 or "hello". Once there is something
-there, I can probably give a more specific hint! This can also happen if I run
-into reserved words like `let` or `as` unexpectedly, or operators in unexpected
-spots.
+Add an expression or `todo` for an unfinished body.

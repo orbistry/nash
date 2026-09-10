@@ -5,7 +5,6 @@ expression: "snapshot(Expr::String(StringError::Escape(Escape::BadUnicodeCode(8)
 BAD UNICODE ESCAPE
 Region { start: Position { line: 1, column: 10 }, end: Position { line: 1, column: 18 } }
 
-This is not a valid code point:
+Invalid Unicode scalar value.
 
-The valid Unicode scalar values are between 0 and 10FFFF inclusive, excluding
-the surrogate range D800 through DFFF.
+Use 0000–10FFFF, excluding D800–DFFF.

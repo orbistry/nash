@@ -2,18 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Let(&Let::IndentDef(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED LET
+MISSING DEFINITION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a `let` expression, but I got stuck here:
+Expected a definition after `let`.
 
-I was expecting a value to be defined here. It may need more indentation.
-
-    let
-        fullName =
-            first ++ " " ++ last
-    in
-    fullName
-
-The definition is indented more than the `let` keyword, and its value is
-indented a bit more than that. That is important!
+Add an indented definition.

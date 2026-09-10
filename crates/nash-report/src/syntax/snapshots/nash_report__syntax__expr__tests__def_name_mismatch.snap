@@ -3,9 +3,8 @@ source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::NameMatch(\"y\", 1, 9), 1, 9), 1, 9),\n\"value = y\")"
 ---
 NAME MISMATCH
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
+Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I just saw a type annotation for `x`, but it is followed by a definition for
-`y`:
+Expected definition `x`, found `y`.
 
-These names do not match! Is there a typo?
+Use the same name for an annotation and its definition.

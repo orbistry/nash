@@ -4,12 +4,9 @@ description: if
 ---
 nash::diagnostic
 
-  × The name `if` is reserved in Nash, so it cannot be used as an argument here:
+  × Reserved word `if` cannot be an argument name.
    ╭─[src/Main.nash:1:1]
  1 │ if
    · ──
    ╰────
-  help: Try renaming it to something else.
-
-        Note: The `if` keyword has a special meaning in Nash, so it can only be used in
-        certain situations.
+  help: Choose another name.

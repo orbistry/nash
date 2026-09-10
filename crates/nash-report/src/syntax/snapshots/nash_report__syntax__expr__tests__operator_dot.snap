@@ -5,7 +5,6 @@ expression: "snapshot(Expr::OperatorReserved(BadOperator::Dot, 1, 9), \"value = 
 UNEXPECTED SYMBOL
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
 
-I was not expecting this dot:
+Unexpected `.` in expression.
 
-Dots are for record access, so they cannot float around on their own. Maybe
-there is some extra whitespace?
+Use a dot directly before a record field name.

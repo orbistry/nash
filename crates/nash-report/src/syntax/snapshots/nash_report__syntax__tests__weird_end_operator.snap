@@ -2,24 +2,13 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule Main exposing (..)\n\n+"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I am getting stuck because this line starts with the + symbol:
+  × Expected a declaration.
    ╭─[src/Main.nash:3:1]
  2 │ 
  3 │ +
    · ─
    ╰────
-  help: When a line has no spaces at the beginning, I expect it to be a declaration. If
-        this is not supposed to be a declaration, try adding some spaces before it?
-
-        Here is a valid definition (with a type annotation) for reference:
-
-            greet : string -> string
-            greet name =
-              "Hello " ++ name ++ "!"
-
-        The top line (called a "type annotation") is optional. You can leave it off if
-        you want. As you get more comfortable with Nash and as your project grows, it
-        becomes more and more valuable to add them though! They work great as
-        compiler-verified documentation, and they often improve error messages!
+  help: Start a named definition here, or indent this line to continue the preceding
+        definition.

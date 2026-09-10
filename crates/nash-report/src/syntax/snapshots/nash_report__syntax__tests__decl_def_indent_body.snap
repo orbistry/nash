@@ -2,23 +2,12 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf =\n1"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got stuck while parsing the `f` definition:
+  × Expected an expression after `=`.
    ╭─[src/Main.nash:1:4]
  1 │ f =
    ·    ─
  2 │ 1
    ╰────
-  help: I was expecting to see an expression next. What is it equal to?
-
-        Here is a valid definition (with a type annotation) for reference:
-
-            greet : string -> string
-            greet name =
-              "Hello " ++ name ++ "!"
-
-        The top line (called a "type annotation") is optional. You can leave it off if
-        you want. As you get more comfortable with Nash and as your project grows, it
-        becomes more and more valuable to add them though! They work great as
-        compiler-verified documentation, and they often improve error messages!
+  help: Add an indented body, or `todo` for unfinished code.

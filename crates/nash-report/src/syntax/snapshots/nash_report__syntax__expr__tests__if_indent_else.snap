@@ -2,10 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::If(&If::IndentElse(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED IF
+MISSING ELSE
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was expecting to see more of this `if` expression, but I got stuck here:
+Expected an else branch.
 
-I was expecting to see an `else` branch after this. All `if` expressions need
-both branches. Check the indentation if the branch is already present.
+Add `else` and an expression; every if expression needs both branches.

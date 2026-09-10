@@ -2,14 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I just saw a type annotation for `f`, but it is followed by a definition for
-  │ `g`:
+  × Expected definition `f`, found `g`.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: These names do not match! Is there a typo?
-
-            g -> f
+  help: Use the same name for the annotation and definition.

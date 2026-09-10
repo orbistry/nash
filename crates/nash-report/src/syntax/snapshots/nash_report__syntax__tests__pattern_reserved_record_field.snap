@@ -4,9 +4,9 @@ description: if
 ---
 nash::diagnostic
 
-  × I was not expecting to see `if` as a record field name:
+  × Reserved word `if` cannot be a pattern variable.
    ╭─[src/Main.nash:1:1]
  1 │ if
    · ──
    ╰────
-  help: This is a reserved word, not available for variable names. Try another name!
+  help: Choose another name.

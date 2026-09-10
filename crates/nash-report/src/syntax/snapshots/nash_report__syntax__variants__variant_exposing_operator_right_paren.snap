@@ -2,12 +2,12 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × It looks like you are exposing an operator, but I got stuck here:
+  × Expected `)` to close `(`.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
-   ·   ─
+   ·   ┬
+   ·   ╰── expected `)`
    ╰────
-  help: I was expecting to see the closing parenthesis immediately after the operator.
-        Try adding a ) right here?
+  help: Add `)` here.

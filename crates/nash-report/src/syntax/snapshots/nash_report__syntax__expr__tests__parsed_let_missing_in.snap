@@ -2,14 +2,11 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was partway through parsing a `let` expression, but I got stuck here:
+  × Expected `in` after the let definitions.
    ╭─[Main.nash:1:18]
  1 │ value = let x = 1
    ·                  ─
    ╰────
-  help: Based on the indentation, I was expecting to see the `in` keyword next. Is there
-        a typo? This can also happen if you are trying to define another value within
-        the `let` but it is not indented enough. Make sure each definition has exactly
-        the same amount of spaces before it. They should line up exactly!
+  help: Add `in` before the expression that uses these definitions.

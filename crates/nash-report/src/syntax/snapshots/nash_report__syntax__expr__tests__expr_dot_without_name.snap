@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Dot(1, 9), \"value = \")"
 ---
-EXPECTING RECORD ACCESSOR
+EXPECTED ACCESSOR
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was expecting to see a record accessor here:
+Expected a record accessor.
 
-Something like .name or .price that accesses a value from a record.
+Write a dot followed by a field name, such as `.name`.

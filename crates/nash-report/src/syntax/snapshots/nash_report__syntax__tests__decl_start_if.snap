@@ -4,10 +4,9 @@ description: if
 ---
 nash::diagnostic
 
-  × I was not expecting to run into the `if` keyword here:
+  × Unexpected `if` at the start of a declaration.
    ╭─[src/Main.nash:1:1]
  1 │ if
    · ──
    ╰────
-  help: It is reserved for writing `if` expressions. Try using a different name? If you
-        are trying to write an `if` expression, it needs to be part of a definition.
+  help: Put the expression inside a named definition.

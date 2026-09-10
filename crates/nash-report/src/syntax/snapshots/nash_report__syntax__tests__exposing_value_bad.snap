@@ -2,19 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule Main exposing (1)"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got stuck while parsing these exposed values:
+  × Expected a value, type, or operator to expose.
    ╭─[src/Main.nash:1:23]
  1 │ module Main exposing (1)
    ·                       ─
    ╰────
-  help: I do not have an exact recommendation, so here are some valid examples of
-        `exposing` for reference:
-
-            import Data.Decoder exposing (..)
-            import Basics exposing (type int, type bool(..), (+), not)
-
-        These examples show how to expose types, variants, operators, and functions.
-        Everything should be some permutation of these examples, just with different
-        names.
+  help: Separate names with commas, or use `..` to expose everything.

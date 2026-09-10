@@ -2,10 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Tuple(&Tuple::IndentExprN(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED TUPLE
+MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing some parentheses, but I got stuck here:
+Expected a tuple element after `,`.
 
-I just saw a comma, so I was expecting to see an expression next. It may need
-more indentation.
+Add an indented expression, or remove a trailing comma.

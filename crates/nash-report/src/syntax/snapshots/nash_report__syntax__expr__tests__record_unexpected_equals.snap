@@ -2,12 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Record(&Record::Expr(&Expr::OperatorReserved(BadOperator::Equals,\n1, 9), 1, 9), 1, 9), \"value = =\")"
 ---
-UNEXPECTED EQUALS
+UNEXPECTED SYMBOL
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
 
-I was not expecting this equals sign:
+Unexpected `=` in expression.
 
-Maybe you want == instead? To check if two values are equal?
-
-Note: Records look like { x = 3, y = 4 } with the equals sign right after the
-field name. So maybe you forgot a comma?
+Separate record fields with commas; use `==` for a comparison.

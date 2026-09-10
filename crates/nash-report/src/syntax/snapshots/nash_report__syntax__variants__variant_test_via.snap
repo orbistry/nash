@@ -2,11 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I have the property input pattern, but I got stuck here:
+  × Expected `via` after the input pattern.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: Add `via` followed by the fuzzer expression that generates this input.
+  help: Add `via` followed by the fuzzer expression.

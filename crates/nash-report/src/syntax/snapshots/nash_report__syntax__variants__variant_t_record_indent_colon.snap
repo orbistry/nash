@@ -2,23 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I am partway through parsing a record type. I just saw a record field, so I was
-  │ expecting to see a colon next:
+  × Expected `:` after the field name.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: Try putting a : followed by a type?
-
-        Note: I may be confused by indentation. For example, if you are trying to define
-        a record type across multiple lines, I recommend using this format:
-
-            { name : string
-            , age : int
-            , value : 'a
-            }
-
-        Notice that each line starts with some indentation. Usually two or four spaces.
-        This is the stylistic convention in the Nash ecosystem.
+  help: Separate the field name and its type with `:`.

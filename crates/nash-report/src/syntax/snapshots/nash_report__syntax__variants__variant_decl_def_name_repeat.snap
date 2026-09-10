@@ -2,24 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I just saw the type annotation for `f` so I was expecting to see its definition
-  │ here:
+  × Expected the definition of `f` after its annotation.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: Type annotations always appear directly above the relevant definition, without
-        anything else in between. (Not even doc comments!)
-
-        Here is a valid definition (with a type annotation) for reference:
-
-            greet : string -> string
-            greet name =
-              "Hello " ++ name ++ "!"
-
-        The top line (called a "type annotation") is optional. You can leave it off if
-        you want. As you get more comfortable with Nash and as your project grows, it
-        becomes more and more valuable to add them though! They work great as
-        compiler-verified documentation, and they often improve error messages!
+  help: Repeat the annotated name and add its arguments and body.

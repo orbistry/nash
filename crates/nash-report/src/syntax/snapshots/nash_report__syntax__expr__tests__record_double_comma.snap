@@ -5,13 +5,6 @@ expression: "snapshot(Expr::Record(&Record::Field(1, 9), 1, 9), \"value = ,\")"
 EXTRA COMMA
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a record, but I got stuck here:
+Extra comma in record.
 
-I am seeing two commas in a row. This is the second one! Just delete one of the
-commas and you should be all set!
-
-    { name = "Nash"
-      , age = 1
-      }
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Remove the repeated comma.

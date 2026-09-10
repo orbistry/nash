@@ -2,12 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: Thing
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got stuck on this name:
+  × Unexpected input after the declaration.
    ╭─[src/Main.nash:1:1]
  1 │ Thing
-   · ─────
+   · ─
    ╰────
-  help: It is confusing me a lot! Normally I can give fairly specific hints, but
-        something is really tripping me up this time.
+  help: Start the next declaration on a new line in column 1.

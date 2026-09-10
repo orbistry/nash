@@ -2,24 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: Thing
 ---
-nash::diagnostic
+nash::syntax
 
-  × Declarations always start with a lower-case letter, so I am getting stuck here:
+  × Definition name `Thing` must start lowercase.
    ╭─[src/Main.nash:1:1]
  1 │ Thing
    · ─
    ╰────
-  help: Try a name like thing instead?
-
-        Here is a valid definition (with a type annotation) for reference:
-
-            greet : string -> string
-            greet name =
-              "Hello " ++ name ++ "!"
-
-        The top line (called a "type annotation") is optional. You can leave it off if
-        you want. As you get more comfortable with Nash and as your project grows, it
-        becomes more and more valuable to add them though! They work great as
-        compiler-verified documentation, and they often improve error messages!
-
-        Notice that they always start with a lower-case letter. Capitalization matters!
+  help: Use a lowercase value name; uppercase names identify constructors.

@@ -2,11 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: module
 ---
-nash::diagnostic
+nash::syntax
 
-  × This `module` should not have any spaces before it:
+  × Top-level declarations must start on separate lines.
    ╭─[src/Main.nash:1:1]
  1 │ module
    · ─
    ╰────
-  help: Delete the spaces before `module` until there are none left!
+  help: Start the declaration in column 1 on a new line.

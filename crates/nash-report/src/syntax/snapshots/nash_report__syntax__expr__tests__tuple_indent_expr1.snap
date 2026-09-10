@@ -2,10 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Tuple(&Tuple::IndentExpr1(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED PARENTHESES
+MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing some parentheses, but I got stuck here:
+Expected an expression or `)`.
 
-I just saw an open parenthesis, so I was expecting to see an expression next. It
-may need more indentation.
+Add an expression inside the parentheses.

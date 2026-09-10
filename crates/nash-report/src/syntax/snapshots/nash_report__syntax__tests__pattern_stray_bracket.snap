@@ -2,11 +2,12 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "]"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I ran into an unexpected square bracket in this pattern:
+  × Expected `)`, found `]`.
    ╭─[src/Main.nash:1:1]
  1 │ ]
-   · ─
+   · ┬
+   · ╰── expected `)`
    ╰────
-  help: This ] does not match up with an earlier open square bracket. Try deleting it?
+  help: Replace `]` with `)`.

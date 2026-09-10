@@ -2,12 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I just saw an open parenthesis, so I was expecting an operator next:
+  × Expected an operator inside these parentheses.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: It is possible to expose operators, so I was expecting to see something like (+)
-        or (|=) or (||) after I saw that open parenthesis.
+  help: Write an operator such as `(+)`.

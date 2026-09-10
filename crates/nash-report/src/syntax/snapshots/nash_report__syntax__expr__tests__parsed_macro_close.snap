@@ -2,11 +2,13 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I was partway through parsing a macro invocation, but I got stuck here:
+  × Expected `)` to close `(`.
    ╭─[Main.nash:1:15]
  1 │ value = foo!(1
-   ·               ─
+   ·             ┬ ┬
+   ·             │ ╰── expected `)`
+   ·             ╰── opened here
    ╰────
-  help: I was expecting a comma or a closing parenthesis after this macro argument.
+  help: Add `)` here.

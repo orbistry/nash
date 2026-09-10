@@ -2,24 +2,13 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I got to the end of the line without seeing the closing double quote:
+  × Expected `"` to close `"`.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
-   ·   ─
+   · ┬ ┬
+   · │ ╰── expected `"`
+   · ╰── opened here
    ╰────
-  help: Strings look like "this" with double quotes on each end. Is the closing double
-        quote missing in your code? For a string that spans multiple lines, use triple
-        double quotes on each end.
-
-            """
-            # Multi-line Strings
-
-            - start with triple double quotes
-            - write whatever you want
-            - no need to escape newlines or double quotes
-            - end with triple double quotes
-            """
-
-        Here is a valid multi-line string for reference.
+  help: Add `"` here.

@@ -4,10 +4,9 @@ description: if
 ---
 nash::diagnostic
 
-  × I ran into a reserved word unexpectedly:
+  × Reserved word `if` cannot be a type.
    ╭─[src/Main.nash:1:1]
  1 │ if
    · ──
    ╰────
-  help: It looks like you are trying to use `if` as a variable name, but it is a
-        reserved word. Try using a different name!
+  help: Choose another name.

@@ -7,6 +7,7 @@
 //! not AST types. They are allocated in the arena like everything else.
 
 use crate::{Col, Row};
+use nash_region::Position;
 
 // =============================================================================
 // Top-level Error
@@ -72,7 +73,7 @@ pub enum Test<'a> {
     WithinKind(Row, Col),
     WithinNumber(Number, Row, Col),
     WithinDuplicate(Row, Col),
-    WithinEnd(Row, Col),
+    WithinEnd(Position, Row, Col),
     Equals(Row, Col),
     Do(Row, Col),
     Body(&'a Do<'a>, Row, Col),
@@ -96,7 +97,8 @@ pub enum Exposing {
     Value(Row, Col),
     Operator(Row, Col),
     OperatorReserved(BadOperator, Row, Col),
-    OperatorRightParen(Row, Col),
+    OperatorRightParen(Position, Row, Col),
+    TypePrivacyEnd(Position, Row, Col),
     TypePrivacy(Row, Col),
     TypeName(Row, Col),
     End(Row, Col),
@@ -159,11 +161,11 @@ pub enum Trait<'a> {
 pub enum Attribute<'a> {
     Name(Row, Col),
     Arg(&'a Expr<'a>, Row, Col),
-    End(Row, Col),
+    End(Position, Row, Col),
     Space(Space, Row, Col),
     FreshLine(Row, Col),
     IndentArg(Row, Col),
-    IndentEnd(Row, Col),
+    IndentEnd(Position, Row, Col),
 }
 
 #[derive(Debug)]
@@ -216,7 +218,7 @@ pub enum CustomType<'a> {
     Field(Row, Col),
     FieldColon(Row, Col),
     FieldType(&'a Type<'a>, Row, Col),
-    FieldEnd(Row, Col),
+    FieldEnd(Position, Row, Col),
     IndentField(Row, Col),
     IndentFieldType(Row, Col),
 }
@@ -428,7 +430,7 @@ pub enum Pattern<'a> {
 
 #[derive(Debug)]
 pub enum Bytes {
-    Endless,
+    Endless(Position),
     OddLength,
     BadHexDigit(usize),
 }
@@ -537,8 +539,8 @@ pub enum TTuple<'a> {
 
 #[derive(Debug)]
 pub enum StringError {
-    EndlessSingle,
-    EndlessMulti,
+    EndlessSingle(Position),
+    EndlessMulti(Position),
     Escape(Escape),
 }
 
@@ -570,7 +572,7 @@ pub enum Number {
 pub enum Space {
     TooDeep,
     HasTab,
-    EndlessMultiComment,
+    EndlessMultiComment(Position),
 }
 
 #[derive(Debug)]

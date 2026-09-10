@@ -2,16 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Record(&Record::IndentEquals(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED RECORD
+MISSING EQUALS
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a record, but I got stuck here:
+Expected `=` after the field name.
 
-I just saw a record field, so I was expecting to see an equals sign next. Try
-adding more indentation.
-
-    { name = "Nash"
-      , age = 1
-      }
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Write `name = value` for a record field.

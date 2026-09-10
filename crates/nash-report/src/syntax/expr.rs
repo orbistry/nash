@@ -1,10 +1,8 @@
-//! Expression syntax reports, adapted from Elm's Reporting/Error/Syntax.hs.
-
-use super::{pattern, problem, to_space_report, type_, wide};
+//! Expression syntax diagnostics.
+use super::{closing, pattern, problem, to_space_report, type_, wide};
 use crate::code::Next;
 use crate::{Doc, Report, Source};
 use nash_parse::{Col, Row, error::*};
-
 #[derive(Clone, Copy)]
 #[allow(clippy::enum_variant_names)] // Preserve Elm's context vocabulary.
 pub(crate) enum Context<'c> {
@@ -68,32 +66,12 @@ fn context_start(context: Context<'_>) -> (Row, Col, String) {
         ),
     }
 }
-fn unfinished(title: &str, thing: &str, r: Row, c: Col, sr: Row, sc: Col, hint: &str) -> Report {
-    wide(
-        problem(
-            title,
-            r,
-            c,
-            &format!("I was partway through parsing {thing}, but I got stuck here:"),
-            hint,
-        ),
-        sr,
-        sc,
-    )
-}
 fn width(mut report: Report, amount: usize) -> Report {
     report.region.end.column = report.region.start.column.saturating_add(amount);
     report.context = Some(report.region);
     report
 }
-fn example(mut report: Report, lines: &[&str], note: &str) -> Report {
-    report.after = Doc::stack([
-        report.after,
-        Doc::indent(4, Doc::vcat(lines.iter().map(|s| Doc::text(*s)))).dullyellow(),
-        Doc::reflow(note),
-    ]);
-    report
-}
+
 pub(crate) fn to_expr_report(
     source: &Source<'_>,
     context: Context<'_>,
@@ -117,64 +95,65 @@ pub(crate) fn to_expr_report(
         Expr::Trace(e, r, c) => to_keyword_report(source, context, "trace", e, r, c),
         Expr::Comptime(e, r, c) => to_keyword_report(source, context, "comptime", e, r, c),
         Expr::Dot(r, c) => problem(
-            "EXPECTING RECORD ACCESSOR",
+            "EXPECTED ACCESSOR",
             r,
             c,
-            "I was expecting to see a record accessor here:",
-            "Something like .name or .price that accesses a value from a record.",
+            "Expected a record accessor.",
+            "Write a dot followed by a field name, such as `.name`.",
         ),
         Expr::Access(r, c) => problem(
-            "EXPECTING RECORD ACCESSOR",
+            "EXPECTED FIELD",
             r,
             c,
-            "I am trying to parse a record accessor here:",
-            "Something like .name or .price that accesses a value from a record. Record field names must start with a lower case letter!",
+            "Expected a field name after `.`.",
+            "Use a lowercase field name.",
         ),
-        Expr::OperatorRight(op, r, c) => {
-            let hint = match op { "+"|"-"|"*"|"/"|"^"=>format!("I was expecting to see an expression next. Something like 42 or 1000 that makes sense with a {op} sign."),"&&"|"||"=>"I was expecting to see an expression next. Something like True or False that makes sense with boolean logic.".into(),"|>"=>"I was expecting to see a function next.".into(),"<|"=>"I was expecting to see an argument next.".into(),_=>"I was expecting to see an expression next.".into() };
-            wide(
-                problem(
-                    "MISSING EXPRESSION",
-                    r,
-                    c,
-                    &format!(
-                        "I just saw a {op} {}, so I am getting stuck here:",
-                        if matches!(op, "+" | "-" | "*" | "/" | "^") {
-                            "sign"
-                        } else {
-                            "operator"
-                        }
-                    ),
-                    &hint,
-                ),
-                sr,
-                sc,
-            )
-        }
-        Expr::IndentOperatorRight(op, r, c) => wide(
+        Expr::OperatorRight(op, r, c) | Expr::IndentOperatorRight(op, r, c) => wide(
             problem(
                 "MISSING EXPRESSION",
                 r,
                 c,
-                &format!("I was expecting to see an expression after this {op} operator:"),
-                &format!(
-                    "You can just put anything for now, like 42 or \"hello\". Once there is something there, I can probably give a more specific hint! I may be getting confused by your indentation? The easiest way to make sure this is not an indentation problem is to put the expression on the right of the {op} operator on the same line."
-                ),
+                &format!("Expected an operand after `({op})`."),
+                "Add an expression on the same line or indent it on the next line.",
             ),
             sr,
             sc,
         ),
         Expr::OperatorReserved(ref op, r, c) => operator_in_context(source, context, op, r, c),
         Expr::Start(r, c) => {
-            let (r0, c0, thing) = context_start(context);
-            unfinished(
-                "MISSING EXPRESSION",
-                &thing,
-                r,
-                c,
-                r0,
-                c0,
-                "I was expecting to see an expression like 42 or \"hello\". Once there is something there, I can probably give a more specific hint! This can also happen if I run into reserved words like `let` or `as` unexpectedly, or operators in unexpected spots.",
+            if let Context::InNode(node, open_row, open_col, _) = context {
+                let delimiter = match node {
+                    Node::List => Some(']'),
+                    Node::Parens => Some(')'),
+                    Node::Record => Some('}'),
+                    _ => None,
+                };
+                if let (Some(delimiter), Next::Close(_, found)) =
+                    (delimiter, source.what_is_next(r, c))
+                {
+                    if found != delimiter {
+                        return closing(source, r, c, open_row, open_col, delimiter);
+                    }
+                    return problem(
+                        "MISSING EXPRESSION",
+                        r,
+                        c,
+                        "Expected an expression before the closing delimiter.",
+                        "Add the missing expression, or remove a trailing comma.",
+                    );
+                }
+            }
+            let (row, col, place) = context_start(context);
+            wide(
+                problem(
+                    "MISSING EXPRESSION",
+                    r,
+                    c,
+                    &format!("Expected an expression in {place}."),
+                    "Add an expression or `todo` for an unfinished body.",
+                ),
+                row,
+                col,
             )
         }
         Expr::String(ref e, r, c) => to_string_report(source, e, r, c),
@@ -183,73 +162,49 @@ pub(crate) fn to_expr_report(
         Expr::Space(ref e, r, c) => to_space_report(source, e, r, c),
     }
 }
-pub(crate) fn to_string_report(source: &Source<'_>, e: &StringError, r: Row, c: Col) -> Report {
-    let report = match e {
-        StringError::EndlessSingle => problem(
-            "ENDLESS STRING",
-            r,
-            c,
-            "I got to the end of the line without seeing the closing double quote:",
-            "Strings look like \"this\" with double quotes on each end. Is the closing double quote missing in your code? For a string that spans multiple lines, use triple double quotes on each end.",
-        ),
-        StringError::EndlessMulti => width(
-            problem(
-                "ENDLESS STRING",
-                r,
-                c,
-                "I cannot find the end of this multi-line string:",
-                "Add a \"\"\" somewhere after this to end the string.",
-            ),
-            3,
-        ),
-        StringError::Escape(e) => return to_escape_report(source, e, r, c),
-    };
-    example(
-        report,
-        &[
-            "\"\"\"",
-            "# Multi-line Strings",
-            "",
-            "- start with triple double quotes",
-            "- write whatever you want",
-            "- no need to escape newlines or double quotes",
-            "- end with triple double quotes",
-            "\"\"\"",
-        ],
-        "Here is a valid multi-line string for reference.",
-    )
+
+pub(crate) fn to_string_report(source: &Source<'_>, error: &StringError, r: Row, c: Col) -> Report {
+    match error {
+        StringError::EndlessSingle(opening) => {
+            super::unclosed_literal("ENDLESS STRING", r, c, *opening, "\"", "\"")
+        }
+        StringError::EndlessMulti(opening) => {
+            super::unclosed_literal("ENDLESS STRING", r, c, *opening, "\"\"\"", "\"\"\"")
+        }
+        StringError::Escape(error) => to_escape_report(source, error, r, c),
+    }
 }
-fn to_escape_report(_source: &Source<'_>, e: &Escape, r: Row, c: Col) -> Report {
-    match *e {
+fn to_escape_report(_source: &Source<'_>, error: &Escape, r: Row, c: Col) -> Report {
+    match *error {
         Escape::Unknown => width(
             problem(
                 "UNKNOWN ESCAPE",
                 r,
                 c,
-                "Backslashes always start escaped characters, but I do not recognize this one:",
-                r#"Valid escape characters include \n, \r, \t, \", \', \\, and \u{003D}. Do you want one of those instead? Maybe you need \\ to escape a backslash?"#,
+                "Unknown escape sequence.",
+                r#"Use \n, \r, \t, \", \', \\, or \u{0041}."#,
             ),
             2,
         ),
-        Escape::BadUnicodeFormat(w) => width(
+        Escape::BadUnicodeFormat(length) => width(
             problem(
                 "BAD UNICODE ESCAPE",
                 r,
                 c,
-                "I ran into an invalid Unicode escape:",
-                r"Valid Unicode escapes include \u{0041}, \u{03BB}, and \u{1F60A}. Notice that the code point is always surrounded by curly braces. Maybe you are missing the opening or closing curly brace?",
+                "Malformed Unicode escape.",
+                r"Use \u{0041}: four to six hexadecimal digits inside braces.",
             ),
-            w,
+            length,
         ),
-        Escape::BadUnicodeCode(w) => width(
+        Escape::BadUnicodeCode(length) => width(
             problem(
                 "BAD UNICODE ESCAPE",
                 r,
                 c,
-                "This is not a valid code point:",
-                "The valid Unicode scalar values are between 0 and 10FFFF inclusive, excluding the surrogate range D800 through DFFF.",
+                "Invalid Unicode scalar value.",
+                "Use 0000–10FFFF, excluding D800–DFFF.",
             ),
-            w,
+            length,
         ),
         Escape::BadUnicodeLength {
             code,
@@ -260,160 +215,141 @@ fn to_escape_report(_source: &Source<'_>, e: &Escape, r: Row, c: Col) -> Report 
                 "BAD UNICODE ESCAPE",
                 r,
                 c,
-                "This code point has the wrong number of digits:",
-                &format!(
-                    "I expected {expected} digits, but found {actual}. Unicode escapes need between four and six hexadecimal digits. Add leading zeros if there are too few, or trim leading zeros if there are too many."
-                ),
+                &format!("Unicode escape needs {expected} digits, found {actual}."),
+                "Use four to six hexadecimal digits; adjust leading zeros.",
             ),
             code,
         ),
     }
 }
-pub(crate) fn to_number_report(_source: &Source<'_>, e: &Number, r: Row, c: Col) -> Report {
-    match e {
+pub(crate) fn to_number_report(_source: &Source<'_>, error: &Number, r: Row, c: Col) -> Report {
+    match error {
         Number::End => problem(
-            "WEIRD NUMBER",
+            "INVALID NUMBER",
             r,
             c,
-            "I thought I was reading a number, but I ran into some weird stuff here:",
-            "I recognize integers like 42 and 0x002B. Is there a way to write it like one of those? Nash has no floating point numbers.",
+            "Invalid integer literal.",
+            "Use decimal or hexadecimal integers; floating point numbers are not supported.",
         ),
-        Number::Dot(n) => problem(
-            "WEIRD NUMBER",
+        Number::Dot(number) => problem(
+            "INVALID NUMBER",
             r,
             c,
-            "Numbers cannot end with a dot like this:",
-            &format!("Switching to {n} will work though! Nash has no floating point numbers."),
+            "Floating point numbers are not supported.",
+            &format!("Use an integer such as `{number}`."),
         ),
         Number::HexDigit => problem(
-            "WEIRD HEXADECIMAL",
+            "INVALID HEXADECIMAL",
             r,
             c,
-            "I thought I was reading a hexadecimal number until I got here:",
-            "Valid hexadecimal digits include 0123456789abcdefABCDEF, so I can only recognize things like 0x2B, 0x002B, or 0x00ffb3.",
+            "Expected a hexadecimal digit.",
+            "Use digits from `0123456789abcdefABCDEF`.",
         ),
         Number::NoLeadingZero => problem(
             "LEADING ZEROS",
             r,
             c,
-            "I do not accept numbers with leading zeros:",
-            "Just delete the leading zeros and it should work! Some languages use a leading zero to specify octal numbers. Nash avoids this ambiguity.",
+            "Integer has leading zeros.",
+            "Remove the leading zeros.",
         ),
     }
 }
-pub(crate) fn to_bytes_report(_source: &Source<'_>, e: &Bytes, r: Row, c: Col) -> Report {
-    match e {
-        Bytes::Endless => problem(
-            "ENDLESS BYTE STRING",
-            r,
-            c,
-            "I cannot find the end of this byte string:",
-            "Add a closing double quote to end the byte string.",
-        ),
+pub(crate) fn to_bytes_report(_source: &Source<'_>, error: &Bytes, r: Row, c: Col) -> Report {
+    match error {
+        Bytes::Endless(opening) => {
+            super::unclosed_literal("ENDLESS BYTE STRING", r, c, *opening, "#\"", "\"")
+        }
         Bytes::OddLength => problem(
             "INCOMPLETE BYTE",
             r,
             c,
-            "This byte string has an odd number of hexadecimal digits:",
-            "Each byte needs two hexadecimal digits. Add the missing digit or remove the extra one.",
+            "Byte string has an odd number of hexadecimal digits.",
+            "Use two hexadecimal digits per byte.",
         ),
         Bytes::BadHexDigit(bad_col) => wide(
             problem(
                 "BAD BYTE STRING",
                 r,
                 *bad_col,
-                "I ran into an invalid hexadecimal digit in this byte string:",
-                "Use pairs of digits from 0123456789abcdefABCDEF, one pair for each byte.",
+                "Invalid hexadecimal digit in byte string.",
+                "Use digits from `0123456789abcdefABCDEF`.",
             ),
             r,
             c,
         ),
     }
 }
-pub(crate) fn to_operator_report(_source: &Source<'_>, e: &BadOperator, r: Row, c: Col) -> Report {
-    let (title, before, after, w) = match e {
-        BadOperator::Dot => (
-            "UNEXPECTED SYMBOL",
-            "I was not expecting this dot:",
-            "Dots are for record access, so they cannot float around on their own. Maybe there is some extra whitespace?",
-            1,
-        ),
+pub(crate) fn to_operator_report(
+    _source: &Source<'_>,
+    error: &BadOperator,
+    r: Row,
+    c: Col,
+) -> Report {
+    let (token, hint) = match error {
+        BadOperator::Dot => (".", "Use a dot directly before a record field name."),
         BadOperator::Pipe => (
-            "UNEXPECTED SYMBOL",
-            "I was not expecting this vertical bar:",
-            "Vertical bars appear in custom type declarations and record updates. Maybe you want || instead?",
-            1,
+            "|",
+            "Use `||` for boolean disjunction; `|` belongs in datatype declarations and record updates.",
         ),
         BadOperator::Arrow => (
-            "UNEXPECTED ARROW",
-            "I was not expecting this arrow:",
-            "Arrows belong in `case` branches, anonymous functions, and function types. Maybe an earlier expression is unfinished?",
-            2,
+            "->",
+            "Use `->` in function types, anonymous functions, or case branches.",
         ),
         BadOperator::Equals => (
-            "UNEXPECTED EQUALS",
-            "I was not expecting this equals sign:",
-            "An equals sign defines a value. To compare two values, use == instead.",
-            1,
+            "=",
+            "Use `==` to compare values; `=` defines a value or record field.",
         ),
         BadOperator::HasType => (
-            "UNEXPECTED COLON",
-            "I was not expecting this colon:",
-            "Colons appear in type annotations. A type annotation must appear directly above its definition.",
-            1,
+            ":",
+            "Use `::` to prepend a list element; `:` introduces a type annotation.",
         ),
         BadOperator::FatArrow => (
-            "UNEXPECTED ARROW",
-            "I was not expecting this fat arrow:",
-            "Use -> for a `case` branch or an anonymous function. The => arrow belongs in trait constraints.",
-            2,
+            "=>",
+            "Use `=>` after type constraints; use `->` for function and case bodies.",
         ),
-        BadOperator::LeftArrow => (
-            "UNEXPECTED ARROW",
-            "I was not expecting this left arrow:",
-            "The <- arrow binds the result of an action inside a `do` block.",
-            2,
-        ),
+        BadOperator::LeftArrow => ("<-", "Use `<-` for a binding inside a do block."),
     };
-    width(problem(title, r, c, before, after), w)
+    width(
+        problem(
+            "UNEXPECTED SYMBOL",
+            r,
+            c,
+            &format!("Unexpected `{token}` in expression."),
+            hint,
+        ),
+        token.len(),
+    )
 }
 fn operator_in_context(
     source: &Source<'_>,
     context: Context<'_>,
-    e: &BadOperator,
+    error: &BadOperator,
     r: Row,
     c: Col,
 ) -> Report {
-    let mut report = to_operator_report(source, e, r, c);
-    if matches!(e, BadOperator::Arrow)
+    let mut report = to_operator_report(source, error, r, c);
+    if matches!(error, BadOperator::Arrow)
         && (is_within(Node::Case, context) || is_within(Node::Branch, context))
     {
-        report.before = Doc::reflow(
-            "I am parsing a `case` expression right now, but this arrow is confusing me:",
-        );
-        report.after = Doc::reflow(if is_within(Node::Case, context) {
-            "Maybe the `of` keyword is missing on a previous line?"
+        report.after = Doc::text(if is_within(Node::Case, context) {
+            "Add `of` before the case branches."
         } else {
-            "Maybe this branch is not indented enough? Each pattern must line up with the other patterns."
+            "Align this pattern with the other case branches."
         });
-    } else if matches!(e, BadOperator::Equals) && is_within(Node::Record, context) {
-        report.after = Doc::stack([
-            Doc::reflow("Maybe you want == instead? To check if two values are equal?"),
-            Doc::to_simple_note(
-                "Records look like { x = 3, y = 4 } with the equals sign right after the field name. So maybe you forgot a comma?",
-            ),
-        ]);
-    } else if matches!(e, BadOperator::Equals)
+    } else if matches!(error, BadOperator::Equals) && is_within(Node::Record, context) {
+        report.after = Doc::text("Separate record fields with commas; use `==` for a comparison.");
+    } else if matches!(error, BadOperator::Equals)
         && let Some(name) = get_def_name(context)
     {
-        report.after = Doc::reflow(&format!(
-            "Maybe you want == instead? To check if two values are equal? I may be getting confused by your indentation. I think I am still parsing the `{name}` definition. Is this supposed to be part of a definition after that? If so, the problem may be a bit before the equals sign. I need all definitions to be indented exactly the same amount, so the problem may be that this new definition has too many spaces in front of it."
+        report.after = Doc::text(format!(
+            "Use `==` for a comparison, or align a new definition with `{name}`."
         ));
     }
     report
 }
-fn to_if_report(source: &Source<'_>, ctx: Context<'_>, e: &If<'_>, sr: Row, sc: Col) -> Report {
-    let (r, c, hint) = match *e {
+
+fn to_if_report(source: &Source<'_>, ctx: Context<'_>, error: &If<'_>, sr: Row, sc: Col) -> Report {
+    let report = match *error {
         If::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         If::Condition(e, r, c) => {
             return to_expr_report(source, Context::InNode(Node::Cond, sr, sc, &ctx), e, r, c);
@@ -424,337 +360,280 @@ fn to_if_report(source: &Source<'_>, ctx: Context<'_>, e: &If<'_>, sr: Row, sc: 
         If::ElseBranch(e, r, c) => {
             return to_expr_report(source, Context::InNode(Node::Else, sr, sc, &ctx), e, r, c);
         }
-        If::Then(r, c) => (r, c, "I was expecting to see the `then` keyword next."),
-        If::Else(r, c) => (
+        If::Then(r, c) | If::IndentThen(r, c) => problem(
+            "MISSING THEN",
             r,
             c,
-            "I was expecting to see the `else` keyword next. All `if` expressions need an `else` branch.",
+            "Expected `then` after the condition.",
+            "Add `then` before the first branch.",
         ),
-        If::ElseBranchStart(r, c) => (
-            r,
-            c,
-            "I was expecting to see an expression next. Maybe the `else` branch is not filled in yet?",
-        ),
-        If::IndentCondition(r, c) => (
-            r,
-            c,
-            "I was expecting to see a condition next. If it is already present, it may not be indented enough for me to recognize it.",
-        ),
-        If::IndentThen(r, c) => (
-            r,
-            c,
-            "I was expecting to see the `then` keyword next. It may need more indentation.",
-        ),
-        If::IndentThenBranch(r, c) => (
-            r,
-            c,
-            "I was expecting to see an expression next. If the `then` branch is already present, it may not be indented enough for me to recognize it.",
-        ),
-        If::IndentElseBranch(r, c) => (
-            r,
-            c,
-            "I was expecting to see an expression next. If the `else` branch is already present, it may not be indented enough for me to recognize it.",
-        ),
-        If::IndentElse(r, c) => {
+        If::Else(r, c) | If::IndentElse(r, c) => {
             if let Some((row, col)) = source.next_line_starts_with_keyword("else", r) {
-                return wide(
-                    width(
-                        problem(
-                            "WEIRD ELSE BRANCH",
-                            row,
-                            col,
-                            "I was partway through an `if` expression when I got stuck here:",
-                            "I think this `else` keyword needs to be indented more. Try adding some spaces before it!",
-                        ),
-                        4,
+                width(
+                    problem(
+                        "INDENTATION",
+                        row,
+                        col,
+                        "The else branch is not indented enough.",
+                        "Indent `else` to continue this if expression.",
                     ),
-                    sr,
-                    sc,
-                );
+                    4,
+                )
+            } else {
+                problem(
+                    "MISSING ELSE",
+                    r,
+                    c,
+                    "Expected an else branch.",
+                    "Add `else` and an expression; every if expression needs both branches.",
+                )
             }
-            (
-                r,
-                c,
-                "I was expecting to see an `else` branch after this. All `if` expressions need both branches. Check the indentation if the branch is already present.",
-            )
         }
-    };
-    wide(
-        problem(
-            "UNFINISHED IF",
+        If::ElseBranchStart(r, c) | If::IndentElseBranch(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "I was expecting to see more of this `if` expression, but I got stuck here:",
-            hint,
+            "Expected an expression after `else`.",
+            "Add the second branch, indented inside the if expression.",
         ),
-        sr,
-        sc,
-    )
-}
-fn case_note(report: Report) -> Report {
-    example(
-        report,
-        &[
-            "case maybeWidth of",
-            "  Some width ->",
-            "    width + 200",
-            "",
-            "  None ->",
-            "    400",
-        ],
-        "Notice the indentation. Each pattern is aligned, and each branch is indented a bit more than the corresponding pattern. That is important!",
-    )
-}
-fn to_case_report(source: &Source<'_>, ctx: Context<'_>, e: &Case<'_>, sr: Row, sc: Col) -> Report {
-    let (r,c,hint)=match *e {
-        Case::Space(ref e,r,c)=>return to_space_report(source,e,r,c),
-        Case::Pattern(e,r,c)=>return pattern::to_pattern_report(source,pattern::PContext::Case,e,r,c),
-        Case::Expr(e,r,c)=>return to_expr_report(source,Context::InNode(Node::Case,sr,sc,&ctx),e,r,c),
-        Case::Branch(e,r,c)=>return to_expr_report(source,Context::InNode(Node::Branch,sr,sc,&ctx),e,r,c),
-        Case::Of(r,c)|Case::IndentOf(r,c)=>(r,c,"I was expecting to see the `of` keyword next.".to_owned()),
-        Case::Arrow(r,c)=> {
-            let (title,hint)=match source.what_is_next(r,c) {
-                Next::Keyword(k)=>("RESERVED WORD",format!("It looks like you are trying to use `{k}` in one of your patterns, but it is a reserved word. Try using a different name?")),
-                Next::Operator(":")=>("UNEXPECTED OPERATOR","I am seeing : but maybe you want :: instead?".into()),
-                Next::Operator("=")=>("UNEXPECTED OPERATOR","I am seeing = but maybe you want -> instead?".into()),
-                _=>("MISSING ARROW","I was expecting to see an arrow next.".into()),
-            };
-            return case_note(unfinished(title,"a `case` expression",r,c,sr,sc,&hint));
-        }
-        Case::IndentExpr(r,c)=>(r,c,"I was expecting to see an expression next.".into()),
-        Case::IndentPattern(r,c)=>(r,c,"I was expecting to see a pattern next.".into()),
-        Case::IndentArrow(r,c)=>(r,c,"I was expecting to see an arrow next. It may need more indentation.".into()),
-        Case::IndentBranch(r,c)=>(r,c,"I was expecting to see an expression next. What should I do when I run into this particular pattern?".into()),
-        Case::PatternAlignment(indent,r,c)=>(r,c,format!("I suspect this is a pattern that is not indented far enough? ({indent} spaces)")),
+        If::IndentCondition(r, c) => problem(
+            "MISSING CONDITION",
+            r,
+            c,
+            "Expected an indented condition after `if`.",
+            "Add a boolean expression.",
+        ),
+        If::IndentThenBranch(r, c) => problem(
+            "MISSING EXPRESSION",
+            r,
+            c,
+            "Expected an expression after `then`.",
+            "Add the first branch, indented inside the if expression.",
+        ),
     };
-    case_note(unfinished(
-        "UNFINISHED CASE",
-        "a `case` expression",
-        r,
-        c,
-        sr,
-        sc,
-        &hint,
-    ))
+    wide(report, sr, sc)
 }
-fn record_note(report: Report) -> Report {
-    example(
-        report,
-        &["{ name = \"Nash\"", "  , age = 1", "  }"],
-        "Notice that each line starts with some indentation. Usually two or four spaces.",
-    )
-}
-fn to_record_report(
+
+fn to_case_report(
     source: &Source<'_>,
     ctx: Context<'_>,
-    e: &Record<'_>,
+    error: &Case<'_>,
     sr: Row,
     sc: Col,
 ) -> Report {
-    let (r, c, title, hint) = match *e {
+    let report = match *error {
+        Case::Space(ref e, r, c) => return to_space_report(source, e, r, c),
+        Case::Pattern(e, r, c) => {
+            return pattern::to_pattern_report(source, pattern::PContext::Case, e, r, c);
+        }
+        Case::Expr(e, r, c) => {
+            return to_expr_report(source, Context::InNode(Node::Case, sr, sc, &ctx), e, r, c);
+        }
+        Case::Branch(e, r, c) => {
+            return to_expr_report(source, Context::InNode(Node::Branch, sr, sc, &ctx), e, r, c);
+        }
+        Case::Of(r, c) | Case::IndentOf(r, c) => problem(
+            "MISSING OF",
+            r,
+            c,
+            "Expected `of` after the case value.",
+            "Add `of` before the case branches.",
+        ),
+        Case::Arrow(r, c) | Case::IndentArrow(r, c) => problem(
+            "MISSING ARROW",
+            r,
+            c,
+            "Expected `->` after the pattern.",
+            "Separate the pattern and branch body with `->`.",
+        ),
+        Case::IndentExpr(r, c) => problem(
+            "MISSING EXPRESSION",
+            r,
+            c,
+            "Expected a value after `case`.",
+            "Add an indented expression followed by `of`.",
+        ),
+        Case::IndentPattern(r, c) => problem(
+            "MISSING PATTERN",
+            r,
+            c,
+            "Expected a case pattern.",
+            "Indent the pattern beneath `case`.",
+        ),
+        Case::IndentBranch(r, c) => problem(
+            "MISSING EXPRESSION",
+            r,
+            c,
+            "Expected a case branch body.",
+            "Indent an expression beneath the pattern.",
+        ),
+        Case::PatternAlignment(indent, r, c) => problem(
+            "INDENTATION",
+            r,
+            c,
+            "Case patterns must align.",
+            &format!("Indent this pattern with {indent} spaces."),
+        ),
+    };
+    wide(report, sr, sc)
+}
+
+fn to_record_report(
+    source: &Source<'_>,
+    ctx: Context<'_>,
+    error: &Record<'_>,
+    sr: Row,
+    sc: Col,
+) -> Report {
+    let report = match *error {
         Record::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         Record::Expr(e, r, c) => {
             return to_expr_report(source, Context::InNode(Node::Record, sr, sc, &ctx), e, r, c);
         }
+        Record::End(r, c) | Record::IndentEnd(r, c) => return closing(source, r, c, sr, sc, '}'),
+        Record::Open(r, c) | Record::Field(r, c) if matches!(source.what_is_next(r, c), Next::Close(_, found) if found != '}') =>
+        {
+            return closing(source, r, c, sr, sc, '}');
+        }
         Record::Open(r, c) | Record::Field(r, c) => match source.what_is_next(r, c) {
-            Next::Keyword(k) => {
-                return wide(
-                    width(
-                        problem(
-                            "RESERVED WORD",
-                            r,
-                            c,
-                            "I am partway through parsing a record, but I got stuck on this field name:",
-                            &format!(
-                                "It looks like you are trying to use `{k}` as a field name, but that is a reserved word. Try using a different name!"
-                            ),
-                        ),
-                        k.len(),
-                    ),
-                    sr,
-                    sc,
-                );
-            }
-            Next::Other(Some(',')) => (
-                r,
-                c,
-                "EXTRA COMMA",
-                "I am seeing two commas in a row. This is the second one! Just delete one of the commas and you should be all set!",
+            Next::Keyword(keyword) => width(
+                problem(
+                    "RESERVED WORD",
+                    r,
+                    c,
+                    &format!("Reserved word `{keyword}` cannot be a field name."),
+                    "Choose another field name.",
+                ),
+                keyword.len(),
             ),
-            Next::Close(_, '}') => (
-                r,
-                c,
+            Next::Other(Some(',')) => problem(
                 "EXTRA COMMA",
-                "Trailing commas are not allowed in records. Try deleting the comma that appears before this closing curly brace.",
-            ),
-            _ => (
                 r,
                 c,
-                "PROBLEM IN RECORD",
-                "I was expecting to see a record field next. Record field names must start with a lower case letter.",
+                "Extra comma in record.",
+                "Remove the repeated comma.",
+            ),
+            Next::Close(_, '}') => problem(
+                "EXTRA COMMA",
+                r,
+                c,
+                "Trailing comma in record.",
+                "Remove the comma before `}`.",
+            ),
+            _ => problem(
+                "EXPECTED FIELD",
+                r,
+                c,
+                "Expected a record field.",
+                "Write `name = value`; separate fields with commas.",
             ),
         },
-        Record::End(r, c) => (
+        Record::Equals(r, c) | Record::IndentEquals(r, c) => problem(
+            "MISSING EQUALS",
             r,
             c,
-            "PROBLEM IN RECORD",
-            "I was expecting to see a comma or a closing curly brace next.",
+            "Expected `=` after the field name.",
+            "Write `name = value` for a record field.",
         ),
-        Record::Equals(r, c) => (
+        Record::IndentOpen(r, c) | Record::IndentField(r, c) => problem(
+            "EXPECTED FIELD",
             r,
             c,
-            "PROBLEM IN RECORD",
-            "I just saw a record field, so I was expecting to see an equals sign next.",
+            "Expected an indented record field.",
+            "Indent the field inside the braces.",
         ),
-        Record::IndentOpen(r, c) => (
+        Record::IndentExpr(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "UNFINISHED RECORD",
-            "I just saw the opening curly brace of a record. I was expecting a field name or a closing curly brace next. Try adding more indentation.",
-        ),
-        Record::IndentEnd(r, c) => {
-            if let Some((row, col)) = source.next_line_starts_with_close_curly(r) {
-                return record_note(unfinished(
-                    "NEED MORE INDENTATION",
-                    "a record",
-                    row,
-                    col,
-                    sr,
-                    sc,
-                    "I need this curly brace to be indented more. Try adding some spaces before it!",
-                ));
-            }
-            if matches!(source.what_is_next(r, c), Next::Close(_, '}')) {
-                (
-                    r,
-                    c,
-                    "NEED MORE INDENTATION",
-                    "I need this curly brace to be indented more. Try adding some spaces before it!",
-                )
-            } else {
-                (
-                    r,
-                    c,
-                    "UNFINISHED RECORD",
-                    "I was expecting a comma or a closing curly brace next. Try adding more indentation.",
-                )
-            }
-        }
-        Record::IndentField(r, c) => (
-            r,
-            c,
-            "UNFINISHED RECORD",
-            "Trailing commas are not allowed in records, so the fix may be to delete that last comma? Or maybe you were in the middle of defining an additional field?",
-        ),
-        Record::IndentEquals(r, c) => (
-            r,
-            c,
-            "UNFINISHED RECORD",
-            "I just saw a record field, so I was expecting to see an equals sign next. Try adding more indentation.",
-        ),
-        Record::IndentExpr(r, c) => (
-            r,
-            c,
-            "UNFINISHED RECORD",
-            "I was expecting to run into an expression next. If it is already present, it may need more indentation.",
+            "Expected a field value after `=`.",
+            "Add an indented expression.",
         ),
     };
-    record_note(unfinished(title, "a record", r, c, sr, sc, hint))
+    wide(report, sr, sc)
 }
+
 fn to_tuple_report(
     source: &Source<'_>,
     ctx: Context<'_>,
-    e: &Tuple<'_>,
+    error: &Tuple<'_>,
     sr: Row,
     sc: Col,
 ) -> Report {
-    let (r, c, title, hint) = match *e {
+    let report = match *error {
         Tuple::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         Tuple::Expr(e, r, c) => {
             return to_expr_report(source, Context::InNode(Node::Parens, sr, sc, &ctx), e, r, c);
         }
-        Tuple::OperatorReserved(ref e, r, c) => return to_operator_report(source, e, r, c),
-        Tuple::End(r, c) => (
+        Tuple::OperatorReserved(ref op, r, c) => return to_operator_report(source, op, r, c),
+        Tuple::End(r, c) | Tuple::IndentEnd(r, c) | Tuple::OperatorClose(r, c) => {
+            return closing(source, r, c, sr, sc, ')');
+        }
+        Tuple::IndentExpr1(r, c) if matches!(source.what_is_next(r, c), Next::Close(_, found) if found != ')') =>
+        {
+            return closing(source, r, c, sr, sc, ')');
+        }
+        Tuple::IndentExpr1(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "UNFINISHED PARENTHESES",
-            "I was expecting to see a closing parenthesis next. Try adding a ) to see if that helps?",
+            "Expected an expression or `)`.",
+            "Add an expression inside the parentheses.",
         ),
-        Tuple::OperatorClose(r, c) => (
+        Tuple::IndentExprN(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "UNFINISHED OPERATOR FUNCTION",
-            "I was expecting a closing parenthesis here. Try adding a ) to see if that helps! Operators in parentheses, like (+), can be used as functions.",
-        ),
-        Tuple::IndentExpr1(r, c) => (
-            r,
-            c,
-            "UNFINISHED PARENTHESES",
-            "I just saw an open parenthesis, so I was expecting to see an expression next. It may need more indentation.",
-        ),
-        Tuple::IndentExprN(r, c) => (
-            r,
-            c,
-            "UNFINISHED TUPLE",
-            "I just saw a comma, so I was expecting to see an expression next. It may need more indentation.",
-        ),
-        Tuple::IndentEnd(r, c) => (
-            r,
-            c,
-            "UNFINISHED PARENTHESES",
-            "I was expecting to see a closing parenthesis next. Try adding a ) or adding more indentation to the existing one.",
+            "Expected a tuple element after `,`.",
+            "Add an indented expression, or remove a trailing comma.",
         ),
     };
-    unfinished(title, "some parentheses", r, c, sr, sc, hint)
+    wide(report, sr, sc)
 }
-fn to_list_report(source: &Source<'_>, ctx: Context<'_>, e: &List<'_>, sr: Row, sc: Col) -> Report {
-    let (r, c, hint) = match *e {
+
+fn to_list_report(
+    source: &Source<'_>,
+    ctx: Context<'_>,
+    error: &List<'_>,
+    sr: Row,
+    sc: Col,
+) -> Report {
+    let report = match *error {
         List::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         List::Expr(e, r, c) => {
-            if let Expr::Start(row, col) = *e {
-                (
-                    row,
-                    col,
-                    "Trailing commas are not allowed in lists, so the fix may be to delete the comma?",
-                )
-            } else {
-                return to_expr_report(source, Context::InNode(Node::List, sr, sc, &ctx), e, r, c);
-            }
+            return to_expr_report(source, Context::InNode(Node::List, sr, sc, &ctx), e, r, c);
         }
-        List::Open(r, c) => (
+        List::End(r, c) | List::IndentEnd(r, c) => return closing(source, r, c, sr, sc, ']'),
+        List::Open(r, c) | List::IndentOpen(r, c) if matches!(source.what_is_next(r, c), Next::Close(_, found) if found != ']') =>
+        {
+            return closing(source, r, c, sr, sc, ']');
+        }
+        List::Open(r, c) | List::IndentOpen(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "I was expecting an expression or a closing square bracket next.",
+            "Expected a list element or `]`.",
+            "Add an indented expression, or close an empty list.",
         ),
-        List::End(r, c) => (
+        List::IndentExpr(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "I was expecting a comma or a closing square bracket next.",
-        ),
-        List::IndentOpen(r, c) => (
-            r,
-            c,
-            "I cannot find the end of this list. Try adding a ] or indenting the list entries more.",
-        ),
-        List::IndentEnd(r, c) => (
-            r,
-            c,
-            "I cannot find the end of this list. Try adding a ] or indenting the closing bracket more.",
-        ),
-        List::IndentExpr(r, c) => (
-            r,
-            c,
-            "I was expecting to see another list entry after this comma. Trailing commas are not allowed in lists, so the fix may be to delete the comma?",
+            "Expected a list element after `,`.",
+            "Add an indented expression, or remove a trailing comma.",
         ),
     };
-    example(
-        unfinished("UNFINISHED LIST", "a list", r, c, sr, sc, hint),
-        &["[ 1", "  , 2", "  ]"],
-        "Notice that each line starts with some indentation. Usually two or four spaces.",
-    )
+    wide(report, sr, sc)
 }
-fn to_func_report(source: &Source<'_>, ctx: Context<'_>, e: &Func<'_>, sr: Row, sc: Col) -> Report {
-    let (r, c, title, hint) = match *e {
+
+fn to_func_report(
+    source: &Source<'_>,
+    ctx: Context<'_>,
+    error: &Func<'_>,
+    sr: Row,
+    sc: Col,
+) -> Report {
+    let report = match *error {
         Func::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         Func::Arg(e, r, c) => {
             return pattern::to_pattern_report(source, pattern::PContext::Arg, e, r, c);
@@ -762,126 +641,139 @@ fn to_func_report(source: &Source<'_>, ctx: Context<'_>, e: &Func<'_>, sr: Row, 
         Func::Body(e, r, c) => {
             return to_expr_report(source, Context::InNode(Node::Func, sr, sc, &ctx), e, r, c);
         }
-        Func::Arrow(r, c) => match source.what_is_next(r, c) {
-            Next::Keyword(k) => {
-                return wide(
-                    width(
-                        problem(
-                            "RESERVED WORD",
-                            r,
-                            c,
-                            "I was parsing an anonymous function, but I got stuck here:",
-                            &format!(
-                                "It looks like you are trying to use `{k}` as an argument, but it is a reserved word in this language. Try using a different argument name!"
-                            ),
-                        ),
-                        k.len(),
-                    ),
-                    sr,
-                    sc,
-                );
-            }
-            _ => (
-                r,
-                c,
-                "UNFINISHED ANONYMOUS FUNCTION",
-                "I was expecting to see an arrow next. The syntax for anonymous functions is \\name -> name.",
-            ),
-        },
-        Func::IndentArg(r, c) => (
+        Func::Arrow(r, c) | Func::IndentArrow(r, c) => problem(
+            "MISSING ARROW",
             r,
             c,
-            "MISSING ARGUMENT",
-            "I just saw the beginning of an anonymous function, so I was expecting to see an argument next. It may need more indentation.",
+            "Expected `->` after the arguments.",
+            "Separate the argument patterns and function body with `->`.",
         ),
-        Func::IndentArrow(r, c) => (
+        Func::IndentArg(r, c) => problem(
+            "MISSING PATTERN",
             r,
             c,
-            "UNFINISHED ANONYMOUS FUNCTION",
-            "I was expecting to see an arrow next. It may need more indentation.",
+            "Expected an argument pattern after `\\`.",
+            "Add an indented argument pattern.",
         ),
-        Func::IndentBody(r, c) => (
+        Func::IndentBody(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "UNFINISHED ANONYMOUS FUNCTION",
-            "I was expecting to see an expression after the arrow. It may need more indentation.",
+            "Expected a function body after `->`.",
+            "Add an indented expression.",
         ),
     };
-    unfinished(title, "an anonymous function", r, c, sr, sc, hint)
+    wide(report, sr, sc)
 }
-fn to_let_report(source: &Source<'_>, ctx: Context<'_>, e: &Let<'_>, sr: Row, sc: Col) -> Report {
-    let (r,c,hint)=match *e {
-        Let::Space(ref e,r,c)=>return to_space_report(source,e,r,c),
-        Let::Def(name,e,r,c)=>return to_let_def_report(source,name,e,r,c),
-        Let::Destruct(e,r,c)=>return to_let_destruct_report(source,e,r,c),
-        Let::Body(e,r,c)=>return to_expr_report(source,ctx,e,r,c),
-        Let::In(r,c)|Let::DefAlignment(_,r,c)=>return unfinished("LET PROBLEM", "a `let` expression", r,c,sr,sc,"Based on the indentation, I was expecting to see the `in` keyword next. Is there a typo? This can also happen if you are trying to define another value within the `let` but it is not indented enough. Make sure each definition has exactly the same amount of spaces before it. They should line up exactly!"),
-        Let::IndentIn(r,c)=>(r,c,"I was expecting to see the `in` keyword next. Or maybe more of that expression?".into()),
-        Let::DefName(r,c)=>match source.what_is_next(r,c) {
-            Next::Keyword(k)=>return wide(width(problem("RESERVED WORD",r,c,"I was partway through parsing a `let` expression, but I got stuck here:",&format!("It looks like you are trying to use `{k}` as a variable name, but it is a reserved word! Try using a different name instead.")),k.len()),sr,sc),
-            _=>(r,c,"I was expecting the name of a definition next.".to_owned()),
-        },
-        Let::IndentDef(r,c)=>(r,c,"I was expecting a value to be defined here. It may need more indentation.".into()),
-        Let::IndentBody(r,c)=>(r,c,"I was expecting an expression next. Tell me what should happen with the value you just defined!".into()),
-    };
-    example(
-        unfinished("UNFINISHED LET", "a `let` expression", r, c, sr, sc, &hint),
-        &[
-            "let",
-            "    fullName =",
-            "        first ++ \" \" ++ last",
-            "in",
-            "fullName",
-        ],
-        "The definition is indented more than the `let` keyword, and its value is indented a bit more than that. That is important!",
-    )
-}
-pub(crate) fn to_let_def_report(
+
+fn to_let_report(
     source: &Source<'_>,
-    name: &str,
-    e: &Def<'_>,
+    ctx: Context<'_>,
+    error: &Let<'_>,
     sr: Row,
     sc: Col,
 ) -> Report {
-    let (r,c,title,hint)=match *e {
-        Def::Space(ref e,r,c)=>return to_space_report(source,e,r,c),
-        Def::Type(e,r,c)=>return type_::to_type_report(source,type_::TContext::Annotation(name),e,r,c),
-        Def::Arg(e,r,c)=>return pattern::to_pattern_report(source,pattern::PContext::Arg,e,r,c),
-        Def::Body(e,r,c)=>return to_expr_report(source,Context::InDef(name,sr,sc),e,r,c),
-        Def::NameRepeat(r,c)=>(r,c,"EXPECTING DEFINITION",format!("I just saw the type annotation for `{name}` so I was expecting to see its definition here. Type annotations always appear directly above the relevant definition, without anything else in between.")),
-        Def::NameMatch(actual,r,c)=>return wide(width(problem("NAME MISMATCH",r,c,&format!("I just saw a type annotation for `{name}`, but it is followed by a definition for `{actual}`:"),"These names do not match! Is there a typo?"),actual.len()),sr,sc).with_suggestions(vec![name.to_owned()]),
-        Def::Equals(r,c)=>match source.what_is_next(r,c) {
-            Next::Keyword(k)=>return wide(width(problem("RESERVED WORD",r,c,&format!("The name `{k}` is reserved, so it cannot be used as an argument:"),"Try renaming it to something else."),k.len()),sr,sc),
-            Next::Operator("->")=>(r,c,"MISSING COLON?","I was not expecting to see an arrow here. Maybe this is a type annotation missing its colon?".into()),
-            _=>(r,c,"PROBLEM IN DEFINITION","I was expecting to see an argument or an equals sign next.".into()),
-        },
-        Def::IndentEquals(r,c)=>(r,c,"UNFINISHED DEFINITION","I was expecting to see an argument or an equals sign next. It may need more indentation.".into()),
-        Def::IndentType(r,c)=>(r,c,"UNFINISHED DEFINITION","I just saw a colon, so I am expecting to see a type next. It may need more indentation.".into()),
-        Def::IndentBody(r,c)=>(r,c,"UNFINISHED DEFINITION","I was expecting to see an expression next. What is it equal to?".into()),
-        Def::Alignment(indent,r,c)=>(r,c,"PROBLEM IN DEFINITION",format!("I just saw a type annotation indented {indent} spaces, so I was expecting to see the corresponding definition next with the exact same amount of indentation.")),
-    };
-    example(
-        wide(
-            problem(
-                title,
-                r,
-                c,
-                &format!("I got stuck while parsing the `{name}` definition:"),
-                &hint,
-            ),
-            sr,
-            sc,
+    let report = match *error {
+        Let::Space(ref e, r, c) => return to_space_report(source, e, r, c),
+        Let::Def(name, e, r, c) => return to_let_def_report(source, name, e, r, c),
+        Let::Destruct(e, r, c) => return to_let_destruct_report(source, e, r, c),
+        Let::Body(e, r, c) => return to_expr_report(source, ctx, e, r, c),
+        Let::In(r, c) | Let::IndentIn(r, c) => problem(
+            "MISSING IN",
+            r,
+            c,
+            "Expected `in` after the let definitions.",
+            "Add `in` before the expression that uses these definitions.",
         ),
-        &[
-            "greet : string -> string",
-            "greet name =",
-            "    \"Hello \" ++ name",
-        ],
-        "The top line is an optional type annotation. It works as compiler-verified documentation and often improves error messages!",
-    )
+        Let::DefAlignment(indent, r, c) => problem(
+            "INDENTATION",
+            r,
+            c,
+            "Let definitions must align.",
+            &format!("Indent this definition with {indent} spaces."),
+        ),
+        Let::DefName(r, c) | Let::IndentDef(r, c) => problem(
+            "MISSING DEFINITION",
+            r,
+            c,
+            "Expected a definition after `let`.",
+            "Add an indented definition.",
+        ),
+        Let::IndentBody(r, c) => problem(
+            "MISSING EXPRESSION",
+            r,
+            c,
+            "Expected a body after `in`.",
+            "Add an indented expression.",
+        ),
+    };
+    wide(report, sr, sc)
 }
-fn to_let_destruct_report(source: &Source<'_>, e: &Destruct<'_>, sr: Row, sc: Col) -> Report {
-    let (r, c, hint) = match *e {
+
+pub(crate) fn to_let_def_report(
+    source: &Source<'_>,
+    name: &str,
+    error: &Def<'_>,
+    sr: Row,
+    sc: Col,
+) -> Report {
+    let report = match *error {
+        Def::Space(ref e, r, c) => return to_space_report(source, e, r, c),
+        Def::Type(e, r, c) => {
+            return type_::to_type_report(source, type_::TContext::Annotation(name), e, r, c);
+        }
+        Def::Arg(e, r, c) => {
+            return pattern::to_pattern_report(source, pattern::PContext::Arg, e, r, c);
+        }
+        Def::Body(e, r, c) => return to_expr_report(source, Context::InDef(name, sr, sc), e, r, c),
+        Def::NameRepeat(r, c) => problem(
+            "MISSING DEFINITION",
+            r,
+            c,
+            &format!("Expected the definition of `{name}` after its annotation."),
+            "Repeat the annotated name and add its arguments and body.",
+        ),
+        Def::NameMatch(found, r, c) => problem(
+            "NAME MISMATCH",
+            r,
+            c,
+            &format!("Expected definition `{name}`, found `{found}`."),
+            "Use the same name for an annotation and its definition.",
+        ),
+        Def::Equals(r, c) | Def::IndentEquals(r, c) => problem(
+            "MISSING EQUALS",
+            r,
+            c,
+            &format!("Expected `=` in the definition of `{name}`."),
+            "Separate the arguments and body with `=`.",
+        ),
+        Def::IndentType(r, c) => problem(
+            "MISSING TYPE",
+            r,
+            c,
+            "Expected a type after `:`.",
+            "Add an indented type annotation.",
+        ),
+        Def::IndentBody(r, c) => problem(
+            "MISSING EXPRESSION",
+            r,
+            c,
+            "Expected a body after `=`.",
+            "Add an indented expression.",
+        ),
+        Def::Alignment(indent, r, c) => problem(
+            "INDENTATION",
+            r,
+            c,
+            "Definition and annotation must align.",
+            &format!("Indent the definition with {indent} spaces."),
+        ),
+    };
+    wide(report, sr, sc)
+}
+
+fn to_let_destruct_report(source: &Source<'_>, error: &Destruct<'_>, sr: Row, sc: Col) -> Report {
+    let report = match *error {
         Destruct::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         Destruct::Pattern(e, r, c) => {
             return pattern::to_pattern_report(source, pattern::PContext::Let, e, r, c);
@@ -889,45 +781,37 @@ fn to_let_destruct_report(source: &Source<'_>, e: &Destruct<'_>, sr: Row, sc: Co
         Destruct::Body(e, r, c) => {
             return to_expr_report(source, Context::InDestruct(sr, sc), e, r, c);
         }
-        Destruct::Equals(r, c) => (
+        Destruct::Equals(r, c) | Destruct::IndentEquals(r, c) => problem(
+            "MISSING EQUALS",
             r,
             c,
+            "Expected `=` after the binding pattern.",
             if matches!(source.what_is_next(r, c), Next::Operator(":")) {
-                "I was expecting to see an equals sign next, followed by an expression telling me what to compute. Destructuring definitions cannot have type annotations. Put the annotation on a named value instead."
+                "Annotate a named definition; destructuring bindings cannot have annotations."
             } else {
-                "I was expecting to see an equals sign next, followed by an expression telling me what to compute."
+                "Add `=` before the value to destructure."
             },
         ),
-        Destruct::IndentEquals(r, c) => (
+        Destruct::IndentBody(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "I was expecting to see an equals sign next, followed by an expression telling me what to compute. It may need more indentation.",
-        ),
-        Destruct::IndentBody(r, c) => (
-            r,
-            c,
-            "I was expecting to see an expression next. What is it equal to?",
+            "Expected a value after `=`.",
+            "Add an indented expression.",
         ),
     };
-    unfinished(
-        "UNFINISHED DEFINITION",
-        "this definition",
-        r,
-        c,
-        sr,
-        sc,
-        hint,
-    )
+    wide(report, sr, sc)
 }
+
 fn to_keyword_report(
     source: &Source<'_>,
     ctx: Context<'_>,
     keyword: &'static str,
-    e: &Keyword<'_>,
+    error: &Keyword<'_>,
     sr: Row,
     sc: Col,
 ) -> Report {
-    let (r, c, hint) = match *e {
+    let report = match *error {
         Keyword::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         Keyword::Body(e, r, c) | Keyword::Message(e, r, c) => {
             return to_expr_report(
@@ -938,87 +822,111 @@ fn to_keyword_report(
                 c,
             );
         }
-        Keyword::IndentBody(r, c) => (
+        Keyword::IndentBody(r, c) => problem(
+            "MISSING EXPRESSION",
             r,
             c,
-            "I was expecting to see an expression next. It may need more indentation.",
+            &format!("Expected a body after `{keyword}`."),
+            "Add an indented expression.",
         ),
-        Keyword::IndentMessage(r, c) => (
+        Keyword::IndentMessage(r, c) => problem(
+            "MISSING MESSAGE",
             r,
             c,
-            "I was expecting to see a message expression next. It may need more indentation.",
+            &format!("Expected a message for `{keyword}`."),
+            "Add an indented message expression.",
         ),
     };
-    unfinished(
-        "UNFINISHED EXPRESSION",
-        &format!(
-            "{} `{keyword}` expression",
-            if keyword == "assert" { "an" } else { "a" }
-        ),
-        r,
-        c,
-        sr,
-        sc,
-        hint,
-    )
+    wide(report, sr, sc)
 }
+
 pub(crate) fn to_do_report(
     source: &Source<'_>,
     ctx: Context<'_>,
-    e: &Do<'_>,
+    error: &Do<'_>,
     sr: Row,
     sc: Col,
 ) -> Report {
-    let (r,c,hint)=match *e {
-        Do::Space(ref e,r,c)=>return to_space_report(source,e,r,c),
-        Do::Let(e,r,c)=>return to_let_report(source,ctx,e,r,c),
-        Do::Pattern(e,r,c)=>return pattern::to_pattern_report(source,pattern::PContext::Let,e,r,c),
-        Do::Expr(e,r,c)=>return to_expr_report(source,Context::InNode(Node::Do,sr,sc,&ctx),e,r,c),
-        Do::Arrow(r,c)=>(r,c,"I was expecting to see <- after this binding pattern.".into()),
-        Do::LastNotExpr(r,c)=>(r,c,"A `do` block must end with an expression. Add the final expression after this binding.".into()),
-        Do::IndentStmt(r,c)=>(r,c,"I was expecting an indented statement after `do`.".into()),
-        Do::IndentArrow(r,c)=>(r,c,"I was expecting to see <- after this binding pattern. It may need more indentation.".into()),
-        Do::IndentExpr(r,c)=>(r,c,"I was expecting an expression after <-. It may need more indentation.".into()),
-        Do::Alignment(indent,r,c)=>(r,c,format!("Statements in this `do` block must line up with {indent} spaces of indentation.")),
+    let report = match *error {
+        Do::Space(ref e, r, c) => return to_space_report(source, e, r, c),
+        Do::Let(e, r, c) => return to_let_report(source, ctx, e, r, c),
+        Do::Pattern(e, r, c) => {
+            return pattern::to_pattern_report(source, pattern::PContext::Let, e, r, c);
+        }
+        Do::Expr(e, r, c) => {
+            return to_expr_report(source, Context::InNode(Node::Do, sr, sc, &ctx), e, r, c);
+        }
+        Do::Arrow(r, c) | Do::IndentArrow(r, c) => problem(
+            "MISSING BIND ARROW",
+            r,
+            c,
+            "Expected `<-` after the binding pattern.",
+            "Separate the pattern and computation with `<-`.",
+        ),
+        Do::LastNotExpr(r, c) => problem(
+            "MISSING RESULT",
+            r,
+            c,
+            "A do block must end with an expression.",
+            "Add a final expression after this binding.",
+        ),
+        Do::IndentStmt(r, c) => problem(
+            "MISSING STATEMENT",
+            r,
+            c,
+            "Expected a statement after `do`.",
+            "Add an indented statement.",
+        ),
+        Do::IndentExpr(r, c) => problem(
+            "MISSING EXPRESSION",
+            r,
+            c,
+            "Expected an expression after `<-`.",
+            "Add an indented computation.",
+        ),
+        Do::Alignment(indent, r, c) => problem(
+            "INDENTATION",
+            r,
+            c,
+            "Do statements must align.",
+            &format!("Indent the statement with {indent} spaces."),
+        ),
     };
-    unfinished("UNFINISHED DO", "a `do` block", r, c, sr, sc, &hint)
+    wide(report, sr, sc)
 }
+
 fn to_macro_report(
     source: &Source<'_>,
     ctx: Context<'_>,
-    e: &Macro<'_>,
+    error: &Macro<'_>,
     sr: Row,
     sc: Col,
 ) -> Report {
-    let (r, c, hint) = match *e {
+    let report = match *error {
         Macro::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         Macro::Arg(e, r, c) => {
             return to_expr_report(source, Context::InNode(Node::Macro, sr, sc, &ctx), e, r, c);
         }
-        Macro::Open(r, c) => (
+        Macro::End(r, c) | Macro::IndentEnd(r, c) => {
+            return closing(source, r, c, sr, sc.saturating_add(1), ')');
+        }
+        Macro::Open(r, c) => problem(
+            "MISSING PARENTHESIS",
             r,
             c,
-            "I was expecting an opening parenthesis after the macro's ! marker.",
+            "Expected `(` after the macro marker `!`.",
+            "Write `name!(arguments)`.",
         ),
-        Macro::End(r, c) => (
+        Macro::IndentArg(r, c) => problem(
+            "MISSING ARGUMENT",
             r,
             c,
-            "I was expecting a comma or a closing parenthesis after this macro argument.",
-        ),
-        Macro::IndentArg(r, c) => (
-            r,
-            c,
-            "I was expecting a macro argument next. It may need more indentation.",
-        ),
-        Macro::IndentEnd(r, c) => (
-            r,
-            c,
-            "I was expecting a closing parenthesis. It may need more indentation.",
+            "Expected a macro argument.",
+            "Add an indented expression inside the parentheses.",
         ),
     };
-    unfinished("UNFINISHED MACRO", "a macro invocation", r, c, sr, sc, hint)
+    wide(report, sr, sc)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1056,12 +964,20 @@ mod tests {
     );
     report_test!(
         string_endless_single,
-        Expr::String(StringError::EndlessSingle, 1, 9),
+        Expr::String(
+            StringError::EndlessSingle(nash_region::Position::new(1, 9)),
+            1,
+            9
+        ),
         "value = "
     );
     report_test!(
         string_endless_multi,
-        Expr::String(StringError::EndlessMulti, 1, 9),
+        Expr::String(
+            StringError::EndlessMulti(nash_region::Position::new(1, 9)),
+            1,
+            9
+        ),
         "value = "
     );
     report_test!(
@@ -1561,7 +1477,7 @@ mod tests {
     );
     report_test!(
         bytes_endless,
-        Expr::Bytes(Bytes::Endless, 1, 12),
+        Expr::Bytes(Bytes::Endless(nash_region::Position::new(1, 9)), 1, 12),
         "value = #\"aa"
     );
     report_test!(

@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nx =\t1"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I ran into a tab, but tabs are not allowed in Nash files.
+  × Tabs are not allowed.
    ╭─[src/Main.nash:1:4]
  1 │ x = 1
    ·    ─

@@ -3,7 +3,12 @@ source: crates/nash-parse/src/expression/string.rs
 description: "Code:\n\n\"hello"
 ---
 String(
-    EndlessSingle,
+    EndlessSingle(
+        Position {
+            line: 1,
+            column: 1,
+        },
+    ),
     1,
-    2,
+    7,
 )

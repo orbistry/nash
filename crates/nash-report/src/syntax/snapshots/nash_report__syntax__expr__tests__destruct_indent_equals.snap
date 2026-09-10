@@ -2,10 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Let(&Let::Destruct(&Destruct::IndentEquals(1, 9), 1, 9), 1, 9),\n\"value = \")"
 ---
-UNFINISHED DEFINITION
+MISSING EQUALS
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing this definition, but I got stuck here:
+Expected `=` after the binding pattern.
 
-I was expecting to see an equals sign next, followed by an expression telling me
-what to compute. It may need more indentation.
+Add `=` before the value to destructure.

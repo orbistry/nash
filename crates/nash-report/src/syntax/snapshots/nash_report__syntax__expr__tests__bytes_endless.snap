@@ -1,10 +1,10 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Bytes(Bytes::Endless, 1, 12), \"value = #\\\"aa\")"
+expression: "snapshot(Expr::Bytes(Bytes::Endless(nash_region::Position::new(1, 9)), 1, 12),\n\"value = #\\\"aa\")"
 ---
 ENDLESS BYTE STRING
 Region { start: Position { line: 1, column: 12 }, end: Position { line: 1, column: 12 } }
 
-I cannot find the end of this byte string:
+Expected `"` to close `#"`.
 
-Add a closing double quote to end the byte string.
+Add `"` here.

@@ -2,14 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I am partway through parsing a list pattern, but I got stuck here:
+  × Expected an indented list pattern.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: I was expecting to see another pattern next. Maybe a variable name.
-
-        Note: I can get confused by indentation in cases like this, so maybe there is
-        more to this pattern but it is not indented enough?
+  help: Add a pattern inside the brackets; separate elements with commas.

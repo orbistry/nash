@@ -2,16 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Record(&Record::IndentExpr(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED RECORD
+MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a record, but I got stuck here:
+Expected a field value after `=`.
 
-I was expecting to run into an expression next. If it is already present, it may
-need more indentation.
-
-    { name = "Nash"
-      , age = 1
-      }
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Add an indented expression.

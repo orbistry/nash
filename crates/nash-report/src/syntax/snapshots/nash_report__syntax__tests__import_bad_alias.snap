@@ -2,16 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nimport Cardano.Tx as tx"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was parsing an `import` until I got stuck here:
+  × Expected an alias after `as`.
    ╭─[src/Main.nash:1:22]
  1 │ import Cardano.Tx as tx
    ·                      ─
    ╰────
-  help: I was expecting to see an alias next, like in these examples:
-
-            import Cardano.Tx as Tx
-            import Data.Decoder as D
-
-        Notice that the alias always starts with a capital letter. That is required!
+  help: Use an uppercase alias, as in `import Cardano.Tx as Tx`.

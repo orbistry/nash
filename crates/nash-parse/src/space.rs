@@ -22,7 +22,7 @@ pub enum SpaceStatus {
     /// Encountered a tab character (not allowed).
     HasTab,
     /// Encountered an unclosed multi-line comment.
-    EndlessMultiComment,
+    EndlessMultiComment(nash_region::Position),
 }
 
 impl<'a> Parser<'a> {
@@ -36,9 +36,11 @@ impl<'a> Parser<'a> {
         match status {
             SpaceStatus::Good => Ok(()),
             SpaceStatus::HasTab => Err(to_error(Space::HasTab, new_row, new_col)),
-            SpaceStatus::EndlessMultiComment => {
-                Err(to_error(Space::EndlessMultiComment, new_row, new_col))
-            }
+            SpaceStatus::EndlessMultiComment(opening) => Err(to_error(
+                Space::EndlessMultiComment(opening),
+                new_row,
+                new_col,
+            )),
         }
     }
 
@@ -58,13 +60,20 @@ impl<'a> Parser<'a> {
                 if new_col > self.indent && new_col > 1 {
                     Ok(())
                 } else {
-                    Err(to_indent_error(row_before, col_before))
+                    let (row, col) = if matches!(self.peek(), Some(b')' | b']' | b'}')) {
+                        (new_row, new_col)
+                    } else {
+                        (row_before, col_before)
+                    };
+                    Err(to_indent_error(row, col))
                 }
             }
             SpaceStatus::HasTab => Err(to_space_error(Space::HasTab, new_row, new_col)),
-            SpaceStatus::EndlessMultiComment => {
-                Err(to_space_error(Space::EndlessMultiComment, new_row, new_col))
-            }
+            SpaceStatus::EndlessMultiComment(opening) => Err(to_space_error(
+                Space::EndlessMultiComment(opening),
+                new_row,
+                new_col,
+            )),
         }
     }
 
@@ -83,7 +92,14 @@ impl<'a> Parser<'a> {
         if self.col > self.indent && self.col > 1 {
             Ok(())
         } else {
-            Err(to_error(end_row, end_col))
+            // A closing token is present but underindented. Keep its actual
+            // position even when intervening whitespace contains comments.
+            let (row, col) = if matches!(self.peek(), Some(b')' | b']' | b'}')) {
+                self.position()
+            } else {
+                (end_row, end_col)
+            };
+            Err(to_error(row, col))
         }
     }
 
@@ -134,7 +150,8 @@ impl<'a> Parser<'a> {
             let content_start = self.pos;
 
             // Use the existing multi-comment helper with nesting=1
-            let status = self.eat_multi_comment_help(1);
+            let status = self
+                .eat_multi_comment_help(1, nash_region::Position::new(start_row, start_col - 3));
 
             match status {
                 SpaceStatus::Good => {
@@ -152,8 +169,8 @@ impl<'a> Parser<'a> {
                     Ok(comment)
                 }
                 SpaceStatus::HasTab => Err(to_space_error(Space::HasTab, self.row, self.col)),
-                SpaceStatus::EndlessMultiComment => Err(to_space_error(
-                    Space::EndlessMultiComment,
+                SpaceStatus::EndlessMultiComment(opening) => Err(to_space_error(
+                    Space::EndlessMultiComment(opening),
                     self.row,
                     self.col,
                 )),
@@ -255,15 +272,20 @@ impl<'a> Parser<'a> {
     ///
     /// Supports nested comments.
     fn eat_multi_comment(&mut self) -> SpaceStatus {
+        let opening = nash_region::Position::new(self.row(), self.col());
         // Skip the {-
         self.advance();
         self.advance();
 
-        self.eat_multi_comment_help(1)
+        self.eat_multi_comment_help(1, opening)
     }
 
     /// Helper for eating multi-line comments with nesting.
-    fn eat_multi_comment_help(&mut self, mut open_comments: usize) -> SpaceStatus {
+    fn eat_multi_comment_help(
+        &mut self,
+        mut open_comments: usize,
+        opening: nash_region::Position,
+    ) -> SpaceStatus {
         loop {
             match self.peek() {
                 // Newline
@@ -309,7 +331,7 @@ impl<'a> Parser<'a> {
 
                 // EOF without closing
                 None => {
-                    return SpaceStatus::EndlessMultiComment;
+                    return SpaceStatus::EndlessMultiComment(opening);
                 }
             }
         }
@@ -383,7 +405,10 @@ mod tests {
     #[test]
     fn endless_multi_comment() {
         let (status, _, _, _) = parse_and_chomp("{- never closed");
-        assert_eq!(status, SpaceStatus::EndlessMultiComment);
+        assert_eq!(
+            status,
+            SpaceStatus::EndlessMultiComment(nash_region::Position::new(1, 1))
+        );
     }
 
     #[test]

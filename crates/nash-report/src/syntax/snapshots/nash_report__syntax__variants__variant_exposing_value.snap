@@ -2,13 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got stuck on this symbol:
+  × Exposed operators need parentheses.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: If you are trying to expose an operator, add parentheses around it like this:
-
-            = -> (=)
+  help: Write `(=)`.

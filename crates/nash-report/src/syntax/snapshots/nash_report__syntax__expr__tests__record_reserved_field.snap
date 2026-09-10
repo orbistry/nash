@@ -5,7 +5,6 @@ expression: "snapshot(Expr::Record(&Record::Open(1, 11), 1, 9), \"value = { if =
 RESERVED WORD
 Region { start: Position { line: 1, column: 11 }, end: Position { line: 1, column: 13 } }
 
-I am partway through parsing a record, but I got stuck on this field name:
+Reserved word `if` cannot be a field name.
 
-It looks like you are trying to use `if` as a field name, but that is a reserved
-word. Try using a different name!
+Choose another field name.

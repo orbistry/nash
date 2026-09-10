@@ -5,7 +5,7 @@ expression: "snapshot(Expr::OperatorReserved(BadOperator::Pipe, 1, 9), \"value =
 UNEXPECTED SYMBOL
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
 
-I was not expecting this vertical bar:
+Unexpected `|` in expression.
 
-Vertical bars appear in custom type declarations and record updates. Maybe you
-want || instead?
+Use `||` for boolean disjunction; `|` belongs in datatype declarations and
+record updates.

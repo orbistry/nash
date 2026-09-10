@@ -1,4 +1,4 @@
-use super::{Doc, Report, Source, expr, pattern, problem, to_space_report, type_, wide};
+use super::{Doc, Report, Source, closing, expr, pattern, problem, to_space_report, type_, wide};
 use crate::code::{Next, to_keyword_region};
 use nash_parse::error::{Attribute, CustomType, Decl, DeclDef, DeclType, Impl, Trait, TypeAlias};
 use nash_parse::{Col, Row};
@@ -12,11 +12,11 @@ pub(crate) fn to_declarations_report(source: &Source<'_>, error: &Decl<'_>) -> R
         Decl::Type(e, r, c) => to_decl_type_report(source, e, r, c),
         Decl::Def(name, e, r, c) => to_decl_def_report(source, name, e, r, c),
         Decl::FreshLineAfterDocComment(r, c) => problem(
-            "EXPECTING DECLARATION",
+            "EXPECTED DECLARATION",
             r,
             c,
-            "I just saw a doc comment, but then I got stuck here:",
-            "I was expecting to see the corresponding declaration next, starting on a fresh line with no indentation.",
+            "Expected a declaration after the doc comment.",
+            "Start the declaration on a new line without indentation.",
         ),
         Decl::Attribute(e, r, c) => to_attribute_report(source, e, r, c),
         Decl::Trait(e, r, c) => to_trait_report(source, e, r, c),
@@ -24,104 +24,45 @@ pub(crate) fn to_declarations_report(source: &Source<'_>, error: &Decl<'_>) -> R
     }
 }
 
-pub(crate) fn to_decl_start_report(source: &Source<'_>, r: Row, c: Col) -> Report {
-    match source.what_is_next(r, c) {
-        Next::Close(term, ch) => problem(
-            &format!("STRAY {}", term.to_uppercase()),
-            r,
-            c,
-            &format!("I was not expecting to see a {term} here:"),
-            &format!("This {ch} does not match up with an earlier open {term}. Try deleting it?"),
+pub(crate) fn to_decl_start_report(source: &Source<'_>, row: Row, col: Col) -> Report {
+    match source.what_is_next(row, col) {
+        Next::Close(_, ch) => problem(
+            "STRAY DELIMITER",
+            row,
+            col,
+            &format!("Unexpected closing `{ch}`."),
+            "Remove the unmatched delimiter.",
         ),
-        Next::Keyword(k) => {
-            let after = match k {
-                "import" => {
-                    "It is reserved for declaring imports at the top of your module. If you want another import, try moving it up top with the other imports. If you want to define a value or function, try changing the name to something else!"
-                }
-                "case" => {
-                    "It is reserved for writing `case` expressions. Try using a different name? If you are trying to write a `case` expression, it needs to be part of a definition."
-                }
-                "if" => {
-                    "It is reserved for writing `if` expressions. Try using a different name? If you are trying to write an `if` expression, it needs to be part of a definition."
-                }
-                _ => "It is a reserved word. Try changing the name to something else?",
-            };
-            Report::snippet(
-                "RESERVED WORD",
-                to_keyword_region(r, c, k),
-                None,
-                Doc::reflow(&format!(
-                    "I was not expecting to run into the `{k}` keyword here:"
-                )),
-                Doc::reflow(after),
-            )
-        }
-        Next::Upper(name) => {
-            let lower = name
-                .chars()
-                .next()
-                .map(|ch| ch.to_lowercase().to_string() + &name[ch.len_utf8()..])
-                .unwrap_or_default();
-            let mut report = problem(
-                "UNEXPECTED CAPITAL LETTER",
-                r,
-                c,
-                "Declarations always start with a lower-case letter, so I am getting stuck here:",
-                &format!("Try a name like {lower} instead?"),
-            );
-            report.after = Doc::stack([
-                report.after,
-                decl_def_note(),
-                Doc::reflow(
-                    "Notice that they always start with a lower-case letter. Capitalization matters!",
-                ),
-            ]);
-            report
-        }
-        Next::Operator(op) => with_note(
-            problem(
-                "UNEXPECTED SYMBOL",
-                r,
-                c,
-                &format!("I am getting stuck because this line starts with the {op} symbol:"),
-                "When a line has no spaces at the beginning, I expect it to be a declaration. If this is not supposed to be a declaration, try adding some spaces before it?",
-            ),
-            decl_def_note(),
+        Next::Keyword(keyword) => Report::snippet(
+            "RESERVED WORD",
+            to_keyword_region(row, col, keyword),
+            None,
+            Doc::text(format!(
+                "Unexpected `{keyword}` at the start of a declaration."
+            )),
+            Doc::text(match keyword {
+                "import" => "Move imports before the module's definitions.",
+                "case" | "if" => "Put the expression inside a named definition.",
+                _ => "Use a name that is not reserved.",
+            }),
         ),
-        Next::Other(Some(ch))
-            if [
-                '(', '{', '[', '+', '-', '*', '/', '^', '&', '|', '"', '\'', '!', '@', '#', '$',
-                '%',
-            ]
-            .contains(&ch) =>
-        {
-            with_note(
-                problem(
-                    "UNEXPECTED SYMBOL",
-                    r,
-                    c,
-                    &format!("I am getting stuck because this line starts with the {ch} symbol:"),
-                    "When a line has no spaces at the beginning, I expect it to be a declaration. If this is not supposed to be a declaration, try adding some spaces before it?",
-                ),
-                decl_def_note(),
-            )
-        }
-        Next::Lower(_) | Next::Other(_) => with_note(
-            problem(
-                "WEIRD DECLARATION",
-                r,
-                c,
-                "I am trying to parse a declaration, but I am getting stuck here:",
-                "When a line has no spaces at the beginning, I expect it to be a declaration. Try to make your declaration look like the example? Or if this is not supposed to be a declaration, try adding some spaces before it?",
-            ),
-            decl_def_note(),
+        Next::Upper(name) => problem(
+            "UNEXPECTED CAPITAL LETTER",
+            row,
+            col,
+            &format!("Definition name `{name}` must start lowercase."),
+            "Use a lowercase value name; uppercase names identify constructors.",
+        ),
+        _ => problem(
+            "EXPECTED DECLARATION",
+            row,
+            col,
+            "Expected a declaration.",
+            "Start a named definition here, or indent this line to continue the preceding definition.",
         ),
     }
 }
-fn with_note(mut report: Report, note: Doc) -> Report {
-    report.after = Doc::stack([report.after, note]);
-    report
-}
+
 pub(super) fn to_decl_type_report(
     source: &Source<'_>,
     error: &DeclType<'_>,
@@ -133,21 +74,19 @@ pub(super) fn to_decl_type_report(
         DeclType::Alias(e, r, c) => to_type_alias_report(source, e, r, c),
         DeclType::Union(e, r, c) => to_custom_type_report(source, e, r, c),
         DeclType::Name(r, c) | DeclType::IndentName(r, c) => wide(
-            with_note(
-                problem(
-                    "EXPECTING TYPE NAME",
-                    r,
-                    c,
-                    "I think I am parsing a type declaration, but I got stuck here:",
-                    "I was expecting a name like status or option next. Nash uses lower-case names for little types and capitalized names for Big types.",
-                ),
-                custom_type_note(),
+            problem(
+                "EXPECTED TYPE NAME",
+                r,
+                c,
+                "Expected a type name.",
+                "Use lowercase for a little type or uppercase for a Big type.",
             ),
             sr,
             sc,
         ),
     }
 }
+
 pub(super) fn to_type_alias_report(
     source: &Source<'_>,
     error: &TypeAlias<'_>,
@@ -156,82 +95,41 @@ pub(super) fn to_type_alias_report(
 ) -> Report {
     let report = match *error {
         TypeAlias::Space(ref e, r, c) => return to_space_report(source, e, r, c),
+        TypeAlias::Param(e, r, c) => return type_::to_type_param_report(source, e, r, c),
         TypeAlias::Body(e, r, c) => {
             return type_::to_type_report(source, TContext::TypeAlias, e, r, c);
         }
-        TypeAlias::Param(e, r, c) => return type_::to_type_param_report(source, e, r, c),
         TypeAlias::Name(r, c) => problem(
-            "EXPECTING TYPE ALIAS NAME",
+            "MISSING ALIAS NAME",
             r,
             c,
-            "I am partway through parsing a type alias, but I got stuck here:",
-            "I was expecting a name like account or point next. Nash uses lower-case names for little aliases and capitalized names for Big aliases.",
+            "Expected a name after `type alias`.",
+            "Name the alias before its parameters and body.",
         ),
-        TypeAlias::Equals(r, c) => match source.what_is_next(r, c) {
-            Next::Keyword(k) => Report::snippet(
-                "RESERVED WORD",
-                to_keyword_region(r, c, k),
-                None,
-                Doc::reflow(
-                    "I ran into a reserved word unexpectedly while parsing this type alias:",
-                ),
-                Doc::reflow(&format!(
-                    "It looks like you are trying to use `{k}` as a type variable, but it is a reserved word. Try using a different name?"
-                )),
-            ),
-            _ => problem(
-                "PROBLEM IN TYPE ALIAS",
-                r,
-                c,
-                "I am partway through parsing a type alias, but I got stuck here:",
-                "I was expecting to see a type variable or an equals sign next.",
-            ),
-        },
-        TypeAlias::IndentEquals(r, c) => problem(
-            "UNFINISHED TYPE ALIAS",
+        TypeAlias::Equals(r, c) | TypeAlias::IndentEquals(r, c) => problem(
+            "MISSING EQUALS",
             r,
             c,
-            "I am partway through parsing a type alias, but I got stuck here:",
-            "I was expecting to see a type variable or an equals sign next.",
+            "Expected `=` in the type alias.",
+            "Write `type alias Name = Type`.",
         ),
         TypeAlias::IndentBody(r, c) => problem(
-            "UNFINISHED TYPE ALIAS",
+            "MISSING TYPE",
             r,
             c,
-            "I am partway through parsing a type alias, but I got stuck here:",
-            "I was expecting to see a type next. Something as simple as int or string would work!",
+            "Expected a type after `=`.",
+            "Add an indented alias body.",
         ),
     };
-    wide(with_note(report, type_alias_note()), sr, sc)
+    wide(report, sr, sc)
 }
-fn type_alias_note() -> Doc {
-    Doc::stack([
-        Doc::to_simple_note("Here is an example of a valid `type alias` for reference:"),
-        Doc::indent(
-            4,
-            Doc::text("type alias Account = { owner : Bytes, balance : Int }"),
-        ),
-        Doc::reflow(
-            "This would let us use `Account` as a shorthand for that record type. Using this shorthand makes type annotations much easier to read, and makes changing code easier if you decide later that there is more to an account than owner and balance!",
-        ),
-    ])
-}
-fn custom_type_note() -> Doc {
-    Doc::stack([
-        Doc::to_simple_note("Here is an example of a valid `type` declaration for reference:"),
-        Doc::indent(4, Doc::text("type option 'a = None | Some 'a")),
-        Doc::reflow(
-            "This defines a new `option` type with two variants. The Some variant has some associated data, allowing us to store a value when one is available. None represents the absence of a value.",
-        ),
-    ])
-}
+
 pub(super) fn to_custom_type_report(
     source: &Source<'_>,
     error: &CustomType<'_>,
     sr: Row,
     sc: Col,
 ) -> Report {
-    let before = "I am partway through parsing a custom type, but I got stuck here:";
     let report = match *error {
         CustomType::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         CustomType::Param(e, r, c) => return type_::to_type_param_report(source, e, r, c),
@@ -239,105 +137,63 @@ pub(super) fn to_custom_type_report(
             return type_::to_type_report(source, TContext::CustomType, e, r, c);
         }
         CustomType::Name(r, c) => problem(
-            "EXPECTING TYPE NAME",
+            "MISSING TYPE NAME",
             r,
             c,
-            "I think I am parsing a type declaration, but I got stuck here:",
-            "I was expecting a name like status or option next. Nash uses lower-case names for little types and capitalized names for Big types.",
+            "Expected a datatype name.",
+            "Use lowercase for a little type or uppercase for a Big type.",
         ),
-        CustomType::Equals(r, c) => match source.what_is_next(r, c) {
-            Next::Keyword(k) => Report::snippet(
-                "RESERVED WORD",
-                to_keyword_region(r, c, k),
-                None,
-                Doc::reflow(
-                    "I ran into a reserved word unexpectedly while parsing this custom type:",
-                ),
-                Doc::reflow(&format!(
-                    "It looks like you are trying to use `{k}` as a type variable, but it is a reserved word. Try using a different name?"
-                )),
-            ),
-            _ => problem(
-                "PROBLEM IN CUSTOM TYPE",
-                r,
-                c,
-                before,
-                "I was expecting to see a type variable or an equals sign next.",
-            ),
-        },
-        CustomType::Bar(r, c) => problem(
-            "PROBLEM IN CUSTOM TYPE",
+        CustomType::Equals(r, c) | CustomType::IndentEquals(r, c) => problem(
+            "MISSING EQUALS",
             r,
             c,
-            before,
-            "I was expecting to see a vertical bar like | next.",
+            "Expected `=` before the variants.",
+            "Separate the datatype name and variants with `=`.",
         ),
-        CustomType::Variant(r, c) => problem(
-            "PROBLEM IN CUSTOM TYPE",
+        CustomType::Bar(r, c) | CustomType::IndentBar(r, c) => problem(
+            "MISSING VARIANT SEPARATOR",
             r,
             c,
-            before,
-            "I was expecting to see a variant name next. Something like Success or Sandwich. Any name that starts with a capital letter really!",
+            "Expected `|` between variants.",
+            "Separate each pair of variants with `|`.",
         ),
-        CustomType::IndentEquals(r, c) => problem(
-            "UNFINISHED CUSTOM TYPE",
+        CustomType::Variant(r, c)
+        | CustomType::IndentAfterBar(r, c)
+        | CustomType::IndentAfterEquals(r, c) => problem(
+            "MISSING VARIANT",
             r,
             c,
-            before,
-            "I was expecting to see a type variable or an equals sign next.",
-        ),
-        CustomType::IndentBar(r, c) => problem(
-            "UNFINISHED CUSTOM TYPE",
-            r,
-            c,
-            before,
-            "I was expecting to see a vertical bar like | next.",
-        ),
-        CustomType::IndentAfterBar(r, c) => problem(
-            "UNFINISHED CUSTOM TYPE",
-            r,
-            c,
-            before,
-            "I just saw a vertical bar, so I was expecting to see another variant defined next.",
-        ),
-        CustomType::IndentAfterEquals(r, c) => problem(
-            "UNFINISHED CUSTOM TYPE",
-            r,
-            c,
-            before,
-            "I just saw an equals sign, so I was expecting to see the first variant defined next.",
+            "Expected a constructor name.",
+            "Start the constructor name with an uppercase letter.",
         ),
         CustomType::Field(r, c) | CustomType::IndentField(r, c) => problem(
-            "UNFINISHED CONSTRUCTOR FIELD",
+            "MISSING FIELD",
             r,
             c,
-            before,
-            "I was expecting a field name next. A named constructor field looks like `owner : Bytes`.",
+            "Expected a constructor field name.",
+            "Write a lowercase field name followed by `:` and its type.",
         ),
         CustomType::FieldColon(r, c) => problem(
-            "MISSING FIELD COLON",
+            "MISSING COLON",
             r,
             c,
-            before,
-            "I have the field name, so I was expecting a colon followed by its type.",
+            "Expected `:` after the constructor field name.",
+            "Separate the field name and type with `:`.",
         ),
-        CustomType::FieldEnd(r, c) => problem(
-            "UNFINISHED CONSTRUCTOR FIELDS",
-            r,
-            c,
-            before,
-            "Separate constructor fields with commas, and close the field list with }.",
-        ),
+        CustomType::FieldEnd(opening, r, c) => {
+            closing(source, r, c, opening.line, opening.column, '}')
+        }
         CustomType::IndentFieldType(r, c) => problem(
-            "UNFINISHED FIELD TYPE",
+            "MISSING TYPE",
             r,
             c,
-            before,
-            "I just saw a colon, so I was expecting the field type next. Indent it farther than the constructor declaration.",
+            "Expected a constructor field type.",
+            "Add an indented type after `:`.",
         ),
     };
-    wide(with_note(report, custom_type_note()), sr, sc)
+    wide(report, sr, sc)
 }
+
 pub(super) fn to_decl_def_report(
     source: &Source<'_>,
     name: &str,
@@ -345,7 +201,6 @@ pub(super) fn to_decl_def_report(
     sr: Row,
     sc: Col,
 ) -> Report {
-    let before = format!("I got stuck while parsing the `{name}` definition:");
     let report = match *error {
         DeclDef::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         DeclDef::Type(e, r, c) => {
@@ -356,138 +211,67 @@ pub(super) fn to_decl_def_report(
             return expr::to_expr_report(source, expr::Context::InDef(name, sr, sc), e, r, c);
         }
         DeclDef::Equals(r, c) => match source.what_is_next(r, c) {
-            Next::Keyword(k) => Report::snippet(
+            Next::Keyword(keyword) => Report::snippet(
                 "RESERVED WORD",
-                to_keyword_region(r, c, k),
+                to_keyword_region(r, c, keyword),
                 None,
-                Doc::reflow(&format!(
-                    "The name `{k}` is reserved in Nash, so it cannot be used as an argument here:"
+                Doc::text(format!(
+                    "Reserved word `{keyword}` cannot be an argument name."
                 )),
-                Doc::stack([
-                    Doc::reflow("Try renaming it to something else."),
-                    Doc::to_simple_note(&format!(
-                        "The `{k}` keyword has a special meaning in Nash, so it can only be used in certain situations."
-                    )),
-                ]),
+                Doc::text("Choose another name."),
             ),
             Next::Operator("->") => problem(
-                "MISSING COLON?",
+                "MISSING COLON",
                 r,
                 c,
-                "I was not expecting to see an arrow here:",
-                "This usually means a : is missing a bit earlier in a type annotation. It could be something else though, so here is a valid definition for reference:",
-            ),
-            Next::Operator(_) => problem(
-                "UNEXPECTED SYMBOL",
-                r,
-                c,
-                "I was not expecting to see this symbol here:",
-                "I am not sure what is going wrong exactly, so here is a valid definition (with an optional type annotation) for reference:",
+                "Unexpected `->` in a definition's arguments.",
+                "If this is a type annotation, add `:` after the definition name.",
             ),
             _ => problem(
-                "PROBLEM IN DEFINITION",
+                "MISSING EQUALS",
                 r,
                 c,
-                &before,
-                "I am not sure what is going wrong exactly, so here is a valid definition (with an optional type annotation) for reference:",
+                &format!("Expected `=` in the definition of `{name}`."),
+                "Separate the arguments and body with `=`.",
             ),
         },
         DeclDef::NameRepeat(r, c) => problem(
-            "EXPECTING DEFINITION",
+            "MISSING DEFINITION",
             r,
             c,
-            &format!(
-                "I just saw the type annotation for `{name}` so I was expecting to see its definition here:"
-            ),
-            "Type annotations always appear directly above the relevant definition, without anything else in between. (Not even doc comments!)",
+            &format!("Expected the definition of `{name}` after its annotation."),
+            "Repeat the annotated name and add its arguments and body.",
         ),
-        DeclDef::NameMatch(actual, r, c) => {
-            let mut report = problem(
-                "NAME MISMATCH",
-                r,
-                c,
-                &format!(
-                    "I just saw a type annotation for `{name}`, but it is followed by a definition for `{actual}`:"
-                ),
-                "These names do not match! Is there a typo?",
-            );
-            report.after = Doc::stack([
-                report.after,
-                Doc::indent(
-                    4,
-                    Doc::cat([
-                        Doc::text(actual).dullyellow(),
-                        Doc::text(" -> "),
-                        Doc::text(name).green(),
-                    ]),
-                ),
-            ]);
-            return wide(report.with_suggestions(vec![name.to_string()]), sr, sc);
-        }
-        DeclDef::IndentType(r, c) => problem(
-            "UNFINISHED DEFINITION",
+        DeclDef::NameMatch(found, r, c) => problem(
+            "NAME MISMATCH",
             r,
             c,
-            &format!("I got stuck while parsing the `{name}` type annotation:"),
-            "I just saw a colon, so I am expecting to see a type next.",
+            &format!("Expected definition `{name}`, found `{found}`."),
+            "Use the same name for the annotation and definition.",
+        ),
+        DeclDef::IndentType(r, c) => problem(
+            "MISSING TYPE",
+            r,
+            c,
+            "Expected a type after `:`.",
+            "Add an indented type.",
         ),
         DeclDef::IndentEquals(r, c) => problem(
-            "UNFINISHED DEFINITION",
+            "MISSING EQUALS",
             r,
             c,
-            &before,
-            "I was expecting to see an argument or an equals sign next.",
+            "Expected `=` before the definition body.",
+            "Add `=` after the name and argument patterns.",
         ),
         DeclDef::IndentBody(r, c) => problem(
-            "UNFINISHED DEFINITION",
+            "MISSING EXPRESSION",
             r,
             c,
-            &before,
-            "I was expecting to see an expression next. What is it equal to?",
+            "Expected an expression after `=`.",
+            "Add an indented body, or `todo` for unfinished code.",
         ),
-    };
-    let report = match *error {
-        DeclDef::Equals(r, c) => match source.what_is_next(r, c) {
-            Next::Keyword(_) => report,
-            _ => with_note(
-                report,
-                Doc::stack([
-                    decl_def_example(),
-                    Doc::reflow(&format!(
-                        "Try to use that format with your `{name}` definition!"
-                    )),
-                ]),
-            ),
-        },
-        _ => with_note(report, decl_def_note()),
     };
     wide(report, sr, sc)
-}
-fn decl_def_example() -> Doc {
-    Doc::indent(
-        4,
-        Doc::vcat([
-            Doc::text("greet : string -> string"),
-            Doc::text("greet name ="),
-            Doc::text("  \"Hello \" ++ name ++ \"!\""),
-        ]),
-    )
-}
-fn decl_def_note() -> Doc {
-    Doc::stack([
-        Doc::reflow("Here is a valid definition (with a type annotation) for reference:"),
-        Doc::indent(
-            4,
-            Doc::vcat([
-                Doc::text("greet : string -> string"),
-                Doc::text("greet name ="),
-                Doc::text("  \"Hello \" ++ name ++ \"!\""),
-            ]),
-        ),
-        Doc::reflow(
-            "The top line (called a \"type annotation\") is optional. You can leave it off if you want. As you get more comfortable with Nash and as your project grows, it becomes more and more valuable to add them though! They work great as compiler-verified documentation, and they often improve error messages!",
-        ),
-    ])
 }
 
 pub(super) fn to_attribute_report(
@@ -505,35 +289,31 @@ pub(super) fn to_attribute_report(
             "MISSING ATTRIBUTE NAME",
             r,
             c,
-            "I just saw @, but I got stuck here:",
-            "Write the attribute name immediately after @, such as `@derive(Eq)`.",
+            "Expected a name after `@`.",
+            "Write the attribute name directly after `@`.",
         ),
-        Attribute::End(r, c) | Attribute::IndentEnd(r, c) => problem(
-            "UNFINISHED ATTRIBUTE",
-            r,
-            c,
-            "I was parsing an attribute, but I got stuck here:",
-            "I was expecting a comma between arguments or a closing parenthesis after the final argument.",
-        ),
+        Attribute::End(opening, r, c) | Attribute::IndentEnd(opening, r, c) => {
+            closing(source, r, c, opening.line, opening.column, ')')
+        }
         Attribute::FreshLine(r, c) => problem(
-            "ATTRIBUTE NEEDS FRESH LINE",
+            "ATTRIBUTE PLACEMENT",
             r,
             c,
-            "I finished this attribute, but I got stuck here:",
-            "Put the declaration or next attribute on a fresh line with the same indentation.",
+            "Attributes must occupy their own lines.",
+            "Move the following attribute or declaration to a new line.",
         ),
         Attribute::IndentArg(r, c) => problem(
             "MISSING ATTRIBUTE ARGUMENT",
             r,
             c,
-            "I was parsing an attribute argument, but I got stuck here:",
-            "Add the argument expression and indent it farther than the start of the attribute.",
+            "Expected an attribute argument.",
+            "Add an indented expression inside the parentheses.",
         ),
     };
     wide(report, sr, sc)
 }
+
 pub(super) fn to_trait_report(source: &Source<'_>, error: &Trait<'_>, sr: Row, sc: Col) -> Report {
-    let before = "I was parsing a trait declaration, but I got stuck here:";
     let report = match *error {
         Trait::Space(ref e, r, c) => return to_space_report(source, e, r, c),
         Trait::Param(e, r, c) => return type_::to_type_param_report(source, e, r, c),
@@ -548,96 +328,94 @@ pub(super) fn to_trait_report(source: &Source<'_>, error: &Trait<'_>, sr: Row, s
             "MISSING TRAIT NAME",
             r,
             c,
-            before,
-            "I was expecting a capitalized trait name, such as Eq or Show.",
+            "Expected a trait name.",
+            "Use an uppercase name, such as `Eq`.",
         ),
         Trait::SuperArg(r, c) => problem(
             "BAD SUPERCLASS ARGUMENT",
             r,
             c,
-            before,
-            "A superclass argument must be one of the trait's quoted type parameters, such as 'a.",
+            "Superclass argument must be a trait parameter.",
+            "Use one of this trait's quoted type parameters.",
         ),
         Trait::Where(r, c) | Trait::IndentWhere(r, c) => problem(
             "MISSING TRAIT WHERE",
             r,
             c,
-            before,
-            "Add `where` after the trait parameters and superclass constraints, before the method declarations.",
+            "Expected `where` before the trait methods.",
+            "Add `where` after the trait parameters and constraints.",
         ),
         Trait::MethodName(r, c) | Trait::IndentMethod(r, c) => problem(
             "MISSING TRAIT METHOD",
             r,
             c,
-            before,
-            "I was expecting an indented method signature, such as `show : 'a -> string`.",
+            "Expected an indented method signature.",
+            "Write `method : Type`.",
         ),
         Trait::Colon(r, c) | Trait::IndentColon(r, c) => problem(
             "MISSING METHOD COLON",
             r,
             c,
-            before,
-            "Add a colon between the method name and its type annotation.",
+            "Expected `:` after the method name.",
+            "Separate the method name and its type with `:`.",
         ),
         Trait::IndentParam(r, c) => problem(
             "MISSING TRAIT PARAMETER",
             r,
             c,
-            before,
-            "Add a quoted type parameter, such as 'a, and keep it indented farther than the trait declaration.",
+            "Expected an indented type parameter.",
+            "Add a quoted parameter such as `'a`.",
         ),
         Trait::IndentType(r, c) => problem(
             "MISSING METHOD TYPE",
             r,
             c,
-            before,
-            "I just saw a colon, so I was expecting a method type next. Indent the type farther than the method name.",
+            "Expected a method type after `:`.",
+            "Indent the type farther than the method name.",
         ),
         Trait::Alignment(indent, r, c) => problem(
-            "TRAIT METHOD ALIGNMENT",
+            "INDENTATION",
             r,
             c,
-            before,
-            &format!("All methods in this trait must start in column {indent}."),
+            "Trait methods must align.",
+            &format!("Start each method in column {indent}."),
         ),
     };
     wide(report, sr, sc)
 }
+
 pub(super) fn to_impl_report(source: &Source<'_>, error: &Impl<'_>, sr: Row, sc: Col) -> Report {
-    let before = "I was parsing an impl declaration, but I got stuck here:";
     let report = match *error {
         Impl::Space(ref e, r, c) => return to_space_report(source, e, r, c),
-        Impl::Head(e, r, c) => {
-            return type_::to_type_report(source, TContext::ImplHead, e, r, c);
-        }
+        Impl::Head(e, r, c) => return type_::to_type_report(source, TContext::ImplHead, e, r, c),
         Impl::Method(name, e, r, c) => return expr::to_let_def_report(source, name, e, r, c),
         Impl::BadHead(r, c) | Impl::IndentHead(r, c) => problem(
             "BAD IMPL HEAD",
             r,
             c,
-            before,
-            "I was expecting a trait name followed by its type arguments. For example: `impl Show int where`.",
+            "Expected a trait name and type arguments.",
+            "Write `impl Trait Type where`.",
         ),
         Impl::Where(r, c) | Impl::IndentWhere(r, c) => problem(
             "MISSING IMPL WHERE",
             r,
             c,
-            before,
-            "Add `where` after the impl head, then indent the method definitions below it.",
+            "Expected `where` after the impl head.",
+            "Add `where`, then indent the method definitions.",
         ),
         Impl::MethodName(r, c) | Impl::IndentMethod(r, c) => problem(
             "MISSING IMPL METHOD",
             r,
             c,
-            before,
-            "I was expecting a method definition. Write its name and arguments followed by = and the body.",
+            "Expected a method definition.",
+            "Write the method name and arguments, followed by `=` and its body.",
         ),
         Impl::Alignment(indent, r, c) => problem(
-            "IMPL METHOD ALIGNMENT",
+            "INDENTATION",
             r,
             c,
-            before,
-            &format!("All methods in this impl must start in column {indent}."),
+            "Impl methods must align.",
+            &format!("Start each method in column {indent}."),
         ),
     };
     wide(report, sr, sc)

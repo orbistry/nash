@@ -2,11 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "42"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was partway through parsing a type alias, but I got stuck here:
+  × Expected a type in the type alias.
    ╭─[src/Main.nash:1:1]
  1 │ 42
    · ─
    ╰────
-  help: I was expecting to see a type next. Try putting int or string for now?
+  help: Write a type name or a quoted type variable, such as `'a`.

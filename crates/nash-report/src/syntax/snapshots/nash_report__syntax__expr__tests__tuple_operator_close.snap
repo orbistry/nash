@@ -2,10 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Tuple(&Tuple::OperatorClose(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED OPERATOR FUNCTION
+UNCLOSED DELIMITER
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing some parentheses, but I got stuck here:
+Expected `)` to close `(`.
 
-I was expecting a closing parenthesis here. Try adding a ) to see if that helps!
-Operators in parentheses, like (+), can be used as functions.
+Add `)` here.

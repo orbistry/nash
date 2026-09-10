@@ -2,18 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::NameRepeat(1, 9), 1, 9), 1, 9),\n\"value = \")"
 ---
-EXPECTING DEFINITION
+MISSING DEFINITION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I got stuck while parsing the `x` definition:
+Expected the definition of `x` after its annotation.
 
-I just saw the type annotation for `x` so I was expecting to see its definition
-here. Type annotations always appear directly above the relevant definition,
-without anything else in between.
-
-    greet : string -> string
-    greet name =
-        "Hello " ++ name
-
-The top line is an optional type annotation. It works as compiler-verified
-documentation and often improves error messages!
+Repeat the annotated name and add its arguments and body.

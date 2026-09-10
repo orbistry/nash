@@ -2,15 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::List(&List::Expr(&Expr::Start(1, 13), 1, 13), 1, 9),\n\"value = [1, ]\")"
 ---
-UNFINISHED LIST
+MISSING EXPRESSION
 Region { start: Position { line: 1, column: 13 }, end: Position { line: 1, column: 13 } }
 
-I was partway through parsing a list, but I got stuck here:
+Expected an expression before the closing delimiter.
 
-Trailing commas are not allowed in lists, so the fix may be to delete the comma?
-
-    [ 1
-      , 2
-      ]
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Add the missing expression, or remove a trailing comma.

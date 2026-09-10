@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Do(&Do::IndentStmt(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED DO
+MISSING STATEMENT
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a `do` block, but I got stuck here:
+Expected a statement after `do`.
 
-I was expecting an indented statement after `do`.
+Add an indented statement.

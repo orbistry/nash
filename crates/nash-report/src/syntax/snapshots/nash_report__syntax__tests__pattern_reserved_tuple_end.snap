@@ -2,11 +2,12 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: if
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I ran into a reserved word in this pattern:
+  × Expected `)` to close `(`.
    ╭─[src/Main.nash:1:1]
  1 │ if
-   · ──
+   · ┬
+   · ╰── expected `)`
    ╰────
-  help: The `if` keyword is reserved. Try using a different name instead!
+  help: Add `)` here.

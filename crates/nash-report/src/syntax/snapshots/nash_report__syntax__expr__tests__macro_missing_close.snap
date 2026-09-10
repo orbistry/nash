@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Macro(&Macro::End(1, 15), 1, 9), \"value = foo!(1\")"
 ---
-UNFINISHED MACRO
+UNCLOSED DELIMITER
 Region { start: Position { line: 1, column: 15 }, end: Position { line: 1, column: 15 } }
 
-I was partway through parsing a macro invocation, but I got stuck here:
+Expected `)` to close `(`.
 
-I was expecting a comma or a closing parenthesis after this macro argument.
+Add `)` here.

@@ -19,7 +19,11 @@ impl<'a> Parser<'a> {
         loop {
             match self.peek() {
                 None | Some(b'\n') => {
-                    return Err(to_error(error::Bytes::Endless, self.row(), self.col()));
+                    return Err(to_error(
+                        error::Bytes::Endless(nash_region::Position::new(row, col)),
+                        self.row(),
+                        self.col(),
+                    ));
                 }
                 Some(b'"') => break,
                 Some(b) if b.is_ascii_hexdigit() => self.advance(),

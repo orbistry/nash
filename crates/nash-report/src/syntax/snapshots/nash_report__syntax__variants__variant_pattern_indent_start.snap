@@ -2,15 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I wanted to parse a pattern next, but I got stuck here:
+  × Expected an indented pattern.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: I am not sure why I am getting stuck exactly. I just know that I want a pattern
-        next. Something as simple as maybeHeight or result would work!
-
-        Note: I can get confused by indentation. If you think there is a pattern next,
-        maybe it needs to be indented a bit more?
+  help: Indent the pattern to continue this expression.

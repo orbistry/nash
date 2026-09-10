@@ -2,12 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "-1"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I ran into a minus sign unexpectedly in this pattern:
+  × Negative literal patterns are not supported.
    ╭─[src/Main.nash:1:1]
  1 │ -1
    · ─
    ╰────
-  help: It is not possible to pattern match on negative numbers at this time. Try using
-        an `if` expression for that sort of thing for now.
+  help: Use an if expression to test the value.

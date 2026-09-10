@@ -128,20 +128,25 @@ impl<'a> Parser<'a> {
             vec![Box::new(|parser: &mut Parser<'a>| {
                 parser.keyword_within(TestErr::Equals)?;
                 parser.chomp_and_check_indent(TestErr::Space, TestErr::WithinOpen)?;
+                let opening = parser.get_position();
                 parser.word1(b'(', TestErr::WithinOpen)?;
                 parser.chomp_and_check_indent(TestErr::Space, TestErr::WithinKind)?;
                 let first = parser.budget_entry()?;
-                parser.chomp_and_check_indent(TestErr::Space, TestErr::WithinEnd)?;
+                parser.chomp_and_check_indent(TestErr::Space, |r, c| {
+                    TestErr::WithinEnd(opening, r, c)
+                })?;
                 let budget = parser.one_of(
-                    TestErr::WithinEnd,
+                    |r, c| TestErr::WithinEnd(opening, r, c),
                     vec![
                         Box::new(|parser: &mut Parser<'a>| {
-                            parser.word1(b',', TestErr::WithinEnd)?;
+                            parser.word1(b',', |r, c| TestErr::WithinEnd(opening, r, c))?;
                             parser.chomp_and_check_indent(TestErr::Space, TestErr::WithinKind)?;
                             let (row, col) = parser.position();
                             let second = parser.budget_entry()?;
-                            parser.chomp_and_check_indent(TestErr::Space, TestErr::WithinEnd)?;
-                            parser.word1(b')', TestErr::WithinEnd)?;
+                            parser.chomp_and_check_indent(TestErr::Space, |r, c| {
+                                TestErr::WithinEnd(opening, r, c)
+                            })?;
+                            parser.word1(b')', |r, c| TestErr::WithinEnd(opening, r, c))?;
                             match (first, second) {
                                 (Budget::Cpu(cpu), Budget::Mem(mem))
                                 | (Budget::Mem(mem), Budget::Cpu(cpu)) => {
@@ -151,7 +156,7 @@ impl<'a> Parser<'a> {
                             }
                         }),
                         Box::new(|parser: &mut Parser<'a>| {
-                            parser.word1(b')', TestErr::WithinEnd)?;
+                            parser.word1(b')', |r, c| TestErr::WithinEnd(opening, r, c))?;
                             Ok(first)
                         }),
                     ],

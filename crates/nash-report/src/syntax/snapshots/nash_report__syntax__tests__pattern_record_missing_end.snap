@@ -2,14 +2,13 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf {x = 1"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I was partway through parsing a record pattern, but I got stuck here:
+  × Expected `}` to close `{`.
    ╭─[src/Main.nash:1:6]
  1 │ f {x = 1
-   ·      ─
+   ·   ┬  ┬
+   ·   │  ╰── expected `}`
+   ·   ╰── opened here
    ╰────
-  help: I was expecting to see a closing curly brace next. Try adding a } here?
-
-        Hint: A record pattern looks like {x,y} or {name,age} where you list the field
-        names you want to access.
+  help: Add `}` here.

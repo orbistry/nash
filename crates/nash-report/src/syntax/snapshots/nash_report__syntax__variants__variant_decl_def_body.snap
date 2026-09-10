@@ -2,14 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was partway through parsing the `f` definition, but I got stuck here:
+  × Expected an expression in the `f` definition.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: I was expecting to see an expression like 42 or "hello". Once there is something
-        there, I can probably give a more specific hint! This can also happen if I run
-        into reserved words like `let` or `as` unexpectedly, or operators in unexpected
-        spots.
+  help: Add an expression or `todo` for an unfinished body.

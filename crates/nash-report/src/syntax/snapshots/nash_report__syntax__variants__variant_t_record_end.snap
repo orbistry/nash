@@ -2,16 +2,12 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I am partway through parsing a record type, but I got stuck here:
+  × Expected `}` to close `{`.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
-   ·   ─
+   ·   ┬
+   ·   ╰── expected `}`
    ╰────
-  help: I was expecting to see a closing curly brace before this, so try adding a } and
-        see if that helps?
-
-        Note: When I get stuck like this, it usually means that there is a missing
-        parenthesis or bracket somewhere earlier. It could also be a stray keyword or
-        operator.
+  help: Add `}` here.

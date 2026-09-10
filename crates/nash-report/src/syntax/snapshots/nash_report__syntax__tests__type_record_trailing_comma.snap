@@ -2,23 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "}"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I am partway through parsing a record type, but I got stuck here:
+  × Trailing comma in record type.
    ╭─[src/Main.nash:1:1]
  1 │ }
    · ─
    ╰────
-  help: Trailing commas are not allowed in record types. Try deleting the comma that
-        appears before this closing curly brace.
-
-        Note: If you are trying to define a record type across multiple lines, I
-        recommend using this format:
-
-            { name : string
-            , age : int
-            , value : 'a
-            }
-
-        Notice that each line starts with some indentation. Usually two or four spaces.
-        This is the stylistic convention in the Nash ecosystem.
+  help: Remove the comma before `}`.

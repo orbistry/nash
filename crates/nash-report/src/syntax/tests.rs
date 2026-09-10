@@ -398,3 +398,146 @@ report_branch!(
         1
     )
 );
+
+#[test]
+fn delimiter_errors_label_the_innermost_opening() {
+    for (source, opening, closing) in [
+        ("value = [()", 9, "]"),
+        ("value = (()", 9, ")"),
+        ("value = { field = ()", 9, "}"),
+        ("f [x = x", 3, "]"),
+        ("f (x = x", 3, ")"),
+        ("f {x = x", 3, "}"),
+        ("value : (unit, unit", 9, ")"),
+        ("value : { x : unit", 9, "}"),
+        ("value = [(()]", 10, ")"),
+        ("value = [( {- ] -} ()]", 10, ")"),
+    ] {
+        let bump = bumpalo::Bump::new();
+        let error = nash_parse::Parser::new(&bump, source)
+            .module()
+            .expect_err(source);
+        let report = to_report(&Source::new(source), &Error::ParseError(&error));
+        assert_eq!(report.labels.len(), 1, "{source}: {report:?}");
+        assert_eq!(
+            report.labels[0].region.start,
+            nash_region::Position::new(1, opening),
+            "{source}: {report:?}"
+        );
+        assert_eq!(report.labels[0].text, "opened here");
+        assert_eq!(
+            report.primary_label.as_deref(),
+            Some(format!("expected `{closing}`").as_str()),
+            "{source}: {report:?}"
+        );
+    }
+}
+
+#[test]
+fn declaration_delimiters_retain_their_opening_locations() {
+    for (source, row, column, delimiter) in [
+        ("value = foo!(()", 1, 13, ")"),
+        ("@tag(()", 1, 5, ")"),
+        ("module Main exposing (value", 1, 22, ")"),
+        ("module Main exposing ((+", 1, 23, ")"),
+        ("module Main exposing (Box(..", 1, 26, ")"),
+        ("type Box ('a : Storable = Box", 1, 10, ")"),
+        ("type Box = Box { value : unit", 1, 16, "}"),
+        (
+            "tests\n    test \"x\" within(cpu 1 = do\n        ()",
+            2,
+            20,
+            ")",
+        ),
+    ] {
+        let bump = bumpalo::Bump::new();
+        let error = nash_parse::Parser::new(&bump, source)
+            .module()
+            .expect_err(source);
+        let report = to_report(&Source::new(source), &Error::ParseError(&error));
+        assert_eq!(report.labels.len(), 1, "{source}: {report:?}");
+        assert_eq!(
+            report.labels[0].region.start,
+            nash_region::Position::new(row, column),
+            "{source}: {report:?}"
+        );
+        assert_eq!(
+            report.primary_label,
+            Some(format!("expected `{delimiter}`")),
+            "{source}: {report:?}"
+        );
+    }
+}
+
+#[test]
+fn underindented_closing_delimiter_is_not_reported_missing() {
+    for source in [
+        "value = [()\n]",
+        "value : { x : unit\n}",
+        "value = [() -- comment\n]",
+        "value = [() {- ] -}\n]",
+    ] {
+        let bump = bumpalo::Bump::new();
+        let error = nash_parse::Parser::new(&bump, source)
+            .module()
+            .expect_err(source);
+        let report = to_report(&Source::new(source), &Error::ParseError(&error));
+        assert!(
+            report.after.render(80, false).contains("Indent"),
+            "{source}: {report:?}"
+        );
+        assert_eq!(report.region.start, nash_region::Position::new(2, 1));
+        assert_eq!(report.labels.len(), 1);
+    }
+}
+
+#[test]
+fn malformed_empty_collections_keep_opener_and_comma_guidance() {
+    for (source, closer) in [
+        ("value = [)", "]"),
+        ("value = (]", ")"),
+        ("value = {]", "}"),
+    ] {
+        let bump = bumpalo::Bump::new();
+        let error = nash_parse::Parser::new(&bump, source)
+            .module()
+            .expect_err(source);
+        let report = to_report(&Source::new(source), &Error::ParseError(&error));
+        assert_eq!(report.labels.len(), 1, "{source}: {report:?}");
+        assert_eq!(
+            report.labels[0].region.start,
+            nash_region::Position::new(1, 9)
+        );
+        assert!(
+            report
+                .after
+                .render(80, false)
+                .contains(&format!("with `{closer}`"))
+        );
+    }
+    let source = "value = [(),]";
+    let bump = bumpalo::Bump::new();
+    let error = nash_parse::Parser::new(&bump, source).module().unwrap_err();
+    let report = to_report(&Source::new(source), &Error::ParseError(&error));
+    assert!(report.after.render(80, false).contains("comma"));
+}
+
+#[test]
+fn unclosed_literals_and_comments_keep_opening_and_boundary() {
+    for (source, opening, boundary) in [
+        ("value = \"abc", 9, 13),
+        ("value = \"\"\"abc", 9, 15),
+        ("value = #\"00", 9, 13),
+        ("value = () {- open", 12, 19),
+    ] {
+        let bump = bumpalo::Bump::new();
+        let error = nash_parse::Parser::new(&bump, source).module().unwrap_err();
+        let report = to_report(&Source::new(source), &Error::ParseError(&error));
+        assert_eq!(report.labels.len(), 1, "{source}: {report:?}");
+        assert_eq!(
+            report.labels[0].region.start,
+            nash_region::Position::new(1, opening)
+        );
+        assert_eq!(report.region.start, nash_region::Position::new(1, boundary));
+    }
+}

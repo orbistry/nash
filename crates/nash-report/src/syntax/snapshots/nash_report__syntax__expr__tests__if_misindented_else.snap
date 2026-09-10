@@ -2,10 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::If(&If::IndentElse(1, 25), 1, 9),\n\"value = if True then 1\\nelse 2\")"
 ---
-WEIRD ELSE BRANCH
+INDENTATION
 Region { start: Position { line: 2, column: 1 }, end: Position { line: 2, column: 5 } }
 
-I was partway through an `if` expression when I got stuck here:
+The else branch is not indented enough.
 
-I think this `else` keyword needs to be indented more. Try adding some spaces
-before it!
+Indent `else` to continue this if expression.

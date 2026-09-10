@@ -2,18 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "->"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was not expecting to see an arrow here:
+  × Unexpected `->` in a definition's arguments.
    ╭─[src/Main.nash:1:1]
  1 │ ->
    · ─
    ╰────
-  help: This usually means a : is missing a bit earlier in a type annotation. It could
-        be something else though, so here is a valid definition for reference:
-
-            greet : string -> string
-            greet name =
-              "Hello " ++ name ++ "!"
-
-        Try to use that format with your `f` definition!
+  help: If this is a type annotation, add `:` after the definition name.

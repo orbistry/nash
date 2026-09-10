@@ -2,12 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was parsing an exposed type, but I got stuck here:
+  × Expected a lowercase type name after `type`.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: Write the name of the type after `type`. Use `type name(..)` to expose its
-        constructors as well.
+  help: Write `type name` or `type name(..)`.

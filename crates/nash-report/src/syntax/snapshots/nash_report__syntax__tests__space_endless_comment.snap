@@ -2,15 +2,13 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\n{- unfinished"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I cannot find the end of this multi-line comment:
+  × Expected `-}` to close `{-`.
    ╭─[src/Main.nash:1:14]
  1 │ {- unfinished
-   ·              ─
+   · ─┬           ┬
+   ·  │           ╰── expected `-}`
+   ·  ╰── opened here
    ╰────
-  help: Add a -} somewhere after this to end the comment.
-
-        Hint: Multi-line comments can be nested in Nash, so {- {- -} -} is a comment
-        that happens to contain another comment. Like parentheses and curly braces, the
-        start and end markers must always be balanced. Maybe that is the problem?
+  help: Add `-}` here.

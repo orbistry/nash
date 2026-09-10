@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Comptime(&Keyword::IndentMessage(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED EXPRESSION
+MISSING MESSAGE
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a `comptime` expression, but I got stuck here:
+Expected a message for `comptime`.
 
-I was expecting to see a message expression next. It may need more indentation.
+Add an indented message expression.

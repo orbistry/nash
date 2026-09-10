@@ -214,7 +214,7 @@ fn variant_exposing_operator_reserved() {
 #[test]
 fn variant_exposing_operator_right_paren() {
     let source = Source::new("f = value");
-    let error = Exposing::OperatorRightParen(1, 3);
+    let error = Exposing::OperatorRightParen(nash_region::Position::new(1, 1), 1, 3);
     let report = module::to_exposing_report(&source, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }
@@ -614,7 +614,7 @@ fn variant_custom_type_field_type() {
 #[test]
 fn variant_custom_type_field_end() {
     let source = Source::new("f = value");
-    let error = CustomType::FieldEnd(1, 3);
+    let error = CustomType::FieldEnd(nash_region::Position::new(1, 1), 1, 3);
     let report = decl::to_custom_type_report(&source, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }
@@ -654,7 +654,7 @@ fn variant_attribute_arg() {
 #[test]
 fn variant_attribute_end() {
     let source = Source::new("f = value");
-    let error = Attribute::End(1, 3);
+    let error = Attribute::End(nash_region::Position::new(1, 1), 1, 3);
     let report = decl::to_attribute_report(&source, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }
@@ -686,7 +686,7 @@ fn variant_attribute_indent_arg() {
 #[test]
 fn variant_attribute_indent_end() {
     let source = Source::new("f = value");
-    let error = Attribute::IndentEnd(1, 3);
+    let error = Attribute::IndentEnd(nash_region::Position::new(1, 1), 1, 3);
     let report = decl::to_attribute_report(&source, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }
@@ -966,7 +966,11 @@ fn variant_test_space() {
 #[test]
 fn variant_test_name() {
     let source = Source::new("f = value");
-    let error = Test::Name(StringError::EndlessSingle, 1, 3);
+    let error = Test::Name(
+        StringError::EndlessSingle(nash_region::Position::new(1, 1)),
+        1,
+        3,
+    );
     let report = module::to_test_report(&source, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }
@@ -1022,7 +1026,7 @@ fn variant_test_within_duplicate() {
 #[test]
 fn variant_test_within_end() {
     let source = Source::new("f = value");
-    let error = Test::WithinEnd(1, 3);
+    let error = Test::WithinEnd(nash_region::Position::new(1, 1), 1, 3);
     let report = module::to_test_report(&source, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }
@@ -1174,7 +1178,11 @@ fn variant_pattern_start() {
 #[test]
 fn variant_pattern_string() {
     let source = Source::new("f = value");
-    let error = Pattern::String(StringError::EndlessSingle, 1, 3);
+    let error = Pattern::String(
+        StringError::EndlessSingle(nash_region::Position::new(1, 1)),
+        1,
+        3,
+    );
     let report = pattern::to_pattern_report(&source, pattern::PContext::Arg, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }
@@ -1182,7 +1190,7 @@ fn variant_pattern_string() {
 #[test]
 fn variant_pattern_bytes() {
     let source = Source::new("f = value");
-    let error = Pattern::Bytes(Bytes::Endless, 1, 3);
+    let error = Pattern::Bytes(Bytes::Endless(nash_region::Position::new(1, 1)), 1, 3);
     let report = pattern::to_pattern_report(&source, pattern::PContext::Arg, &error, 1, 1);
     insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
 }

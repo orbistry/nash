@@ -2,16 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::List(&List::IndentEnd(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED LIST
+UNCLOSED DELIMITER
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a list, but I got stuck here:
+Expected `]` to close `[`.
 
-I cannot find the end of this list. Try adding a ] or indenting the closing
-bracket more.
-
-    [ 1
-      , 2
-      ]
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Add `]` here.

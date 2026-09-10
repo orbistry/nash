@@ -2,15 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::List(&List::Open(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED LIST
+MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a list, but I got stuck here:
+Expected a list element or `]`.
 
-I was expecting an expression or a closing square bracket next.
-
-    [ 1
-      , 2
-      ]
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Add an indented expression, or close an empty list.

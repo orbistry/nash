@@ -115,7 +115,9 @@ impl<'a> Parser<'a> {
                     let op = p.operator(error::Exposing::Operator, |bad_op, row, col| {
                         error::Exposing::OperatorReserved(bad_op, row, col)
                     })?;
-                    p.word1(b')', error::Exposing::OperatorRightParen)?;
+                    p.word1(b')', |r, c| {
+                        error::Exposing::OperatorRightParen(start, r, c)
+                    })?;
                     let end = p.get_position();
                     Ok(p.alloc(Exposed::Operator {
                         region: Region::new(start, end),
@@ -156,13 +158,14 @@ impl<'a> Parser<'a> {
     fn privacy(&mut self) -> Result<Privacy, error::Exposing> {
         self.one_of_with_fallback(
             vec![Box::new(|p: &mut Parser<'a>| {
+                let opening = p.get_position();
                 p.word1(b'(', error::Exposing::TypePrivacy)?;
                 p.chomp_and_check_indent(error::Exposing::Space, error::Exposing::TypePrivacy)?;
                 let start = p.get_position();
                 p.word2(b'.', b'.', error::Exposing::TypePrivacy)?;
                 let end = p.get_position();
                 p.chomp_and_check_indent(error::Exposing::Space, error::Exposing::TypePrivacy)?;
-                p.word1(b')', error::Exposing::TypePrivacy)?;
+                p.word1(b')', |r, c| error::Exposing::TypePrivacyEnd(opening, r, c))?;
                 Ok(Privacy::Public(Region::new(start, end)))
             })],
             Privacy::Private,

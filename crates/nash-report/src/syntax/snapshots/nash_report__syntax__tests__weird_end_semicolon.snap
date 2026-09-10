@@ -2,15 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ;
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got stuck on this semicolon:
+  × Semicolons do not separate declarations.
    ╭─[src/Main.nash:1:1]
  1 │ ;
    · ─
    ╰────
-  help: Try removing it?
-
-        Note: Some languages require semicolons at the end of each statement. Nash uses
-        indentation to separate declarations and statements in do blocks, so there is no
-        need to use semicolons to separate them.
+  help: Start a new line without indentation.

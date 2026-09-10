@@ -4,10 +4,9 @@ description: if
 ---
 nash::diagnostic
 
-  × I got stuck on this reserved word:
+  × Cannot expose reserved word `if`.
    ╭─[src/Main.nash:1:1]
  1 │ if
    · ──
    ╰────
-  help: It looks like you are trying to expose `if` but that is a reserved word. Is
-        there a typo?
+  help: Expose a declared value, type, or operator.

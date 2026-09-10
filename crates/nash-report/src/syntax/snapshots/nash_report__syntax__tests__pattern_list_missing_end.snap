@@ -2,11 +2,13 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf [x = 1"
 ---
-nash::diagnostic
+nash::syntax::unclosed_delimiter
 
-  × I was expecting a closing square bracket to end this list pattern:
+  × Expected `]` to close `[`.
    ╭─[src/Main.nash:1:6]
  1 │ f [x = 1
-   ·      ─
+   ·   ┬  ┬
+   ·   │  ╰── expected `]`
+   ·   ╰── opened here
    ╰────
-  help: Try adding a ] to see if that helps?
+  help: Add `]` here.

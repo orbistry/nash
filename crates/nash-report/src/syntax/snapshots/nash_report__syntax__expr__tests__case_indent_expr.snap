@@ -2,19 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Case(&Case::IndentExpr(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED CASE
+MISSING EXPRESSION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a `case` expression, but I got stuck here:
+Expected a value after `case`.
 
-I was expecting to see an expression next.
-
-    case maybeWidth of
-      Some width ->
-        width + 200
-
-      None ->
-        400
-
-Notice the indentation. Each pattern is aligned, and each branch is indented a
-bit more than the corresponding pattern. That is important!
+Add an indented expression followed by `of`.

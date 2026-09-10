@@ -2,16 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Record(&Record::IndentField(1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED RECORD
+EXPECTED FIELD
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a record, but I got stuck here:
+Expected an indented record field.
 
-Trailing commas are not allowed in records, so the fix may be to delete that
-last comma? Or maybe you were in the middle of defining an additional field?
-
-    { name = "Nash"
-      , age = 1
-      }
-
-Notice that each line starts with some indentation. Usually two or four spaces.
+Indent the field inside the braces.

@@ -16,27 +16,40 @@ use nash_region::{Position, Region};
 
 pub fn to_report(source: &Source<'_>, error: &Error<'_>) -> Report {
     match error {
-        Error::ModuleNameUnspecified(name) => Report {
-            title: "MODULE NAME MISSING".into(), severity: crate::Severity::Error,
-            region: to_region(1, 1), code: "nash::syntax::missing_module_name", primary_label: None, labels: Vec::new(), context: None, related: Vec::new(),
-            before: Doc::stack([
-                Doc::reflow("I need the module name to be declared at the top of this file, like this:"),
-                Doc::indent(4, Doc::hsep([Doc::text("module").cyan(), Doc::text(*name), Doc::text("exposing").cyan(), Doc::text("(..)")])),
-                Doc::reflow("Try adding that as the first line of your file!"),
-            ]),
-            after: Doc::to_simple_note("It is best to replace (..) with an explicit list of types and functions you want to expose. When you know a value is only used within this module, you can refactor without worrying about uses elsewhere. Limiting exposed values can also speed up compilation because I can skip a bunch of work if I see that the exposed API has not changed."),
-            suggestions: Vec::new(),
-        },
-        Error::ModuleNameMismatch { expected, actual, row, col } => Report::snippet(
-            "MODULE NAME MISMATCH", to_wider_region(*row, *col, actual.len()), None,
-            Doc::text("It looks like this module name is out of sync:"),
-            Doc::stack([
-                Doc::reflow(&format!("I need it to match the file path, so I was expecting to see `{expected}` here. Make the following change, and you should be all set!")),
-                Doc::indent(4, Doc::cat([Doc::text(*actual).dullyellow(), Doc::text(" -> "), Doc::text(*expected).green()])),
-                Doc::to_simple_note("I require that module names correspond to file paths. This makes it much easier to explore unfamiliar codebases! So if you want to keep the current module name, try renaming the file instead."),
-            ]),
-        ).with_suggestions(vec![expected.to_string()]),
-        Error::ParseError(error) => module::to_parse_error_report(source, error),
+        Error::ModuleNameUnspecified(name) => Report::snippet(
+            "MODULE NAME MISSING",
+            to_region(1, 1),
+            None,
+            Doc::text("Missing module declaration."),
+            Doc::text(format!(
+                "Add `module {name} exposing (..)` at the start of the file."
+            )),
+        )
+        .without_source()
+        .with_code("nash::syntax::missing_module_name"),
+        Error::ModuleNameMismatch {
+            expected,
+            actual,
+            row,
+            col,
+        } => Report::snippet(
+            "MODULE NAME MISMATCH",
+            to_wider_region(*row, *col, actual.len()),
+            None,
+            Doc::text(format!(
+                "Module name must be `{expected}`, found `{actual}`."
+            )),
+            Doc::text("Make the module name match its file path."),
+        )
+        .with_code("nash::syntax::module_name_mismatch")
+        .with_suggestions(vec![expected.to_string()]),
+        Error::ParseError(error) => {
+            let mut report = module::to_parse_error_report(source, error);
+            if report.code == "nash::diagnostic" {
+                report.code = "nash::syntax";
+            }
+            report
+        }
     }
 }
 
@@ -48,6 +61,7 @@ pub(crate) fn problem(title: &str, row: Row, col: Col, before: &str, after: &str
         Doc::reflow(before),
         Doc::reflow(after),
     )
+    .with_code("nash::syntax")
 }
 
 pub(crate) fn wide(mut report: Report, row: Row, col: Col) -> Report {
@@ -57,34 +71,124 @@ pub(crate) fn wide(mut report: Report, row: Row, col: Col) -> Report {
     report
 }
 
+/// Delimiter coordinates come from the parser's enclosing context, never a
+/// backwards punctuation search that could select a comment or string literal.
+pub(super) fn closing(
+    source: &Source<'_>,
+    row: Row,
+    col: Col,
+    open_row: Row,
+    open_col: Col,
+    delimiter: char,
+) -> Report {
+    let opening = match delimiter {
+        ')' => '(',
+        ']' => '[',
+        '}' => '{',
+        _ => unreachable!("collection delimiter"),
+    };
+    // Indentation errors retain the end of the preceding token. Inspect only
+    // whitespace after that boundary; comments and strings are never searched.
+    let mut position = Position::new(row, col);
+    for ch in source.text()[source.offset(position)..].chars() {
+        if !ch.is_whitespace() {
+            break;
+        }
+        if ch == '\n' {
+            position = Position::new(position.line + 1, 1);
+        } else {
+            position.column += ch.len_utf8();
+        }
+    }
+    let found = source.what_is_next(position.line, position.column);
+    let (position, message, hint, label, code) = match found {
+        crate::code::Next::Close(_, found) if found == delimiter => (
+            position,
+            format!("Closing `{delimiter}` is underindented."),
+            format!("Indent `{delimiter}` to continue this construct."),
+            "underindented closing delimiter".into(),
+            "nash::syntax::indentation",
+        ),
+        crate::code::Next::Close(_, found) => (
+            position,
+            format!("Expected `{delimiter}`, found `{found}`."),
+            format!("Replace `{found}` with `{delimiter}`."),
+            format!("expected `{delimiter}`"),
+            "nash::syntax::unclosed_delimiter",
+        ),
+        _ => (
+            Position::new(row, col),
+            format!("Expected `{delimiter}` to close `{opening}`."),
+            format!("Add `{delimiter}` here."),
+            format!("expected `{delimiter}`"),
+            "nash::syntax::unclosed_delimiter",
+        ),
+    };
+    let mut report = problem(
+        "UNCLOSED DELIMITER",
+        position.line,
+        position.column,
+        &message,
+        &hint,
+    )
+    .with_code(code);
+    report.primary_label = Some(label);
+    if source
+        .line(open_row)
+        .and_then(|line| line.get(open_col.saturating_sub(1)..))
+        .is_some_and(|rest| rest.starts_with(opening))
+    {
+        report.labels.push(crate::Label {
+            region: to_wider_region(open_row, open_col, 1),
+            text: "opened here".into(),
+        });
+    }
+    report
+}
+
+fn unclosed_literal(
+    title: &str,
+    row: Row,
+    col: Col,
+    opening: Position,
+    token: &str,
+    closing: &str,
+) -> Report {
+    let mut report = problem(
+        title,
+        row,
+        col,
+        &format!("Expected `{closing}` to close `{token}`."),
+        &format!("Add `{closing}` here."),
+    )
+    .with_code("nash::syntax::unclosed_delimiter");
+    report.primary_label = Some(format!("expected `{closing}`"));
+    report.labels.push(crate::Label {
+        region: to_wider_region(opening.line, opening.column, token.len()),
+        text: "opened here".into(),
+    });
+    report
+}
+
 pub(crate) fn to_space_report(_source: &Source<'_>, space: &Space, row: Row, col: Col) -> Report {
     match space {
         Space::TooDeep => problem(
             "EXCESSIVE NESTING",
             row,
             col,
-            "This expression, pattern, or type is nested too deeply.",
-            "Split it into smaller definitions or simplify its nesting.",
+            "Nesting limit exceeded.",
+            "Split this expression, pattern, or type into smaller definitions.",
         ),
         Space::HasTab => problem(
             "NO TABS",
             row,
             col,
-            "I ran into a tab, but tabs are not allowed in Nash files.",
+            "Tabs are not allowed.",
             "Replace the tab with spaces.",
         ),
-        Space::EndlessMultiComment => Report::snippet(
-            "ENDLESS COMMENT",
-            to_wider_region(row, col, 2),
-            None,
-            Doc::reflow("I cannot find the end of this multi-line comment:"),
-            Doc::stack([
-                Doc::reflow("Add a -} somewhere after this to end the comment."),
-                Doc::to_simple_hint(
-                    "Multi-line comments can be nested in Nash, so {- {- -} -} is a comment that happens to contain another comment. Like parentheses and curly braces, the start and end markers must always be balanced. Maybe that is the problem?",
-                ),
-            ]),
-        ),
+        Space::EndlessMultiComment(opening) => {
+            unclosed_literal("ENDLESS COMMENT", row, col, *opening, "{-", "-}")
+        }
     }
 }
 

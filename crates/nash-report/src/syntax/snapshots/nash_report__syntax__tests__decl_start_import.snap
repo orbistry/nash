@@ -4,11 +4,9 @@ description: import
 ---
 nash::diagnostic
 
-  × I was not expecting to run into the `import` keyword here:
+  × Unexpected `import` at the start of a declaration.
    ╭─[src/Main.nash:1:1]
  1 │ import
    · ──────
    ╰────
-  help: It is reserved for declaring imports at the top of your module. If you want
-        another import, try moving it up top with the other imports. If you want to
-        define a value or function, try changing the name to something else!
+  help: Move imports before the module's definitions.

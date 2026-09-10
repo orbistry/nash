@@ -2,14 +2,11 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was partway through parsing an anonymous function, but I got stuck here:
+  × Expected an expression in an anonymous function.
    ╭─[Main.nash:1:14]
  1 │ value = \x ->
    ·              ─
    ╰────
-  help: I was expecting to see an expression like 42 or "hello". Once there is something
-        there, I can probably give a more specific hint! This can also happen if I run
-        into reserved words like `let` or `as` unexpectedly, or operators in unexpected
-        spots.
+  help: Add an expression or `todo` for an unfinished body.

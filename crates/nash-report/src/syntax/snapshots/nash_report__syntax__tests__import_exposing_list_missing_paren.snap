@@ -2,20 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nimport Cardano.Tx exposing x"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I want to parse exposed values, but I am getting stuck here:
+  × Expected `(` after `exposing`.
    ╭─[src/Main.nash:1:28]
  1 │ import Cardano.Tx exposing x
    ·                            ─
    ╰────
-  help: Exposed values are always surrounded by parentheses. So try adding a ( here?
-
-        Note: Here are some valid examples of `exposing` for reference:
-
-            import Data.Decoder exposing (..)
-            import Data.Decoder exposing (decode)
-
-        If you are getting tripped up, you can just expose everything for now. It should
-        get easier to make an explicit exposing list as you see more examples in the
-        wild.
+  help: Enclose the exposed names in parentheses.

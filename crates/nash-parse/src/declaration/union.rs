@@ -111,10 +111,11 @@ impl<'a> Parser<'a> {
 
         let (arguments, end) = if self.peek() == Some(b'{') {
             self.check_indent(name_end.line, name_end.column, CustomType::IndentField)?;
+            let opening = self.get_position();
             self.advance();
             self.chomp_and_check_indent(CustomType::Space, CustomType::IndentField)?;
-            let first = self.ctor_field()?;
-            let fields = self.ctor_fields_end(first)?;
+            let first = self.ctor_field(opening)?;
+            let fields = self.ctor_fields_end(first, opening)?;
             let end = self.get_position();
             self.chomp(CustomType::Space)?;
             (CtorArgs::Labeled(fields), end)
@@ -130,7 +131,7 @@ impl<'a> Parser<'a> {
         Ok((ctor, end))
     }
 
-    fn ctor_field(&mut self) -> Result<CtorField<'a>, CustomType<'a>> {
+    fn ctor_field(&mut self, opening: Position) -> Result<CtorField<'a>, CustomType<'a>> {
         let name_start = self.get_position();
         let name = self.lower_name(CustomType::Field)?;
         let name = self.add_end(name_start, name);
@@ -141,29 +142,32 @@ impl<'a> Parser<'a> {
             |bump, e, row, col| CustomType::FieldType(bump.alloc(e), row, col),
             |p| p.type_expr(),
         )?;
-        self.check_indent(end.line, end.column, CustomType::FieldEnd)?;
+        self.check_indent(end.line, end.column, |r, c| {
+            CustomType::FieldEnd(opening, r, c)
+        })?;
         Ok((name, typ))
     }
 
     fn ctor_fields_end(
         &mut self,
         first: CtorField<'a>,
+        opening: Position,
     ) -> Result<&'a [CtorField<'a>], CustomType<'a>> {
         let mut fields = BumpVec::new_in(self.bump);
         fields.push(first);
         loop {
             self.chomp(CustomType::Space)?;
             let done = self.one_of(
-                CustomType::FieldEnd,
+                |r, c| CustomType::FieldEnd(opening, r, c),
                 vec![
                     Box::new(|p: &mut Parser<'a>| {
-                        p.word1(b',', CustomType::FieldEnd)?;
+                        p.word1(b',', |r, c| CustomType::FieldEnd(opening, r, c))?;
                         p.chomp_and_check_indent(CustomType::Space, CustomType::IndentField)?;
-                        fields.push(p.ctor_field()?);
+                        fields.push(p.ctor_field(opening)?);
                         Ok(false)
                     }),
                     Box::new(|p: &mut Parser<'a>| {
-                        p.word1(b'}', CustomType::FieldEnd)?;
+                        p.word1(b'}', |r, c| CustomType::FieldEnd(opening, r, c))?;
                         Ok(true)
                     }),
                 ],

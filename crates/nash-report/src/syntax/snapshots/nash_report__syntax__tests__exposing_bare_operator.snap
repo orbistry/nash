@@ -2,13 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: +
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got stuck on this symbol:
+  × Exposed operators need parentheses.
    ╭─[src/Main.nash:1:1]
  1 │ +
    · ─
    ╰────
-  help: If you are trying to expose an operator, add parentheses around it like this:
-
-            + -> (+)
+  help: Write `(+)`.

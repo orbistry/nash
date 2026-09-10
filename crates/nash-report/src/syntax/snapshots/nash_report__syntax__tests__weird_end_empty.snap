@@ -2,11 +2,11 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ""
 ---
-nash::diagnostic
+nash::syntax
 
-  × I got to the end of the file, but I was expecting more.
+  × Unexpected input after the declaration.
    ╭─[src/Main.nash:1:1]
  1 │ 
    · ─
    ╰────
-  help: Maybe a declaration or an expression is incomplete?
+  help: Start the next declaration on a new line in column 1.

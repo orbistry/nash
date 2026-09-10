@@ -2,24 +2,12 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : { x int }\nf = 1"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I am partway through parsing a record type, but I got stuck here:
+  × Expected `:` after the field name.
    ╭─[src/Main.nash:1:9]
  1 │ f : { x int }
    ·         ─
  2 │ f = 1
    ╰────
-  help: I just saw a field name, so I was expecting to see a colon next. So try putting
-        a : sign here?
-
-        Note: If you are trying to define a record type across multiple lines, I
-        recommend using this format:
-
-            { name : string
-            , age : int
-            , value : 'a
-            }
-
-        Notice that each line starts with some indentation. Usually two or four spaces.
-        This is the stylistic convention in the Nash ecosystem.
+  help: Separate the field name and its type with `:`.

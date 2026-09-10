@@ -2,22 +2,12 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was partway through parsing a `case` expression, but I got stuck here:
+  × Expected `->` after the pattern.
    ╭─[Main.nash:2:16]
  1 │ value = case x of
  2 │     Some width = width
    ·                ─
    ╰────
-  help: I am seeing = but maybe you want -> instead?
-
-            case maybeWidth of
-              Some width ->
-                width + 200
-
-              None ->
-                400
-
-        Notice the indentation. Each pattern is aligned, and each branch is indented a
-        bit more than the corresponding pattern. That is important!
+  help: Separate the pattern and branch body with `->`.

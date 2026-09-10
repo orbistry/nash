@@ -5,6 +5,6 @@ expression: "snapshot(Expr::Bytes(Bytes::BadHexDigit(12), 1, 12), \"value = #\\\
 BAD BYTE STRING
 Region { start: Position { line: 1, column: 12 }, end: Position { line: 1, column: 12 } }
 
-I ran into an invalid hexadecimal digit in this byte string:
+Invalid hexadecimal digit in byte string.
 
-Use pairs of digits from 0123456789abcdefABCDEF, one pair for each byte.
+Use digits from `0123456789abcdefABCDEF`.

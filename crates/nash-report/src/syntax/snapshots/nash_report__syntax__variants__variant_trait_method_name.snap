@@ -2,11 +2,11 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
-nash::diagnostic
+nash::syntax
 
-  × I was parsing a trait declaration, but I got stuck here:
+  × Expected an indented method signature.
    ╭─[src/Main.nash:1:3]
  1 │ f = value
    ·   ─
    ╰────
-  help: I was expecting an indented method signature, such as `show : 'a -> string`.
+  help: Write `method : Type`.

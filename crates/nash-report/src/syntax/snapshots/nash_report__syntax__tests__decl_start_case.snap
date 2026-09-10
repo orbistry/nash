@@ -4,11 +4,9 @@ description: case
 ---
 nash::diagnostic
 
-  × I was not expecting to run into the `case` keyword here:
+  × Unexpected `case` at the start of a declaration.
    ╭─[src/Main.nash:1:1]
  1 │ case
    · ────
    ╰────
-  help: It is reserved for writing `case` expressions. Try using a different name? If
-        you are trying to write a `case` expression, it needs to be part of a
-        definition.
+  help: Put the expression inside a named definition.

@@ -2,9 +2,9 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "snapshot(Expr::Do(&Do::Alignment(4, 1, 9), 1, 9), \"value = \")"
 ---
-UNFINISHED DO
+INDENTATION
 Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
 
-I was partway through parsing a `do` block, but I got stuck here:
+Do statements must align.
 
-Statements in this `do` block must line up with 4 spaces of indentation.
+Indent the statement with 4 spaces.
