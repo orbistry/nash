@@ -9,7 +9,7 @@ Implement the six Nash/Alder comparison findings, then evaluate a direct inferen
 - [x] Widen coordinates with a safe source bound.
 - [x] Guard mutually recursive parsing with a measured nesting limit and remove flat-sequence recursion.
 - [x] Delete unused driver interface-cache machinery and orphaned dependencies.
-- [ ] Separate canonical module data from local scopes without cloning the whole environment.
+- [x] Separate canonical module data from local scopes without cloning the whole environment.
 - [ ] Bound trait selection and evidence lookup using existing map ordering.
 - [ ] Replace the constraint tree and intermediate inference Type with direct AST inference, subject to the adoption gates below.
 
@@ -32,6 +32,10 @@ Chunk 3b verification passed: formatting, workspace check, clippy, full tests, a
 Chunk 4 removes InterfaceCache, ModuleMeta, interface load/save, the cache-only serialization error, serde derives, and two dedicated cache tests. No active build caller used these APIs. In-memory Interface/Export and fingerprint tests remain. The driver no longer depends on serde or bincode; bincode is removed from workspace dependencies and the lockfile.
 
 Chunk 4 verification passed: formatting, workspace check, clippy, full tests including interface-contract regressions, and positive scratch compilation. No snapshots changed and the lockfile removes only bincode and the two driver dependency edges.
+
+Chunk 5 removes Env cloning and the local-variable variant from module lookup. Five scope entry points now borrow module data and binding maps through a parent chain. Shadowing checks, let-group visibility, generated section names, free-variable bookkeeping, and sorted suggestions preserve their prior behavior. Three new snapshots captured against the original implementation verify sibling reuse, recovery after missing names, and recovery after rejected shadowing; all canonicalizer tests pass unchanged after replacement.
+
+Chunk 5 verification passed: formatting, workspace check, clippy, full tests, positive scratch compilation, and a negative CLI JSON case retaining both independent missing-name diagnostics after scope exit. The three new baseline snapshots were reviewed individually; existing snapshots stayed unchanged.
 
 ## Direct inference adoption gates
 

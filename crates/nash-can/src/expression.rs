@@ -14,7 +14,7 @@ use nash_source::{
 };
 
 use crate::Error;
-use crate::environment::{self, Ctor as EnvCtor, Env, Info, Var};
+use crate::environment::{self, Ctor as EnvCtor, Env, Info, Scope, Var};
 use crate::error::DuplicatePatternContext;
 use crate::pattern::{self, Bindings};
 use crate::scc;
@@ -88,7 +88,7 @@ pub fn verify_bindings<'a>(
 
 pub fn canonicalize_expr<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     expr: &'a Located<SourceExpr<'a>>,
     free_locals: &mut FreeLocals<'a>,
     warnings: &mut Vec<Warning<'a>>,
@@ -149,7 +149,7 @@ pub fn canonicalize_expr<'a>(
             kind: VarType::CapVar,
             name,
         } => {
-            let ctor = env.find_ctor(bump, region, name)?;
+            let ctor = env.module.find_ctor(bump, region, name)?;
             to_var_ctor(bump, env, name, &ctor)?
         }
 
@@ -164,7 +164,7 @@ pub fn canonicalize_expr<'a>(
             module,
             name,
         } => {
-            let ctor = env.find_ctor_qual(bump, region, module, name)?;
+            let ctor = env.module.find_ctor_qual(bump, region, module, name)?;
             to_var_ctor(bump, env, name, &ctor)?
         }
 
@@ -173,7 +173,7 @@ pub fn canonicalize_expr<'a>(
         }
 
         SourceExpr::Op(symbol) => {
-            let binop = env.find_binop(bump, region, symbol)?;
+            let binop = env.module.find_binop(bump, region, symbol)?;
             CanExpr::VarOperator {
                 symbol,
                 operator_home: binop.home,
@@ -185,6 +185,7 @@ pub fn canonicalize_expr<'a>(
         SourceExpr::Negate(inner) => {
             let trait_ = nash_ast::primitives::num_trait();
             let annotation = env
+                .module
                 .method_annotation(trait_, "negate")
                 .ok_or_else(|| vec![Error::NegateWithoutNum { region }])?;
             let function = bump.alloc(Located::at(
@@ -226,9 +227,10 @@ pub fn canonicalize_expr<'a>(
                     grouped: false,
                 } = &argument.value
             {
-                env.ctors
+                env.module
+                    .ctors
                     .values()
-                    .chain(env.q_ctors.values().flat_map(|ctors| ctors.values()))
+                    .chain(env.module.q_ctors.values().flat_map(|ctors| ctors.values()))
                     .find_map(|info| {
                         let Info::Specific(
                             _,
@@ -352,7 +354,7 @@ enum SectionSide<'a> {
 
 fn canonicalize_section<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     side: SectionSide<'a>,
     operator: &'a str,
     region: Region,
@@ -361,7 +363,7 @@ fn canonicalize_section<'a>(
 ) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
     let mut generated = "$section";
     let mut suffix = 0;
-    while env.vars.contains_key(generated) {
+    while env.local(generated).is_some() || env.module.vars.contains_key(generated) {
         suffix += 1;
         generated = bump.alloc_str(&format!("$section{suffix}"));
     }
@@ -400,7 +402,7 @@ fn canonicalize_section<'a>(
 #[allow(clippy::too_many_arguments)]
 fn canonicalize_do<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     stmts: &'a [&'a Located<nash_source::Stmt<'a>>],
     last: &'a Located<SourceExpr<'a>>,
     region: Region,
@@ -430,11 +432,14 @@ fn canonicalize_do<'a>(
         ),
     };
     let trait_ = nash_ast::primitives::monad_trait();
-    let annotation = env.method_annotation(trait_, "bind").ok_or_else(|| {
-        vec![Error::DoWithoutMonad {
-            region: statement.region,
-        }]
-    })?;
+    let annotation = env
+        .module
+        .method_annotation(trait_, "bind")
+        .ok_or_else(|| {
+            vec![Error::DoWithoutMonad {
+                region: statement.region,
+            }]
+        })?;
     // The RHS cannot see its own pattern. The lambda canonicalizer adds the
     // pattern only for the remaining statements and accounts for delayed uses.
     let value = canonicalize_expr(bump, env, expression, free_locals, warnings)?;
@@ -486,12 +491,16 @@ fn irrefutable(pattern: &SourcePattern<'_>) -> bool {
 
 fn find_var<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     region: Region,
     name: &'a str,
     free_locals: &mut FreeLocals<'a>,
 ) -> Result<CanExpr<'a>, Vec<Error<'a>>> {
-    match env.vars.get(name) {
+    if env.local(name).is_some() {
+        log_var(free_locals, name);
+        return Ok(CanExpr::VarLocal(name));
+    }
+    match env.module.vars.get(name) {
         Some(Var::Method {
             trait_, annotation, ..
         }) => Ok(CanExpr::VarMethod {
@@ -499,14 +508,10 @@ fn find_var<'a>(
             method: name,
             annotation,
         }),
-        Some(Var::Local(_)) => {
-            log_var(free_locals, name);
-            Ok(CanExpr::VarLocal(name))
-        }
         Some(Var::TopLevel(_)) => {
             log_var(free_locals, name);
             Ok(CanExpr::VarTopLevel(QualifiedName {
-                home: env.home,
+                home: env.module.home,
                 name,
             }))
         }
@@ -521,8 +526,8 @@ fn find_var<'a>(
             first_module: *first,
             other_modules: bump.alloc_slice_fill_iter(others.iter().copied()),
         }]),
-        None if env.ctors.contains_key(name) => {
-            let ctor = env.find_ctor(bump, region, name)?;
+        None if env.module.ctors.contains_key(name) => {
+            let ctor = env.module.find_ctor(bump, region, name)?;
             to_var_ctor(bump, env, name, &ctor)
         }
         None => Err(vec![Error::NotFoundVar {
@@ -536,24 +541,27 @@ fn find_var<'a>(
 
 fn find_var_qual<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     region: Region,
     prefix: &'a str,
     name: &'a str,
 ) -> Result<CanExpr<'a>, Vec<Error<'a>>> {
     if !env
+        .module
         .q_vars
         .get(prefix)
         .is_some_and(|values| values.contains_key(name))
         && env
+            .module
             .q_ctors
             .get(prefix)
             .is_some_and(|ctors| ctors.contains_key(name))
     {
-        let ctor = env.find_ctor_qual(bump, region, prefix, name)?;
+        let ctor = env.module.find_ctor_qual(bump, region, prefix, name)?;
         return to_var_ctor(bump, env, name, &ctor);
     }
     let info = env
+        .module
         .q_vars
         .get(prefix)
         .and_then(|m| m.get(name))
@@ -589,7 +597,7 @@ fn find_var_qual<'a>(
 
 fn to_var_ctor<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     name: &'a str,
     ctor: &EnvCtor<'a>,
 ) -> Result<CanExpr<'a>, Vec<Error<'a>>> {
@@ -637,7 +645,8 @@ fn to_var_ctor<'a>(
                 typ,
             });
 
-            let annotation = crate::kinds::check_annotation(bump, &env.kinds, name, annotation)?;
+            let annotation =
+                crate::kinds::check_annotation(bump, &env.module.kinds, name, annotation)?;
             CanExpr::VarConstructor {
                 options: *options,
                 reference: ConstructorName {
@@ -694,7 +703,8 @@ fn to_var_ctor<'a>(
                 free_vars,
                 typ,
             });
-            let annotation = crate::kinds::check_annotation(bump, &env.kinds, name, annotation)?;
+            let annotation =
+                crate::kinds::check_annotation(bump, &env.module.kinds, name, annotation)?;
 
             CanExpr::VarConstructor {
                 options: CtorOpts::Normal,
@@ -712,7 +722,7 @@ fn to_var_ctor<'a>(
 
 fn canonicalize_exprs<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     exprs: &[&'a Located<SourceExpr<'a>>],
     free_locals: &mut FreeLocals<'a>,
     warnings: &mut Vec<Warning<'a>>,
@@ -733,7 +743,7 @@ fn canonicalize_exprs<'a>(
 
 fn canonicalize_lambda<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     parameters: &'a [&'a Located<nash_source::Pattern<'a>>],
     body: &'a Located<SourceExpr<'a>>,
     region: Region,
@@ -742,8 +752,12 @@ fn canonicalize_lambda<'a>(
 ) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
     // One duplicate-detection scope across ALL parameters, so `\x x -> x`
     // is rejected like in Elm.
-    let (can_params, all_bindings) =
-        pattern::verify_all(bump, env, DuplicatePatternContext::LambdaArgs, parameters)?;
+    let (can_params, all_bindings) = pattern::verify_all(
+        bump,
+        env.module,
+        DuplicatePatternContext::LambdaArgs,
+        parameters,
+    )?;
 
     let inner_env = env.add_locals(&all_bindings)?;
     let mut body_free_locals = FreeLocals::new();
@@ -768,7 +782,7 @@ fn canonicalize_lambda<'a>(
 
 fn canonicalize_case_branches<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     arms: &[&'a CaseArm<'a>],
     free_locals: &mut FreeLocals<'a>,
     warnings: &mut Vec<Warning<'a>>,
@@ -789,13 +803,17 @@ fn canonicalize_case_branches<'a>(
 
 fn canonicalize_case_branch<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     arm: &'a CaseArm<'a>,
     free_locals: &mut FreeLocals<'a>,
     warnings: &mut Vec<Warning<'a>>,
 ) -> Result<CanCaseBranch<'a>, Vec<Error<'a>>> {
-    let (can_pattern, bindings) =
-        pattern::verify(bump, env, DuplicatePatternContext::CaseBranch, arm.pattern)?;
+    let (can_pattern, bindings) = pattern::verify(
+        bump,
+        env.module,
+        DuplicatePatternContext::CaseBranch,
+        arm.pattern,
+    )?;
     let inner_env = env.add_locals(&bindings)?;
     let mut body_free_locals = FreeLocals::new();
     let can_body = canonicalize_expr(bump, &inner_env, arm.body, &mut body_free_locals, warnings)?;
@@ -814,7 +832,7 @@ fn canonicalize_case_branch<'a>(
 
 fn canonicalize_if<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     branches: &[&'a SourceIfBranch<'a>],
     final_else: &'a Located<SourceExpr<'a>>,
     free_locals: &mut FreeLocals<'a>,
@@ -886,7 +904,7 @@ fn check_field_assigns<'a>(
 
 fn canonicalize_record<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     region: Region,
     fields: &[&'a FieldAssign<'a>],
     free_locals: &mut FreeLocals<'a>,
@@ -895,9 +913,10 @@ fn canonicalize_record<'a>(
     let field_dict = check_field_assigns(fields)?;
     let mut candidates = BTreeMap::new();
     for candidate in env
+        .module
         .ctors
         .values()
-        .chain(env.q_ctors.values().flat_map(|m| m.values()))
+        .chain(env.module.q_ctors.values().flat_map(|m| m.values()))
     {
         if let Info::Specific(
             _,
@@ -978,7 +997,7 @@ fn canonicalize_record<'a>(
 
 fn canonicalize_update<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     record: &'a Located<&'a str>,
     fields: &[&'a FieldAssign<'a>],
     free_locals: &mut FreeLocals<'a>,
@@ -1027,7 +1046,7 @@ struct ResolvedOp<'a> {
 
 fn canonicalize_binops<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     operands: &[&'a BinOpOperand<'a>],
     last: &'a Located<SourceExpr<'a>>,
     overall_region: Region,
@@ -1042,7 +1061,10 @@ fn canonicalize_binops<'a>(
             Ok(e) => can_exprs.push(e),
             Err(errs) => errors.extend(errs),
         }
-        match env.find_binop(bump, operand.op.region, operand.op.value) {
+        match env
+            .module
+            .find_binop(bump, operand.op.region, operand.op.value)
+        {
             Ok(binop) => ops.push(ResolvedOp {
                 symbol: binop.symbol,
                 home: binop.home,
@@ -1143,7 +1165,7 @@ enum LetBinding<'a> {
 
 fn canonicalize_let<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     defs: &[&'a Located<SourceDef<'a>>],
     body: &'a Located<SourceExpr<'a>>,
     region: Region,
@@ -1373,7 +1395,7 @@ type LetDefResult<'a> = Result<
 
 fn canonicalize_let_def<'a>(
     bump: &'a Bump,
-    env: &Env<'a>,
+    env: &Scope<'_, 'a>,
     def: &SourceDef<'a>,
     let_bindings: &Bindings<'a>,
     warnings: &mut Vec<Warning<'a>>,
@@ -1388,43 +1410,52 @@ fn canonicalize_let_def<'a>(
             // Mirrors Elm's `addDefNodes`: for typed defs the annotation is
             // resolved and matched against the arguments BEFORE the body is
             // canonicalized; either way one duplicate scope spans all args.
-            let (can_def_builder, arg_bindings): (DefBuilder<'a>, Bindings<'a>) = if let Some(ann) =
-                annotation
-            {
-                let annotation_val = types::to_annotation(bump, env, ann)?;
-                let annotation_val =
-                    crate::kinds::check_annotation(bump, &env.kinds, name.value, annotation_val)?;
-                let mut bound: Vec<(&'a str, Region)> = Vec::new();
-                let (typed_args, result_type) =
-                    gather_typed_args(bump, env, name.value, args, annotation_val.typ, &mut bound)?;
-                let arg_bindings = pattern::detect_duplicates(
-                    DuplicatePatternContext::FuncArgs(name.value),
-                    bound,
-                )?;
-                (
-                    DefBuilder::Typed {
-                        context: annotation_val.context,
-                        annotation: annotation_val.typ,
-                        free_vars: annotation_val.free_vars,
-                        args: bump.alloc_slice_fill_iter(typed_args),
-                        typ: result_type,
-                    },
-                    arg_bindings,
-                )
-            } else {
-                let (can_args, arg_bindings) = pattern::verify_all(
-                    bump,
-                    env,
-                    DuplicatePatternContext::FuncArgs(name.value),
-                    args,
-                )?;
-                (
-                    DefBuilder::Untyped {
-                        args: bump.alloc_slice_fill_iter(can_args),
-                    },
-                    arg_bindings,
-                )
-            };
+            let (can_def_builder, arg_bindings): (DefBuilder<'a>, Bindings<'a>) =
+                if let Some(ann) = annotation {
+                    let annotation_val = types::to_annotation(bump, env.module, ann)?;
+                    let annotation_val = crate::kinds::check_annotation(
+                        bump,
+                        &env.module.kinds,
+                        name.value,
+                        annotation_val,
+                    )?;
+                    let mut bound: Vec<(&'a str, Region)> = Vec::new();
+                    let (typed_args, result_type) = gather_typed_args(
+                        bump,
+                        env.module,
+                        name.value,
+                        args,
+                        annotation_val.typ,
+                        &mut bound,
+                    )?;
+                    let arg_bindings = pattern::detect_duplicates(
+                        DuplicatePatternContext::FuncArgs(name.value),
+                        bound,
+                    )?;
+                    (
+                        DefBuilder::Typed {
+                            context: annotation_val.context,
+                            annotation: annotation_val.typ,
+                            free_vars: annotation_val.free_vars,
+                            args: bump.alloc_slice_fill_iter(typed_args),
+                            typ: result_type,
+                        },
+                        arg_bindings,
+                    )
+                } else {
+                    let (can_args, arg_bindings) = pattern::verify_all(
+                        bump,
+                        env.module,
+                        DuplicatePatternContext::FuncArgs(name.value),
+                        args,
+                    )?;
+                    (
+                        DefBuilder::Untyped {
+                            args: bump.alloc_slice_fill_iter(can_args),
+                        },
+                        arg_bindings,
+                    )
+                };
 
             let body_env = env.add_locals(&arg_bindings)?;
             let mut body_free_locals = FreeLocals::new();
@@ -1476,7 +1507,7 @@ fn canonicalize_let_def<'a>(
         }
         SourceDef::Destruct { pattern, body } => {
             let (can_pattern, _) =
-                pattern::verify(bump, env, DuplicatePatternContext::Destruct, pattern)?;
+                pattern::verify(bump, env.module, DuplicatePatternContext::Destruct, pattern)?;
             let mut body_free_locals = FreeLocals::new();
             let can_body = canonicalize_expr(bump, env, body, &mut body_free_locals, warnings)?;
             let deps: Vec<&'a str> = body_free_locals

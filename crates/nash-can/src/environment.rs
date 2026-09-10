@@ -123,7 +123,6 @@ pub enum Var<'a> {
         annotation: &'a nash_ast::Annotation<'a>,
         local_region: Option<Region>,
     },
-    Local(Region),
     TopLevel(Region),
     /// Imported from another module, like Elm's `Foreign home annotation`.
     /// The annotation comes from the defining module's (post-solve)
@@ -259,11 +258,8 @@ pub struct Binop<'a> {
     pub precedence: Precedence,
 }
 
-/// The canonicalization environment.
-///
-/// Built from imports (foreign) then augmented with local definitions.
-/// Consumed by type, pattern, and expression canonicalization.
-#[derive(Clone)]
+/// Module information for canonicalization, built from imports and top-level
+/// definitions. Local expression bindings live in Scope and never mutate it.
 pub struct Env<'a> {
     pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: Exposed<'a, &'a TraitInfo<'a>>,
@@ -277,6 +273,86 @@ pub struct Env<'a> {
     pub q_vars: Qualified<'a, QualifiedValue<'a>>,
     pub q_types: Qualified<'a, Type<'a>>,
     pub q_ctors: Qualified<'a, Ctor<'a>>,
+}
+
+/// Local bindings borrow module information and their parent scope. Scope exit,
+/// including an early error return, cannot change a sibling or ancestor.
+pub struct Scope<'scope, 'a> {
+    pub module: &'scope Env<'a>,
+    parent: Option<&'scope Scope<'scope, 'a>>,
+    bindings: &'scope BTreeMap<&'a str, Region>,
+}
+
+impl<'scope, 'a> Scope<'scope, 'a> {
+    pub fn new(
+        module: &'scope Env<'a>,
+        parent: Option<&'scope Scope<'scope, 'a>>,
+        bindings: &'scope BTreeMap<&'a str, Region>,
+    ) -> Result<Self, Vec<Error<'a>>> {
+        let mut errors = Vec::new();
+        for (&name, &region) in bindings {
+            let original = parent.and_then(|scope| scope.local(name)).or_else(|| {
+                match module.vars.get(name) {
+                    Some(Var::TopLevel(original))
+                    | Some(Var::Method {
+                        local_region: Some(original),
+                        ..
+                    }) => Some(*original),
+                    _ => None,
+                }
+            });
+            if let Some(original) = original {
+                errors.push(Error::Shadowing {
+                    name,
+                    original,
+                    new: region,
+                });
+            }
+        }
+        if errors.is_empty() {
+            Ok(Self {
+                module,
+                parent,
+                bindings,
+            })
+        } else {
+            Err(errors)
+        }
+    }
+
+    pub fn add_locals<'child>(
+        &'child self,
+        bindings: &'child BTreeMap<&'a str, Region>,
+    ) -> Result<Scope<'child, 'a>, Vec<Error<'a>>> {
+        Scope::new(self.module, Some(self), bindings)
+    }
+
+    pub fn local(&self, name: &str) -> Option<Region> {
+        let mut scope = Some(self);
+        while let Some(current) = scope {
+            if let Some(region) = current.bindings.get(name) {
+                return Some(*region);
+            }
+            scope = current.parent;
+        }
+        None
+    }
+
+    pub fn possible_var_names(&self, bump: &'a Bump) -> crate::error::PossibleNames<'a> {
+        let mut names: std::collections::BTreeSet<_> = self.module.vars.keys().copied().collect();
+        let mut scope = Some(self);
+        while let Some(current) = scope {
+            names.extend(current.bindings.keys().copied());
+            scope = current.parent;
+        }
+        let locals = bump.alloc_slice_fill_iter(names);
+        let qualified =
+            bump.alloc_slice_fill_iter(self.module.q_vars.iter().map(|(prefix, inner)| {
+                let names = bump.alloc_slice_fill_iter(inner.keys().copied());
+                (*prefix, names as &[&str])
+            }));
+        crate::error::PossibleNames { locals, qualified }
+    }
 }
 
 impl<'a> Env<'a> {
@@ -408,43 +484,6 @@ impl<'a> Env<'a> {
         }
     }
 
-    /// Extend env with local bindings (clone-on-scope-extension).
-    /// Shadows foreign imports silently.
-    /// Errors on re-shadowing a local/top-level.
-    pub fn add_locals(
-        &self,
-        bindings: &std::collections::BTreeMap<&'a str, Region>,
-    ) -> Result<Env<'a>, Vec<Error<'a>>> {
-        let mut new_env = self.clone();
-        let mut errors = Vec::new();
-
-        for (&name, &region) in bindings {
-            match new_env.vars.get(name) {
-                Some(Var::Local(original))
-                | Some(Var::TopLevel(original))
-                | Some(Var::Method {
-                    local_region: Some(original),
-                    ..
-                }) => {
-                    errors.push(Error::Shadowing {
-                        name,
-                        original: *original,
-                        new: region,
-                    });
-                }
-                _ => {
-                    new_env.vars.insert(name, Var::Local(region));
-                }
-            }
-        }
-
-        if errors.is_empty() {
-            Ok(new_env)
-        } else {
-            Err(errors)
-        }
-    }
-
     /// Look up a binop by symbol. Mirrors Elm's `Env.findBinop`.
     pub fn find_binop(
         &self,
@@ -470,15 +509,6 @@ impl<'a> Env<'a> {
 
     fn available_binops(&self, bump: &'a Bump) -> &'a [&'a str] {
         bump.alloc_slice_fill_iter(self.binops.keys().copied())
-    }
-
-    pub fn possible_var_names(&self, bump: &'a Bump) -> crate::error::PossibleNames<'a> {
-        let locals = bump.alloc_slice_fill_iter(self.vars.keys().copied());
-        let qualified = bump.alloc_slice_fill_iter(self.q_vars.iter().map(|(prefix, inner)| {
-            let names = bump.alloc_slice_fill_iter(inner.keys().copied());
-            (*prefix, names as &[&str])
-        }));
-        crate::error::PossibleNames { locals, qualified }
     }
 
     pub fn possible_type_names(&self, bump: &'a Bump) -> crate::error::PossibleNames<'a> {

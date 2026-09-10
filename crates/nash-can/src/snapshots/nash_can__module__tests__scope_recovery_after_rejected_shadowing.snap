@@ -1,0 +1,51 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nmodule Main exposing (..)\n\nf outer =\n    case outer of\n        outer -> outer\n        next -> unknown\n"
+---
+[
+    Shadowing {
+        name: "outer",
+        original: Region {
+            start: Position {
+                line: 3,
+                column: 3,
+            },
+            end: Position {
+                line: 3,
+                column: 8,
+            },
+        },
+        new: Region {
+            start: Position {
+                line: 5,
+                column: 9,
+            },
+            end: Position {
+                line: 5,
+                column: 14,
+            },
+        },
+    },
+    NotFoundVar {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 17,
+            },
+            end: Position {
+                line: 6,
+                column: 24,
+            },
+        },
+        prefix: None,
+        name: "unknown",
+        suggestions: PossibleNames {
+            locals: [
+                "f",
+                "next",
+                "outer",
+            ],
+            qualified: [],
+        },
+    },
+]

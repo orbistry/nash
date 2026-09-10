@@ -359,7 +359,7 @@ fn to_node_one<'a>(
         )
     };
 
-    let body_env = env.add_locals(&arg_bindings)?;
+    let body_env = crate::environment::Scope::new(env, None, &arg_bindings)?;
     let mut free_locals = expression::FreeLocals::new();
     let can_body =
         expression::canonicalize_expr(bump, &body_env, src.body, &mut free_locals, warnings)?;
@@ -2874,6 +2874,48 @@ mod tests {
                     x = x
                 in
                 x
+        "#
+        );
+    }
+
+    #[test]
+    fn scope_recovery_between_case_branches() {
+        assert_module_error_snapshot!(
+            r#"
+            module Main exposing (..)
+
+            f outer =
+                case outer of
+                    first -> missing
+                    second -> first
+        "#
+        );
+    }
+
+    #[test]
+    fn scope_recovery_after_rejected_shadowing() {
+        assert_module_error_snapshot!(
+            r#"
+            module Main exposing (..)
+
+            f outer =
+                case outer of
+                    outer -> outer
+                    next -> unknown
+        "#
+        );
+    }
+
+    #[test]
+    fn scope_siblings_reuse_binding_names() {
+        assert_module_snapshot!(
+            r#"
+            module Main exposing (..)
+
+            f outer =
+                case outer of
+                    (first, value) -> value
+                    (second, value) -> value
         "#
         );
     }

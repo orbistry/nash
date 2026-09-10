@@ -22,6 +22,12 @@ EOF fit without a separate parser input-size failure. This makes `Region`
 32 bytes on a 64-bit host. Protocol boundaries such as LSP check their narrower
 coordinate limits explicitly; they must not truncate positions.
 
+Canonicalization keeps module information separate from local bindings. Each
+local scope borrows its bindings and parent; creating or leaving a scope does
+not copy or mutate module maps. Locals may shadow imports, but cannot shadow
+ancestor locals, top-level definitions, or methods declared in the same module.
+Name suggestions merge visible bindings in sorted order.
+
 The driver returns in-memory interface summaries with exports, kinds, and
 contract fingerprints. It has no persistent interface cache or cache metadata.
 
