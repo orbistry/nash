@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+TRAIT PROBLEM
+
+  × The `a` method does not mention trait parameter 'a:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Every trait parameter must occur in the method's type so a call can determine
+        which impl to use.

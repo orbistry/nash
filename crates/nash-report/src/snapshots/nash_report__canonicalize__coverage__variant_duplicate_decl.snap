@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+NAME CLASH
+
+  × This file has multiple `name` declarations. One here:
+   ╭─[Main.nash:2:1]
+ 1 │ name = other
+   · ──┬─
+   ·   ╰── one here
+ 2 │ other = name
+   · ──┬──
+   ·   ╰── and another one here
+   ╰────
+  help: How can I know which one you want? Rename one of them!

@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+BAD IMPL HEAD
+
+  × This impl head is an application of a type variable:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: Use a named type constructor or a tuple as the outermost type of an impl head.

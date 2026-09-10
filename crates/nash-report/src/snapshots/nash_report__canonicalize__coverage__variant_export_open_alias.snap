@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+BAD EXPORT
+
+  × The (..) syntax is for exposing variants of a custom type. It cannot be used
+  │ with a type alias like `name` though.
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Remove the (..) and you should be fine!

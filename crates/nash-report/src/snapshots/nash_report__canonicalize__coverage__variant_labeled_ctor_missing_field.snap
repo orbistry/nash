@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+MISSING FIELD
+
+  × The `a` constructor needs a `a` field:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Add the missing field to this constructor application.

@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+UNKNOWN RECORD
+
+  × I cannot find a visible record alias with exactly these fields: x, y.
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Declare or import an alias for this record.

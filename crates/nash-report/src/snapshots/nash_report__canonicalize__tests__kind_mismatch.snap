@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+KIND MISMATCH
+
+  × I found a kind mismatch in the type annotation:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: This position needs kind `Type`, but the type has kind `Type -> Type`. Type
+        arguments must have matching kinds.

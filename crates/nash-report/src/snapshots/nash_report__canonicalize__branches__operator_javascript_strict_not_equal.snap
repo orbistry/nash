@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+UNKNOWN OPERATOR
+
+  × Nash uses a different name for the “not equal” operator:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: Switch to (/=) instead. Our (/=) operator is supposed to look like a real “not
+        equal” sign (≠). I hope that history will remember (!==) as a weird and
+        temporary choice.

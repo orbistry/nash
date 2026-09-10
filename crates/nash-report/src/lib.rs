@@ -6,6 +6,7 @@
 //! (Elm's `--report=json` shape), and the LSP conversion in
 //! `nash-language-server`.
 
+pub mod canonicalize;
 pub mod code;
 pub mod doc;
 pub mod json;

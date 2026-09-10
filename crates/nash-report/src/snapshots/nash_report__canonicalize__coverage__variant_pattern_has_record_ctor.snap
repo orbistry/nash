@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+BAD PATTERN
+
+  × You can construct records by using `name` as a function, but it is not available
+  │ in pattern matching like this:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: I recommend matching the record as a variable and unpacking it later.

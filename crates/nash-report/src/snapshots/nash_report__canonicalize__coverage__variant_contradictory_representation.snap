@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+CONTRADICTORY REPRESENTATION
+
+  × The representation requirements on 'a are incompatible:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: No type can satisfy all of these requirements. Change the constraints or the
+        positions where this type variable is used.

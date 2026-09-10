@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+INFINITE KIND
+
+  × This application in the annotation for `name` would require an infinite kind:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: A type constructor cannot be applied to itself. Check which type is being
+        applied and the kinds of its arguments.

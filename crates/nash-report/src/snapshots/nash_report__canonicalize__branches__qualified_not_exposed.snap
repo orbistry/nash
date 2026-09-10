@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+NAMING ERROR
+
+  × I cannot find a `Known.Box` type:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: The `Known` module does not expose a `Box` type. These names seem close though:
+
+            Known.Bag
+
+        Hint: Read <https://nash-script.dev/hints/imports> to see how `import`
+        declarations work in Nash.

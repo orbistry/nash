@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+OVERLAPPING IMPL
+
+  × These `First.Equal` impls can both match the same trait arguments. The
+  │ overlapping head is 'a0:
+   ╭─[Main.nash:2:1]
+ 1 │ name = other
+   · ──┬─
+   ·   ╰── first impl in `First`
+ 2 │ other = name
+   · ──┬──
+   ·   ╰── overlapping impl in `Second`
+   ╰────
+  help: I cannot choose which impl to use. Remove one of them, or change their heads so
+        they cannot match the same trait arguments. Adding different context constraints
+        does not disambiguate overlapping heads.

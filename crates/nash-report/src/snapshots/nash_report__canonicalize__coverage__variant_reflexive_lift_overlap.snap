@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+OVERLAPPING IMPL
+
+  × This impl overlaps the reflexive `Lift` rule:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
+        overlap that built-in rule.

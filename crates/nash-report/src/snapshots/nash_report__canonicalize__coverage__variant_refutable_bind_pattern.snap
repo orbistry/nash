@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+UNSAFE PATTERN
+
+  × This `do` binding has a pattern that can fail to match:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Use a variable or another irrefutable pattern here. Match individual variants in
+        a `case` expression so every possibility is handled.

@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+INFIX PROBLEM
+
+  × You cannot mix (a) and (a) without parentheses.
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: I do not know how to group these expressions. Add parentheses for me!

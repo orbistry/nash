@@ -1,0 +1,20 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+SHADOWING
+
+  × The name `name` is first defined here:
+   ╭─[Main.nash:2:1]
+ 1 │ name = other
+   · ──┬─
+   ·   ╰── first defined here
+ 2 │ other = name
+   · ──┬──
+   ·   ╰── defined AGAIN here
+   ╰────
+  help: Think of a more helpful name for one of them and you should be all set!
+
+        Note: Linters advise against shadowing, so Nash makes “best practices” the
+        default. Read <https://nash-script.dev/hints/shadowing> for more details on this
+        choice.

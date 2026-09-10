@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+BAD IMPORT
+
+  × The `name` trait cannot be followed by (..) like this:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: The (..) syntax exposes variants of a custom type. Remove the dots and name the
+        trait methods explicitly when you need them.

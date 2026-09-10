@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+AMBIGUOUS RECORD
+
+  × Several visible record aliases have exactly these fields:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: The candidates are First.Equal, Second.Other. Use the intended alias constructor
+        to make the record type clear.

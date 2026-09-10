@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+BAD IMPORT
+
+  × You are trying to import the `name` variant by name:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Try importing a(..) instead. The dots mean “expose the a type and all its
+        variants” so it gives you access to name.

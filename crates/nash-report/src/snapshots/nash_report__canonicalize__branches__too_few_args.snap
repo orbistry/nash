@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+TOO FEW ARGS
+
+  × The `Pair` variant needs 2 arguments, but I see 1 instead:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: What is missing? Are some parentheses misplaced?

@@ -1,0 +1,22 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+CYCLIC DEFINITION
+
+  × The `name` definition is causing a very tricky infinite loop.
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: The `name` value depends on itself through the following chain of definitions:
+
+            ┌─────┐
+            │    name
+            │     ↓
+            │    other
+            └─────┘
+
+        Hint: The root problem is often a typo in some variable name, but I recommend
+        reading <https://nash-script.dev/hints/bad-recursion> for more detailed advice,
+        especially if you actually do need a recursive value.

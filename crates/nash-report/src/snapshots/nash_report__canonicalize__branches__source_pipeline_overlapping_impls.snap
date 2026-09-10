@@ -1,0 +1,20 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: rendered
+---
+OVERLAPPING IMPL
+
+  × These `Bad.Keep` impls can both match the same trait arguments. The overlapping
+  │ head is Builtin.unit:
+   ╭─[Bad.nash:6:1]
+ 3 │         keep : 'a -> 'a
+ 4 │ ╭─▶ impl Keep () where
+ 5 │ ├─▶     keep x = x
+   · ╰──── first impl in `Bad`
+ 6 │ ╭─▶ impl Keep () where
+ 7 │ ├─▶     keep x = x
+   · ╰──── overlapping impl in `Bad`
+   ╰────
+  help: I cannot choose which impl to use. Remove one of them, or change their heads so
+        they cannot match the same trait arguments. Adding different context constraints
+        does not disambiguate overlapping heads.

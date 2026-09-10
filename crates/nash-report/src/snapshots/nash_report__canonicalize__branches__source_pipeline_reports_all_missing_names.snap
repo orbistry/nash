@@ -1,0 +1,36 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "errors.iter().map(|e|\ncrate::render_plain(&to_report(&source, e), &source,\n\"Main.nash\")).collect::<Vec<_>>().join(\"\\n\")"
+---
+NAMING ERROR
+
+  × I cannot find a `missing` variable:
+   ╭─[Main.nash:2:9]
+ 1 │ module Main exposing (..)
+ 2 │ first = missing
+   ·         ───────
+ 3 │ second = absent
+   ╰────
+  help: These names seem close though:
+
+            first
+            second
+
+        Hint: Read <https://nash-script.dev/hints/imports> to see how `import`
+        declarations work in Nash.
+
+NAMING ERROR
+
+  × I cannot find a `absent` variable:
+   ╭─[Main.nash:3:10]
+ 2 │ first = missing
+ 3 │ second = absent
+   ·          ──────
+   ╰────
+  help: These names seem close though:
+
+            first
+            second
+
+        Hint: Read <https://nash-script.dev/hints/imports> to see how `import`
+        declarations work in Nash.

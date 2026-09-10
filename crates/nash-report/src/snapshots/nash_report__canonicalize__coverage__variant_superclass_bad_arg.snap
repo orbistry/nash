@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+TRAIT PROBLEM
+
+  × The `Equal` superclass has an invalid argument:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Superclass arguments must be parameters declared by this trait. Replace this
+        argument with the intended trait parameter.

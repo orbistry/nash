@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+IMPL PATTERN LIMIT
+
+  × This impl pattern is too large or deeply nested:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Simplify the impl head so the compiler can compare and resolve its patterns
+        within the supported limit.

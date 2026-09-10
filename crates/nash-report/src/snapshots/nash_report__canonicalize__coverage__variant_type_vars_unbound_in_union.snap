@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+UNBOUND TYPE VARIABLE
+
+  × The `Box` type uses an unbound type variable `a` in its definition:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: You probably need to change the declaration to something like this:
+
+            type Box 'a = ...
+
+        Why? Well, imagine one `Box` where `a` is an Int and another where it is a Bool.
+        When we explicitly list the type variables, the type checker can see that they
+        are actually different types.

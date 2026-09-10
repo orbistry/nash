@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+UNKNOWN OPERATOR
+
+  × I do not recognize the (**) operator:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: Switch to (^) for exponentiation. Or switch to (*) for multiplication.

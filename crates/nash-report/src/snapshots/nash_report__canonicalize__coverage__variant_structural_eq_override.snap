@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+STRUCTURAL EQUALITY
+
+  × This impl would replace structural equality:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Equality for this type is supplied by the compiler. Remove the explicit `Eq`
+        impl.

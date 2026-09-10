@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+NAMING ERROR
+
+  × I cannot resolve numeric negation here:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Negation requires the `Num` trait. Import the module that defines `Num` before
+        using a negative expression.

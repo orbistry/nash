@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+UNKNOWN OPERATOR
+
+  × Nash does not use (%) as the remainder operator:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: If you want the behavior of (%) like in JavaScript, use the integer remainder
+        function. If you want modular arithmetic like in math, use the integer modulus
+        function. The difference is how things work when negative numbers are involved.

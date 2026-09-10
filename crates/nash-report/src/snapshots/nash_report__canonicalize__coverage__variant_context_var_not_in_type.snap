@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+TRAIT PROBLEM
+
+  × The context mentions 'name, but this variable does not occur in the annotated
+  │ type:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Use the variable in the type, or remove the constraint that mentions it.

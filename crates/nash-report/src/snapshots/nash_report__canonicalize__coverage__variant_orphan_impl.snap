@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+ORPHAN IMPL
+
+  × This module cannot define an impl of `First.Equal` for First.Equal:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: An impl must be defined in the module that defines its trait or one of its head
+        types. Move this impl to one of those modules.

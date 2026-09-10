@@ -1,0 +1,8 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+UNKNOWN EXPORT
+
+  × You are trying to expose a type named `Box` but I cannot find its definition.
+  help: I do not see any super similar names in this file. Is the definition missing?

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+INFIX PROBLEM
+
+  × The (a) operator says it is implemented by `a`, but I cannot find a `a`
+  │ definition in this file.
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Define it, or point the `infix` declaration at an existing top-level value.

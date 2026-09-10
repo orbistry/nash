@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+REDUNDANT EXPORT
+
+  × You are trying to expose `name` multiple times! Once here:
+   ╭─[Main.nash:2:1]
+ 1 │ name = other
+   · ──┬─
+   ·   ╰── once here
+ 2 │ other = name
+   · ──┬──
+   ·   ╰── and again right here
+   ╰────
+  help: Remove one of them and you should be all set!

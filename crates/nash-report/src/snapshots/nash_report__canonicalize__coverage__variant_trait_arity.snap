@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+TOO MANY ARGS
+
+  × The `name` trait needs 1 argument, but I see 2 instead:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Which is the extra one? Maybe some parentheses are missing?

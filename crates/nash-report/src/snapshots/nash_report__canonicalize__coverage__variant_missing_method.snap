@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+MISSING METHOD
+
+  × This `Equal` impl does not define `name`:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: The `Equal` trait requires this method and does not provide a default. Add a
+        `name` definition to this impl.

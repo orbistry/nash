@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+BUILTIN TRAIT
+
+  × The `First.Equal` trait is owned by the compiler:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Its representation rules cannot be replaced by an impl. Remove this impl and use
+        a type with an admitted representation.

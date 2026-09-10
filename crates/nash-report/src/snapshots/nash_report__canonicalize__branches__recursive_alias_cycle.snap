@@ -1,0 +1,25 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+ALIAS PROBLEM
+
+  × This type alias is part of a mutually recursive set of type aliases.
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: It is part of this cycle of type aliases:
+
+            ┌─────┐
+            │    First
+            │     ↓
+            │    Second
+            │     ↓
+            │    Third
+            └─────┘
+
+        You need to convert at least one of these type aliases into a `type`.
+
+        Note: Read <https://nash-script.dev/hints/recursive-alias> to learn why this
+        `type` vs `type alias` distinction matters. It is subtle but important!

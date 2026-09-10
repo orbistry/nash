@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+UNKNOWN EXPORT
+
+  × You are trying to expose an operator named (<+>) but I cannot find its
+  │ definition.
+  help: These names seem close though:
+
+            +
+            ++

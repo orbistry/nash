@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+NAMING ERROR
+
+  × I cannot find a `name` trait:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Is there an `import` or `exposing` missing up top?
+
+        Hint: Read <https://nash-script.dev/hints/imports> to see how `import`
+        declarations work in Nash.

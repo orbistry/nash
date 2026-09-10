@@ -1,0 +1,18 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+---
+NAMING ERROR
+
+  × I cannot find a `naem` variable:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+   ╰────
+  help: These names seem close though:
+
+            name
+            other
+
+        Hint: Read <https://nash-script.dev/hints/imports> to see how `import`
+        declarations work in Nash.

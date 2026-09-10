@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+TRAIT PROBLEM
+
+  × The impl context mentions 'name, but this variable does not occur in the impl
+  │ head:
+   ╭─[Main.nash:1:1]
+ 1 │ name = other
+   · ────
+ 2 │ other = name
+   ╰────
+  help: Each variable in an impl context must occur in its head. Check for a misspelled
+        type variable.

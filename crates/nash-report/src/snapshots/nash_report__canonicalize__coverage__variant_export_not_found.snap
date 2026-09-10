@@ -1,0 +1,8 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+---
+UNKNOWN EXPORT
+
+  × You are trying to expose a value named `naem` but I cannot find its definition.
+  help: Maybe you want name instead?
