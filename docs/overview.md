@@ -22,6 +22,9 @@ EOF fit without a separate parser input-size failure. This makes `Region`
 32 bytes on a 64-bit host. Protocol boundaries such as LSP check their narrower
 coordinate limits explicitly; they must not truncate positions.
 
+The driver returns in-memory interface summaries with exports, kinds, and
+contract fingerprints. It has no persistent interface cache or cache metadata.
+
 The parser permits at most 64 simultaneous recursive expression, pattern, and
 type entries, counted together. Beyond this limit it reports excessive nesting
 at the first exhausted position. Backtracking cannot clear that failure. This

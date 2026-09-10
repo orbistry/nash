@@ -54,6 +54,6 @@ pub use compile::{BuildResult, ModuleResult, build, build_graph};
 pub use database::Database;
 pub use error::DriverError;
 pub use graph::DepGraph;
-pub use interface::{Export, Interface, InterfaceCache, ModuleMeta};
+pub use interface::{Export, Interface};
 pub use project::{ModuleOrigins, Project, ProjectMember};
 pub use source::{FileSource, FileSystemSource, InMemorySource, OverlaySource};

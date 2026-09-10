@@ -9,11 +9,9 @@ license.workspace = true
 
 [dependencies]
 async-trait.workspace = true
-bincode.workspace = true
 bumpalo.workspace = true
 glob.workspace = true
 miette.workspace = true
-serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync", "fs"] }
 url.workspace = true

@@ -8,7 +8,7 @@ Implement the six Nash/Alder comparison findings, then evaluate a direct inferen
 - [x] Require valid UTF-8 at the parser boundary and remove unchecked conversions.
 - [x] Widen coordinates with a safe source bound.
 - [x] Guard mutually recursive parsing with a measured nesting limit and remove flat-sequence recursion.
-- [ ] Delete unused driver interface-cache machinery and orphaned dependencies.
+- [x] Delete unused driver interface-cache machinery and orphaned dependencies.
 - [ ] Separate canonical module data from local scopes without cloning the whole environment.
 - [ ] Bound trait selection and evidence lookup using existing map ordering.
 - [ ] Replace the constraint tree and intermediate inference Type with direct AST inference, subject to the adoption gates below.
@@ -28,6 +28,10 @@ Chunk 3a uses usize coordinates and indentation, bounded by the source string al
 Chunk 3b bounds combined recursive expression, pattern, and type entries at 64. Exhaustion remains committed across backtracking and the counter resets after returning. The original 512-parenthesis input aborted on a 2 MiB stack; guarded parsing reports excessive nesting. Fixed-stack regressions cover ordinary and negative parentheses, lists, lambdas, constructor patterns, type parentheses, and arrows. Flat access chains, lambda arguments, else-if branches, let definitions, case arms, and union variants now iterate without accumulator copies; 2,000-element cases and 65,536 nested comments use bounded stack.
 
 Chunk 3b verification passed: formatting, workspace check, clippy, full tests, all 444 parser tests plus doctests in release, positive scratch compilation, and a CLI JSON negative scratch case reporting EXCESSIVE NESTING. Existing snapshots are unchanged; the new nesting report was reviewed.
+
+Chunk 4 removes InterfaceCache, ModuleMeta, interface load/save, the cache-only serialization error, serde derives, and two dedicated cache tests. No active build caller used these APIs. In-memory Interface/Export and fingerprint tests remain. The driver no longer depends on serde or bincode; bincode is removed from workspace dependencies and the lockfile.
+
+Chunk 4 verification passed: formatting, workspace check, clippy, full tests including interface-contract regressions, and positive scratch compilation. No snapshots changed and the lockfile removes only bincode and the two driver dependency edges.
 
 ## Direct inference adoption gates
 

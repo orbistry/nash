@@ -49,9 +49,6 @@ pub enum DriverError {
     #[error("module not found: {module}")]
     ModuleNotFound { module: String },
 
-    #[error("failed to serialize interface: {0}")]
-    SerializeError(#[from] bincode::Error),
-
     #[error("invalid module path: {path}")]
     InvalidModulePath { path: PathBuf },
 }
