@@ -1,0 +1,18 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\nf : int\ng = 1"
+---
+Declarations(
+    Def(
+        "f",
+        NameMatch(
+            "g",
+            2,
+            2,
+        ),
+        1,
+        2,
+    ),
+    1,
+    1,
+)

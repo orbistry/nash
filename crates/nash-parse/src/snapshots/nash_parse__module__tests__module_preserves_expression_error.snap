@@ -1,0 +1,25 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\nvalue = if True then 42"
+---
+Declarations(
+    Def(
+        "value",
+        Body(
+            If(
+                Else(
+                    1,
+                    24,
+                ),
+                1,
+                9,
+            ),
+            1,
+            9,
+        ),
+        1,
+        6,
+    ),
+    1,
+    1,
+)

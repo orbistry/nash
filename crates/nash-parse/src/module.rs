@@ -100,14 +100,14 @@ impl<'a> Parser<'a> {
                     imports.push(import);
                     // import() already ensures fresh line at the end
                 }
-                Err(_) => {
+                Err(error) => {
                     // If we didn't consume input, we're done with imports
                     if self.pos == state.pos {
                         self.restore_state(state);
                         break;
                     }
                     // Otherwise propagate the error
-                    return Err(error::Module::ImportStart(self.row, self.col));
+                    return Err(error);
                 }
             }
         }
@@ -156,18 +156,14 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
-                Err(_) => {
+                Err(error) => {
                     // If we didn't consume input, we're done with declarations
                     if self.pos == state.pos {
                         self.restore_state(state);
                         break;
                     }
                     // Otherwise propagate the error
-                    return Err(error::Module::Declarations(
-                        self.bump.alloc(error::Decl::Start(self.row, self.col)),
-                        self.row,
-                        self.col,
-                    ));
+                    return Err(error);
                 }
             }
         }
@@ -592,5 +588,30 @@ mod tests {
     #[test]
     fn validator_module_must_remain_indented() {
         assert_module_error_snapshot!("validator\nmodule V exposing (..)");
+    }
+
+    #[test]
+    fn module_preserves_import_alias_error() {
+        assert_module_error_snapshot!("import Cardano.Tx as tx");
+    }
+
+    #[test]
+    fn module_preserves_type_alias_error() {
+        assert_module_error_snapshot!("type alias account");
+    }
+
+    #[test]
+    fn module_preserves_pattern_error() {
+        assert_module_error_snapshot!("f (x as) = x");
+    }
+
+    #[test]
+    fn module_preserves_expression_error() {
+        assert_module_error_snapshot!("value = if True then 42");
+    }
+
+    #[test]
+    fn module_preserves_annotation_name_error() {
+        assert_module_error_snapshot!("f : int\ng = 1");
     }
 }

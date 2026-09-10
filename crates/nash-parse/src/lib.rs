@@ -7,13 +7,13 @@ pub mod error;
 mod exposing;
 mod expression;
 mod import;
-mod keyword;
+pub mod keyword;
 mod module;
 mod number;
 mod pattern;
 mod space;
 mod string;
-mod symbol;
+pub mod symbol;
 #[cfg(test)]
 pub(crate) mod test_support;
 mod tests_block;

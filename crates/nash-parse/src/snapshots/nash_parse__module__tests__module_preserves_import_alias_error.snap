@@ -1,0 +1,8 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\nimport Cardano.Tx as tx"
+---
+ImportAlias(
+    1,
+    22,
+)

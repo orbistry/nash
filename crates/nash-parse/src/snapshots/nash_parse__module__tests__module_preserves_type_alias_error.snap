@@ -1,0 +1,20 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\ntype alias account"
+---
+Declarations(
+    Type(
+        Alias(
+            Equals(
+                1,
+                19,
+            ),
+            1,
+            6,
+        ),
+        1,
+        1,
+    ),
+    1,
+    1,
+)
