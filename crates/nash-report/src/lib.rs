@@ -11,6 +11,7 @@ pub mod code;
 pub mod doc;
 pub mod json;
 pub mod localizer;
+pub mod pattern;
 pub mod render_type;
 pub mod suggest;
 pub mod syntax;
@@ -18,6 +19,7 @@ pub mod type_;
 pub mod type_diff;
 pub use localizer::Localizer;
 mod render;
+pub mod warning;
 
 use nash_region::Region;
 
@@ -153,5 +155,32 @@ impl ModuleReports {
                 report.suggestions.clone(),
             )
         });
+    }
+}
+
+/// Phase error data is converted while its arena is still alive.
+pub enum ModuleError<'a> {
+    Syntax(nash_parse::error::Error<'a>),
+    Names(Vec<nash_can::Error<'a>>),
+    Types(Localizer, Vec<nash_constrain::Error<'a>>),
+    Patterns(Vec<nash_nitpick::Error<'a>>),
+}
+
+pub fn to_reports(
+    source: &Source<'_>,
+    expected_module_name: &str,
+    error: &ModuleError<'_>,
+) -> Vec<Report> {
+    match error {
+        ModuleError::Syntax(error) => vec![syntax::to_report(source, error)],
+        ModuleError::Names(errors) => errors
+            .iter()
+            .map(|error| canonicalize::to_report_with_name(source, error, expected_module_name))
+            .collect(),
+        ModuleError::Types(localizer, errors) => errors
+            .iter()
+            .map(|error| type_::to_report(localizer, error))
+            .collect(),
+        ModuleError::Patterns(errors) => errors.iter().map(pattern::to_report).collect(),
     }
 }

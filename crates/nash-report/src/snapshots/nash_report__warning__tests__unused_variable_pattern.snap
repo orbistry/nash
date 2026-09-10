@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/warning.rs
+expression: "render_plain(&only_warning(input), &Source::new(input), \"src/Main.nash\")"
+---
+unused variable
+
+  ⚠ You are not using `unused` anywhere.
+   ╭─[src/Main.nash:2:3]
+ 1 │ module Main exposing (..)
+ 2 │ f unused = 1
+   ·   ──────
+   ╰────
+  help: Is there a typo? Maybe you intended to use `unused` somewhere but typed another
+        name instead?
+
+        If you are sure there is no typo, replace `unused` with _ so future readers will
+        not have to wonder why it is there!

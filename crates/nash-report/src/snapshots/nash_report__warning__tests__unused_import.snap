@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/warning.rs
+expression: "render_plain(&report, &Source::new(input), \"src/Main.nash\")"
+---
+unused import
+
+  ⚠ Nothing from the `Tools` module is used in this file.
+   ╭─[src/Main.nash:2:8]
+ 1 │ module Main exposing (..)
+ 2 │ import Tools
+   ·        ─────
+ 3 │ x = 1
+   ╰────
+  help: I recommend removing unused imports.

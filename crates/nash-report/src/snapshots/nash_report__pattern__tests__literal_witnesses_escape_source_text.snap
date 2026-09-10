@@ -1,0 +1,8 @@
+---
+source: crates/nash-report/src/pattern.rs
+expression: "doc.render(80, false)"
+---
+    _
+    -7
+    "a\n\"b"
+    #"00ff"

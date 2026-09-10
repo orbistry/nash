@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/pattern.rs
+expression: "render(\"module Main exposing (..)\\nf [x] = x\\n\")"
+---
+UNSAFE PATTERN
+
+  × This pattern does not cover all possibilities:
+   ╭─[src/Main.nash:2:3]
+ 1 │ module Main exposing (..)
+ 2 │ f [x] = x
+   ·   ───
+   ╰────
+  help: Other possibilities include:
+
+            []
+
+        I would have to crash if I saw one of those! So rather than pattern matching in
+        function arguments, put a `case` in the function body to account for all
+        possibilities.

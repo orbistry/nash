@@ -1,0 +1,22 @@
+---
+source: crates/nash-report/src/pattern.rs
+expression: "render(indoc::indoc!\n{r#\"\n            module Main exposing (..)\n            first xs =\n                case xs of\n                    [] -> 0\n                    [] :: _ -> 1\n        \"#})"
+---
+MISSING PATTERNS
+
+  × This `case` does not have branches for all possibilities:
+   ╭─[src/Main.nash:3:5]
+ 2 │     first xs =
+ 3 │ ╭─▶     case xs of
+ 4 │ │           [] -> 0
+ 5 │ ╰─▶         [] :: _ -> 1
+   ╰────
+  help: Missing possibilities include:
+
+            (_ :: _) :: _
+
+        I would have to crash if I saw one of those. Add branches for them!
+
+        Hint: If you want to write the code for each branch later, use `todo` as a
+        placeholder. Read <https://nash-script.dev/hints/missing-patterns> for more
+        guidance on this workflow.
