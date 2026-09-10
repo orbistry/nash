@@ -258,8 +258,21 @@ These are useful implementation examples, not a ready-made UPLC calling conventi
 
 ### Keep language decisions separate
 
-A switch does not automatically add rank-N polymorphism, existential packages,
-first-class constraints, user-selected instances, or overlapping impls. Nash's
+Nash already supports let polymorphism, higher-kinded types, and annotated
+polymorphic recursion (subject to the evidence-growth restriction below). These
+are distinct from higher-rank polymorphism: accepting a function argument whose
+own type variables remain universally quantified inside the receiving function.
+For example, `use : (forall a. a -> a) -> (unit, Color)` uses mathematical
+`forall` notation that Nash does not currently support. The current canonical
+AST keeps quantification on `Annotation.free_vars`; nested `Type` nodes do not
+contain quantified schemes, and function parameters get monomorphic variables.
+See [`Annotation` and `Type`](../../crates/nash-ast/src/lib.rs) and
+[lambda inference](../../crates/nash-solve/src/solve/expressions.rs). The solver's
+internal variable ranks track generalization levels; they do not mean rank-N
+source types.
+
+A dictionary switch does not itself add higher-rank polymorphism, existential
+packages, first-class constraints, user-selected instances, or overlapping impls. Nash's
 orphan/overlap rules and instance resolution can remain unchanged. Both compilers
 already check coherence. A dictionary is an implementation of evidence, not a
 new source-language escape from those rules.
