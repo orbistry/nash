@@ -106,8 +106,6 @@ impl<'a> Parser<'a> {
         let mut current_end = end;
 
         loop {
-            let state_for_fallback = (ops.clone(), current_expr, current_args.clone(), current_end);
-
             let result = if self.is_trailing_section_operator() {
                 ExprEndState::Done
             } else {
@@ -121,10 +119,7 @@ impl<'a> Parser<'a> {
                             let new_end = p.get_position();
                             p.chomp(error::Expr::Space)?;
 
-                            let mut new_args = current_args.clone();
-                            new_args.push(arg);
-
-                            Ok(ExprEndState::MoreArgs(new_args, new_end))
+                            Ok(ExprEndState::MoreArgs(arg, new_end))
                         }),
                         // operator
                         Box::new(|p: &mut Parser<'a>| {
@@ -162,10 +157,7 @@ impl<'a> Parser<'a> {
                                     p.alloc(Located::at(neg_region, Expr::Negate(negated_expr)));
                                 p.chomp(error::Expr::Space)?;
 
-                                let mut new_args = current_args.clone();
-                                new_args.push(neg);
-
-                                Ok(ExprEndState::MoreArgs(new_args, neg_end))
+                                Ok(ExprEndState::MoreArgs(neg, neg_end))
                             } else {
                                 // Regular binary operator
                                 p.one_of(
@@ -213,20 +205,20 @@ impl<'a> Parser<'a> {
             };
 
             match result {
-                ExprEndState::MoreArgs(new_args, new_end) => {
-                    current_args = new_args;
+                ExprEndState::MoreArgs(arg, new_end) => {
+                    current_args.push(arg);
                     current_end = new_end;
                 }
                 ExprEndState::MoreOps(op, new_expr, new_end) => {
                     // Push (toCall current_expr current_args, op) onto ops
-                    let call_expr = to_call(self, start, current_expr, current_args.clone());
+                    let call_expr =
+                        to_call(self, start, current_expr, std::mem::take(&mut current_args));
                     let operand = self.alloc(BinOpOperand {
                         expr: call_expr,
                         op,
                     });
                     ops.push(operand);
                     current_expr = new_expr;
-                    current_args = Vec::new();
                     current_end = new_end;
                 }
                 ExprEndState::Final(op, final_expr, final_end) => {
@@ -247,20 +239,20 @@ impl<'a> Parser<'a> {
                     return Ok((result, final_end));
                 }
                 ExprEndState::Done => {
-                    // Finalize - use saved state
-                    let (saved_ops, saved_expr, saved_args, saved_end) = state_for_fallback;
-                    let final_call = to_call(self, start, saved_expr, saved_args);
+                    // No accumulator changes occur until a parse attempt succeeds.
+                    let final_call = to_call(self, start, current_expr, current_args);
 
-                    if saved_ops.is_empty() {
-                        return Ok((final_call, saved_end));
+                    if ops.is_empty() {
+                        return Ok((final_call, current_end));
                     } else {
-                        let ops_slice = saved_ops.into_bump_slice();
+                        let ops_slice = ops.into_bump_slice();
                         let binops = Expr::BinOps {
                             operands: ops_slice,
                             last: final_call,
                         };
-                        let result = self.alloc(Located::at(Region::new(start, saved_end), binops));
-                        return Ok((result, saved_end));
+                        let result =
+                            self.alloc(Located::at(Region::new(start, current_end), binops));
+                        return Ok((result, current_end));
                     }
                 }
             }
@@ -383,8 +375,8 @@ fn to_call<'a>(
 
 /// State for expression end parsing (function application and binary operators).
 enum ExprEndState<'a> {
-    /// More function arguments accumulated
-    MoreArgs(Vec<&'a Located<Expr<'a>>>, Position),
+    /// One successfully parsed function argument
+    MoreArgs(&'a Located<Expr<'a>>, Position),
     /// Binary operator found, continue parsing chain
     MoreOps(&'a Located<&'a str>, &'a Located<Expr<'a>>, Position),
     /// Final expression found (let, case, if, lambda) after operator
@@ -536,6 +528,29 @@ pub(crate) use assert_indented_expression_snapshot;
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn operator_chain_arena_growth_is_linear() {
+        let mut previous = None;
+        for count in [1000, 2000, 4000] {
+            let source = vec!["x"; count].join(" + ");
+            let bump = bumpalo::Bump::new();
+            let mut parser = crate::Parser::new(&bump, source.as_bytes());
+            let (expression, _) = parser.expression().expect("operator chain");
+            assert!(parser.is_eof());
+            let nash_source::Expr::BinOps { operands, .. } = expression.value else {
+                panic!("expected binary operators");
+            };
+            assert_eq!(operands.len(), count - 1);
+            let allocated = bump.allocated_bytes();
+            eprintln!("{count} operands: {allocated} arena bytes");
+            if let Some(previous) = previous {
+                // Allow arena chunk rounding while rejecting quadratic growth.
+                assert!(allocated <= previous * 3, "superlinear arena growth");
+            }
+            previous = Some(allocated);
+        }
+    }
+
     #[test]
     fn call_with_bytes_argument() {
         assert_expression_snapshot!("f #\"01\" x");
