@@ -1,0 +1,18 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(& Error ::\nBadPattern(region(), PCategory :: Str, & string(), PExpected ::\nFromContext(region(), PContext::CtorArg(\"Some\", 0), & int())))"
+---
+TYPE MISMATCH
+
+  × The 1st argument to `Some` is weird.
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: It is trying to match strings:
+
+            string
+
+        But `Some` needs its 1st argument to be:
+
+            int

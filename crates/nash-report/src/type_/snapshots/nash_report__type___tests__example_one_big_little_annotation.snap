@@ -1,0 +1,23 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "crate::render_plain(&report, &crate::Source::new(source), \"src/Ledger.nash\")"
+---
+TYPE MISMATCH
+
+  × Something is off with the body of the `settle` definition:
+    ╭─[src/Ledger.nash:10:5]
+  9 │ settle accounts =
+ 10 │     List.map balanceOf accounts
+    ·     ───────────────────────────
+    ╰────
+  help: This `List.map` call produces:
+
+            list Int
+
+        But the type annotation on `settle` says it should be:
+
+            list int
+
+        Hint: `Int` is the Big (Data) type and `int` is the little type. They never
+        convert implicitly. Where an appropriate `Lift` impl is available, use `lower`
+        to go from `Int` to `int`, or `lift` to go the other way.

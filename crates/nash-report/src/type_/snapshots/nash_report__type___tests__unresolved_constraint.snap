@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::UnresolvedConstraint\n{\n    region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::FlexVar(\"a\")]\n})"
+---
+UNRESOLVED CONSTRAINT
+
+  × I could not establish the constraint required by `f`:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help:     Eq 'a
+
+        Type inference finished without a proof for this requirement.
+
+        Hint: Add a type annotation to resolve the remaining type variables, then check
+        that the required impl or annotation constraint is available.

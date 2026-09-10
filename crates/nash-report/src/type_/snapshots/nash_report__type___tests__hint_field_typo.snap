@@ -1,0 +1,8 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "Doc::stack(problem_to_hint(&problem)).render(80, false)"
+---
+Hint: Seems like a record field typo. Maybe naem should be name?
+
+Hint: Can more type annotations be added? Type annotations always help me give
+more specific messages, and I think they could help a lot in this case!

@@ -1,0 +1,11 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "Doc::stack([report.before, report.after]).render(80, false)"
+---
+Subtraction does not work with this value:
+
+The right side of (-) is a string of type:
+
+    string
+
+But (-) only works with values whose type implements `Num`.

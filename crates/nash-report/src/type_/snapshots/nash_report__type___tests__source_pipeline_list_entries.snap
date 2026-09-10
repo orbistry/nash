@@ -1,0 +1,23 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf = [A, B]\\n\")"
+---
+TYPE MISMATCH
+
+  × The 2nd element of this list does not match all the previous elements:
+   ╭─[Main.nash:4:9]
+ 3 │ type B = B
+ 4 │ f = [A, B]
+   ·         ─
+   ╰────
+  help: This `B` value is a:
+
+            B
+
+        But all the previous elements in the list are:
+
+            A
+
+        Hint: Everything in a list must be the same type of value. This way, we never
+        run into unexpected values partway through a List.map, List.foldl, etc. Read
+        <https://nash-script.dev/hints/custom-types> to learn how to “mix” types.

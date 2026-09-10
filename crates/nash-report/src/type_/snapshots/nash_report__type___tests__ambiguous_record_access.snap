@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::AmbiguousRecordAccess\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Accessor,\n    field: Some(\"name\"), record: &ErrorType::FlexVar(\"a\")\n})"
+---
+AMBIGUOUS RECORD ACCESS
+
+  × I cannot determine the record type when using the field access function for the
+  │ `name` field:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: The type is still:
+
+            'a
+
+        Hint: Add a type annotation to tell me which record type provides these fields.

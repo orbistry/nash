@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&Error::BadExpr(region(), Category::List, &list,\nExpected::FromContext(region(), Context::OpRight(\"++\"), &string())))"
+---
+TYPE MISMATCH
+
+  × The (++) operator needs the same type of value on both sides:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: I see a string on the left and a list on the right. Which should it be? Does the
+        string need [] around it to become a list?

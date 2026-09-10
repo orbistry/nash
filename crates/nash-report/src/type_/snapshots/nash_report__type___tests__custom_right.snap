@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "Doc::stack([report.before, report.after]).render(80, false)"
+---
+The right argument of (<?>) is causing problems.
+
+The right argument is a string of type:
+
+    string
+
+But (<?>) needs the right argument to be:
+
+    int
+
+Hint: With operators like (<?>) I always check the left side first. If it seems
+fine, I assume it is correct and check the right side. So the problem may be in
+how the left and right arguments interact!

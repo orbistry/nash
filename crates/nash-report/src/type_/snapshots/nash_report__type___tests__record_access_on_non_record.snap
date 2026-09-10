@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(),\nContext::RecordAccess\n{\n    record_region: region(), maybe_name: Some(\"value\"), field_region:\n    region(), field: \"name\"\n}, & int())))"
+---
+TYPE MISMATCH
+
+  × This is not a record, so it has no fields to access!
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: It is:
+
+            string
+
+        But I need a record with a `name` field!

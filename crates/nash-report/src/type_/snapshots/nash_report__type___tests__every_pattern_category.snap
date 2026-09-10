@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "categories.into_iter().map(|category|\nadd_pattern_category(\"It matches\", category)).collect::<Vec<_>>().join(\"\\n\")"
+---
+It matches record values of type:
+It matches unit values:
+It matches tuples of type:
+It matches lists of type:
+It matches `Box` values of type:
+It matches integers:
+It matches bytes:
+It matches strings:
+It matches booleans:

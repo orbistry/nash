@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::NotARecord\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Pattern,\n    field: Some(\"name\"), record: &int()\n})"
+---
+TYPE MISMATCH
+
+  × This value is not a record, so I cannot use it when matching the `name` field in
+  │ this record pattern:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: It has type:
+
+            int
+
+        But I need a value with record fields!

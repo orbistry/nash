@@ -1,0 +1,22 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::CallArg(MaybeName::FuncName(\"f\"), 1), &\nint())))"
+---
+TYPE MISMATCH
+
+  × The 2nd argument to `f` is not what I expect:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: This argument is a string of type:
+
+            string
+
+        But `f` needs the 2nd argument to be:
+
+            int
+
+        Hint: I always figure out the argument types from left to right. If an argument
+        is acceptable, I assume it is “correct” and move on. So the problem may actually
+        be in one of the previous arguments!

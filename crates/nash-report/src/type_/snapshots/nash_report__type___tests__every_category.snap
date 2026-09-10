@@ -1,0 +1,20 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "categories.into_iter().map(|category|\nadd_category(\"It is\", category)).collect::<Vec<_>>().join(\"\\n\")"
+---
+It is a list of type:
+It is a string of type:
+This `if` expression produces:
+This `case` expression produces:
+This `f` call produces:
+This `Box` call produces:
+It is:
+It is:
+It is an anonymous function of type:
+This .field field access function has type:
+The value at .field is a:
+It is a record of type:
+It is a tuple of type:
+It is a unit value:
+This `local` value is a:
+This `foreign` value is a:

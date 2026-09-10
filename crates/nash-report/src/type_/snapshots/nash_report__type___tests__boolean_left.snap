@@ -1,0 +1,9 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "Doc::stack([report.before, report.after]).render(80, false)"
+---
+I am struggling with this boolean operation:
+
+Both sides of (&&) must be `bool` values, but the left side is:
+
+    string

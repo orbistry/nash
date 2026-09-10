@@ -1,0 +1,21 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::RecordUpdateValue(\"name\"), & int())))"
+---
+TYPE MISMATCH
+
+  × I cannot update the `name` field like this:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: You are trying to update `name` to be a string of type:
+
+            string
+
+        But it should be:
+
+            int
+
+        Note: The record update syntax does not allow you to change the type of fields.
+        You can achieve that with record constructors or the record literal syntax.

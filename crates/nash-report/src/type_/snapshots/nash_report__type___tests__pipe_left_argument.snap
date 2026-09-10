@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "Doc::stack([report.before, report.after]).render(80, false)"
+---
+I cannot send this through the (<|) pipe:
+
+The argument is:
+
+    string
+
+But (<|) is piping it to a function that expects:
+
+    int

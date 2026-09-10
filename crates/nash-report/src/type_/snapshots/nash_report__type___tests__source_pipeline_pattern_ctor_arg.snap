@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\ntype Box = Box A\\nf (Box B) = A\\n\")"
+---
+TYPE MISMATCH
+
+  × The 1st argument to `Box` is weird.
+   ╭─[Main.nash:5:8]
+ 4 │ type Box = Box A
+ 5 │ f (Box B) = A
+   ·        ─
+   ╰────
+  help: It is trying to match `B` values of type:
+
+            B
+
+        But `Box` needs its 1st argument to be:
+
+            A

@@ -1,0 +1,18 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: show(&error)
+---
+TYPE MISMATCH
+
+  × This `person` record does not have a `naem` field:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: This is usually a typo. Here are the `person` fields that are most similar:
+
+            { name : string
+            , age : int
+            }
+
+        So maybe naem should be name?

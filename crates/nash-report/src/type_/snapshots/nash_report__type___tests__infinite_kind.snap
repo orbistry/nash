@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::BadKind\n{\n    region: region(), name: \"f\", args: &[&ErrorType::FlexVar(\"a\")], reason:\n    nash_constrain::error::KindProblem::Infinite\n})"
+---
+INFINITE KIND
+
+  × The use of `f` would require an infinite kind:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: The type arguments at this use are:
+
+            'a
+
+        A type constructor cannot be applied to itself in this way: its kind would have
+        to contain itself forever.

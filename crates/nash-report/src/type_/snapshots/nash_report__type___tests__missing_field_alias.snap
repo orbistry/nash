@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&Error::MissingField\n{\n    region: region(), context: FieldContext::Access\n    { record_region: region(), maybe_name: Some(\"person\") }, field: \"aeg\",\n    record: &actual, available: &[\"age\"]\n})"
+---
+TYPE MISMATCH
+
+  × I cannot find `aeg` when accessing the `aeg` field of `person`:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: This is usually a typo. Here are the `person` fields that are most similar:
+
+            { age : int
+            }
+
+        So maybe aeg should be age?

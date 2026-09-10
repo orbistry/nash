@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::OpRight(\"::\"), & int())))"
+---
+TYPE MISMATCH
+
+  × The (::) operator can only add elements onto lists.
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: The right side is a string of type:
+
+            string
+
+        But (::) needs a `list` on the right.

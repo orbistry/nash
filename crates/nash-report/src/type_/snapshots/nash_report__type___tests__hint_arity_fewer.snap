@@ -1,0 +1,5 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "Doc::stack(problem_to_hint(&problem)).render(80, false)"
+---
+Hint: It looks like it takes too few arguments. I was expecting 2 more.

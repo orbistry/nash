@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "Doc::stack([report.before, report.after]).render(80, false)"
+---
+The (++) operator cannot append this type of value:
+
+I am seeing a string of type:
+
+    string
+
+But the (++) operator is only for appending list and string values. Maybe put
+this value in [] to make it a list?

@@ -1,0 +1,21 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::FieldMismatch\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Update\n    { record: \"person\" }, field: \"age\", actual: &string(), expected: &int()\n})"
+---
+TYPE MISMATCH
+
+  × I cannot update the `age` field like this:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: You are trying to update `age` to be:
+
+            int
+
+        But it should be:
+
+            string
+
+        Note: The record update syntax does not allow you to change the type of fields.
+        You can achieve that with record constructors or the record literal syntax.

@@ -1,0 +1,18 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&Error::BadExpr(region(), Category::Lambda, &actual,\nExpected::FromContext(region(), Context::OpRight(\"|>\"), &expected)))"
+---
+TYPE MISMATCH
+
+  × This function cannot handle the argument sent through the (|>) pipe:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: The argument is:
+
+            int
+
+        But (|>) is piping it to a function that expects:
+
+            string

@@ -1,0 +1,26 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::BadKind\n{\n    region: region(), name: \"f\", args: &[&int()], reason:\n    nash_constrain::error::KindProblem::Mismatch\n    {\n        expected:\n        &nash_ast::Kind::Arrow(&nash_ast::Kind::Type, &nash_ast::Kind::Type),\n        actual: &nash_ast::Kind::Type\n    }\n})"
+---
+KIND MISMATCH
+
+  × The type arguments to `f` have incompatible kinds:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: The type arguments at this use are:
+
+            int
+
+        I need kind:
+
+            Type -> Type
+
+        But this use has kind:
+
+            Type
+
+        Hint: A type constructor needs all of its required type arguments before it can
+        be used as a value type. An annotation's quantified kinds cannot be specialized
+        by its body.

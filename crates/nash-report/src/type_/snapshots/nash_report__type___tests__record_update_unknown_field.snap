@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&Error::BadExpr(region(), Category::Record, &record,\nExpected::FromContext(region(), Context::RecordUpdateKeys(\"person\", &updates),\n&int())))"
+---
+TYPE MISMATCH
+
+  × The `person` record does not have a `naem` field:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: This is usually a typo. Here are the `person` fields that are most similar:
+
+            { name : string
+            }
+
+        So maybe naem should be name?

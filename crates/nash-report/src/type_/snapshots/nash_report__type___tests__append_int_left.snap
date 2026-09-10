@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: show(&error)
+---
+TYPE MISMATCH
+
+  × The (++) operator can append list and string values, but not int values like
+  │ this:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: Hint: Try using Int.toString to turn it into a string? Or put it in [] to make
+        it a list? Or switch to the (::) operator?

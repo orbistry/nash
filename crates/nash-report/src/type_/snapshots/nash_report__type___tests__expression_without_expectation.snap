@@ -1,0 +1,18 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&Error::BadExpr(region(), Category::String, &string(),\nExpected::NoExpectation(&int())))"
+---
+TYPE MISMATCH
+
+  × This expression is being used in an unexpected way:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: It is a string of type:
+
+            string
+
+        But you are trying to use it as:
+
+            int

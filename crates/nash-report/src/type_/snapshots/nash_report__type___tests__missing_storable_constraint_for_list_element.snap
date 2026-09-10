@@ -1,0 +1,24 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::MissingImpl\n{\n    region: region(), name: \"values\", trait_:\n    nash_ast::primitives::ReprTrait::Storable.qualified(), args:\n    &[&ErrorType::Lambda(&int(), &int(), &[])], available: &[], because:\n    &[nash_constrain::error::Requirement::Formation(&ErrorType::Type\n    {\n        home: nash_ast::primitives::builtin_home(), name: \"list\", args:\n        &[&ErrorType::Lambda(&int(), &int(), &[])]\n    })]\n})"
+---
+MISSING IMPL
+
+  × `values` requires a representation that this type does not provide:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help:     (int -> int)
+
+        `Storable` accepts Big or Const representations. This argument does not meet
+        that requirement.
+
+        Hint: Representation constraints are compiler-owned. Adding an impl cannot
+        change a type's representation; change the datatype or convert the value
+        explicitly.
+
+        This requirement came from the following chain, from the original use to the
+        failing requirement:
+
+            forming list (int -> int)

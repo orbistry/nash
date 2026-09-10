@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "type_error_reports(\"module Main exposing (..)\\nf x = x x\\n\")"
+---
+INFINITE TYPE
+
+  × I am inferring a weird self-referential type for x:
+   ╭─[Main.nash:2:3]
+ 1 │ module Main exposing (..)
+ 2 │ f x = x x
+   ·   ─
+   ╰────
+  help: Here is my best effort at writing down the type. You will see ∞ for parts of the
+        type that repeat something already printed out infinitely.
+
+            ∞ -> 'a
+
+        Staring at this type is usually not so helpful, so I recommend reading the hints
+        at <https://nash-script.dev/hints/infinite-type> to get unstuck!

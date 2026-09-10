@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf : A -> A\\nf x = x\\ng = f B\\n\")"
+---
+TYPE MISMATCH
+
+  × The 1st argument to `f` is not what I expect:
+   ╭─[Main.nash:6:7]
+ 5 │ f x = x
+ 6 │ g = f B
+   ·       ─
+   ╰────
+  help: This `B` value is a:
+
+            B
+
+        But `f` needs the 1st argument to be:
+
+            A

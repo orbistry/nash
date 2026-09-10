@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf : A\\nf = B\\n\")"
+---
+TYPE MISMATCH
+
+  × Something is off with the body of the `f` definition:
+   ╭─[Main.nash:5:5]
+ 4 │ f : A
+ 5 │ f = B
+   ·     ─
+   ╰────
+  help: This `B` value is a:
+
+            B
+
+        But the type annotation on `f` says it should be:
+
+            A

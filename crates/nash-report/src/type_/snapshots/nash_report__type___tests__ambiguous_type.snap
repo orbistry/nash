@@ -1,0 +1,21 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&\nError::AmbiguousType\n{\n    region: region(), name: \"value\", variable: &ErrorType::FlexVar(\"a\"),\n    predicates:\n    &[nash_constrain::error::AmbiguousPredicate\n    {\n        trait_: nash_ast::primitives::num_trait(), args:\n        &[&ErrorType::FlexVar(\"a\")]\n    }]\n})"
+---
+AMBIGUOUS TYPE
+
+  × I cannot determine the type needed by `value`:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: This type variable is still unresolved:
+
+            'a
+
+        It must satisfy these constraints:
+
+            Num 'a
+
+        Hint: Add a type annotation that fixes this type. Each constraint needs enough
+        information to select an impl.

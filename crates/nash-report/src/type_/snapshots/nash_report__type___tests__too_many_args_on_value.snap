@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::CallArity(MaybeName::FuncName(\"value\"), 2), &\nint())))"
+---
+TOO MANY ARGS
+
+  × The `value` value is not a function, but it was given 2 arguments.
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: Are there any missing commas? Or missing parentheses?

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::OpRight(\"|>\"), & int())))"
+---
+TYPE MISMATCH
+
+  × The right side of (|>) needs to be a function so I can pipe arguments to it!
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: But instead of a function, I am seeing a string of type:
+
+            string

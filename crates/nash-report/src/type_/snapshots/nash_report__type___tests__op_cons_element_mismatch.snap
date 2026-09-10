@@ -1,0 +1,20 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&Error::BadExpr(region(), Category::List, &actual,\nExpected::FromContext(region(), Context::OpRight(\"::\"), &expected)))"
+---
+TYPE MISMATCH
+
+  × I am having trouble with this (::) operator:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: The left side of (::) is:
+
+            int
+
+        But you are trying to put that into a list filled with:
+
+            string
+
+        Lists need ALL elements to be the same type though.

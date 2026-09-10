@@ -1,0 +1,25 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "show(&Error::BadExpr(region(), Category::CallResult(MaybeName::NoName),\n&int(),\nExpected::FromAnnotation(\"f\", 0, SubContext::TypedBody,\n&ErrorType::RigidVar(\"a\"))))"
+---
+TYPE MISMATCH
+
+  × Something is off with the body of the `f` definition:
+   ╭─[Main.nash:1:1]
+ 1 │ value
+   · ─────
+   ╰────
+  help: The body is:
+
+            int
+
+        But the type annotation on `f` says it should be:
+
+            'a
+
+        Hint: Your type annotation uses type variable `'a` which means ANY type of value
+        can flow through, but your code is saying it specifically wants a value of type
+        `int`. Maybe change your type annotation to be more specific? Maybe change the
+        code to be more general?
+
+        Read <https://nash-script.dev/hints/type-annotations> for more advice!

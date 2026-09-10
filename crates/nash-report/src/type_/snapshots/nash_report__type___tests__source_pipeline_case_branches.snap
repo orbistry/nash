@@ -1,0 +1,25 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf a =\\n    case a of\\n        A -> A\\n        _ -> B\\n\")"
+---
+TYPE MISMATCH
+
+  × The 2nd branch of this `case` does not match all the previous branches:
+   ╭─[Main.nash:7:14]
+ 4 │ f a =
+ 5 │     case a of
+ 6 │         A -> A
+ 7 │         _ -> B
+   ·              ─
+   ╰────
+  help: This `B` value is a:
+
+            B
+
+        But all the previous branches result in:
+
+            A
+
+        Hint: All branches in a `case` must produce the same type of values. This way,
+        no matter which branch we take, the result is always a consistent shape. Read
+        <https://nash-script.dev/hints/custom-types> to learn how to “mix” types.
