@@ -253,6 +253,13 @@ impl<'a> Store<'a> {
         depth
     }
 
+    pub(crate) fn root(&self, mut id: PredId) -> PredId {
+        while let Origin::Sub { parent, .. } = self.get(id).origin {
+            id = parent;
+        }
+        id
+    }
+
     pub fn push(&mut self, uf: &mut UnionFind<'a>, predicate: Predicate<'a>) -> PredId {
         let id = PredId(u32::try_from(self.predicates.len()).expect("predicate store exhausted"));
         for arg in predicate.body.roots() {

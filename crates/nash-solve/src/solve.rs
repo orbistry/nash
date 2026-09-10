@@ -39,6 +39,11 @@ pub fn run<'a>(
         uses: Vec::new(),
         owners: Vec::new(),
         resolution_work: std::collections::HashMap::new(),
+        has_poison: false,
+        dependencies: crate::recovery::Dependencies::default(),
+        failed_lineages: BTreeSet::new(),
+        failed_predicates: BTreeSet::new(),
+        failed_definitions: std::collections::HashSet::new(),
         value_roots: Vec::new(),
         kind_contracts: Vec::new(),
         kind_errors: Vec::new(),
@@ -65,6 +70,7 @@ pub fn run<'a>(
     } else {
         // Elm accumulates errors by prepending; match its final order.
         let mut errors = state.errors;
+        errors.extend(solver.final_errors(uf));
         errors.reverse();
         Err(errors)
     }
@@ -105,6 +111,7 @@ enum UseSource {
 
 struct UseRecord<'a> {
     site: UseSite<'a>,
+    variable: Variable,
     owner: Option<nash_ast::NodeId>,
     source: UseSource,
     predicates: Vec<type_::PredId>,
@@ -143,7 +150,12 @@ struct Solver<'a, 'tables> {
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
     owners: Vec<nash_ast::NodeId>,
-    resolution_work: std::collections::HashMap<nash_ast::NodeId, usize>,
+    resolution_work: std::collections::HashMap<type_::PredId, usize>,
+    has_poison: bool,
+    dependencies: crate::recovery::Dependencies,
+    failed_lineages: BTreeSet<type_::PredId>,
+    failed_predicates: BTreeSet<type_::PredId>,
+    failed_definitions: std::collections::HashSet<nash_ast::NodeId>,
     value_roots: Vec<(Variable, nash_region::Region)>,
     kind_contracts: Vec<crate::kind_check::Contract<'a>>,
     kind_errors: Vec<Error<'a>>,
@@ -163,6 +175,97 @@ struct Given<'a> {
 }
 
 impl<'a> Solver<'a, '_> {
+    fn unify(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        actual: Variable,
+        expected: Variable,
+    ) -> unify::Answer<'a> {
+        self.dependencies.remember(uf, [actual, expected]);
+        self.propagate_poison(uf);
+        let detached = self.dependencies.detached(uf, [actual, expected]);
+        let answer = unify::unify(self.bump, uf, actual, expected);
+        self.dependencies.remember(uf, [actual, expected]);
+        if matches!(answer, unify::Answer::Err(..)) {
+            self.has_poison = true;
+            crate::recovery::poison_roots(uf, detached);
+            self.propagate_poison(uf);
+        }
+        answer
+    }
+
+    /// Normalization can remove application heads from the visible type tree.
+    /// A use still owns those copied variables and their kind contracts. Carry
+    /// poison through its original roots before checking later obligations.
+    fn propagate_poison(&self, uf: &mut UnionFind<'a>) {
+        if !self.has_poison {
+            return;
+        }
+        loop {
+            let mut changed = self.dependencies.propagate(uf);
+            for use_ in &self.uses {
+                let mut roots = vec![use_.variable];
+                for id in &use_.predicates {
+                    roots.extend(self.predicates.get(*id).body.roots());
+                }
+                match &use_.source {
+                    UseSource::Local { copies, .. } => {
+                        roots.extend(copies.iter().map(|(_, copy)| copy))
+                    }
+                    UseSource::Foreign { variables } => roots.extend(variables),
+                }
+                if crate::recovery::is_poisoned(uf, roots.iter().copied())
+                    && !crate::recovery::is_poisoned(uf, [use_.variable])
+                {
+                    changed |= crate::recovery::poison_roots(uf, [use_.variable]);
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+    }
+
+    fn fail_definition(&mut self, uf: &mut UnionFind<'a>, definition: nash_ast::NodeId) {
+        self.has_poison = true;
+        self.failed_definitions.insert(definition);
+        loop {
+            let before = self.failed_definitions.len();
+            for scheme in &self.schemes {
+                if self.failed_definitions.contains(&scheme.site.node())
+                    || self.failed_definitions.contains(&scheme.binder)
+                {
+                    self.failed_definitions.insert(scheme.site.node());
+                    crate::recovery::poison_roots(uf, [scheme.binding.variable]);
+                }
+            }
+            for use_ in &self.uses {
+                if let UseSource::Local { definition, copies } = &use_.source
+                    && self.failed_definitions.contains(definition)
+                {
+                    crate::recovery::poison(
+                        uf,
+                        [use_.variable]
+                            .into_iter()
+                            .chain(copies.iter().map(|(_, copy)| *copy)),
+                    );
+                    if let Some(owner) = use_.owner {
+                        self.failed_definitions.insert(owner);
+                    }
+                }
+            }
+            if before == self.failed_definitions.len() {
+                break;
+            }
+        }
+    }
+
+    fn predicate_blocked(&self, uf: &mut UnionFind<'a>, id: type_::PredId) -> bool {
+        self.failed_predicates.contains(&id)
+            || self.failed_lineages.contains(&self.predicates.root(id))
+            || crate::recovery::is_poisoned(uf, self.predicates.get(id).body.roots())
+    }
+
     /// Field resolution may expose another receiver, so retry to a fixed point.
     fn retry_fields(&mut self, uf: &mut UnionFind<'a>, rank: usize, errors: &mut Vec<Error<'a>>) {
         loop {
@@ -179,6 +282,16 @@ impl<'a> Solver<'a, '_> {
         }
     }
 
+    fn poison_field(&mut self, uf: &mut UnionFind<'a>, field: DeferredField<'a>) {
+        self.has_poison = true;
+        let result = match (field.context, field.field) {
+            (type_::FieldContext::Update { .. }, _) | (_, None) => field.record,
+            (_, Some((_, variable))) => variable,
+        };
+        crate::recovery::poison_roots(uf, [result]);
+        self.propagate_poison(uf);
+    }
+
     fn try_field(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -186,6 +299,35 @@ impl<'a> Solver<'a, '_> {
         field: DeferredField<'a>,
         errors: &mut Vec<Error<'a>>,
     ) -> bool {
+        let before = errors.len();
+        let resolved = self.resolve_field(uf, rank, field, errors);
+        if errors.len() > before {
+            self.poison_field(uf, field);
+        }
+        resolved
+    }
+
+    fn resolve_field(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        field: DeferredField<'a>,
+        errors: &mut Vec<Error<'a>>,
+    ) -> bool {
+        if [field.record]
+            .into_iter()
+            .chain(field.field.map(|(_, var)| var))
+            .any(|variable| matches!(uf.get(variable).content, Content::Error))
+        {
+            self.poison_field(uf, field);
+            return true;
+        }
+        self.dependencies.remember(
+            uf,
+            [field.record]
+                .into_iter()
+                .chain(field.field.map(|(_, var)| var)),
+        );
         let mut receiver = field.record;
         let mut seen = BTreeSet::new();
         while seen.insert(uf.find(receiver)) {
@@ -194,7 +336,10 @@ impl<'a> Solver<'a, '_> {
             self.introduce(uf, rank, &allocated);
             match uf.get(receiver).content.clone() {
                 Content::FlexVar(_) => return false,
-                Content::Error => return true,
+                Content::Error => {
+                    self.poison_field(uf, field);
+                    return true;
+                }
                 Content::Alias { body, real, .. } => {
                     if !matches!(body.value, CanType::Record { .. }) {
                         receiver = real;
@@ -218,7 +363,7 @@ impl<'a> Solver<'a, '_> {
                         });
                         return true;
                     };
-                    return match unify::unify(self.bump, uf, actual, field_type) {
+                    return match self.unify(uf, actual, field_type) {
                         unify::Answer::Ok(vars) => {
                             self.introduce(uf, rank, &vars);
                             true
@@ -270,7 +415,7 @@ impl<'a> Solver<'a, '_> {
                     };
                     let substitution = union.parameters.iter().copied().zip(args).collect();
                     let actual = self.src_type_to_var(uf, rank, &substitution, actual.typ);
-                    match unify::unify(self.bump, uf, actual, field_type) {
+                    match self.unify(uf, actual, field_type) {
                         unify::Answer::Ok(vars) => self.introduce(uf, rank, &vars),
                         unify::Answer::Err(vars, actual, expected) => {
                             self.introduce(uf, rank, &vars);
@@ -333,6 +478,7 @@ impl<'a> Solver<'a, '_> {
                     field: field.field.map(|(name, _)| name),
                     record: to_error_type(self.bump, uf, field.record),
                 });
+                self.poison_field(uf, field);
             } else {
                 self.fields.push(field);
             }
@@ -459,28 +605,28 @@ impl<'a> Solver<'a, '_> {
         growing
     }
 
-    fn finish(
-        &self,
-        uf: &mut UnionFind<'a>,
-        env: &Env<'a>,
-    ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
-        use crate::solved::{Instance, Scheme, SolvedTypes};
-        use std::collections::HashMap;
-        if let Some(error) = crate::kind_check::check(
+    fn final_errors(&mut self, uf: &mut UnionFind<'a>) -> Vec<Error<'a>> {
+        self.propagate_poison(uf);
+        let mut errors = crate::kind_check::check(
             self.bump,
             uf,
             &self.tables.kinds,
             &self.value_roots,
             &self.predicates,
             &self.kind_contracts,
-        ) {
-            return Err(vec![error]);
+            &self.dependencies,
+        );
+        if !errors.is_empty() {
+            self.has_poison = true;
+            self.propagate_poison(uf);
         }
         let growing = self.growing_evidence();
-        let mut errors = Vec::new();
         for use_ in &self.uses {
+            if crate::recovery::is_poisoned(uf, [use_.variable]) {
+                continue;
+            }
             for root in &use_.predicates {
-                if growing.contains(root) {
+                if growing.contains(root) && !self.predicate_blocked(uf, *root) {
                     let pred = self.predicates.get(*root);
                     let Body::Trait { trait_, args, .. } = &pred.body else {
                         continue;
@@ -500,7 +646,7 @@ impl<'a> Solver<'a, '_> {
             let mut pending = use_.predicates.clone();
             let mut seen = BTreeSet::new();
             while let Some(id) = pending.pop() {
-                if !seen.insert(id) {
+                if !seen.insert(id) || self.predicate_blocked(uf, id) {
                     continue;
                 }
                 let pred = self.predicates.get(id);
@@ -536,6 +682,17 @@ impl<'a> Solver<'a, '_> {
                 }
             }
         }
+        errors
+    }
+
+    fn finish(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        env: &Env<'a>,
+    ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
+        use crate::solved::{Instance, Scheme, SolvedTypes};
+        use std::collections::HashMap;
+        let errors = self.final_errors(uf);
         if !errors.is_empty() {
             return Err(errors);
         }
@@ -890,6 +1047,9 @@ impl<'a> Solver<'a, '_> {
         binder: Option<type_::Binder<'a>>,
         annotated: bool,
     ) -> State<'a> {
+        // Attribute new failures to their owning binding. This count does not
+        // gate any independent constraint or reset the collected diagnostics.
+        let errors_before = state.errors.len();
         let depth = self.enter_givens(uf, rank, given, binder);
         let start = self.wanted.len();
         let owner_depth = self.owners.len();
@@ -899,6 +1059,11 @@ impl<'a> Solver<'a, '_> {
         let mut state = self.solve(uf, env, rank, state, constraint);
         self.retry_fields(uf, rank, &mut state.errors);
         state = self.resolve_wanted(uf, rank, state, start, binder, annotated);
+        if state.errors.len() > errors_before
+            && let Some(binder) = binder
+        {
+            self.fail_definition(uf, binder.node());
+        }
         self.givens.truncate(depth);
         self.owners.truncate(owner_depth);
         state
@@ -982,6 +1147,8 @@ impl<'a> Solver<'a, '_> {
         head: Variable,
         args: &[Variable],
     ) -> Option<Vec<Body<'a>>> {
+        self.dependencies
+            .remember(uf, [head].into_iter().chain(args.iter().copied()));
         let (name, supplied) = crate::representation::application(uf, head, args)?;
         let info = self.tables.kinds.constructor(name);
         let variables: BTreeMap<_, _> = info.parameters().iter().copied().zip(supplied).collect();
@@ -1005,6 +1172,7 @@ impl<'a> Solver<'a, '_> {
         variable: Variable,
     ) -> Option<nash_ast::primitives::Repr> {
         let mut allocated = Vec::new();
+        self.dependencies.remember(uf, [variable]);
         let repr = crate::representation::known(uf, &self.tables.kinds, variable, &mut allocated);
         self.introduce(uf, rank, &allocated);
         repr
@@ -1043,8 +1211,8 @@ impl<'a> Solver<'a, '_> {
     ) -> State<'a> {
         use crate::preds::Solution;
         use nash_ast::primitives::{Repr, ReprTrait};
-        let report_errors = state.errors.is_empty();
-        let report_missing = annotated && report_errors;
+        self.propagate_poison(uf);
+        let report_missing = annotated;
         let mut queue: VecDeque<_> = self
             .wanted
             .split_off(start)
@@ -1052,6 +1220,10 @@ impl<'a> Solver<'a, '_> {
             .map(|(rank, id)| (rank, id, self.predicates.depth(id)))
             .collect();
         while let Some((wanted_rank, id, resolution_depth)) = queue.pop_front() {
+            if self.predicate_blocked(uf, id) {
+                self.predicates.detach(uf, id);
+                continue;
+            }
             if self.predicates.get(id).solution.is_some() {
                 continue;
             }
@@ -1122,7 +1294,8 @@ impl<'a> Solver<'a, '_> {
                                 typ: args[0],
                             },
                         );
-                    } else if report_errors && let Some(site) = site {
+                    } else if let Some(site) = site {
+                        self.failed_predicates.insert(id);
                         state.errors.push(Error::MissingImpl {
                             region: site.region,
                             name: site.name,
@@ -1141,6 +1314,7 @@ impl<'a> Solver<'a, '_> {
                     && let Some(site) = site
                     && matches!(uf.get(args[0]).content, Content::RigidVar(_))
                 {
+                    self.failed_predicates.insert(id);
                     state.errors.push(Error::MissingConstraint {
                         region: site.region,
                         name: site.name,
@@ -1185,6 +1359,7 @@ impl<'a> Solver<'a, '_> {
                     .iter()
                     .map(|arg| to_error_type(self.bump, uf, *arg))
                     .collect();
+                self.failed_predicates.insert(id);
                 state.errors.push(Error::MissingConstraint {
                     region: site.region,
                     name: site.name,
@@ -1194,9 +1369,12 @@ impl<'a> Solver<'a, '_> {
                 });
                 continue;
             }
-            if report_errors && let Some(binder) = binder {
+            if binder.is_some() {
                 let site = site.expect("wanteds originate at uses");
-                let work = self.resolution_work.entry(binder.node()).or_default();
+                let work = self
+                    .resolution_work
+                    .entry(self.predicates.root(id))
+                    .or_default();
                 *work += 1;
                 if *work > 16_384 || resolution_depth >= 128 {
                     state.errors.push(Error::ImplResolutionLimit {
@@ -1204,7 +1382,8 @@ impl<'a> Solver<'a, '_> {
                         name: site.name,
                         trait_,
                     });
-                    break;
+                    self.failed_lineages.insert(self.predicates.root(id));
+                    continue;
                 }
                 match crate::resolve::select(self.tables, uf, trait_, &args) {
                     crate::resolve::Selection::Deferred => self.wanted.push((wanted_rank, id)),
@@ -1213,7 +1392,8 @@ impl<'a> Solver<'a, '_> {
                             region: site.region,
                             name: site.name,
                             trait_,
-                        })
+                        });
+                        self.failed_lineages.insert(self.predicates.root(id));
                     }
                     crate::resolve::Selection::Missing => {
                         let args: Vec<_> = args
@@ -1227,6 +1407,7 @@ impl<'a> Solver<'a, '_> {
                             .filter(|key| key.trait_ == trait_)
                             .map(|key| key.heads)
                             .collect();
+                        self.failed_predicates.insert(id);
                         state.errors.push(Error::MissingImpl {
                             region: site.region,
                             name: site.name,
@@ -1285,6 +1466,7 @@ impl<'a> Solver<'a, '_> {
         roots: &[Variable],
         region: nash_region::Region,
     ) {
+        self.dependencies.remember(uf, roots.iter().copied());
         self.value_roots
             .extend(roots.iter().map(|variable| (*variable, region)));
         let Some(owner) = self.owners.last().copied() else {
@@ -1404,6 +1586,7 @@ impl<'a> Solver<'a, '_> {
             } => {
                 let record = self.type_to_variable(uf, rank, record);
                 let field_type = self.type_to_variable(uf, rank, field_type);
+                self.dependencies.field(field_type, record);
                 self.fields.push(DeferredField {
                     region: *region,
                     context: *context,
@@ -1424,8 +1607,27 @@ impl<'a> Solver<'a, '_> {
             Constraint::Equal(region, category, tipe, expectation) => {
                 let actual = self.type_to_variable(uf, rank, tipe);
                 let expected = self.expected_to_variable(uf, rank, expectation);
+                if let Expected::FromContext(
+                    _,
+                    nash_constrain::error::Context::CallArity(_, arity),
+                    _,
+                ) = expectation
+                {
+                    let mut result = expected;
+                    let mut inputs = vec![actual];
+                    for _ in 0..*arity {
+                        let Content::Structure(FlatType::Fun1(argument, output)) =
+                            uf.get(result).content
+                        else {
+                            break;
+                        };
+                        inputs.push(argument);
+                        result = output;
+                    }
+                    self.dependencies.computation(result, inputs);
+                }
                 self.formed_at(uf, rank, &[actual, expected], *region);
-                match unify::unify(self.bump, uf, actual, expected) {
+                match self.unify(uf, actual, expected) {
                     unify::Answer::Ok(vars) => {
                         self.introduce(uf, rank, &vars);
                         state
@@ -1461,7 +1663,7 @@ impl<'a> Solver<'a, '_> {
                 );
                 let expected = self.expected_to_variable(uf, rank, expectation);
                 self.formed_at(uf, rank, &[actual, expected], *region);
-                match unify::unify(self.bump, uf, actual, expected) {
+                match self.unify(uf, actual, expected) {
                     unify::Answer::Ok(vars) => {
                         self.introduce(uf, rank, &vars);
                         state
@@ -1494,7 +1696,7 @@ impl<'a> Solver<'a, '_> {
                 );
                 let expected = self.expected_to_variable(uf, rank, expectation);
                 self.formed_at(uf, rank, &[actual, expected], *region);
-                match unify::unify(self.bump, uf, actual, expected) {
+                match self.unify(uf, actual, expected) {
                     unify::Answer::Ok(vars) => {
                         self.introduce(uf, rank, &vars);
                         state
@@ -1518,7 +1720,7 @@ impl<'a> Solver<'a, '_> {
                 let actual = self.type_to_variable(uf, rank, tipe);
                 let expected = self.pattern_expectation_to_variable(uf, rank, expectation);
                 self.formed_at(uf, rank, &[actual, expected], *region);
-                match unify::unify(self.bump, uf, actual, expected) {
+                match self.unify(uf, actual, expected) {
                     unify::Answer::Ok(vars) => {
                         self.introduce(uf, rank, &vars);
                         state
@@ -1553,6 +1755,7 @@ impl<'a> Solver<'a, '_> {
                 header_con,
                 body_con,
             } => {
+                let errors_before = state.errors.len();
                 let wanted_start = self.wanted.len();
                 let annotated = definitions.iter().any(|def| def.context.is_some());
                 if definitions.is_empty()
@@ -1563,17 +1766,13 @@ impl<'a> Solver<'a, '_> {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    if state1.errors.is_empty() {
-                        self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
-                    }
+                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
                     state1
                 } else if definitions.is_empty() && rigid_vars.is_empty() && flex_vars.is_empty() {
                     let declared = self.declared_contexts(uf, rank, definitions, declarations);
                     let state1 = self
                         .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
-                    if state1.errors.is_empty() {
-                        self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
-                    }
+                    self.record_definitions(uf, rank, definitions, &declared, &[], *binder);
                     let locals: Vec<(&'a str, Located<Variable>)> = header
                         .iter()
                         .map(|(name, loc_type)| {
@@ -1646,30 +1845,24 @@ impl<'a> Solver<'a, '_> {
                     self.generalize(uf, young_mark, visit_mark, next_rank);
                     self.pools[next_rank] = Vec::new();
 
-                    // check that things went well
-                    if state1.errors.is_empty() {
-                        for rigid in rigid_vars.iter() {
-                            if uf.get(*rigid).rank != NO_RANK {
-                                let owner = binder
-                                    .map(|name| (name.name().region, name.name().value))
-                                    .or_else(|| {
-                                        header.first().map(|(name, typ)| (typ.region, *name))
-                                    });
-                                state1.errors.push(Error::AnnotationVariableEscapes {
-                                    region: owner
-                                        .map_or_else(nash_region::Region::zero, |(region, _)| {
-                                            region
-                                        }),
-                                    name: owner.map(|(_, name)| name),
-                                    variable: to_error_type(self.bump, uf, *rigid),
-                                });
-                            }
+                    // An unrelated error must not suppress an escaping annotation.
+                    for rigid in rigid_vars.iter() {
+                        if uf.get(*rigid).rank != NO_RANK
+                            && !crate::recovery::is_poisoned(uf, [*rigid])
+                        {
+                            let owner = binder
+                                .map(|name| (name.name().region, name.name().value))
+                                .or_else(|| header.first().map(|(name, typ)| (typ.region, *name)));
+                            state1.errors.push(Error::AnnotationVariableEscapes {
+                                region: owner
+                                    .map_or_else(nash_region::Region::zero, |(region, _)| region),
+                                name: owner.map(|(_, name)| name),
+                                variable: to_error_type(self.bump, uf, *rigid),
+                            });
                         }
                     }
 
-                    if state1.errors.is_empty()
-                        && let Some(binder) = *binder
-                    {
+                    if let Some(binder) = *binder {
                         let depth = self.enter_givens(uf, rank, given, Some(binder));
                         loop {
                             let (errors, defaulted) = self.check_ambiguity(
@@ -1680,7 +1873,7 @@ impl<'a> Solver<'a, '_> {
                                 binder.name(),
                             );
                             state1.errors.extend(errors);
-                            if !defaulted || !state1.errors.is_empty() {
+                            if !defaulted {
                                 break;
                             }
                             state1 = self.resolve_wanted(
@@ -1691,9 +1884,6 @@ impl<'a> Solver<'a, '_> {
                                 Some(binder),
                                 annotated,
                             );
-                            if !state1.errors.is_empty() {
-                                break;
-                            }
                         }
                         self.givens.truncate(depth);
                     }
@@ -1711,9 +1901,12 @@ impl<'a> Solver<'a, '_> {
                     };
 
                     let mut new_env = env.clone();
-                    if state1.errors.is_empty() {
-                        self.record_definitions(uf, rank, definitions, &declared, context, *binder);
+                    if state1.errors.len() > errors_before
+                        && let Some(binder) = *binder
+                    {
+                        self.fail_definition(uf, binder.node());
                     }
+                    self.record_definitions(uf, rank, definitions, &declared, context, *binder);
                     for (name, loc) in &locals {
                         new_env.entry(name).or_insert(Binding {
                             declared_quantifiers: if declarations
@@ -1795,7 +1988,8 @@ impl<'a> Solver<'a, '_> {
         let variable = located_variable.value;
         if occurs::occurs(uf, variable) {
             let error_type = to_error_type(self.bump, uf, variable);
-            uf.modify(variable, |desc| desc.content = Content::Error);
+            self.has_poison = true;
+            crate::recovery::poison(uf, [variable]);
             add_error(
                 state,
                 Error::InfiniteType {
@@ -2064,6 +2258,7 @@ impl<'a> Solver<'a, '_> {
         );
         self.uses.push(UseRecord {
             site,
+            variable: typ,
             owner: self.owners.last().copied(),
             source: UseSource::Foreign {
                 variables: annotation
@@ -2103,6 +2298,10 @@ impl<'a> Solver<'a, '_> {
         quantified: &[Variable],
         region: nash_region::Region,
     ) {
+        self.dependencies.remember(uf, [root]);
+        if crate::recovery::is_poisoned(uf, [root]) {
+            return;
+        }
         let bodies = ids
             .iter()
             .map(|id| self.predicates.get(*id).body.clone())
@@ -2117,7 +2316,12 @@ impl<'a> Solver<'a, '_> {
             &self.kind_contracts,
         ) {
             Ok(contracts) => self.kind_contracts.extend(contracts),
-            Err(error) => self.kind_errors.push(*error),
+            Err(failure) => {
+                self.kind_errors.push(failure.error);
+                self.has_poison = true;
+                self.dependencies.invalidate(uf, [failure.variable]);
+                self.propagate_poison(uf);
+            }
         }
     }
 
@@ -2149,6 +2353,11 @@ impl<'a> Solver<'a, '_> {
                 .into_iter()
                 .filter(|var| uf.get(*var).rank == NO_RANK)
                 .collect();
+            if self.failed_definitions.contains(&definition.site.node())
+                || binder.is_some_and(|binder| self.failed_definitions.contains(&binder.node()))
+            {
+                crate::recovery::poison_roots(uf, [binding.variable]);
+            }
             self.freeze_kind_contracts(
                 uf,
                 binding.variable,
@@ -2163,6 +2372,10 @@ impl<'a> Solver<'a, '_> {
                 binder: binder.unwrap_or(definition.site).node(),
                 parent: self.owners.last().copied(),
             });
+        }
+        let failed: Vec<_> = self.failed_definitions.iter().copied().collect();
+        for definition in failed {
+            self.fail_definition(uf, definition);
         }
         let pending = std::mem::take(&mut self.recursive_uses);
         for use_index in pending {
@@ -2262,6 +2475,12 @@ impl<'a> Solver<'a, '_> {
         binding: Binding<'a>,
         site: UseSite<'a>,
     ) -> Variable {
+        if binding
+            .definition
+            .is_some_and(|definition| self.failed_definitions.contains(&definition))
+        {
+            return self.register(uf, rank, Content::Error);
+        }
         let mut roots = vec![binding.variable];
         if let Some(scheme) = self
             .schemes
@@ -2303,6 +2522,7 @@ impl<'a> Solver<'a, '_> {
             }
             self.uses.push(UseRecord {
                 site,
+                variable: copies[0],
                 owner: self.owners.last().copied(),
                 source: UseSource::Local {
                     definition,
@@ -2329,6 +2549,9 @@ impl<'a> Solver<'a, '_> {
         let mut representations: Vec<(Variable, Vec<ReprTrait>)> = Vec::new();
         let mut allocated = Vec::new();
         for (_, id) in &self.wanted[start..] {
+            if self.predicate_blocked(uf, *id) {
+                continue;
+            }
             let Body::Trait { trait_, args, .. } = &self.predicates.get(*id).body else {
                 continue;
             };
@@ -2349,27 +2572,25 @@ impl<'a> Solver<'a, '_> {
             }
         }
         self.introduce(uf, rank, &allocated);
-        let conflicts: Vec<_> = representations
-            .into_iter()
-            .filter_map(|(subject, requirements)| {
-                let admitted = requirements
-                    .iter()
-                    .fold(nash_ast::primitives::ReprSet::ALL, |set, requirement| {
-                        set.intersect(requirement.admits())
-                    });
-                admitted
-                    .is_empty()
-                    .then(|| Error::ContradictoryRepresentation {
-                        region: binder.region,
-                        name: binder.value,
-                        typ: to_error_type(self.bump, uf, subject),
-                        requirements: self.bump.alloc_slice_fill_iter(requirements),
-                    })
-            })
-            .collect();
-        if !conflicts.is_empty() {
-            return (conflicts, false);
+        let mut errors = Vec::new();
+        for (subject, requirements) in representations {
+            let admitted = requirements
+                .iter()
+                .fold(nash_ast::primitives::ReprSet::ALL, |set, requirement| {
+                    set.intersect(requirement.admits())
+                });
+            if admitted.is_empty() {
+                errors.push(Error::ContradictoryRepresentation {
+                    region: binder.region,
+                    name: binder.value,
+                    typ: to_error_type(self.bump, uf, subject),
+                    requirements: self.bump.alloc_slice_fill_iter(requirements),
+                });
+                self.has_poison = true;
+                crate::recovery::poison(uf, [subject]);
+            }
         }
+        self.propagate_poison(uf);
         let roots: Vec<_> = definitions
             .iter()
             .map(|def| self.type_to_variable(uf, rank, def.typ))
@@ -2377,6 +2598,9 @@ impl<'a> Solver<'a, '_> {
         let reachable = Self::type_variables(uf, roots);
         let mut ambiguous: BTreeMap<_, Vec<_>> = BTreeMap::new();
         for (_, id) in &self.wanted[start..] {
+            if self.predicate_blocked(uf, *id) {
+                continue;
+            }
             let variables =
                 Self::type_variables(uf, self.predicates.get(*id).body.roots().collect());
             for var in variables {
@@ -2425,10 +2649,7 @@ impl<'a> Solver<'a, '_> {
             if defaults.len() == 1 && matches!(uf.get(var).content, Content::FlexVar(_)) {
                 let typ = self.bump.alloc(defaults.into_values().next().unwrap());
                 let target = self.type_to_variable(uf, rank, typ);
-                if matches!(
-                    unify::unify(self.bump, uf, var, target),
-                    unify::Answer::Ok(_)
-                ) {
+                if matches!(self.unify(uf, var, target), unify::Answer::Ok(_)) {
                     defaulted = true;
                     continue;
                 }
@@ -2438,9 +2659,8 @@ impl<'a> Solver<'a, '_> {
         // A default can unlock an impl which supplies a literal constraint
         // for another hidden variable. Retry before declaring ambiguity.
         if defaulted {
-            return (Vec::new(), true);
+            return (errors, true);
         }
-        let mut errors = Vec::new();
         let mut rejected = BTreeSet::new();
         for (var, ids, distinct) in unresolved {
             let predicates: Vec<_> = distinct
@@ -2466,6 +2686,7 @@ impl<'a> Solver<'a, '_> {
             rejected.extend(ids);
         }
         for id in &rejected {
+            self.failed_predicates.insert(*id);
             self.predicates.detach(uf, *id);
         }
         self.wanted.retain(|(_, id)| !rejected.contains(id));
@@ -2516,6 +2737,10 @@ impl<'a> Solver<'a, '_> {
         let pending = self.wanted.split_off(start);
         let mut retained = Vec::new();
         for (_, id) in pending {
+            if self.predicate_blocked(uf, id) {
+                self.predicates.detach(uf, id);
+                continue;
+            }
             let variables =
                 Self::type_variables(uf, self.predicates.get(id).body.roots().collect());
             let generalized = variables.iter().any(|var| uf.get(*var).rank == NO_RANK);
@@ -2660,7 +2885,7 @@ impl<'a> Solver<'a, '_> {
         quantified: &[Variable],
     ) -> (Vec<Variable>, Vec<(Variable, Variable)>) {
         debug_assert!(self.copied.is_empty());
-        let roots = roots
+        let roots: Vec<_> = roots
             .iter()
             .map(|root| self.make_copy_help(uf, rank, *root, quantified))
             .collect();
@@ -2671,6 +2896,7 @@ impl<'a> Solver<'a, '_> {
                 if uf.equivalent(*original, contract.variable) {
                     self.kind_contracts.push(crate::kind_check::Contract {
                         variable: *copy,
+                        owner: roots[0],
                         ..*contract
                     });
                 }
@@ -3087,6 +3313,96 @@ mod copy_tests {
     }
 
     #[test]
+    fn recovery_work_limit_does_not_drop_the_next_independent_predicate() {
+        let bump = Bump::new();
+        let tables = nash_can::environment::Tables::default();
+        let mut solver = Solver {
+            bump: &bump,
+            tables: &tables,
+            pools: vec![Vec::new(); 8],
+            copied: Vec::new(),
+            predicates: Store::default(),
+            wanted: Vec::new(),
+            givens: Vec::new(),
+            schemes: Vec::new(),
+            recursive_uses: Vec::new(),
+            uses: Vec::new(),
+            owners: Vec::new(),
+            resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
+            value_roots: Vec::new(),
+            kind_contracts: Vec::new(),
+            kind_errors: Vec::new(),
+            fields: Vec::new(),
+        };
+        let mut uf = UnionFind::new();
+        let name = bump.alloc(Located::at_zero("value"));
+        let binder = type_::Binder::Named(name);
+        let mut ids = Vec::new();
+        for trait_name in ["Expanding", "Missing"] {
+            let variable = solver.type_to_variable(
+                &mut uf,
+                OUTERMOST_RANK,
+                &Type::AppN {
+                    home: nash_ast::primitives::builtin_home(),
+                    name: "unit",
+                    args: &[],
+                },
+            );
+            let id = solver.predicates.push(
+                &mut uf,
+                Predicate {
+                    body: Body::Trait {
+                        trait_: nash_ast::QualifiedName {
+                            home: nash_ast::ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: trait_name,
+                        },
+                        args: vec![variable],
+                        hidden: false,
+                    },
+                    origin: Origin::Use {
+                        site: UseSite {
+                            node: binder.node(),
+                            region: name.region,
+                            name: trait_name,
+                        },
+                        index: 0,
+                    },
+                    solution: None,
+                },
+            );
+            solver.wanted.push((OUTERMOST_RANK, id));
+            ids.push(id);
+        }
+        solver.resolution_work.insert(ids[0], 16_384);
+        let result = solver.resolve_wanted(
+            &mut uf,
+            OUTERMOST_RANK,
+            State {
+                env: Env::new(),
+                mark: NO_MARK.next(),
+                errors: Vec::new(),
+            },
+            0,
+            Some(binder),
+            false,
+        );
+        assert!(
+            matches!(result.errors.as_slice(), [Error::ImplResolutionLimit { trait_: first, .. }, Error::MissingImpl { trait_: second, .. }] if first.name == "Expanding" && second.name == "Missing"),
+            "{:?}",
+            result.errors
+        );
+        assert!(solver.wanted.is_empty());
+    }
+
+    #[test]
     fn superclass_givens_record_transitive_paths_and_substitute_arguments() {
         let bump = Bump::new();
         let source = "module Main exposing (..)\ntype Container 'a = Wrap 'a\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    ord : 'a -> 'a\ntrait Ord 'a => Top 'a where\n    top : 'a -> 'a\ntrait Eq 'b => Select 'a 'b where\n    select : 'a -> 'b -> 'a\nf : Top 'a => 'a -> 'a\nf x = eq x\ng : Select 'a 'b => 'a -> 'b -> 'b\ng x y = eq y\nh : (Top 'a, Eq 'a) => 'a -> 'a\nh x = eq x\n";
@@ -3110,6 +3426,11 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
@@ -3179,6 +3500,11 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
@@ -3241,6 +3567,11 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
@@ -3325,6 +3656,11 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
@@ -3459,6 +3795,11 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
@@ -3628,6 +3969,11 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
@@ -3707,6 +4053,11 @@ mod copy_tests {
             uses: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
+            has_poison: false,
+            dependencies: crate::recovery::Dependencies::default(),
+            failed_lineages: BTreeSet::new(),
+            failed_predicates: BTreeSet::new(),
+            failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),

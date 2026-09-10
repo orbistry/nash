@@ -24,10 +24,26 @@ pub enum Answer<'a> {
 }
 
 pub fn unify<'a>(bump: &'a Bump, uf: &mut UnionFind<'a>, v1: Variable, v2: Variable) -> Answer<'a> {
+    // Capture before unions discard child edges. Only assignments made by the
+    // failed comparison are untrustworthy; untouched siblings remain useful.
+    let dependencies = crate::recovery::reachable(uf, [v1, v2]);
+    let before: Vec<_> = dependencies
+        .into_iter()
+        .map(|variable| (variable, uf.get(variable).content.clone()))
+        .collect();
     let mut vars = Vec::new();
     match guarded_unify(uf, &mut vars, v1, v2) {
         Ok(()) => Answer::Ok(vars),
         Err(()) => {
+            let changed: Vec<_> = before
+                .into_iter()
+                .filter_map(|(variable, content)| {
+                    let current = uf.get(variable).content.clone();
+                    let linked_flex =
+                        matches!(content, Content::FlexVar(_)) && uf.find(variable) != variable;
+                    (linked_flex || !same_content(uf, &content, &current)).then_some(variable)
+                })
+                .collect();
             let t1 = annotation::to_error_type(bump, uf, v1);
             let t2 = annotation::to_error_type(bump, uf, v2);
             let preds = merged_predicates(uf, v1, v2);
@@ -42,9 +58,104 @@ pub fn unify<'a>(bump: &'a Bump, uf: &mut UnionFind<'a>, v1: Variable, v2: Varia
                     copy: None,
                 },
             );
+            crate::recovery::poison_roots(uf, changed.into_iter().chain(vars.iter().copied()));
             Answer::Err(vars, t1, t2)
         }
     }
+}
+
+/// Compare type information, ignoring representative changes for equal types.
+fn same_content(uf: &mut UnionFind<'_>, first: &Content<'_>, second: &Content<'_>) -> bool {
+    let same_vars = |uf: &mut UnionFind<'_>, first: &[Variable], second: &[Variable]| {
+        first.len() == second.len()
+            && first
+                .iter()
+                .zip(second)
+                .all(|(a, b)| uf.find(*a) == uf.find(*b))
+    };
+    match (first, second) {
+        (Content::FlexVar(a), Content::FlexVar(b)) => a == b,
+        (Content::RigidVar(a), Content::RigidVar(b)) => a == b,
+        (Content::Error, Content::Error) => true,
+        (Content::Structure(a), Content::Structure(b)) => match (a, b) {
+            (FlatType::App1(ah, an, aa), FlatType::App1(bh, bn, ba)) => {
+                ah == bh && an == bn && same_vars(uf, aa, ba)
+            }
+            (FlatType::AppV1(ah, aa), FlatType::AppV1(bh, ba)) => {
+                uf.find(*ah) == uf.find(*bh) && same_vars(uf, aa, ba)
+            }
+            (FlatType::Fun1(af, at), FlatType::Fun1(bf, bt)) => {
+                same_vars(uf, &[*af, *at], &[*bf, *bt])
+            }
+            (FlatType::Tuple1(af, as_, ar), FlatType::Tuple1(bf, bs, br)) => {
+                same_vars(uf, &[*af, *as_], &[*bf, *bs]) && same_vars(uf, ar, br)
+            }
+            (FlatType::Record1(a), FlatType::Record1(b)) => {
+                a.len() == b.len()
+                    && a.iter()
+                        .zip(b)
+                        .all(|((an, av), (bn, bv))| an == bn && uf.find(*av) == uf.find(*bv))
+            }
+            _ => false,
+        },
+        (
+            Content::Alias {
+                home: ah,
+                name: an,
+                args: aa,
+                real: ar,
+                body: ab,
+            },
+            Content::Alias {
+                home: bh,
+                name: bn,
+                args: ba,
+                real: br,
+                body: bb,
+            },
+        ) => {
+            ah == bh
+                && an == bn
+                && std::ptr::eq(*ab, *bb)
+                && uf.find(*ar) == uf.find(*br)
+                && same_alias_args(uf, aa, ba)
+        }
+        (
+            Content::PartialAlias {
+                home: ah,
+                name: an,
+                args: aa,
+                remaining: ar,
+                body: ab,
+            },
+            Content::PartialAlias {
+                home: bh,
+                name: bn,
+                args: ba,
+                remaining: br,
+                body: bb,
+            },
+        ) => {
+            ah == bh
+                && an == bn
+                && ar == br
+                && std::ptr::eq(*ab, *bb)
+                && same_alias_args(uf, aa, ba)
+        }
+        _ => false,
+    }
+}
+
+fn same_alias_args(
+    uf: &mut UnionFind<'_>,
+    first: &[(&str, Variable)],
+    second: &[(&str, Variable)],
+) -> bool {
+    first.len() == second.len()
+        && first
+            .iter()
+            .zip(second)
+            .all(|((an, av), (bn, bv))| an == bn && uf.find(*av) == uf.find(*bv))
 }
 
 type UResult = Result<(), ()>;
@@ -574,6 +685,43 @@ fn unify_record<'a>(
 mod predicate_tests {
     use super::*;
     use type_::PredId;
+
+    #[test]
+    fn failed_composite_unification_poison_reaches_shared_children() {
+        let bump = Bump::new();
+        let mut uf = UnionFind::new();
+        let shared = type_::mk_flex_var(&mut uf);
+        let unit = |uf: &mut UnionFind<'_>| {
+            uf.fresh(type_::make_descriptor(Content::Structure(FlatType::App1(
+                nash_ast::primitives::builtin_home(),
+                "unit",
+                vec![],
+            ))))
+        };
+        let first = unit(&mut uf);
+        let second = unit(&mut uf);
+        let record = uf.fresh(type_::make_descriptor(Content::Structure(
+            FlatType::Record1(BTreeMap::new()),
+        )));
+        let left = uf.fresh(type_::make_descriptor(Content::Structure(
+            FlatType::Tuple1(shared, first, vec![]),
+        )));
+        let right = uf.fresh(type_::make_descriptor(Content::Structure(
+            FlatType::Tuple1(second, record, vec![]),
+        )));
+        assert!(matches!(
+            unify(&bump, &mut uf, left, right),
+            Answer::Err(..)
+        ));
+        let later = uf.fresh(type_::make_descriptor(Content::Structure(
+            FlatType::Record1(BTreeMap::new()),
+        )));
+        assert!(
+            matches!(unify(&bump, &mut uf, shared, later), Answer::Ok(_)),
+            "partial child assignments must not cause a second mismatch"
+        );
+        assert!(matches!(uf.get(shared).content, Content::Error));
+    }
 
     #[test]
     fn application_head_and_argument_cycles_are_detected_and_rendered() {

@@ -12,6 +12,7 @@ pub mod evidence;
 mod kind_check;
 mod occurs;
 pub mod preds;
+mod recovery;
 mod representation;
 mod resolve;
 mod solve;

@@ -1,0 +1,175 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\nkind = idfa (Higher [])\nambiguous = discard (create ())\nconstraint : 'a -> ()\nconstraint x = discard x\nmissing = discard ()\nmismatch : ()\nmismatch = \\x -> x\n"
+expression: errors
+---
+[
+    BadKind {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 1,
+            },
+            end: Position {
+                line: 8,
+                column: 5,
+            },
+        },
+        name: "type application",
+        args: [],
+        reason: Mismatch {
+            expected: Arrow(
+                Type,
+                Type,
+            ),
+            actual: Type,
+        },
+    },
+    AmbiguousType {
+        region: Region {
+            start: Position {
+                line: 9,
+                column: 1,
+            },
+            end: Position {
+                line: 9,
+                column: 10,
+            },
+        },
+        name: "ambiguous",
+        variable: FlexVar(
+            "a",
+        ),
+        predicates: [
+            AmbiguousPredicate {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Round",
+                },
+                args: [
+                    FlexVar(
+                        "a",
+                    ),
+                ],
+            },
+        ],
+    },
+    MissingConstraint {
+        region: Region {
+            start: Position {
+                line: 11,
+                column: 16,
+            },
+            end: Position {
+                line: 11,
+                column: 23,
+            },
+        },
+        name: "discard",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Round",
+        },
+        args: [
+            RigidVar(
+                "a",
+            ),
+        ],
+        binder: Located {
+            region: Region {
+                start: Position {
+                    line: 11,
+                    column: 1,
+                },
+                end: Position {
+                    line: 11,
+                    column: 11,
+                },
+            },
+            value: "constraint",
+        },
+    },
+    BadExpr(
+        Region {
+            start: Position {
+                line: 14,
+                column: 12,
+            },
+            end: Position {
+                line: 14,
+                column: 19,
+            },
+        },
+        Lambda,
+        Lambda(
+            FlexVar(
+                "a",
+            ),
+            FlexVar(
+                "a",
+            ),
+            [],
+        ),
+        FromAnnotation(
+            "mismatch",
+            0,
+            TypedBody,
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+        ),
+    ),
+    MissingImpl {
+        region: Region {
+            start: Position {
+                line: 12,
+                column: 11,
+            },
+            end: Position {
+                line: 12,
+                column: 18,
+            },
+        },
+        name: "discard",
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Round",
+        },
+        args: [
+            Type {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "unit",
+                args: [],
+            },
+        ],
+        available: [],
+        because: [],
+    },
+]

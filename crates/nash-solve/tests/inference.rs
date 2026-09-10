@@ -75,6 +75,436 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
 }
 
 #[test]
+fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
+    let header = "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\n";
+    let definitions = [
+        "mismatch : ()\nmismatch = \\x -> x\n",
+        "missing = discard ()\n",
+        "constraint : 'a -> ()\nconstraint x = discard x\n",
+        "ambiguous = discard (create ())\n",
+        "kind = idfa (Higher [])\n",
+    ];
+    for reverse in [false, true] {
+        let bump = Bump::new();
+        let mut definitions = definitions.to_vec();
+        if reverse {
+            definitions.reverse();
+        }
+        let source = format!("{header}{}", definitions.concat());
+        let errors =
+            infer(&bump, &source).expect_err("failed solve must not publish solved output");
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::BadExpr(..)))
+                .count(),
+            1,
+            "{errors:#?}"
+        );
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::MissingImpl { .. }))
+                .count(),
+            1,
+            "{errors:#?}"
+        );
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::MissingConstraint { .. }))
+                .count(),
+            1,
+            "{errors:#?}"
+        );
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::AmbiguousType { .. }))
+                .count(),
+            1,
+            "{errors:#?}"
+        );
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::BadKind { .. }))
+                .count(),
+            1,
+            "{errors:#?}"
+        );
+        assert_eq!(errors.len(), 5, "{errors:#?}");
+        let mut settings = insta::Settings::clone_current();
+        settings.set_description(source);
+        let _guard = settings.bind_to_scope();
+        insta::assert_debug_snapshot!(
+            format!(
+                "recovery_mixed_errors_{}",
+                if reverse { "reversed" } else { "forward" }
+            ),
+            errors
+        );
+    }
+}
+
+#[test]
+fn recovery_reports_an_independent_escaping_annotation_and_blocks_its_uses() {
+    let bump = Bump::new();
+    let errors = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        mismatch : ()
+        mismatch = \x -> x
+        outer x =
+            let
+                inner : 'a
+                inner = x
+            in
+            (inner (), x ())
+    "#
+        ),
+    )
+    .expect_err("the local annotation is invalid independently of mismatch");
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|error| matches!(error, Error::BadExpr(..)))
+            .count(),
+        1,
+        "{errors:#?}"
+    );
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|error| matches!(error, Error::AnnotationVariableEscapes { .. }))
+            .count(),
+        1,
+        "{errors:#?}"
+    );
+    assert_eq!(errors.len(), 2, "{errors:#?}");
+}
+
+#[test]
+fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
+    for broken in [
+        "broken = if True then () else (\\x -> x)\n",
+        "broken x = x x\n",
+        "broken x = if True then recurse x else (\\y -> y)\nrecurse x = if True then broken x else ()\n",
+        "trait Missing 'a where\n    missing : 'a -> 'a\nbroken = missing ()\n",
+    ] {
+        let bump = Bump::new();
+        let source = format!(
+            "module Main exposing (..)\nimport Builtin exposing (..)\n{broken}first : ()\nfirst = broken\nsecond : ()\nsecond = broken\nsibling : ()\nsibling = \\x -> x\n"
+        );
+        let errors = infer(&bump, &source).expect_err("failed dependencies stay blocked");
+        assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
+        if broken == "broken x = x x\n" {
+            assert_eq!(
+                errors
+                    .iter()
+                    .filter(|error| matches!(error, Error::InfiniteType { .. }))
+                    .count(),
+                1,
+                "{errors:#?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn recovery_shared_partial_unification_does_not_create_trait_or_call_cascades() {
+    let bump = Bump::new();
+    let errors = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        trait Need 'a where
+            need : 'a -> ()
+        outer x =
+            let
+                broken : ((), ())
+                broken = (x, \y -> y)
+            in
+            (x (), need x, broken)
+        sibling : ()
+        sibling = \x -> x
+    "#
+        ),
+    )
+    .expect_err("shared argument depends on the failed tuple check");
+    assert_eq!(errors.len(), 2, "{errors:#?}");
+    assert!(
+        errors
+            .iter()
+            .all(|error| matches!(error, Error::BadExpr(..))),
+        "{errors:#?}"
+    );
+}
+
+#[test]
+fn recovery_final_recursive_evidence_error_survives_an_independent_mismatch() {
+    let bump = Bump::new();
+    let errors = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        type option 'a = Some 'a
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep 'a => Keep (option 'a) where
+            keep xs = xs
+        nest : Keep 'a => 'a -> ()
+        nest x = nest (Some x)
+        sibling : ()
+        sibling = \x -> x
+    "#
+        ),
+    )
+    .expect_err("both checks must run");
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|error| matches!(error, Error::BadExpr(..)))
+            .count(),
+        1,
+        "{errors:#?}"
+    );
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|error| matches!(error, Error::PolymorphicRecursion { .. }))
+            .count(),
+        1,
+        "{errors:#?}"
+    );
+    assert_eq!(errors.len(), 2, "{errors:#?}");
+}
+
+#[test]
+fn recovery_resolution_limit_keeps_unrelated_obligations() {
+    let bump = Bump::new();
+    let errors = infer(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        trait Missing 'a where
+            missing : 'a -> 'a
+        impl Keep (list (list 'a)) => Keep (list 'a) where
+            keep xs = xs
+        value = (keep [()], missing ())
+        sibling : ()
+        sibling = \x -> x
+    "#
+        ),
+    )
+    .expect_err("limit and independent failures");
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|error| matches!(error, Error::ImplResolutionLimit { .. }))
+            .count(),
+        1,
+        "{errors:#?}"
+    );
+    assert_eq!(errors.iter().filter(|error| matches!(error, Error::MissingImpl { trait_, .. } if trait_.name == "Missing")).count(), 1, "{errors:#?}");
+    assert_eq!(
+        errors
+            .iter()
+            .filter(|error| matches!(error, Error::BadExpr(..)))
+            .count(),
+        1,
+        "{errors:#?}"
+    );
+}
+
+#[test]
+fn recovery_field_failures_block_dependent_traits_and_keep_independent_traits() {
+    for body in [
+        "bad : ()\nbad = missing (().field)",
+        "type alias record = { a : () }\nbad : ()\nbad = missing ({ a = () }.field)",
+        "type thing = Thing { a : () }\nbad : thing -> ()\nbad record = missing record.absent",
+        "type thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | a = () }",
+        "bad : () -> ()\nbad record = missing { record | a = () }",
+    ] {
+        let bump = Bump::new();
+        let source = format!(
+            "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\n{body}\nsibling = missing ()\n"
+        );
+        let errors = infer(&bump, &source).expect_err("field failure and independent missing impl");
+        assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::MissingImpl { .. }))
+                .count(),
+            1,
+            "{source}\n{errors:#?}"
+        );
+    }
+}
+
+#[test]
+fn recovery_keeps_independent_tuple_siblings_in_both_orders() {
+    let header = "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\n";
+    for (first, second, expected) in [
+        ("() ()", "missing ()", ["mismatch", "impl"]),
+        ("() ()", "discard (create ())", ["mismatch", "ambiguity"]),
+        ("idfa (Higher [])", "missing ()", ["kind", "impl"]),
+        ("idfa (Higher [])", "idfa (Higher [])", ["kind", "kind"]),
+    ] {
+        for reverse in [false, true] {
+            let bump = Bump::new();
+            let (first, second) = if reverse {
+                (second, first)
+            } else {
+                (first, second)
+            };
+            let source = format!("{header}bad = ({first}, {second})\n");
+            let errors = infer(&bump, &source)
+                .expect_err("both tuple expressions are independently invalid");
+            let mut actual: Vec<_> = errors
+                .iter()
+                .map(|error| match error {
+                    Error::BadExpr(..) => "mismatch",
+                    Error::MissingImpl { .. } => "impl",
+                    Error::AmbiguousType { .. } => "ambiguity",
+                    Error::BadKind { .. } => "kind",
+                    _ => "unexpected",
+                })
+                .collect();
+            actual.sort();
+            let mut expected = expected;
+            expected.sort();
+            assert_eq!(actual, expected, "{source}\n{errors:#?}");
+        }
+    }
+}
+
+#[test]
+fn recovery_annotated_tuple_keeps_independent_obligations() {
+    for body in ["(\\x -> x, missing ())", "(missing (), \\x -> x)"] {
+        let bump = Bump::new();
+        let source = format!(
+            "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ((), ())\nbad = {body}\n"
+        );
+        let errors =
+            infer(&bump, &source).expect_err("both tuple expressions are independently invalid");
+        assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
+        assert!(
+            errors
+                .iter()
+                .any(|error| matches!(error, Error::BadExpr(..))),
+            "{errors:#?}"
+        );
+        assert!(
+            errors
+                .iter()
+                .any(|error| matches!(error, Error::MissingImpl { .. })),
+            "{errors:#?}"
+        );
+    }
+}
+
+#[test]
+fn recovery_poisoned_tuple_child_keeps_independent_type_mismatches() {
+    for (annotation, body, field_errors) in [
+        ("((), ())", "(().field, \\x -> x)", 1),
+        ("((), ())", "(\\x -> x, ().field)", 1),
+        ("((), ())", "(() (), \\x -> x)", 0),
+        ("((), ())", "(\\x -> x, () ())", 0),
+        ("((), ((), ()))", "((), (().field, \\x -> x))", 1),
+        ("(((), ()), ())", "((\\x -> x, ().field), ())", 1),
+        ("(((), ()), ())", "((().field, ()), \\x -> x)", 1),
+        ("((), ((), ()))", "(\\x -> x, ((), ().field))", 1),
+    ] {
+        let bump = Bump::new();
+        let source = format!("module Main exposing (..)\nbad : {annotation}\nbad = {body}\n");
+        let errors = infer(&bump, &source).expect_err("both tuple errors must survive");
+        assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::NotARecord { .. }))
+                .count(),
+            field_errors,
+            "{source}\n{errors:#?}"
+        );
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::BadExpr(..)))
+                .count(),
+            2 - field_errors,
+            "{source}\n{errors:#?}"
+        );
+    }
+}
+
+#[test]
+fn recovery_field_selection_keeps_errors_independent_of_other_fields() {
+    for body in [
+        "{ a = ().field, b = (\\x -> x) }.b",
+        "{ a = (\\x -> x), b = ().field }.a",
+    ] {
+        let bump = Bump::new();
+        let source = format!(
+            "module Main exposing (..)\ntype alias record 'a 'b = {{ a : 'a, b : 'b }}\nbad : ()\nbad = {body}\n"
+        );
+        let errors =
+            infer(&bump, &source).expect_err("selected field remains independently invalid");
+        assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
+        assert!(
+            errors
+                .iter()
+                .any(|error| matches!(error, Error::NotARecord { .. })),
+            "{source}\n{errors:#?}"
+        );
+        assert!(
+            errors
+                .iter()
+                .any(|error| matches!(error, Error::BadExpr(..) | Error::FieldMismatch { .. })),
+            "{source}\n{errors:#?}"
+        );
+    }
+    for (body, independent) in [
+        ("missing ({ a = ().field, b = () }.b)", true),
+        ("missing ({ a = (), b = ().field }.b)", false),
+    ] {
+        let bump = Bump::new();
+        let source = format!(
+            "module Main exposing (..)\ntype alias record 'a 'b = {{ a : 'a, b : 'b }}\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ()\nbad = {body}\n"
+        );
+        let errors = infer(&bump, &source).expect_err("failed record field");
+        assert_eq!(
+            errors.len(),
+            if independent { 2 } else { 1 },
+            "{source}\n{errors:#?}"
+        );
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::MissingImpl { .. }))
+                .count(),
+            usize::from(independent),
+            "{source}\n{errors:#?}"
+        );
+        assert!(
+            errors
+                .iter()
+                .any(|error| matches!(error, Error::NotARecord { .. })),
+            "{source}\n{errors:#?}"
+        );
+    }
+}
+
+#[test]
 fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
     let bump = Bump::new();
     let source = indoc!(

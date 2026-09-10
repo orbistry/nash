@@ -15,8 +15,15 @@ use crate::preds::{Body, Store};
 #[derive(Clone, Copy)]
 pub(crate) struct Contract<'a> {
     pub variable: Variable,
+    /// Scheme or instantiated use that supplied this requirement.
+    pub owner: Variable,
     pub kind: &'a nash_ast::Kind<'a>,
     pub region: Region,
+}
+
+pub(crate) struct Failure<'a> {
+    pub error: Error<'a>,
+    pub variable: Variable,
 }
 
 struct Check<'a, 'env> {
@@ -24,6 +31,7 @@ struct Check<'a, 'env> {
     env: &'env KindEnv<'a>,
     variables: BTreeMap<Variable, &'a K<'a>>,
     contracts: BTreeMap<Variable, Vec<&'a nash_ast::Kind<'a>>>,
+    failed: Option<Variable>,
 }
 
 impl<'a, 'env> Check<'a, 'env> {
@@ -35,6 +43,9 @@ impl<'a, 'env> Check<'a, 'env> {
     ) -> Self {
         let mut requirements = BTreeMap::<_, Vec<_>>::new();
         for contract in contracts {
+            if crate::recovery::is_poisoned(uf, [contract.owner]) {
+                continue;
+            }
             requirements
                 .entry(uf.find(contract.variable))
                 .or_default()
@@ -45,10 +56,23 @@ impl<'a, 'env> Check<'a, 'env> {
             env,
             variables: BTreeMap::new(),
             contracts: requirements,
+            failed: None,
         }
     }
 
     fn variable(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        variable: Variable,
+    ) -> Result<&'a K<'a>, Mismatch<'a>> {
+        let result = self.check_variable(uf, variable);
+        if result.is_err() {
+            self.failed.get_or_insert(variable);
+        }
+        result
+    }
+
+    fn check_variable(
         &mut self,
         uf: &mut UnionFind<'a>,
         variable: Variable,
@@ -139,7 +163,9 @@ impl<'a, 'env> Check<'a, 'env> {
     ) -> Result<(), Mismatch<'a>> {
         for variable in variables {
             let kind = self.variable(uf, variable)?;
-            self.infer.unify(&K::Type, kind)?;
+            self.infer.unify(&K::Type, kind).inspect_err(|_| {
+                self.failed.get_or_insert(variable);
+            })?;
         }
         Ok(())
     }
@@ -155,17 +181,24 @@ impl<'a, 'env> Check<'a, 'env> {
                 assert_eq!(kinds.len(), args.len());
                 for (kind, variable) in kinds.iter().zip(args) {
                     let actual = self.variable(uf, *variable)?;
-                    self.infer.unify(self.infer.from_kind(kind), actual)?;
+                    self.infer
+                        .unify(self.infer.from_kind(kind), actual)
+                        .inspect_err(|_| {
+                            self.failed.get_or_insert(*variable);
+                        })?;
                 }
             }
             Body::Apply { head, args } => {
+                let head_variable = *head;
                 let head = self.variable(uf, *head)?;
                 let args = args
                     .iter()
                     .map(|v| self.variable(uf, *v))
                     .collect::<Result<Vec<_>, _>>()?;
                 // Partial applications may still have an arrow result kind.
-                self.infer.apply(head, &args)?;
+                self.infer.apply(head, &args).inspect_err(|_| {
+                    self.failed.get_or_insert(head_variable);
+                })?;
             }
         }
         Ok(())
@@ -195,27 +228,55 @@ pub(crate) fn check<'a>(
     roots: &[(Variable, Region)],
     predicates: &Store<'a>,
     contracts: &[Contract<'a>],
-) -> Option<Error<'a>> {
-    let mut check = Check::new(bump, uf, env, contracts);
-    for contract in contracts {
-        if let Err(mismatch) = check.variable(uf, contract.variable) {
-            return Some(check.error(contract.region, mismatch));
-        }
+    dependencies: &crate::recovery::Dependencies,
+) -> Vec<Error<'a>> {
+    // Restart after each failure: kind assignments made by a failed check must
+    // not affect another diagnostic. Poison the failing nested type, then let
+    // directed containment skip its parents while retaining sibling roots.
+    let mut errors = Vec::new();
+    loop {
+        let mut check = Check::new(bump, uf, env, contracts);
+        let result = (|| {
+            for contract in contracts {
+                if !crate::recovery::is_poisoned(uf, [contract.owner, contract.variable]) {
+                    check
+                        .variable(uf, contract.variable)
+                        .map_err(|mismatch| (contract.region, mismatch))?;
+                }
+            }
+            for &(variable, region) in roots {
+                if !crate::recovery::is_poisoned(uf, [variable]) {
+                    check
+                        .values(uf, [variable])
+                        .map_err(|mismatch| (region, mismatch))?;
+                }
+            }
+            for (index, predicate) in predicates.iter().enumerate() {
+                if !crate::recovery::is_poisoned(uf, predicate.body.roots()) {
+                    let id = nash_constrain::type_::PredId(index as u32);
+                    let region = predicates
+                        .use_site(id)
+                        .map_or(Region::zero(), |site| site.region);
+                    check
+                        .predicate(uf, &predicate.body)
+                        .map_err(|mismatch| (region, mismatch))?;
+                }
+            }
+            Ok(())
+        })();
+        let Err((region, mismatch)) = result else {
+            break;
+        };
+        errors.push(check.error(region, mismatch));
+        dependencies.invalidate(
+            uf,
+            [check
+                .failed
+                .expect("kind failure identifies a type variable")],
+        );
+        while dependencies.propagate(uf) {}
     }
-    for &(variable, region) in roots {
-        if let Err(mismatch) = check.values(uf, [variable]) {
-            return Some(check.error(region, mismatch));
-        }
-    }
-    for (index, predicate) in predicates.iter().enumerate() {
-        if let Err(mismatch) = check.predicate(uf, &predicate.body) {
-            let region = predicates
-                .use_site(nash_constrain::type_::PredId(index as u32))
-                .map_or(Region::zero(), |site| site.region);
-            return Some(check.error(region, mismatch));
-        }
-    }
-    None
+    errors
 }
 
 /// Freeze only quantified variables. Captured type variables remain shared.
@@ -227,7 +288,7 @@ pub(crate) fn freeze<'a>(
     predicates: &[Body<'a>],
     quantified: &[Variable],
     contracts: &[Contract<'a>],
-) -> Result<Vec<Contract<'a>>, Box<Error<'a>>> {
+) -> Result<Vec<Contract<'a>>, Box<Failure<'a>>> {
     let region = root.region;
     let mut check = Check::new(bump, uf, env, contracts);
     let result = (|| {
@@ -240,11 +301,19 @@ pub(crate) fn freeze<'a>(
             let kind = check.variable(uf, variable)?;
             result.push(Contract {
                 variable,
+                owner: root.value,
                 kind: check.infer.default_and_zonk(kind),
                 region,
             });
         }
         Ok(result)
     })();
-    result.map_err(|mismatch| Box::new(check.error(region, mismatch)))
+    result.map_err(|mismatch| {
+        Box::new(Failure {
+            variable: check
+                .failed
+                .expect("kind failure identifies a type variable"),
+            error: check.error(region, mismatch),
+        })
+    })
 }
