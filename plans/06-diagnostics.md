@@ -13,6 +13,75 @@ rendering. Reporting a vector of errors is insufficient if inference or the
 driver suppressed independent errors before constructing it. Follow the
 collection and cascade-suppression contract in `docs/diagnostics.md`.
 
+## Implementation notes
+
+The code blocks below are porting sketches. The implementation follows the
+current error enums and compiler APIs: 369 parser variants, canonical kind and
+representation errors, current trait-resolution provenance, and nominal records.
+`Localizer` includes compiler-known primitives but no future Prelude imports.
+Missing-impl reports advise an explicit impl; local `@derive` advice states that
+macro expansion belongs to Plan 11. The shipping `Eq` method is `eq`.
+
+`Doc` uses Elm's nested `fillSep` semantics. JSON snippets convert byte regions
+to display-cell carets (including Unicode and tabs); LSP converts to UTF-16.
+Terminal rendering retains wide source context and draws an insertion caret at
+EOF without changing the primary source region. Warnings on failed modules are
+sorted together with errors. Source I/O failures preserve independent modules;
+blocked dependents retain the original failed dependency paths.
+
+All 14 chunks are complete. Validation covers report rendering and independent
+error collection, including the recovery cases listed below.
+
+## Chunk status
+
+- [x] 1: Owned reports, byte-safe source spans, miette rendering and source context.
+- [x] 2: Document layout, styled chunks, nested fill and Unicode widths.
+- [x] 3: Name suggestions and deterministic distance ordering.
+- [x] 4: Module, import, exposing, whitespace and end-of-input syntax reports.
+- [x] 5: Declaration syntax reports.
+- [x] 6: Expression syntax reports and nested parser-error preservation.
+- [x] 7: Pattern and type syntax reports.
+- [x] 8: Canonicalization reports, including paired declaration locations.
+- [x] 9: Source-aware type names, type rendering and focused differences.
+- [x] 10: Type errors with expected/actual types and expression context.
+- [x] 11: Pattern errors and warnings.
+- [x] 12: Owned module reports and Elm-shaped JSON with complete snippets.
+- [x] 13: Kind, representation and trait reports for current compiler errors.
+- [x] 14: Driver, CLI and LSP wiring, independent-error recovery and final acceptance.
+
+## Acceptance evidence
+
+- `nash-solve/tests/inference.rs`: mixed mismatches, missing impls and constraints,
+  ambiguity and kind errors in both declaration orders; repeated and recursive
+  uses; shared partial unification; field failures; independent tuple siblings
+  with and without annotations; nested aggregates; generic record selection
+  with failures in other fields; explicit resolution limits.
+- `nash-solve/tests/representation_predicates.rs`: final kind failures survive
+  unrelated type errors; shared heads removed during normalization still suppress
+  dependent cascades. Failed solves return errors without successful solved output.
+- `nash-driver/src/compile/collection_tests.rs` and graph tests: independent
+  modules continue, failed dependencies block their transitive users, unreadable
+  files preserve independent diagnostics, failed modules export no interfaces,
+  and shuffled discovery produces stable compilation order.
+- `nash-cli/tests/diagnostics.rs`: repeated runs are ordered identically; terminal,
+  JSON and LSP share the mixed problem set and source ranges; terminal headers
+  identify primary locations; color, warning controls and exit codes are checked.
+  All three examples in `docs/diagnostics.md` run against the real core package.
+- Language-server tests: UTF-16 positions, paired related locations, unsaved
+  buffers, version checks, close/repair clearing and nested workspace ownership.
+- Final checks: `cargo fmt --all`; strict Clippy with all targets and features;
+  `cargo test --workspace --no-fail-fast` (2,950 passed, three ignored doctests);
+  `cargo insta test --workspace --check --unreferenced reject` (no pending or
+  unreferenced snapshots). Internal path dependency versions match their crates;
+  the publication graph, including development dependencies, is acyclic.
+- Independent review rebuilt the current compiler and passed all 28 additional
+  recovery probes, including shared variables, repeated/recursive uses, tuple
+  orders and selected record fields. No concrete review finding remains open.
+
+No Plan 06 chunk is deferred. Automatic Prelude imports and macro derivation
+remain assigned to Plans 12 and 11 respectively. Diagnostics describe the current
+compiler and do not imply that these future features are available.
+
 ## Prerequisites
 
 - Plan 05 (`nash-nitpick`) for the pattern chunk.
@@ -930,7 +999,7 @@ pub fn rank<T>(target: &str, to_string: impl Fn(&T) -> String, values: Vec<T>) -
 
 **Tests** — `distance_transposition_is_one` (`"ab"`/`"ba"`),
 `distance_empty`, `sort_prefers_case_insensitive_match` (`"lenght"` →
-`["length", "len", "height"]`), `rank_keeps_stable_order_for_ties`.
+`["length", "height", "len"]`), `rank_keeps_stable_order_for_ties`.
 
 **Done when** tests pass. (Placed before the canonicalize chunk that needs
 it; the brief listed it later.)
@@ -2519,17 +2588,16 @@ not establish completion.
 
 ---
 
-## Open questions
+## Resolved integration details
 
-1. **`Report::with_region`.** Elm's `Code.toSnippet source surroundings
-   (Just region)` pattern (wide snippet, narrow highlight, report region =
-   the point) appears in most syntax reports. The API in chunk 1 grows a
-   `with_region(wide)` builder in chunk 5; consider adding it in chunk 1
-   directly.
-2. **Prelude imports.** `Localizer::from_module` needs the same default
-   import list canonicalization prepends (`docs/stdlib.md`, "Default
-   imports"). The function name `nash_can::imports::defaults()` mirrors
-   Elm's `Imports.defaults`; rename if plan 04 chunk C1 picks another.
-3. **Stdlib function names in hints** (`Int.toString`,
-   `Option.withDefault`, `Int.rem`/`Int.mod`) are placeholders until
-   `docs/stdlib.md` fixes them.
+1. **Primary regions and context.** `Report::with_region` widens the source
+   context while preserving the primary problem region. Terminal
+   rendering, JSON and LSP all use the same report region.
+2. **Prelude imports.** Plan 12 still owns automatic Prelude imports. The
+   localizer uses actual source imports and the compiler's primitive inventory.
+   It preserves qualification when imports or local types can shadow primitives.
+3. **Nash hints.** Reports use Nash type and declaration syntax. Trait defaults
+   use `Eq.eq`; overlapping impl contexts do not disambiguate heads. Derivation
+   remains a Plan 11 feature, and reports state that limitation when mentioning
+   it. The three documented examples are compiled against the current core
+   package and checked against the terminal snapshots.

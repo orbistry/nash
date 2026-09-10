@@ -1,0 +1,7 @@
+{
+  "type": "workspace",
+  "members": [
+    "../../../../../core",
+    "app"
+  ]
+}

@@ -1,0 +1,5 @@
+module Main exposing (..)
+import Builtin exposing (type bool(..))
+
+identity : bool -> unit
+identity flag = flag

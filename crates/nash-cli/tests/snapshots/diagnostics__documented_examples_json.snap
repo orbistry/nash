@@ -1,0 +1,173 @@
+---
+source: crates/nash-cli/tests/diagnostics.rs
+expression: "normalized(serde_json::to_string_pretty(&json).unwrap().as_bytes(), &root)"
+---
+{
+  "errors": [
+    {
+      "name": "Ledger",
+      "path": "<project>/app/src/Ledger.nash",
+      "problems": [
+        {
+          "message": [
+            "Something is off with the body of the `settle` definition:\n\n11|     map balanceOf accounts\n        ",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": "^^^^^^^^^^^^^^^^^^^^^^",
+              "underline": false
+            },
+            "\nThis `map` call produces:\n\n    list ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "Int",
+              "underline": false
+            },
+            "\n\nBut the type annotation on `settle` says it should be:\n\n    list ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "int",
+              "underline": false
+            },
+            "\n\n",
+            {
+              "bold": false,
+              "color": null,
+              "string": "Hint",
+              "underline": true
+            },
+            ": `Int` is the Big (Data) type and `int` is the little type. They never\nconvert implicitly. Where an appropriate `Lift` impl is available, use `lower`\nto go from `Int` to `int`, or `lift` to go the other way."
+          ],
+          "region": {
+            "end": {
+              "column": 27,
+              "line": 11
+            },
+            "start": {
+              "column": 5,
+              "line": 11
+            }
+          },
+          "title": "TYPE MISMATCH"
+        }
+      ]
+    },
+    {
+      "name": "Steps",
+      "path": "<project>/app/src/Steps.nash",
+      "problems": [
+        {
+          "message": [
+            "I cannot find an `Eq` impl for `step`:\n\n8| isDone s = s == Done\n              ",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": "^^^^^^^^^",
+              "underline": false
+            },
+            "\nThe (==) operator needs its arguments to implement `Eq`, and here they are:\n\n    step\n\nBut there is no `impl Eq step` in this module or in any import.\n\n`Eq` is implemented for these heads:\n\n    bool\n    bytes\n    int\n    (list 'a0)\n\n",
+            {
+              "bold": false,
+              "color": null,
+              "string": "Hint",
+              "underline": true
+            },
+            ": This local datatype is a candidate for `@derive(Eq)`, but automatic\nderiving is not available yet. Write the impl by hand:\n\n    impl Eq step where\n        eq a b = ..."
+          ],
+          "region": {
+            "end": {
+              "column": 21,
+              "line": 8
+            },
+            "start": {
+              "column": 12,
+              "line": 8
+            }
+          },
+          "title": "MISSING IMPL"
+        }
+      ]
+    },
+    {
+      "name": "Tag",
+      "path": "<project>/app/src/Tag.nash",
+      "problems": [
+        {
+          "message": [
+            "This `case` does not have branches for all possibilities:\n\n 7|",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": ">",
+              "underline": false
+            },
+            "    case d of\n 8|",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": ">",
+              "underline": false
+            },
+            "        Constr n _ -> n\n 9|",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": ">",
+              "underline": false
+            },
+            "        List _ -> 0\n10|",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": ">",
+              "underline": false
+            },
+            "\n\nMissing possibilities include:\n\n    ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "Map _",
+              "underline": false
+            },
+            "\n    ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "I _",
+              "underline": false
+            },
+            "\n    ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "B _",
+              "underline": false
+            },
+            "\n\nI would have to crash if I saw one of those. Add branches for them!\n\n",
+            {
+              "bold": false,
+              "color": null,
+              "string": "Hint",
+              "underline": true
+            },
+            ": If you want to write the code for each branch later, use `todo` as a\nplaceholder. Read <https://nash-script.dev/hints/missing-patterns> for more\nguidance on this workflow."
+          ],
+          "region": {
+            "end": {
+              "column": 1,
+              "line": 10
+            },
+            "start": {
+              "column": 5,
+              "line": 7
+            }
+          },
+          "title": "MISSING PATTERNS"
+        }
+      ]
+    }
+  ],
+  "type": "compile-errors"
+}

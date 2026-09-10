@@ -1,0 +1,21 @@
+---
+source: crates/nash-cli/tests/diagnostics.rs
+expression: text
+---
+TYPE MISMATCH
+
+  × Something is off with the body of the `identity` definition:
+   ╭─[<project>/src/Main.nash:5:17]
+ 4 │ identity : bool -> unit
+ 5 │ identity flag = flag
+   ·                 ────
+   ╰────
+  help: This `flag` value is a:
+
+            bool
+
+        But the type annotation on `identity` says it should be:
+
+            unit
+
+Compilation failed: 0 succeeded, 1 failed or blocked.

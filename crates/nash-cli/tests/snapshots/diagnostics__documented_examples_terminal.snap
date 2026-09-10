@@ -1,0 +1,73 @@
+---
+source: crates/nash-cli/tests/diagnostics.rs
+expression: text
+---
+TYPE MISMATCH
+
+  × Something is off with the body of the `settle` definition:
+    ╭─[<project>/app/src/Ledger.nash:11:5]
+ 10 │ settle accounts =
+ 11 │     map balanceOf accounts
+    ·     ──────────────────────
+    ╰────
+  help: This `map` call produces:
+
+            list Int
+
+        But the type annotation on `settle` says it should be:
+
+            list int
+
+        Hint: `Int` is the Big (Data) type and `int` is the little type. They never
+        convert implicitly. Where an appropriate `Lift` impl is available, use `lower`
+        to go from `Int` to `int`, or `lift` to go the other way.
+
+MISSING IMPL
+
+  × I cannot find an `Eq` impl for `step`:
+   ╭─[<project>/app/src/Steps.nash:8:12]
+ 7 │ isDone : step -> bool
+ 8 │ isDone s = s == Done
+   ·            ─────────
+   ╰────
+  help: The (==) operator needs its arguments to implement `Eq`, and here they are:
+
+            step
+
+        But there is no `impl Eq step` in this module or in any import.
+
+        `Eq` is implemented for these heads:
+
+            bool
+            bytes
+            int
+            (list 'a0)
+
+        Hint: This local datatype is a candidate for `@derive(Eq)`, but automatic
+        deriving is not available yet. Write the impl by hand:
+
+            impl Eq step where
+                eq a b = ...
+
+MISSING PATTERNS
+
+  × This `case` does not have branches for all possibilities:
+   ╭─[<project>/app/src/Tag.nash:7:5]
+ 6 │     tag d =
+ 7 │ ╭─▶     case d of
+ 8 │ │           Constr n _ -> n
+ 9 │ ╰─▶         List _ -> 0
+   ╰────
+  help: Missing possibilities include:
+
+            Map _
+            I _
+            B _
+
+        I would have to crash if I saw one of those. Add branches for them!
+
+        Hint: If you want to write the code for each branch later, use `todo` as a
+        placeholder. Read <https://nash-script.dev/hints/missing-patterns> for more
+        guidance on this workflow.
+
+Compilation failed: 22 succeeded, 3 failed or blocked.

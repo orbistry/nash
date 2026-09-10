@@ -1,0 +1,8 @@
+module Steps exposing (isDone)
+import Prelude exposing ((==))
+import Eq exposing (Eq)
+
+type step = Done | Next int
+
+isDone : step -> bool
+isDone s = s == Done

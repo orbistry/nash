@@ -30,6 +30,11 @@ Recovery must preserve sound inference state. Mark failed expressions and
 constraints so that their dependent uses do not generate misleading follow-on
 errors; continue at valid definition, constraint, and dependency boundaries.
 Do not remove suppression guards without replacing their dependency tracking.
+Preserve the known shape of a tuple or record when one child fails, so unaffected
+children can still be checked against their annotations. Record selection depends
+on the receiver's shape and the selected field; failure in an unrelated field
+must not suppress a mismatch or trait obligation on the selected field. Changes
+to shared inference variables still invalidate every computation that uses them.
 If parsing or canonicalization cannot produce valid input for the next phase,
 stop that module at that phase and continue independent modules. A failed
 module exports neither an interface nor successful solved output. Mark its
@@ -149,6 +154,12 @@ exposing, so the dual prelude types (`Int`, `int`, `List`, `list`, `Data`,
 `Data.Map.Map` renders as `Data.Map.Map` unless the user exposed it. That
 subsumes Elm's hard-coded `List` special case.
 
+Compiler primitive types from `nash_ast::primitives::PRIMITIVES` are already
+available without imports. The localizer includes that current inventory and
+keeps shadowed primitives qualified. Prelude default imports remain Plan 12;
+the driver currently supplies no future default imports. Local union ownership
+and package identity are retained for actionable impl advice.
+
 The localizer is built once per module by the driver from the *source*
 module (it only needs the import list) and is threaded to every type
 error report, the same way `Reporting.Error.BadTypes` carries it.
@@ -204,10 +215,16 @@ Driver-level errors (`nash_driver::DriverError`: file not found, config
 problems, import cycles) already derive `miette::Diagnostic` via
 `thiserror` and keep doing so; they are not `Report`s.
 
+The following examples are checked against the shipping `core/` package by the
+CLI integration tests. Output uses `--color=never --no-warnings`; only the
+project path is shortened to `src/`. `map` currently comes from `Functor`; a
+future `List` convenience module is not assumed.
+
 ### Example 1 — type mismatch with a diff
 
 ```elm
 module Ledger exposing (settle)
+import Functor exposing (Functor)
 
 type alias Account = { owner : Bytes, balance : Int }
 
@@ -216,9 +233,27 @@ balanceOf account = account.balance
 
 settle : list Account -> list int
 settle accounts =
-    List.map balanceOf accounts
+    map balanceOf accounts
 ```
+TYPE MISMATCH
 
+  × Something is off with the body of the `settle` definition:
+    ╭─[src/Ledger.nash:11:5]
+ 10 │ settle accounts =
+ 11 │     map balanceOf accounts
+    ·     ──────────────────────
+    ╰────
+  help: This `map` call produces:
+
+            list Int
+
+        But the type annotation on `settle` says it should be:
+
+            list int
+
+        Hint: `Int` is the Big (Data) type and `int` is the little type. They never
+        convert implicitly. Where an appropriate `Lift` impl is available, use `lower`
+        to go from `Int` to `int`, or `lift` to go the other way.
 ```
 Error: TYPE MISMATCH
 
@@ -238,8 +273,8 @@ Error: TYPE MISMATCH
             list int
 
         Hint: `Int` is the Big (Data) integer and `int` is the little
-        builtin one. They never convert implicitly. Use `lower` to go from
-        `Int` to `int`, or `lift` to go the other way.
+        type. They never convert implicitly. Use `lower` or `lift` where
+        an appropriate `Lift` impl is available.
 ```
 
 `Int` and `int` in the two type blocks are `dullyellow` on a color
@@ -250,13 +285,40 @@ terminal; the rest of each type is plain. The hint is
 
 ```elm
 module Steps exposing (isDone)
+import Prelude exposing ((==))
+import Eq exposing (Eq)
 
 type step = Done | Next int
 
 isDone : step -> bool
 isDone s = s == Done
 ```
+MISSING IMPL
 
+  × I cannot find an `Eq` impl for `step`:
+   ╭─[src/Steps.nash:8:12]
+ 7 │ isDone : step -> bool
+ 8 │ isDone s = s == Done
+   ·            ─────────
+   ╰────
+  help: The (==) operator needs its arguments to implement `Eq`, and here they are:
+
+            step
+
+        But there is no `impl Eq step` in this module or in any import.
+
+        `Eq` is implemented for these heads:
+
+            bool
+            bytes
+            int
+            (list 'a0)
+
+        Hint: This local datatype is a candidate for `@derive(Eq)`, but automatic
+        deriving is not available yet. Write the impl by hand:
+
+            impl Eq step where
+                eq a b = ...
 ```
 Error: MISSING IMPL
 
@@ -272,19 +334,21 @@ Error: MISSING IMPL
             step
 
         But there is no `impl Eq step` in this module or in any import,
-        and `step` is not marked `@derive(Eq)`.
+        and no matching impl is available.
 
-        Hint: Add `@derive(Eq)` above the `step` declaration, or write
-        the impl by hand:
+        Hint: Write the impl by hand. Deriving with `@derive(Eq)`
+        belongs to the later macro-expansion plan:
 
             impl Eq step where
-                (==) a b = ...
+                eq a b = ...
 ```
 
 ### Example 3 — non-exhaustive case
 
 ```elm
 module Tag exposing (tag)
+import Builtin exposing (Data(..))
+import Literal exposing (FromInt)
 
 tag : Data -> int
 tag d =
@@ -292,7 +356,26 @@ tag d =
         Constr n _ -> n
         List _ -> 0
 ```
+MISSING PATTERNS
 
+  × This `case` does not have branches for all possibilities:
+   ╭─[src/Tag.nash:7:5]
+ 6 │     tag d =
+ 7 │ ╭─▶     case d of
+ 8 │ │           Constr n _ -> n
+ 9 │ ╰─▶         List _ -> 0
+   ╰────
+  help: Missing possibilities include:
+
+            Map _
+            I _
+            B _
+
+        I would have to crash if I saw one of those. Add branches for them!
+
+        Hint: If you want to write the code for each branch later, use `todo` as a
+        placeholder. Read <https://nash-script.dev/hints/missing-patterns> for more
+        guidance on this workflow.
 ```
 Error: MISSING PATTERNS
 
@@ -365,7 +448,14 @@ purpose only), then `after`. Driver errors serialize as
 `{"type":"error","path":..,"title":..,"message":[..]}`.
 
 Warnings use `"type": "compile-warnings"` with the same problem shape
-(Elm has no JSON warnings; this is an addition).
+(Elm has no JSON warnings; this is an addition). `--report=json` writes one
+compile-error document to stdout, including an empty error array on success.
+Warnings are a separate JSON document on stderr; `--no-warnings` suppresses it.
+Source I/O failures use driver-error documents on stderr alongside any warning
+document. There is no progress prose in JSON mode. Exit status is 1 for errors
+or blocked modules and 0 for successful checks with or without warnings.
+Human output uses `--color=auto|always|never`; auto respects `NO_COLOR` and the
+terminal capability. JSON never contains ANSI sequences.
 
 ## LSP consumption
 
@@ -379,8 +469,12 @@ Warnings use `"type": "compile-warnings"` with the same problem shape
 | `code` | `title` |
 | `source` | `"nash"` |
 | `message` | `before` + `"\n\n"` + `after`, rendered plain at width 80 |
-| `related_information` | `Snippet::Pair` second label, and the `highlight` of `Snippet::Region` when it differs from `region` |
+| `related_information` | `Snippet::Pair` first label (the second is primary), and the non-primary highlight of `Snippet::Region` |
 | `data` | `suggestions` (for a future quick-fix code action) |
+
+The server uses full-text synchronization and snapshots unsaved buffers over
+the filesystem. It rejects stale document versions, rebuilds on close, and
+selects the closest project that owns the edited file.
 
 The server runs the same driver pipeline on `didOpen`/`didChange` and
 publishes one `PublishDiagnostics` per module, including modules that

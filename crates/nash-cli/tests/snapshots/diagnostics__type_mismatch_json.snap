@@ -1,0 +1,51 @@
+---
+source: crates/nash-cli/tests/diagnostics.rs
+expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes(), &root)"
+---
+{
+  "errors": [
+    {
+      "name": "Main",
+      "path": "<project>/src/Main.nash",
+      "problems": [
+        {
+          "message": [
+            "Something is off with the body of the `identity` definition:\n\n5| identity flag = flag\n                   ",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": "^^^^",
+              "underline": false
+            },
+            "\nThis `flag` value is a:\n\n    ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "bool",
+              "underline": false
+            },
+            "\n\nBut the type annotation on `identity` says it should be:\n\n    ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "unit",
+              "underline": false
+            }
+          ],
+          "region": {
+            "end": {
+              "column": 21,
+              "line": 5
+            },
+            "start": {
+              "column": 17,
+              "line": 5
+            }
+          },
+          "title": "TYPE MISMATCH"
+        }
+      ]
+    }
+  ],
+  "type": "compile-errors"
+}

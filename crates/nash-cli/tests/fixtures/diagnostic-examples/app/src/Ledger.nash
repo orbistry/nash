@@ -1,0 +1,11 @@
+module Ledger exposing (settle)
+import Functor exposing (Functor)
+
+type alias Account = { owner : Bytes, balance : Int }
+
+balanceOf : Account -> Int
+balanceOf account = account.balance
+
+settle : list Account -> list int
+settle accounts =
+    map balanceOf accounts

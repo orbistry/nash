@@ -1,0 +1,75 @@
+---
+source: crates/nash-cli/tests/diagnostics.rs
+expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes(),\n&project.0)"
+---
+{
+  "errors": [
+    {
+      "name": "Main",
+      "path": "<project>/src/Main.nash",
+      "problems": [
+        {
+          "message": [
+            "Something is off with the body of the `bad` definition:\n\n3| bad = (().field, \\x -> x)\n         ",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": "^^^^^^^^^^^^^^^^^^^",
+              "underline": false
+            },
+            "\nThe body is a tuple of type:\n\n    ( ?, ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "'a -> 'a",
+              "underline": false
+            },
+            " )\n\nBut the type annotation on `bad` says it should be:\n\n    ( ?, ",
+            {
+              "bold": false,
+              "color": "yellow",
+              "string": "unit",
+              "underline": false
+            },
+            " )"
+          ],
+          "region": {
+            "end": {
+              "column": 26,
+              "line": 3
+            },
+            "start": {
+              "column": 7,
+              "line": 3
+            }
+          },
+          "title": "TYPE MISMATCH"
+        },
+        {
+          "message": [
+            "This value is not a record, so I cannot use it when accessing the `field` field\nof this value:\n\n3| bad = (().field, \\x -> x)\n          ",
+            {
+              "bold": false,
+              "color": "RED",
+              "string": "^^^^^^^^",
+              "underline": false
+            },
+            "\nIt has type:\n\n    unit\n\nBut I need a value with record fields!"
+          ],
+          "region": {
+            "end": {
+              "column": 16,
+              "line": 3
+            },
+            "start": {
+              "column": 8,
+              "line": 3
+            }
+          },
+          "title": "TYPE MISMATCH"
+        }
+      ]
+    }
+  ],
+  "type": "compile-errors"
+}
