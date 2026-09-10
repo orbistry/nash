@@ -57,7 +57,7 @@ language can unify types or support polymorphism.
 | --- | --- | --- |
 | Reading inference code | Direct matches over ordinary type values can be easier to follow than descriptor/representative operations. | Alder's types still need binding lookup, normalization, kind information, predicates, and deferred checks. An enum alone does not replace the solver. |
 | Generalization | Free-variable subtraction expresses the rule directly: quantify variables free in the inferred type but not the environment. | Alder clones relevant schemes and scans their free variables. Nash uses rank pools to avoid treating the entire environment as a fresh set calculation at each binding. Levels/ranks can also be retained with substitutions. |
-| Instantiation | An explicit quantified-variable replacement map can make ownership and scoping clearer. | Nash's memoized graph copy already preserves sharing and retains nongeneralized variables. A replacement must preserve both; substituting every variable would be unsound. |
+| Instantiation | An explicit quantified-variable replacement map can make ownership and scoping clearer. | Nash's memoized graph copy preserves sharing and retains nongeneralized variables. A replacement must preserve variable identity, including repeated quantified occurrences and nongeneralized variables. Losing structural sharing can increase copying; freshening nongeneralized variables would be unsound. |
 | Allocation and sharing | Shared immutable type nodes could simplify reading and caching. Owned values release memory through normal Rust ownership. | Alder's derived `Clone` recursively copies owned structure. `prune` clones a stored binding and a cached result. Nash clones descriptor containers too, but their child handles do not recursively clone the whole type. |
 | Error-state isolation | A transaction or persistent substitution state can make failed attempts easier to discard. | Alder's actual table is mutable, not automatically transactional. Nash's diagnostics require preserving independent information after errors. Recovery remains a separate design problem. |
 | Diagnostics and interfaces | Immutable normalized output can provide stable, easy-to-inspect types. | Nash already converts solver types into owned report data and canonical annotations. Better output APIs do not require replacing the solver. |
@@ -150,3 +150,223 @@ comparison.
 **Adoption gate:** demonstrably simpler production code or a repeatable material
 performance gain, with all semantic/recovery tests preserved and no important
 workload regression. The current source review establishes no speed winner.
+
+## 2. Runtime dictionaries instead of mandatory specialization
+
+**Current judgment: this is the more promising architectural experiment.**
+It could make trait-evidence specialization optional where the remaining
+representation operations admit generic lowering, reduce duplicated bodies,
+and support some evidence-growing recursion. Whether it is a better default for Nash depends on UPLC script size
+and execution budgets, not JavaScript output size alone.
+
+### What is implemented, and what is only planned
+
+Nash's solver already records `Impl`, `Given`, and `Super` evidence, plus
+compiler-owned `Repr`, `ReflexiveLift`, and `StructuralEq` evidence. Definition
+schemes and use-site instances are implemented. See
+[`Evidence`](../../crates/nash-ast/src/lib.rs) and
+[`SolvedTypes`](../../crates/nash-solve/src/solved.rs).
+
+There is no `nash-codegen` crate in this checkout. The backend worklist that
+consumes evidence is specified in [Plan 07](../../plans/07-codegen.md), not an
+implemented specialization engine. Consequently, this review cannot benchmark
+Nash's two emitted-code strategies against each other yet.
+
+There is also a material inconsistency to resolve before implementing either:
+
+- [traits.md](../traits.md), “Recursion” and the evidence discussion, says an
+  evidence-free polymorphic definition has one specialization and describes
+  specialization as evidence-only.
+- [codegen.md](../codegen.md), “Monomorphization”, and Plan 07's `MonoKey` include
+  ordinary ground `type_args` in addition to evidence.
+
+Those contracts can produce different copy counts, and potentially different
+termination behavior for polymorphic recursion. A generic identity function
+should not need different code merely because its argument has a different
+source type if its lowered body is identical. Conversely, any type-dependent
+lowering or representation operation must remain accounted for. Define the key
+in terms of actual code-generation dependencies; do not assume all types erase
+without checking their consumers. This review records the disagreement rather
+than silently choosing a new language/backend policy.
+
+Alder implements dictionaries in its active JavaScript backend. Its solver
+publishes binding dictionary parameters and per-use actions; codegen turns them
+into hidden arguments, method selections, imports, and factory calls. See
+[`SolveOutput`, `BindingAbi`, `UseAction`](https://github.com/orbistry/alder/blob/b8d2ee03f468dcd719feee22b40915ac4654c837/crates/alder-solve/src/lib.rs#L18)
+and [evidence lowering](https://github.com/orbistry/alder/blob/b8d2ee03f468dcd719feee22b40915ac4654c837/crates/alder-codegen/src/oxc_backend.rs#L3008).
+
+### What changes at a trait call
+
+Schematic lowering, with concrete names shortened for clarity:
+
+```text
+Source:
+    describe : Show a => a -> string
+    describe x = show x
+
+Specialization:
+    describe_int x = show_int x
+    describe_other x = show_other x
+
+Dictionary passing:
+    describe show_dictionary x = show_dictionary.show x
+    describe int_dictionary 42
+
+After successful specialization of the dictionary version:
+    describe_int x = show_int x
+```
+
+Dictionary passing does not require a runtime search for an impl. The compiler
+still resolves coherent instances; it passes the selected operations as values.
+The runtime operation can be an indirect function call or dictionary projection,
+not a type-name lookup. Alder's
+[actual emitted snapshot](https://github.com/orbistry/alder/blob/b8d2ee03f468dcd719feee22b40915ac4654c837/crates/alder-codegen/src/snapshots/alder_codegen__tests__trait_dictionary_passing.snap)
+shows a single `describe($dict0, value)` body selecting `show` from `$dict0`.
+
+### Benefits, costs, and claims that do not follow
+
+| Concern | Dictionary strategy | Specialization strategy |
+| --- | --- | --- |
+| Generated body count | One generic body can serve many evidence combinations. Dictionary values/factories still add code. | Can create a body for each relevant combination. Sharing and deduplication determine the actual count. |
+| Runtime work | Hidden arguments, projections, captured evidence, and factory construction can cost execution and memory. | Closed calls can dispatch directly and expose methods to inlining and simplification. |
+| Compile time | Can avoid enumerating every specialized generic body. Still requires resolution and dictionary lowering. | Worklist processing and repeated optimization can grow with the number of instances. Neither backend cost is measured for Nash yet. |
+| Higher-order functions | A constrained function value can capture dictionaries in a closure and reuse generic code. | A use can select a specialized function value. Ordinary higher-order functions are not a dictionary-only feature. |
+| Defaults and superclasses | Shared method wrappers and superclass fields give a uniform runtime model. | Existing evidence can select defaults and superclass impls statically. Those features do not require switching. |
+| Separate compilation | A generic calling convention can allow compilation without all downstream call types. | Cross-module specialization generally needs body information or a generic fallback. Nash's final validator still requires closed executable code. |
+| Polymorphic recursion | Growing evidence can be constructed at runtime instead of demanding infinitely many static bodies. | Mandatory recursive specialization needs a finite family or a rejection rule. Nash currently has such a rule. |
+| Predictability | Generic fallback bounds body duplication, but runtime construction can grow with input. | More predictable direct calls, but evidence combinations can increase compile work and script size. |
+
+A simple size model is useful as a hypothesis, not a benchmark. For a generic
+body of size B used with k distinct evidence vectors, specialization can approach
+k copies of B, whereas dictionaries can share B and add dictionary/call overhead.
+Inlining, dead-method removal, body merging, and the number of methods actually
+used can reverse the result for a small function. Count reachable copies from
+real entry points, not every possible impl combination.
+
+Alder's factory output constructs an object and method closures and freezes it;
+the use-site lowering emits a factory call. There is no memoization at that
+lowering site. This makes allocation a concrete concern, although later
+optimization or hoisting may remove particular constructions. See
+[factory construction](https://github.com/orbistry/alder/blob/b8d2ee03f468dcd719feee22b40915ac4654c837/crates/alder-codegen/src/oxc_backend.rs#L790)
+and the
+[factory snapshot](https://github.com/orbistry/alder/blob/b8d2ee03f468dcd719feee22b40915ac4654c837/crates/alder-codegen/src/snapshots/alder_codegen__tests__prerequisite_dictionary_factory.snap).
+
+Alder also binds evidence into higher-order values using JavaScript `.bind`, and
+forwards the selected self dictionary through default-method wrappers. See
+[`bind_evidence`](https://github.com/orbistry/alder/blob/b8d2ee03f468dcd719feee22b40915ac4654c837/crates/alder-codegen/src/oxc_backend.rs#L3253).
+These are useful implementation examples, not a ready-made UPLC calling convention.
+
+### Keep language decisions separate
+
+A switch does not automatically add rank-N polymorphism, existential packages,
+first-class constraints, user-selected instances, or overlapping impls. Nash's
+orphan/overlap rules and instance resolution can remain unchanged. Both compilers
+already check coherence. A dictionary is an implementation of evidence, not a
+new source-language escape from those rules.
+
+The clearest possible extension is evidence-growing polymorphic recursion:
+conceptually a recursive call may require `Show (Wrapper a)` given `Show a`.
+A factory can construct the next dictionary as execution recurses. Nash currently
+rejects growing evidence in [`solve.rs`](../../crates/nash-solve/src/solve.rs)
+(`growing_evidence`, `final_errors`). Merely adding dictionary lowering would
+leave that rejection intact. Supporting this case requires an explicit decision,
+a change to that restriction, and tests using representation-valid wrappers.
+It does not guarantee runtime termination or a bounded execution budget. It also
+does not justify accepting a cyclic instance-resolution obligation that has no
+finite proof.
+
+### UPLC changes the cost question
+
+Nash targets strict UPLC, not a JavaScript VM with object allocation and possible
+JIT devirtualization. Candidate dictionaries need a compiler-internal encoding:
+function arguments, closures/selectors, or suitable constructor/tuple values
+where the chosen target supports them. Method closures are not serializable
+Plutus `Data`; do not reuse a datum encoding as a dictionary representation.
+
+Runtime applications, machine steps, and builtins contribute to evaluation cost.
+The official [Plutus cost-model description](https://github.com/IntersectMBO/plutus/blob/master/plutus-core/cost-model/CostModelGeneration.md)
+explains charging for machine steps and builtins. Compare serialized script
+bytes, CPU budget, and memory budget under a pinned Plutus version and cost
+model. Source size or JavaScript timing cannot substitute for these measurements.
+
+Strict evaluation also makes construction and capture important. Unused methods
+must not execute just because their dictionary was built. Recursive defaults and
+superclasses need a valid strategy for self references. Hoisting, closure sharing,
+and dictionary elimination must preserve errors, traces, and evaluation order.
+These correctness obligations belong in the prototype, not only in later tuning.
+
+Keep proof-only predicates erased: `Evidence::Repr` explicitly has no runtime
+dictionary. Preserve compiler-owned structural equality and reflexive lifting
+as special operations where appropriate. Passing a dictionary for every solver
+predicate would introduce needless runtime data and could obscure representation
+checks.
+
+### The most useful prototype is a hybrid
+
+Retain Nash's current solver evidence. Translate method evidence to explicit
+parameters in a small Core layer; erase proof-only evidence; specialize closed
+calls and eliminate dictionary projections where profitable. Unknown generic
+calls retain their shared implementation. This can make trait-evidence specialization optional, provided every remaining
+type-dependent representation operation also has a valid generic lowering. It
+does not require a second type solver.
+
+This is an established combination, not a claim of novelty: the
+[GHC optimization guide](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-optimisation.html)
+describes specialization of overloaded functions, including specialized calls
+within them. GHC's existence establishes that dictionary passing and
+specialization can coexist; it does not establish that its optimization policy
+is suitable for Nash.
+
+For the prototype, compare three lowerings of the same solved Nash evidence:
+
+1. Mandatory specialization, with its key contract first made explicit.
+2. Generic dictionaries, with no specialization, as a clear cost baseline.
+3. Generic dictionaries plus a bounded specialization and elimination pass.
+
+Use small and large constrained functions, multiple evidence combinations,
+first-class constrained function values, default/superclass methods, repeated
+factory use, and recursive evidence. Include compiler-owned equality/lifting and
+ordinary trait-free polymorphism as controls. Measure reachable body count,
+script bytes before/after optimization, compilation allocations/time, execution
+CPU/memory budgets, and result/error/trace equivalence. Fix inputs and target cost
+parameters; measure shallow and growing inputs separately.
+
+**Adoption gate:** a material code-size, compile-time, or expressiveness benefit
+on representative programs with acceptable target execution costs and complete
+semantic coverage. If dictionaries improve generic code but hurt hot calls, a
+hybrid may win. If specialization consistently wins on the intended validators,
+keep it. A hybrid adds an optimizer and another callable form; it is not
+inherently the simplest implementation.
+
+## 3. Recommendation and evidence limits
+
+These decisions are independent:
+
+| Type inference store | Mandatory specialization | Dictionaries, optionally specialized |
+| --- | --- | --- |
+| Nash-style union-find | Current planned direction | Most useful next backend experiment |
+| Substitution bindings | Possible, but no demonstrated advantage yet | Possible; two changes at once would obscure which caused a result |
+
+Investigate dictionary lowering first, using the existing evidence output, and
+settle the specialization-key disagreement before building the comparison.
+Profile type-inference work independently, especially recovery snapshots and
+repeated normalization. Prototype a new type store only against a specific
+maintainability or measured-performance goal. Do not couple the two migrations.
+
+There is no backward-compatibility requirement in this assessment. Migration cost
+means engineering work and correctness risk, not supporting external users or
+retaining an old implementation. Prototype alternatives can be disposable; a
+selected production replacement should remove the superseded path.
+
+Verification performed:
+
+- Inspected the actual active module declarations, type stores, inference,
+  generalization, recovery, evidence output, codegen consumer, and snapshots.
+- Verified Alder's source revision against remote HEAD.
+- Ran `cargo test -p alder-codegen dictionary --locked --offline`: **13 passed**.
+  These are codegen tests, not UPLC execution benchmarks.
+- Ran `cargo test -p alder-solve --locked --offline`: **533 passed**. This
+  verifies the inspected Alder baseline; it is not a comparison with Nash.
+- No Nash compiler implementation was changed. Its specialization backend does
+  not yet exist, so this report contains no measured comparison of emitted Nash
+  programs and makes no speedup claim.
