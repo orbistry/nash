@@ -365,6 +365,7 @@ fn constrain_call<'a>(
 
 fn get_name<'a>(func: &Located<CanExpr<'a>>) -> MaybeName<'a> {
     match &func.value {
+        CanExpr::VarMethod { method, .. } => MaybeName::FuncName(method),
         CanExpr::VarLocal(name) => MaybeName::FuncName(name),
         CanExpr::VarTopLevel(reference) => MaybeName::FuncName(reference.name),
         CanExpr::VarForeign { reference, .. } => MaybeName::FuncName(reference.name),
