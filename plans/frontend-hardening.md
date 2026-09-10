@@ -6,7 +6,8 @@ Implement the six Nash/Alder comparison findings, then evaluate a direct inferen
 
 - [x] Remove expression-parser accumulator copies. A successful attempt returns one new argument or operator; only then does the loop change its accumulators. Existing parsing and error snapshots stay unchanged.
 - [x] Require valid UTF-8 at the parser boundary and remove unchecked conversions.
-- [ ] Widen coordinates with a safe input bound; guard mutually recursive parsing with a measured nesting limit.
+- [x] Widen coordinates with a safe source bound.
+- [ ] Guard mutually recursive parsing with a measured nesting limit and remove flat-sequence recursion.
 - [ ] Delete unused driver interface-cache machinery and orphaned dependencies.
 - [ ] Separate canonical module data from local scopes without cloning the whole environment.
 - [ ] Bound trait selection and evidence lookup using existing map ordering.
@@ -21,6 +22,8 @@ Parser allocation regression: before the first change, 1,000 and 2,000 operands 
 Chunk 1 verification passed: formatting, workspace check (all targets/features), clippy (all targets/features, warnings denied), full workspace tests, `nash check scratch`, and the release allocation test. Existing snapshots were unchanged.
 
 Chunk 2 requires `Parser::new` source text to be `&str`; all callers are updated directly, with no byte-input adapter. All seven unchecked UTF-8 conversions are replaced with checked conversions. Added snapshots preserve raw Unicode, mixed Unicode/escapes, and CRLF normalization. A compile-fail doctest rejects arbitrary bytes. Formatting, workspace check, clippy, full tests (including the doctest), and `nash check scratch` passed. Only the three reviewed new Unicode snapshots were added.
+
+Chunk 3a uses usize coordinates and indentation, bounded by the source string allocation (at most isize::MAX bytes). This avoids a fallible constructor and removes coordinate casts; Region grows to 32 bytes on 64-bit hosts. LSP explicitly reports positions beyond its 32-bit range. Source bounds, arbitrary lookahead, and oversized Unicode escape widths are covered by regressions. The Unicode numeric accumulator saturates only as an invalid-code marker, preventing overflow while retaining full diagnostic width. Larger error payloads prompted removal of a trivial header adapter and arena storage of the rare irregular-recursion reference; no lint was suppressed. Formatting, check, clippy, all workspace tests, the positive scratch project, and all 441 parser tests plus doctests in release passed. CLI JSON negative scratch cases report the exact missing-name positions at line 65,539 and column 65,544.
 
 ## Direct inference adoption gates
 

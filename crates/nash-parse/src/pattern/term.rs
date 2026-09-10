@@ -112,8 +112,8 @@ impl<'a> Parser<'a> {
         &mut self,
         start: Position,
         ctor_start: usize,
-        row: u16,
-        col: u16,
+        row: usize,
+        col: usize,
     ) -> Result<&'a Located<Pattern<'a>>, error::Pattern<'a>> {
         // Keep chomping Module.Module... until we hit the final name
         loop {

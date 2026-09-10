@@ -90,7 +90,7 @@ impl<'a> Parser<'a> {
     /// Check that current column equals indent level (for alignment).
     ///
     /// Mirrors Elm's `Space.checkAligned`.
-    pub fn check_aligned<E>(&self, to_error: impl FnOnce(u16, Row, Col) -> E) -> Result<(), E> {
+    pub fn check_aligned<E>(&self, to_error: impl FnOnce(usize, Row, Col) -> E) -> Result<(), E> {
         if self.col == self.indent {
             Ok(())
         } else {
@@ -263,7 +263,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Helper for eating multi-line comments with nesting.
-    fn eat_multi_comment_help(&mut self, open_comments: u16) -> SpaceStatus {
+    fn eat_multi_comment_help(&mut self, open_comments: usize) -> SpaceStatus {
         loop {
             match self.peek() {
                 // Newline

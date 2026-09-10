@@ -119,8 +119,8 @@ fn display_line(line: &str) -> String {
     text
 }
 
-fn visual_column(line: &str, byte_column: u16) -> usize {
-    let mut offset = usize::from(byte_column.saturating_sub(1)).min(line.len());
+fn visual_column(line: &str, byte_column: usize) -> usize {
+    let mut offset = byte_column.saturating_sub(1).min(line.len());
     // Match Source::offset when an invalid input points inside a UTF-8 scalar.
     while !line.is_char_boundary(offset) {
         offset -= 1;
@@ -141,7 +141,7 @@ mod tests {
     use crate::{Doc, Label, Snippet, Source};
     use nash_region::{Position, Region};
 
-    fn region(sr: u16, sc: u16, er: u16, ec: u16) -> Region {
+    fn region(sr: usize, sc: usize, er: usize, ec: usize) -> Region {
         Region::new(Position::new(sr, sc), Position::new(er, ec))
     }
 

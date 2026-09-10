@@ -16,6 +16,12 @@ Nash has no compatibility commitments to earlier syntax, APIs, or cache formats.
 Implement the current design directly and remove superseded paths. Cache files
 are disposable; do not add version migrations or older-format readers.
 
+Source coordinates and indentation use `usize`, matching source byte offsets.
+Valid Rust strings have at most `isize::MAX` bytes, so one-based positions and
+EOF fit without a separate parser input-size failure. This makes `Region`
+32 bytes on a 64-bit host. Protocol boundaries such as LSP check their narrower
+coordinate limits explicitly; they must not truncate positions.
+
 ## Status
 
 Done (ported from the Elm compiler, Haskell -> Rust):

@@ -584,7 +584,10 @@ impl<'a> Parser<'a> {
     /// Parse a type name, with an uppercase module path and either type casing.
     ///
     /// Mirrors Elm's `Var.foreignUpper`.
-    fn type_name<E>(&mut self, to_error: impl FnOnce(u16, u16) -> E) -> Result<TypeName<'a>, E> {
+    fn type_name<E>(
+        &mut self,
+        to_error: impl FnOnce(usize, usize) -> E,
+    ) -> Result<TypeName<'a>, E> {
         let (row, col) = self.position();
         let start_pos = self.pos;
 
@@ -612,7 +615,7 @@ impl<'a> Parser<'a> {
     fn chomp_qualified_upper_for_type<E>(
         &mut self,
         start_pos: usize,
-        to_error: impl FnOnce(u16, u16) -> E,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<TypeName<'a>, E> {
         loop {
             if self.is_dot_upper() {

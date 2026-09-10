@@ -63,14 +63,17 @@ impl Region {
     }
 }
 
+/// One-based source coordinates (columns count UTF-8 bytes).
+/// A valid source string is at most isize::MAX bytes long, so its coordinates,
+/// including one-past-end positions, fit usize without a separate size limit.
 #[derive(Clone, Debug, Eq, Copy, PartialEq, Hash)]
 pub struct Position {
-    pub line: u16,
-    pub column: u16,
+    pub line: usize,
+    pub column: usize,
 }
 
 impl Position {
-    pub const fn new(line: u16, column: u16) -> Self {
+    pub const fn new(line: usize, column: usize) -> Self {
         Self { line, column }
     }
 

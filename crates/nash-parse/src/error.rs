@@ -59,7 +59,7 @@ pub enum Tests<'a> {
     Test(&'a Test<'a>, Row, Col),
     Start(Row, Col),
     IndentStart(Row, Col),
-    Alignment(u16, Row, Col),
+    Alignment(usize, Row, Col),
 }
 
 #[derive(Debug)]
@@ -86,7 +86,7 @@ pub enum Test<'a> {
     IndentBody(Row, Col),
     IndentBinder(Row, Col),
     IndentIn(Row, Col),
-    BinderAlignment(u16, Row, Col),
+    BinderAlignment(usize, Row, Col),
 }
 
 #[derive(Debug)]
@@ -131,7 +131,7 @@ pub enum Impl<'a> {
     IndentHead(Row, Col),
     IndentWhere(Row, Col),
     IndentMethod(Row, Col),
-    Alignment(u16, Row, Col),
+    Alignment(usize, Row, Col),
 }
 
 #[derive(Debug)]
@@ -152,7 +152,7 @@ pub enum Trait<'a> {
     IndentMethod(Row, Col),
     IndentColon(Row, Col),
     IndentType(Row, Col),
-    Alignment(u16, Row, Col),
+    Alignment(usize, Row, Col),
 }
 
 #[derive(Debug)]
@@ -273,7 +273,7 @@ pub enum Do<'a> {
     IndentStmt(Row, Col),
     IndentArrow(Row, Col),
     IndentExpr(Row, Col),
-    Alignment(u16, Row, Col),
+    Alignment(usize, Row, Col),
 }
 
 #[derive(Debug)]
@@ -348,7 +348,7 @@ pub enum Case<'a> {
     IndentPattern(Row, Col),
     IndentArrow(Row, Col),
     IndentBranch(Row, Col),
-    PatternAlignment(u16, Row, Col),
+    PatternAlignment(usize, Row, Col),
 }
 
 #[derive(Debug)]
@@ -371,7 +371,7 @@ pub enum If<'a> {
 pub enum Let<'a> {
     Space(Space, Row, Col),
     In(Row, Col),
-    DefAlignment(u16, Row, Col),
+    DefAlignment(usize, Row, Col),
     DefName(Row, Col),
     Def(&'a str, &'a Def<'a>, Row, Col),
     Destruct(&'a Destruct<'a>, Row, Col),
@@ -393,7 +393,7 @@ pub enum Def<'a> {
     IndentEquals(Row, Col),
     IndentType(Row, Col),
     IndentBody(Row, Col),
-    Alignment(u16, Row, Col),
+    Alignment(usize, Row, Col),
 }
 
 #[derive(Debug)]
@@ -430,7 +430,7 @@ pub enum Pattern<'a> {
 pub enum Bytes {
     Endless,
     OddLength,
-    BadHexDigit(u16),
+    BadHexDigit(usize),
 }
 
 #[derive(Debug)]
@@ -545,10 +545,10 @@ pub enum StringError {
 #[derive(Debug)]
 pub enum Escape {
     Unknown,
-    BadUnicodeFormat(u16),
-    BadUnicodeCode(u16),
+    BadUnicodeFormat(usize),
+    BadUnicodeCode(usize),
     BadUnicodeLength {
-        code: u16,
+        code: usize,
         expected: i32,
         actual: i32,
     },

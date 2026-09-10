@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
 
         let name_start = Position::new(
             variable.region.end.line,
-            variable.region.end.column - u16::try_from(name.len()).expect("identifier too long"),
+            variable.region.end.column - name.len(),
         );
         let name = self.alloc(Located::at(
             Region::new(name_start, variable.region.end),

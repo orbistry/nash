@@ -67,7 +67,7 @@ pub(crate) fn to_pattern_report(
                 .unwrap_or_else(|| "x or age".into());
             Report::snippet(
                 "UNEXPECTED NAME",
-                to_wider_region(r, c, u16::try_from(width).unwrap_or(1)),
+                to_wider_region(r, c, usize::try_from(width).unwrap_or(1)),
                 None,
                 Doc::reflow("Variable names cannot start with underscores like this:"),
                 Doc::reflow(&format!(

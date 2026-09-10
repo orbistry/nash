@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/expression/string.rs
+description: "Code:\n\n\"\\u{FFFFFFFFF}\""
+---
+String(
+    Escape(
+        BadUnicodeCode(
+            12,
+        ),
+    ),
+    1,
+    3,
+)

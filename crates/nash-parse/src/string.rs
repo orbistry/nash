@@ -310,7 +310,7 @@ impl<'a> Parser<'a> {
         loop {
             match self.peek_at(offset) {
                 None => {
-                    return EscapeResult::Problem(Escape::BadUnicodeFormat(offset as u16));
+                    return EscapeResult::Problem(Escape::BadUnicodeFormat(offset));
                 }
                 Some(b'}') => {
                     break;
@@ -323,25 +323,26 @@ impl<'a> Parser<'a> {
                     } else {
                         (b - b'A' + 10) as u32
                     };
-                    code = code * 16 + digit;
+                    // Saturation keeps an oversized escape invalid without overflowing.
+                    code = code.saturating_mul(16).saturating_add(digit);
                     num_digits += 1;
                     offset += 1;
                 }
                 Some(_) => {
-                    return EscapeResult::Problem(Escape::BadUnicodeFormat(offset as u16));
+                    return EscapeResult::Problem(Escape::BadUnicodeFormat(offset));
                 }
             }
         }
 
         // Check code validity
         if code > 0x10FFFF {
-            return EscapeResult::Problem(Escape::BadUnicodeCode((offset + 1) as u16));
+            return EscapeResult::Problem(Escape::BadUnicodeCode(offset + 1));
         }
 
         // Check digit count (must be 4-6)
         if !(4..=6).contains(&num_digits) {
             return EscapeResult::Problem(Escape::BadUnicodeLength {
-                code: (offset + 1) as u16,
+                code: offset + 1,
                 expected: if num_digits < 4 { 4 } else { 6 },
                 actual: num_digits,
             });

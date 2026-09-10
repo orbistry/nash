@@ -36,18 +36,6 @@ pub struct CanResult<'a> {
     pub warnings: Vec<Warning<'a>>,
 }
 
-fn canonicalize_header<'a>(
-    context: Context<'a, '_>,
-    module: &SourceModule<'a>,
-) -> Result<ModuleName<'a>, Error<'a>> {
-    let name = module.name.ok_or(Error::MissingModuleHeader)?;
-
-    Ok(ModuleName {
-        package: context.package,
-        name: name.value,
-    })
-}
-
 pub fn canonicalize<'a>(
     bump: &'a Bump,
     context: Context<'a, '_>,
@@ -68,7 +56,13 @@ pub fn canonicalize<'a>(
             region,
         }]);
     }
-    let home = canonicalize_header(context, module).map_err(|e| vec![e])?;
+    let name = module
+        .name
+        .ok_or_else(|| vec![Error::MissingModuleHeader])?;
+    let home = ModuleName {
+        package: context.package,
+        name: name.value,
+    };
 
     let mut env =
         environment::foreign::create_initial_env(bump, home, context.interfaces, module.imports)?;

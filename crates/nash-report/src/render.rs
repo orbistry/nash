@@ -166,7 +166,7 @@ mod tests {
     use super::*;
     use crate::{Doc, Label};
     use nash_region::{Position, Region};
-    fn region(a: u16, b: u16) -> Region {
+    fn region(a: usize, b: usize) -> Region {
         Region::new(Position::new(1, a), Position::new(1, b))
     }
     fn snippet() -> Report {

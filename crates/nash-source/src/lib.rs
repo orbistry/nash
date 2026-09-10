@@ -446,8 +446,8 @@ pub struct Snippet<'a> {
     pub data: &'a [u8], // already the relevant slice
     // offset: usize,
     // length: usize,
-    pub off_row: u16,
-    pub off_col: u16,
+    pub off_row: usize,
+    pub off_col: usize,
 }
 
 #[derive(Debug)]

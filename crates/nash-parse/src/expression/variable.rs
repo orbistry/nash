@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
     /// Parses `[a-z][a-zA-Z0-9_]*`, checks it's not a reserved word.
     pub(crate) fn lower_name<E>(
         &mut self,
-        to_error: impl FnOnce(u16, u16) -> E,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<&'a str, E> {
         let (row, col) = self.position();
         let start_pos = self.pos;
@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
     /// Parse a quoted type variable and return its name without the quote.
     pub(crate) fn type_var_name<E>(
         &mut self,
-        to_error: impl FnOnce(u16, u16) -> E,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<&'a str, E> {
         let (row, col) = self.position();
         if self.peek() != Some(b'\'')
@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
     /// Parse an uppercase or lowercase type declaration name.
     pub(crate) fn type_decl_name<E>(
         &mut self,
-        to_error: impl FnOnce(u16, u16) -> E,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<&'a str, E> {
         match self.peek() {
             Some(b) if b.is_ascii_uppercase() => self.upper_name(to_error),
@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
     /// Parses `[A-Z][a-zA-Z0-9_]*`. No reserved word check for uppercase.
     pub(crate) fn upper_name<E>(
         &mut self,
-        to_error: impl FnOnce(u16, u16) -> E,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<&'a str, E> {
         let (row, col) = self.position();
         let start_pos = self.pos;
@@ -140,7 +140,10 @@ impl<'a> Parser<'a> {
     /// - `Module.foo` -> VarQual(LowVar, "Module", "foo")
     /// - `Module.Foo` -> VarQual(CapVar, "Module", "Foo")
     /// - `A.B.C.foo` -> VarQual(LowVar, "A.B.C", "foo")
-    fn foreign_alpha<E>(&mut self, to_error: impl FnOnce(u16, u16) -> E) -> Result<Expr<'a>, E> {
+    fn foreign_alpha<E>(
+        &mut self,
+        to_error: impl FnOnce(usize, usize) -> E,
+    ) -> Result<Expr<'a>, E> {
         let (row, col) = self.position();
         let start_pos = self.pos;
 
@@ -229,9 +232,9 @@ impl<'a> Parser<'a> {
     fn parse_qualified_lower<E>(
         &mut self,
         start_pos: usize,
-        row: u16,
-        col: u16,
-        to_error: impl FnOnce(u16, u16) -> E,
+        row: usize,
+        col: usize,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<Expr<'a>, E> {
         let module_end = self.pos;
         self.advance(); // consume dot
@@ -259,9 +262,9 @@ impl<'a> Parser<'a> {
     fn chomp_qualified_upper<E>(
         &mut self,
         start_pos: usize,
-        row: u16,
-        col: u16,
-        to_error: impl FnOnce(u16, u16) -> E,
+        row: usize,
+        col: usize,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<Expr<'a>, E> {
         loop {
             if self.is_dot_upper() {

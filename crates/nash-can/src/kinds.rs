@@ -928,7 +928,7 @@ struct ContextInput<'a> {
 enum ContextFailure<'a> {
     Representation(RepresentationFailure<'a>),
     IrregularRecursion {
-        reference: GroupReference<'a>,
+        reference: &'a GroupReference<'a>,
         parameter: &'a str,
     },
 }
@@ -990,7 +990,7 @@ fn close_contexts<'a>(
                     && !matches!(typ.value, Type::Var(_))
                 {
                     return Err(ContextFailure::IrregularRecursion {
-                        reference,
+                        reference: bump.alloc(reference),
                         parameter,
                     });
                 }

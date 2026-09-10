@@ -19,14 +19,14 @@ pub(crate) mod test_support;
 mod tests_block;
 mod type_;
 
-pub type Row = u16;
-pub type Col = u16;
+pub type Row = usize;
+pub type Col = usize;
 
 /// Saved parser state for backtracking.
 #[derive(Clone, Copy)]
 struct ParserState {
     pos: usize,
-    indent: u16,
+    indent: usize,
     row: Row,
     col: Col,
 }
@@ -46,7 +46,7 @@ pub struct Parser<'a> {
     /// Current byte position
     pos: usize,
     /// Current indentation level (for layout-sensitive parsing)
-    indent: u16,
+    indent: usize,
     /// Current row (1-indexed)
     row: Row,
     /// Current column (1-indexed)
@@ -114,13 +114,13 @@ impl<'a> Parser<'a> {
 
     /// Current indentation level.
     #[inline]
-    pub fn indent(&self) -> u16 {
+    pub fn indent(&self) -> usize {
         self.indent
     }
 
     /// Set the indentation level.
     #[inline]
-    pub fn set_indent(&mut self, indent: u16) {
+    pub fn set_indent(&mut self, indent: usize) {
         self.indent = indent;
     }
 
@@ -159,7 +159,7 @@ impl<'a> Parser<'a> {
     /// ```
     pub fn with_backset_indent<T, E>(
         &mut self,
-        backset: u16,
+        backset: usize,
         parser: impl FnOnce(&mut Self) -> Result<T, E>,
     ) -> Result<T, E> {
         let old_indent = self.indent;
@@ -417,7 +417,7 @@ impl<'a> Parser<'a> {
     /// Peek at a byte at the given offset from current position.
     #[inline]
     pub fn peek_at(&self, offset: usize) -> Option<u8> {
-        self.src.get(self.pos + offset).copied()
+        self.src.get(self.pos.checked_add(offset)?).copied()
     }
 
     /// Get the remaining bytes from current position.
@@ -477,6 +477,49 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn coordinates_cover_large_sources() {
+        let bump = Bump::new();
+        let lines = "\n".repeat(65_536);
+        let mut parser = Parser::new(&bump, &lines);
+        parser.advance_by(lines.len());
+        assert_eq!(parser.row(), 65_537);
+        assert_eq!(parser.col(), 1);
+
+        let string = format!("\"{}\"", "x".repeat(65_536));
+        let mut parser = Parser::new(&bump, &string);
+        parser.expression().expect("long string");
+        assert!(parser.is_eof());
+        assert_eq!(parser.col(), string.len() + 1);
+
+        let indented = format!("{}x", " ".repeat(65_536));
+        let mut parser = Parser::new(&bump, &indented);
+        parser.chomp(|_, _, _| ()).expect("long indentation");
+        assert_eq!(parser.col(), 65_537);
+        parser.expression().expect("indented expression");
+        assert!(parser.is_eof());
+
+        let escaped = format!("\"\\u{{{}}}\"", "F".repeat(65_536));
+        let mut parser = Parser::new(&bump, &escaped);
+        let error::Expr::String(
+            error::StringError::Escape(error::Escape::BadUnicodeCode(width)),
+            1,
+            3,
+        ) = parser.expression().expect_err("oversized Unicode escape")
+        else {
+            panic!("expected an invalid Unicode code with its full width");
+        };
+        assert_eq!(width, 65_539);
+    }
+
+    #[test]
+    fn lookahead_offset_cannot_wrap() {
+        let bump = Bump::new();
+        let mut parser = Parser::new(&bump, "xy");
+        parser.advance();
+        assert_eq!(parser.peek_at(usize::MAX), None);
+    }
+
     use super::*;
 
     #[test]

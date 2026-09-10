@@ -51,7 +51,7 @@ mod tests {
     use crate::{Doc, Label, Snippet};
     use nash_region::Position;
 
-    fn region(sr: u16, sc: u16, er: u16, ec: u16) -> Region {
+    fn region(sr: usize, sc: usize, er: usize, ec: usize) -> Region {
         Region::new(Position::new(sr, sc), Position::new(er, ec))
     }
 

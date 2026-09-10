@@ -31,7 +31,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse aligned statements ending in an expression.
-    pub(crate) fn do_body(&mut self, parent_indent: u16) -> Result<DoBody<'a>, Do<'a>> {
+    pub(crate) fn do_body(&mut self, parent_indent: usize) -> Result<DoBody<'a>, Do<'a>> {
         let (first, mut end) = self.do_stmt()?;
         let mut statements = vec![first];
 

@@ -25,8 +25,8 @@ impl<'a> Parser<'a> {
     /// - `:` (colon - reserved for type annotations)
     pub(crate) fn operator<E>(
         &mut self,
-        to_expectation: impl FnOnce(u16, u16) -> E,
-        to_error: impl FnOnce(BadOperator, u16, u16) -> E,
+        to_expectation: impl FnOnce(usize, usize) -> E,
+        to_error: impl FnOnce(BadOperator, usize, usize) -> E,
     ) -> Result<&'a str, E> {
         let (row, col) = self.position();
         let start_pos = self.pos;
@@ -63,8 +63,8 @@ impl<'a> Parser<'a> {
     /// Parse an operator and wrap it in a Located.
     pub(crate) fn add_location_operator<E>(
         &mut self,
-        to_expectation: impl FnOnce(u16, u16) -> E,
-        to_error: impl FnOnce(BadOperator, u16, u16) -> E,
+        to_expectation: impl FnOnce(usize, usize) -> E,
+        to_error: impl FnOnce(BadOperator, usize, usize) -> E,
     ) -> Result<&'a Located<&'a str>, E> {
         let start = self.get_position();
         let op = self.operator(to_expectation, to_error)?;

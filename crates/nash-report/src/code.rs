@@ -28,7 +28,7 @@ impl<'s> Source<'s> {
 
     /// Byte offset of a 1-based position produced by the parser.
     pub fn offset(&self, position: Position) -> usize {
-        let row = usize::from(position.line.saturating_sub(1));
+        let row = position.line.saturating_sub(1);
         let Some(&start) = self.line_starts.get(row) else {
             return self.text.len();
         };
@@ -37,7 +37,7 @@ impl<'s> Source<'s> {
             .get(row + 1)
             .map_or(self.text.len(), |next| next - 1);
         let mut offset = start
-            .saturating_add(usize::from(position.column.saturating_sub(1)))
+            .saturating_add(position.column.saturating_sub(1))
             .min(end);
         while !self.text.is_char_boundary(offset) {
             offset -= 1;
@@ -58,10 +58,10 @@ impl<'s> Source<'s> {
 
     /// Text of a 1-based row, without its newline.
     pub fn line(&self, row: Row) -> Option<&'s str> {
-        let start = *self.line_starts.get(usize::from(row.checked_sub(1)?))?;
+        let start = *self.line_starts.get(row.checked_sub(1)?)?;
         let end = self
             .line_starts
-            .get(usize::from(row))
+            .get(row)
             .map_or(self.text.len(), |next| next - 1);
         Some(&self.text[start..end.max(start)])
     }
@@ -70,7 +70,7 @@ impl<'s> Source<'s> {
     pub fn what_is_next(&self, row: Row, col: Col) -> Next<'s> {
         let Some(rest) = self
             .line(row)
-            .and_then(|line| line.get(usize::from(col.checked_sub(1)?)..))
+            .and_then(|line| line.get(col.checked_sub(1)?..))
         else {
             return Next::Other(None);
         };
@@ -150,7 +150,7 @@ pub fn to_region(row: Row, col: Col) -> Region {
 }
 
 /// Elm's `toWiderRegion`.
-pub fn to_wider_region(row: Row, col: Col, extra: u16) -> Region {
+pub fn to_wider_region(row: Row, col: Col, extra: usize) -> Region {
     Region::new(
         Position::new(row, col),
         Position::new(row, col.saturating_add(extra)),
@@ -159,7 +159,7 @@ pub fn to_wider_region(row: Row, col: Col, extra: u16) -> Region {
 
 /// Elm's `toKeywordRegion`.
 pub fn to_keyword_region(row: Row, col: Col, keyword: &str) -> Region {
-    to_wider_region(row, col, keyword.len() as u16)
+    to_wider_region(row, col, keyword.len())
 }
 
 #[cfg(test)]

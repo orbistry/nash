@@ -81,7 +81,7 @@ fn unfinished(title: &str, thing: &str, r: Row, c: Col, sr: Row, sc: Col, hint: 
         sc,
     )
 }
-fn width(mut report: Report, amount: u16) -> Report {
+fn width(mut report: Report, amount: usize) -> Report {
     report.region.end.column = report.region.start.column.saturating_add(amount);
     report.snippet = crate::Snippet::Region {
         region: report.region,
@@ -572,7 +572,7 @@ fn to_record_report(
                                 "It looks like you are trying to use `{k}` as a field name, but that is a reserved word. Try using a different name!"
                             ),
                         ),
-                        k.len() as u16,
+                        k.len(),
                     ),
                     sr,
                     sc,
@@ -778,7 +778,7 @@ fn to_func_report(source: &Source<'_>, ctx: Context<'_>, e: &Func<'_>, sr: Row, 
                                 "It looks like you are trying to use `{k}` as an argument, but it is a reserved word in this language. Try using a different argument name!"
                             ),
                         ),
-                        k.len() as u16,
+                        k.len(),
                     ),
                     sr,
                     sc,
@@ -821,7 +821,7 @@ fn to_let_report(source: &Source<'_>, ctx: Context<'_>, e: &Let<'_>, sr: Row, sc
         Let::In(r,c)|Let::DefAlignment(_,r,c)=>return unfinished("LET PROBLEM", "a `let` expression", r,c,sr,sc,"Based on the indentation, I was expecting to see the `in` keyword next. Is there a typo? This can also happen if you are trying to define another value within the `let` but it is not indented enough. Make sure each definition has exactly the same amount of spaces before it. They should line up exactly!"),
         Let::IndentIn(r,c)=>(r,c,"I was expecting to see the `in` keyword next. Or maybe more of that expression?".into()),
         Let::DefName(r,c)=>match source.what_is_next(r,c) {
-            Next::Keyword(k)=>return wide(width(problem("RESERVED WORD",r,c,"I was partway through parsing a `let` expression, but I got stuck here:",&format!("It looks like you are trying to use `{k}` as a variable name, but it is a reserved word! Try using a different name instead.")),k.len() as u16),sr,sc),
+            Next::Keyword(k)=>return wide(width(problem("RESERVED WORD",r,c,"I was partway through parsing a `let` expression, but I got stuck here:",&format!("It looks like you are trying to use `{k}` as a variable name, but it is a reserved word! Try using a different name instead.")),k.len()),sr,sc),
             _=>(r,c,"I was expecting the name of a definition next.".to_owned()),
         },
         Let::IndentDef(r,c)=>(r,c,"I was expecting a value to be defined here. It may need more indentation.".into()),
@@ -852,9 +852,9 @@ pub(crate) fn to_let_def_report(
         Def::Arg(e,r,c)=>return pattern::to_pattern_report(source,pattern::PContext::Arg,e,r,c),
         Def::Body(e,r,c)=>return to_expr_report(source,Context::InDef(name,sr,sc),e,r,c),
         Def::NameRepeat(r,c)=>(r,c,"EXPECTING DEFINITION",format!("I just saw the type annotation for `{name}` so I was expecting to see its definition here. Type annotations always appear directly above the relevant definition, without anything else in between.")),
-        Def::NameMatch(actual,r,c)=>return wide(width(problem("NAME MISMATCH",r,c,&format!("I just saw a type annotation for `{name}`, but it is followed by a definition for `{actual}`:"),"These names do not match! Is there a typo?"),actual.len() as u16),sr,sc).with_suggestions(vec![name.to_owned()]),
+        Def::NameMatch(actual,r,c)=>return wide(width(problem("NAME MISMATCH",r,c,&format!("I just saw a type annotation for `{name}`, but it is followed by a definition for `{actual}`:"),"These names do not match! Is there a typo?"),actual.len()),sr,sc).with_suggestions(vec![name.to_owned()]),
         Def::Equals(r,c)=>match source.what_is_next(r,c) {
-            Next::Keyword(k)=>return wide(width(problem("RESERVED WORD",r,c,&format!("The name `{k}` is reserved, so it cannot be used as an argument:"),"Try renaming it to something else."),k.len() as u16),sr,sc),
+            Next::Keyword(k)=>return wide(width(problem("RESERVED WORD",r,c,&format!("The name `{k}` is reserved, so it cannot be used as an argument:"),"Try renaming it to something else."),k.len()),sr,sc),
             Next::Operator("->")=>(r,c,"MISSING COLON?","I was not expecting to see an arrow here. Maybe this is a type annotation missing its colon?".into()),
             _=>(r,c,"PROBLEM IN DEFINITION","I was expecting to see an argument or an equals sign next.".into()),
         },

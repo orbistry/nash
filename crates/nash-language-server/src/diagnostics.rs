@@ -7,6 +7,15 @@ use tower_lsp_server::ls_types::{
 };
 
 pub fn to_lsp(report: &Report, source: &Source<'_>, uri: &Uri) -> Diagnostic {
+    checked_to_lsp(report, source, uri).unwrap_or_else(|| Diagnostic {
+        severity: Some(DiagnosticSeverity::ERROR),
+        source: Some("nash".into()),
+        message: "Cannot represent this diagnostic's source position in LSP: line or UTF-16 column exceeds the protocol's 32-bit limit.".into(),
+        ..Diagnostic::default()
+    })
+}
+
+fn checked_to_lsp(report: &Report, source: &Source<'_>, uri: &Uri) -> Option<Diagnostic> {
     let related = match &report.snippet {
         Snippet::Pair { first, .. } => Some((first.region, first.text.clone())),
         Snippet::Region {
@@ -15,8 +24,18 @@ pub fn to_lsp(report: &Report, source: &Source<'_>, uri: &Uri) -> Diagnostic {
         } if *highlight != report.region => Some((*highlight, "Related source".into())),
         _ => None,
     };
-    Diagnostic {
-        range: to_range(report.region, source),
+    let related_information = match related {
+        Some((region, message)) => Some(vec![DiagnosticRelatedInformation {
+            location: Location {
+                uri: uri.clone(),
+                range: to_range(region, source)?,
+            },
+            message,
+        }]),
+        None => None,
+    };
+    Some(Diagnostic {
+        range: to_range(report.region, source)?,
         severity: Some(match report.severity {
             Severity::Error => DiagnosticSeverity::ERROR,
             Severity::Warning => DiagnosticSeverity::WARNING,
@@ -28,56 +47,67 @@ pub fn to_lsp(report: &Report, source: &Source<'_>, uri: &Uri) -> Diagnostic {
             report.before.render(80, false),
             report.after.render(80, false)
         ),
-        related_information: related.map(|(region, message)| {
-            vec![DiagnosticRelatedInformation {
-                location: Location {
-                    uri: uri.clone(),
-                    range: to_range(region, source),
-                },
-                message,
-            }]
-        }),
+        related_information,
         data: (!report.suggestions.is_empty()).then(|| serde_json::json!(report.suggestions)),
         ..Diagnostic::default()
-    }
+    })
 }
 
-pub fn to_range(region: Region, source: &Source<'_>) -> Range {
-    Range::new(
-        to_position(region.start, source),
-        to_position(region.end, source),
-    )
+pub fn to_range(region: Region, source: &Source<'_>) -> Option<Range> {
+    Some(Range::new(
+        to_position(region.start, source)?,
+        to_position(region.end, source)?,
+    ))
 }
 
-fn to_position(position: NashPosition, source: &Source<'_>) -> Position {
+fn to_position(position: NashPosition, source: &Source<'_>) -> Option<Position> {
     let offset = source.offset(position);
     let prefix = &source.text()[..offset];
-    let line = prefix.bytes().filter(|&b| b == b'\n').count() as u32;
+    let line = prefix.bytes().filter(|&b| b == b'\n').count();
     let character = prefix
         .rsplit('\n')
         .next()
         .unwrap_or("")
         .encode_utf16()
-        .count() as u32;
-    Position::new(line, character)
+        .count();
+    protocol_position(line, character)
+}
+
+fn protocol_position(line: usize, character: usize) -> Option<Position> {
+    Some(Position::new(
+        line.try_into().ok()?,
+        character.try_into().ok()?,
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use nash_report::{Doc, Label};
-    fn region(sr: u16, sc: u16, er: u16, ec: u16) -> Region {
+    fn region(sr: usize, sc: usize, er: usize, ec: usize) -> Region {
         Region::new(NashPosition::new(sr, sc), NashPosition::new(er, ec))
+    }
+    #[test]
+    fn protocol_positions_do_not_truncate() {
+        let max = u32::MAX as usize;
+        assert_eq!(
+            protocol_position(max, max),
+            Some(Position::new(u32::MAX, u32::MAX))
+        );
+        if let Some(too_large) = max.checked_add(1) {
+            assert_eq!(protocol_position(too_large, 0), None);
+            assert_eq!(protocol_position(0, too_large), None);
+        }
     }
     #[test]
     fn ranges_count_utf16_surrogate_pairs() {
         let source = Source::new("a😀éz\nlast");
         assert_eq!(
-            to_range(region(1, 6, 1, 8), &source),
+            to_range(region(1, 6, 1, 8), &source).unwrap(),
             Range::new(Position::new(0, 3), Position::new(0, 4))
         );
         assert_eq!(
-            to_range(region(2, 5, 2, 5), &source),
+            to_range(region(2, 5, 2, 5), &source).unwrap(),
             Range::new(Position::new(1, 4), Position::new(1, 4))
         );
     }
@@ -99,10 +129,10 @@ mod tests {
         );
         let source = Source::new("x\nx");
         let diagnostic = to_lsp(&report, &source, &uri);
-        assert_eq!(diagnostic.range, to_range(report.region, &source));
+        assert_eq!(diagnostic.range, to_range(report.region, &source).unwrap());
         assert_eq!(
             diagnostic.related_information.unwrap()[0].location.range,
-            to_range(region(1, 1, 1, 2), &source)
+            to_range(region(1, 1, 1, 2), &source).unwrap()
         );
         assert_eq!(diagnostic.message, "Duplicate names:\n\nRename one.");
     }

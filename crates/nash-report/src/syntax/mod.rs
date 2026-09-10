@@ -28,7 +28,7 @@ pub fn to_report(source: &Source<'_>, error: &Error<'_>) -> Report {
             suggestions: Vec::new(),
         },
         Error::ModuleNameMismatch { expected, actual, row, col } => Report::snippet(
-            "MODULE NAME MISMATCH", to_wider_region(*row, *col, actual.len() as u16), None,
+            "MODULE NAME MISMATCH", to_wider_region(*row, *col, actual.len()), None,
             Doc::text("It looks like this module name is out of sync:"),
             Doc::stack([
                 Doc::reflow(&format!("I need it to match the file path, so I was expecting to see `{expected}` here. Make the following change, and you should be all set!")),

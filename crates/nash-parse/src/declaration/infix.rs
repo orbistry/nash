@@ -103,7 +103,7 @@ impl<'a> Parser<'a> {
     /// Parse a precedence digit (0-9).
     ///
     /// Mirrors Elm's `Number.precedence`.
-    fn precedence<E>(&mut self, to_error: impl FnOnce(u16, u16) -> E) -> Result<Precedence, E> {
+    fn precedence<E>(&mut self, to_error: impl FnOnce(usize, usize) -> E) -> Result<Precedence, E> {
         match self.peek() {
             Some(b) if b.is_ascii_digit() => {
                 let value = (b - b'0') as u16;

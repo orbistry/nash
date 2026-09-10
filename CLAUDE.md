@@ -31,7 +31,7 @@ let mut parser = Parser::new(&bump, src);
 **Inline small `Copy` types** - don't put them behind `&'a`:
 - Small enums (e.g., `VarType`, `Associativity`) - just store the value
 - Newtypes around primitives (e.g., `Precedence(u16)`) - just store the value
-- `Region` (8 bytes of integers) - same size as a pointer, no benefit to indirection
+- `Region` uses native-size source coordinates (32 bytes on 64-bit hosts); keep it inline in AST nodes.
 
 **Use `&'a T` for**:
 - Large types

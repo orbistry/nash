@@ -141,7 +141,7 @@ impl<'a> Parser<'a> {
     /// ```
     pub(crate) fn module_name<E>(
         &mut self,
-        to_error: impl FnOnce(u16, u16) -> E,
+        to_error: impl FnOnce(usize, usize) -> E,
     ) -> Result<&'a str, E> {
         let (row, col) = self.position();
         let start_pos = self.pos;
