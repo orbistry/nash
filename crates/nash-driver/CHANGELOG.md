@@ -1,5 +1,15 @@
 # nash-driver
 
+## 0.5.0 — 2026-09-10
+
+### Minor changes
+
+- [b7ff823](https://github.com/orbistry/nash/commit/b7ff823b144beb39d5cc355052710b7032f0509e) Collect independent compiler errors with dependency-aware recovery, retain failed module dependencies, and render owned diagnostics in the terminal, JSON, and language server. Preserve trait-method call names in error context. Add JSON and warning controls to `nash check`, and publish diagnostics for unsaved editor buffers with UTF-16 ranges. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-can@0.6.1, nash-constrain@0.4.1, nash-parse@0.5.1, nash-report@0.2.0, nash-solve@0.4.1
+
 ## 0.4.0 — 2026-09-10
 
 ### Minor changes

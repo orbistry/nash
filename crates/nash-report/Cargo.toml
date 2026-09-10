@@ -1,6 +1,6 @@
 [package]
 name = "nash-report"
-version = "0.1.0"
+version = "0.2.0"
 edition.workspace = true
 description = "Error reports for the Nash compiler: Elm's prose rendered with miette"
 homepage.workspace = true
@@ -13,10 +13,10 @@ unicode-width = "0.1.14"
 serde.workspace = true
 serde_json.workspace = true
 nash-ast = { path = "../nash-ast", version = "0.7.0" }
-nash-can = { path = "../nash-can", version = "0.6.0" }
-nash-constrain = { path = "../nash-constrain", version = "0.4.0" }
+nash-can = { path = "../nash-can", version = "0.6.1" }
+nash-constrain = { path = "../nash-constrain", version = "0.4.1" }
 nash-nitpick = { path = "../nash-nitpick", version = "0.2.0" }
-nash-parse = { path = "../nash-parse", version = "0.5.0" }
+nash-parse = { path = "../nash-parse", version = "0.5.1" }
 nash-region = { path = "../nash-region", version = "0.2.0" }
 nash-source = { path = "../nash-source", version = "0.6.0" }
 
@@ -24,4 +24,4 @@ nash-source = { path = "../nash-source", version = "0.6.0" }
 bumpalo.workspace = true
 indoc.workspace = true
 insta.workspace = true
-nash-solve = { path = "../nash-solve", version = "0.4.0" }
+nash-solve = { path = "../nash-solve", version = "0.4.1" }
