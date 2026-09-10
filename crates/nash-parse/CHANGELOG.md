@@ -1,5 +1,11 @@
 # nash-parse
 
+## 0.5.1 — 2026-09-10
+
+### Patch changes
+
+- [b7ff823](https://github.com/orbistry/nash/commit/b7ff823b144beb39d5cc355052710b7032f0509e) Add compiler report documents, source spans, terminal rendering and name suggestions. Expose parser token classifiers and preserve nested parse errors for diagnostics. — Thanks @MicroProofs!
+
 ## 0.5.0 — 2026-09-10
 
 ### Minor changes
