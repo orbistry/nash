@@ -1883,7 +1883,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ast"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "bumpalo",
  "nash-region",
@@ -1892,7 +1892,7 @@ dependencies = [
 
 [[package]]
 name = "nash-can"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1905,7 +1905,7 @@ dependencies = [
 
 [[package]]
 name = "nash-cli"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "clap",
  "color-print",
@@ -1941,7 +1941,7 @@ dependencies = [
 
 [[package]]
 name = "nash-constrain"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bumpalo",
  "nash-ast",
@@ -1950,7 +1950,7 @@ dependencies = [
 
 [[package]]
 name = "nash-driver"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "async-trait",
  "bumpalo",
@@ -1975,7 +1975,7 @@ dependencies = [
 
 [[package]]
 name = "nash-language-server"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "nash-driver",
  "nash-region",
@@ -1989,7 +1989,7 @@ dependencies = [
 
 [[package]]
 name = "nash-nitpick"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bumpalo",
  "hex",
@@ -2000,7 +2000,7 @@ dependencies = [
 
 [[package]]
 name = "nash-parse"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2037,11 +2037,11 @@ dependencies = [
 
 [[package]]
 name = "nash-region"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "nash-report"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2062,7 +2062,7 @@ dependencies = [
 
 [[package]]
 name = "nash-solve"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2077,7 +2077,7 @@ dependencies = [
 
 [[package]]
 name = "nash-source"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "nash-region",

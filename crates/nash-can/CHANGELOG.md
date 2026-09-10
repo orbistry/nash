@@ -1,5 +1,17 @@
 # nash-can
 
+## 0.7.0 — 2026-09-10
+
+### Minor changes
+
+- [d06f2c5](https://github.com/orbistry/nash/commit/d06f2c5b69164d527d1e0bc4eefe6dcc7117867c) Borrow module data and local binding maps during canonicalization instead of cloning the full environment at each scope. Preserve shadowing, diagnostics, and error recovery. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [e22bfb5](https://github.com/orbistry/nash/commit/e22bfb5783668dc1256eba8a2294e28d679a4816) Use ordered map ranges for trait candidate lookup, evidence construction, entailment, and missing-implementation suggestions. Preserve candidate order without a second index. — Thanks @MicroProofs!
+- [8bb97f6](https://github.com/orbistry/nash/commit/8bb97f680047cc8818b890af407247cdd585000e) Use source-sized coordinates and diagnostic widths throughout parsing and reporting. Check LSP coordinate conversion instead of truncating. Reject oversized Unicode escapes without integer overflow, and make arbitrary lookahead offsets safe. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.7.1, nash-parse@0.6.0, nash-region@0.3.0, nash-source@0.7.0
+
 ## 0.6.1 — 2026-09-10
 
 ### Patch changes

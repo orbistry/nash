@@ -1,6 +1,6 @@
 [package]
 name = "nash-nitpick"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 description = "Exhaustiveness and redundancy checking for Nash pattern matches"
 homepage.workspace = true
@@ -10,8 +10,8 @@ license.workspace = true
 [dependencies]
 bumpalo.workspace = true
 hex.workspace = true
-nash-ast = { path = "../nash-ast", version = "0.7.0" }
-nash-region = { path = "../nash-region", version = "0.2.0" }
+nash-ast = { path = "../nash-ast", version = "0.7.1" }
+nash-region = { path = "../nash-region", version = "0.3.0" }
 
 [dev-dependencies]
 insta.workspace = true
