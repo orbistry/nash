@@ -406,6 +406,18 @@ fn compile_module<'s>(
             );
         }
     };
+    if let Err(errors) = nash_constrain::module::check_main_parameters(
+        bump,
+        module,
+        annotations.get("main").copied(),
+        &can_result.tables.kinds,
+    ) {
+        return failed(
+            name,
+            nash_report::ModuleError::Types(localizer, errors),
+            warnings,
+        );
+    }
     if let Err(errors) = nash_nitpick::check(bump, &can_result.module) {
         return failed(name, nash_report::ModuleError::Patterns(errors), warnings);
     }

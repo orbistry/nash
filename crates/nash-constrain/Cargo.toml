@@ -14,3 +14,8 @@ license.workspace = true
 bumpalo.workspace = true
 nash-ast = { path = "../nash-ast", version = "0.7.0" }
 nash-region = { path = "../nash-region", version = "0.2.0" }
+
+nash-can = { path = "../nash-can", version = "0.6.1" }
+
+[dev-dependencies]
+insta.workspace = true

@@ -9,14 +9,14 @@ The `nash` binary is `crates/nash-cli`. Every command loads the project from
 | Command | Status | Purpose |
 |---|---|---|
 | `nash check [PATH]` | exists | Parse, canonicalize and type check every module, including `tests` blocks. No codegen. |
-| `nash build [PATH]` | planned (plans/09) | `check` without tests blocks, then compile every validator module to `build/`. |
+| `nash build [PATH]` | exists (Plan 07 prerequisite) | Check the frontend, then compile every validator module to Plutus V3 files in `build/`. |
 | `nash test [PATH]` | planned (plans/10) | `check`, then compile and run every `test` and `prop`. |
 | `nash fmt [PATH...]` | planned | Format files in place, or `--check` to report unformatted files. |
 | `nash docs [PATH]` | planned | Generate HTML documentation for exposed modules into `docs/`. |
 | `nash lsp` | exists | Language server over stdio. |
 | `nash init NAME` | planned | Create a project skeleton: `nash.jsonc`, `src/`, one validator module with a `tests` block. |
 
-Aliases: `nash c` for `check`, `nash b` for `build`, `nash t` for `test`.
+Aliases: `nash c` for `check`, `nash b` for `build`; `nash t` is planned with `test`.
 
 Version proxying stays as it is: `nash` reads the `compiler` field of
 `nash.jsonc` and re-executes the matching downloaded compiler
@@ -29,19 +29,21 @@ Global flags, accepted before the subcommand:
 | Flag | Effect |
 |---|---|
 | `--color auto\|always\|never` | ANSI colors on stderr. Default `auto`. |
-| `--json` | Machine-readable output on stdout, human output suppressed. Diagnostics are emitted as miette JSON. |
-| `-q`, `--quiet` | Only errors and the final summary. |
+| `--json` (planned) | Machine-readable output on stdout, human output suppressed. Diagnostics are emitted as miette JSON. |
+| `-q`, `--quiet` (planned) | Only errors and the final summary. |
 
 `nash build`:
 
 | Flag | Default | Effect |
 |---|---|---|
-| `--trace-level silent\|compact\|verbose` | config `traceLevel`, else `silent` | User `trace` compilation mode. |
+| `--trace-level silent\|compact\|verbose` | `silent` | User `trace` compilation mode. |
 | `--compiler-traces` | off | Keep compiler-generated traces. |
-| `--optimize 0\|1\|2` | config `optimize`, else `2` | Core optimization level. |
 | `--out DIR` | `build` | Output directory. |
 
-`nash test`:
+The current build targets Plutus V3 without optimization. Config defaults,
+`--optimize`, and other target versions remain Plans 08/09 work.
+
+`nash test` (planned):
 
 | Flag | Default | Effect |
 |---|---|---|
@@ -67,8 +69,8 @@ Global flags, accepted before the subcommand:
 | `--no-warnings` | Suppress warnings; errors only. |
 | `--report human\|json` | `json` prints nash-report's Elm-shaped JSON document (`{"type":"compile-errors",...}`) instead of the terminal rendering. Default `human`. |
 
-`nash build` and `nash test` accept the same two flags for their compile
-phase.
+Plans 09/10 add these two flags to `build` and `test`. The initial build
+command uses human diagnostics and shows warnings.
 
 ## Exit codes
 
@@ -94,14 +96,16 @@ Warnings never change the exit code.
   .nash/                      caches (interfaces, downloaded compilers)
 ```
 
-`build/` and `.nash/` are safe to delete. `nash build` removes stale outputs
-for modules that are no longer validators before writing.
+`build/` and `.nash/` are safe to delete. The initial `nash build` writes
+outputs only after successful compilation. Stale-output removal remains Plan 09
+work; obsolete files must currently be removed explicitly. `.cbor` is one CBOR
+byte string containing the `.flat` bytes.
 
 Human-readable output goes to stderr. Machine-readable output (`--json`) goes
 to stdout. Diagnostics use the miette fancy renderer with Elm's prose (see
 [diagnostics.md](diagnostics.md)).
 
-### `nash build` transcript
+### Planned `nash build` transcript
 
 ```
    Compiling 14 modules
@@ -118,7 +122,8 @@ See [testing.md](testing.md#example-output).
 
 ## `nash.jsonc` additions
 
-Three optional fields on `application` and `package` configs:
+Plan 09 adds three optional fields on `application` and `package` configs.
+The initial build command does not read them:
 
 ```jsonc
 {

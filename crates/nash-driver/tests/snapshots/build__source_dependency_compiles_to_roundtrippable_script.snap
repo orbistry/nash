@@ -1,0 +1,9 @@
+---
+source: crates/nash-driver/tests/build.rs
+expression: output.uplc
+---
+(program 1.1.0
+  [(lam identity_3
+    [(lam main_1 main_1)
+      (lam arg_2 [(lam match_4 [identity_3 (con unit ())]) arg_2])])
+    (lam x_5 x_5)])

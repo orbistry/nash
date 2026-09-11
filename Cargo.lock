@@ -1913,6 +1913,7 @@ dependencies = [
  "futures",
  "insta",
  "miette",
+ "nash-codegen",
  "nash-config",
  "nash-driver",
  "nash-language-server",
@@ -1963,7 +1964,9 @@ name = "nash-constrain"
 version = "0.4.1"
 dependencies = [
  "bumpalo",
+ "insta",
  "nash-ast",
+ "nash-can",
  "nash-region",
 ]
 
@@ -1979,10 +1982,12 @@ dependencies = [
  "miette",
  "nash-ast",
  "nash-can",
+ "nash-codegen",
  "nash-config",
  "nash-constrain",
  "nash-nitpick",
  "nash-parse",
+ "nash-plutus",
  "nash-region",
  "nash-report",
  "nash-solve",

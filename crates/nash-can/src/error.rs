@@ -35,6 +35,14 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    ValidatorMissingMain {
+        region: Region,
+        module: &'a str,
+    },
+    ValidatorMainNotExposed {
+        region: Region,
+        module: &'a str,
+    },
     RecordLiteralNoAlias {
         region: Region,
         fields: &'a [&'a str],
