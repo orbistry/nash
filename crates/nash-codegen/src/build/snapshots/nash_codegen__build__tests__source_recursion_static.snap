@@ -1,0 +1,12 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+expression: pretty
+---
+let fromInt#3 : int -> int = \value#6 : int -> value#6 in
+letrec
+  repeat#2 : int -> int -> int [static [0]] = \item#4 : int n#5 : int -> case@Bool equalsInteger n#5 (fromInt#3 0) of
+    True -> item#4
+    False -> repeat#2 item#4 (subtractInteger n#5 (fromInt#3 1))
+in
+let main#1 : int = repeat#2 (fromInt#3 42) (fromInt#3 3) in
+main#1

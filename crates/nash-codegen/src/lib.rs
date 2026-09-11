@@ -15,3 +15,9 @@ pub mod demand;
 pub mod decision_tree;
 
 pub mod evidence;
+
+pub mod comptime;
+pub mod program;
+
+pub mod build;
+pub mod can_to_core;

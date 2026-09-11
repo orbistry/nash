@@ -798,3 +798,88 @@ fn big_list_tail_binding_remains_data_encoded() {
         "(con data (List [I 2]))"
     );
 }
+
+#[test]
+fn duplicated_leaf_joins_preserve_bindings_and_lazy_effects() {
+    for bind_default in [false, true] {
+        for first in [false, true] {
+            for second in [false, true] {
+                let arena = Arena::new();
+                let b = Builder::new(&arena);
+                let unions = HashMap::new();
+                let mut types = TypeEnv::new(&arena, &unions);
+                let ty = Ty::Term(arena.alloc(TermTy::Tuple(&[
+                    Ty::Const(&ConstTy::Bool),
+                    Ty::Const(&ConstTy::Bool),
+                ])));
+                let records = HashMap::new();
+                let literals = HashMap::new();
+                let default = if bind_default {
+                    pat(&arena, Pattern::Var("whole"))
+                } else {
+                    pat(&arena, Pattern::Anything)
+                };
+                let names = bindings(&b, &mut types, ty, default, &records).unwrap();
+                let result = if bind_default {
+                    b.field(b.var(names["whole"].name), 0, 2)
+                } else {
+                    b.lit(Constant::bool(&arena, false))
+                };
+                let rows = [
+                    MatchBranch {
+                        pattern: tuple(&arena, boolean(&arena, true), boolean(&arena, true)),
+                        bindings: BTreeMap::new(),
+                        body: b.lit(Constant::bool(&arena, true)),
+                    },
+                    MatchBranch {
+                        pattern: default,
+                        bindings: names,
+                        body: b.trace(b.lit(Constant::string(&arena, "default")), result),
+                    },
+                ];
+                let core = compile(
+                    &b,
+                    &mut types,
+                    ty,
+                    b.constr(
+                        0,
+                        &[
+                            b.lit(Constant::bool(&arena, first)),
+                            b.lit(Constant::bool(&arena, second)),
+                        ],
+                    ),
+                    &rows,
+                    MatchInputs {
+                        record_fields: &records,
+                        literal_tests: &literals,
+                    },
+                    b.error(),
+                )
+                .unwrap();
+                let pretty = nash_ir::pretty::pretty(core);
+                assert_eq!(pretty.matches("trace").count(), 1);
+                if !bind_default && !first && !second {
+                    insta::assert_snapshot!("shared_default_leaf", pretty);
+                }
+                let evaluated = crate::harness::eval_core(&arena, core);
+                let expected = first && (second || bind_default);
+                assert_eq!(
+                    evaluated.result,
+                    if expected {
+                        "(con bool True)"
+                    } else {
+                        "(con bool False)"
+                    }
+                );
+                assert_eq!(
+                    evaluated.logs,
+                    if first && second {
+                        Vec::<String>::new()
+                    } else {
+                        vec!["default".to_string()]
+                    }
+                );
+            }
+        }
+    }
+}

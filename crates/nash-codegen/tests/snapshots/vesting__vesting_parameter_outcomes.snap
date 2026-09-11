@@ -1,0 +1,24 @@
+---
+source: crates/nash-codegen/tests/vesting.rs
+expression: outcomes
+---
+claim after deadline
+result: unit
+logs: []
+cpu: 6933057
+mem: 29113
+claim before deadline
+result: error
+logs: ["assertion failed"]
+cpu: 5664555
+mem: 20845
+cancel signed by owner
+result: unit
+logs: []
+cpu: 6957610
+mem: 29681
+cancel unsigned
+result: error
+logs: ["assertion failed"]
+cpu: 5593108
+mem: 20813

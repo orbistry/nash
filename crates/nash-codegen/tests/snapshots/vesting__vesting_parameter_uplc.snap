@@ -1,0 +1,198 @@
+---
+source: crates/nash-codegen/tests/vesting.rs
+expression: uplc
+---
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          [(lam i4
+            [(lam i5
+              [(lam i6 i6)
+                (lam i6
+                  (lam i7
+                    (lam i8
+                      (lam i9
+                        [(lam i10
+                          [(lam i11
+                            (force
+                              [[[[[[(force (builtin chooseData)) i11]
+                                (delay
+                                  [(lam i12
+                                    [[(lam i13
+                                      (lam i14
+                                        [(lam i15
+                                          (force
+                                            [[[(force (builtin ifThenElse)) [[(builtin equalsInteger) i15] (con integer 0)]]
+                                              (delay
+                                                [(lam i16
+                                                  [(lam i17
+                                                    [(lam i18
+                                                      [(lam i19
+                                                        [(lam i20
+                                                          (force
+                                                            [[[(force (builtin ifThenElse)) i20] (delay (con unit ()))]
+                                                              (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
+                                                          [[(builtin lessThanInteger) [[(builtin addInteger) [i2 i19]] i6]] [i3 i9]]])
+                                                        [(force (builtin headList)) i18]])
+                                                      [(force (builtin tailList)) i17]])
+                                                    [(force (force (builtin sndPair))) i16]])
+                                                  [(builtin unConstrData) i7]])]
+                                              (delay
+                                                (force
+                                                  [[[(force (builtin ifThenElse)) [[(builtin equalsInteger) i15] (con integer 1)]]
+                                                    (delay
+                                                      [(lam i16
+                                                        [(lam i17
+                                                          [(lam i18
+                                                            [(lam i19
+                                                              (force
+                                                                [[[(force (builtin ifThenElse)) i19] (delay (con unit ()))]
+                                                                  (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
+                                                              [[i5 i9] i18]])
+                                                            [(force (builtin headList)) i17]])
+                                                          [(force (force (builtin sndPair))) i16]])
+                                                        [(builtin unConstrData) i7]])]
+                                                    (delay (force [[(force (builtin trace)) i1] (delay (error))]))]))]))
+                                          i13]))
+                                      [(force (force (builtin fstPair))) i12]]
+                                      [(force (force (builtin sndPair))) i12]])
+                                    [(builtin unConstrData) i11]])]
+                                (delay (force [[(force (builtin trace)) i1] (delay (error))]))]
+                                (delay (force [[(force (builtin trace)) i1] (delay (error))]))]
+                                (delay (force [[(force (builtin trace)) i1] (delay (error))]))]
+                                (delay (force [[(force (builtin trace)) i1] (delay (error))]))]))
+                            i10])
+                          i8]))))])
+              (lam i5
+                (lam i6
+                  [(lam i7
+                    [(lam i8
+                      [(lam i9
+                        (force
+                          [[[[[[(force (builtin chooseData)) i9]
+                            (delay
+                              [(lam i10
+                                [[(lam i11
+                                  (lam i12
+                                    [(lam i13
+                                      (force
+                                        [[[(force (builtin ifThenElse)) [(force (builtin nullList)) i13]]
+                                          (delay (force i8))]
+                                          (delay
+                                            [[(lam i14
+                                              (lam i15
+                                                [(lam i16
+                                                  (force
+                                                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) i16]]
+                                                      (delay (force i8))]
+                                                      (delay
+                                                        [[(lam i17
+                                                          (lam i18
+                                                            [(lam i19
+                                                              (force
+                                                                [[[[[[(force (builtin chooseData)) i19]
+                                                                  (delay
+                                                                    [(lam i20
+                                                                      [[(lam i21 (lam i22 (force i8))) [(force (force (builtin fstPair))) i20]]
+                                                                        [(force (force (builtin sndPair))) i20]])
+                                                                      [(builtin unConstrData) i19]])]
+                                                                  (delay [(lam i20 (force i8)) [(builtin unMapData) i19]])]
+                                                                  (delay [(lam i20 (force i8)) [(builtin unListData) i19]])]
+                                                                  (delay [(lam i20 (force i8)) [(builtin unIData) i19]])]
+                                                                  (delay
+                                                                    [(lam i20
+                                                                      [(lam i21
+                                                                        (force
+                                                                          [[[(force (builtin ifThenElse)) [(force (builtin nullList)) i21]]
+                                                                            (delay [(lam i22 [[(builtin equalsByteString) i22] [i4 i6]]) i20])]
+                                                                            (delay
+                                                                              [[(lam i22 (lam i23 (force i8))) [(force (builtin headList)) i21]]
+                                                                                [(force (builtin tailList)) i21]])]))
+                                                                        i18])
+                                                                      [(builtin unBData) i19]])]))
+                                                              i17]))
+                                                          [(force (builtin headList)) i16]]
+                                                          [(force (builtin tailList)) i16]])]))
+                                                  i15]))
+                                              [(force (builtin headList)) i13]]
+                                              [(force (builtin tailList)) i13]])]))
+                                      i12]))
+                                  [(force (force (builtin fstPair))) i10]]
+                                  [(force (force (builtin sndPair))) i10]])
+                                [(builtin unConstrData) i9]])]
+                            (delay [(lam i10 (force i8)) [(builtin unMapData) i9]])]
+                            (delay [(lam i10 (force i8)) [(builtin unListData) i9]])]
+                            (delay [(lam i10 (force i8)) [(builtin unIData) i9]])]
+                            (delay [(lam i10 (force i8)) [(builtin unBData) i9]])]))
+                        i7])
+                      (delay (error))])
+                    i5]))])
+            (lam i4 [(lam i5 [(builtin unBData) i5]) i4])])
+          (lam i3
+            [(lam i4
+              [(lam i5
+                [(lam i6
+                  (force
+                    [[[[[[(force (builtin chooseData)) i6]
+                      (delay
+                        [(lam i7
+                          [[(lam i8
+                            (lam i9
+                              [(lam i10
+                                (force
+                                  [[[(force (builtin ifThenElse)) [(force (builtin nullList)) i10]]
+                                    (delay (force i5))]
+                                    (delay
+                                      [[(lam i11
+                                        (lam i12
+                                          [(lam i13
+                                            (force
+                                              [[[[[[(force (builtin chooseData)) i13]
+                                                (delay
+                                                  [(lam i14
+                                                    [[(lam i15 (lam i16 (force i5))) [(force (force (builtin fstPair))) i14]]
+                                                      [(force (force (builtin sndPair))) i14]])
+                                                    [(builtin unConstrData) i13]])]
+                                                (delay [(lam i14 (force i5)) [(builtin unMapData) i13]])]
+                                                (delay [(lam i14 (force i5)) [(builtin unListData) i13]])]
+                                                (delay
+                                                  [(lam i14
+                                                    [(lam i15
+                                                      (force
+                                                        [[[(force (builtin ifThenElse)) [(force (builtin nullList)) i15]]
+                                                          (delay (force i5))]
+                                                          (delay
+                                                            [[(lam i16
+                                                              (lam i17
+                                                                [(lam i18
+                                                                  (force
+                                                                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) i18]]
+                                                                      (delay [(lam i19 i19) i14])]
+                                                                      (delay
+                                                                        [[(lam i19 (lam i20 (force i5))) [(force (builtin headList)) i18]]
+                                                                          [(force (builtin tailList)) i18]])]))
+                                                                  i17]))
+                                                              [(force (builtin headList)) i15]]
+                                                              [(force (builtin tailList)) i15]])]))
+                                                      i12])
+                                                    [(builtin unIData) i13]])]
+                                                (delay [(lam i14 (force i5)) [(builtin unBData) i13]])]))
+                                            i11]))
+                                        [(force (builtin headList)) i10]]
+                                        [(force (builtin tailList)) i10]])]))
+                                i9]))
+                            [(force (force (builtin fstPair))) i7]]
+                            [(force (force (builtin sndPair))) i7]])
+                          [(builtin unConstrData) i6]])]
+                      (delay [(lam i7 (force i5)) [(builtin unMapData) i6]])]
+                      (delay [(lam i7 (force i5)) [(builtin unListData) i6]])]
+                      (delay [(lam i7 (force i5)) [(builtin unIData) i6]])]
+                      (delay [(lam i7 (force i5)) [(builtin unBData) i6]])]))
+                  i4])
+                (delay (error))])
+              i3])])
+        (lam i2 [(lam i3 [(builtin unIData) i3]) i2])])
+      (con string "incomplete pattern match")])
+    (con string "assertion failed")])

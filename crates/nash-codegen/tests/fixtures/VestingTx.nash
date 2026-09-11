@@ -1,0 +1,17 @@
+module Cardano.Tx exposing (currentSlot, signedBy)
+
+import Builtin exposing (..)
+import Lift exposing (lower)
+
+-- Test contexts encode the current slot and one signer as two Data fields.
+currentSlot : Data -> int
+currentSlot ctx =
+    case ctx of
+        Constr _ [ I slot, _ ] -> slot
+        _ -> fail
+
+signedBy : Data -> Bytes -> bool
+signedBy ctx owner =
+    case ctx of
+        Constr _ [ _, B signer ] -> Builtin.equalsByteString signer (lower owner)
+        _ -> fail

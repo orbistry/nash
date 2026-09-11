@@ -1,0 +1,8 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+expression: core
+---
+let message#4 : string = "hello" in
+let fromString#2 : string -> string = \value#3 : string -> value#3 in
+let main#1 : (unit, unit) = constr 0 (trace (fromString#2 message#4) in ()) (trace (fromString#2 message#4) in ()) in
+main#1

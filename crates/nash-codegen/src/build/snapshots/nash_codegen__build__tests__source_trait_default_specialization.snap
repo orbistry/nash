@@ -1,0 +1,12 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+expression: "nash_ir::pretty::pretty(compiled.core)"
+---
+let eq#5 : unit -> unit -> bool = \arg#6 : unit arg#7 : unit -> let match#9 : unit = arg#6 in
+let match#8 : unit = arg#7 in
+true in
+let neq#2 : 'erased -> 'erased -> bool = \a#3 : 'erased b#4 : 'erased -> case@Bool eq#5 a#3 b#4 of
+  True -> false
+  False -> true in
+let main#1 : bool = neq#2 () () in
+main#1
