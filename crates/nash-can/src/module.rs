@@ -76,6 +76,17 @@ pub fn canonicalize<'a>(
     }
     let pre_aliases = canonicalize_aliases(bump, &mut env, module.aliases)?;
     environment::local::add_vars(&mut env, module.values)?;
+    if let nash_ast::ModuleKind::Validator(region) = module.kind
+        && !module
+            .values
+            .iter()
+            .any(|value| value.value.name.value == "main")
+    {
+        return Err(vec![Error::ValidatorMissingMain {
+            region,
+            module: home.name,
+        }]);
+    }
     let pre_unions = canonicalize_unions(bump, &env, module.unions)?;
     let mut kind_env = kinds::KindEnv::from_interfaces(context.interfaces);
     let schemes = kinds::infer_declarations(bump, &mut kind_env, home, &pre_unions, &pre_aliases)?;
@@ -115,6 +126,14 @@ pub fn canonicalize<'a>(
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
     let binops = canonicalize_binops(bump, &env, module.binops);
     let exports = canonicalize_exports(bump, module)?;
+    if matches!(module.kind, nash_ast::ModuleKind::Validator(_))
+        && matches!(&exports, Exports::Explicit(items) if !items.iter().any(|e| matches!(e.value, Export::Value("main"))))
+    {
+        return Err(vec![Error::ValidatorMainNotExposed {
+            region: module.exports.region,
+            module: home.name,
+        }]);
+    }
 
     let can_module = CanModule {
         traits,
@@ -1749,6 +1768,23 @@ mod tests {
     #[test]
     fn module_shell_header_only() {
         assert_module_snapshot!("module Main exposing (..)\n");
+    }
+
+    #[test]
+    fn validator_missing_main() {
+        assert_module_error_snapshot!("validator module Foo exposing (main)\n\nx = 1\n");
+    }
+
+    #[test]
+    fn validator_main_not_exposed() {
+        assert_module_error_snapshot!(
+            "validator module Foo exposing (x)\n\nx = 1\n\nmain c = ()\n"
+        );
+    }
+
+    #[test]
+    fn validator_main_explicitly_exposed() {
+        assert_module_snapshot!("validator module Foo exposing (main)\n\nmain ctx = ()\n");
     }
 
     #[test]

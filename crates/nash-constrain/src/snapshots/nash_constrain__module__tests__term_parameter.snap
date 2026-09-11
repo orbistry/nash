@@ -1,0 +1,43 @@
+---
+source: crates/nash-constrain/src/module.rs
+expression: "check(&b, &kinds, typ, &[])"
+---
+Err(
+    [
+        MainParameterIsTerm {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            index: 0,
+            typ: Located {
+                region: Region {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                },
+                value: Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "V",
+                        },
+                        name: "option",
+                    },
+                    args: [],
+                },
+            },
+        },
+    ],
+)

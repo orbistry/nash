@@ -21,8 +21,8 @@ supersedes the ground-type `MonoKey` sketches below. Generate compile-time
 specializations only: no runtime trait dictionaries. Keep union-find inference.
 Key lexical definitions by executable evidence and demanded runtime layouts;
 carry complete substitutions separately. Preserve trait-free polymorphic
-recursion through opaque values, and report recursively growing demanded native
-layouts. Core permits `Ty::Erased` where no representation inspection is needed.
+recursion through opaque values. Bound specialization work and report resource
+limits when demanded layouts keep growing. Core permits `Ty::Erased` where no representation inspection is needed.
 
 Implementation follows the current source APIs; old constraint-tree solver
 signatures in the sketches are historical. Record each concrete correction here
@@ -35,26 +35,63 @@ polymorphic under the existing language rules; the scalar examples below use
 `main : int` when evaluated. Integrate the minimum prerequisite hooks from later plans
 needed to execute and verify this plan; do not mark later plans complete.
 
+Concrete integration choices:
+
+- `Build::compile` returns a reachable Core root, its actual root type and
+  specialization metadata. `program::assemble_core` rewrites recursion and
+  produces named and DeBruijn UPLC; optimization remains Plan 08.
+- Runtime metadata erases undemanded quantifiers. Native layout demands normalize
+  Big payloads to Data. Complete substitutions remain available for evidence
+  selection and the requested root type; they do not become runtime arguments.
+- Generalized local values needing evidence or native layout are templates,
+  evaluated per requested specialization. Other local values remain strict;
+  there is no arbitrary instance selection for an unused overloaded value.
+- Specialization has explicit body/type-depth limits, recursive Data validation
+  has a helper-count limit, and branch normalization has a work limit. These are
+  resource errors, not claims that a single observed type-size increase proves
+  infinite specialization.
+- Strict nullary recursive values are diagnosed during codegen. The historical
+  `ones` sketch below does not create a lazy infinite native list.
+- Test-only power-assert rewriting remains Plan 10. Validator assertions retain
+  ordinary failure traces, independently of compiler-generated cast/match traces.
+- Tests use focused semantic assertions plus Core/UPLC/budget snapshots. The
+  historical snapshot counts below are sketches; the executable tests under
+  `nash-codegen` and the driver are the current acceptance evidence.
+
 - [x] 1. Core types, builders, type formatting, and four pretty snapshots.
 - [x] 2. UPLC printing, checked DeBruijn conversion, structural lowering and CEK tests.
-- [ ] 3. Solved expression/pattern metadata, type conversion, initial expression lowering.
+- [x] 3. Solved expression/pattern metadata, type conversion, initial expression lowering.
   - Solved expression/pattern metadata and canonical type conversion are
     implemented and tested, including annotated branches, alias patterns,
     nested scopes, recursive definitions and higher-kinded partial aliases.
-- [ ] 4. Complete compiler-owned Builtin mapping and force/arity checks.
-  - Core mapping and inventory checks pass; source-call integration remains.
-- [ ] 5. Little ADTs, tuples, native lists, and decision trees.
-- [ ] 6. Big ADTs, Data patterns, checked casts and validation.
-- [ ] 7. Nominal records and labeled constructor layouts.
-- [ ] 8. Self and mutual recursion, captures, static-argument handling.
-  - Core rewriting and executable tests pass; source integration remains.
-- [ ] 9. Evidence specialization, superclass/default methods, finite worklist.
-- [ ] 10. Trace/fail/todo/assert semantics and trace controls.
-- [ ] 11. Reachable program assembly, driver boundary, comptime evaluation.
+- [x] 4. Complete compiler-owned Builtin mapping and force/arity checks.
+  - Compiler inventory, exact builtin ownership and source-call integration pass.
+- [x] 5. Little ADTs, tuples, native lists, and decision trees.
+- [x] 6. Big ADTs, Data patterns, checked casts and validation.
+- [x] 7. Nominal records and labeled constructor layouts.
+  - Scoped accessors share Data decoders and list prefixes, including mixed
+    constructor patterns and field access. CEK tests preserve trace order
+    and keep decoding in unselected branches lazy.
+- [x] 8. Self and mutual recursion, captures, static-argument handling.
+  - Core and source recursion tests cover captures, mutual recursion, static
+    parameters and conditional function bodies.
+- [x] 9. Evidence specialization, superclass/default methods, finite worklist.
+- [x] 10. Trace/fail/todo/assert semantics and trace controls.
+- [x] 11. Reachable program assembly, driver boundary, comptime evaluation.
   - Driver `build_with` preserves solved node identities and tables through
     its finish callback; failed frontend builds do not invoke that callback.
-- [ ] 12. Vesting fixtures, success/failure execution and budget baselines.
-- [ ] Final: scratch projects, full tests, formatting, strict Clippy, release metadata.
+- [x] 12. Vesting fixtures, success/failure execution and budget baselines.
+- [x] Final: scratch projects, full tests, formatting, strict Clippy, release metadata.
+  - `cargo fmt --all`, strict all-target/all-feature Clippy, and `cargo test` pass.
+  - Fresh CLI build compiles 25 real-core/example modules into both Vesting
+    scripts. The eight fixture outcomes, real-core driver outcomes, Flat/text
+    round trips, and rejection of Term validator parameters pass.
+  - All 157 documented scratch projects match current expectations: 37 pass,
+    120 expected failures. Scratch fixtures remain in their separate commit.
+  - Final unoptimized success baselines (CPU / memory): Vesting claim
+    6,719,849 / 28,411; cancel 6,909,610 / 29,381. Parameterized claim
+    6,933,057 / 29,113; cancel 6,957,610 / 29,681. Failure budgets and
+    assertion logs are recorded beside them in the Vesting snapshots.
 
 ## Prerequisites
 
@@ -1753,9 +1790,9 @@ assert_eval_snapshot!(r#"
         go 5
 "#);
 assert_eval_snapshot!(r#"
-    ones = Builtin.mkCons 1 ones   -- no params: Delay/Force wrapper; must not loop at definition
+    ones = Builtin.mkCons 1 ones   -- strict nullary recursive value
     main = Builtin.headList ones
-"#);   // expected: evaluation error (strict), snapshot documents it
+"#);   // expected: recursive-value codegen error; native lists are strict
 ```
 
 **Done when**: `static_params` unit tests (four cases: all static, none,

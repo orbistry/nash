@@ -13,6 +13,11 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    MainParameterIsTerm {
+        region: Region,
+        index: usize,
+        typ: &'a nash_region::Located<nash_ast::Type<'a>>,
+    },
     FieldMismatch {
         region: Region,
         context: crate::type_::FieldContext<'a>,

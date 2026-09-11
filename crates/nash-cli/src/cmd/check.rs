@@ -27,7 +27,14 @@ pub struct Args {
 
 impl Args {
     pub async fn exec(self, color: bool) -> Result<()> {
-        let result = self.check().await;
+        self.report_result(self.check().await, color)
+    }
+
+    pub(crate) fn report_result(
+        &self,
+        result: Result<nash_driver::BuildResult>,
+        color: bool,
+    ) -> Result<()> {
         let result = match result {
             Ok(result) => result,
             Err(error) if self.report == ReportFormat::Json => {

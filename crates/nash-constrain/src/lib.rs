@@ -3,6 +3,7 @@
 pub mod error;
 pub mod error_type;
 pub mod instantiate;
+pub mod module;
 pub mod type_;
 
 mod union_find;

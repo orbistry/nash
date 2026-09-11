@@ -41,6 +41,7 @@
 //! }
 //! ```
 
+pub mod build;
 pub mod compile;
 pub mod database;
 pub mod error;

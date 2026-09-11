@@ -41,3 +41,26 @@ fn failed_frontend_never_calls_finish() {
     assert!(!report.is_success());
     assert!(output.is_none());
 }
+
+#[test]
+fn term_validator_parameter_never_reaches_codegen() {
+    let uri = Url::parse("file:///project/src/VestingBad.nash").unwrap();
+    let source = include_str!("../../../nash-codegen/tests/fixtures/VestingBad.nash");
+    let (report, output) = build_sync_with_edges_and(
+        vec![(uri.clone(), None, Ok(source.into()))],
+        &HashMap::new(),
+        |_| panic!("invalid validator must not reach codegen"),
+    );
+    assert!(!report.is_success());
+    assert!(output.is_none());
+    let ModuleResult::Failed(errors) = &report.modules[&uri] else {
+        panic!("expected parameter diagnostic")
+    };
+    assert!(
+        errors
+            .reports
+            .iter()
+            .any(|report| report.title == "BAD MAIN PARAMETER"),
+        "{errors:?}"
+    );
+}

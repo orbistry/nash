@@ -912,3 +912,21 @@ fn pipe_argument_mismatch_does_not_blame_the_function_operand() {
         Some("right operand of (<|)")
     );
 }
+
+#[test]
+fn validator_term_parameter() {
+    let unit = nash_region::Located::at_zero(nash_ast::Type::unit());
+    let typ = nash_region::Located::at(
+        region(),
+        nash_ast::Type::Tuple {
+            first: &unit,
+            second: &unit,
+            rest: &[],
+        },
+    );
+    insta::assert_snapshot!(show(&Error::MainParameterIsTerm {
+        region: region(),
+        index: 1,
+        typ: &typ
+    }));
+}

@@ -40,3 +40,14 @@ impl Cli {
         self.cmd.exec(color).await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::CommandFactory;
+
+    #[test]
+    fn command_schema_is_consistent() {
+        Cli::command().debug_assert();
+    }
+}

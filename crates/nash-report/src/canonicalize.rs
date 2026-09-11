@@ -52,6 +52,24 @@ mod tests {
         );
     }
     #[test]
+    fn validator_main_errors() {
+        snapshot(
+            "validator_missing_main",
+            Error::ValidatorMissingMain {
+                region: Region::one(),
+                module: "Main",
+            },
+        );
+        snapshot(
+            "validator_main_not_exposed",
+            Error::ValidatorMainNotExposed {
+                region: Region::one(),
+                module: "Main",
+            },
+        );
+    }
+
+    #[test]
     fn missing_module_header() {
         snapshot("missing_module_header", Error::MissingModuleHeader);
     }
@@ -75,6 +93,18 @@ pub fn to_report(source: &Source<'_>, error: &Error<'_>) -> Report {
 
 pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name: &str) -> Report {
     let report = match error {
+        Error::ValidatorMissingMain { region, .. } => simple(
+            "NO MAIN",
+            *region,
+            "This validator module requires a main value to compile into a script.",
+            "Add a main value, or remove the validator keyword from the module header.",
+        ),
+        Error::ValidatorMainNotExposed { region, .. } => simple(
+            "MAIN NOT EXPOSED",
+            *region,
+            "This validator module does not expose main.",
+            "Add main to the exposing list.",
+        ),
         Error::MissingModuleHeader => crate::syntax::to_report(
             source,
             &nash_parse::error::Error::ModuleNameUnspecified(expected_name),
@@ -830,6 +860,8 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         ),
     };
     report.with_code(match error {
+        Error::ValidatorMissingMain { .. } => "nash::validator::missing_main",
+        Error::ValidatorMainNotExposed { .. } => "nash::validator::main_not_exposed",
         Error::RecordLiteralNoAlias { .. } => "nash::names::record_literal_no_alias",
         Error::RecordLiteralAmbiguous { .. } => "nash::names::record_literal_ambiguous",
         Error::RecordTypeOutsideAlias { .. } => "nash::names::record_type_outside_alias",

@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/src/module.rs
+description: "Code:\n\nvalidator module Foo exposing (x)\n\nx = 1\n\nmain c = ()\n"
+---
+[
+    ValidatorMainNotExposed {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 31,
+            },
+            end: Position {
+                line: 1,
+                column: 34,
+            },
+        },
+        module: "Foo",
+    },
+]

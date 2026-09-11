@@ -10,6 +10,24 @@ validator module through `nash-codegen`, and `nash build` writes
 
 Spec: [docs/validators.md](../docs/validators.md), [docs/cli.md](../docs/cli.md).
 
+## Plan 07 integration prerequisite
+
+Plan 07 brings forward the minimum hooks needed for its executable validator
+acceptance tests. Canonical modules already retain `ModuleKind`. The canonical
+checker requires an exposed `main`, and the driver calls
+`nash_constrain::module::check_main_parameters` after solving and before the
+finish callback. `build_with(db, graph, origins, finish)` owns the solved module
+tables until the callback returns an owned result. There is no separate compile
+mode in this API.
+
+The initial `nash build` path targets Plutus V3, uses no optimizer, and accepts
+`--trace-level`, `--compiler-traces`, and `--out`. It writes `.uplc`, `.flat`,
+and `.cbor` outputs. The CBOR output wraps the Flat bytes once. Configuration
+fields, other target versions, hashes, and stale-output removal remain work for
+this plan. The code sketches below must be adapted to those implemented APIs.
+This prerequisite does not mark Plan 09 complete.
+
+
 ## Prerequisites
 
 - plans/01 (syntax): the parser accepts the `validator` keyword and the

@@ -21,6 +21,18 @@ use crate::{Doc, Report};
 /// Elm's `toReport`, including Nash's trait, representation and record errors.
 pub fn to_report(localizer: &Localizer, error: &Error<'_>) -> Report {
     let report = match error {
+        Error::MainParameterIsTerm { region, index, typ } => Report::snippet(
+            "BAD MAIN PARAMETER",
+            *region,
+            None,
+            Doc::stack([
+                Doc::reflow(&format!("Parameter {} of main has a Term type:", index + 1)),
+                crate::render_type::can_to_doc(localizer, Ctx::None, &typ.value),
+            ]),
+            Doc::reflow(
+                "A script can only receive constants. Use Data, a Big type, or a Const type for this parameter, and convert it inside main.",
+            ),
+        ),
         Error::BadExpr(region, category, actual, expected) => {
             to_expr_report(localizer, *region, *category, actual, expected)
         }
@@ -159,6 +171,7 @@ pub fn to_report(localizer: &Localizer, error: &Error<'_>) -> Report {
         });
     }
     report.with_code(match error {
+        Error::MainParameterIsTerm { .. } => "nash::validator::main_parameter_is_term",
         Error::FieldMismatch { .. } => "nash::type::field_mismatch",
         Error::MissingField { .. } => "nash::type::missing_field",
         Error::NotARecord { .. } => "nash::type::not_a_record",

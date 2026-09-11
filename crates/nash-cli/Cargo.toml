@@ -16,6 +16,7 @@ name = "nash"
 path = "src/main.rs"
 
 [dependencies]
+nash-codegen = { path = "../nash-codegen", version = "0.1.0" }
 clap.workspace = true
 color-print.workspace = true
 dirs.workspace = true
