@@ -1,5 +1,17 @@
 # nash-cli
 
+## 0.4.0 — 2026-09-10
+
+### Minor changes
+
+- [e3e72a7](https://github.com/orbistry/nash/commit/e3e72a7432f96f2de01777edd6c5a935e88d48fb) Use concise diagnostics with full expected/actual type comparisons, expectation-origin labels, and stable codes independent of display titles. Retain parser opening positions for closing-delimiter reports. Support arbitrary secondary labels and related reports across source files.
+  
+  Extend diagnostic JSON with code, severity, labels, suggestions, and related reports. JSON messages now contain styled prose without embedded source drawings; consumers should render the structured labels. LSP diagnostic codes now use stable identifiers instead of titles and include secondary and related source locations. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-driver@0.6.0, nash-language-server@0.4.0, nash-report@0.3.0
+
 ## 0.3.0 — 2026-09-10
 
 ### Minor changes

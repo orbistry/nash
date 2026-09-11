@@ -1,5 +1,17 @@
 # nash-driver
 
+## 0.6.0 — 2026-09-10
+
+### Minor changes
+
+- [7dab841](https://github.com/orbistry/nash/commit/7dab8416345ca7bd57292d82c4d358c9073457b2) Remove unused disk interface-cache APIs, serialization, and cache metadata. Preserve in-memory exports, kind contracts, and fingerprints returned by compilation. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [3bd387a](https://github.com/orbistry/nash/commit/3bd387aabd3755da2f734db212859647c128d3f5) Require UTF-8 text at the parser boundary instead of arbitrary bytes. Remove unchecked string conversions and pass source text directly from the driver. — Thanks @MicroProofs!
+- [0ed0c75](https://github.com/orbistry/nash/commit/0ed0c75a0ac421a193a420c116cd2284ba922a25) Infer directly from the canonical AST into the existing union-find and predicate engine. Remove the allocated constraint tree and intermediate inference Type, preserving schemes, evidence, rank ownership, recursive-group sequencing, and complete diagnostics. Pass canonical modules directly to the solver. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.7.1, nash-can@0.7.0, nash-constrain@0.5.0, nash-nitpick@0.2.1, nash-parse@0.6.0, nash-region@0.3.0, nash-report@0.3.0, nash-solve@0.5.0, nash-source@0.7.0
+
 ## 0.5.0 — 2026-09-10
 
 ### Minor changes

@@ -1,5 +1,19 @@
 # nash-solve
 
+## 0.5.0 — 2026-09-10
+
+### Minor changes
+
+- [0ed0c75](https://github.com/orbistry/nash/commit/0ed0c75a0ac421a193a420c116cd2284ba922a25) Infer directly from the canonical AST into the existing union-find and predicate engine. Remove the allocated constraint tree and intermediate inference Type, preserving schemes, evidence, rank ownership, recursive-group sequencing, and complete diagnostics. Pass canonical modules directly to the solver. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [e3e72a7](https://github.com/orbistry/nash/commit/e3e72a7432f96f2de01777edd6c5a935e88d48fb) Use concise diagnostics with full expected/actual type comparisons, expectation-origin labels, and stable codes independent of display titles. Retain parser opening positions for closing-delimiter reports. Support arbitrary secondary labels and related reports across source files.
+  
+  Extend diagnostic JSON with code, severity, labels, suggestions, and related reports. JSON messages now contain styled prose without embedded source drawings; consumers should render the structured labels. LSP diagnostic codes now use stable identifiers instead of titles and include secondary and related source locations. — Thanks @MicroProofs!
+- [e22bfb5](https://github.com/orbistry/nash/commit/e22bfb5783668dc1256eba8a2294e28d679a4816) Use ordered map ranges for trait candidate lookup, evidence construction, entailment, and missing-implementation suggestions. Preserve candidate order without a second index. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.7.1, nash-can@0.7.0, nash-constrain@0.5.0, nash-parse@0.6.0, nash-region@0.3.0, nash-source@0.7.0
+
 ## 0.4.1 — 2026-09-10
 
 ### Patch changes
