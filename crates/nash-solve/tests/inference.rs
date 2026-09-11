@@ -4343,3 +4343,383 @@ f (Box (() as whole)) = whole ()
 "#
     );
 }
+
+// Original canonical nodes must all be usable by codegen, including the
+// branch/let nodes that the annotated inference path handles separately.
+#[derive(Default)]
+struct MetadataNodes<'a> {
+    exprs: Vec<&'a Located<nash_ast::Expr<'a>>>,
+    patterns: Vec<&'a Located<nash_ast::Pattern<'a>>>,
+}
+
+impl<'a> MetadataNodes<'a> {
+    fn pattern(&mut self, pattern: &'a Located<nash_ast::Pattern<'a>>) {
+        use nash_ast::Pattern;
+        self.patterns.push(pattern);
+        match &pattern.value {
+            Pattern::Alias { pattern, .. } => self.pattern(pattern),
+            Pattern::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                self.pattern(first);
+                self.pattern(second);
+                for pattern in *rest {
+                    self.pattern(pattern);
+                }
+            }
+            Pattern::List(patterns) => {
+                for pattern in *patterns {
+                    self.pattern(pattern);
+                }
+            }
+            Pattern::Cons { head, tail } => {
+                self.pattern(head);
+                self.pattern(tail);
+            }
+            Pattern::Constructor(ctor) => {
+                for arg in ctor.arguments {
+                    self.pattern(arg.pattern);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn definition(&mut self, def: &'a nash_ast::Def<'a>) {
+        use nash_ast::Def;
+        match def {
+            Def::Def { args, body, .. } => {
+                for pattern in *args {
+                    self.pattern(pattern);
+                }
+                self.expr(body);
+            }
+            Def::TypedDef { args, body, .. } => {
+                for arg in *args {
+                    self.pattern(arg.pattern);
+                }
+                self.expr(body);
+            }
+        }
+    }
+
+    fn expr(&mut self, expr: &'a Located<nash_ast::Expr<'a>>) {
+        use nash_ast::Expr;
+        self.exprs.push(expr);
+        match &expr.value {
+            Expr::List(items) => {
+                for item in *items {
+                    self.expr(item);
+                }
+            }
+            Expr::Binop { left, right, .. } => {
+                self.expr(left);
+                self.expr(right);
+            }
+            Expr::Lambda { parameters, body } => {
+                for pattern in *parameters {
+                    self.pattern(pattern);
+                }
+                self.expr(body);
+            }
+            Expr::Call {
+                function,
+                arguments,
+            } => {
+                self.expr(function);
+                for arg in *arguments {
+                    self.expr(arg);
+                }
+            }
+            Expr::If {
+                branches,
+                final_else,
+            } => {
+                for branch in *branches {
+                    self.expr(branch.condition);
+                    self.expr(branch.then_branch);
+                }
+                self.expr(final_else);
+            }
+            Expr::Let { definition, body } => {
+                self.definition(definition);
+                self.expr(body);
+            }
+            Expr::LetRec { definitions, body } => {
+                for def in *definitions {
+                    self.definition(def);
+                }
+                self.expr(body);
+            }
+            Expr::LetDestruct {
+                pattern,
+                value,
+                body,
+            } => {
+                self.pattern(pattern);
+                self.expr(value);
+                self.expr(body);
+            }
+            Expr::Case {
+                scrutinee,
+                branches,
+            } => {
+                self.expr(scrutinee);
+                for branch in *branches {
+                    self.pattern(branch.pattern);
+                    self.expr(branch.body);
+                }
+            }
+            Expr::Access { record, .. } => self.expr(record),
+            Expr::Update { base, fields, .. } => {
+                self.expr(base);
+                for field in *fields {
+                    self.expr(field.value);
+                }
+            }
+            Expr::Record { fields, .. } => {
+                for field in *fields {
+                    self.expr(field.value);
+                }
+            }
+            Expr::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                self.expr(first);
+                self.expr(second);
+                for item in *rest {
+                    self.expr(item);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn metadata_fixture<'a>(
+    bump: &'a Bump,
+    source: &str,
+) -> (
+    Annotations<'a>,
+    nash_solve::SolvedTypes<'a>,
+    MetadataNodes<'a>,
+) {
+    let source = bump.alloc_str(source);
+    let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
+    let mut interfaces = literal_interfaces(bump);
+    let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\nimpl Eq int where\n    eq a b = True\n");
+    let eq_parsed = nash_parse::Parser::new(bump, eq_source).module().unwrap();
+    let eq_can = nash_can::canonicalize(
+        bump,
+        Context {
+            package: Some(nash_ast::primitives::CORE),
+            interfaces: Some(&interfaces),
+        },
+        &eq_parsed,
+    )
+    .unwrap();
+    let (eq_annotations, _) =
+        nash_solve::run(bump, &mut UnionFind::new(), &eq_can.module, &eq_can.tables).unwrap();
+    interfaces.insert(
+        "Eq",
+        nash_can::from_module(bump, &eq_can.module, &eq_annotations),
+    );
+    let canonical = nash_can::canonicalize(
+        bump,
+        Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &parsed,
+    )
+    .unwrap();
+    let mut uf = UnionFind::new();
+    let (annotations, solved) =
+        nash_solve::run(bump, &mut uf, &canonical.module, &canonical.tables).unwrap();
+    let mut nodes = MetadataNodes::default();
+    let mut decls = canonical.module.decls;
+    loop {
+        match decls {
+            nash_ast::Decls::Declare { definition, next } => {
+                nodes.definition(definition);
+                decls = next;
+            }
+            nash_ast::Decls::DeclareRec {
+                definition,
+                following,
+                next,
+            } => {
+                nodes.definition(definition);
+                for def in *following {
+                    nodes.definition(def);
+                }
+                decls = next;
+            }
+            nash_ast::Decls::Empty => break,
+        }
+    }
+    for trait_ in canonical.module.traits {
+        for method in trait_.value.methods {
+            if let Some(def) = method.default {
+                nodes.definition(def);
+            }
+        }
+    }
+    for impl_ in canonical.module.impls {
+        for def in impl_.value.methods {
+            nodes.definition(def);
+        }
+    }
+    (annotations, solved, nodes)
+}
+
+#[test]
+fn solved_metadata_covers_original_nodes_in_recursive_and_annotated_bodies() {
+    let bump = Bump::new();
+    let (_, solved, nodes) = metadata_fixture(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        type option 'a = None | Some 'a
+        trait Keep 'a where
+            keep : 'a -> 'a
+        typed : 'a -> 'a
+        typed (x as alias) =
+            if True then
+                let
+                    captured y = (alias, y)
+                    (a, b) = captured ()
+                in
+                a
+            else
+                case Some x of
+                    Some z -> typed z
+                    None -> x
+        untyped x = untyped x
+        qualified : Keep 'a => 'a -> 'a
+        qualified x =
+            let
+                helper y = keep y
+            in
+            helper x
+        literal : int -> ()
+        literal x =
+            case x of
+                0 -> ()
+                _ -> ()
+        tuple (a, b) = (a, b)
+        list (x :: xs) = xs
+        lambda = \x -> x
+    "#
+        ),
+    );
+    let expr_ids: std::collections::HashSet<_> = nodes
+        .exprs
+        .iter()
+        .map(|expr| nash_ast::NodeId::expr(expr))
+        .collect();
+    let pattern_ids: std::collections::HashSet<_> = nodes
+        .patterns
+        .iter()
+        .map(|pattern| nash_ast::NodeId::pattern(pattern))
+        .collect();
+    assert_eq!(
+        solved
+            .exprs
+            .keys()
+            .copied()
+            .collect::<std::collections::HashSet<_>>(),
+        expr_ids
+    );
+    assert_eq!(
+        solved
+            .patterns
+            .keys()
+            .copied()
+            .collect::<std::collections::HashSet<_>>(),
+        pattern_ids
+    );
+    for expr in nodes.exprs {
+        if let nash_ast::Expr::Unit = expr.value {
+            assert_eq!(
+                solved.exprs[&nash_ast::NodeId::expr(expr)].value,
+                CanType::unit()
+            );
+        }
+    }
+}
+
+#[test]
+fn solved_metadata_names_captures_consistently_with_schemes_and_instances() {
+    let bump = Bump::new();
+    let (annotations, solved, nodes) = metadata_fixture(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        outer captured =
+            let
+                local argument = (captured, argument)
+            in
+            (local (), captured)
+    "#
+        ),
+    );
+    let CanType::Lambda { from, .. } = annotations["outer"].typ.value else {
+        panic!("function");
+    };
+    let CanType::Var(capture_name) = from.value else {
+        panic!("generic capture");
+    };
+    for expr in &nodes.exprs {
+        if matches!(expr.value, nash_ast::Expr::VarLocal("captured")) {
+            assert_eq!(
+                solved.exprs[&nash_ast::NodeId::expr(expr)].value,
+                CanType::Var(capture_name)
+            );
+        }
+    }
+    for pattern in nodes.patterns {
+        if matches!(pattern.value, nash_ast::Pattern::Var("captured")) {
+            assert_eq!(
+                solved.patterns[&nash_ast::NodeId::pattern(pattern)].value,
+                CanType::Var(capture_name)
+            );
+        }
+    }
+    let local = solved.schemes.values().find(|scheme| {
+        !scheme.annotation.free_vars.contains(&capture_name)
+            && matches!(scheme.annotation.typ.value, CanType::Lambda { to, .. } if matches!(to.value, CanType::Tuple { .. }))
+    }).unwrap();
+    let CanType::Lambda { to, .. } = local.annotation.typ.value else {
+        unreachable!()
+    };
+    let CanType::Tuple { first, .. } = to.value else {
+        unreachable!()
+    };
+    assert_eq!(first.value, CanType::Var(capture_name));
+    assert!(!local.annotation.free_vars.contains(&capture_name));
+    let use_ = nodes
+        .exprs
+        .iter()
+        .find(|expr| matches!(expr.value, nash_ast::Expr::VarLocal("local")))
+        .unwrap();
+    let node = nash_ast::NodeId::expr(use_);
+    let CanType::Lambda { from, to } = solved.exprs[&node].value else {
+        panic!("local function use");
+    };
+    assert_eq!(from.value, CanType::unit());
+    let CanType::Tuple { first, second, .. } = to.value else {
+        panic!("local result");
+    };
+    assert_eq!(first.value, CanType::Var(capture_name));
+    assert_eq!(second.value, CanType::unit());
+    assert_eq!(solved.instances[&node].type_args.len(), 1);
+    assert_eq!(solved.instances[&node].type_args[0].value, from.value);
+}

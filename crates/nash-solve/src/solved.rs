@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Default)]
 pub struct SolvedTypes<'a> {
-    /// Filled by Plan 07's expression/pattern type recording.
+    /// Solved types of original canonical nodes, named in their owner's scope.
     pub exprs: HashMap<NodeId, &'a Located<Type<'a>>>,
     pub patterns: HashMap<NodeId, &'a Located<Type<'a>>>,
     pub instances: HashMap<NodeId, Instance<'a>>,

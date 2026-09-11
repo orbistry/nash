@@ -32,6 +32,8 @@ needed to execute and verify this plan; do not mark later plans complete.
 - [ ] 1. Core types, builders, type formatting, and four pretty snapshots.
 - [ ] 2. UPLC printing, checked DeBruijn conversion, structural lowering and CEK tests.
 - [ ] 3. Solved expression/pattern metadata, type conversion, initial expression lowering.
+  - Solved expression/pattern metadata is implemented and tested, including
+    annotated branches, alias patterns, nested scopes and recursive definitions.
 - [ ] 4. Complete compiler-owned Builtin mapping and force/arity checks.
 - [ ] 5. Little ADTs, tuples, native lists, and decision trees.
 - [ ] 6. Big ADTs, Data patterns, checked casts and validation.

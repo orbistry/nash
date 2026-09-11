@@ -79,6 +79,12 @@ enum UseSource {
     },
 }
 
+struct NodeTypeRecord {
+    node: nash_ast::NodeId,
+    variable: Variable,
+    owner: Option<nash_ast::NodeId>,
+}
+
 struct UseRecord<'a> {
     site: UseSite<'a>,
     variable: Variable,
@@ -119,6 +125,8 @@ struct Solver<'a, 'tables> {
     schemes: Vec<SchemeRecord<'a>>,
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
+    expr_types: Vec<NodeTypeRecord>,
+    pattern_types: Vec<NodeTypeRecord>,
     owners: Vec<nash_ast::NodeId>,
     resolution_work: std::collections::HashMap<type_::PredId, usize>,
     has_poison: bool,
@@ -157,6 +165,8 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -777,6 +787,16 @@ impl<'a> Solver<'a, '_> {
                     }
                 }
             }
+            // Node types must use the same variable names as their owner's
+            // schemes and instances. Add them last so existing quantifier
+            // ordering remains stable when a body introduces private types.
+            let node_types = self.expr_types.iter().chain(&self.pattern_types);
+            roots.extend(node_types.filter_map(|record| {
+                record
+                    .owner
+                    .filter(|owner| self.scope(*owner).0 == *scope)
+                    .map(|_| record.variable)
+            }));
             crate::annotation::prepare_scope(self.bump, uf, &roots);
             for scheme in members {
                 let id = scheme.site.node();
@@ -837,6 +857,23 @@ impl<'a> Solver<'a, '_> {
                         .is_none(),
                     "one instance per original use node"
                 );
+            }
+            for (records, output) in [
+                (&self.expr_types, &mut solved.exprs),
+                (&self.pattern_types, &mut solved.patterns),
+            ] {
+                for record in records {
+                    if record
+                        .owner
+                        .is_some_and(|owner| self.scope(owner).0 == *scope)
+                    {
+                        let typ = crate::annotation::to_solved_type(self.bump, uf, record.variable);
+                        assert!(
+                            output.insert(record.node, typ).is_none(),
+                            "one type per original node"
+                        );
+                    }
+                }
             }
         }
         // Callees in other scopes may have been rendered later. Reorder the
@@ -2921,6 +2958,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -3011,6 +3050,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -3080,6 +3121,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -3142,6 +3185,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -3226,6 +3271,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -3360,6 +3407,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -3532,6 +3581,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -3616,6 +3667,8 @@ mod copy_tests {
             schemes: Vec::new(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
+            expr_types: Vec::new(),
+            pattern_types: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
