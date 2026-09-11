@@ -1,0 +1,6 @@
+validator module VestingBad exposing (main)
+
+import Builtin exposing (..)
+
+main : (Data -> bool) -> Data -> unit
+main predicate ctx = assert (predicate ctx)

@@ -29,6 +29,17 @@ where
     Ok(encoder.buffer)
 }
 
+/// Encode a program as one CBOR byte string containing its Flat bytes.
+pub fn to_cbor<'a, V>(program: &'a Program<'a, V>) -> Result<Vec<u8>, FlatEncodeError>
+where
+    V: Binder<'a>,
+{
+    let flat = encode(program)?;
+    let mut encoder = minicbor::Encoder::new(Vec::new());
+    encoder.bytes(&flat)?;
+    Ok(encoder.into_writer())
+}
+
 fn encode_term<'a, V>(encoder: &mut Encoder, term: &'a Term<'a, V>) -> Result<(), FlatEncodeError>
 where
     V: Binder<'a>,
@@ -297,6 +308,26 @@ mod tests {
     use crate::arena::Arena;
     use crate::binder::DeBruijn;
     use crate::flat::decode;
+
+    #[test]
+    fn cbor_wraps_flat_bytes_once() {
+        let arena = Arena::new();
+        let program = Program::new(
+            &arena,
+            crate::program::Version::plutus_v3(&arena),
+            Term::<DeBruijn>::integer_from(&arena, 42),
+        );
+        let flat = encode(program).unwrap();
+        let cbor = to_cbor(program).unwrap();
+        let mut decoder = minicbor::Decoder::new(&cbor);
+        assert_eq!(decoder.bytes().unwrap(), flat.as_slice());
+        assert_eq!(decoder.position(), cbor.len());
+        let decoded: &Program<DeBruijn> = decode(&arena, &flat).unwrap();
+        assert_eq!(
+            crate::pretty::program(decoded),
+            crate::pretty::program(program)
+        );
+    }
 
     #[test]
     fn roundtrip_program_big_constr_tag() {

@@ -1,0 +1,19 @@
+validator module Vesting exposing (main)
+
+import Builtin exposing (..)
+import Lift exposing (lower)
+import Cardano.Tx exposing (currentSlot, signedBy)
+
+type Datum = Datum { owner : Bytes, deadline : Int }
+
+type step 'a = Done 'a | Next int 'a
+
+type alias acc = { total : int, seen : list Int }
+
+type Redeemer = Claim | Cancel
+
+main : Datum -> Redeemer -> Data -> unit
+main datum redeemer ctx =
+    case redeemer of
+        Claim -> assert (Builtin.lessThanInteger (lower datum.deadline) (currentSlot ctx))
+        Cancel -> assert (signedBy ctx datum.owner)

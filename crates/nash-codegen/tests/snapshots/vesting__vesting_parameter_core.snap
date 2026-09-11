@@ -1,0 +1,67 @@
+---
+source: crates/nash-codegen/tests/vesting.rs
+expression: core
+---
+let message#105 : string = "assertion failed" in
+let message#106 : string = "incomplete pattern match" in
+let lower#6 : Int -> int = \value#12 : Int -> (\value#13 : Int -> unIData value#13) value#12 in
+let currentSlot#7 : Data -> int = \ctx#14 : Data -> let match#16 : Data = ctx#14 in
+let leaf#35 : 'erased = delay error in
+case@Data match#16 of
+  DataConstr field#36 field#37 -> case@List field#37 of
+    Nil -> force leaf#35
+    Cons field#38 field#39 -> case@Data field#38 of
+      DataConstr field#40 field#41 -> force leaf#35
+      DataMap field#42 -> force leaf#35
+      DataList field#43 -> force leaf#35
+      DataI field#44 -> case@List field#39 of
+        Nil -> force leaf#35
+        Cons field#45 field#46 -> case@List field#46 of
+          Nil -> let slot#15 : int = field#44 in
+          slot#15
+          Cons field#47 field#48 -> force leaf#35
+      DataB field#49 -> force leaf#35
+  DataMap field#50 -> force leaf#35
+  DataList field#51 -> force leaf#35
+  DataI field#52 -> force leaf#35
+  DataB field#53 -> force leaf#35 in
+let lower#57 : Bytes -> bytes = \value#96 : Bytes -> (\value#97 : Bytes -> unBData value#97) value#96 in
+let signedBy#8 : Data -> Bytes -> bool = \ctx#54 : Data owner#55 : Bytes -> let match#58 : Data = ctx#54 in
+let leaf#77 : 'erased = delay error in
+case@Data match#58 of
+  DataConstr field#78 field#79 -> case@List field#79 of
+    Nil -> force leaf#77
+    Cons field#80 field#81 -> case@List field#81 of
+      Nil -> force leaf#77
+      Cons field#82 field#83 -> case@Data field#82 of
+        DataConstr field#84 field#85 -> force leaf#77
+        DataMap field#86 -> force leaf#77
+        DataList field#87 -> force leaf#77
+        DataI field#88 -> force leaf#77
+        DataB field#89 -> case@List field#83 of
+          Nil -> let signer#56 : bytes = field#89 in
+          equalsByteString signer#56 (lower#57 owner#55)
+          Cons field#90 field#91 -> force leaf#77
+  DataMap field#92 -> force leaf#77
+  DataList field#93 -> force leaf#77
+  DataI field#94 -> force leaf#77
+  DataB field#95 -> force leaf#77 in
+let main#1 : int -> VestingParam.Datum -> VestingParam.Redeemer -> Data -> unit = \minimumLock#2 : int datum#3 : VestingParam.Datum redeemer#4 : VestingParam.Redeemer ctx#5 : Data -> let match#9 : VestingParam.Redeemer = redeemer#4 in
+case@Data match#9 of
+  DataConstr tag#10 fields#11 -> case@Int tag#10 of
+    0 -> let projection#98 : pair int (list Data) = unConstrData datum#3 in
+    let projection#99 : list Data = sndPair projection#98 in
+    let projection#100 : list Data = tailList projection#99 in
+    let projection#101 : Data = headList projection#100 in
+    case@Bool lessThanInteger (addInteger (lower#6 projection#101) minimumLock#2) (currentSlot#7 ctx#5) of
+      True -> ()
+      False -> trace message#105 in error
+    1 -> let projection#102 : pair int (list Data) = unConstrData datum#3 in
+    let projection#103 : list Data = sndPair projection#102 in
+    let projection#104 : Data = headList projection#103 in
+    case@Bool signedBy#8 ctx#5 projection#104 of
+      True -> ()
+      False -> trace message#105 in error
+    _ -> trace message#106 in error
+  _ -> trace message#106 in error in
+main#1

@@ -1,0 +1,15 @@
+module Lift exposing (..)
+
+import Builtin exposing (..)
+
+trait Lift 'a 'b where
+    lift : 'a -> 'b
+    lower : 'b -> 'a
+
+impl Lift int Int where
+    lift value = Builtin.castLift value
+    lower value = Builtin.castLower value
+
+impl Lift bytes Bytes where
+    lift value = Builtin.castLift value
+    lower value = Builtin.castLower value

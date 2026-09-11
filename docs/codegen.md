@@ -459,7 +459,10 @@ evaluate eagerly), which is the shape Aiken's shrinker also targets.
 
 Big record access is `headList (tailList^i (unListData r))`; the memoized
 accessor set shares the `unListData` and the `tailList` prefix across fields
-read in one scope. Little record access is `Field`. On a single-constructor
+read in one scope. Sharing starts at the first evaluation and does not move
+a possibly failing decoder ahead of effects or out of a branch, lambda, or
+delay. Pattern-bound constructor fields also seed the accessor cache.
+Little record access is `Field`. On a single-constructor
 type with labeled fields, `r.x` is not a record access: it lowers to the
 constructor's field extraction (`sndPair (unConstrData r)` then list
 indexing for Big, `Field` for little), exactly as the pattern
@@ -482,7 +485,8 @@ listData [headList (unListData base), e, ..]         -- Big
 | `trace "msg" e` | `Trace(Lit "msg", e)` | |
 | `assert c` | `Case(Bool, c, [Lit (), Trace(msg, Error)])` | `msg` is the power-assert rendering built at compile time (see [testing.md](testing.md)) |
 
-Trace levels are a build setting (`nash.jsonc`, [cli.md](cli.md)):
+Trace levels are a build setting (`--trace-level`; config support follows in
+Plan 09, [cli.md](cli.md)):
 
 - `silent`: every user `Trace(m, b)` becomes `b`; `fail "msg"` becomes
   `Error`.
@@ -499,6 +503,10 @@ traces without the compiler's, or the reverse. In Aiken both are one
 
 Trace strings are hoisted: each distinct message becomes one top-level
 `Let` of a `string` constant so the program does not repeat it.
+
+Outside test blocks, failed assertions use an assertion-failure message.
+The Plan 10 power-assert rewrite captures displayed values only in test bodies;
+it does not rewrite validators.
 
 ## Validators
 
@@ -582,3 +590,14 @@ tree and reads the output `Ast` from the result `Value`, never through
    conversion.** The syn module only parses. `plans/07-codegen.md` chunk 2
    adds both to nash-plutus (ports of Aiken `crates/uplc/src/pretty.rs` and
    `crates/uplc/src/debruijn.rs`).
+
+## Generalized local values
+
+A generalized binding that needs executable evidence or a concrete native layout
+is a compile-time template. Each requested specialization supplies those inputs
+and evaluates the resulting value in its lexical scope. An unused template has no
+runtime value: codegen does not select an arbitrary literal instance or native
+list element type merely to execute it. A generalized local value with no evidence
+or layout demand can use an erased instance and retains strict let evaluation;
+for example, an unused `let stopped = fail` still fails. Ordinary monomorphic
+local bindings also retain strict evaluation.

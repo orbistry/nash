@@ -133,3 +133,74 @@ pub struct Module<'a> {
     pub bindings: &'a [(Binder<'a>, &'a Core<'a>)],
     pub root: &'a Core<'a>,
 }
+
+pub use crate::traverse::map;
+
+impl<'a> Core<'a> {
+    /// Visit this node before its children, in field order: function then
+    /// arguments, binding values then continuation, scrutinee then branches
+    /// then default. Shared subtrees are visited once per occurrence.
+    pub fn walk<'tree>(&'tree self, f: &mut impl FnMut(&'tree Core<'a>)) {
+        f(self);
+        match self {
+            Core::Var(_) | Core::Lit(_) | Core::Error => {}
+            Core::Lam { body, .. } | Core::Delay(body) | Core::Force(body) => body.walk(f),
+            Core::App { func, args } => {
+                func.walk(f);
+                for arg in *args {
+                    arg.walk(f);
+                }
+            }
+            Core::Let { value, body, .. } => {
+                value.walk(f);
+                body.walk(f);
+            }
+            Core::LetRec { binders, body } => {
+                for binder in *binders {
+                    binder.body.walk(f);
+                }
+                body.walk(f);
+            }
+            Core::Case {
+                scrutinee,
+                branches,
+                default,
+                ..
+            } => {
+                scrutinee.walk(f);
+                for branch in *branches {
+                    branch.body.walk(f);
+                }
+                if let Some(body) = default {
+                    body.walk(f);
+                }
+            }
+            Core::Constr { fields, .. } => {
+                for field in *fields {
+                    field.walk(f);
+                }
+            }
+            Core::Builtin { args, .. } => {
+                for arg in *args {
+                    arg.walk(f);
+                }
+            }
+            Core::Field { record, .. } => record.walk(f),
+            Core::Cast { arg, .. } => arg.walk(f),
+            Core::Trace { message, body } => {
+                message.walk(f);
+                body.walk(f);
+            }
+        }
+    }
+
+    /// Map children before invoking the visitor on their parent. Unchanged
+    /// nodes and metadata slices are reused; replacements are not revisited.
+    pub fn map(
+        &'a self,
+        build: &crate::build::Builder<'a>,
+        f: &mut impl FnMut(&'a Core<'a>) -> Option<&'a Core<'a>>,
+    ) -> &'a Core<'a> {
+        map(build, self, f)
+    }
+}

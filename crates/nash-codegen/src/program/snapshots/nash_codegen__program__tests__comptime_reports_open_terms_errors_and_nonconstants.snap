@@ -1,0 +1,6 @@
+---
+source: crates/nash-codegen/src/program/tests.rs
+expression: "comptime::eval_closed(&a, &[], fail).unwrap_err().to_string()"
+---
+comptime evaluation failed: ExplicitErrorTerm
+traces: x

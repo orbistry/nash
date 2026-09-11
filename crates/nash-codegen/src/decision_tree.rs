@@ -49,6 +49,7 @@ enum Pat<'a> {
 }
 #[derive(Clone)]
 struct Row<'a> {
+    index: usize,
     patterns: Vec<Pat<'a>>,
     bindings: BTreeMap<&'a str, Binder<'a>>,
     assignments: Vec<(Binder<'a>, &'a Core<'a>)>,
@@ -152,22 +153,54 @@ pub fn compile<'a>(
         name: build.fresh("match"),
         ty,
     };
-    let rows = branches
+    let mut rows: Vec<_> = branches
         .iter()
-        .map(|b| Row {
+        .enumerate()
+        .map(|(index, b)| Row {
+            index,
             patterns: vec![Pat::Node(b.pattern)],
             bindings: b.bindings.clone(),
             assignments: Vec::new(),
             body: b.body,
         })
         .collect();
-    let body = Matrix {
+    let mut matrix = Matrix {
         build,
         types,
         inputs,
         fallback,
+        leaf_counts: vec![0; branches.len()],
+    };
+    let mut body = matrix.compile(vec![Subject { binder: root }], rows.clone())?;
+    let mut joins = Vec::new();
+    for (row, count) in rows.iter_mut().zip(&matrix.leaf_counts) {
+        if *count < 2 {
+            continue;
+        }
+        let params = row.bindings.values().copied().collect::<Vec<_>>();
+        // Join results are passed through without inspecting their representation.
+        let binder = Binder {
+            name: build.fresh("leaf"),
+            ty: Ty::Erased,
+        };
+        let value = if params.is_empty() {
+            let value = build.delay(row.body);
+            row.body = build.force(build.var(binder.name));
+            value
+        } else {
+            let value = build.lam(&params, row.body);
+            let args = params.iter().map(|p| build.var(p.name)).collect::<Vec<_>>();
+            row.body = build.app(build.var(binder.name), &args);
+            value
+        };
+        joins.push((binder, value));
     }
-    .compile(vec![Subject { binder: root }], rows)?;
+    if !joins.is_empty() {
+        body = matrix.compile(vec![Subject { binder: root }], rows)?;
+        for (binder, value) in joins.into_iter().rev() {
+            body = build.let_(binder, value, body);
+        }
+    }
     Ok(build.let_(root, scrutinee, body))
 }
 struct Matrix<'a, 'b, 'env, 'i> {
@@ -175,6 +208,7 @@ struct Matrix<'a, 'b, 'env, 'i> {
     types: &'b mut TypeEnv<'a, 'env>,
     inputs: MatchInputs<'a, 'i>,
     fallback: &'a Core<'a>,
+    leaf_counts: Vec<usize>,
 }
 impl<'a> Matrix<'a, '_, '_, '_> {
     fn compile(
@@ -212,6 +246,7 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         }
         let Some(column) = rows[0].patterns.iter().position(|p| !matches!(p, Pat::Any)) else {
             let row = &rows[0];
+            self.leaf_counts[row.index] += 1;
             return Ok(row
                 .assignments
                 .iter()

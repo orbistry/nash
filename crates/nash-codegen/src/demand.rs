@@ -373,13 +373,20 @@ impl<'a> Analysis<'a> {
                 .iter()
                 .any(|b| b.name == reference.name && b.lowering.is_core_only())
         {
+            let kind = if reference.name == "castToData" {
+                // The checked Big value already is Data. Its nominal layout
+                // cannot change this identity operation or its binder shape.
+                DemandKind::Native
+            } else {
+                DemandKind::Deep
+            };
             if let Some(instance) = solved.instances.get(&node) {
                 for t in instance.type_args {
-                    variables(t, DemandKind::Deep, self.demands.entry(owner).or_default());
+                    variables(t, kind, self.demands.entry(owner).or_default());
                 }
             }
             if let Some(t) = solved.exprs.get(&node) {
-                variables(t, DemandKind::Deep, self.demands.entry(owner).or_default());
+                variables(t, kind, self.demands.entry(owner).or_default());
             }
         } else if let Some(&target) = self.top.get(&reference) {
             self.call(target, node, owner, solved);
@@ -756,7 +763,7 @@ mod graph_tests {
         let demands = analyze(&[(&m, &s)]);
         assert_eq!(
             demands[&NodeId::def(definition(outer).0)],
-            BTreeMap::from([("captured", DemandKind::Deep)])
+            BTreeMap::from([("captured", DemandKind::Native)])
         );
     }
     #[test]
@@ -826,7 +833,7 @@ mod graph_tests {
         m.impls = b.alloc_slice_copy(&[&*impl_]);
         assert_eq!(
             analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)],
-            BTreeMap::from([("a", DemandKind::Deep)])
+            BTreeMap::from([("a", DemandKind::Native)])
         );
     }
 }
