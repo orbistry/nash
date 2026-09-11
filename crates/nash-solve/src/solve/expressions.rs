@@ -14,6 +14,16 @@ impl<'a> Solver<'a, '_> {
         expr: &Located<CanExpr<'a>>,
         expected: Expected<'a, Variable>,
     ) -> State<'a> {
+        let variable = match expected {
+            Expected::NoExpectation(var)
+            | Expected::FromContext(_, _, var)
+            | Expected::FromAnnotation(_, _, _, _, var) => var,
+        };
+        self.expr_types.push(NodeTypeRecord {
+            node: NodeId::expr(expr),
+            variable,
+            owner: self.owners.last().copied(),
+        });
         // These are exactly the old `exists` boundaries. Their wanted flush
         // must remain even though variables are now introduced eagerly.
         let existential = matches!(
@@ -639,6 +649,23 @@ impl<'a> Solver<'a, '_> {
         let Expected::FromAnnotation(name, annotation_region, arity, _, typ) = expected else {
             unreachable!("annotated expression has its canonical expectation")
         };
+        // These forms recurse directly through canonical expectations instead
+        // of entering infer_expr. Retain their original arena node identities.
+        if matches!(
+            expr.value,
+            CanExpr::If { .. }
+                | CanExpr::Case { .. }
+                | CanExpr::Let { .. }
+                | CanExpr::LetRec { .. }
+                | CanExpr::LetDestruct { .. }
+        ) {
+            let variable = self.src_type_to_var(uf, rank, rtv, typ);
+            self.expr_types.push(NodeTypeRecord {
+                node: NodeId::expr(expr),
+                variable,
+                owner: self.owners.last().copied(),
+            });
+        }
         let region = expr.region;
         match &expr.value {
             CanExpr::If {

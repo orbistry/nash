@@ -41,6 +41,11 @@ impl<'a> Solver<'a, '_> {
         let expected_var = match expected {
             PExpected::NoExpectation(var) | PExpected::FromContext(_, _, var) => var,
         };
+        self.pattern_types.push(NodeTypeRecord {
+            node: nash_ast::NodeId::pattern(pattern),
+            variable: expected_var,
+            owner: self.owners.last().copied(),
+        });
         match &pattern.value {
             Pattern::Anything => state,
             Pattern::Var(name) => {
@@ -312,6 +317,11 @@ impl<'a> Solver<'a, '_> {
                 pattern: inner,
                 name,
             } => {
+                self.pattern_types.push(NodeTypeRecord {
+                    node: nash_ast::NodeId::pattern(pattern),
+                    variable: var,
+                    owner: self.owners.last().copied(),
+                });
                 headers.insert(name, Located::at(pattern.region, var));
                 self.infer_canonical_pattern(uf, rank, state, inner, expected, variables, headers)
             }
