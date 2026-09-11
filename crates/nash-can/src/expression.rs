@@ -98,15 +98,29 @@ pub fn canonicalize_expr<'a>(
         SourceExpr::Str(s) => CanExpr::Str(s),
         SourceExpr::Bytes(bytes) => CanExpr::Bytes(bytes),
         SourceExpr::Int(n) => CanExpr::Int(*n),
-        SourceExpr::Assert(_)
-        | SourceExpr::Fail(_)
-        | SourceExpr::Todo(_)
-        | SourceExpr::Trace { .. }
-        | SourceExpr::Comptime(_) => {
-            return Err(vec![Error::Unsupported {
-                feature: "keyword expression",
-                region,
-            }]);
+        SourceExpr::Assert(condition) => CanExpr::Assert(canonicalize_expr(
+            bump,
+            env,
+            condition,
+            free_locals,
+            warnings,
+        )?),
+        SourceExpr::Fail(message) => CanExpr::Fail(
+            message
+                .map(|message| canonicalize_expr(bump, env, message, free_locals, warnings))
+                .transpose()?,
+        ),
+        SourceExpr::Todo(message) => CanExpr::Todo(
+            message
+                .map(|message| canonicalize_expr(bump, env, message, free_locals, warnings))
+                .transpose()?,
+        ),
+        SourceExpr::Trace { message, body } => CanExpr::Trace {
+            message: canonicalize_expr(bump, env, message, free_locals, warnings)?,
+            body: canonicalize_expr(bump, env, body, free_locals, warnings)?,
+        },
+        SourceExpr::Comptime(inner) => {
+            CanExpr::Comptime(canonicalize_expr(bump, env, inner, free_locals, warnings)?)
         }
         SourceExpr::Do { stmts, last } => {
             return canonicalize_do(bump, env, stmts, last, region, free_locals, warnings);

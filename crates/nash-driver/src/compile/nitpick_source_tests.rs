@@ -1427,3 +1427,25 @@ fn string_escapes_round_trip() {
     assert_eq!(value, original);
     insta::assert_snapshot!(rendered);
 }
+
+#[test]
+fn keyword_children_keep_pattern_coverage_checks() {
+    for wrapper in [
+        "assert (case x of True -> True)",
+        "comptime (case x of True -> ())",
+        "fail (case x of True -> \"stop\")",
+        "todo (case x of True -> \"later\")",
+        "trace (case x of True -> \"message\") ()",
+        "trace \"message\" (case x of True -> ())",
+    ] {
+        let source = format!(
+            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nf x = {wrapper}\n"
+        );
+        let errors = run(&source).expect_err("keyword child contains an incomplete match");
+        assert_eq!(errors.len(), 1, "{wrapper}: {errors:?}");
+        assert!(
+            errors[0].contains("Incomplete BadCase"),
+            "{wrapper}: {errors:?}"
+        );
+    }
+}

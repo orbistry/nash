@@ -1167,6 +1167,16 @@ fn collect_from_expr<'a>(
 ) {
     use nash_ast::Expr::*;
     match expr {
+        Assert(inner) | Comptime(inner) => collect_from_expr(&inner.value, home, used),
+        Fail(message) | Todo(message) => {
+            if let Some(message) = message {
+                collect_from_expr(&message.value, home, used);
+            }
+        }
+        Trace { message, body } => {
+            collect_from_expr(&message.value, home, used);
+            collect_from_expr(&body.value, home, used);
+        }
         VarLocal(_) | Accessor(_) | Unit => {}
         Str(_) | Bytes(_) | Int(_) => {
             add_if_foreign(home, nash_ast::primitives::literal_home(), used);
@@ -4583,8 +4593,71 @@ mod tests {
     }
 
     #[test]
-    fn keyword_expression_unsupported() {
-        assert_module_error_snapshot!("module Main exposing (..)\n\nvalue = assert True\n");
+    fn keyword_children_retain_import_uses_and_local_dependencies() {
+        let bump = Bump::new();
+        let source = bump.alloc_str("module Main exposing (..)\nimport Builtin exposing (..)\nf message x = trace message (comptime (addInteger x x))\ncheck = assert True\nstop message = fail message\nlater message = todo message\nrecur x = comptime (recur x)\n");
+        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let interfaces =
+            std::collections::BTreeMap::from([("Builtin", crate::kinds::builtin_interface(&bump))]);
+        let result = canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+        assert!(super::collect_used_modules(&result.module).contains("Builtin"));
+        let mut decls = result.module.decls;
+        let mut recursive = false;
+        loop {
+            match decls {
+                nash_ast::Decls::Declare { next, .. } => decls = next,
+                nash_ast::Decls::DeclareRec { next, .. } => {
+                    recursive = true;
+                    decls = next;
+                }
+                nash_ast::Decls::Empty => break,
+            }
+        }
+        assert!(
+            recursive,
+            "a dependency through comptime still forms a recursive group"
+        );
+    }
+
+    #[test]
+    fn keyword_expressions_preserve_children_and_source_regions() {
+        let bump = Bump::new();
+        let module = parse_and_canonicalize(
+            &bump,
+            "module Main exposing (..)\nvalue message body = trace message (comptime body)\n",
+            Context::default(),
+        )
+        .unwrap();
+        let nash_ast::Decls::Declare { definition, .. } = module.decls else {
+            panic!("definition")
+        };
+        let nash_ast::Def::Def { body, .. } = definition else {
+            panic!("untyped")
+        };
+        let nash_ast::Expr::Trace {
+            message,
+            body: inner,
+        } = body.value
+        else {
+            panic!("trace")
+        };
+        assert_eq!(body.region.start.column, 22);
+        assert_eq!(message.region.start.column, 28);
+        assert!(matches!(message.value, nash_ast::Expr::VarLocal("message")));
+        let nash_ast::Expr::Comptime(value) = inner.value else {
+            panic!("comptime")
+        };
+        assert!(matches!(value.value, nash_ast::Expr::VarLocal("body")));
+        assert!(value.region.start.column > inner.region.start.column);
     }
 
     #[test]

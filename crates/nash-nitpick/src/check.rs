@@ -93,6 +93,16 @@ impl<'a> Checker<'a> {
             | Expr::Int(_)
             | Expr::Accessor(_)
             | Expr::Unit => {}
+            Expr::Assert(inner) | Expr::Comptime(inner) => self.expr(inner),
+            Expr::Fail(message) | Expr::Todo(message) => {
+                if let Some(message) = message {
+                    self.expr(message);
+                }
+            }
+            Expr::Trace { message, body } => {
+                self.expr(message);
+                self.expr(body);
+            }
             Expr::List(entries) => {
                 for entry in *entries {
                     self.expr(entry);
