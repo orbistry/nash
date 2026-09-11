@@ -1,0 +1,11 @@
+---
+source: crates/nash-ir/src/pretty.rs
+expression: "pretty(b.case(CaseKind::Data, b.var(data),\n&[Branch\n{\n    test: Test::DataConstr, binders: arena.alloc_slice_copy(&[tag, fields]),\n    body: b.int(0)\n}, Branch\n{\n    test: Test::DataMap, binders: arena.alloc_slice_copy(&[map]), body:\n    b.int(1)\n}, Branch\n{\n    test: Test::DataList, binders: arena.alloc_slice_copy(&[list]), body:\n    b.int(2)\n}, Branch\n{\n    test: Test::DataI, binders: arena.alloc_slice_copy(&[integer]), body:\n    b.int(3)\n}, Branch\n{\n    test: Test::DataB, binders: arena.alloc_slice_copy(&[bytes]), body:\n    b.int(4)\n},], Some(b.error())))"
+---
+case@Data data#1 of
+  DataConstr tag#2 fields#3 -> 0
+  DataMap map#4 -> 1
+  DataList list#5 -> 2
+  DataI integer#6 -> 3
+  DataB bytes#7 -> 4
+  _ -> error

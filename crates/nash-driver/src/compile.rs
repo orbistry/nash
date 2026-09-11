@@ -22,6 +22,8 @@ use crate::graph::DepGraph;
 #[cfg(test)]
 mod collection_tests;
 #[cfg(test)]
+mod finish_tests;
+#[cfg(test)]
 mod nitpick_source_tests;
 #[cfg(test)]
 mod nitpick_tests;
@@ -91,9 +93,18 @@ impl BuildResult {
 /// canonical nodes and map values borrow the build arena.
 #[derive(Debug)]
 pub struct SolvedModule<'a> {
+    pub uri: Url,
+    pub tables: nash_can::environment::Tables<'a>,
     pub module: &'a nash_ast::Module<'a>,
     pub annotations: nash_can::Annotations<'a>,
     pub types: nash_solve::SolvedTypes<'a>,
+}
+
+/// Borrowed canonical build state. A finish callback must produce an owned
+/// result before this arena is dropped; node-addressed solved metadata stays valid.
+pub struct Solved<'a> {
+    pub store: &'a Bump,
+    pub modules: Vec<SolvedModule<'a>>,
 }
 
 /// Holds the output of compiling a single module.
@@ -114,6 +125,21 @@ pub async fn build(
     graph: &DepGraph,
     origins: &crate::ModuleOrigins,
 ) -> BuildResult {
+    build_with(db, graph, origins, |_| ()).await.0
+}
+
+/// Finish a successful frontend build while its original canonical arena and
+/// owned metadata maps remain alive. Failed builds never call the backend.
+pub async fn build_with<R, F>(
+    db: Arc<Mutex<Database>>,
+    graph: &DepGraph,
+    origins: &crate::ModuleOrigins,
+    finish: F,
+) -> (BuildResult, Option<R>)
+where
+    R: Send + 'static,
+    F: for<'a> FnOnce(Solved<'a>) -> R + Send + 'static,
+{
     let modules: Vec<&Url> = graph.levels().into_iter().flatten().collect();
     let sources = fetch_sources(&db, &modules)
         .await
@@ -125,7 +151,7 @@ pub async fn build(
         .collect();
 
     let edges = graph.edges.clone();
-    tokio::task::spawn_blocking(move || build_sync_with_edges(sources, &edges))
+    tokio::task::spawn_blocking(move || build_sync_with_edges_and(sources, &edges, finish))
         .await
         .expect("compile task panicked")
 }
@@ -135,6 +161,7 @@ pub async fn build(
 ///
 /// Type checking is inherently dependency-ordered, so within-build
 /// compilation is sequential within a build.
+#[cfg(test)]
 fn build_sync_with_edges(
     sources: Vec<(
         Url,
@@ -143,6 +170,18 @@ fn build_sync_with_edges(
     )>,
     edges: &HashMap<Url, Vec<Url>>,
 ) -> BuildResult {
+    build_sync_with_edges_and(sources, edges, |_| ()).0
+}
+
+fn build_sync_with_edges_and<R>(
+    sources: Vec<(
+        Url,
+        Option<nash_config::PackageName>,
+        Result<String, String>,
+    )>,
+    edges: &HashMap<Url, Vec<Url>>,
+    finish: impl for<'a> FnOnce(Solved<'a>) -> R,
+) -> (BuildResult, Option<R>) {
     let store = Bump::new();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
     let mut public_interfaces = HashMap::new();
@@ -192,14 +231,25 @@ fn build_sync_with_edges(
         .filter(|r| matches!(r, ModuleResult::Success { .. }))
         .count();
 
-    BuildResult {
-        modules: results,
-        interfaces: public_interfaces,
-        total,
-        success,
-        failed: total - success,
-        warnings: all_warnings,
-    }
+    let output = if total == success {
+        Some(finish(Solved {
+            store: &store,
+            modules: solved.into_values().collect(),
+        }))
+    } else {
+        None
+    };
+    (
+        BuildResult {
+            modules: results,
+            interfaces: public_interfaces,
+            total,
+            success,
+            failed: total - success,
+            warnings: all_warnings,
+        },
+        output,
+    )
 }
 
 #[cfg(test)]
@@ -362,6 +412,8 @@ fn compile_module<'s>(
     let module = bump.alloc(can_result.module);
     let interface = nash_can::from_module(bump, module, &annotations);
     let solved = SolvedModule {
+        uri: uri.clone(),
+        tables: can_result.tables,
         module,
         annotations,
         types,

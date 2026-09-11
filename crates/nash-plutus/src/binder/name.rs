@@ -2,13 +2,20 @@ use crate::arena::Arena;
 
 use super::Binder;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Name<'a> {
     text: &'a str,
     unique: usize,
 }
 
 impl<'a> Name<'a> {
+    pub fn text(&self) -> &'a str {
+        self.text
+    }
+    pub fn unique(&self) -> usize {
+        self.unique
+    }
+
     pub fn new(arena: &'a Arena, text: &'a str, unique: usize) -> &'a Self {
         arena.alloc(Name { text, unique })
     }
