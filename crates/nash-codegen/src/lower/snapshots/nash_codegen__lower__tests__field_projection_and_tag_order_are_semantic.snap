@@ -1,0 +1,12 @@
+---
+source: crates/nash-codegen/src/lower/tests.rs
+expression: "crate::harness::eval_core(&arena, core)"
+---
+--- uplc
+(program 1.1.0 (case (constr 1 (con integer 17)) (error) (lam x_1 x_1)))
+--- result
+(con integer 17)
+--- logs
+[]
+--- budget
+cpu: 80100, memory: 600

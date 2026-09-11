@@ -26,22 +26,33 @@ layouts. Core permits `Ty::Erased` where no representation inspection is needed.
 
 Implementation follows the current source APIs; old constraint-tree solver
 signatures in the sketches are historical. Record each concrete correction here
-as its chunk lands. Integrate the minimum prerequisite hooks from later plans
+as its chunk lands. The Core type model includes `Erased` pass-through values
+and `Constructor` metadata for higher-kinded arguments. Type conversion records
+ADT layouts lazily, one level at a time. UPLC printing uses lexical scope for
+DeBruijn names and explicitly identifies nonliteral ML values. Root evaluation
+requires an explicit instance or a closed annotation: `main = 42` remains
+polymorphic under the existing language rules; the scalar examples below use
+`main : int` when evaluated. Integrate the minimum prerequisite hooks from later plans
 needed to execute and verify this plan; do not mark later plans complete.
 
-- [ ] 1. Core types, builders, type formatting, and four pretty snapshots.
-- [ ] 2. UPLC printing, checked DeBruijn conversion, structural lowering and CEK tests.
+- [x] 1. Core types, builders, type formatting, and four pretty snapshots.
+- [x] 2. UPLC printing, checked DeBruijn conversion, structural lowering and CEK tests.
 - [ ] 3. Solved expression/pattern metadata, type conversion, initial expression lowering.
-  - Solved expression/pattern metadata is implemented and tested, including
-    annotated branches, alias patterns, nested scopes and recursive definitions.
+  - Solved expression/pattern metadata and canonical type conversion are
+    implemented and tested, including annotated branches, alias patterns,
+    nested scopes, recursive definitions and higher-kinded partial aliases.
 - [ ] 4. Complete compiler-owned Builtin mapping and force/arity checks.
+  - Core mapping and inventory checks pass; source-call integration remains.
 - [ ] 5. Little ADTs, tuples, native lists, and decision trees.
 - [ ] 6. Big ADTs, Data patterns, checked casts and validation.
 - [ ] 7. Nominal records and labeled constructor layouts.
 - [ ] 8. Self and mutual recursion, captures, static-argument handling.
+  - Core rewriting and executable tests pass; source integration remains.
 - [ ] 9. Evidence specialization, superclass/default methods, finite worklist.
 - [ ] 10. Trace/fail/todo/assert semantics and trace controls.
 - [ ] 11. Reachable program assembly, driver boundary, comptime evaluation.
+  - Driver `build_with` preserves solved node identities and tables through
+    its finish callback; failed frontend builds do not invoke that callback.
 - [ ] 12. Vesting fixtures, success/failure execution and budget baselines.
 - [ ] Final: scratch projects, full tests, formatting, strict Clippy, release metadata.
 

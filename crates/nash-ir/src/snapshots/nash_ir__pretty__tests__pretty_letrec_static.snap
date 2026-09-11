@@ -1,0 +1,8 @@
+---
+source: crates/nash-ir/src/pretty.rs
+expression: "pretty(b.let_rec(&[RecBinder\n{\n    binder: f, params: arena.alloc_slice_copy(&[step, n]), static_params:\n    &[0], body: b.app(b.var(f.name), &[b.var(step.name), next])\n}], b.app(b.var(f.name), &[b.int(1), b.int(5)])))"
+---
+letrec
+  loop#1 : int -> int -> int [static [0]] = \step#2 : int n#3 : int -> loop#1 step#2 (subtractInteger n#3 step#2)
+in
+loop#1 1 5

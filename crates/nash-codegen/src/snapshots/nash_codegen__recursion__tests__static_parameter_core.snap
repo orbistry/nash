@@ -1,0 +1,8 @@
+---
+source: crates/nash-codegen/src/recursion_tests.rs
+expression: "nash_ir::pretty::pretty(rewrite(&b, program).unwrap())"
+---
+let count#1 : int -> int -> int = \n#2 : int step#3 : int -> (\self#5 : 'erased -> self#5 self#5) (\self#5 : 'erased n#2 : int -> case@Bool equalsInteger n#2 0 of
+  True -> 0
+  False -> addInteger step#3 (self#5 self#5 (subtractInteger n#2 1))) n#2 in
+count#1 3 7

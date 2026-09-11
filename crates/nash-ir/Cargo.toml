@@ -1,0 +1,15 @@
+[package]
+name = "nash-ir"
+version = "0.1.0"
+edition.workspace = true
+description = "Nash Core IR with explicit runtime representations"
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+nash-ast = { path = "../nash-ast", version = "0.7.0" }
+nash-plutus = { path = "../nash-plutus", version = "0.1.0" }
+
+[dev-dependencies]
+insta.workspace = true

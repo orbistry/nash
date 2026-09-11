@@ -35,12 +35,25 @@ impl Arena {
         self.bump.alloc(value)
     }
 
+    pub fn alloc_slice_copy<T: Copy>(&self, values: &[T]) -> &[T] {
+        self.bump.alloc_slice_copy(values)
+    }
+
+    pub fn alloc_slice_fill_iter<T, I>(&self, values: I) -> &mut [T]
+    where
+        I: IntoIterator<Item = T>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        self.bump.alloc_slice_fill_iter(values)
+    }
+
     pub fn alloc_integer(&self, value: Integer) -> &Integer {
         let idx = self.integers.push(value);
         &self.integers[idx]
     }
 
-    pub(crate) fn as_bump(&self) -> &Bump {
+    /// Borrow the allocation arena for canonical compiler metadata.
+    pub fn as_bump(&self) -> &Bump {
         &self.bump
     }
 

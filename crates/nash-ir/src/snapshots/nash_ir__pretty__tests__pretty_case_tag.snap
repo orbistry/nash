@@ -1,0 +1,7 @@
+---
+source: crates/nash-ir/src/pretty.rs
+expression: "pretty(b.case(CaseKind::Tag, b.var(s),\n&[Branch\n{\n    test: Test::Tag(0), binders: arena.alloc_slice_copy(&[a]), body:\n    b.var(a.name)\n}, Branch\n{\n    test: Test::Tag(1), binders: arena.alloc_slice_copy(&[n, other]), body:\n    b.var(other.name)\n},], None))"
+---
+case@Tag s#1 of
+  0 a#2 -> a#2
+  1 n#3 a#4 -> a#4
