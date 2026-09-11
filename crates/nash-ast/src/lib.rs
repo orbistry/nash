@@ -193,6 +193,14 @@ pub enum CtorOpts {
 
 #[derive(Debug)]
 pub enum Expr<'a> {
+    Assert(&'a Located<Expr<'a>>),
+    Fail(Option<&'a Located<Expr<'a>>>),
+    Todo(Option<&'a Located<Expr<'a>>>),
+    Trace {
+        message: &'a Located<Expr<'a>>,
+        body: &'a Located<Expr<'a>>,
+    },
+    Comptime(&'a Located<Expr<'a>>),
     VarMethod {
         trait_: QualifiedName<'a>,
         method: &'a str,

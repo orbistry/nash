@@ -555,6 +555,65 @@ impl<'a> Solver<'a, '_> {
                 );
                 self.equal(uf, rank, state, region, Category::Record, result, expected)
             }
+            CanExpr::Assert(condition) => {
+                let boolean = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(nash_ast::primitives::builtin_home(), "bool", vec![]),
+                );
+                state = self.infer_expr(
+                    uf,
+                    env,
+                    rank,
+                    state,
+                    rtv,
+                    condition,
+                    Expected::NoExpectation(boolean),
+                );
+                let unit = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(nash_ast::primitives::builtin_home(), "unit", vec![]),
+                );
+                self.equal(uf, rank, state, region, Category::Unit, unit, expected)
+            }
+            CanExpr::Fail(message) | CanExpr::Todo(message) => {
+                if let Some(message) = message {
+                    let string = self.structure(
+                        uf,
+                        rank,
+                        FlatType::App1(nash_ast::primitives::builtin_home(), "string", vec![]),
+                    );
+                    state = self.infer_expr(
+                        uf,
+                        env,
+                        rank,
+                        state,
+                        rtv,
+                        message,
+                        Expected::NoExpectation(string),
+                    );
+                }
+                state
+            }
+            CanExpr::Trace { message, body } => {
+                let string = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(nash_ast::primitives::builtin_home(), "string", vec![]),
+                );
+                state = self.infer_expr(
+                    uf,
+                    env,
+                    rank,
+                    state,
+                    rtv,
+                    message,
+                    Expected::NoExpectation(string),
+                );
+                self.infer_expr(uf, env, rank, state, rtv, body, expected)
+            }
+            CanExpr::Comptime(inner) => self.infer_expr(uf, env, rank, state, rtv, inner, expected),
             CanExpr::Unit => {
                 let unit = self.structure(
                     uf,
@@ -658,6 +717,8 @@ impl<'a> Solver<'a, '_> {
                 | CanExpr::Let { .. }
                 | CanExpr::LetRec { .. }
                 | CanExpr::LetDestruct { .. }
+                | CanExpr::Trace { .. }
+                | CanExpr::Comptime(_)
         ) {
             let variable = self.src_type_to_var(uf, rank, rtv, typ);
             self.expr_types.push(NodeTypeRecord {
@@ -668,6 +729,26 @@ impl<'a> Solver<'a, '_> {
         }
         let region = expr.region;
         match &expr.value {
+            CanExpr::Trace { message, body } => {
+                let string = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(nash_ast::primitives::builtin_home(), "string", vec![]),
+                );
+                state = self.infer_expr(
+                    uf,
+                    env,
+                    rank,
+                    state,
+                    rtv,
+                    message,
+                    Expected::NoExpectation(string),
+                );
+                self.infer_annotated_expr(uf, env, rank, state, rtv, body, expected)
+            }
+            CanExpr::Comptime(inner) => {
+                self.infer_annotated_expr(uf, env, rank, state, rtv, inner, expected)
+            }
             CanExpr::If {
                 branches,
                 final_else,

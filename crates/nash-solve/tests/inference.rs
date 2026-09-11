@@ -4409,6 +4409,16 @@ impl<'a> MetadataNodes<'a> {
         use nash_ast::Expr;
         self.exprs.push(expr);
         match &expr.value {
+            Expr::Assert(inner) | Expr::Comptime(inner) => self.expr(inner),
+            Expr::Fail(message) | Expr::Todo(message) => {
+                if let Some(message) = message {
+                    self.expr(message);
+                }
+            }
+            Expr::Trace { message, body } => {
+                self.expr(message);
+                self.expr(body);
+            }
             Expr::List(items) => {
                 for item in *items {
                     self.expr(item);
@@ -4722,4 +4732,91 @@ fn solved_metadata_names_captures_consistently_with_schemes_and_instances() {
     assert_eq!(second.value, CanType::unit());
     assert_eq!(solved.instances[&node].type_args.len(), 1);
     assert_eq!(solved.instances[&node].type_args[0].value, from.value);
+}
+
+#[test]
+fn keyword_expressions_infer_messages_and_preserve_result_types() {
+    let bump = Bump::new();
+    let (annotations, solved, nodes) = metadata_fixture(
+        &bump,
+        indoc!(
+            r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        check flag = assert flag
+        stop = fail
+        unfinished = todo
+        failMessage message = fail message
+        todoMessage message = todo message
+        traced message value = trace message value
+        computed value = comptime value
+        typed : 'a -> 'a
+        typed value = trace "hello" (comptime value)
+        typedStop : 'a
+        typedStop = fail "stop"
+    "#
+        ),
+    );
+    let CanType::Lambda { from, to } = annotations["check"].typ.value else {
+        panic!("function")
+    };
+    assert!(matches!(from.value, CanType::Named { reference, .. } if reference.name == "bool"));
+    assert_eq!(to.value, CanType::unit());
+    for name in ["stop", "unfinished", "typedStop"] {
+        assert!(matches!(annotations[name].typ.value, CanType::Var(_)));
+        assert!(annotations[name].context.is_empty());
+    }
+    for name in ["failMessage", "todoMessage", "traced"] {
+        let CanType::Lambda { from, .. } = annotations[name].typ.value else {
+            panic!("function")
+        };
+        assert!(
+            matches!(from.value, CanType::Named { reference, .. } if reference.name == "string")
+        );
+    }
+    for name in ["computed", "typed"] {
+        let CanType::Lambda { from, to } = annotations[name].typ.value else {
+            panic!("function")
+        };
+        assert_eq!(from.value, to.value);
+    }
+    assert_eq!(solved.exprs.len(), nodes.exprs.len());
+    for expr in nodes.exprs {
+        assert!(solved.exprs.contains_key(&nash_ast::NodeId::expr(expr)));
+    }
+}
+
+#[test]
+fn keyword_expressions_reject_wrong_message_and_condition_types() {
+    for expression in ["assert ()", "trace () ()", "fail ()", "todo ()"] {
+        let bump = Bump::new();
+        let source = format!("module Main exposing (..)\nvalue = {expression}\n");
+        let errors =
+            infer(&bump, &source).expect_err("keyword argument has its required builtin type");
+        assert!(
+            errors
+                .iter()
+                .any(|error| matches!(error, Error::BadExpr(..))),
+            "{expression}: {errors:#?}"
+        );
+    }
+}
+
+#[test]
+fn keyword_wrappers_preserve_annotated_branch_error_recovery() {
+    for wrapper in ["comptime", "trace \"message\""] {
+        let bump = Bump::new();
+        let source = format!(
+            "module Main exposing (..)\nimport Builtin exposing (..)\nvalue : ()\nvalue = {wrapper} (if True then (\\x -> x) else [])\n"
+        );
+        let errors = infer(&bump, &source).expect_err("each branch disagrees with unit");
+        assert_eq!(
+            errors
+                .iter()
+                .filter(|error| matches!(error, Error::BadExpr(..)))
+                .count(),
+            2,
+            "{wrapper}: {errors:#?}"
+        );
+    }
 }
