@@ -14,6 +14,35 @@ nash-plutus CEK machine. Two new crates:
 Specification: [docs/codegen.md](../docs/codegen.md),
 [docs/data.md](../docs/data.md).
 
+## Execution contract and progress
+
+The current [specialization contract](../docs/codegen.md#1-monomorphization-worklist)
+supersedes the ground-type `MonoKey` sketches below. Generate compile-time
+specializations only: no runtime trait dictionaries. Keep union-find inference.
+Key lexical definitions by executable evidence and demanded runtime layouts;
+carry complete substitutions separately. Preserve trait-free polymorphic
+recursion through opaque values, and report recursively growing demanded native
+layouts. Core permits `Ty::Erased` where no representation inspection is needed.
+
+Implementation follows the current source APIs; old constraint-tree solver
+signatures in the sketches are historical. Record each concrete correction here
+as its chunk lands. Integrate the minimum prerequisite hooks from later plans
+needed to execute and verify this plan; do not mark later plans complete.
+
+- [ ] 1. Core types, builders, type formatting, and four pretty snapshots.
+- [ ] 2. UPLC printing, checked DeBruijn conversion, structural lowering and CEK tests.
+- [ ] 3. Solved expression/pattern metadata, type conversion, initial expression lowering.
+- [ ] 4. Complete compiler-owned Builtin mapping and force/arity checks.
+- [ ] 5. Little ADTs, tuples, native lists, and decision trees.
+- [ ] 6. Big ADTs, Data patterns, checked casts and validation.
+- [ ] 7. Nominal records and labeled constructor layouts.
+- [ ] 8. Self and mutual recursion, captures, static-argument handling.
+- [ ] 9. Evidence specialization, superclass/default methods, finite worklist.
+- [ ] 10. Trace/fail/todo/assert semantics and trace controls.
+- [ ] 11. Reachable program assembly, driver boundary, comptime evaluation.
+- [ ] 12. Vesting fixtures, success/failure execution and budget baselines.
+- [ ] Final: scratch projects, full tests, formatting, strict Clippy, release metadata.
+
 ## Prerequisites
 
 - [02-kind-predicates.md](02-kind-predicates.md): kinds are closed Haskell

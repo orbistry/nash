@@ -419,7 +419,7 @@ The recursive call needs `Show (List 'a)`, resolved as `Impl (Show List)
 evidence is exactly the definition's own `Given`s (or closed, like `Impl
 (Show int) []`) is fine, as is polymorphic recursion without any trait
 constraint: UPLC is untyped, so a definition with no evidence has exactly
-one specialization.
+one specialization when its operations do not demand varying native layouts.
 
 ### Solver output
 
@@ -494,12 +494,17 @@ failed predicate. Resolution and type traversal share a 16,384-step work
 budget, with a depth limit of 128. Context substitution is charged before
 allocation. Callers supply well-kinded canonical types and complete tables.
 
-Codegen never looks at types to specialize. It walks a definition with a
-substitution `Given { binder, index } -> Evidence` for the definition's
-context, and at each recorded use site it substitutes, then either inlines
-the method body of the resulting `Impl` or requests a specialization of the
-callee at the resulting evidence vector. Two calls of `member` at `int` and
-`Int` produce two copies of `member`; two calls at `int` share one.
+Codegen specializes executable trait evidence at compile time. It walks a
+definition with a substitution `Given { binder, index } -> Evidence` for its
+context, substitutes each recorded use, and selects the resulting impl method
+or requests a callee specialization. No dictionary is passed at runtime.
+
+Specialization identity also includes the runtime layout details demanded by
+native constant construction and casts. `Repr` proofs are erased, but this does
+not make native constants independent of their element types. Complete source
+type arguments are substitution metadata, not unconditional key components.
+Opaque pass-through types need no distinct copy. See [codegen.md](codegen.md)
+for the authoritative specialization identity and recursive-layout check.
 
 `Super { of, index }` after substitution is an `Impl`, and the superclass
 impl is found by key: the `index`-th superclass of the impl's trait, at the

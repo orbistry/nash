@@ -15,12 +15,13 @@ Aiken generates UPLC from a stack of intermediate forms (`AirTree` ->
 performs monomorphization by rewriting the tree in place, and defaults every
 user type to `Data`. Nash does three things differently:
 
-1. **One tree IR.** `Core` is a monomorphized, explicitly-typed lambda
+1. **One tree IR.** `Core` is a specialized, explicitly-typed lambda
    calculus. Every pass is `Core -> Core` until the last one, which is
    `Core -> Term<Name>`. There is no linearized instruction stream.
-2. **Explicit representations.** Every binder and every node carries a
-   `Ty` tagged `Big`, `Const` or `Term` (see [kinds.md](kinds.md)). Codegen
-   reads this representation; Haskell 98 kinds have already been checked.
+2. **Explicit representations.** Binders and casts carry a `Ty` tagged `Big`,
+   `Const` or `Term` (see [kinds.md](kinds.md)); representation-independent
+   parameters may instead be `Erased`. Codegen demands concrete types only
+   where an operation needs them. Haskell 98 kinds have already been checked.
 3. **No `Data` by default.** A little type is never represented as `Data`.
    Conversions between representations are explicit `Cast` nodes that the
    front end inserted for `toData` / `fromData` / `validateData` / `lift` /
@@ -48,17 +49,20 @@ Core ::= Var(name)
 
 Every binder is `Binder { name: Name, ty: Ty }` where `Name { text, unique }`
 is globally unique after the hygiene pass (see `plans/08-optimizer.md`,
-chunk 1). `Ty` is a fully monomorphic type with its representation exposed:
+chunk 1). `Ty` exposes the representation needed by lowering. An opaque
+parameter that is only passed through has `Ty::Erased`:
 
 ```rust
 pub enum Ty<'a> {
+    Erased,              // opaque pass-through value; not a Plutus constant type
     Big(&'a BigTy<'a>),     // Int, Bytes, Data, List t, Map k v, Big ADT, Big record
     Const(&'a ConstTy<'a>), // int, bytes, string, bool, unit, list t, pair a b, array t, bls_*, value
     Term(&'a TermTy<'a>),   // little ADT, tuple, little record, function
 }
 ```
 
-`Ty::repr()` is the only thing most passes need. `BigTy` records enough
+`Ty::repr()` returns no representation for `Erased`. Constant construction
+and casts must require concrete layout metadata instead of assuming `Data`. `BigTy` records enough
 structure to generate `validateData` for the type (constructor count and
 field types); `TermTy` records constructor arities so `Case` and `Field` can
 be lowered; `ConstTy` maps one-to-one onto nash-plutus `typ::Type` so
@@ -159,45 +163,47 @@ output (each `Expr::VarTopLevel` / `VarForeign` / `VarOperator` /
 `Binop` occurrence gets its instantiated ground type and a slice of resolved
 impls).
 
-The worklist holds keys:
+The worklist identifies a specialization by:
 
-```rust
-pub struct MonoKey<'a> {
-    pub name: QualifiedName<'a>,
-    pub type_args: &'a [Ty<'a>],         // ground, in `Annotation.free_vars` order
-    pub evidence: &'a [Evidence<'a>],    // ground, one per context predicate
-}
-```
+1. The definition's module and lexical node identity. Local shadowed names
+   must not share an identity. `Scheme.binder` identifies the evidence owner;
+   it does not replace the individual definition identity in recursive groups.
+2. Its executable trait evidence, after substituting `Given` and resolving
+   `Super`. Impl references and prerequisite implementations select method
+   bodies. There are no runtime dictionary parameters or runtime impl searches.
+3. The runtime layout descriptors demanded by that body and its callees.
+   Complete source type arguments remain available as substitution metadata,
+   but do not all participate in key equality or hashing.
 
-`Evidence` is `nash_ast::Evidence::{Impl { impl_, type_args, args }, ReflexiveLift { typ }, Given, Super}`
-from [plans/03-traits.md](../plans/03-traits.md) ("Contract with
-plans/07-codegen.md"). Before a key is formed, every `Given` is replaced by
-the evidence of the enclosing specialization and every `Super` is resolved
-through the impl table, so a key holds `Impl` trees and `ReflexiveLift`
-leaves. Evidence equality and hashing ignore source locations in types.
-Specialization substitutes the type carried by `ReflexiveLift` too.
-Its `lift` and `lower` methods lower to a one-argument identity function;
-there is no source impl body or synthetic constructor key to look up.
+Layout demand propagates through calls to a fixed point. It includes native
+constant construction and representation-dependent casts. In particular an
+empty builtin list requires its complete UPLC element type: `list int` and
+`list Int` cannot share the same empty-list constant. A mere `Const`/`Big` tag
+is not enough for nested native lists and pairs. Little constructor tags and
+arities do not depend on the types of their opaque fields.
 
-Starting from the roots (`main` for a validator, each test body for a test
-module, the `comptime` subterm for compile-time evaluation), the driver pops a
-key, instantiates the definition's body with the type substitution, rewrites
-every trait-method use to the method of the impl named in the evidence
-(phase 2), and pushes every new key it meets. Each key is instantiated once.
-Instances are named `text#variant` where `variant` is the rendering of the
-type arguments (Aiken: `get_generic_variant_name` in
-`crates/aiken-lang/src/gen_uplc/builder.rs:178`), so `List.map#int#Int`
-and `List.map#Int#Int` are distinct `Core` bindings.
+`Evidence::Repr` is checked by the solver and erased; its full nominal type
+must not automatically create a specialization. `ReflexiveLift` denotes
+identity and `StructuralEq` denotes structural Data equality. Their type
+payloads likewise distinguish copies only if some separate operation demands
+that layout. Impl type arguments are projected onto the selected code's demands.
+Source locations never affect specialization identity.
 
-Evidence is a function of the ground type arguments under coherence (Rust
-orphan rules, see [traits.md](traits.md)), so the key could omit it; it is
-kept because the instantiation needs it and because superclass evidence is
-cheaper to carry than to re-derive.
+This permits one body for trait-free polymorphic recursion through little
+constructors, such as `plain : 'a -> unit; plain x = plain (Some x)`.
+Opaque binders use `Ty::Erased`; no runtime operation inspects that marker.
+The solver's existing rejection of recursively growing executable evidence
+remains in force. It is not a proof that layout specialization terminates:
+a recursive call can require successively deeper native constant types.
+Codegen must diagnose growing demanded layouts rather than loop, silently
+merge incompatible layouts, or introduce runtime type/dictionary arguments.
 
-Nash's ordering differs from Aiken's: Aiken builds the whole `AirTree` with
-generic types and monomorphizes afterwards (`builder::monomorphize`,
-`gen_uplc.rs` `hoist_functions_to_validator`). Nash instantiates while
-building, so `Core` is never polymorphic.
+Starting from a selected root (`main`, a test body, or a `comptime` subterm),
+request each required specialization once, substitute its compile-time
+metadata, rewrite trait methods to their selected implementation, and follow
+reachable callees. Assign deterministic internal names from traversal order;
+source spelling alone is not identity. The existing union-find solver remains
+unchanged as the inference representation.
 
 ### 2. Trait method calls
 
