@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf (x as) = x"
 ---
+nash::syntax
+
   × Expected a variable after `as`.
    ╭─[src/Main.nash:1:8]
  1 │ f (x as) = x

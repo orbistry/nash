@@ -206,7 +206,7 @@ produces a value implementing `miette::Diagnostic`:
 
 | miette | from `Report` |
 |---|---|
-| `code()` | omitted in terminal output; retained in JSON and LSP |
+| `code()` | stable diagnostic code (not the uppercase display title) |
 | `severity()` | `severity` |
 | `Display` (the `×` line) | `before` rendered at 80 columns |
 | `labels()` | primary region and secondary labels, converted to byte spans by `Source` |
@@ -219,6 +219,13 @@ The CLI installs a handler built with `MietteHandlerOpts::new()
 indented the text; miette only adds the `help:` prefix and indentation. Color is
 decided once by the CLI (`--color`, `NO_COLOR`, `isatty`) and passed to
 both the `Doc` renderer and miette's theme.
+
+Terminal source labels are relative to the loaded project root: the workspace
+root for a workspace build, or the package/application root for a standalone
+build. The shell working directory does not change these labels. On terminals
+with hyperlink support, OSC 8 links target absolute file URLs behind those
+relative labels. Related diagnostics use the same mapping; JSON and LSP retain
+the original absolute source identity.
 
 Driver-level errors (`nash_driver::DriverError`: file not found, config
 problems, import cycles) already derive `miette::Diagnostic` via
@@ -246,8 +253,10 @@ settle accounts =
 ```
 
 ```text
+nash::type::mismatch
+
   × Type mismatch: expected `list int`, found `list Int`.
-    ╭─[src/Ledger.nash:11:5]
+    ╭─[app/src/Ledger.nash:11:5]
   8 │ 
   9 │ settle : list Account -> list int
     ·          ────────────┬───────────
@@ -274,8 +283,10 @@ isDone s = s == Done
 ```
 
 ```text
+nash::type::missing_impl
+
   × No impl for `Eq step`.
-   ╭─[src/Steps.nash:8:12]
+   ╭─[app/src/Steps.nash:8:12]
  7 │ isDone : step -> bool
  8 │ isDone s = s == Done
    ·            ────┬────
@@ -308,8 +319,10 @@ tag d =
 ```
 
 ```text
+nash::pattern::incomplete
+
   × Case expression is not exhaustive.
-   ╭─[src/Tag.nash:7:5]
+   ╭─[app/src/Tag.nash:7:5]
  6 │     tag d =
  7 │ ╭─▶     case d of
  8 │ │           Constr n _ -> n

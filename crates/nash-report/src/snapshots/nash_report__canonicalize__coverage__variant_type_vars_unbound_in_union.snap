@@ -2,6 +2,8 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
+nash::names::type_vars_unbound_in_union
+
   × The `Box` type uses an unbound type variable `a` in its definition:
    ╭─[Main.nash:1:1]
  1 │ name = other

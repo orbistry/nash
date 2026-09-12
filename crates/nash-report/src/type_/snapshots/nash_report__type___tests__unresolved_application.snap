@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::UnresolvedApplication\n{\n    region: region(), name: \"f\", head: &ErrorType::FlexVar(\"f\"), args:\n    &[&int()]\n})"
 ---
+nash::type::unresolved_application
+
   × Cannot establish the datatype context for `f`: 'f int
    ╭─[Main.nash:1:1]
  1 │ value

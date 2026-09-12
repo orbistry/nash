@@ -2,6 +2,8 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
+nash::names::type_vars_messed_up_in_alias
+
   × The `Box` type alias uses an unbound type variable `a` in its definition:
    ╭─[Main.nash:1:1]
  1 │ name = other

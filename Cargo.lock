@@ -1920,10 +1920,12 @@ dependencies = [
  "nash-report",
  "octocrab",
  "serde_json",
+ "supports-hyperlinks",
  "tar",
  "tokio",
  "tokio-util",
  "tower-lsp-server",
+ "url",
  "xz2",
  "zip",
 ]

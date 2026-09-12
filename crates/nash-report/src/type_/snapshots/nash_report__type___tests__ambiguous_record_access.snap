@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::AmbiguousRecordAccess\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Accessor,\n    field: Some(\"name\"), record: &ErrorType::FlexVar(\"a\")\n})"
 ---
+nash::type::ambiguous_record_access
+
   × Cannot determine record type `'a`.
    ╭─[Main.nash:1:1]
  1 │ value

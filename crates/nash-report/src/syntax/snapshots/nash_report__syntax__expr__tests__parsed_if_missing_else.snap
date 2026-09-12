@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
+nash::syntax
+
   × Expected an else branch.
    ╭─[Main.nash:1:24]
  1 │ value = if True then 42

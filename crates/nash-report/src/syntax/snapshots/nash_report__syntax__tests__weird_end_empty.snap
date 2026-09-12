@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ""
 ---
+nash::syntax
+
   × Unexpected input after the declaration.
    ╭─[src/Main.nash:1:1]
  1 │ 

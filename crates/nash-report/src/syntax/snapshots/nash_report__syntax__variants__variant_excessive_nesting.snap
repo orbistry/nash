@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/variants.rs
 expression: "render_plain(&report, &source, \"src/Main.nash\")"
 ---
+nash::syntax
+
   × Nesting limit exceeded.
    ╭─[src/Main.nash:1:7]
  1 │ f = (((1)))

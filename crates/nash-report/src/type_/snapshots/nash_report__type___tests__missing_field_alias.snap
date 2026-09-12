@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::MissingField\n{\n    region: region(), context: FieldContext::Access\n    { record_region: region(), maybe_name: Some(\"person\") }, field: \"aeg\",\n    record: &actual, available: &[\"age\"]\n})"
 ---
+nash::type::missing_field
+
   × Record has no field `aeg`.
    ╭─[Main.nash:1:1]
  1 │ value

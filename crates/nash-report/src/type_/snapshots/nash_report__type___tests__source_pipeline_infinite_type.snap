@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\nf x = x x\\n\")"
 ---
+nash::type::infinite_type
+
   × `x` has a self-referential type: ∞ -> 'a
    ╭─[Main.nash:2:3]
  1 │ module Main exposing (..)

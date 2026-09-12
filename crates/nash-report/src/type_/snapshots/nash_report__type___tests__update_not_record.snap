@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error::UpdateNotRecord { region: region(), record: &int() })"
 ---
+nash::type::update_not_record
+
   × Cannot update fields of `int`.
    ╭─[Main.nash:1:1]
  1 │ value

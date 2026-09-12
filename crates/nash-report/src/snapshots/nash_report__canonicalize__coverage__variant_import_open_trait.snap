@@ -2,6 +2,8 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
+nash::names::import_open_trait
+
   × The `name` trait cannot be followed by (..) like this:
    ╭─[Main.nash:1:1]
  1 │ name = other

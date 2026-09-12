@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "]"
 ---
+nash::syntax::unclosed_delimiter
+
   × Expected `)`, found `]`.
    ╭─[src/Main.nash:1:1]
  1 │ ]

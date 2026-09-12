@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: _Thing
 ---
+nash::diagnostic
+
   × Variable `_Thing` starts with an underscore.
    ╭─[src/Main.nash:1:1]
  1 │ _Thing

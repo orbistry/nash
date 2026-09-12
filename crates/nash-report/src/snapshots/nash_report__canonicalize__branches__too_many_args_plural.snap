@@ -2,6 +2,8 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
+nash::names::bad_arity
+
   × The `One` variant needs 1 argument, but I see 3 instead:
    ╭─[Main.nash:1:1]
  1 │ name = other

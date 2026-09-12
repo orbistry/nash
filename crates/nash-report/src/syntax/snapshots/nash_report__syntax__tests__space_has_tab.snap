@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nx =\t1"
 ---
+nash::syntax
+
   × Tabs are not allowed.
    ╭─[src/Main.nash:1:4]
  1 │ x = 1

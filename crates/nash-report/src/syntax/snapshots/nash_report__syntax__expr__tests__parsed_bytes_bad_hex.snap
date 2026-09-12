@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
+nash::syntax
+
   × Invalid hexadecimal digit in byte string.
    ╭─[Main.nash:1:12]
  1 │ value = #"ag"

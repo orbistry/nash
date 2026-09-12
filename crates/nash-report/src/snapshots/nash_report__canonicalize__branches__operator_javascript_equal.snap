@@ -2,6 +2,8 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
+nash::names::not_found_binop
+
   × Unknown operator `(===)`.
    ╭─[Main.nash:1:1]
  1 │ name = other

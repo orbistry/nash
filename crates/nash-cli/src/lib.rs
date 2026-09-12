@@ -6,6 +6,8 @@ pub mod cmd;
 mod download;
 /// Compiler version proxy logic.
 pub mod proxy;
+/// Terminal source labels and absolute file links.
+mod reporting;
 
 pub use cli::Cli;
 

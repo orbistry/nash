@@ -2,6 +2,8 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
+nash::names::missing_superclass
+
   × The `First.Equal` impl for 'a0 does not establish superclass 1:
    ╭─[Main.nash:1:1]
  1 │ name = other
