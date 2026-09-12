@@ -1,271 +1,41 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nimpl Lift Color Color where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Container 'a = Wrap 'a\nimpl Lift (Container 'a) (Container 'b) where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype color = Red\nimpl Lift color color where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype alias Alias 'a = 'a\nimpl Lift (Alias 'a) (Alias 'b) where\n    lift x = x\n    lower x = x\n"
+info: diagnostic
 ---
-[
-    Err(
-        [
-            ReflexiveLiftOverlap {
-                heads: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 4,
-                                column: 11,
-                            },
-                            end: Position {
-                                line: 4,
-                                column: 16,
-                            },
-                        },
-                        value: Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "Color",
-                            },
-                            args: [],
-                        },
-                    },
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 4,
-                                column: 17,
-                            },
-                            end: Position {
-                                line: 4,
-                                column: 22,
-                            },
-                        },
-                        value: Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "Color",
-                            },
-                            args: [],
-                        },
-                    },
-                ],
-            },
-        ],
-    ),
-    Err(
-        [
-            ReflexiveLiftOverlap {
-                heads: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 4,
-                                column: 12,
-                            },
-                            end: Position {
-                                line: 4,
-                                column: 24,
-                            },
-                        },
-                        value: Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "Container",
-                            },
-                            args: [
-                                Located {
-                                    region: Region {
-                                        start: Position {
-                                            line: 4,
-                                            column: 22,
-                                        },
-                                        end: Position {
-                                            line: 4,
-                                            column: 24,
-                                        },
-                                    },
-                                    value: Var(
-                                        "a",
-                                    ),
-                                },
-                            ],
-                        },
-                    },
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 4,
-                                column: 27,
-                            },
-                            end: Position {
-                                line: 4,
-                                column: 39,
-                            },
-                        },
-                        value: Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "Container",
-                            },
-                            args: [
-                                Located {
-                                    region: Region {
-                                        start: Position {
-                                            line: 4,
-                                            column: 37,
-                                        },
-                                        end: Position {
-                                            line: 4,
-                                            column: 39,
-                                        },
-                                    },
-                                    value: Var(
-                                        "b",
-                                    ),
-                                },
-                            ],
-                        },
-                    },
-                ],
-            },
-        ],
-    ),
-    Ok(
-        (),
-    ),
-    Err(
-        [
-            ReflexiveLiftOverlap {
-                heads: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 4,
-                                column: 12,
-                            },
-                            end: Position {
-                                line: 4,
-                                column: 20,
-                            },
-                        },
-                        value: Alias {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "Alias",
-                            },
-                            arguments: [
-                                AliasArgument {
-                                    name: "a",
-                                    typ: Located {
-                                        region: Region {
-                                            start: Position {
-                                                line: 4,
-                                                column: 18,
-                                            },
-                                            end: Position {
-                                                line: 4,
-                                                column: 20,
-                                            },
-                                        },
-                                        value: Var(
-                                            "a",
-                                        ),
-                                    },
-                                },
-                            ],
-                            remaining: [],
-                            target: Open(
-                                Located {
-                                    region: Region {
-                                        start: Position {
-                                            line: 3,
-                                            column: 23,
-                                        },
-                                        end: Position {
-                                            line: 3,
-                                            column: 25,
-                                        },
-                                    },
-                                    value: Var(
-                                        "a",
-                                    ),
-                                },
-                            ),
-                        },
-                    },
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 4,
-                                column: 23,
-                            },
-                            end: Position {
-                                line: 4,
-                                column: 31,
-                            },
-                        },
-                        value: Alias {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "Alias",
-                            },
-                            arguments: [
-                                AliasArgument {
-                                    name: "a",
-                                    typ: Located {
-                                        region: Region {
-                                            start: Position {
-                                                line: 4,
-                                                column: 29,
-                                            },
-                                            end: Position {
-                                                line: 4,
-                                                column: 31,
-                                            },
-                                        },
-                                        value: Var(
-                                            "b",
-                                        ),
-                                    },
-                                },
-                            ],
-                            remaining: [],
-                            target: Open(
-                                Located {
-                                    region: Region {
-                                        start: Position {
-                                            line: 3,
-                                            column: 23,
-                                        },
-                                        end: Position {
-                                            line: 3,
-                                            column: 25,
-                                        },
-                                    },
-                                    value: Var(
-                                        "a",
-                                    ),
-                                },
-                            ),
-                        },
-                    },
-                ],
-            },
-        ],
-    ),
-]
+nash::names::reflexive_lift_overlap
+
+  × This impl overlaps the reflexive `Lift` rule:
+   ╭─[src/Main.nash:4:11]
+ 3 │ type Color = Red
+ 4 │ impl Lift Color Color where
+   ·           ─────
+ 5 │     lift x = x
+   ╰────
+  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
+        overlap that built-in rule.
+
+nash::names::reflexive_lift_overlap
+
+  × This impl overlaps the reflexive `Lift` rule:
+   ╭─[src/Main.nash:4:12]
+ 3 │ type Container 'a = Wrap 'a
+ 4 │ impl Lift (Container 'a) (Container 'b) where
+   ·            ────────────
+ 5 │     lift x = x
+   ╰────
+  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
+        overlap that built-in rule.
+
+Case 3: accepted
+nash::names::reflexive_lift_overlap
+
+  × This impl overlaps the reflexive `Lift` rule:
+   ╭─[src/Main.nash:4:12]
+ 3 │ type alias Alias 'a = 'a
+ 4 │ impl Lift (Alias 'a) (Alias 'b) where
+   ·            ────────
+ 5 │     lift x = x
+   ╰────
+  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
+        overlap that built-in rule.

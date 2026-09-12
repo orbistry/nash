@@ -1,36 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
 description: "module Main exposing (..)\n\ntype wrap 'a = Wrap ('f 'a)\n"
+info: diagnostic
 ---
-[
-    TypeVarsUnboundInUnion {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 4,
-                column: 1,
-            },
-        },
-        name: "wrap",
-        args: [
-            "a",
-        ],
-        unbound: (
-            "f",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 22,
-                },
-                end: Position {
-                    line: 3,
-                    column: 24,
-                },
-            },
-        ),
-        more_unbound: [],
-    },
-]
+nash::names::type_vars_unbound_in_union
+
+  × The `wrap` type uses an unbound type variable `f` in its definition:
+   ╭─[src/Main.nash:3:22]
+ 2 │ 
+ 3 │ type wrap 'a = Wrap ('f 'a)
+   ·                      ──
+   ╰────
+  help: Declare the type variables:
+
+            type wrap 'a 'f = ...

@@ -1898,8 +1898,10 @@ dependencies = [
  "indoc",
  "insta",
  "nash-ast",
+ "nash-can",
  "nash-parse",
  "nash-region",
+ "nash-report",
  "nash-source",
 ]
 
@@ -2040,7 +2042,9 @@ dependencies = [
  "bumpalo",
  "indoc",
  "insta",
+ "nash-parse",
  "nash-region",
+ "nash-report",
  "nash-source",
 ]
 
@@ -2107,6 +2111,7 @@ dependencies = [
  "nash-constrain",
  "nash-parse",
  "nash-region",
+ "nash-report",
  "nash-source",
 ]
 

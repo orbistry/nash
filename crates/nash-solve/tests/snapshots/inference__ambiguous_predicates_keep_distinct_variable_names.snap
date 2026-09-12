@@ -1,98 +1,29 @@
 ---
 source: crates/nash-solve/tests/inference.rs
 description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Main exposing (..)\ntrait Source 'a where\n    create : () -> 'a\ntrait Sink 'a where\n    consume : 'a -> ()\nvalue = (consume (create ()), consume (create ()))\n"
+info: diagnostic
 ---
-[
-    AmbiguousType {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 1,
-            },
-            end: Position {
-                line: 6,
-                column: 6,
-            },
-        },
-        name: "value",
-        variable: FlexVar(
-            "a1",
-        ),
-        predicates: [
-            AmbiguousPredicate {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Sink",
-                },
-                args: [
-                    FlexVar(
-                        "a1",
-                    ),
-                ],
-            },
-            AmbiguousPredicate {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Source",
-                },
-                args: [
-                    FlexVar(
-                        "a1",
-                    ),
-                ],
-            },
-        ],
-    },
-    AmbiguousType {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 1,
-            },
-            end: Position {
-                line: 6,
-                column: 6,
-            },
-        },
-        name: "value",
-        variable: FlexVar(
-            "a",
-        ),
-        predicates: [
-            AmbiguousPredicate {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Sink",
-                },
-                args: [
-                    FlexVar(
-                        "a",
-                    ),
-                ],
-            },
-            AmbiguousPredicate {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Source",
-                },
-                args: [
-                    FlexVar(
-                        "a",
-                    ),
-                ],
-            },
-        ],
-    },
-]
+nash::type::ambiguous_type
+
+  × Cannot determine type `'a1` in `value`.
+   ╭─[Main.nash:6:1]
+ 5 │     consume : 'a -> ()
+ 6 │ value = (consume (create ()), consume (create ()))
+   · ─────
+   ╰────
+  help: Required constraints: Sink 'a1 Source 'a1
+
+        Add a type annotation that determines this variable.
+
+
+nash::type::ambiguous_type
+
+  × Cannot determine type `'a` in `value`.
+   ╭─[Main.nash:6:1]
+ 5 │     consume : 'a -> ()
+ 6 │ value = (consume (create ()), consume (create ()))
+   · ─────
+   ╰────
+  help: Required constraints: Sink 'a Source 'a
+
+        Add a type annotation that determines this variable.

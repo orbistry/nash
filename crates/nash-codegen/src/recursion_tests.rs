@@ -81,7 +81,7 @@ fn tail_recursion() {
         &[rec(&b, f, &[acc, n], body)],
         b.app(b.var(f.name), &[b.int(0), b.int(10)]),
     );
-    insta::assert_snapshot!(eval(&b,program),@"(con integer 55)");
+    assert_eq!(eval(&b, program), "(con integer 55)");
 }
 #[test]
 fn non_tail_factorial() {
@@ -99,7 +99,13 @@ fn non_tail_factorial() {
             b.app(b.var(f.name), &[decrement(&b, n)]),
         ),
     );
-    insta::assert_snapshot!(eval(&b,b.let_rec(&[rec(&b,f,&[n],body)],b.app(b.var(f.name),&[b.int(6)]))),@"(con integer 720)");
+    assert_eq!(
+        eval(
+            &b,
+            b.let_rec(&[rec(&b, f, &[n], body)], b.app(b.var(f.name), &[b.int(6)]))
+        ),
+        "(con integer 720)"
+    );
 }
 #[test]
 fn static_parameter_keeps_original_position() {
@@ -123,11 +129,7 @@ fn static_parameter_keeps_original_position() {
         &[rec(&b, f, &[n, step], body)],
         b.app(b.var(f.name), &[b.int(3), b.int(7)]),
     );
-    insta::assert_snapshot!(eval(&b,program),@"(con integer 21)");
-    insta::assert_snapshot!(
-        "static_parameter_core",
-        nash_ir::pretty::pretty(rewrite(&b, program).unwrap())
-    );
+    assert_eq!(eval(&b, program), "(con integer 21)");
 }
 #[test]
 fn mutual_even_odd_and_three_cycle() {
@@ -169,7 +171,17 @@ fn captures_lexical_binding() {
         b.var(captured.name),
         b.app(b.var(f.name), &[decrement(&b, n)]),
     );
-    insta::assert_snapshot!(eval(&b,b.let_(captured,b.int(42),b.let_rec(&[rec(&b,f,&[n],body)],b.app(b.var(f.name),&[b.int(3)])))),@"(con integer 42)");
+    assert_eq!(
+        eval(
+            &b,
+            b.let_(
+                captured,
+                b.int(42),
+                b.let_rec(&[rec(&b, f, &[n], body)], b.app(b.var(f.name), &[b.int(3)]))
+            )
+        ),
+        "(con integer 42)"
+    );
 }
 #[test]
 fn first_class_recursive_function() {
@@ -188,7 +200,13 @@ fn first_class_recursive_function() {
         ),
     );
     assert!(static_params(f.name, &[n], body).is_empty());
-    insta::assert_snapshot!(eval(&b,b.let_rec(&[rec(&b,f,&[n],body)],b.app(b.var(f.name),&[b.int(3)]))),@"(con integer 12)");
+    assert_eq!(
+        eval(
+            &b,
+            b.let_rec(&[rec(&b, f, &[n], body)], b.app(b.var(f.name), &[b.int(3)]))
+        ),
+        "(con integer 12)"
+    );
 }
 #[test]
 fn rejects_recursive_value() {

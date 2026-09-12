@@ -1,23 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
 description: "module Main exposing (..)\n\nimport Restricted exposing (type restricted)\n\nf : restricted ()\nf x = x\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 16,
-            },
-            end: Position {
-                line: 5,
-                column: 18,
-            },
-        },
-        context: Annotation {
-            name: "f",
-        },
-        required: Big,
-        actual: Const,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Big` in the annotation for `f`:
+   ╭─[src/Main.nash:5:16]
+ 4 │ 
+ 5 │ f : restricted ()
+   ·                ──
+ 6 │ f x = x
+   ╰────
+  help: The type has `Const` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

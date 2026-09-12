@@ -1,62 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nsame : 'a -> 'a -> 'a\nsame x _ = x\ndiscard x = ()\nvalue = discard (same 1 \"one\")\n"
+description: "module Main exposing (..)\nsame : 'a -> 'a -> 'a\nsame x _ = x\ndiscard x = ()\nvalue = discard (same 1 \"one\")\n"
+info: diagnostic
 ---
-[
-    AmbiguousType {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 1,
-            },
-            end: Position {
-                line: 5,
-                column: 6,
-            },
-        },
-        name: "value",
-        variable: FlexVar(
-            "a",
-        ),
-        predicates: [
-            AmbiguousPredicate {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Literal",
-                    },
-                    name: "FromInt",
-                },
-                args: [
-                    FlexVar(
-                        "a",
-                    ),
-                ],
-            },
-            AmbiguousPredicate {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Literal",
-                    },
-                    name: "FromString",
-                },
-                args: [
-                    FlexVar(
-                        "a",
-                    ),
-                ],
-            },
-        ],
-    },
-]
+nash::type::ambiguous_type
+
+  × Cannot determine type `'a` in `value`.
+   ╭─[Main.nash:5:1]
+ 4 │ discard x = ()
+ 5 │ value = discard (same 1 "one")
+   · ─────
+   ╰────
+  help: Required constraints: Literal.FromInt 'a Literal.FromString 'a
+
+        Add a type annotation that determines this variable.

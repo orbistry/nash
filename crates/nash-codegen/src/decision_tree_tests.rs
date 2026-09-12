@@ -858,9 +858,6 @@ fn duplicated_leaf_joins_preserve_bindings_and_lazy_effects() {
                 .unwrap();
                 let pretty = nash_ir::pretty::pretty(core);
                 assert_eq!(pretty.matches("trace").count(), 1);
-                if !bind_default && !first && !second {
-                    insta::assert_snapshot!("shared_default_leaf", pretty);
-                }
                 let evaluated = crate::harness::eval_core(&arena, core);
                 let expected = first && (second || bind_default);
                 assert_eq!(

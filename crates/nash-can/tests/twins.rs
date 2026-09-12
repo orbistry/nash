@@ -45,12 +45,13 @@ fn twin_imports_preserve_privacy_and_explicit_exposure() {
                     [nash_can::Error::NotFoundCtor { .. }]
                 ));
                 diagnostics.push(format!(
-                    "exports={exports}; imports={imports}; {constructor}: {errors:?}"
+                    "exports={exports}; imports={imports}; {constructor}:\n{}",
+                    snapshot_support::errors(source, &errors)
                 ));
             }
         }
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(diagnostics.join("\n"));
     });
 }
@@ -80,9 +81,9 @@ fn twin_exception_rejects_unrelated_and_malformed_duplicates() {
                 .any(|error| matches!(error, nash_can::Error::DuplicateCtor { .. })),
             "{errors:?}"
         );
-        diagnostics.push(format!("{declarations}{errors:?}"));
+        diagnostics.push(snapshot_support::errors(source, &errors));
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(diagnostics.join("\n"));
     });
 }

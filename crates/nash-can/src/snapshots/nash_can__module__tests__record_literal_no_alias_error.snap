@@ -1,21 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\nvalue = { x = () }\n"
+info: diagnostic
 ---
-[
-    RecordLiteralNoAlias {
-        region: Region {
-            start: Position {
-                line: 2,
-                column: 9,
-            },
-            end: Position {
-                line: 2,
-                column: 19,
-            },
-        },
-        fields: [
-            "x",
-        ],
-    },
-]
+nash::names::record_literal_no_alias
+
+  × No visible record alias has exactly these fields: x.
+   ╭─[src/Main.nash:2:9]
+ 1 │ module Main exposing (..)
+ 2 │ value = { x = () }
+   ·         ──────────
+   ╰────
+  help: Declare or import an alias for this record.

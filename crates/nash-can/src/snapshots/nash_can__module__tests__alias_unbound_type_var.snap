@@ -1,36 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Bad = List 'a\n"
+info: diagnostic
 ---
-[
-    TypeVarsMessedUpInAlias {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 4,
-                column: 1,
-            },
-        },
-        name: "Bad",
-        args: [],
-        unused: [],
-        unbound: [
-            (
-                "a",
-                Region {
-                    start: Position {
-                        line: 3,
-                        column: 23,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 25,
-                    },
-                },
-            ),
-        ],
-    },
-]
+nash::names::type_vars_messed_up_in_alias
+
+  × The `Bad` type alias uses an unbound type variable `a` in its definition:
+   ╭─[src/Main.nash:3:23]
+ 2 │ 
+ 3 │ type alias Bad = List 'a
+   ·                       ──
+   ╰────
+  help: Declare the type variables:
+
+            type alias Bad 'a = ...

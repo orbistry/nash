@@ -1,20 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing ((|>))\n\ninfix left 6 (|>) = missing\n"
+info: diagnostic
 ---
-[
-    BinopFunctionNotFound {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 4,
-                column: 1,
-            },
-        },
-        op: "|>",
-        function: "missing",
-    },
-]
+nash::names::binop_function_not_found
+
+  × Operator `(|>)` refers to undefined function `missing`.
+   ╭─[src/Main.nash:3:1]
+ 2 │ 
+ 3 │ infix left 6 (|>) = missing
+   · ────────────────────────────
+   ╰────
+  help: Define it, or point the `infix` declaration at an existing top-level value.

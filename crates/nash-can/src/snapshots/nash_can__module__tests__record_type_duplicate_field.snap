@@ -1,29 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias R = { x : Int, x : String }\n"
+info: diagnostic
 ---
-[
-    DuplicateField {
-        name: "x",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 18,
-            },
-            end: Position {
-                line: 3,
-                column: 19,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 27,
-            },
-            end: Position {
-                line: 3,
-                column: 28,
-            },
-        },
-    },
-]
+nash::names::duplicate_field
+
+  × This record has multiple `x` fields.
+   ╭─[src/Main.nash:3:27]
+ 2 │ 
+ 3 │ type alias R = { x : Int, x : String }
+   ·                  ┬        ┬
+   ·                  │        ╰── and another first definition
+   ·                  ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

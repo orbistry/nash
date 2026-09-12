@@ -1,52 +1,17 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype status = Ready\ntype Status = Ready\nwrong : Status\nwrong = Ready\n"
+description: "module Main exposing (..)\ntype status = Ready\ntype Status = Ready\nwrong : Status\nwrong = Ready\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 5,
-                column: 9,
-            },
-            end: Position {
-                line: 5,
-                column: 14,
-            },
-        },
-        Foreign(
-            "Ready",
-        ),
-        Type {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "status",
-            args: [],
-        },
-        FromAnnotation(
-            "wrong",
-            Region {
-                start: Position {
-                    line: 4,
-                    column: 9,
-                },
-                end: Position {
-                    line: 4,
-                    column: 15,
-                },
-            },
-            0,
-            TypedBody,
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Status",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `Status`, found `status`.
+   ╭─[Main.nash:5:9]
+ 3 │ type Status = Ready
+ 4 │ wrong : Status
+   ·         ───┬──
+   ·            ╰── declared type
+ 5 │ wrong = Ready
+   ·         ──┬──
+   ·           ╰── body of `wrong`
+   ╰────

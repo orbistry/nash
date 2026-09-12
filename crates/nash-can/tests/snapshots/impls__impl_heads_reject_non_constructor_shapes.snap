@@ -1,114 +1,76 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a -> 'b) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (('a -> 'b) : Term) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep { value : 'a } where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('f 'a) where\n    keep x = x\n"
+info: diagnostic
 ---
-[
-    (
-        "'a",
-        [
-            BadInstanceHead {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 13,
-                    },
-                },
-                reason: BareVariable,
-            },
-        ],
-    ),
-    (
-        "('a : Big)",
-        [
-            BadInstanceHead {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 21,
-                    },
-                },
-                reason: BareVariable,
-            },
-        ],
-    ),
-    (
-        "('a -> 'b)",
-        [
-            BadInstanceHead {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 12,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 20,
-                    },
-                },
-                reason: Function,
-            },
-        ],
-    ),
-    (
-        "(('a -> 'b) : Term)",
-        [
-            BadInstanceHead {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 30,
-                    },
-                },
-                reason: Function,
-            },
-        ],
-    ),
-    (
-        "{ value : 'a }",
-        [
-            BadInstanceHead {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 25,
-                    },
-                },
-                reason: Record,
-            },
-        ],
-    ),
-    (
-        "('f 'a)",
-        [
-            BadInstanceHead {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 12,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 17,
-                    },
-                },
-                reason: VariableApplication,
-            },
-        ],
-    ),
-]
+'a
+nash::names::bad_instance_head
+
+  × This impl head is a bare type variable:
+   ╭─[src/Main.nash:4:11]
+ 3 │     keep : 'a -> 'a
+ 4 │ impl Keep 'a where
+   ·           ──
+ 5 │     keep x = x
+   ╰────
+  help: Use a named type constructor or a tuple as the outermost type of an impl head.
+
+('a : Big)
+nash::names::bad_instance_head
+
+  × This impl head is a bare type variable:
+   ╭─[src/Main.nash:4:11]
+ 3 │     keep : 'a -> 'a
+ 4 │ impl Keep ('a : Big) where
+   ·           ──────────
+ 5 │     keep x = x
+   ╰────
+  help: Use a named type constructor or a tuple as the outermost type of an impl head.
+
+('a -> 'b)
+nash::names::bad_instance_head
+
+  × This impl head is a function type:
+   ╭─[src/Main.nash:4:12]
+ 3 │     keep : 'a -> 'a
+ 4 │ impl Keep ('a -> 'b) where
+   ·            ────────
+ 5 │     keep x = x
+   ╰────
+  help: Use a named type constructor or a tuple as the outermost type of an impl head.
+
+(('a -> 'b) : Term)
+nash::names::bad_instance_head
+
+  × This impl head is a function type:
+   ╭─[src/Main.nash:4:11]
+ 3 │     keep : 'a -> 'a
+ 4 │ impl Keep (('a -> 'b) : Term) where
+   ·           ───────────────────
+ 5 │     keep x = x
+   ╰────
+  help: Use a named type constructor or a tuple as the outermost type of an impl head.
+
+{ value : 'a }
+nash::names::bad_instance_head
+
+  × This impl head is an anonymous record:
+   ╭─[src/Main.nash:4:11]
+ 3 │     keep : 'a -> 'a
+ 4 │ impl Keep { value : 'a } where
+   ·           ──────────────
+ 5 │     keep x = x
+   ╰────
+  help: Use a named type constructor or a tuple as the outermost type of an impl head.
+
+('f 'a)
+nash::names::bad_instance_head
+
+  × This impl head is an application of a type variable:
+   ╭─[src/Main.nash:4:12]
+ 3 │     keep : 'a -> 'a
+ 4 │ impl Keep ('f 'a) where
+   ·            ─────
+ 5 │     keep x = x
+   ╰────
+  help: Use a named type constructor or a tuple as the outermost type of an impl head.

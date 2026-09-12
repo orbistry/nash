@@ -1,58 +1,17 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype Box 'a = Box 'a\nwrong : 'f 'a -> Box 'a\nwrong x = x\n"
+description: "module Main exposing (..)\ntype Box 'a = Box 'a\nwrong : 'f 'a -> Box 'a\nwrong x = x\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 4,
-                column: 11,
-            },
-            end: Position {
-                line: 4,
-                column: 12,
-            },
-        },
-        Local(
-            "x",
-        ),
-        VarApp(
-            RigidVar(
-                "f",
-            ),
-            [
-                RigidVar(
-                    "a",
-                ),
-            ],
-        ),
-        FromAnnotation(
-            "wrong",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 9,
-                },
-                end: Position {
-                    line: 3,
-                    column: 24,
-                },
-            },
-            1,
-            TypedBody,
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Box",
-                args: [
-                    RigidVar(
-                        "a",
-                    ),
-                ],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `Box 'a`, found `'f 'a`.
+   ╭─[Main.nash:4:11]
+ 2 │ type Box 'a = Box 'a
+ 3 │ wrong : 'f 'a -> Box 'a
+   ·         ───────┬───────
+   ·                ╰── declared type
+ 4 │ wrong x = x
+   ·           ┬
+   ·           ╰── body of `wrong`
+   ╰────

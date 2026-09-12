@@ -1,17 +1,14 @@
 ---
 source: crates/nash-parse/src/declaration/impl_.rs
 description: "impl Eq int where\n    eq : int -> bool\n"
+info: diagnostic
 ---
-Impl(
-    Method(
-        "eq",
-        Equals(
-            2,
-            8,
-        ),
-        2,
-        7,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected `=` in the definition of `eq`.
+   ╭─[src/Main.nash:2:8]
+ 1 │ impl Eq int where
+ 2 │     eq : int -> bool
+   ·        ─
+   ╰────
+  help: Separate the arguments and body with `=`.

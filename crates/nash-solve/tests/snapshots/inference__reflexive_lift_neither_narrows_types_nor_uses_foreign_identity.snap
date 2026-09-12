@@ -1,189 +1,48 @@
 ---
 source: crates/nash-solve/tests/inference.rs
 description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : 'a -> 'a\nbad x = lift x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : 'a -> 'b\nbad x = lift x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : Color -> Color\nbad x = lift x\n"
+info: diagnostic
 ---
-[
-    (
-        true,
-        "'a -> 'a",
-        [
-            MissingConstraint {
-                region: Region {
-                    start: Position {
-                        line: 5,
-                        column: 9,
-                    },
-                    end: Position {
-                        line: 5,
-                        column: 13,
-                    },
-                },
-                name: "lift",
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Lift",
-                    },
-                    name: "Lift",
-                },
-                args: [
-                    RigidVar(
-                        "a",
-                    ),
-                    RigidVar(
-                        "a",
-                    ),
-                ],
-                binder: Located {
-                    region: Region {
-                        start: Position {
-                            line: 5,
-                            column: 1,
-                        },
-                        end: Position {
-                            line: 5,
-                            column: 4,
-                        },
-                    },
-                    value: "bad",
-                },
-            },
-        ],
-    ),
-    (
-        true,
-        "'a -> 'b",
-        [
-            MissingConstraint {
-                region: Region {
-                    start: Position {
-                        line: 5,
-                        column: 9,
-                    },
-                    end: Position {
-                        line: 5,
-                        column: 13,
-                    },
-                },
-                name: "lift",
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Lift",
-                    },
-                    name: "Lift",
-                },
-                args: [
-                    RigidVar(
-                        "a",
-                    ),
-                    RigidVar(
-                        "b",
-                    ),
-                ],
-                binder: Located {
-                    region: Region {
-                        start: Position {
-                            line: 5,
-                            column: 1,
-                        },
-                        end: Position {
-                            line: 5,
-                            column: 4,
-                        },
-                    },
-                    value: "bad",
-                },
-            },
-        ],
-    ),
-    (
-        false,
-        "Color -> Color",
-        [
-            MissingImpl {
-                region: Region {
-                    start: Position {
-                        line: 5,
-                        column: 9,
-                    },
-                    end: Position {
-                        line: 5,
-                        column: 13,
-                    },
-                },
-                name: "lift",
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Lift",
-                    },
-                    name: "Lift",
-                },
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "Color",
-                        args: [],
-                    },
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "Color",
-                        args: [],
-                    },
-                ],
-                available: [
-                    [
-                        Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                            },
-                            args: [],
-                        },
-                        Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                            },
-                            args: [],
-                        },
-                    ],
-                ],
-                because: [],
-            },
-        ],
-    ),
-]
+core: true, annotation: 'a -> 'a
+nash::type::missing_constraint
+
+  × `lift` requires undeclared constraint `Lift 'a 'a`.
+   ╭─[Main.nash:5:9]
+ 4 │ bad : 'a -> 'a
+ 5 │ bad x = lift x
+   · ─┬─     ──┬─
+   ·  │        ╰── constraint required here
+   ·  ╰── annotation for `bad`
+   ╰────
+  help: Add `Lift 'a 'a` to the annotation for `bad`.
+
+
+core: true, annotation: 'a -> 'b
+nash::type::missing_constraint
+
+  × `lift` requires undeclared constraint `Lift 'a 'b`.
+   ╭─[Main.nash:5:9]
+ 4 │ bad : 'a -> 'b
+ 5 │ bad x = lift x
+   · ─┬─     ──┬─
+   ·  │        ╰── constraint required here
+   ·  ╰── annotation for `bad`
+   ╰────
+  help: Add `Lift 'a 'b` to the annotation for `bad`.
+
+
+core: false, annotation: Color -> Color
+nash::type::missing_impl
+
+  × No impl for `Lift Color Color`.
+   ╭─[Main.nash:5:9]
+ 4 │ bad : Color -> Color
+ 5 │ bad x = lift x
+   ·         ──┬─
+   ·           ╰── required by `lift`
+   ╰────
+  help: Available impl heads:
+
+            unit unit
+
+        Import or define an impl for `Lift Color Color`.

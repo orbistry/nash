@@ -1,40 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype box 'a = Box { value : 'a }\nchange : box unit -> box unit\nchange b = { b | value = () }\n"
+description: "module Main exposing (..)\ntype box 'a = Box { value : 'a }\nchange : box unit -> box unit\nchange b = { b | value = () }\n"
+info: diagnostic
 ---
-[
-    UpdateNotRecord {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 18,
-            },
-            end: Position {
-                line: 4,
-                column: 23,
-            },
-        },
-        record: Type {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "box",
-            args: [
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-            ],
-        },
-    },
-]
+nash::type::update_not_record
+
+  × Cannot update fields of `box unit`.
+   ╭─[Main.nash:4:18]
+ 3 │ change : box unit -> box unit
+ 4 │ change b = { b | value = () }
+   ·                  ─────
+   ╰────
+  help: Rebuild the value with its constructor.

@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"truth\" = do\n        assert True\n"
+info: diagnostic
 ---
-[
-    Unsupported {
-        feature: "tests block",
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 5,
-            },
-            end: Position {
-                line: 5,
-                column: 20,
-            },
-        },
-    },
-]
+nash::names::unsupported
+
+  × Unsupported feature: tests block.
+   ╭─[src/Main.nash:4:5]
+ 3 │     tests
+ 4 │ ╭─▶     test "truth" = do
+ 5 │ ╰─▶         assert True
+   ╰────
+  help: This syntax is recognized, but its compiler implementation is not available yet.

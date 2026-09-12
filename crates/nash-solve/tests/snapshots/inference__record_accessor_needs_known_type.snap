@@ -1,25 +1,15 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (getName)\n\ngetName = .name\n"
+description: "module Main exposing (getName)\n\ngetName = .name\n"
+info: diagnostic
 ---
-[
-    AmbiguousRecordAccess {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 11,
-            },
-            end: Position {
-                line: 3,
-                column: 16,
-            },
-        },
-        context: Accessor,
-        field: Some(
-            "name",
-        ),
-        record: FlexVar(
-            "a",
-        ),
-    },
-]
+nash::type::ambiguous_record_access
+
+  × Cannot determine record type `'a`.
+   ╭─[Main.nash:3:11]
+ 2 │ 
+ 3 │ getName = .name
+   ·           ──┬──
+   ·             ╰── field `name` accessor
+   ╰────
+  help: Add a type annotation that identifies the record.

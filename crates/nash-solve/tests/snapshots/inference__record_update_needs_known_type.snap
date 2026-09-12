@@ -1,27 +1,15 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (bump)\n\nbump r = { r | x = 1 }\n"
+description: "module Main exposing (bump)\n\nbump r = { r | x = 1 }\n"
+info: diagnostic
 ---
-[
-    AmbiguousRecordAccess {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 16,
-            },
-            end: Position {
-                line: 3,
-                column: 17,
-            },
-        },
-        context: Update {
-            record: "r",
-        },
-        field: Some(
-            "x",
-        ),
-        record: FlexVar(
-            "a",
-        ),
-    },
-]
+nash::type::ambiguous_record_access
+
+  × Cannot determine record type `'a`.
+   ╭─[Main.nash:3:16]
+ 2 │ 
+ 3 │ bump r = { r | x = 1 }
+   ·                ┬
+   ·                ╰── field `x` update of `r`
+   ╰────
+  help: Add a type annotation that identifies the record.

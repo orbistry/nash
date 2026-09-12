@@ -61,12 +61,12 @@ fn casts_require_exact_core_package_for_every_import_route() {
                     "{package:?}: {import}: {result:?}"
                 );
                 if package.is_none() && cast == "castLift" {
-                    diagnostics.push(format!("{import}: {:?}", result.unwrap_err()));
+                    diagnostics.push(snapshot_support::errors(source, &result.unwrap_err()));
                 }
             }
         }
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(diagnostics.join("\n"));
     });
 }

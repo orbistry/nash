@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nvalidator module Foo exposing (main)\n\nx = 1\n"
+info: diagnostic
 ---
-[
-    ValidatorMissingMain {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 10,
-            },
-        },
-        module: "Foo",
-    },
-]
+nash::validator::missing_main
+
+  × This validator module requires a main value to compile into a script.
+   ╭─[src/Foo.nash:1:1]
+ 1 │ validator module Foo exposing (main)
+   · ─────────
+ 2 │ 
+   ╰────
+  help: Add a main value, or remove the validator keyword from the module header.

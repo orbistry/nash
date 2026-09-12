@@ -1,36 +1,21 @@
 ---
 source: crates/nash-can/tests/traits.rs
 description: "module Main exposing (..)\n\ntrait Second 'a => First 'a where\n    first : 'a -> 'a\n\ntrait First 'a => Second 'a where\n    second : 'a -> 'a\n"
+info: diagnostic
 ---
-[
-    RecursiveSuperclass {
-        names: [
-            Located {
-                region: Region {
-                    start: Position {
-                        line: 3,
-                        column: 20,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 25,
-                    },
-                },
-                value: "First",
-            },
-            Located {
-                region: Region {
-                    start: Position {
-                        line: 6,
-                        column: 19,
-                    },
-                    end: Position {
-                        line: 6,
-                        column: 25,
-                    },
-                },
-                value: "Second",
-            },
-        ],
-    },
-]
+nash::names::recursive_superclass
+
+  × These superclass declarations form a cycle:
+   ╭─[src/Main.nash:3:20]
+ 2 │ 
+ 3 │ trait Second 'a => First 'a where
+   ·                    ─────
+ 4 │     first : 'a -> 'a
+   ╰────
+  help:     ┌─────┐
+            │    First
+            │     ↓
+            │    Second
+            └─────┘
+
+        Remove a superclass dependency to break the cycle.

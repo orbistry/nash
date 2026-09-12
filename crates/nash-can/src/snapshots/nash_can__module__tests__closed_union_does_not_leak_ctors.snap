@@ -1,24 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Maybe exposing (Maybe(..))\n\nx = Just\n"
+info: diagnostic
 ---
-[
-    NotFoundCtor {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 5,
-            },
-            end: Position {
-                line: 5,
-                column: 9,
-            },
-        },
-        prefix: None,
-        name: "Just",
-        suggestions: PossibleNames {
-            locals: [],
-            qualified: [],
-        },
-    },
-]
+nash::names::not_found_ctor
+
+  × Unknown variant `Just`.
+   ╭─[src/Main.nash:5:5]
+ 4 │ 
+ 5 │ x = Just
+   ·     ────
+   ╰────
+  help: Define or import this name.

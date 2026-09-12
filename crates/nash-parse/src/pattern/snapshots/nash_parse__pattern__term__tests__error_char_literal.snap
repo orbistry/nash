@@ -1,8 +1,13 @@
 ---
 source: crates/nash-parse/src/pattern/term.rs
 description: "Code:\n\n'x'"
+info: diagnostic
 ---
-Start(
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected an argument pattern.
+   ╭─[src/Main.nash:1:1]
+ 1 │ 'x'
+   · ─
+   ╰────
+  help: Use a variable, constructor pattern, or `_`.

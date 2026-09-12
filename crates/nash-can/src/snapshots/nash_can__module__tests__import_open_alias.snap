@@ -1,19 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Foo exposing (MyAlias(..))\n\nx = 1\n"
+info: diagnostic
 ---
-[
-    ImportOpenAlias {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 30,
-            },
-            end: Position {
-                line: 3,
-                column: 32,
-            },
-        },
-        name: "MyAlias",
-    },
-]
+nash::names::import_open_alias
+
+  × Type alias `MyAlias` has no variants to import.
+   ╭─[src/Main.nash:3:30]
+ 2 │ 
+ 3 │ import Foo exposing (MyAlias(..))
+   ·                              ──
+ 4 │ 
+   ╰────
+  help: Remove `(..)`.

@@ -1,18 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntrait Num 'a where\n    negate : 'a -> 'a\nf x = -x\n"
+info: diagnostic
 ---
-[
-    NegateWithoutNum {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 7,
-            },
-            end: Position {
-                line: 5,
-                column: 9,
-            },
-        },
-    },
-]
+nash::names::negate_without_num
+
+  × Numeric negation requires `Num`.
+   ╭─[src/Main.nash:5:7]
+ 4 │     negate : 'a -> 'a
+ 5 │ f x = -x
+   ·       ──
+   ╰────
+  help: Import the module that defines `Num`.

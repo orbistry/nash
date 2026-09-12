@@ -1,23 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
 description: "module Main exposing (..)\ntype tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('g ('a) ('g)) ('f ('f) ('a)))\ntype w = W (s (s s s) tag)"
+info: diagnostic
 ---
-[
-    KindInfinite {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 35,
-            },
-            end: Position {
-                line: 3,
-                column: 37,
-            },
-        },
-        context: LittleField {
-            union: "s",
-            ctor: "S",
-            index: 0,
-        },
-    },
-]
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `S` in `s` would require an
+  │ infinite kind:
+   ╭─[src/Main.nash:3:35]
+ 2 │ type tag 'a = Tag
+ 3 │ type s 'f 'g 'a = S ('g ('g ('a) ('g)) ('f ('f) ('a)))
+   ·                                   ──
+ 4 │ type w = W (s (s s s) tag)
+   ╰────
+  help: Check the type application and the kinds of its arguments.

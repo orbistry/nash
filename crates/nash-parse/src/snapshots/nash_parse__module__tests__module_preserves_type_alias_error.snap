@@ -1,20 +1,13 @@
 ---
 source: crates/nash-parse/src/module.rs
 description: "Code:\n\ntype alias account"
+info: diagnostic
 ---
-Declarations(
-    Type(
-        Alias(
-            Equals(
-                1,
-                19,
-            ),
-            1,
-            6,
-        ),
-        1,
-        1,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected `=` in the type alias.
+   ╭─[src/Main.nash:1:19]
+ 1 │ type alias account
+   ·                   ─
+   ╰────
+  help: Write `type alias Name = Type`.

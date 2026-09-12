@@ -1,23 +1,15 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nf {} = ()\n"
+description: "module Main exposing (..)\nf {} = ()\n"
+info: diagnostic
 ---
-[
-    AmbiguousRecordAccess {
-        region: Region {
-            start: Position {
-                line: 2,
-                column: 3,
-            },
-            end: Position {
-                line: 2,
-                column: 5,
-            },
-        },
-        context: Pattern,
-        field: None,
-        record: FlexVar(
-            "a",
-        ),
-    },
-]
+nash::type::ambiguous_record_access
+
+  × Cannot determine record type `'a`.
+   ╭─[Main.nash:2:3]
+ 1 │ module Main exposing (..)
+ 2 │ f {} = ()
+   ·   ─┬
+   ·    ╰── fields pattern
+   ╰────
+  help: Add a type annotation that identifies the record.

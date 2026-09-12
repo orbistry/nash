@@ -1,16 +1,14 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
 description: trait Eq where
+info: diagnostic
 ---
-Trait(
-    Param(
-        Start(
-            1,
-            10,
-        ),
-        1,
-        10,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected a type parameter.
+   ╭─[src/Main.nash:1:10]
+ 1 │ trait Eq where
+   ·          ─
+   ╰────
+  help: Use a quoted name such as `'a`, or a bounded parameter such as `('a :
+        Storable)`.

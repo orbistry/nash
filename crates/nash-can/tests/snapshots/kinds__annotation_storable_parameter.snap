@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "f : 'a -> list 'a -> list 'a\nf x xs = xs"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\nf : 'a -> list 'a -> list 'a\nf x xs = xs\n"
 ---
 (
     [],

@@ -78,8 +78,6 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
 
 #[test]
 fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
-    let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
     let header = "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\n";
     let definitions = [
         "mismatch : ()\nmismatch = \\x -> x\n",
@@ -89,6 +87,8 @@ fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
         "kind = idfa (Higher [])\n",
     ];
     for reverse in [false, true] {
+        let snapshot_inputs = SnapshotInputs::default();
+        snapshot_inputs.record(LITERAL_SOURCE);
         let bump = Bump::new();
         let mut definitions = definitions.to_vec();
         if reverse {
@@ -138,13 +138,13 @@ fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
             "{errors:#?}"
         );
         assert_eq!(errors.len(), 5, "{errors:#?}");
-        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-            insta::assert_debug_snapshot!(
+        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true, info => &"diagnostic"}, {
+            insta::assert_snapshot!(
                     format!(
                         "recovery_mixed_errors_{}",
                         if reverse { "reversed" } else { "forward" }
                     ),
-                    errors
+                    render_errors(&source, &errors)
                 );
         });
     }
@@ -754,6 +754,25 @@ fn render_apply(name: &str, args: &[&Located<CanType<'_>>], ctx: Ctx) -> String 
     }
 }
 
+// Render each error against the same module text that produced its regions.
+fn render_errors(input: &str, errors: &[Error<'_>]) -> String {
+    let bump = Bump::new();
+    let module = nash_parse::Parser::new(&bump, input)
+        .module()
+        .expect("diagnostic source must parse");
+    let localizer = nash_report::localizer::Localizer::from_module(&module, &[]);
+    let filename = format!("{}.nash", module.name.map_or("Main", |name| name.value));
+    let source = nash_report::code::Source::new(input);
+    errors
+        .iter()
+        .map(|error| {
+            let report = nash_report::type_::to_report(&localizer, error);
+            nash_report::render_plain(&report, &source, &filename)
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
 // SNAPSHOT MACROS
 
 macro_rules! assert_inference_snapshot {
@@ -778,10 +797,11 @@ macro_rules! assert_inference_error_snapshot {
         let errors = infer(&bump, input).expect_err("expected type errors");
 
         insta::with_settings!({
-            description => format!("Code:\n\n{}", input),
+            description => input,
             omit_expression => true,
+            info => &"diagnostic",
         }, {
-            insta::assert_debug_snapshot!(errors);
+            insta::assert_snapshot!(render_errors(input, &errors));
         });
     }};
 }
@@ -940,10 +960,8 @@ fn ambiguous_predicates_keep_distinct_variable_names() {
     let snapshot_inputs = SnapshotInputs::default();
     snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
-    let errors = infer(
-        &bump,
-        snapshot_inputs.record(indoc!(
-            r#"
+    let input = indoc!(
+        r#"
         module Main exposing (..)
         trait Source 'a where
             create : () -> 'a
@@ -951,9 +969,9 @@ fn ambiguous_predicates_keep_distinct_variable_names() {
             consume : 'a -> ()
         value = (consume (create ()), consume (create ()))
         "#
-        )),
-    )
-    .expect_err("both hidden variables are ambiguous");
+    );
+    let errors = infer(&bump, snapshot_inputs.record(input))
+        .expect_err("both hidden variables are ambiguous");
     let names: Vec<_> = errors
         .iter()
         .map(|error| {
@@ -968,8 +986,8 @@ fn ambiguous_predicates_keep_distinct_variable_names() {
         .collect();
     assert_eq!(names.len(), 2);
     assert_ne!(names[0], names[1]);
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true, info => &"diagnostic"}, {
+        insta::assert_snapshot!(render_errors(input, &errors));
     });
 }
 
@@ -3006,8 +3024,8 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
             assert!(
                 matches!(&errors[..], [Error::MissingImpl { trait_, .. }] if trait_.name == "Keep")
             );
-            insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-                insta::assert_debug_snapshot!("partial_alias_nominal_mismatch", errors);
+            insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true, info => &"diagnostic"}, {
+                insta::assert_snapshot!("partial_alias_nominal_mismatch", render_errors(source, &errors));
             });
             continue;
         }
@@ -3190,12 +3208,13 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
             errors.iter().all(|error| matches!(error, Error::MissingImpl { trait_, .. } if *trait_ == nash_ast::primitives::ReprTrait::Storable.qualified())) && errors.iter().any(|error| matches!(error, Error::MissingImpl { name: actual, .. } if *actual == name)),
             "{errors:?}"
         );
-        results.push((name, errors));
+        results.push(format!("{name}:\n{}", render_errors(source, &errors)));
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true, info => &"diagnostic"}, {
         insta::assert_snapshot!(format!(
-            "{}\n{results:#?}",
-            render_annotations(&annotations)
+            "{}\n{}",
+            render_annotations(&annotations),
+            results.join("\n\n")
         ));
     });
 }
@@ -3470,10 +3489,13 @@ fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
             errors.as_slice(),
             [Error::MissingConstraint { .. }] | [Error::MissingImpl { .. }]
         ));
-        results.push((core, annotation, errors));
+        results.push(format!(
+            "core: {core}, annotation: {annotation}\n{}",
+            render_errors(source, &errors)
+        ));
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(results);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true, info => &"diagnostic"}, {
+        insta::assert_snapshot!(results.join("\n\n"));
     });
 }
 

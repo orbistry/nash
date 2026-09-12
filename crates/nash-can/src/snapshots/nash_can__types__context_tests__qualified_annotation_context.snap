@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-description: "Equality.Eq 'a => 'a -> 'a"
+description: "module Main exposing (..)\n\nf : Equality.Eq 'a => 'a -> 'a\nf x = x\n"
 ---
 Annotation {
     context: [

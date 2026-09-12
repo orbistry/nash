@@ -1,16 +1,14 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    prop \"p\" = assert True\n"
+info: diagnostic
 ---
-Tests(
-    Test(
-        Let(
-            4,
-            16,
-        ),
-        4,
-        5,
-    ),
-    3,
-    1,
-)
+nash::syntax
+
+  × Expected generated inputs for the property.
+   ╭─[src/Main.nash:4:16]
+ 3 │ tests
+ 4 │     prop "p" = assert True
+   ·                ─
+   ╰────
+  help: Write `let pattern via fuzzer` before `in`.

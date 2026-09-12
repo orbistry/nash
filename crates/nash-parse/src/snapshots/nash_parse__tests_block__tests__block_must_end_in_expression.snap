@@ -1,20 +1,14 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"t\" = do\n        x <- e\n"
+info: diagnostic
 ---
-Tests(
-    Test(
-        Body(
-            LastNotExpr(
-                5,
-                9,
-            ),
-            5,
-            9,
-        ),
-        4,
-        5,
-    ),
-    3,
-    1,
-)
+nash::syntax
+
+  × A do block must end with an expression.
+   ╭─[src/Main.nash:5:9]
+ 4 │     test "t" = do
+ 5 │         x <- e
+   ·         ─
+   ╰────
+  help: Add a final expression after this binding.

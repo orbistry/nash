@@ -1,59 +1,17 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\nfirst x = (second x, x)\nsecond x = case first x of\n    (previous, current) -> current\nbad : () -> Color\nbad x = second x\n"
+description: "module Main exposing (..)\ntype Color = Red\nfirst x = (second x, x)\nsecond x = case first x of\n    (previous, current) -> current\nbad : () -> Color\nbad x = second x\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 7,
-                column: 9,
-            },
-            end: Position {
-                line: 7,
-                column: 17,
-            },
-        },
-        CallResult(
-            FuncName(
-                "second",
-            ),
-        ),
-        Type {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "unit",
-            args: [],
-        },
-        FromAnnotation(
-            "bad",
-            Region {
-                start: Position {
-                    line: 6,
-                    column: 7,
-                },
-                end: Position {
-                    line: 6,
-                    column: 18,
-                },
-            },
-            1,
-            TypedBody,
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Color",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `Color`, found `unit`.
+   ╭─[Main.nash:7:9]
+ 5 │     (previous, current) -> current
+ 6 │ bad : () -> Color
+   ·       ─────┬─────
+   ·            ╰── declared type
+ 7 │ bad x = second x
+   ·         ────┬───
+   ·             ╰── body of `bad`
+   ╰────

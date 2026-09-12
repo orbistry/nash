@@ -439,7 +439,12 @@ the fixture description instead of invented Nash code. Pure tests built from
 Rust IR/type/formatting values have no Nash input. The exact reviewed exceptions
 are listed in `crates/nash-cli/tests/snapshot_hygiene.rs`; new snapshots default
 to requiring a description and suppressed Rust expression metadata. That test
-also rejects terminal escape codes and non-rendered reporter snapshots.
+also rejects terminal escape codes and raw `Err(...)` output. Diagnostic
+snapshots set `info => &"diagnostic"`, which makes the rendered-output check
+apply across compiler crates. Error snapshot macros must use that metadata or
+forward to the shared diagnostic assertion macro; raw Debug error macros fail
+validation. Direct Core fixtures in codegen use structural and evaluation assertions;
+codegen snapshots compile the Nash program shown in the description.
 
 After reviewing updates, run `cargo insta test --workspace --test-runner
 cargo-test --unreferenced reject --check` to check both output and stale files.

@@ -1,133 +1,17 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntrait Lift 'a 'a => RoundTrip 'a where\n    roundTrip : 'a -> 'a\nimpl RoundTrip Color where\n    roundTrip x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntrait Lift 'a 'a => RoundTrip 'a where\n    roundTrip : 'a -> 'a\nimpl RoundTrip () where\n    roundTrip x = x\n"
+info: diagnostic
 ---
-[
-    Ok(
-        (),
-    ),
-    Err(
-        [
-            MissingSuperclass {
-                region: Region {
-                    start: Position {
-                        line: 6,
-                        column: 1,
-                    },
-                    end: Position {
-                        line: 7,
-                        column: 20,
-                    },
-                },
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "RoundTrip",
-                },
-                heads: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 6,
-                                column: 16,
-                            },
-                            end: Position {
-                                line: 6,
-                                column: 18,
-                            },
-                        },
-                        value: Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                            },
-                            args: [],
-                        },
-                    },
-                ],
-                superclass: Trait {
-                    trait_: QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Lift",
-                        },
-                        name: "Lift",
-                    },
-                    args: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 6,
-                                    column: 16,
-                                },
-                                end: Position {
-                                    line: 6,
-                                    column: 18,
-                                },
-                            },
-                            value: Named {
-                                reference: QualifiedName {
-                                    home: ModuleName {
-                                        package: Some(
-                                            PackageName {
-                                                author: "nash",
-                                                project: "core",
-                                            },
-                                        ),
-                                        name: "Builtin",
-                                    },
-                                    name: "unit",
-                                },
-                                args: [],
-                            },
-                        },
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 6,
-                                    column: 16,
-                                },
-                                end: Position {
-                                    line: 6,
-                                    column: 18,
-                                },
-                            },
-                            value: Named {
-                                reference: QualifiedName {
-                                    home: ModuleName {
-                                        package: Some(
-                                            PackageName {
-                                                author: "nash",
-                                                project: "core",
-                                            },
-                                        ),
-                                        name: "Builtin",
-                                    },
-                                    name: "unit",
-                                },
-                                args: [],
-                            },
-                        },
-                    ],
-                },
-                index: 0,
-                reason: Missing,
-            },
-        ],
-    ),
-]
+Case 1: accepted
+nash::names::missing_superclass
+
+  × The `Main.RoundTrip` impl for Builtin.unit does not establish superclass 1:
+   ╭─[src/Main.nash:6:1]
+ 5 │         roundTrip : 'a -> 'a
+ 6 │ ╭─▶ impl RoundTrip () where
+ 7 │ ╰─▶     roundTrip x = x
+   ╰────
+  help: It must also satisfy `Lift.Lift Builtin.unit Builtin.unit`. I cannot find an
+        impl or context constraint that provides it. Add the required impl or include
+        the necessary constraint in this impl's context.

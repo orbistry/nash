@@ -1,12 +1,15 @@
 ---
 source: crates/nash-parse/src/pattern/list.rs
 description: "Code:\n\n[a, b"
+info: diagnostic
 ---
-List(
-    End(
-        1,
-        6,
-    ),
-    1,
-    1,
-)
+nash::syntax::unclosed_delimiter
+
+  × Expected `]` to close `[`.
+   ╭─[src/Main.nash:1:6]
+ 1 │ [a, b
+   · ┬    ┬
+   · │    ╰── expected `]`
+   · ╰── opened here
+   ╰────
+  help: Add `]` here.

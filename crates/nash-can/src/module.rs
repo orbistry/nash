@@ -1505,12 +1505,13 @@ mod tests {
     };
     use nash_region::{Located, Region};
 
-    use super::{Context, canonicalize};
-    use crate::interface::{
-        self, AliasVisibility, InterfaceAlias, InterfaceBinop, InterfaceUnion, InterfaceValue,
+    use crate::snapshot_support::{errors as render_errors, warnings as render_warnings};
+    use nash_can::{
+        AliasVisibility, InterfaceAlias, InterfaceBinop, InterfaceUnion, InterfaceValue,
         UnionVisibility,
     };
-    use crate::{Error, Interface};
+    use nash_can::{Context, canonicalize};
+    use nash_can::{Error, Interface};
 
     fn parse_and_canonicalize<'a>(
         bump: &'a Bump,
@@ -1546,11 +1547,11 @@ mod tests {
             let result = parse_and_canonicalize(&bump, input, Context::default())
                 .expect_err("expected canonicalization error");
 
-            insta::with_settings!({
+            insta::with_settings!({info => &"diagnostic",
                 description => format!("Code:\n\n{}", input),
                 omit_expression => true,
             }, {
-                insta::assert_debug_snapshot!(result);
+                insta::assert_snapshot!(render_errors(input, &result));
             });
         }};
     }
@@ -1562,7 +1563,7 @@ mod tests {
             let can_module = parse_and_canonicalize(&bump, input, Context::default())
                 .expect("expected successful canonicalization");
             let annotations = mock_annotations(&bump, &can_module);
-            let result = interface::from_module(&bump, &can_module, &annotations);
+            let result = nash_can::from_module(&bump, &can_module, &annotations);
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),
                 omit_expression => true,
@@ -1662,14 +1663,11 @@ mod tests {
     /// Solver stand-in for interface extraction tests: give every
     /// top-level value a `Forall [a] a` annotation, mimicking the map
     /// Elm's `Interface.fromModule` receives from the solver.
-    fn mock_annotations<'a>(
-        bump: &'a Bump,
-        module: &CanModule<'a>,
-    ) -> crate::interface::Annotations<'a> {
+    fn mock_annotations<'a>(bump: &'a Bump, module: &CanModule<'a>) -> nash_can::Annotations<'a> {
         fn walk<'a>(
             decls: &nash_ast::Decls<'a>,
             bump: &'a Bump,
-            out: &mut crate::interface::Annotations<'a>,
+            out: &mut nash_can::Annotations<'a>,
         ) {
             match decls {
                 nash_ast::Decls::Declare { definition, next } => {
@@ -1690,11 +1688,7 @@ mod tests {
                 nash_ast::Decls::Empty => {}
             }
         }
-        fn add<'a>(
-            def: &nash_ast::Def<'a>,
-            bump: &'a Bump,
-            out: &mut crate::interface::Annotations<'a>,
-        ) {
+        fn add<'a>(def: &nash_ast::Def<'a>, bump: &'a Bump, out: &mut nash_can::Annotations<'a>) {
             let name = match def {
                 nash_ast::Def::Def { name, .. } | nash_ast::Def::TypedDef { name, .. } => {
                     name.value
@@ -1702,7 +1696,7 @@ mod tests {
             };
             out.insert(name, test_annotation(bump));
         }
-        let mut annotations = crate::interface::Annotations::new();
+        let mut annotations = nash_can::Annotations::new();
         walk(module.decls, bump, &mut annotations);
         annotations
     }
@@ -1934,11 +1928,11 @@ mod tests {
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
 
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -1974,11 +1968,11 @@ mod tests {
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
 
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -2026,11 +2020,11 @@ mod tests {
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
 
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -2097,11 +2091,11 @@ mod tests {
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
 
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -2339,7 +2333,7 @@ mod tests {
             &bump,
             "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
         ).module().unwrap();
-        let interfaces = BTreeMap::from([("Builtin", crate::kinds::builtin_interface(&bump))]);
+        let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let result = canonicalize(
             &bump,
             Context {
@@ -2651,7 +2645,7 @@ mod tests {
         bump: &'a Bump,
         input: &str,
         context: Context<'a, '_>,
-    ) -> Result<(CanModule<'a>, Vec<crate::Warning<'a>>), Vec<Error<'a>>> {
+    ) -> Result<(CanModule<'a>, Vec<nash_can::Warning<'a>>), Vec<Error<'a>>> {
         let src = bump.alloc_str(input);
         let mut parser = nash_parse::Parser::new(bump, src);
         let module = parser.module().expect("expected successful parse");
@@ -2666,11 +2660,11 @@ mod tests {
                 parse_and_canonicalize_with_warnings(&bump, input, Context::default())
                     .expect("expected successful canonicalization");
             assert!(!warnings.is_empty(), "expected warnings but got none");
-            insta::with_settings!({
+            insta::with_settings!({info => &"diagnostic",
                 description => format!("Code:\n\n{}", input),
                 omit_expression => true,
             }, {
-                insta::assert_debug_snapshot!(warnings);
+                insta::assert_snapshot!(render_warnings(input, &warnings));
             });
         }};
     }
@@ -3156,7 +3150,7 @@ mod tests {
                 package: None,
                 name: module_name,
             },
-            values: bump.alloc_slice_fill_iter([crate::interface::InterfaceValue {
+            values: bump.alloc_slice_fill_iter([nash_can::InterfaceValue {
                 name: val_name,
                 annotation: test_annotation(bump),
             }]),
@@ -3186,11 +3180,11 @@ mod tests {
         let (_, warnings) = parse_and_canonicalize_with_warnings(&bump, input, context)
             .expect("expected successful canonicalization");
         assert!(!warnings.is_empty(), "expected warnings but got none");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(warnings);
+            insta::assert_snapshot!(render_warnings(input, &warnings));
         });
     }
 
@@ -3626,11 +3620,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -3748,11 +3742,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -3852,11 +3846,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -3906,11 +3900,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -3960,11 +3954,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4097,11 +4091,11 @@ mod tests {
         let (_, warnings) = parse_and_canonicalize_with_warnings(&bump, input, context)
             .expect("expected successful canonicalization");
         assert!(!warnings.is_empty(), "expected warnings but got none");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(warnings);
+            insta::assert_snapshot!(render_warnings(input, &warnings));
         });
     }
 
@@ -4246,11 +4240,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4273,11 +4267,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4300,11 +4294,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4327,11 +4321,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4374,11 +4368,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4452,11 +4446,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4482,11 +4476,11 @@ mod tests {
         };
         let result = parse_and_canonicalize(&bump, input, context)
             .expect_err("expected canonicalization error");
-        insta::with_settings!({
+        insta::with_settings!({info => &"diagnostic",
             description => format!("Code:\n\n{}", input),
             omit_expression => true,
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!(render_errors(input, &result));
         });
     }
 
@@ -4633,8 +4627,10 @@ mod tests {
         let bump = Bump::new();
         let source = bump.alloc_str("module Main exposing (..)\nimport Builtin exposing (..)\nf message x = trace message (comptime (addInteger x x))\ncheck = assert True\nstop message = fail message\nlater message = todo message\nrecur x = comptime (recur x)\n");
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
-        let interfaces =
-            std::collections::BTreeMap::from([("Builtin", crate::kinds::builtin_interface(&bump))]);
+        let interfaces = std::collections::BTreeMap::from([(
+            "Builtin",
+            nash_can::kinds::builtin_interface(&bump),
+        )]);
         let result = canonicalize(
             &bump,
             Context {

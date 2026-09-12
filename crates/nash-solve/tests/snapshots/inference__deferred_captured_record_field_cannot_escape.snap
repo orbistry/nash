@@ -1,67 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\ng : point -> ()\ng p = ()\nasInt : int -> ()\nasInt x = ()\nasString : string -> ()\nasString x = ()\nf p =\n    let\n        get ignored = p.x\n    in\n    (asInt (get ()), asString (get ()), g p)\n"
+description: "module Main exposing (..)\ntype alias point = { x : int }\ng : point -> ()\ng p = ()\nasInt : int -> ()\nasInt x = ()\nasString : string -> ()\nasString x = ()\nf p =\n    let\n        get ignored = p.x\n    in\n    (asInt (get ()), asString (get ()), g p)\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 13,
-                column: 32,
-            },
-            end: Position {
-                line: 13,
-                column: 38,
-            },
-        },
-        CallResult(
-            FuncName(
-                "get",
-            ),
-        ),
-        Type {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "int",
-            args: [],
-        },
-        FromContext(
-            Region {
-                start: Position {
-                    line: 13,
-                    column: 22,
-                },
-                end: Position {
-                    line: 13,
-                    column: 38,
-                },
-            },
-            CallArg(
-                FuncName(
-                    "asString",
-                ),
-                0,
-            ),
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "string",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `string`, found `int`.
+    ╭─[Main.nash:13:32]
+ 12 │     in
+ 13 │     (asInt (get ()), asString (get ()), g p)
+    ·                                ───┬──
+    ·                                   ╰── argument 1 of `asString`
+    ╰────

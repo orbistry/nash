@@ -1,22 +1,13 @@
 ---
 source: crates/nash-can/src/pattern.rs
 description: Just x y
+info: diagnostic
 ---
-[
-    BadArity {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 9,
-            },
-        },
-        context: PatternArity,
-        name: "Just",
-        expected: 1,
-        actual: 2,
-    },
-]
+nash::names::bad_arity
+
+  × The `Just` variant needs 1 argument, but I see 2 instead:
+   ╭─[src/Main.nash:1:1]
+ 1 │ Just x y
+   · ────────
+   ╰────
+  help: Remove the extra arguments or check the grouping.

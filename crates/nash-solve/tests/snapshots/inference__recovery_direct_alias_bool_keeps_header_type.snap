@@ -1,128 +1,27 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nf : () -> ()\nf (True as whole) = whole ()\n"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nf : () -> ()\nf (True as whole) = whole ()\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 4,
-                column: 21,
-            },
-            end: Position {
-                line: 4,
-                column: 26,
-            },
-        },
-        CallResult(
-            FuncName(
-                "whole",
-            ),
-        ),
-        Type {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "unit",
-            args: [],
-        },
-        FromContext(
-            Region {
-                start: Position {
-                    line: 4,
-                    column: 21,
-                },
-                end: Position {
-                    line: 4,
-                    column: 29,
-                },
-            },
-            CallArity(
-                FuncName(
-                    "whole",
-                ),
-                1,
-            ),
-            Lambda(
-                FlexVar(
-                    "a",
-                ),
-                FlexVar(
-                    "b",
-                ),
-                [],
-            ),
-        ),
-    ),
-    BadPattern(
-        Region {
-            start: Position {
-                line: 4,
-                column: 4,
-            },
-            end: Position {
-                line: 4,
-                column: 9,
-            },
-        },
-        Bool,
-        Type {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "bool",
-            args: [],
-        },
-        FromContext(
-            Region {
-                start: Position {
-                    line: 4,
-                    column: 4,
-                },
-                end: Position {
-                    line: 4,
-                    column: 17,
-                },
-            },
-            TypedArg(
-                "f",
-                0,
-                Region {
-                    start: Position {
-                        line: 3,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 13,
-                    },
-                },
-            ),
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × `whole` is not a function; received 1 argument.
+   ╭─[Main.nash:4:21]
+ 3 │ f : () -> ()
+ 4 │ f (True as whole) = whole ()
+   ·                     ─────
+   ╰────
+
+
+nash::type::pattern_mismatch
+
+  × Type mismatch: expected `unit`, found `bool`.
+   ╭─[Main.nash:4:4]
+ 2 │ import Builtin exposing (..)
+ 3 │ f : () -> ()
+   ·     ────┬───
+   ·         ╰── declared argument type
+ 4 │ f (True as whole) = whole ()
+   ·    ──┬──
+   ·      ╰── argument 1 of `f`
+   ╰────

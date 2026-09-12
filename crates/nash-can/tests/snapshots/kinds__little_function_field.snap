@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type thunk 'a = Thunk (unit -> 'a)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype thunk 'a = Thunk (unit -> 'a)\n"
 ---
 (
     [

@@ -1,30 +1,16 @@
 ---
 source: crates/nash-can/src/pattern.rs
-description: "verify_all over `x` and `x`"
+description: "module Main exposing (..)\nf = \\x x -> x\n"
+info: diagnostic
 ---
-[
-    DuplicatePattern {
-        context: LambdaArgs,
-        name: "x",
-        first: Region {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 2,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 2,
-            },
-        },
-    },
-]
+nash::names::duplicate_pattern
+
+  × This anonymous function has multiple `x` arguments.
+   ╭─[src/Main.nash:2:8]
+ 1 │ module Main exposing (..)
+ 2 │ f = \x x -> x
+   ·      ┬ ┬
+   ·      │ ╰── and another first definition
+   ·      ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

@@ -1,8 +1,13 @@
 ---
 source: crates/nash-parse/src/exposing.rs
 description: "Code:\n\n(type Foo)"
+info: diagnostic
 ---
-TypeName(
-    1,
-    7,
-)
+nash::syntax
+
+  × Expected a lowercase type name after `type`.
+   ╭─[src/Main.nash:1:7]
+ 1 │ (type Foo)
+   ·       ─
+   ╰────
+  help: Write `type name` or `type name(..)`.

@@ -1,8 +1,65 @@
 ---
 source: crates/nash-can/tests/core_casts.rs
 description: "module Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castLift\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castLift\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castLift\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castLift)\nlift : int -> Int\nlift = castLift\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castLower\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castLower\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castLower\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castLower)\nlift : int -> Int\nlift = castLower\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castToData\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castToData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castToData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castToData)\nlift : int -> Int\nlift = castToData\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castFromDataShallow)\nlift : int -> Int\nlift = castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castValidateData\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castValidateData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castValidateData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castValidateData)\nlift : int -> Int\nlift = castValidateData\n"
+info: diagnostic
 ---
-import Builtin: [NotFoundVar { region: Region { start: Position { line: 4, column: 8 }, end: Position { line: 4, column: 24 } }, prefix: Some("Builtin"), name: "castLift", suggestions: PossibleNames { locals: ["lift"], qualified: [("Builtin", ["addInteger", "andByteString", "appendByteString", "appendString", "bData", "blake2b_224", "blake2b_256", "bls12_381_finalVerify", "bls12_381_g1_add", "bls12_381_g1_compress", "bls12_381_g1_equal", "bls12_381_g1_hashToGroup", "bls12_381_g1_multiScalarMul", "bls12_381_g1_neg", "bls12_381_g1_scalarMul", "bls12_381_g1_uncompress", "bls12_381_g2_add", "bls12_381_g2_compress", "bls12_381_g2_equal", "bls12_381_g2_hashToGroup", "bls12_381_g2_multiScalarMul", "bls12_381_g2_neg", "bls12_381_g2_scalarMul", "bls12_381_g2_uncompress", "bls12_381_millerLoop", "bls12_381_mulMlResult", "byteStringToInteger", "chooseData", "chooseList", "chooseUnit", "complementByteString", "consByteString", "constrData", "countSetBits", "decodeUtf8", "divideInteger", "dropList", "encodeUtf8", "equalsByteString", "equalsData", "equalsInteger", "equalsString", "error", "expModInteger", "findFirstSetBit", "fstPair", "headList", "iData", "identity", "ifThenElse", "indexArray", "indexByteString", "insertCoin", "integerToByteString", "keccak_256", "lengthOfArray", "lengthOfByteString", "lessThanByteString", "lessThanEqualsByteString", "lessThanEqualsInteger", "lessThanInteger", "listData", "listToArray", "lookupCoin", "mapData", "mkCons", "mkNilData", "mkNilPairData", "mkPairData", "modInteger", "multiplyInteger", "nullList", "orByteString", "quotientInteger", "readBit", "remainderInteger", "replicateByte", "ripemd_160", "rotateByteString", "scaleValue", "serialiseData", "sha2_256", "sha3_256", "shiftByteString", "sliceByteString", "sndPair", "subtractInteger", "tailList", "trace", "unBData", "unConstrData", "unIData", "unListData", "unMapData", "unValueData", "unionValue", "valueContains", "valueData", "verifyEcdsaSecp256k1Signature", "verifyEd25519Signature", "verifySchnorrSecp256k1Signature", "writeBits", "xorByteString"])] } }]
-import Builtin as B: [NotFoundVar { region: Region { start: Position { line: 4, column: 8 }, end: Position { line: 4, column: 18 } }, prefix: Some("B"), name: "castLift", suggestions: PossibleNames { locals: ["lift"], qualified: [("B", ["addInteger", "andByteString", "appendByteString", "appendString", "bData", "blake2b_224", "blake2b_256", "bls12_381_finalVerify", "bls12_381_g1_add", "bls12_381_g1_compress", "bls12_381_g1_equal", "bls12_381_g1_hashToGroup", "bls12_381_g1_multiScalarMul", "bls12_381_g1_neg", "bls12_381_g1_scalarMul", "bls12_381_g1_uncompress", "bls12_381_g2_add", "bls12_381_g2_compress", "bls12_381_g2_equal", "bls12_381_g2_hashToGroup", "bls12_381_g2_multiScalarMul", "bls12_381_g2_neg", "bls12_381_g2_scalarMul", "bls12_381_g2_uncompress", "bls12_381_millerLoop", "bls12_381_mulMlResult", "byteStringToInteger", "chooseData", "chooseList", "chooseUnit", "complementByteString", "consByteString", "constrData", "countSetBits", "decodeUtf8", "divideInteger", "dropList", "encodeUtf8", "equalsByteString", "equalsData", "equalsInteger", "equalsString", "error", "expModInteger", "findFirstSetBit", "fstPair", "headList", "iData", "identity", "ifThenElse", "indexArray", "indexByteString", "insertCoin", "integerToByteString", "keccak_256", "lengthOfArray", "lengthOfByteString", "lessThanByteString", "lessThanEqualsByteString", "lessThanEqualsInteger", "lessThanInteger", "listData", "listToArray", "lookupCoin", "mapData", "mkCons", "mkNilData", "mkNilPairData", "mkPairData", "modInteger", "multiplyInteger", "nullList", "orByteString", "quotientInteger", "readBit", "remainderInteger", "replicateByte", "ripemd_160", "rotateByteString", "scaleValue", "serialiseData", "sha2_256", "sha3_256", "shiftByteString", "sliceByteString", "sndPair", "subtractInteger", "tailList", "trace", "unBData", "unConstrData", "unIData", "unListData", "unMapData", "unValueData", "unionValue", "valueContains", "valueData", "verifyEcdsaSecp256k1Signature", "verifyEd25519Signature", "verifySchnorrSecp256k1Signature", "writeBits", "xorByteString"])] } }]
-import Builtin exposing (..): [NotFoundVar { region: Region { start: Position { line: 4, column: 8 }, end: Position { line: 4, column: 16 } }, prefix: None, name: "castLift", suggestions: PossibleNames { locals: ["addInteger", "andByteString", "appendByteString", "appendString", "bData", "blake2b_224", "blake2b_256", "bls12_381_finalVerify", "bls12_381_g1_add", "bls12_381_g1_compress", "bls12_381_g1_equal", "bls12_381_g1_hashToGroup", "bls12_381_g1_multiScalarMul", "bls12_381_g1_neg", "bls12_381_g1_scalarMul", "bls12_381_g1_uncompress", "bls12_381_g2_add", "bls12_381_g2_compress", "bls12_381_g2_equal", "bls12_381_g2_hashToGroup", "bls12_381_g2_multiScalarMul", "bls12_381_g2_neg", "bls12_381_g2_scalarMul", "bls12_381_g2_uncompress", "bls12_381_millerLoop", "bls12_381_mulMlResult", "byteStringToInteger", "chooseData", "chooseList", "chooseUnit", "complementByteString", "consByteString", "constrData", "countSetBits", "decodeUtf8", "divideInteger", "dropList", "encodeUtf8", "equalsByteString", "equalsData", "equalsInteger", "equalsString", "error", "expModInteger", "findFirstSetBit", "fstPair", "headList", "iData", "identity", "ifThenElse", "indexArray", "indexByteString", "insertCoin", "integerToByteString", "keccak_256", "lengthOfArray", "lengthOfByteString", "lessThanByteString", "lessThanEqualsByteString", "lessThanEqualsInteger", "lessThanInteger", "lift", "listData", "listToArray", "lookupCoin", "mapData", "mkCons", "mkNilData", "mkNilPairData", "mkPairData", "modInteger", "multiplyInteger", "nullList", "orByteString", "quotientInteger", "readBit", "remainderInteger", "replicateByte", "ripemd_160", "rotateByteString", "scaleValue", "serialiseData", "sha2_256", "sha3_256", "shiftByteString", "sliceByteString", "sndPair", "subtractInteger", "tailList", "trace", "unBData", "unConstrData", "unIData", "unListData", "unMapData", "unValueData", "unionValue", "valueContains", "valueData", "verifyEcdsaSecp256k1Signature", "verifyEd25519Signature", "verifySchnorrSecp256k1Signature", "writeBits", "xorByteString"], qualified: [("Builtin", ["addInteger", "andByteString", "appendByteString", "appendString", "bData", "blake2b_224", "blake2b_256", "bls12_381_finalVerify", "bls12_381_g1_add", "bls12_381_g1_compress", "bls12_381_g1_equal", "bls12_381_g1_hashToGroup", "bls12_381_g1_multiScalarMul", "bls12_381_g1_neg", "bls12_381_g1_scalarMul", "bls12_381_g1_uncompress", "bls12_381_g2_add", "bls12_381_g2_compress", "bls12_381_g2_equal", "bls12_381_g2_hashToGroup", "bls12_381_g2_multiScalarMul", "bls12_381_g2_neg", "bls12_381_g2_scalarMul", "bls12_381_g2_uncompress", "bls12_381_millerLoop", "bls12_381_mulMlResult", "byteStringToInteger", "chooseData", "chooseList", "chooseUnit", "complementByteString", "consByteString", "constrData", "countSetBits", "decodeUtf8", "divideInteger", "dropList", "encodeUtf8", "equalsByteString", "equalsData", "equalsInteger", "equalsString", "error", "expModInteger", "findFirstSetBit", "fstPair", "headList", "iData", "identity", "ifThenElse", "indexArray", "indexByteString", "insertCoin", "integerToByteString", "keccak_256", "lengthOfArray", "lengthOfByteString", "lessThanByteString", "lessThanEqualsByteString", "lessThanEqualsInteger", "lessThanInteger", "listData", "listToArray", "lookupCoin", "mapData", "mkCons", "mkNilData", "mkNilPairData", "mkPairData", "modInteger", "multiplyInteger", "nullList", "orByteString", "quotientInteger", "readBit", "remainderInteger", "replicateByte", "ripemd_160", "rotateByteString", "scaleValue", "serialiseData", "sha2_256", "sha3_256", "shiftByteString", "sliceByteString", "sndPair", "subtractInteger", "tailList", "trace", "unBData", "unConstrData", "unIData", "unListData", "unMapData", "unValueData", "unionValue", "valueContains", "valueData", "verifyEcdsaSecp256k1Signature", "verifyEd25519Signature", "verifySchnorrSecp256k1Signature", "writeBits", "xorByteString"])] } }]
-import Builtin exposing (castLift): [ImportExposingNotFound { region: Region { start: Position { line: 2, column: 26 }, end: Position { line: 2, column: 34 } }, module: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "castLift", available: ["addInteger", "andByteString", "appendByteString", "appendString", "bData", "blake2b_224", "blake2b_256", "bls12_381_finalVerify", "bls12_381_g1_add", "bls12_381_g1_compress", "bls12_381_g1_equal", "bls12_381_g1_hashToGroup", "bls12_381_g1_multiScalarMul", "bls12_381_g1_neg", "bls12_381_g1_scalarMul", "bls12_381_g1_uncompress", "bls12_381_g2_add", "bls12_381_g2_compress", "bls12_381_g2_equal", "bls12_381_g2_hashToGroup", "bls12_381_g2_multiScalarMul", "bls12_381_g2_neg", "bls12_381_g2_scalarMul", "bls12_381_g2_uncompress", "bls12_381_millerLoop", "bls12_381_mulMlResult", "byteStringToInteger", "chooseData", "chooseList", "chooseUnit", "complementByteString", "consByteString", "constrData", "countSetBits", "decodeUtf8", "divideInteger", "dropList", "encodeUtf8", "equalsByteString", "equalsData", "equalsInteger", "equalsString", "error", "expModInteger", "findFirstSetBit", "fstPair", "headList", "iData", "identity", "ifThenElse", "indexArray", "indexByteString", "insertCoin", "integerToByteString", "keccak_256", "lengthOfArray", "lengthOfByteString", "lessThanByteString", "lessThanEqualsByteString", "lessThanEqualsInteger", "lessThanInteger", "listData", "listToArray", "lookupCoin", "mapData", "mkCons", "mkNilData", "mkNilPairData", "mkPairData", "modInteger", "multiplyInteger", "nullList", "orByteString", "quotientInteger", "readBit", "remainderInteger", "replicateByte", "ripemd_160", "rotateByteString", "scaleValue", "serialiseData", "sha2_256", "sha3_256", "shiftByteString", "sliceByteString", "sndPair", "subtractInteger", "tailList", "trace", "unBData", "unConstrData", "unIData", "unListData", "unMapData", "unValueData", "unionValue", "valueContains", "valueData", "verifyEcdsaSecp256k1Signature", "verifyEd25519Signature", "verifySchnorrSecp256k1Signature", "writeBits", "xorByteString"] }]
+nash::names::not_found_var
+
+  × Unknown variable `Builtin.castLift`.
+   ╭─[src/Main.nash:4:8]
+ 3 │ lift : int -> Int
+ 4 │ lift = Builtin.castLift
+   ·        ────────────────
+   ╰────
+  help: Similar names:
+
+            Builtin.tailList
+            Builtin.chooseList
+            Builtin.dropList
+            Builtin.headList
+
+nash::names::not_found_var
+
+  × Unknown variable `B.castLift`.
+   ╭─[src/Main.nash:4:8]
+ 3 │ lift : int -> Int
+ 4 │ lift = B.castLift
+   ·        ──────────
+   ╰────
+  help: Similar names:
+
+            B.tailList
+            B.chooseList
+            B.dropList
+            B.headList
+
+nash::names::not_found_var
+
+  × Unknown variable `castLift`.
+   ╭─[src/Main.nash:4:8]
+ 3 │ lift : int -> Int
+ 4 │ lift = castLift
+   ·        ────────
+   ╰────
+  help: Similar names:
+
+            lift
+            tailList
+            chooseList
+            dropList
+
+nash::names::import_exposing_not_found
+
+  × The `Builtin` module does not expose `castLift`:
+   ╭─[src/Main.nash:2:26]
+ 1 │ module Main exposing (..)
+ 2 │ import Builtin exposing (castLift)
+   ·                          ────────
+ 3 │ lift : int -> Int
+   ╰────
+  help: Similar names:
+
+            tailList
+            chooseList
+            dropList
+            headList

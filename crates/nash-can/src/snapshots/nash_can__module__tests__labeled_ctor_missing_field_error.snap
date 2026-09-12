@@ -1,20 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit, a : unit }\nmain = Packet { a = () }\n"
+info: diagnostic
 ---
-[
-    LabeledCtorMissingField {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 8,
-            },
-            end: Position {
-                line: 3,
-                column: 25,
-            },
-        },
-        ctor: "Packet",
-        field: "z",
-    },
-]
+nash::names::labeled_ctor_missing_field
+
+  × The `Packet` constructor needs a `z` field:
+   ╭─[src/Main.nash:3:8]
+ 2 │ type packet = Packet { z : unit, a : unit }
+ 3 │ main = Packet { a = () }
+   ·        ─────────────────
+   ╰────
+  help: Add the missing field to this constructor application.

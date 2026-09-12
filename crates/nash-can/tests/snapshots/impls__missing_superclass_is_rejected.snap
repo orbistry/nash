@@ -1,84 +1,16 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Main exposing (..)\ntype Color = Red\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Ord Color where\n    compare x = x\n"
+info: diagnostic
 ---
-[
-    MissingSuperclass {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 1,
-            },
-            end: Position {
-                line: 8,
-                column: 18,
-            },
-        },
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Ord",
-        },
-        heads: [
-            Located {
-                region: Region {
-                    start: Position {
-                        line: 7,
-                        column: 10,
-                    },
-                    end: Position {
-                        line: 7,
-                        column: 15,
-                    },
-                },
-                value: Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "Color",
-                    },
-                    args: [],
-                },
-            },
-        ],
-        superclass: Trait {
-            trait_: QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Eq",
-            },
-            args: [
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 7,
-                            column: 10,
-                        },
-                        end: Position {
-                            line: 7,
-                            column: 15,
-                        },
-                    },
-                    value: Named {
-                        reference: QualifiedName {
-                            home: ModuleName {
-                                package: None,
-                                name: "Main",
-                            },
-                            name: "Color",
-                        },
-                        args: [],
-                    },
-                },
-            ],
-        },
-        index: 0,
-        reason: Missing,
-    },
-]
+nash::names::missing_superclass
+
+  × The `Main.Ord` impl for Main.Color does not establish superclass 1:
+   ╭─[src/Main.nash:7:1]
+ 6 │         compare : 'a -> 'a
+ 7 │ ╭─▶ impl Ord Color where
+ 8 │ ╰─▶     compare x = x
+   ╰────
+  help: It must also satisfy `Main.Eq Main.Color`. I cannot find an impl or context
+        constraint that provides it. Add the required impl or include the necessary
+        constraint in this impl's context.

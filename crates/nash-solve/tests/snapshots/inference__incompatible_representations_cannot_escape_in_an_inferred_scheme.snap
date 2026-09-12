@@ -1,26 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nuseBig : ('a : Big) -> ()\nuseBig x = ()\nuseTerm : ('a : Term) -> ()\nuseTerm x = ()\nbad x = (useBig x, useTerm x)\n"
+description: "module Main exposing (..)\nuseBig : ('a : Big) -> ()\nuseBig x = ()\nuseTerm : ('a : Term) -> ()\nuseTerm x = ()\nbad x = (useBig x, useTerm x)\n"
+info: diagnostic
 ---
-[
-    ContradictoryRepresentation {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 1,
-            },
-            end: Position {
-                line: 6,
-                column: 4,
-            },
-        },
-        name: "bad",
-        typ: FlexVar(
-            "a",
-        ),
-        requirements: [
-            Big,
-            Term,
-        ],
-    },
-]
+nash::type::contradictory_representation
+
+  × `bad` requires incompatible representations for `'a`.
+   ╭─[Main.nash:6:1]
+ 5 │ useTerm x = ()
+ 6 │ bad x = (useBig x, useTerm x)
+   · ───
+   ╰────
+  help: Required: Big, Term.
+
+        Use a consistent representation or convert the value explicitly.

@@ -255,7 +255,12 @@ mod tests {
             reference,
             args: &[],
         }));
-        insta::assert_debug_snapshot!(check(&b, &kinds, typ, &[]));
+        let errors = check(&b, &kinds, typ, &[]).unwrap_err();
+        assert!(matches!(
+            errors.as_slice(),
+            [Error::MainParameterIsTerm { index: 0, typ: actual, .. }]
+                if std::ptr::eq(*actual, typ)
+        ));
     }
     #[test]
     fn constant_big_and_unconstrained_parameters() {

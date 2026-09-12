@@ -1,46 +1,22 @@
 ---
 source: crates/nash-can/src/types.rs
 description: Maybe Bogus Other
+info: diagnostic
 ---
-[
-    NotFoundType {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 7,
-            },
-            end: Position {
-                line: 1,
-                column: 12,
-            },
-        },
-        prefix: None,
-        name: "Bogus",
-        suggestions: PossibleNames {
-            locals: [
-                "Maybe",
-            ],
-            qualified: [],
-        },
-    },
-    NotFoundType {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 13,
-            },
-            end: Position {
-                line: 1,
-                column: 18,
-            },
-        },
-        prefix: None,
-        name: "Other",
-        suggestions: PossibleNames {
-            locals: [
-                "Maybe",
-            ],
-            qualified: [],
-        },
-    },
-]
+nash::names::not_found_type
+
+  × Unknown type `Bogus`.
+   ╭─[src/Main.nash:1:7]
+ 1 │ Maybe Bogus Other
+   ·       ─────
+   ╰────
+  help: Try Maybe instead.
+
+nash::names::not_found_type
+
+  × Unknown type `Other`.
+   ╭─[src/Main.nash:1:13]
+ 1 │ Maybe Bogus Other
+   ·             ─────
+   ╰────
+  help: Try Maybe instead.

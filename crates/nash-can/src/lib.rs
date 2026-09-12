@@ -23,3 +23,7 @@ pub use crate::interface::{
 };
 pub use crate::module::{CanResult, Context, canonicalize};
 pub use crate::warning::{Warning, WarningContext};
+
+#[cfg(test)]
+#[path = "../tests/snapshot_support/mod.rs"]
+mod snapshot_support;

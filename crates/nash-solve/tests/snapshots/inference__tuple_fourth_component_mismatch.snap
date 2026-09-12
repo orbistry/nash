@@ -1,142 +1,18 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nvalue : (unit, unit, unit, unit)\nvalue = ((), (), (), \\x -> x)\n"
+description: "module Main exposing (..)\nvalue : (unit, unit, unit, unit)\nvalue = ((), (), (), \\x -> x)\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 3,
-                column: 9,
-            },
-            end: Position {
-                line: 3,
-                column: 30,
-            },
-        },
-        Tuple,
-        Tuple(
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-            [
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                Lambda(
-                    FlexVar(
-                        "a",
-                    ),
-                    FlexVar(
-                        "a",
-                    ),
-                    [],
-                ),
-            ],
-        ),
-        FromAnnotation(
-            "value",
-            Region {
-                start: Position {
-                    line: 2,
-                    column: 9,
-                },
-                end: Position {
-                    line: 2,
-                    column: 33,
-                },
-            },
-            0,
-            TypedBody,
-            Tuple(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                [
-                    Type {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
-                        args: [],
-                    },
-                    Type {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
-                        args: [],
-                    },
-                ],
-            ),
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `( unit, unit, unit, unit )`,
+  │ found `( unit, unit, unit, 'a -> 'a )`.
+   ╭─[Main.nash:3:9]
+ 1 │ module Main exposing (..)
+ 2 │ value : (unit, unit, unit, unit)
+   ·         ────────────┬───────────
+   ·                     ╰── declared type
+ 3 │ value = ((), (), (), \x -> x)
+   ·         ──────────┬──────────
+   ·                   ╰── body of `value`
+   ╰────

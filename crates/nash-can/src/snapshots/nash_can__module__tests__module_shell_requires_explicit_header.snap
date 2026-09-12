@@ -1,7 +1,9 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmain = 42\n"
+info: diagnostic
 ---
-[
-    MissingModuleHeader,
-]
+nash::names::missing_module_header
+
+  × Missing module declaration.
+  help: Add `module Main exposing (..)` at the start of the file.

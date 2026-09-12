@@ -1,5 +1,6 @@
 ---
 source: crates/nash-driver/src/error/tests.rs
 description: "Main.nash:\n\nmodule Main exposing (..)\nimport Missing\n"
+info: diagnostic
 ---
   × module not found: Missing

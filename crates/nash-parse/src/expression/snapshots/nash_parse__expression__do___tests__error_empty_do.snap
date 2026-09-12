@@ -1,12 +1,13 @@
 ---
 source: crates/nash-parse/src/expression/do_.rs
 description: "Code (indented inside a def):\n\n    do\n"
+info: diagnostic
 ---
-Do(
-    IndentStmt(
-        1,
-        7,
-    ),
-    1,
-    5,
-)
+nash::syntax
+
+  × Expected a statement after `do`.
+   ╭─[src/Main.nash:1:7]
+ 1 │     do
+   ·       ─
+   ╰────
+  help: Add an indented statement.

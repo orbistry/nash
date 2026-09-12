@@ -1,16 +1,13 @@
 ---
 source: crates/nash-parse/src/declaration/type_alias.rs
 description: type alias = int
+info: diagnostic
 ---
-Type(
-    Alias(
-        Name(
-            1,
-            12,
-        ),
-        1,
-        6,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected a name after `type alias`.
+   ╭─[src/Main.nash:1:12]
+ 1 │ type alias = int
+   ·            ─
+   ╰────
+  help: Name the alias before its parameters and body.

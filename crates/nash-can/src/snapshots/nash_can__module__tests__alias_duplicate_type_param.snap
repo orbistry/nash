@@ -1,30 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Bad 'a 'a = 'a\n"
+info: diagnostic
 ---
-[
-    DuplicateAliasArg {
-        type_name: "Bad",
-        arg_name: "a",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 19,
-            },
-            end: Position {
-                line: 3,
-                column: 21,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 16,
-            },
-            end: Position {
-                line: 3,
-                column: 18,
-            },
-        },
-    },
-]
+nash::names::duplicate_alias_arg
+
+  × The `Bad` type alias has multiple `a` type variables.
+   ╭─[src/Main.nash:3:16]
+ 2 │ 
+ 3 │ type alias Bad 'a 'a = 'a
+   ·                ─┬ ─┬
+   ·                 │  ╰── first definition
+   ·                 ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.

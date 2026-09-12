@@ -1,21 +1,13 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing ((|>))\n"
+info: diagnostic
 ---
-[
-    ExportNotFound {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 23,
-            },
-            end: Position {
-                line: 1,
-                column: 27,
-            },
-        },
-        kind: BadOp,
-        name: "|>",
-        suggestions: [],
-    },
-]
+nash::names::export_not_found
+
+  × Unknown exported operator (|>).
+   ╭─[src/Main.nash:1:23]
+ 1 │ module Main exposing ((|>))
+   ·                       ────
+   ╰────
+  help: Define the name or remove it from the exposing list.

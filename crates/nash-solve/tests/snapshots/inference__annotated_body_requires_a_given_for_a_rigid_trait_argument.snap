@@ -1,44 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nmissing : 'a -> 'a\nmissing x = keep x\n"
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nmissing : 'a -> 'a\nmissing x = keep x\n"
+info: diagnostic
 ---
-[
-    MissingConstraint {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 13,
-            },
-            end: Position {
-                line: 5,
-                column: 17,
-            },
-        },
-        name: "keep",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Keep",
-        },
-        args: [
-            RigidVar(
-                "a",
-            ),
-        ],
-        binder: Located {
-            region: Region {
-                start: Position {
-                    line: 5,
-                    column: 1,
-                },
-                end: Position {
-                    line: 5,
-                    column: 8,
-                },
-            },
-            value: "missing",
-        },
-    },
-]
+nash::type::missing_constraint
+
+  × `keep` requires undeclared constraint `Keep 'a`.
+   ╭─[Main.nash:5:13]
+ 4 │ missing : 'a -> 'a
+ 5 │ missing x = keep x
+   · ───┬───     ──┬─
+   ·    │          ╰── constraint required here
+   ·    ╰── annotation for `missing`
+   ╰────
+  help: Add `Keep 'a` to the annotation for `missing`.

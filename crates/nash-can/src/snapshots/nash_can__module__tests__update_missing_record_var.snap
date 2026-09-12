@@ -1,26 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf = { nonexistent | x = 1 }\n"
+info: diagnostic
 ---
-[
-    NotFoundVar {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 7,
-            },
-            end: Position {
-                line: 3,
-                column: 18,
-            },
-        },
-        prefix: None,
-        name: "nonexistent",
-        suggestions: PossibleNames {
-            locals: [
-                "f",
-            ],
-            qualified: [],
-        },
-    },
-]
+nash::names::not_found_var
+
+  × Unknown variable `nonexistent`.
+   ╭─[src/Main.nash:3:7]
+ 2 │ 
+ 3 │ f = { nonexistent | x = 1 }
+   ·       ───────────
+   ╰────
+  help: Try f instead.

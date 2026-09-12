@@ -1,8 +1,13 @@
 ---
 source: crates/nash-parse/src/module.rs
 description: "Code:\n\nimport Cardano.Tx as tx"
+info: diagnostic
 ---
-ImportAlias(
-    1,
-    22,
-)
+nash::syntax
+
+  × Expected an alias after `as`.
+   ╭─[src/Main.nash:1:22]
+ 1 │ import Cardano.Tx as tx
+   ·                      ─
+   ╰────
+  help: Use an uppercase alias, as in `import Cardano.Tx as Tx`.

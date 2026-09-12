@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a 'b\ntype alias withList = box list\ntype alias withPair = box (pair int)\ntype alias withAlias = box (pairAlias int)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype box 'f = Box ('f int)\ntype alias pairAlias 'a 'b = pair 'a 'b\ntype alias withList = box list\ntype alias withPair = box (pair int)\ntype alias withAlias = box (pairAlias int)\n"
 ---
 (
     [

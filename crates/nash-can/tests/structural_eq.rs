@@ -58,13 +58,13 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                     err.as_slice(),
                     [nash_can::Error::StructuralEqOverride { .. }]
                 ));
-                errors.push(format!("{head}: {err:?}"));
+                errors.push(snapshot_support::errors(source, &err));
             } else {
                 result.unwrap();
             }
         }
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(errors.join("\n"));
     });
 }

@@ -1,6 +1,3 @@
-mod snapshot_support;
-use snapshot_support::SnapshotInputs;
-
 use bumpalo::Bump;
 use nash_ast::{Evidence, Pred, QualifiedName, Type};
 use nash_can::{Annotations, Context, environment::Tables};
@@ -518,11 +515,10 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
 
 #[test]
 fn ground_resolution_reports_missing_open_and_expanding_requirements() {
-    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let (tables, annotations) = fixture(
         &bump,
-        snapshot_inputs.record(indoc::indoc!(
+        indoc::indoc!(
             "
         module Main exposing (..)
         trait Keep 'a where
@@ -542,7 +538,7 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
         function : (int -> int) -> (int -> int)
         function x = x
     "
-        )),
+        ),
     );
     let trait_ = *tables.traits.keys().find(|key| key.name == "Keep").unwrap();
     let results: Vec<_> = ["missing", "open", "growing", "cycle", "function"]
@@ -555,9 +551,16 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
             (name, resolve(&bump, &tables, &pred).unwrap_err().reason)
         })
         .collect();
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(results);
-    });
+    assert_eq!(
+        results,
+        vec![
+            ("missing", Failure::MissingImpl),
+            ("open", Failure::NonGround),
+            ("growing", Failure::Limit),
+            ("cycle", Failure::Limit),
+            ("function", Failure::MissingImpl),
+        ]
+    );
     let mut deep = input(&annotations, "missing");
     for _ in 0..140 {
         deep = bump.alloc(Located::at_zero(Type::Named {

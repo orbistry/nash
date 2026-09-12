@@ -1,20 +1,15 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    prop \"p\" = let in do\n        assert True\n"
+info: diagnostic
 ---
-Tests(
-    Test(
-        Pattern(
-            Start(
-                4,
-                20,
-            ),
-            4,
-            20,
-        ),
-        4,
-        5,
-    ),
-    3,
-    1,
-)
+nash::syntax
+
+  × Reserved word `in` cannot be a pattern variable.
+   ╭─[src/Main.nash:4:20]
+ 3 │ tests
+ 4 │     prop "p" = let in do
+   ·                    ──
+ 5 │         assert True
+   ╰────
+  help: Choose another name.

@@ -15,7 +15,7 @@ macro_rules! assert_kinds_snapshot {
         let result = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect("kind checking succeeds");
         let unions: Vec<_> = result.module.unions.iter().map(|u| (u.value.name.value, u.value.kind, u.value.context)).collect();
         let aliases: Vec<_> = result.module.aliases.iter().map(|a| (a.value.name.value, a.value.kind, a.value.context)).collect();
-        insta::with_settings!({description => $source, omit_expression => true}, {
+        insta::with_settings!({description => &*source, omit_expression => true}, {
             insta::assert_debug_snapshot!((unions, aliases));
         });
     }};
@@ -29,8 +29,8 @@ macro_rules! assert_kind_error_snapshot {
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let errors = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect_err("declaration or annotation checking fails");
         assert!(errors.iter().all(|error| matches!(error, $expected)), "wrong diagnostic: {errors:?}");
-        insta::with_settings!({description => $source, omit_expression => true}, {
-            insta::assert_debug_snapshot!(errors);
+        insta::with_settings!({info => &"diagnostic", description => &*source, omit_expression => true}, {
+            insta::assert_snapshot!(snapshot_support::errors(source, &errors));
         });
     }};
 }
@@ -280,8 +280,8 @@ fn named_constructor_arity_remains_a_canonicalization_error() {
     )
     .unwrap_err();
     assert!(matches!(errors.as_slice(), [Error::BadArity { .. }]));
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&errors));
     });
 }
 
@@ -339,8 +339,8 @@ fn applied_head_is_a_free_variable() {
         errors.as_slice(),
         [Error::TypeVarsUnboundInUnion { .. }]
     ));
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&errors));
     });
 }
 
@@ -602,8 +602,8 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
         errors.as_slice(),
         [Error::RepresentationMismatch { .. }]
     ));
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&errors));
     });
 }
 
@@ -805,8 +805,8 @@ macro_rules! self_application_cases {
             let result = canonicalize(&bump, Context { package: None, interfaces: None }, &module);
             let errors = result.expect_err("self application fails the H98 occurs check");
             assert!(errors.iter().all(|error| matches!(error, Error::KindInfinite { .. })), "declaration-time occurs check: {errors:?}");
-            insta::with_settings!({description => &*source, omit_expression => true}, {
-                insta::assert_debug_snapshot!(errors);
+            insta::with_settings!({info => &"diagnostic", description => &*source, omit_expression => true}, {
+                insta::assert_snapshot!(snapshot_support::errors(source, &errors));
             });
         }
     )*};

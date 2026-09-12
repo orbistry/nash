@@ -1,8 +1,13 @@
 ---
 source: crates/nash-parse/src/expression/variable.rs
 description: "Code:\n\nif"
+info: diagnostic
 ---
-Start(
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected an expression in the `value` definition.
+   ╭─[src/Main.nash:1:1]
+ 1 │ if
+   · ─
+   ╰────
+  help: Add an expression or `todo` for an unfinished body.

@@ -1,18 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype alias wrapped = list { x : int }\n"
+info: diagnostic
 ---
-[
-    RecordTypeOutsideAlias {
-        region: Region {
-            start: Position {
-                line: 2,
-                column: 27,
-            },
-            end: Position {
-                line: 2,
-                column: 38,
-            },
-        },
-    },
-]
+nash::names::record_type_outside_alias
+
+  × This record type needs a name:
+   ╭─[src/Main.nash:2:27]
+ 1 │ module Main exposing (..)
+ 2 │ type alias wrapped = list { x : int }
+   ·                           ───────────
+   ╰────
+  help: A record type is only allowed as the direct body of a type alias. Give this
+        record a named alias.

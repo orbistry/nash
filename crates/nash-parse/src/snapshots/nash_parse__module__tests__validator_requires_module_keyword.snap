@@ -1,8 +1,13 @@
 ---
 source: crates/nash-parse/src/module.rs
 description: "Code:\n\nvalidator Vesting exposing (main)"
+info: diagnostic
 ---
-Problem(
-    1,
-    11,
-)
+nash::syntax
+
+  × Incomplete module declaration.
+   ╭─[src/Main.nash:1:11]
+ 1 │ validator Vesting exposing (main)
+   ·           ─
+   ╰────
+  help: Write `module Name exposing (..)`.

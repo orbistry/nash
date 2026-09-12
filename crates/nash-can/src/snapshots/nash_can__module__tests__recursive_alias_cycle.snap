@@ -1,49 +1,21 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias A = B\n\ntype alias B = A\n"
+info: diagnostic
 ---
-[
-    RecursiveAlias {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 12,
-            },
-            end: Position {
-                line: 3,
-                column: 13,
-            },
-        },
-        name: "A",
-        args: [],
-        typ: Located {
-            region: Region {
-                start: Position {
-                    line: 3,
-                    column: 16,
-                },
-                end: Position {
-                    line: 3,
-                    column: 17,
-                },
-            },
-            value: Type {
-                region: Region {
-                    start: Position {
-                        line: 3,
-                        column: 16,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 17,
-                    },
-                },
-                name: "B",
-                args: [],
-            },
-        },
-        others: [
-            "B",
-        ],
-    },
-]
+nash::names::recursive_alias
+
+  × Type alias `A` expands recursively.
+   ╭─[src/Main.nash:3:12]
+ 2 │ 
+ 3 │ type alias A = B
+   ·            ─
+ 4 │ 
+   ╰────
+  help:     ┌─────┐
+            │    A
+            │     ↓
+            │    B
+            └─────┘
+
+        Convert at least one alias in this cycle to a custom type.

@@ -1,12 +1,13 @@
 ---
 source: crates/nash-parse/src/declaration/attribute.rs
 description: "@derive(Eq) type T = A"
+info: diagnostic
 ---
-Attribute(
-    FreshLine(
-        1,
-        13,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Attributes must occupy their own lines.
+   ╭─[src/Main.nash:1:13]
+ 1 │ @derive(Eq) type T = A
+   ·             ─
+   ╰────
+  help: Move the following attribute or declaration to a new line.

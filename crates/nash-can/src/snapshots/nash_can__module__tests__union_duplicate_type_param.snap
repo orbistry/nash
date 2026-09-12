@@ -1,30 +1,17 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype Bad 'a 'a\n    = Foo\n"
+info: diagnostic
 ---
-[
-    DuplicateUnionArg {
-        type_name: "Bad",
-        arg_name: "a",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 13,
-            },
-            end: Position {
-                line: 3,
-                column: 15,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 10,
-            },
-            end: Position {
-                line: 3,
-                column: 12,
-            },
-        },
-    },
-]
+nash::names::duplicate_union_arg
+
+  × The `Bad` type has multiple `a` type variables.
+   ╭─[src/Main.nash:3:10]
+ 2 │ 
+ 3 │ type Bad 'a 'a
+   ·          ─┬ ─┬
+   ·           │  ╰── first definition
+   ·           ╰── and another first definition
+ 4 │     = Foo
+   ╰────
+  help: Rename one of the definitions.

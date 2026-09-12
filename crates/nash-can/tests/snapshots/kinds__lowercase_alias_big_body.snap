@@ -1,24 +1,15 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: type alias id = Int
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias id = Int\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 17,
-            },
-            end: Position {
-                line: 5,
-                column: 20,
-            },
-        },
-        context: AliasCasing {
-            alias: "id",
-            big: false,
-        },
-        required: Little,
-        actual: Big,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Little` in the lowercase name of alias `id`:
+   ╭─[src/Main.nash:5:17]
+ 4 │ 
+ 5 │ type alias id = Int
+   ·                 ───
+   ╰────
+  help: The type has `Big` representation, but `Little` admits Const or Term types.
+        Change the type or the representation requirement.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type alias unConstrData = Data -> pair int (list Data)\ntype alias fstPair 'a 'b = pair 'a 'b -> 'a\ntype alias sndPair 'a 'b = pair 'a 'b -> 'b\ntype alias mkPairData = Data -> Data -> pair Data Data"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias unConstrData = Data -> pair int (list Data)\ntype alias fstPair 'a 'b = pair 'a 'b -> 'a\ntype alias sndPair 'a 'b = pair 'a 'b -> 'b\ntype alias mkPairData = Data -> Data -> pair Data Data\n"
 ---
 (
     [],

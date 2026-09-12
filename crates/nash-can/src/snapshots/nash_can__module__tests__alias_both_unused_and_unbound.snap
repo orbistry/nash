@@ -1,52 +1,19 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Bad 'a = 'b\n"
+info: diagnostic
 ---
-[
-    TypeVarsMessedUpInAlias {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 4,
-                column: 1,
-            },
-        },
-        name: "Bad",
-        args: [
-            "a",
-        ],
-        unused: [
-            (
-                "a",
-                Region {
-                    start: Position {
-                        line: 3,
-                        column: 16,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 18,
-                    },
-                },
-            ),
-        ],
-        unbound: [
-            (
-                "b",
-                Region {
-                    start: Position {
-                        line: 3,
-                        column: 21,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 23,
-                    },
-                },
-            ),
-        ],
-    },
-]
+nash::names::type_vars_messed_up_in_alias
+
+  × Type alias `Bad` has some type variable problems.
+   ╭─[src/Main.nash:3:1]
+ 2 │ 
+ 3 │ type alias Bad 'a = 'b
+   · ───────────────────────
+   ╰────
+  help: Type variable `b` appears in the definition, but I do not see it declared.
+        Likewise, type variable `a` is declared, but not used.
+
+        Match the declaration to the variables used:
+
+            type alias Bad 'b = ...

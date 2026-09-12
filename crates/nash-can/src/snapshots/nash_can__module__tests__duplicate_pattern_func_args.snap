@@ -1,32 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf x x = x\n"
+info: diagnostic
 ---
-[
-    DuplicatePattern {
-        context: FuncArgs(
-            "f",
-        ),
-        name: "x",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 3,
-            },
-            end: Position {
-                line: 3,
-                column: 4,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 5,
-            },
-            end: Position {
-                line: 3,
-                column: 6,
-            },
-        },
-    },
-]
+nash::names::duplicate_pattern
+
+  × The `f` function has multiple `x` arguments.
+   ╭─[src/Main.nash:3:5]
+ 2 │ 
+ 3 │ f x x = x
+   ·   ┬ ┬
+   ·   │ ╰── and another first definition
+   ·   ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

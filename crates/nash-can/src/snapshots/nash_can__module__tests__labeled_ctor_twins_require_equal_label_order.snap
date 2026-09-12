@@ -1,29 +1,18 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype Box = Box { z : Int, a : Int }\ntype box = Box { a : int, z : int }\n"
+info: diagnostic
 ---
-[
-    DuplicateCtor {
-        name: "Box",
-        first: Region {
-            start: Position {
-                line: 2,
-                column: 12,
-            },
-            end: Position {
-                line: 2,
-                column: 15,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 12,
-            },
-            end: Position {
-                line: 3,
-                column: 15,
-            },
-        },
-    },
-]
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Box` type constructors.
+   ╭─[src/Main.nash:3:12]
+ 1 │ module Main exposing (..)
+ 2 │ type Box = Box { z : Int, a : Int }
+   ·            ─┬─
+   ·             ╰── first definition
+ 3 │ type box = Box { a : int, z : int }
+   ·            ─┬─
+   ·             ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.

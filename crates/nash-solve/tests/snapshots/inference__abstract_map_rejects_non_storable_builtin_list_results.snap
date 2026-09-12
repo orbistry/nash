@@ -1,365 +1,52 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\nimpl Functor list where\n    map f xs =\n        case xs of\n            [] -> []\n            x :: rest -> Builtin.mkCons (f x) (map f rest)\nbad = map (\\x -> (x, x)) [()]\n"
+description: "module Main exposing (..)\nimport Builtin\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\nimpl Functor list where\n    map f xs =\n        case xs of\n            [] -> []\n            x :: rest -> Builtin.mkCons (f x) (map f rest)\nbad = map (\\x -> (x, x)) [()]\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 10,
-                column: 7,
-            },
-            end: Position {
-                line: 10,
-                column: 10,
-            },
-        },
-        name: "type application",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            Tuple(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                [],
-            ),
-        ],
-        available: [],
-        because: [
-            Formation(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                    args: [
-                        Tuple(
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                            [],
-                        ),
-                    ],
-                },
-            ),
-            Application {
-                head: Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                    args: [],
-                },
-                args: [
-                    Tuple(
-                        Type {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "unit",
-                            args: [],
-                        },
-                        Type {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "unit",
-                            args: [],
-                        },
-                        [],
-                    ),
-                ],
-            },
-        ],
-    },
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 10,
-                column: 7,
-            },
-            end: Position {
-                line: 10,
-                column: 10,
-            },
-        },
-        name: "map",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            Tuple(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                [],
-            ),
-        ],
-        available: [],
-        because: [
-            Application {
-                head: Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                    args: [],
-                },
-                args: [
-                    Tuple(
-                        Type {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "unit",
-                            args: [],
-                        },
-                        Type {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "unit",
-                            args: [],
-                        },
-                        [],
-                    ),
-                ],
-            },
-        ],
-    },
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 10,
-                column: 7,
-            },
-            end: Position {
-                line: 10,
-                column: 30,
-            },
-        },
-        name: "type application",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            Tuple(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                [],
-            ),
-        ],
-        available: [],
-        because: [
-            Formation(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                    args: [
-                        Tuple(
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                            [],
-                        ),
-                    ],
-                },
-            ),
-        ],
-    },
-]
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ( unit, unit )`.
+    ╭─[Main.nash:10:7]
+  9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
+ 10 │ bad = map (\x -> (x, x)) [()]
+    ·       ─┬─
+    ·        ╰── required by `type application`
+    ╰────
+  help: Requirement chain:
+
+            forming list ( unit, unit )
+            list ( unit, unit )
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ( unit, unit )`.
+    ╭─[Main.nash:10:7]
+  9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
+ 10 │ bad = map (\x -> (x, x)) [()]
+    ·       ─┬─
+    ·        ╰── required by `map`
+    ╰────
+  help: Requirement chain:
+
+            list ( unit, unit )
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ( unit, unit )`.
+    ╭─[Main.nash:10:7]
+  9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
+ 10 │ bad = map (\x -> (x, x)) [()]
+    ·       ───────────┬───────────
+    ·                  ╰── required by `type application`
+    ╰────
+  help: Requirement chain:
+
+            forming list ( unit, unit )
+
+        Use a type with Big or Const representation; an impl cannot change representation.

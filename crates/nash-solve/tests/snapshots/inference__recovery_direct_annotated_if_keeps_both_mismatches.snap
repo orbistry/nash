@@ -1,110 +1,31 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nf : ()\nf = if True then (\\x -> x) else (\\y -> y)\n"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nf : ()\nf = if True then (\\x -> x) else (\\y -> y)\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 4,
-                column: 34,
-            },
-            end: Position {
-                line: 4,
-                column: 41,
-            },
-        },
-        Lambda,
-        Lambda(
-            FlexVar(
-                "a",
-            ),
-            FlexVar(
-                "a",
-            ),
-            [],
-        ),
-        FromAnnotation(
-            "f",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 5,
-                },
-                end: Position {
-                    line: 3,
-                    column: 7,
-                },
-            },
-            0,
-            TypedIfBranch(
-                1,
-            ),
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-        ),
-    ),
-    BadExpr(
-        Region {
-            start: Position {
-                line: 4,
-                column: 19,
-            },
-            end: Position {
-                line: 4,
-                column: 26,
-            },
-        },
-        Lambda,
-        Lambda(
-            FlexVar(
-                "a",
-            ),
-            FlexVar(
-                "a",
-            ),
-            [],
-        ),
-        FromAnnotation(
-            "f",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 5,
-                },
-                end: Position {
-                    line: 3,
-                    column: 7,
-                },
-            },
-            0,
-            TypedIfBranch(
-                0,
-            ),
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:4:34]
+ 2 │ import Builtin exposing (..)
+ 3 │ f : ()
+   ·     ─┬
+   ·      ╰── declared type
+ 4 │ f = if True then (\x -> x) else (\y -> y)
+   ·                                  ───┬───
+   ·                                     ╰── if branch 2
+   ╰────
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:4:19]
+ 2 │ import Builtin exposing (..)
+ 3 │ f : ()
+   ·     ─┬
+   ·      ╰── declared type
+ 4 │ f = if True then (\x -> x) else (\y -> y)
+   ·                   ───┬───
+   ·                      ╰── if branch 1
+   ╰────

@@ -1,24 +1,21 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nx = y\n\ny = x\n"
+info: diagnostic
 ---
-[
-    RecursiveDecl {
-        name: Located {
-            region: Region {
-                start: Position {
-                    line: 3,
-                    column: 1,
-                },
-                end: Position {
-                    line: 3,
-                    column: 2,
-                },
-            },
-            value: "x",
-        },
-        others: [
-            "y",
-        ],
-    },
-]
+nash::names::recursive_decl
+
+  × Value `x` depends on itself.
+   ╭─[src/Main.nash:3:1]
+ 2 │ 
+ 3 │ x = y
+   · ─
+ 4 │ 
+   ╰────
+  help:     ┌─────┐
+            │    x
+            │     ↓
+            │    y
+            └─────┘
+
+        Break the cycle between these value definitions.

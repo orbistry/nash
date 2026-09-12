@@ -1,9 +1,13 @@
 ---
 source: crates/nash-parse/src/pattern/term.rs
 description: "Code:\n\n#\"0\""
+info: diagnostic
 ---
-Bytes(
-    OddLength,
-    1,
-    1,
-)
+nash::syntax
+
+  × Byte string has an odd number of hexadecimal digits.
+   ╭─[src/Main.nash:1:1]
+ 1 │ #"0"
+   · ─
+   ╰────
+  help: Use two hexadecimal digits per byte.

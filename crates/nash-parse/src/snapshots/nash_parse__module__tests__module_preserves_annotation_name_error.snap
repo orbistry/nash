@@ -1,18 +1,14 @@
 ---
 source: crates/nash-parse/src/module.rs
 description: "Code:\n\nf : int\ng = 1"
+info: diagnostic
 ---
-Declarations(
-    Def(
-        "f",
-        NameMatch(
-            "g",
-            2,
-            2,
-        ),
-        1,
-        2,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected definition `f`, found `g`.
+   ╭─[src/Main.nash:2:2]
+ 1 │ f : int
+ 2 │ g = 1
+   ·  ─
+   ╰────
+  help: Use the same name for the annotation and definition.

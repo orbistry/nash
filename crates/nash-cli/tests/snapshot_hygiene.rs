@@ -17,16 +17,6 @@ const CONSTRUCTED_FIXTURES: &[&str] = &[
     "nash_can__module__tests__to_public_union_open_passes_through.snap",
     "nash_can__module__tests__to_public_union_private_returns_none.snap",
     "nash_can__types__tests__partial_alias_keeps_formal_parameters_bound.snap",
-    "nash_codegen__casts__tests__repeated_casts_share_one_checker.snap",
-    "nash_codegen__decision_tree__tests__shared_default_leaf.snap",
-    "nash_codegen__lower__tests__boolean_case_does_not_evaluate_unselected_failure.snap",
-    "nash_codegen__lower__tests__field_projection_and_tag_order_are_semantic.snap",
-    "nash_codegen__lower__tests__let_application_evaluates.snap",
-    "nash_codegen__lower__tests__trace_precedes_failure.snap",
-    "nash_codegen__program__tests__assemble_lets_chain.snap",
-    "nash_codegen__program__tests__comptime_reports_open_terms_errors_and_nonconstants.snap",
-    "nash_codegen__recursion__tests__static_parameter_core.snap",
-    "nash_constrain__module__tests__term_parameter.snap",
     "nash_ir__pretty__tests__pretty_case_data.snap",
     "nash_ir__pretty__tests__pretty_case_tag.snap",
     "nash_ir__pretty__tests__pretty_let_app.snap",
@@ -86,6 +76,12 @@ fn source_snapshots_include_input_and_omit_rust_expressions() {
         if snapshot.contains('\x1b') {
             failures.push(format!("{} contains terminal escape codes", path.display()));
         }
+        if body.trim_start().starts_with("Err(") {
+            failures.push(format!(
+                "{} contains an unrendered error result",
+                path.display()
+            ));
+        }
         if constructed {
             continue;
         }
@@ -107,7 +103,9 @@ fn source_snapshots_include_input_and_omit_rust_expressions() {
         // A diagnostic renderer test must snapshot the actual terminal report,
         // not a title/Region/prose concatenation. JSON is a separate contract.
         let rendered_diagnostic = metadata.lines().any(|line| {
-            line.starts_with("source: crates/nash-report/src/") && !line.ends_with("/json.rs")
+            line == "info: diagnostic"
+                || (line.starts_with("source: crates/nash-report/src/")
+                    && !line.ends_with("/json.rs"))
         });
         if rendered_diagnostic && !body.contains('×') && !body.contains('⚠') {
             failures.push(format!("{} is not a rendered diagnostic", path.display()));
@@ -121,5 +119,59 @@ fn source_snapshots_include_input_and_omit_rust_expressions() {
         failures.is_empty(),
         "snapshot hygiene failures:\n{}",
         failures.join("\n")
+    );
+}
+
+/// Error snapshot macros must opt into the rendered-diagnostic contract.
+/// This catches a copied raw Debug helper even before its snapshots exist.
+#[test]
+fn error_snapshot_macros_require_rendered_diagnostics() {
+    fn check(directory: &Path, failures: &mut Vec<String>) {
+        for entry in std::fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                check(&path, failures);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                let source = std::fs::read_to_string(&path).unwrap();
+                for definition in source.split("macro_rules! ").skip(1) {
+                    let name = definition.split_whitespace().next().unwrap_or("");
+                    if !name.contains("error_snapshot") && name != "assert_diagnostics_snapshot" {
+                        continue;
+                    }
+                    // All snapshot macros use a braced definition. Balance its
+                    // braces to avoid accidentally inspecting the next test.
+                    let start = definition.find('{').unwrap();
+                    let mut depth = 0;
+                    let mut end = start;
+                    for (offset, ch) in definition[start..].char_indices() {
+                        match ch {
+                            '{' => depth += 1,
+                            '}' => {
+                                depth -= 1;
+                                if depth == 0 {
+                                    end = start + offset;
+                                    break;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    let body = &definition[start..end];
+                    if body.contains("assert_debug_snapshot!")
+                        || (!body.contains("info => &\"diagnostic\"")
+                            && !body.contains("assert_diagnostics_snapshot!"))
+                    {
+                        failures.push(format!("{}: {name}", path.display()));
+                    }
+                }
+            }
+        }
+    }
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let mut failures = Vec::new();
+    check(crates, &mut failures);
+    assert!(
+        failures.is_empty(),
+        "raw error snapshot macros: {failures:?}"
     );
 }

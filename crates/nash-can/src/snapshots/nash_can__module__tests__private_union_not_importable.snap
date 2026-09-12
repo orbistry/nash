@@ -1,24 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Maybe exposing (Maybe)\n\nx = 1\n"
+info: diagnostic
 ---
-[
-    ImportExposingNotFound {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 24,
-            },
-            end: Position {
-                line: 3,
-                column: 29,
-            },
-        },
-        module: ModuleName {
-            package: None,
-            name: "Maybe",
-        },
-        name: "Maybe",
-        available: [],
-    },
-]
+nash::names::import_exposing_not_found
+
+  × The `Maybe` module does not expose `Maybe`:
+   ╭─[src/Main.nash:3:24]
+ 2 │ 
+ 3 │ import Maybe exposing (Maybe)
+   ·                        ─────
+ 4 │ 
+   ╰────
+  help: Check that the module exposes this name.

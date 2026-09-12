@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type wrap 'f ('a : Storable) = Wrap (('f 'a) : Storable)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype wrap 'f ('a : Storable) = Wrap (('f 'a) : Storable)\n"
 ---
 (
     [

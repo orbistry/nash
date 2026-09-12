@@ -1,47 +1,18 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Loop = Loop\n"
+info: diagnostic
 ---
-[
-    RecursiveAlias {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 12,
-            },
-            end: Position {
-                line: 3,
-                column: 16,
-            },
-        },
-        name: "Loop",
-        args: [],
-        typ: Located {
-            region: Region {
-                start: Position {
-                    line: 3,
-                    column: 19,
-                },
-                end: Position {
-                    line: 3,
-                    column: 23,
-                },
-            },
-            value: Type {
-                region: Region {
-                    start: Position {
-                        line: 3,
-                        column: 19,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 23,
-                    },
-                },
-                name: "Loop",
-                args: [],
-            },
-        },
-        others: [],
-    },
-]
+nash::names::recursive_alias
+
+  × Type alias `Loop` expands recursively.
+   ╭─[src/Main.nash:3:12]
+ 2 │ 
+ 3 │ type alias Loop = Loop
+   ·            ────
+   ╰────
+  help: Use a custom type:
+
+            type Loop =
+                Loop
+                    Loop

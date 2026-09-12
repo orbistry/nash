@@ -1,38 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Phantom 'a = Int\n"
+info: diagnostic
 ---
-[
-    TypeVarsMessedUpInAlias {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 4,
-                column: 1,
-            },
-        },
-        name: "Phantom",
-        args: [
-            "a",
-        ],
-        unused: [
-            (
-                "a",
-                Region {
-                    start: Position {
-                        line: 3,
-                        column: 20,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 22,
-                    },
-                },
-            ),
-        ],
-        unbound: [],
-    },
-]
+nash::names::type_vars_messed_up_in_alias
+
+  × Type alias `Phantom` does not use the `a` type variable.
+   ╭─[src/Main.nash:3:20]
+ 2 │ 
+ 3 │ type alias Phantom 'a = Int
+   ·                    ──
+   ╰────
+  help: Remove a from the declaration:
+
+            type alias Phantom = ...

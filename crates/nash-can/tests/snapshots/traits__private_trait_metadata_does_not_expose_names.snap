@@ -1,60 +1,30 @@
 ---
 source: crates/nash-can/tests/traits.rs
 description: "module Identity exposing (Keep)\n\ntrait Hidden ('a : Big) where\n    hidden : 'a -> 'a\n\ntrait Hidden 'a => Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule Main exposing (..)\nimport Identity exposing (Keep)\n\ntrait Keep 'a => Child 'a where\n    child : 'a -> 'a\n\n\nmodule Main exposing (..)\nimport Identity exposing (..)\n\nf : Identity.Hidden 'a => 'a -> 'a\nf x = x\n\n\nmodule Main exposing (..)\nimport Identity exposing (..)\n\nf x = Identity.hidden x\n"
+info: diagnostic
 ---
-(
-    [
-        Type,
-    ],
-    [
-        NotFoundTrait {
-            region: Region {
-                start: Position {
-                    line: 4,
-                    column: 5,
-                },
-                end: Position {
-                    line: 4,
-                    column: 20,
-                },
-            },
-            prefix: Some(
-                "Identity",
-            ),
-            name: "Hidden",
-        },
-    ],
-    [
-        NotFoundVar {
-            region: Region {
-                start: Position {
-                    line: 4,
-                    column: 7,
-                },
-                end: Position {
-                    line: 4,
-                    column: 22,
-                },
-            },
-            prefix: Some(
-                "Identity",
-            ),
-            name: "hidden",
-            suggestions: PossibleNames {
-                locals: [
-                    "f",
-                    "keep",
-                    "x",
-                ],
-                qualified: [
-                    (
-                        "Identity",
-                        [
-                            "keep",
-                        ],
-                    ),
-                ],
-            },
-        },
-    ],
-)
+nash::names::not_found_trait
+
+  × Unknown trait `Identity.Hidden`.
+   ╭─[src/Main.nash:4:5]
+ 3 │ 
+ 4 │ f : Identity.Hidden 'a => 'a -> 'a
+   ·     ───────────────
+ 5 │ f x = x
+   ╰────
+  help: Import `Identity` or check its alias.
+
+nash::names::not_found_var
+
+  × Unknown variable `Identity.hidden`.
+   ╭─[src/Main.nash:4:7]
+ 3 │ 
+ 4 │ f x = Identity.hidden x
+   ·       ───────────────
+   ╰────
+  help: Similar names:
+
+            Identity.keep
+            keep
+            f
+            x

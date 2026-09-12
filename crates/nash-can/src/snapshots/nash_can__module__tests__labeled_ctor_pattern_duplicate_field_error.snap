@@ -1,32 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit }\nget (Packet { z, z }) = z\n"
+info: diagnostic
 ---
-[
-    DuplicatePattern {
-        context: FuncArgs(
-            "get",
-        ),
-        name: "z",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 15,
-            },
-            end: Position {
-                line: 3,
-                column: 16,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 18,
-            },
-            end: Position {
-                line: 3,
-                column: 19,
-            },
-        },
-    },
-]
+nash::names::duplicate_pattern
+
+  × The `get` function has multiple `z` arguments.
+   ╭─[src/Main.nash:3:18]
+ 2 │ type packet = Packet { z : unit }
+ 3 │ get (Packet { z, z }) = z
+   ·               ┬  ┬
+   ·               │  ╰── and another first definition
+   ·               ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

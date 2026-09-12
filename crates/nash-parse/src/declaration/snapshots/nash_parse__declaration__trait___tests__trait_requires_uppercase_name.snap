@@ -1,12 +1,13 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
 description: "trait eq 'a where"
+info: diagnostic
 ---
-Trait(
-    Name(
-        1,
-        7,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected a trait name.
+   ╭─[src/Main.nash:1:7]
+ 1 │ trait eq 'a where
+   ·       ─
+   ╰────
+  help: Use an uppercase name, such as `Eq`.

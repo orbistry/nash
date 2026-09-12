@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nvalidator module Foo exposing (x)\n\nx = 1\n\nmain c = ()\n"
+info: diagnostic
 ---
-[
-    ValidatorMainNotExposed {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 31,
-            },
-            end: Position {
-                line: 1,
-                column: 34,
-            },
-        },
-        module: "Foo",
-    },
-]
+nash::validator::main_not_exposed
+
+  × This validator module does not expose main.
+   ╭─[src/Foo.nash:1:31]
+ 1 │ validator module Foo exposing (x)
+   ·                               ───
+ 2 │ 
+   ╰────
+  help: Add main to the exposing list.

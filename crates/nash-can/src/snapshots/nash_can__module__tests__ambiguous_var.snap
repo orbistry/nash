@@ -1,30 +1,17 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Foo exposing (..)\n\nimport Bar exposing (..)\n\nx = baz\n"
+info: diagnostic
 ---
-[
-    AmbiguousVar {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 5,
-            },
-            end: Position {
-                line: 7,
-                column: 8,
-            },
-        },
-        prefix: None,
-        name: "baz",
-        first_module: ModuleName {
-            package: None,
-            name: "Foo",
-        },
-        other_modules: [
-            ModuleName {
-                package: None,
-                name: "Bar",
-            },
-        ],
-    },
-]
+nash::names::ambiguous_var
+
+  × Ambiguous variable `baz`.
+   ╭─[src/Main.nash:7:5]
+ 6 │ 
+ 7 │ x = baz
+   ·     ───
+   ╰────
+  help:     Bar.baz
+            Foo.baz
+
+        Use a qualified name.

@@ -1,26 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (selfApply)\n\nselfApply f = f f\n"
+description: "module Main exposing (selfApply)\n\nselfApply f = f f\n"
+info: diagnostic
 ---
-[
-    InfiniteType {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 11,
-            },
-            end: Position {
-                line: 3,
-                column: 12,
-            },
-        },
-        name: "f",
-        overall_type: Lambda(
-            Infinite,
-            FlexVar(
-                "a",
-            ),
-            [],
-        ),
-    },
-]
+nash::type::infinite_type
+
+  × `f` has a self-referential type: ∞ -> 'a
+   ╭─[Main.nash:3:11]
+ 2 │ 
+ 3 │ selfApply f = f f
+   ·           ─
+   ╰────
+  help: Break the type cycle; ∞ marks a repeated part of the type.

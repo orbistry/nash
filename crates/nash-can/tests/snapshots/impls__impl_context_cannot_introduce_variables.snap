@@ -1,19 +1,16 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'b => Keep (List 'a) where\n    keep x = x\n"
+info: diagnostic
 ---
-[
-    ImplContextVarNotInHead {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 11,
-            },
-            end: Position {
-                line: 4,
-                column: 13,
-            },
-        },
-        name: "b",
-    },
-]
+nash::names::impl_context_var_not_in_head
+
+  × The impl context mentions 'b, but this variable does not occur in the impl head:
+   ╭─[src/Main.nash:4:11]
+ 3 │     keep : 'a -> 'a
+ 4 │ impl Keep 'b => Keep (List 'a) where
+   ·           ──
+ 5 │     keep x = x
+   ╰────
+  help: Each variable in an impl context must occur in its head. Check for a misspelled
+        type variable.

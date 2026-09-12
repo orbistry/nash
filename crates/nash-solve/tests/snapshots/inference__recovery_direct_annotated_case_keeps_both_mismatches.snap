@@ -1,110 +1,35 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nf : ()\nf = case True of\n    True -> (\\x -> x)\n    False -> (\\y -> y)\n"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nf : ()\nf = case True of\n    True -> (\\x -> x)\n    False -> (\\y -> y)\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 6,
-                column: 15,
-            },
-            end: Position {
-                line: 6,
-                column: 22,
-            },
-        },
-        Lambda,
-        Lambda(
-            FlexVar(
-                "a",
-            ),
-            FlexVar(
-                "a",
-            ),
-            [],
-        ),
-        FromAnnotation(
-            "f",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 5,
-                },
-                end: Position {
-                    line: 3,
-                    column: 7,
-                },
-            },
-            0,
-            TypedCaseBranch(
-                1,
-            ),
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-        ),
-    ),
-    BadExpr(
-        Region {
-            start: Position {
-                line: 5,
-                column: 14,
-            },
-            end: Position {
-                line: 5,
-                column: 21,
-            },
-        },
-        Lambda,
-        Lambda(
-            FlexVar(
-                "a",
-            ),
-            FlexVar(
-                "a",
-            ),
-            [],
-        ),
-        FromAnnotation(
-            "f",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 5,
-                },
-                end: Position {
-                    line: 3,
-                    column: 7,
-                },
-            },
-            0,
-            TypedCaseBranch(
-                0,
-            ),
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:6:15]
+ 2 │ import Builtin exposing (..)
+ 3 │ f : ()
+   ·     ─┬
+   ·      ╰── declared type
+ 4 │ f = case True of
+ 5 │     True -> (\x -> x)
+ 6 │     False -> (\y -> y)
+   ·               ───┬───
+   ·                  ╰── case branch 2
+   ╰────
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:5:14]
+ 2 │ import Builtin exposing (..)
+ 3 │ f : ()
+   ·     ─┬
+   ·      ╰── declared type
+ 4 │ f = case True of
+ 5 │     True -> (\x -> x)
+   ·              ───┬───
+   ·                 ╰── case branch 1
+ 6 │     False -> (\y -> y)
+   ╰────

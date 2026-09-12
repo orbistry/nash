@@ -1,9 +1,13 @@
 ---
 source: crates/nash-parse/src/expression/number.rs
 description: "Code:\n\n007"
+info: diagnostic
 ---
-Number(
-    NoLeadingZero,
-    1,
-    2,
-)
+nash::syntax
+
+  × Integer has leading zeros.
+   ╭─[src/Main.nash:1:2]
+ 1 │ 007
+   ·  ─
+   ╰────
+  help: Remove the leading zeros.

@@ -1,12 +1,14 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
 description: "trait Eq 'a\n    eq : 'a -> bool\n"
+info: diagnostic
 ---
-Trait(
-    Where(
-        2,
-        5,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected `where` before the trait methods.
+   ╭─[src/Main.nash:2:5]
+ 1 │ trait Eq 'a
+ 2 │     eq : 'a -> bool
+   ·     ─
+   ╰────
+  help: Add `where` after the trait parameters and constraints.

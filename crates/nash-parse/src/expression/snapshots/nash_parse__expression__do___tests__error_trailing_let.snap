@@ -1,12 +1,14 @@
 ---
 source: crates/nash-parse/src/expression/do_.rs
 description: "Code (indented inside a def):\n\n    do\n        let y = 1\n"
+info: diagnostic
 ---
-Do(
-    LastNotExpr(
-        2,
-        9,
-    ),
-    1,
-    5,
-)
+nash::syntax
+
+  × A do block must end with an expression.
+   ╭─[src/Main.nash:2:9]
+ 1 │     do
+ 2 │         let y = 1
+   ·         ─
+   ╰────
+  help: Add a final expression after this binding.

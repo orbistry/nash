@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)\n"
+info: diagnostic
 ---
-[
-    ContradictoryRepresentation {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 41,
-            },
-            end: Position {
-                line: 7,
-                column: 43,
-            },
-        },
-        variable: "a",
-    },
-]
+nash::names::contradictory_representation
+
+  × The representation requirements on 'a are incompatible:
+   ╭─[src/Main.nash:7:41]
+ 6 │ type first ('a : Const) = First (second 'a)
+ 7 │ type second 'a = Second (Box 'a) (first 'a)
+   ·                                         ──
+   ╰────
+  help: Change the incompatible constraints or uses of this variable.

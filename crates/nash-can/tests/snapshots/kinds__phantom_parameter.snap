@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Tag 'a = Tag Int"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Tag 'a = Tag Int\n"
 ---
 (
     [

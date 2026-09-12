@@ -1,25 +1,13 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
 description: "type T ('f : Foo) = A"
+info: diagnostic
 ---
-Type(
-    Union(
-        Param(
-            Repr(
-                Name(
-                    "Foo",
-                    1,
-                    14,
-                ),
-                1,
-                14,
-            ),
-            1,
-            8,
-        ),
-        1,
-        6,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Unknown representation bound `Foo`.
+   ╭─[src/Main.nash:1:14]
+ 1 │ type T ('f : Foo) = A
+   ·              ─
+   ╰────
+  help: Use `Big`, `Const`, `Term`, or `Storable`.

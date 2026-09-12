@@ -1,12 +1,14 @@
 ---
 source: crates/nash-parse/src/declaration/attribute.rs
 description: "@Derive(Eq)\ntype T = A"
+info: diagnostic
 ---
-Attribute(
-    Name(
-        1,
-        2,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected a name after `@`.
+   ╭─[src/Main.nash:1:2]
+ 1 │ @Derive(Eq)
+   ·  ─
+ 2 │ type T = A
+   ╰────
+  help: Write the attribute name directly after `@`.

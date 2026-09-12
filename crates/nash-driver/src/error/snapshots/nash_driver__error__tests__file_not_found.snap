@@ -1,5 +1,6 @@
 ---
 source: crates/nash-driver/src/error/tests.rs
 description: "Source lookup: /project/src/Main.nash does not exist."
+info: diagnostic
 ---
   × file not found: file:///project/src/Main.nash

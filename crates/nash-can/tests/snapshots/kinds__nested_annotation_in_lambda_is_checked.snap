@@ -1,23 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type option 'a = None | Some 'a\nf = \\x ->\n    let\n        g : list (option int) -> int\n        g y = 1\n    in\n    g x"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype option 'a = None | Some 'a\nf = \\x ->\n    let\n        g : list (option int) -> int\n        g y = 1\n    in\n    g x\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 8,
-                column: 19,
-            },
-            end: Position {
-                line: 8,
-                column: 29,
-            },
-        },
-        context: Annotation {
-            name: "g",
-        },
-        required: Storable,
-        actual: Term,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Storable` in the annotation for `g`:
+   ╭─[src/Main.nash:8:19]
+ 7 │     let
+ 8 │         g : list (option int) -> int
+   ·                   ──────────
+ 9 │         g y = 1
+   ╰────
+  help: The type has `Term` representation, but `Storable` admits Big or Const types.
+        Change the type or the representation requirement.

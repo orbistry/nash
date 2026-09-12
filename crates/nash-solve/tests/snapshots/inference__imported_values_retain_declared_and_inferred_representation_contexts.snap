@@ -1,300 +1,63 @@
 ---
 source: crates/nash-solve/tests/inference.rs
 description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Source exposing (first, wrapper)\nimport Builtin exposing (..)\nfirst : 'a -> list 'a -> 'a\nfirst x xs = wrapper x xs\nwrapper x xs = first x xs\n\n\nmodule Main exposing (..)\nimport Source exposing (first)\ntype option 'a = Some 'a\nbad xs = first (Some ()) xs\n\n\nmodule Main exposing (..)\nimport Source exposing (wrapper)\ntype option 'a = Some 'a\nbad xs = wrapper (Some ()) xs\n"
+info: diagnostic
 ---
 first : forall a. Storable a => a -> list a -> a
 wrapper : forall a. Storable a => a -> list a -> a
-[
-    (
-        "first",
-        [
-            MissingImpl {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 10,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 15,
-                    },
-                },
-                name: "type application",
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "Storable",
-                },
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "option",
-                        args: [
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                        ],
-                    },
-                ],
-                available: [],
-                because: [
-                    Formation(
-                        Type {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "list",
-                            args: [
-                                Type {
-                                    home: ModuleName {
-                                        package: None,
-                                        name: "Main",
-                                    },
-                                    name: "option",
-                                    args: [
-                                        Type {
-                                            home: ModuleName {
-                                                package: Some(
-                                                    PackageName {
-                                                        author: "nash",
-                                                        project: "core",
-                                                    },
-                                                ),
-                                                name: "Builtin",
-                                            },
-                                            name: "unit",
-                                            args: [],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ),
-                ],
-            },
-            MissingImpl {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 10,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 15,
-                    },
-                },
-                name: "first",
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "Storable",
-                },
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "option",
-                        args: [
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                        ],
-                    },
-                ],
-                available: [],
-                because: [],
-            },
-        ],
-    ),
-    (
-        "wrapper",
-        [
-            MissingImpl {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 10,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 17,
-                    },
-                },
-                name: "type application",
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "Storable",
-                },
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "option",
-                        args: [
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                        ],
-                    },
-                ],
-                available: [],
-                because: [
-                    Formation(
-                        Type {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "list",
-                            args: [
-                                Type {
-                                    home: ModuleName {
-                                        package: None,
-                                        name: "Main",
-                                    },
-                                    name: "option",
-                                    args: [
-                                        Type {
-                                            home: ModuleName {
-                                                package: Some(
-                                                    PackageName {
-                                                        author: "nash",
-                                                        project: "core",
-                                                    },
-                                                ),
-                                                name: "Builtin",
-                                            },
-                                            name: "unit",
-                                            args: [],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ),
-                ],
-            },
-            MissingImpl {
-                region: Region {
-                    start: Position {
-                        line: 4,
-                        column: 10,
-                    },
-                    end: Position {
-                        line: 4,
-                        column: 17,
-                    },
-                },
-                name: "wrapper",
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "Storable",
-                },
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "option",
-                        args: [
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                        ],
-                    },
-                ],
-                available: [],
-                because: [],
-            },
-        ],
-    ),
-]
+first:
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable (option unit)`.
+   ╭─[Main.nash:4:10]
+ 3 │ type option 'a = Some 'a
+ 4 │ bad xs = first (Some ()) xs
+   ·          ──┬──
+   ·            ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming list (option unit)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable (option unit)`.
+   ╭─[Main.nash:4:10]
+ 3 │ type option 'a = Some 'a
+ 4 │ bad xs = first (Some ()) xs
+   ·          ──┬──
+   ·            ╰── required by `first`
+   ╰────
+  help: Use a type with Big or Const representation; an impl cannot change representation.
+
+
+wrapper:
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable (option unit)`.
+   ╭─[Main.nash:4:10]
+ 3 │ type option 'a = Some 'a
+ 4 │ bad xs = wrapper (Some ()) xs
+   ·          ───┬───
+   ·             ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming list (option unit)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable (option unit)`.
+   ╭─[Main.nash:4:10]
+ 3 │ type option 'a = Some 'a
+ 4 │ bad xs = wrapper (Some ()) xs
+   ·          ───┬───
+   ·             ╰── required by `wrapper`
+   ╰────
+  help: Use a type with Big or Const representation; an impl cannot change representation.

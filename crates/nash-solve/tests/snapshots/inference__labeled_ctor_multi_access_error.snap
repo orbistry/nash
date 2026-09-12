@@ -1,44 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype choice = First { value : unit } | Second { value : unit }\nget : choice -> unit\nget b = b.value\n"
+description: "module Main exposing (..)\ntype choice = First { value : unit } | Second { value : unit }\nget : choice -> unit\nget b = b.value\n"
+info: diagnostic
 ---
-[
-    NotARecord {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 9,
-            },
-            end: Position {
-                line: 4,
-                column: 16,
-            },
-        },
-        context: Access {
-            record_region: Region {
-                start: Position {
-                    line: 4,
-                    column: 9,
-                },
-                end: Position {
-                    line: 4,
-                    column: 10,
-                },
-            },
-            maybe_name: Some(
-                "b",
-            ),
-        },
-        field: Some(
-            "value",
-        ),
-        record: Type {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "choice",
-            args: [],
-        },
-    },
-]
+nash::type::not_a_record
+
+  × Expected a record, found `choice`.
+   ╭─[Main.nash:4:9]
+ 3 │ get : choice -> unit
+ 4 │ get b = b.value
+   ·         ───┬───
+   ·            ╰── field `value` of `b`
+   ╰────

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Tree = Node (List Branch)\ntype alias Branch = Tree"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Tree = Node (List Branch)\ntype alias Branch = Tree\n"
 ---
 (
     [

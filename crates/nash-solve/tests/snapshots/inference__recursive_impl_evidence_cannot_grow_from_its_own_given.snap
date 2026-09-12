@@ -1,40 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype option 'a = Some 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (option 'a) where\n    keep xs = xs\nnest : Keep 'a => 'a -> ()\nnest x = nest (Some x)\n"
+description: "module Main exposing (..)\ntype option 'a = Some 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (option 'a) where\n    keep xs = xs\nnest : Keep 'a => 'a -> ()\nnest x = nest (Some x)\n"
+info: diagnostic
 ---
-[
-    PolymorphicRecursion {
-        region: Region {
-            start: Position {
-                line: 8,
-                column: 10,
-            },
-            end: Position {
-                line: 8,
-                column: 14,
-            },
-        },
-        name: "nest",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Keep",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "option",
-                args: [
-                    RigidVar(
-                        "a",
-                    ),
-                ],
-            },
-        ],
-    },
-]
+nash::type::polymorphic_recursion
+
+  × Recursive call to `nest` grows its trait requirement.
+   ╭─[Main.nash:8:10]
+ 7 │ nest : Keep 'a => 'a -> ()
+ 8 │ nest x = nest (Some x)
+   ·          ────
+   ╰────
+  help: Keep (option 'a)
+
+        Keep trait arguments stable across recursive calls, or split the recursion.

@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nvalue = json!(1)\n"
+info: diagnostic
 ---
-[
-    Unsupported {
-        feature: "macro call",
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 9,
-            },
-            end: Position {
-                line: 3,
-                column: 17,
-            },
-        },
-    },
-]
+nash::names::unsupported
+
+  × Unsupported feature: macro call.
+   ╭─[src/Main.nash:3:9]
+ 2 │ 
+ 3 │ value = json!(1)
+   ·         ────────
+   ╰────
+  help: This syntax is recognized, but its compiler implementation is not available yet.

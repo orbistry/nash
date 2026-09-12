@@ -274,13 +274,14 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let source = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, source);
+            let mut parser = nash_parse::Parser::new(&bump, source);
             let error = parser.module().expect_err("expected module parse error");
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),
                 omit_expression => true,
+                info => &"diagnostic",
             }, {
-                insta::assert_debug_snapshot!(error);
+                insta::assert_snapshot!($crate::test_support::render_module_error(source, &error));
             });
         }};
     }

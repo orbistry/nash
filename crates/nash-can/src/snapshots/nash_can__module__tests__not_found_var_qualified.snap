@@ -1,35 +1,17 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Foo\n\nx = Foo.nonexistent\n"
+info: diagnostic
 ---
-[
-    NotFoundVar {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 5,
-            },
-            end: Position {
-                line: 5,
-                column: 20,
-            },
-        },
-        prefix: Some(
-            "Foo",
-        ),
-        name: "nonexistent",
-        suggestions: PossibleNames {
-            locals: [
-                "x",
-            ],
-            qualified: [
-                (
-                    "Foo",
-                    [
-                        "bar",
-                    ],
-                ),
-            ],
-        },
-    },
-]
+nash::names::not_found_var
+
+  × Unknown variable `Foo.nonexistent`.
+   ╭─[src/Main.nash:5:5]
+ 4 │ 
+ 5 │ x = Foo.nonexistent
+   ·     ───────────────
+   ╰────
+  help: Similar names:
+
+            Foo.bar
+            x

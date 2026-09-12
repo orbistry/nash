@@ -1,41 +1,27 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type g 'f = G ('f ('f 'f))\ntype w = W (g g)\ntype alias Count = int"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype g 'f = G ('f ('f 'f))\ntype w = W (g g)\ntype alias Count = int\n"
+info: diagnostic
 ---
-[
-    KindInfinite {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 23,
-            },
-            end: Position {
-                line: 5,
-                column: 25,
-            },
-        },
-        context: LittleField {
-            union: "g",
-            ctor: "G",
-            index: 0,
-        },
-    },
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 20,
-            },
-            end: Position {
-                line: 7,
-                column: 23,
-            },
-        },
-        context: AliasCasing {
-            alias: "Count",
-            big: true,
-        },
-        required: Big,
-        actual: Const,
-    },
-]
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `G` in `g` would require an
+  │ infinite kind:
+   ╭─[src/Main.nash:5:23]
+ 4 │ 
+ 5 │ type g 'f = G ('f ('f 'f))
+   ·                       ──
+ 6 │ type w = W (g g)
+   ╰────
+  help: Check the type application and the kinds of its arguments.
+
+nash::names::representation_mismatch
+
+  × This position requires `Big` in the uppercase name of alias `Count`:
+   ╭─[src/Main.nash:7:20]
+ 6 │ type w = W (g g)
+ 7 │ type alias Count = int
+   ·                    ───
+   ╰────
+  help: The type has `Const` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

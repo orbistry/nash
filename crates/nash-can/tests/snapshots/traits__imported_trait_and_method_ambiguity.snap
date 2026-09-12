@@ -1,58 +1,31 @@
 ---
 source: crates/nash-can/tests/traits.rs
 description: "module A exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule B exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf : Keep 'a => 'a -> 'a\nf x = x\n\n\nmodule Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf x = keep x\n"
+info: diagnostic
 ---
-(
-    [
-        AmbiguousTrait {
-            region: Region {
-                start: Position {
-                    line: 5,
-                    column: 5,
-                },
-                end: Position {
-                    line: 5,
-                    column: 9,
-                },
-            },
-            prefix: None,
-            name: "Keep",
-            first_module: ModuleName {
-                package: None,
-                name: "A",
-            },
-            other_modules: [
-                ModuleName {
-                    package: None,
-                    name: "B",
-                },
-            ],
-        },
-    ],
-    [
-        AmbiguousVar {
-            region: Region {
-                start: Position {
-                    line: 5,
-                    column: 7,
-                },
-                end: Position {
-                    line: 5,
-                    column: 11,
-                },
-            },
-            prefix: None,
-            name: "keep",
-            first_module: ModuleName {
-                package: None,
-                name: "A",
-            },
-            other_modules: [
-                ModuleName {
-                    package: None,
-                    name: "B",
-                },
-            ],
-        },
-    ],
-)
+nash::names::ambiguous_trait
+
+  × Ambiguous trait `Keep`.
+   ╭─[src/Main.nash:5:5]
+ 4 │ 
+ 5 │ f : Keep 'a => 'a -> 'a
+   ·     ────
+ 6 │ f x = x
+   ╰────
+  help:     A.Keep
+            B.Keep
+
+        Use a qualified name.
+
+nash::names::ambiguous_var
+
+  × Ambiguous variable `keep`.
+   ╭─[src/Main.nash:5:7]
+ 4 │ 
+ 5 │ f x = keep x
+   ·       ────
+   ╰────
+  help:     A.keep
+            B.keep
+
+        Use a qualified name.

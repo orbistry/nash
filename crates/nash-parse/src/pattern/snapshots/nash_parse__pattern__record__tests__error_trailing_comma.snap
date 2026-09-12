@@ -1,12 +1,13 @@
 ---
 source: crates/nash-parse/src/pattern/record.rs
 description: "Code:\n\n{ x, y, }"
+info: diagnostic
 ---
-Record(
-    Field(
-        1,
-        9,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected a field name in this record pattern.
+   ╭─[src/Main.nash:1:9]
+ 1 │ { x, y, }
+   ·         ─
+   ╰────
+  help: List the required field names, separated by commas.

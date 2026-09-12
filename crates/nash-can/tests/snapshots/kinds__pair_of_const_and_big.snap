@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type alias p = pair int Data\ntype alias q = pair Data int\ntype alias r = pair Data Data"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias p = pair int Data\ntype alias q = pair Data int\ntype alias r = pair Data Data\n"
 ---
 (
     [],

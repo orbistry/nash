@@ -1,29 +1,19 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nfoo = 1\n\nfoo = 2\n"
+info: diagnostic
 ---
-[
-    DuplicateDecl {
-        name: "foo",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 3,
-                column: 4,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 5,
-                column: 1,
-            },
-            end: Position {
-                line: 5,
-                column: 4,
-            },
-        },
-    },
-]
+nash::names::duplicate_decl
+
+  × This file has multiple `foo` declarations.
+   ╭─[src/Main.nash:5:1]
+ 2 │ 
+ 3 │ foo = 1
+   · ─┬─
+   ·  ╰── first definition
+ 4 │ 
+ 5 │ foo = 2
+   · ─┬─
+   ·  ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.

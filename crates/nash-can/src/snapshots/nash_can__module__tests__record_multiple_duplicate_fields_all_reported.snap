@@ -1,52 +1,28 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias R = { x : Int, x : String, y : Int, y : String }\n"
+info: diagnostic
 ---
-[
-    DuplicateField {
-        name: "x",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 18,
-            },
-            end: Position {
-                line: 3,
-                column: 19,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 27,
-            },
-            end: Position {
-                line: 3,
-                column: 28,
-            },
-        },
-    },
-    DuplicateField {
-        name: "y",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 39,
-            },
-            end: Position {
-                line: 3,
-                column: 40,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 48,
-            },
-            end: Position {
-                line: 3,
-                column: 49,
-            },
-        },
-    },
-]
+nash::names::duplicate_field
+
+  × This record has multiple `x` fields.
+   ╭─[src/Main.nash:3:27]
+ 2 │ 
+ 3 │ type alias R = { x : Int, x : String, y : Int, y : String }
+   ·                  ┬        ┬
+   ·                  │        ╰── and another first definition
+   ·                  ╰── first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_field
+
+  × This record has multiple `y` fields.
+   ╭─[src/Main.nash:3:48]
+ 2 │ 
+ 3 │ type alias R = { x : Int, x : String, y : Int, y : String }
+   ·                                       ┬        ┬
+   ·                                       │        ╰── and another first definition
+   ·                                       ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

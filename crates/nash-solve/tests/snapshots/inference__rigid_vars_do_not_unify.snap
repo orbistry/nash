@@ -1,42 +1,18 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (cast)\n\ncast : 'a -> 'b\ncast x = x\n"
+description: "module Main exposing (cast)\n\ncast : 'a -> 'b\ncast x = x\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 4,
-                column: 10,
-            },
-            end: Position {
-                line: 4,
-                column: 11,
-            },
-        },
-        Local(
-            "x",
-        ),
-        RigidVar(
-            "a",
-        ),
-        FromAnnotation(
-            "cast",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 8,
-                },
-                end: Position {
-                    line: 3,
-                    column: 16,
-                },
-            },
-            1,
-            TypedBody,
-            RigidVar(
-                "b",
-            ),
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `'b`, found `'a`.
+   ╭─[Main.nash:4:10]
+ 2 │ 
+ 3 │ cast : 'a -> 'b
+   ·        ────┬───
+   ·            ╰── declared type
+ 4 │ cast x = x
+   ·          ┬
+   ·          ╰── body of `cast`
+   ╰────
+  help: The annotation keeps `'a` and `'b` independent; use one variable if they must be equal.

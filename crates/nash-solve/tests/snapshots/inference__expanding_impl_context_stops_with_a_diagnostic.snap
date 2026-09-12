@@ -1,26 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list (list 'a)) => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [()]\n"
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list (list 'a)) => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [()]\n"
+info: diagnostic
 ---
-[
-    ImplResolutionLimit {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 9,
-            },
-            end: Position {
-                line: 6,
-                column: 13,
-            },
-        },
-        name: "keep",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Keep",
-        },
-    },
-]
+nash::type::impl_resolution_limit
+
+  × Impl resolution for `Keep` in `keep` exceeded the work limit.
+   ╭─[Main.nash:6:9]
+ 5 │     keep xs = xs
+ 6 │ value = keep [()]
+   ·         ────
+   ╰────
+  help: This requirement remains unchecked; other reported errors still apply.
+
+        Simplify cyclic or growing impl constraints.

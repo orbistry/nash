@@ -1,44 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype Box 'a = Box 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (Box 'a) where\n    keep (Box x) = Box (keep x)\n"
+description: "module Main exposing (..)\ntype Box 'a = Box 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (Box 'a) where\n    keep (Box x) = Box (keep x)\n"
+info: diagnostic
 ---
-[
-    MissingConstraint {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 25,
-            },
-            end: Position {
-                line: 6,
-                column: 29,
-            },
-        },
-        name: "keep",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Keep",
-        },
-        args: [
-            RigidVar(
-                "a",
-            ),
-        ],
-        binder: Located {
-            region: Region {
-                start: Position {
-                    line: 6,
-                    column: 5,
-                },
-                end: Position {
-                    line: 6,
-                    column: 9,
-                },
-            },
-            value: "keep",
-        },
-    },
-]
+nash::type::missing_constraint
+
+  × `keep` requires undeclared constraint `Keep 'a`.
+   ╭─[Main.nash:6:25]
+ 5 │ impl Keep (Box 'a) where
+ 6 │     keep (Box x) = Box (keep x)
+   ·     ──┬─                ──┬─
+   ·       │                   ╰── constraint required here
+   ·       ╰── annotation for `keep`
+   ╰────
+  help: Add `Keep 'a` to the annotation for `keep`.

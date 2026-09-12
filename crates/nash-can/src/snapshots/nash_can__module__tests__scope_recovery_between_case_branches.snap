@@ -1,50 +1,33 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf outer =\n    case outer of\n        first -> missing\n        second -> first\n"
+info: diagnostic
 ---
-[
-    NotFoundVar {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 18,
-            },
-            end: Position {
-                line: 5,
-                column: 25,
-            },
-        },
-        prefix: None,
-        name: "missing",
-        suggestions: PossibleNames {
-            locals: [
-                "f",
-                "first",
-                "outer",
-            ],
-            qualified: [],
-        },
-    },
-    NotFoundVar {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 19,
-            },
-            end: Position {
-                line: 6,
-                column: 24,
-            },
-        },
-        prefix: None,
-        name: "first",
-        suggestions: PossibleNames {
-            locals: [
-                "f",
-                "outer",
-                "second",
-            ],
-            qualified: [],
-        },
-    },
-]
+nash::names::not_found_var
+
+  × Unknown variable `missing`.
+   ╭─[src/Main.nash:5:18]
+ 4 │     case outer of
+ 5 │         first -> missing
+   ·                  ───────
+ 6 │         second -> first
+   ╰────
+  help: Similar names:
+
+            first
+            f
+            outer
+
+nash::names::not_found_var
+
+  × Unknown variable `first`.
+   ╭─[src/Main.nash:6:19]
+ 5 │         first -> missing
+ 6 │         second -> first
+   ·                   ─────
+   ╰────
+  help: Similar names:
+
+            f
+            outer
+            second

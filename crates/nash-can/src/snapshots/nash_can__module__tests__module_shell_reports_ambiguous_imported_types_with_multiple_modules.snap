@@ -1,34 +1,18 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Maybe exposing (..)\n\nimport Option exposing (..)\n\nimport Choice exposing (..)\n\ntype alias Wrapped 'a = Maybe 'a\n"
+info: diagnostic
 ---
-[
-    AmbiguousType {
-        region: Region {
-            start: Position {
-                line: 9,
-                column: 25,
-            },
-            end: Position {
-                line: 9,
-                column: 30,
-            },
-        },
-        prefix: None,
-        name: "Maybe",
-        first_module: ModuleName {
-            package: None,
-            name: "Maybe",
-        },
-        other_modules: [
-            ModuleName {
-                package: None,
-                name: "Option",
-            },
-            ModuleName {
-                package: None,
-                name: "Choice",
-            },
-        ],
-    },
-]
+nash::names::ambiguous_type
+
+  × Ambiguous type `Maybe`.
+   ╭─[src/Main.nash:9:25]
+ 8 │ 
+ 9 │ type alias Wrapped 'a = Maybe 'a
+   ·                         ─────
+   ╰────
+  help:     Choice.Maybe
+            Maybe.Maybe
+            Option.Maybe
+
+        Use a qualified name.

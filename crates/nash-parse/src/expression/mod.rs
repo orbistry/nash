@@ -419,14 +419,15 @@ macro_rules! assert_expr_error_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src);
+        let mut parser = nash_parse::Parser::new(&bump, src);
         let result = parser.term().expect_err("expected parse error");
 
         insta::with_settings!({
             description => format!("Code:\n\n{}", indoc::indoc!($code)),
             omit_expression => true,
+                info => &"diagnostic",
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!($crate::test_support::render_expr_error(src, &result));
         });
     }};
 }
@@ -457,14 +458,15 @@ macro_rules! assert_expression_error_snapshot {
     ($code:expr) => {{
         let bump = bumpalo::Bump::new();
         let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = $crate::Parser::new(&bump, src);
+        let mut parser = nash_parse::Parser::new(&bump, src);
         let result = parser.expression().expect_err("expected parse error");
 
         insta::with_settings!({
             description => format!("Code:\n\n{}", indoc::indoc!($code)),
             omit_expression => true,
+                info => &"diagnostic",
         }, {
-            insta::assert_debug_snapshot!(result);
+            insta::assert_snapshot!($crate::test_support::render_expr_error(src, &result));
         });
     }};
 }

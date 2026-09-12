@@ -1,33 +1,15 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Main exposing (..)\n\ntype Color = Red\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n\nimpl Functor Color where\n    map f xs = xs\n"
+info: diagnostic
 ---
-[
-    KindMismatch {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 14,
-            },
-            end: Position {
-                line: 7,
-                column: 19,
-            },
-        },
-        context: ImplHead {
-            trait_: QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Functor",
-            },
-            index: 0,
-        },
-        expected: Arrow(
-            Type,
-            Type,
-        ),
-        actual: Type,
-    },
-]
+nash::names::kind_mismatch
+
+  × Kind mismatch in head 1 of impl `Main.Functor`.
+   ╭─[src/Main.nash:7:14]
+ 6 │ 
+ 7 │ impl Functor Color where
+   ·              ─────
+ 8 │     map f xs = xs
+   ╰────
+  help: Expected kind `Type -> Type`, found `Type`.

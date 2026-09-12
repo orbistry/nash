@@ -1,147 +1,31 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nbad xs = first (Some ()) xs\n"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nbad xs = first (Some ()) xs\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 10,
-            },
-            end: Position {
-                line: 6,
-                column: 15,
-            },
-        },
-        name: "type application",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "option",
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
-                        args: [],
-                    },
-                ],
-            },
-        ],
-        available: [],
-        because: [
-            Formation(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                    args: [
-                        Type {
-                            home: ModuleName {
-                                package: None,
-                                name: "Main",
-                            },
-                            name: "option",
-                            args: [
-                                Type {
-                                    home: ModuleName {
-                                        package: Some(
-                                            PackageName {
-                                                author: "nash",
-                                                project: "core",
-                                            },
-                                        ),
-                                        name: "Builtin",
-                                    },
-                                    name: "unit",
-                                    args: [],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ),
-        ],
-    },
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 10,
-            },
-            end: Position {
-                line: 6,
-                column: 15,
-            },
-        },
-        name: "first",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "option",
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
-                        args: [],
-                    },
-                ],
-            },
-        ],
-        available: [],
-        because: [],
-    },
-]
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable (option unit)`.
+   ╭─[Main.nash:6:10]
+ 5 │ first x xs = x
+ 6 │ bad xs = first (Some ()) xs
+   ·          ──┬──
+   ·            ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming list (option unit)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable (option unit)`.
+   ╭─[Main.nash:6:10]
+ 5 │ first x xs = x
+ 6 │ bad xs = first (Some ()) xs
+   ·          ──┬──
+   ·            ╰── required by `first`
+   ╰────
+  help: Use a type with Big or Const representation; an impl cannot change representation.
