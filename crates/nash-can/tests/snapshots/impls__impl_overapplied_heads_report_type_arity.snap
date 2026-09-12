@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: errors
+description: "module Main exposing (..)\ntype alias listAlias 'a = list 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list 'a 'b) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias listAlias 'a = list 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (listAlias 'a 'b) where\n    keep x = x\n"
 ---
 [
     [

@@ -1,8 +1,15 @@
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use indoc::indoc;
 
+const MONAD_SOURCE: &str = "module Monad exposing (Monad)\ntrait Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n";
+
 fn monad(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
-    let module = nash_parse::Parser::new(bump, "module Monad exposing (Monad)\ntrait Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n").module().unwrap();
+    let module = nash_parse::Parser::new(bump, MONAD_SOURCE)
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         bump,
         nash_can::Context {
@@ -17,6 +24,8 @@ fn monad(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
 
 #[test]
 fn do_scopes_statements_and_uses_the_core_method() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(MONAD_SOURCE);
     let bump = Bump::new();
     let interfaces = std::collections::BTreeMap::from([("Monad", monad(&bump, true))]);
     let source = indoc!(
@@ -34,7 +43,9 @@ fn do_scopes_statements_and_uses_the_core_method() {
             x
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -45,11 +56,15 @@ fn do_scopes_statements_and_uses_the_core_method() {
     )
     .unwrap();
     assert!(canonical.warnings.is_empty(), "{:?}", canonical.warnings);
-    insta::assert_debug_snapshot!(canonical.module.decls);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(canonical.module.decls);
+    });
 }
 
 #[test]
 fn do_rejects_missing_core_and_refutable_patterns() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(MONAD_SOURCE);
     let bump = Bump::new();
     let mut results = Vec::new();
     for (core, pattern, rhs) in [
@@ -60,7 +75,9 @@ fn do_rejects_missing_core_and_refutable_patterns() {
     ] {
         let interfaces = std::collections::BTreeMap::from([("Monad", monad(&bump, core))]);
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Monad\ntype option 'a = Some 'a\nrun m = do\n    {pattern} <- {rhs}\n    m\n"));
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let errors = nash_can::canonicalize(
             &bump,
             nash_can::Context {
@@ -77,5 +94,7 @@ fn do_rejects_missing_core_and_refutable_patterns() {
         );
         results.push(errors);
     }
-    insta::assert_debug_snapshot!(results);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(results);
+    });
 }

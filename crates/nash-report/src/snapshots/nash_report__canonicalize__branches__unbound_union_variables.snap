@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "type Box = Box 'a 'b"
 ---
 nash::names::type_vars_unbound_in_union
 
   × Type variables a and b are unbound in the `Box` type definition:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:17]
+ 1 │ type Box = Box 'a 'b
+   ·                 ─
    ╰────
   help: Declare the type variables:
 

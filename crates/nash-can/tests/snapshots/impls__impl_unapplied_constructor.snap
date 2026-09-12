@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "result.module.impls[0].value.heads"
+description: "module Main exposing (..)\n\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n\nimpl Functor List where\n    map f xs = xs\n"
 ---
 [
     Located {

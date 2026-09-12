@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "type Equal 'a = More (Equal (List 'a))"
 ---
 nash::names::irregular_recursion
 
   × This recursive use of `First.Equal` constructs the parameter 'a:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:22]
+ 1 │ type Equal 'a = More (Equal (List 'a))
+   ·                      ─────────────────
    ╰────
   help: Pass a type variable for this parameter so context inference can terminate.

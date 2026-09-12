@@ -199,7 +199,9 @@ fn baseline(source: &str, parameter: bool) -> (String, String, String) {
 
 #[test]
 fn vesting_four_ledger_outcomes() {
-    let (core, uplc, outcomes) = baseline(include_str!("fixtures/Vesting.nash"), false);
+    let source = include_str!("fixtures/Vesting.nash");
+    let _settings = snapshot_settings(source).bind_to_scope();
+    let (core, uplc, outcomes) = baseline(source, false);
     insta::assert_snapshot!("vesting_core", core);
     insta::assert_snapshot!("vesting_uplc", uplc);
     insta::assert_snapshot!("vesting_outcomes", outcomes);
@@ -207,8 +209,25 @@ fn vesting_four_ledger_outcomes() {
 
 #[test]
 fn vesting_const_parameter_four_ledger_outcomes() {
-    let (core, uplc, outcomes) = baseline(include_str!("fixtures/VestingParam.nash"), true);
+    let source = include_str!("fixtures/VestingParam.nash");
+    let _settings = snapshot_settings(source).bind_to_scope();
+    let (core, uplc, outcomes) = baseline(source, true);
     insta::assert_snapshot!("vesting_parameter_core", core);
     insta::assert_snapshot!("vesting_parameter_uplc", uplc);
     insta::assert_snapshot!("vesting_parameter_outcomes", outcomes);
+}
+
+fn snapshot_settings(source: &str) -> insta::Settings {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_description(
+        [
+            include_str!("fixtures/VestingLiteral.nash"),
+            include_str!("fixtures/VestingLift.nash"),
+            include_str!("fixtures/VestingTx.nash"),
+            source,
+        ]
+        .join("\n"),
+    );
+    settings.set_omit_expression(true);
+    settings
 }

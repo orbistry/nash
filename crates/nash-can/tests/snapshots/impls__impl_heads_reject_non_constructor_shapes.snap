@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: errors
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a -> 'b) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (('a -> 'b) : Term) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep { value : 'a } where\n    keep x = x\n\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('f 'a) where\n    keep x = x\n"
 ---
 [
     (

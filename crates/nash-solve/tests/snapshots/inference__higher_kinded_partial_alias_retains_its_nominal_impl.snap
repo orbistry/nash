@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: "output.join(\"\\n\")"
+description: "module Higher exposing (..)\ntype alias Pair 'left 'right = { first : 'left, second : 'right }\ntrait Keep 'f where\n    keep : 'f 'a -> 'f 'a\nimpl Keep (Pair 'a) where\n    keep x = x\nthrough x = keep x\n\n\nmodule Main exposing (..)\nimport Higher exposing (..)\ntype Color = Red | Blue\ntype Mood = Calm | Busy\npair : Pair Color Color\npair = { first = Red, second = Blue }\nother : Pair Mood Color\nother = Pair Calm Red\nkept = through pair\nkeptOther = through other\n\n\nmodule Reject exposing (..)\nimport Higher exposing (..)\ntype Color = Red | Blue\ntype alias Other 'left 'right = { first : 'left, second : 'right }\nbad = through (Other Red Blue)\n"
 ---
 Higher:
 through : forall a f. (Keep f, Apply f a) => f a -> f a

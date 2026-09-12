@@ -29,17 +29,18 @@ fn finish_receives_original_solved_nodes_and_tables() {
 #[test]
 fn failed_frontend_never_calls_finish() {
     let uri = Url::parse("file:///project/src/Main.nash").unwrap();
+    let source = "module Main exposing (..)\nmain = unknown\n";
     let (report, output) = build_sync_with_edges_and(
-        vec![(
-            uri,
-            None,
-            Ok("module Main exposing (..)\nmain = unknown\n".into()),
-        )],
+        vec![(uri.clone(), None, Ok(source.into()))],
         &HashMap::new(),
         |_| panic!("failed build must not generate code"),
     );
     assert!(!report.is_success());
     assert!(output.is_none());
+    let ModuleResult::Failed(reports) = &report.modules[&uri] else {
+        panic!("expected frontend diagnostic")
+    };
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(report_text(reports)); });
 }
 
 #[test]
@@ -53,14 +54,15 @@ fn term_validator_parameter_never_reaches_codegen() {
     );
     assert!(!report.is_success());
     assert!(output.is_none());
-    let ModuleResult::Failed(errors) = &report.modules[&uri] else {
-        panic!("expected parameter diagnostic")
+    let ModuleResult::Failed(reports) = &report.modules[&uri] else {
+        panic!("expected frontend diagnostic")
     };
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(report_text(reports)); });
     assert!(
-        errors
+        reports
             .reports
             .iter()
             .any(|report| report.title == "BAD MAIN PARAMETER"),
-        "{errors:?}"
+        "{reports:?}"
     );
 }

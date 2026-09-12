@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::String(StringError::Escape(Escape::BadUnicodeCode(8)), 1, 10),\n\"value = \\\"\\\\u{D800}\\\"\")"
+description: "value = \"\\u{D800}\""
 ---
-BAD UNICODE ESCAPE
-Region { start: Position { line: 1, column: 10 }, end: Position { line: 1, column: 18 } }
+nash::syntax
 
-Invalid Unicode scalar value.
-
-Use 0000–10FFFF, excluding D800–DFFF.
+  × Invalid Unicode scalar value.
+   ╭─[src/Main.nash:1:10]
+ 1 │ value = "\u{D800}"
+   ·          ────────
+   ╰────
+  help: Use 0000–10FFFF, excluding D800–DFFF.

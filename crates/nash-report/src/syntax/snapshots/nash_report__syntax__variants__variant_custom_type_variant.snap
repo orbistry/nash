@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: type box = lower
 ---
 nash::syntax
 
   × Expected a constructor name.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:12]
+ 1 │ type box = lower
+   ·            ─
    ╰────
   help: Start the constructor name with an uppercase letter.

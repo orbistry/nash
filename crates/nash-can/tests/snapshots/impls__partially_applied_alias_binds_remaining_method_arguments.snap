@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "(from, free_vars)"
+description: "module Main exposing (..)\ntype alias Pair 'left 'right = { first : 'left, second : 'right }\ntrait Keep 'f where\n    keep : 'f 'a -> 'f 'a\nimpl Keep (Pair 'a) where\n    keep x = x\n"
 ---
 (
     Located {

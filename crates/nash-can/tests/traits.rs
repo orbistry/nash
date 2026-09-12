@@ -1,3 +1,6 @@
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use indoc::indoc;
 
@@ -8,10 +11,11 @@ fn parse<'a>(bump: &'a Bump, source: &str) -> &'a nash_source::Module<'a> {
 
 #[test]
 fn superclass_and_default_method() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (Same)
         import Builtin exposing (..)
@@ -23,7 +27,7 @@ fn superclass_and_default_method() {
             same : 'a -> 'a -> bool
             same x y = eq x y
     "
-        ),
+        )),
     );
     let interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
@@ -37,15 +41,18 @@ fn superclass_and_default_method() {
     )
     .unwrap();
     assert!(result.warnings.is_empty(), "{:?}", result.warnings);
-    insta::assert_debug_snapshot!((&result.module.traits, &result.module.exports));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((&result.module.traits, &result.module.exports));
+    });
 }
 
 #[test]
 fn superclass_cycle() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -55,38 +62,44 @@ fn superclass_cycle() {
         trait First 'a => Second 'a where
             second : 'a -> 'a
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(
-        nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-    );
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(
+            nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
+        );
+    });
 }
 
 #[test]
 fn method_requires_each_trait_parameter() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
         trait Convert 'a 'b where
             convert : 'a -> 'a
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(
-        nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-    );
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(
+            nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
+        );
+    });
 }
 
 #[test]
 fn method_quantifiers_have_independent_kinds() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -94,7 +107,7 @@ fn method_quantifiers_have_independent_kinds() {
             ordinary : 'a -> List 'b -> 'a
             higher : 'a -> 'b 'c -> 'a
     "
-        ),
+        )),
     );
     let result = nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap();
     let trait_ = &result.module.traits[0].value;
@@ -103,15 +116,18 @@ fn method_quantifiers_have_independent_kinds() {
         .iter()
         .map(|m| (m.name.value, m.annotation.free_vars, m.annotation.context))
         .collect();
-    insta::assert_debug_snapshot!((&trait_.kinds, variables));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((&trait_.kinds, variables));
+    });
 }
 
 #[test]
 fn method_predicate_checks_argument_kind() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         import Builtin exposing (..)
@@ -122,29 +138,32 @@ fn method_predicate_checks_argument_kind() {
         trait Uses 'a where
             use : BigOnly int => 'a -> 'a
     "
-        ),
+        )),
     );
     let interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
-    insta::assert_debug_snapshot!(
-        nash_can::canonicalize(
-            &bump,
-            nash_can::Context {
-                package: None,
-                interfaces: Some(&interfaces)
-            },
-            source
-        )
-        .unwrap_err()
-    );
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(
+            nash_can::canonicalize(
+                &bump,
+                nash_can::Context {
+                    package: None,
+                    interfaces: Some(&interfaces)
+                },
+                source
+            )
+            .unwrap_err()
+        );
+    });
 }
 
 #[test]
 fn default_body_checks_nested_annotation_kinds() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         import Builtin exposing (..)
@@ -158,29 +177,32 @@ fn default_body_checks_nested_annotation_kinds() {
                 in
                 x
     "
-        ),
+        )),
     );
     let interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
-    insta::assert_debug_snapshot!(
-        nash_can::canonicalize(
-            &bump,
-            nash_can::Context {
-                package: None,
-                interfaces: Some(&interfaces)
-            },
-            source
-        )
-        .unwrap_err()
-    );
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(
+            nash_can::canonicalize(
+                &bump,
+                nash_can::Context {
+                    package: None,
+                    interfaces: Some(&interfaces)
+                },
+                source
+            )
+            .unwrap_err()
+        );
+    });
 }
 
 #[test]
 fn mutually_referencing_method_contexts_are_not_superclass_cycles() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -190,7 +212,7 @@ fn mutually_referencing_method_contexts_are_not_superclass_cycles() {
         trait Second 'a where
             second : First 'a => 'a -> 'a
     "
-        ),
+        )),
     );
     let result = nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap();
     let schemes: Vec<_> = result
@@ -199,15 +221,18 @@ fn mutually_referencing_method_contexts_are_not_superclass_cycles() {
         .iter()
         .map(|t| (t.value.name.value, t.value.kinds))
         .collect();
-    insta::assert_debug_snapshot!(schemes);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(schemes);
+    });
 }
 
 #[test]
 fn default_parameter_cannot_shadow_local_method() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -215,21 +240,24 @@ fn default_parameter_cannot_shadow_local_method() {
             keep : 'a -> 'a
             keep keep = keep
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(
-        nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-    );
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(
+            nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
+        );
+    });
 }
 
 #[test]
 fn imported_trait_methods_retain_context_and_defaults() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let interface = {
         let source_bump = &bump;
         let source = parse(
             source_bump,
-            indoc!(
+            snapshot_inputs.record(indoc!(
                 "
             module Identity exposing (Keep)
 
@@ -237,7 +265,7 @@ fn imported_trait_methods_retain_context_and_defaults() {
                 keep : 'a -> 'a
                 keep x = x
         "
-            ),
+            )),
         );
         let can =
             nash_can::canonicalize(source_bump, nash_can::Context::default(), source).unwrap();
@@ -246,7 +274,7 @@ fn imported_trait_methods_retain_context_and_defaults() {
     let interfaces = std::collections::BTreeMap::from([("Identity", interface)]);
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         import Identity as I exposing (Keep)
@@ -257,7 +285,7 @@ fn imported_trait_methods_retain_context_and_defaults() {
         qualified : I.Keep 'a => 'a -> 'a
         qualified x = I.keep x
     "
-        ),
+        )),
     );
     let result = nash_can::canonicalize(
         &bump,
@@ -286,7 +314,9 @@ fn imported_trait_methods_retain_context_and_defaults() {
         decls = next;
     }
     assert_eq!(references.len(), 2);
-    insta::assert_debug_snapshot!((interfaces["Identity"].traits, references));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((interfaces["Identity"].traits, references));
+    });
 }
 
 fn interface_from_source<'a>(bump: &'a Bump, source: &str) -> nash_can::Interface<'a> {
@@ -297,10 +327,11 @@ fn interface_from_source<'a>(bump: &'a Bump, source: &str) -> nash_can::Interfac
 
 #[test]
 fn private_trait_metadata_does_not_expose_names() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let interface = interface_from_source(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Identity exposing (Keep)
 
@@ -310,7 +341,7 @@ fn private_trait_metadata_does_not_expose_names() {
         trait Hidden 'a => Keep 'a where
             keep : 'a -> 'a
     "
-        ),
+        )),
     );
     assert_eq!(interface.traits.len(), 2);
     let interfaces = std::collections::BTreeMap::from([("Identity", interface)]);
@@ -320,34 +351,41 @@ fn private_trait_metadata_does_not_expose_names() {
     };
     let valid = parse(
         &bump,
-        "module Main exposing (..)\nimport Identity exposing (Keep)\n\ntrait Keep 'a => Child 'a where\n    child : 'a -> 'a\n",
+        snapshot_inputs.record("module Main exposing (..)\nimport Identity exposing (Keep)\n\ntrait Keep 'a => Child 'a where\n    child : 'a -> 'a\n"),
     );
     let can = nash_can::canonicalize(&bump, context, valid).unwrap();
     let hidden_trait = parse(
         &bump,
-        "module Main exposing (..)\nimport Identity exposing (..)\n\nf : Identity.Hidden 'a => 'a -> 'a\nf x = x\n",
+        snapshot_inputs.record("module Main exposing (..)\nimport Identity exposing (..)\n\nf : Identity.Hidden 'a => 'a -> 'a\nf x = x\n"),
     );
     let hidden_method = parse(
         &bump,
-        "module Main exposing (..)\nimport Identity exposing (..)\n\nf x = Identity.hidden x\n",
+        snapshot_inputs.record(
+            "module Main exposing (..)\nimport Identity exposing (..)\n\nf x = Identity.hidden x\n",
+        ),
     );
-    insta::assert_debug_snapshot!((
-        can.module.traits[0].value.kinds,
-        nash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),
-        nash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),
-    ));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((
+            can.module.traits[0].value.kinds,
+            nash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),
+            nash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),
+        ));
+    });
 }
 
 #[test]
 fn imported_trait_and_method_ambiguity() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let a = interface_from_source(
         &bump,
-        "module A exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n",
+        snapshot_inputs
+            .record("module A exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n"),
     );
     let b = interface_from_source(
         &bump,
-        "module B exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n",
+        snapshot_inputs
+            .record("module B exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n"),
     );
     let interfaces = std::collections::BTreeMap::from([("A", a), ("B", b)]);
     let context = nash_can::Context {
@@ -356,24 +394,27 @@ fn imported_trait_and_method_ambiguity() {
     };
     let trait_source = parse(
         &bump,
-        "module Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf : Keep 'a => 'a -> 'a\nf x = x\n",
+        snapshot_inputs.record("module Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf : Keep 'a => 'a -> 'a\nf x = x\n"),
     );
     let method_source = parse(
         &bump,
-        "module Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf x = keep x\n",
+        snapshot_inputs.record("module Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf x = keep x\n"),
     );
-    insta::assert_debug_snapshot!((
-        nash_can::canonicalize(&bump, context, trait_source).unwrap_err(),
-        nash_can::canonicalize(&bump, context, method_source).unwrap_err(),
-    ));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((
+            nash_can::canonicalize(&bump, context, trait_source).unwrap_err(),
+            nash_can::canonicalize(&bump, context, method_source).unwrap_err(),
+        ));
+    });
 }
 
 #[test]
 fn higher_kinded_method_context() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -383,7 +424,7 @@ fn higher_kinded_method_context() {
         trait Traversable 't where
             traverse : Applicative 'f => ('a -> 'f 'b) -> 't 'a -> 'f ('t 'b)
     "
-        ),
+        )),
     );
     let can = nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap();
     let schemes: Vec<_> = can
@@ -393,15 +434,18 @@ fn higher_kinded_method_context() {
         .map(|t| (t.value.name.value, t.value.kinds))
         .collect();
     let context = can.module.traits[1].value.methods[0].annotation.context;
-    insta::assert_debug_snapshot!((schemes, context));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((schemes, context));
+    });
 }
 
 #[test]
 fn methods_share_the_module_value_namespace() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = parse(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -411,9 +455,11 @@ fn methods_share_the_module_value_namespace() {
         trait Second 'a where
             duplicate : 'a -> 'a
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(
-        nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-    );
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(
+            nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
+        );
+    });
 }

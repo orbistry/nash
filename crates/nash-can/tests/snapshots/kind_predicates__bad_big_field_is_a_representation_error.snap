@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kind_predicates.rs
-expression: errors
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Bad 'a = Bad (list 'a)\n"
 ---
 [
     RepresentationMismatch {

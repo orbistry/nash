@@ -1,16 +1,16 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\ntrait Equal 'name 'name where\n    equal : 'name -> Bool\n"
 ---
 nash::names::duplicate_trait_parameter
 
   × This trait has multiple `name` type parameters.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+   ╭─[Main.nash:2:19]
+ 1 │ module Main exposing (..)
+ 2 │ trait Equal 'name 'name where
+   ·             ──┬── ──┬──
+   ·               │     ╰── and another first definition
+   ·               ╰── first definition
+ 3 │     equal : 'name -> Bool
    ╰────
   help: Rename one of the definitions.

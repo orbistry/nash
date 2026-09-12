@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/pattern.rs
-expression: "render(indoc::indoc!\n{r#\"\n            module Main exposing (..)\n            first xs =\n                case xs of\n                    [] -> 0\n                    [] :: _ -> 1\n        \"#})"
+description: "Code:\n\nmodule Main exposing (..)\nfirst xs =\n    case xs of\n        [] -> 0\n        [] :: _ -> 1\n"
 ---
 nash::pattern::incomplete
 

@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Record(&Record::Field(1, 9), 1, 9), \"value = ,\")"
+description: "value = { x = 1, , y = 2 }"
 ---
-EXTRA COMMA
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Extra comma in record.
-
-Remove the repeated comma.
+  × Extra comma in record.
+   ╭─[src/Main.nash:1:18]
+ 1 │ value = { x = 1, , y = 2 }
+   ·                  ─
+   ╰────
+  help: Remove the repeated comma.

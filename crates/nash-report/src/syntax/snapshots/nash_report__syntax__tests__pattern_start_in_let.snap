@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: if
+description: f = let if = 1 in 1
 ---
 nash::diagnostic
 
   × Reserved word `if` cannot be a pattern variable.
-   ╭─[src/Main.nash:1:1]
- 1 │ if
-   · ──
+   ╭─[src/Main.nash:1:9]
+ 1 │ f = let if = 1 in 1
+   ·         ──
    ╰────
   help: Choose another name.

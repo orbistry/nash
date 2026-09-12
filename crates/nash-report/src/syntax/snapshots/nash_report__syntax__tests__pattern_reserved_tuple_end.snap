@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: if
+description: f (x if) = 1
 ---
 nash::syntax::unclosed_delimiter
 
   × Expected `)` to close `(`.
-   ╭─[src/Main.nash:1:1]
- 1 │ if
-   · ┬
-   · ╰── expected `)`
+   ╭─[src/Main.nash:1:6]
+ 1 │ f (x if) = 1
+   ·   ┬  ┬
+   ·   │  ╰── expected `)`
+   ·   ╰── opened here
    ╰────
   help: Add `)` here.

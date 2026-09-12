@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Record(&Record::Open(1, 11), 1, 9), \"value = { if = 1 }\")"
+description: "value = { if = 1 }"
 ---
-RESERVED WORD
-Region { start: Position { line: 1, column: 11 }, end: Position { line: 1, column: 13 } }
+nash::syntax
 
-Reserved word `if` cannot be a field name.
-
-Choose another field name.
+  × Reserved word `if` cannot be a field name.
+   ╭─[src/Main.nash:1:11]
+ 1 │ value = { if = 1 }
+   ·           ──
+   ╰────
+  help: Choose another field name.

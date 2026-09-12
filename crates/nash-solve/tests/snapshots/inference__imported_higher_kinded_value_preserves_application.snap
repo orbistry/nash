@@ -1,5 +1,5 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Higher exposing (value)\nvalue : 'f 'a -> 'f 'a\nvalue x = x\n\n\nmodule Main exposing (..)\n\nimport Higher\n\nvalue = Higher.value\n"
 ---
 value : forall a f. Apply f a => f a -> f a

@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: module
+description: f = 1 module Other exposing (..)
 ---
 nash::syntax
 
   × Top-level declarations must start on separate lines.
-   ╭─[src/Main.nash:1:1]
- 1 │ module
-   · ─
+   ╭─[src/Main.nash:1:7]
+ 1 │ f = 1 module Other exposing (..)
+   ·       ─
    ╰────
   help: Start the declaration in column 1 on a new line.

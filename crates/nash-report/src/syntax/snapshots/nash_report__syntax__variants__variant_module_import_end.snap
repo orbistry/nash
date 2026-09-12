@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: import Main junk
 ---
 nash::syntax
 
   × Invalid import declaration.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:13]
+ 1 │ import Main junk
+   ·             ─
    ╰────
   help: Write `import Module`, optionally followed by `as Alias` and `exposing (names)`.

@@ -1,0 +1,13 @@
+---
+source: crates/nash-driver/src/compile/finish_tests.rs
+description: "module Main exposing (..)\nmain = unknown\n"
+---
+nash::names::not_found_var
+
+  × Unknown variable `unknown`.
+   ╭─[/project/src/Main.nash:2:8]
+ 1 │ module Main exposing (..)
+ 2 │ main = unknown
+   ·        ───────
+   ╰────
+  help: Try main instead.

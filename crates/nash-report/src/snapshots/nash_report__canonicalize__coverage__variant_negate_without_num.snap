@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: value = -1
 ---
 nash::names::negate_without_num
 
   × Numeric negation requires `Num`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:9]
+ 1 │ value = -1
+   ·         ──
    ╰────
   help: Import the module that defines `Num`.

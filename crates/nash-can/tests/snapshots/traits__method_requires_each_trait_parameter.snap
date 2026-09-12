@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "nash_can::canonicalize(&bump, nash_can::Context::default(),\nsource).unwrap_err()"
+description: "module Main exposing (..)\n\ntrait Convert 'a 'b where\n    convert : 'a -> 'a\n"
 ---
 [
     MethodMissingParameter {

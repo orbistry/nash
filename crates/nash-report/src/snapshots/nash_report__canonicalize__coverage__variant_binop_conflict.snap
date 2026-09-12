@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: value = 1 < 2 > 3
 ---
 nash::names::binop_conflict
 
-  × You cannot mix (a) and (a) without parentheses.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × You cannot mix (<) and (>) without parentheses.
+   ╭─[Main.nash:1:9]
+ 1 │ value = 1 < 2 > 3
+   ·         ─────────
    ╰────
   help: Add parentheses to specify the grouping.

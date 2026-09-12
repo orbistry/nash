@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value = do\n    Just x <- action\n    pure x"
 ---
 nash::names::refutable_bind_pattern
 
   × This `do` binding has a pattern that can fail to match:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:2:5]
+ 1 │ value = do
+ 2 │     Just x <- action
+   ·     ──────
+ 3 │     pure x
    ╰────
   help: Bind a variable here, then use `case` to handle every variant.

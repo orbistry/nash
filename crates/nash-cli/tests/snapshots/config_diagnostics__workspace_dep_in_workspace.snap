@@ -1,0 +1,6 @@
+---
+source: crates/nash-cli/tests/config_diagnostics.rs
+description: "nash.jsonc (complete input):\n{\"type\":\"workspace\",\"members\":[],\"dependencies\":{\"author/name\":{\"workspace\":true}}}"
+---
+Error:   × failed to parse config: '<project>/nash.jsonc' at 1:64: workspace config cannot use { "workspace": true } dependencies
+  ╰─▶ '<project>/nash.jsonc' at 1:64: workspace config cannot use { "workspace": true } dependencies

@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Dot(1, 9), \"value = \")"
+description: value = x.
 ---
-EXPECTED ACCESSOR
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a record accessor.
-
-Write a dot followed by a field name, such as `.name`.
+  × Expected a record accessor.
+   ╭─[src/Main.nash:1:11]
+ 1 │ value = x.
+   ·           ─
+   ╰────
+  help: Write a dot followed by a field name, such as `.name`.

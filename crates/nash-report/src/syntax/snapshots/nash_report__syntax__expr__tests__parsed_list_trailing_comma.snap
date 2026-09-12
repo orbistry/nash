@@ -1,11 +1,11 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+description: "value = [1, ]"
 ---
 nash::syntax
 
   × Expected an expression before the closing delimiter.
-   ╭─[Main.nash:1:13]
+   ╭─[src/Main.nash:1:13]
  1 │ value = [1, ]
    ·             ─
    ╰────

@@ -1,15 +1,15 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "impl (Equal 'name) => Equal (List 'a) where\n    equal x y = True"
 ---
 nash::names::impl_context_var_not_in_head
 
   × The impl context mentions 'name, but this variable does not occur in the impl
   │ head:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:13]
+ 1 │ impl (Equal 'name) => Equal (List 'a) where
+   ·             ─────
+ 2 │     equal x y = True
    ╰────
   help: Each variable in an impl context must occur in its head. Check for a misspelled
         type variable.

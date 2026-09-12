@@ -58,11 +58,14 @@ syntax_snapshot!(type_tuple_missing_end, "f : (int, int\nf = 1");
 
 #[test]
 fn module_name_missing() {
-    insta::assert_snapshot!(render_plain(
-        &to_report(&Source::new(""), &Error::ModuleNameUnspecified("Main")),
-        &Source::new(""),
-        "src/Main.nash"
-    ));
+    let input = "answer = 42";
+    insta::with_settings!({ description => input, omit_expression => true }, {
+        insta::assert_snapshot!(render_plain(
+            &to_report(&Source::new(input), &Error::ModuleNameUnspecified("Main")),
+            &Source::new(input),
+            "src/Main.nash"
+        ));
+    });
 }
 
 #[test]
@@ -74,11 +77,13 @@ fn module_name_mismatch() {
         row: 1,
         col: 8,
     };
-    insta::assert_snapshot!(render_plain(
-        &to_report(&Source::new(input), &error),
-        &Source::new(input),
-        "src/Main.nash"
-    ));
+    insta::with_settings!({ description => input, omit_expression => true }, {
+        insta::assert_snapshot!(render_plain(
+            &to_report(&Source::new(input), &error),
+            &Source::new(input),
+            "src/Main.nash"
+        ));
+    });
 }
 
 macro_rules! report_branch {
@@ -154,224 +159,224 @@ report_branch!(
 report_branch!(decl_start_if, "if", s, decl::to_decl_start_report(&s, 1, 1));
 report_branch!(
     fresh_line_keyword,
-    "module",
+    "f = 1 module Other exposing (..)",
     s,
-    module::to_parse_error_report(&s, &Module::FreshLine(1, 1))
+    module::to_parse_error_report(&s, &Module::FreshLine(1, 7))
 );
 report_branch!(
     exposing_reserved_word,
-    "if",
+    "module Main exposing (if)",
     s,
-    module::to_exposing_report(&s, &Exposing::Value(1, 1), 1, 1)
+    module::to_exposing_report(&s, &Exposing::Value(1, 23), 1, 23)
 );
 report_branch!(
     exposing_bare_operator,
-    "+",
+    "module Main exposing (+)",
     s,
-    module::to_exposing_report(&s, &Exposing::Value(1, 1), 1, 1)
+    module::to_exposing_report(&s, &Exposing::Value(1, 23), 1, 23)
 );
 report_branch!(
     alias_reserved_parameter,
-    "if",
+    "type alias box if = int",
     s,
-    decl::to_type_alias_report(&s, &TypeAlias::Equals(1, 1), 1, 1)
+    decl::to_type_alias_report(&s, &TypeAlias::Equals(1, 16), 1, 16)
 );
 report_branch!(
     custom_type_reserved_parameter,
-    "if",
+    "type box if = Box",
     s,
-    decl::to_custom_type_report(&s, &CustomType::Equals(1, 1), 1, 1)
+    decl::to_custom_type_report(&s, &CustomType::Equals(1, 10), 1, 10)
 );
 report_branch!(
     definition_reserved_argument,
-    "if",
+    "f if = 1",
     s,
-    decl::to_decl_def_report(&s, "f", &DeclDef::Equals(1, 1), 1, 1)
+    decl::to_decl_def_report(&s, "f", &DeclDef::Equals(1, 3), 1, 3)
 );
 report_branch!(
     definition_missing_colon,
-    "->",
+    "f -> int",
     s,
-    decl::to_decl_def_report(&s, "f", &DeclDef::Equals(1, 1), 1, 1)
+    decl::to_decl_def_report(&s, "f", &DeclDef::Equals(1, 3), 1, 3)
 );
 report_branch!(
     definition_unexpected_operator,
-    "+",
+    "f + 1",
     s,
-    decl::to_decl_def_report(&s, "f", &DeclDef::Equals(1, 1), 1, 1)
+    decl::to_decl_def_report(&s, "f", &DeclDef::Equals(1, 3), 1, 3)
 );
 report_branch!(
     pattern_start_in_case,
-    "if",
+    "f = case x of\n    if -> 1",
     s,
-    pattern::to_pattern_report(&s, pattern::PContext::Case, &Pattern::Start(1, 1), 1, 1)
+    pattern::to_pattern_report(&s, pattern::PContext::Case, &Pattern::Start(2, 5), 2, 5)
 );
 report_branch!(
     pattern_start_in_arg,
-    "if",
+    "f if = 1",
     s,
-    pattern::to_pattern_report(&s, pattern::PContext::Arg, &Pattern::Start(1, 1), 1, 1)
+    pattern::to_pattern_report(&s, pattern::PContext::Arg, &Pattern::Start(1, 3), 1, 3)
 );
 report_branch!(
     pattern_start_in_let,
-    "if",
+    "f = let if = 1 in 1",
     s,
-    pattern::to_pattern_report(&s, pattern::PContext::Let, &Pattern::Start(1, 1), 1, 1)
+    pattern::to_pattern_report(&s, pattern::PContext::Let, &Pattern::Start(1, 9), 1, 9)
 );
 report_branch!(
     pattern_negative_number,
-    "-1",
+    "f -1 = 1",
     s,
-    pattern::to_pattern_report(&s, pattern::PContext::Arg, &Pattern::Start(1, 1), 1, 1)
+    pattern::to_pattern_report(&s, pattern::PContext::Arg, &Pattern::Start(1, 3), 1, 3)
 );
 report_branch!(
     pattern_reserved_record_field,
-    "if",
+    "f { if } = 1",
     s,
-    pattern::to_p_record_report(&s, &PRecord::Field(1, 1), 1, 1)
+    pattern::to_p_record_report(&s, &PRecord::Field(1, 5), 1, 3)
 );
 report_branch!(
     pattern_reserved_tuple_open,
-    "if",
+    "f (if) = 1",
     s,
-    pattern::to_p_tuple_report(&s, pattern::PContext::Arg, &PTuple::Open(1, 1), 1, 1)
+    pattern::to_p_tuple_report(&s, pattern::PContext::Arg, &PTuple::Open(1, 4), 1, 3)
 );
 report_branch!(
     pattern_reserved_tuple_end,
-    "if",
+    "f (x if) = 1",
     s,
-    pattern::to_p_tuple_report(&s, pattern::PContext::Arg, &PTuple::End(1, 1), 1, 1)
+    pattern::to_p_tuple_report(&s, pattern::PContext::Arg, &PTuple::End(1, 6), 1, 3)
 );
 report_branch!(
     pattern_stray_bracket,
-    "]",
+    "f (x] = 1",
     s,
-    pattern::to_p_tuple_report(&s, pattern::PContext::Arg, &PTuple::End(1, 1), 1, 1)
+    pattern::to_p_tuple_report(&s, pattern::PContext::Arg, &PTuple::End(1, 5), 1, 3)
 );
 report_branch!(
     pattern_reserved_list_open,
-    "if",
+    "f [if] = 1",
     s,
-    pattern::to_p_list_report(&s, pattern::PContext::Arg, &PList::Open(1, 1), 1, 1)
+    pattern::to_p_list_report(&s, pattern::PContext::Arg, &PList::Open(1, 4), 1, 3)
 );
 report_branch!(
     pattern_underscore_only_name,
-    "___",
+    "f ___ = 1",
     s,
     pattern::to_pattern_report(
         &s,
         pattern::PContext::Arg,
-        &Pattern::WildcardNotVar("___", 3, 1, 1),
+        &Pattern::WildcardNotVar("___", 3, 1, 3),
         1,
-        1
+        3
     )
 );
 report_branch!(
     pattern_underscore_uppercase_name,
-    "_Thing",
+    "f _Thing = 1",
     s,
     pattern::to_pattern_report(
         &s,
         pattern::PContext::Arg,
-        &Pattern::WildcardNotVar("_Thing", 6, 1, 1),
+        &Pattern::WildcardNotVar("_Thing", 6, 1, 3),
         1,
-        1
+        3
     )
 );
 report_branch!(
     type_reserved_word,
-    "if",
+    "f : if",
     s,
     type_::to_type_report(
         &s,
         type_::TContext::Annotation("f"),
-        &Type::Start(1, 1),
+        &Type::Start(1, 5),
         1,
-        1
+        5
     )
 );
 report_branch!(
     type_start_in_custom_type,
-    "42",
+    "type box = Box 42",
     s,
-    type_::to_type_report(&s, type_::TContext::CustomType, &Type::Start(1, 1), 1, 1)
+    type_::to_type_report(&s, type_::TContext::CustomType, &Type::Start(1, 16), 1, 16)
 );
 report_branch!(
     type_start_in_alias,
-    "42",
+    "type alias box = 42",
     s,
-    type_::to_type_report(&s, type_::TContext::TypeAlias, &Type::Start(1, 1), 1, 1)
+    type_::to_type_report(&s, type_::TContext::TypeAlias, &Type::Start(1, 18), 1, 18)
 );
 report_branch!(
     type_indent_in_custom_type,
-    "42",
+    "type box = Box\nint",
     s,
     type_::to_type_report(
         &s,
         type_::TContext::CustomType,
-        &Type::IndentStart(1, 1),
-        1,
+        &Type::IndentStart(2, 1),
+        2,
         1
     )
 );
 report_branch!(
     type_indent_in_alias,
-    "42",
+    "type alias box =\nint",
     s,
     type_::to_type_report(
         &s,
         type_::TContext::TypeAlias,
-        &Type::IndentStart(1, 1),
-        1,
+        &Type::IndentStart(2, 1),
+        2,
         1
     )
 );
 report_branch!(
     type_record_reserved_open,
-    "if",
+    "f : { if : int }",
     s,
     type_::to_t_record_report(
         &s,
         type_::TContext::Annotation("f"),
-        &TRecord::Open(1, 1),
+        &TRecord::Open(1, 7),
         1,
-        1
+        5
     )
 );
 report_branch!(
     type_record_reserved_field,
-    "if",
+    "f : { x : int, if : int }",
     s,
     type_::to_t_record_report(
         &s,
         type_::TContext::Annotation("f"),
-        &TRecord::Field(1, 1),
+        &TRecord::Field(1, 16),
         1,
-        1
+        5
     )
 );
 report_branch!(
     type_record_double_comma,
-    ",",
+    "f : { x : int, , y : int }",
     s,
     type_::to_t_record_report(
         &s,
         type_::TContext::Annotation("f"),
-        &TRecord::Field(1, 1),
+        &TRecord::Field(1, 16),
         1,
-        1
+        5
     )
 );
 report_branch!(
     type_record_trailing_comma,
-    "}",
+    "f : { x : int, }",
     s,
     type_::to_t_record_report(
         &s,
         type_::TContext::Annotation("f"),
-        &TRecord::Field(1, 1),
+        &TRecord::Field(1, 16),
         1,
-        1
+        5
     )
 );
 report_branch!(

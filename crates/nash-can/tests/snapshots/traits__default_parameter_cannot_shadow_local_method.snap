@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "nash_can::canonicalize(&bump, nash_can::Context::default(),\nsource).unwrap_err()"
+description: "module Main exposing (..)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep keep = keep\n"
 ---
 [
     Shadowing {

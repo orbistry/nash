@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Tuple(&Tuple::IndentExpr1(1, 9), 1, 9), \"value = \")"
+description: "value = (\n1, 2)"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected an expression or `)`.
-
-Add an expression inside the parentheses.
+  × Expected an expression or `)`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = (
+ 2 │ 1, 2)
+   · ─
+   ╰────
+  help: Add an expression inside the parentheses.

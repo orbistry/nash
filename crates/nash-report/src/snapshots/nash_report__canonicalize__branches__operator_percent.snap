@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: value = 1 % 2
 ---
 nash::names::not_found_binop
 
   × Unknown operator `(%)`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:11]
+ 1 │ value = 1 % 2
+   ·           ─
    ╰────
   help: Use an integer remainder or modulus function.

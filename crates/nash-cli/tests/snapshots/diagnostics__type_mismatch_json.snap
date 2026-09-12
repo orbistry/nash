@@ -1,6 +1,6 @@
 ---
 source: crates/nash-cli/tests/diagnostics.rs
-expression: "normalized(serde_json::to_string_pretty(&value).unwrap().as_bytes(), &root)"
+description: "src/Main.nash:\n\nmodule Main exposing (..)\nimport Builtin exposing (type bool(..))\n\nidentity : bool -> unit\nidentity flag = flag\n"
 ---
 {
   "errors": [

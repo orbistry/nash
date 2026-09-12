@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/render.rs
-expression: plain(&none)
+description: "Code:\n\nf = x + 1"
 ---
 nash::diagnostic
 

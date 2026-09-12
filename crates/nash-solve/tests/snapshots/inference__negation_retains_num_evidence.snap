@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Num exposing (Num)\ntrait Num 'a where\n    negate : 'a -> 'a\n\n\nmodule Main exposing (..)\nimport Num as N\nimport Literal exposing (..)\nnegate x = x\nflip x = -x\nnegative = -7\n"
 ---
 flip : forall a. Num a => a -> a
 negate : forall a. a -> a

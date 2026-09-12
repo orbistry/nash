@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::If(&If::ElseBranchStart(1, 9), 1, 9), \"value = \")"
+description: "value = if True then 1 else "
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected an expression after `else`.
-
-Add the second branch, indented inside the if expression.
+  × Expected an expression after `else`.
+   ╭─[src/Main.nash:1:29]
+ 1 │ value = if True then 1 else 
+   ·                             ─
+   ╰────
+  help: Add the second branch, indented inside the if expression.

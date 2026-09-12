@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value = [1, 2]"
 ---
 nash::names::unsupported
 
-  × Unsupported feature: a.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Unsupported feature: list literals.
+   ╭─[Main.nash:1:9]
+ 1 │ value = [1, 2]
+   ·         ──────
    ╰────
   help: This syntax is recognized, but its compiler implementation is not available yet.

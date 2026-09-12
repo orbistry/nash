@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Start(1, 9), \"value = \")"
+description: "value = "
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected an expression in the `value` definition.
-
-Add an expression or `todo` for an unfinished body.
+  × Expected an expression in the `value` definition.
+   ╭─[src/Main.nash:1:9]
+ 1 │ value = 
+   ·         ─
+   ╰────
+  help: Add an expression or `todo` for an unfinished body.

@@ -1,0 +1,6 @@
+---
+source: crates/nash-cli/tests/config_diagnostics.rs
+description: "nash.jsonc (complete input):\n{\"type\":\"application\",\"sourceDirectories\":false}"
+---
+Error:   × failed to parse config: '<project>/nash.jsonc' at 1:43: expected an array for 'sourceDirectories'
+  ╰─▶ '<project>/nash.jsonc' at 1:43: expected an array for 'sourceDirectories'

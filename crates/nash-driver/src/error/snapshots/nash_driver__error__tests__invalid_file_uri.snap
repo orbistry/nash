@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "Source lookup: an HTTPS URL was supplied where a file URI was required."
+---
+  × invalid file URI: https://example.test/Main.nash

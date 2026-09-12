@@ -52,3 +52,6 @@ pub enum DriverError {
     #[error("invalid module path: {path}")]
     InvalidModulePath { path: PathBuf },
 }
+
+#[cfg(test)]
+mod tests;

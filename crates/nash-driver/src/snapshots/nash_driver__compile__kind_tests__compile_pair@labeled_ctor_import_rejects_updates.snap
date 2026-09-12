@@ -1,0 +1,13 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type box(..))\ntype box = Box { value : unit }\n\nmodule Main exposing (..)\nimport Types\nchange : Types.box -> Types.box\nchange x = { x | value = () }\n"
+---
+nash::type::update_not_record
+
+  × Cannot update fields of `Types.box`.
+   ╭─[/Main.nash:4:18]
+ 3 │ change : Types.box -> Types.box
+ 4 │ change x = { x | value = () }
+   ·                  ─────
+   ╰────
+  help: Rebuild the value with its constructor.

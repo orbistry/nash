@@ -1,0 +1,25 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "\nmodule Utils exposing (..)\n\nhelper = 1\n\n\nmodule Main exposing (..)\n\nimport Utils\n\nmain = Utils.helper \"not a function argument\"\n"
+---
+nash::type::missing_impl
+
+  × No impl for `Literal.FromInt ('a -> 'b)`.
+   ╭─[/Main.nash:6:8]
+ 5 │ 
+ 6 │ main = Utils.helper "not a function argument"
+   ·        ──────┬─────
+   ·              ╰── required by `helper`
+   ╰────
+  help: Import or define an impl for `Literal.FromInt ('a -> 'b)`.
+
+nash::type::missing_impl
+
+  × No impl for `Literal.FromString string`.
+   ╭─[/Main.nash:6:21]
+ 5 │ 
+ 6 │ main = Utils.helper "not a function argument"
+   ·                     ────────────┬────────────
+   ·                                 ╰── required by `fromString`
+   ╰────
+  help: Import or define an impl for `Literal.FromString string`.

@@ -1,16 +1,15 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\ntype Box 'a 'a = Box 'a\n"
 ---
 nash::names::duplicate_union_arg
 
-  × The `a` type has multiple `a` type variables.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+  × The `Box` type has multiple `a` type variables.
+   ╭─[Main.nash:2:10]
+ 1 │ module Main exposing (..)
+ 2 │ type Box 'a 'a = Box 'a
+   ·          ─┬ ─┬
+   ·           │  ╰── first definition
+   ·           ╰── and another first definition
    ╰────
   help: Rename one of the definitions.

@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Todo(&Keyword::IndentMessage(1, 9), 1, 9), \"value = \")"
+description: "value = todo\n\"message\""
 ---
-MISSING MESSAGE
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a message for `todo`.
-
-Add an indented message expression.
+  × Expected a message for `todo`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = todo
+ 2 │ "message"
+   · ─
+   ╰────
+  help: Add an indented message expression.

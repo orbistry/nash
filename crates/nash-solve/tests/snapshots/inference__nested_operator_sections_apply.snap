@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: rendered
+description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n\n\nmodule Main exposing (..)\n\nimport Operators exposing (..)\n\nright = (+ ((+ 1) 2)) \"right\"\nleft = (((() +) 2) +) \"left\"\n"
 ---
 left : unit
 right : forall a. FromString a => a

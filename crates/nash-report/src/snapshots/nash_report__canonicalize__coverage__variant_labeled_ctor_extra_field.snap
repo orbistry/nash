@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "type Point = Point Int\nvalue = Point { x = 1 }"
 ---
 nash::names::labeled_ctor_extra_field
 
-  × The `a` constructor has no `a` field:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × The `Point` constructor has no `x` field:
+   ╭─[Main.nash:2:17]
+ 1 │ type Point = Point Int
+ 2 │ value = Point { x = 1 }
+   ·                 ─────
    ╰────
   help: Remove this extra field or check its spelling against the constructor
         declaration.

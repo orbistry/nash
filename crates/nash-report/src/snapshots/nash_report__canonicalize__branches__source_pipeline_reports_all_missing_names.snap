@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "errors.iter().map(|e|\ncrate::render_plain(&to_report(&source, e), &source,\n\"Main.nash\")).collect::<Vec<_>>().join(\"\\n\")"
+description: "module Main exposing (..)\nfirst = missing\nsecond = absent\n"
 ---
 nash::names::not_found_var
 

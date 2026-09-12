@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: results
+description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nimpl Lift Color Color where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Container 'a = Wrap 'a\nimpl Lift (Container 'a) (Container 'b) where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype color = Red\nimpl Lift color color where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype alias Alias 'a = 'a\nimpl Lift (Alias 'a) (Alias 'b) where\n    lift x = x\n    lower x = x\n"
 ---
 [
     Err(

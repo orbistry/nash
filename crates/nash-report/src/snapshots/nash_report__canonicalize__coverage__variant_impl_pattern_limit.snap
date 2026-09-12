@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "-- Reduced head from an impl-pattern budget exhaustion.\nimpl Equal (List (List 'a)) where\n    equal x y = True"
 ---
 nash::names::impl_pattern_limit
 
   × This impl pattern is too large or deeply nested:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:2:12]
+ 1 │ -- Reduced head from an impl-pattern budget exhaustion.
+ 2 │ impl Equal (List (List 'a)) where
+   ·            ────────────────
+ 3 │     equal x y = True
    ╰────
   help: Simplify the impl head.

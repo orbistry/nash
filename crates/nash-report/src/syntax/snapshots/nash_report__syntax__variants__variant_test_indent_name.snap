@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "test\n\"name\""
 ---
 nash::syntax
 
   × Expected a quoted test name.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:2:1]
+ 1 │ test
+ 2 │ "name"
+   · ─
    ╰────
   help: Give the test a name in double quotes.

@@ -1,0 +1,6 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "Workspace ownership: packages first/lib and second/lib both own /project/src/Main.nash."
+---
+  × module file:///project/src/Main.nash belongs to both first/lib and second/
+  │ lib

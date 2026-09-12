@@ -1,16 +1,16 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "name = 1\nvalue name = name"
 ---
 nash::names::shadowing
 
   × Name `name` is already defined.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
+   ╭─[Main.nash:2:7]
+ 1 │ name = 1
    · ──┬─
    ·   ╰── first defined here
- 2 │ other = name
-   · ──┬──
-   ·   ╰── shadows this name
+ 2 │ value name = name
+   ·       ──┬─
+   ·         ╰── shadows this name
    ╰────
   help: Rename one of these bindings.

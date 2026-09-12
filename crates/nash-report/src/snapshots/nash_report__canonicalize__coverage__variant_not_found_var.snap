@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: result = name
 ---
 nash::names::not_found_var
 
   × Unknown variable `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:10]
+ 1 │ result = name
+   ·          ────
    ╰────
-  help: Try name instead.
+  help: Try named instead.

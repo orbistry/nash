@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: errors
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep int where\n    keep x = x\n    keep y = y\n"
 ---
 [
     DuplicateMethod {

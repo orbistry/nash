@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "trait (Second 'a) => First 'a where\n    first : 'a -> 'a\ntrait (First 'a) => Second 'a where\n    second : 'a -> 'a"
 ---
 nash::names::recursive_superclass
 
   × These superclass declarations form a cycle:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:22]
+ 1 │ trait (Second 'a) => First 'a where
+   ·                      ─────
+ 2 │     first : 'a -> 'a
    ╰────
   help:     ┌─────┐
             │    First

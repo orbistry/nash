@@ -4716,7 +4716,9 @@ mod tests {
             },
         )
         .expect("expected successful canonicalization");
-        insta::assert_debug_snapshot!(result);
+        insta::with_settings!({description => input, omit_expression => true}, {
+            insta::assert_debug_snapshot!(result);
+        });
     }
 
     #[test]
@@ -4734,7 +4736,9 @@ mod tests {
             },
         )
         .expect("expected successful canonicalization");
-        insta::assert_debug_snapshot!(result);
+        insta::with_settings!({description => input, omit_expression => true}, {
+            insta::assert_debug_snapshot!(result);
+        });
     }
 
     #[test]
@@ -4751,7 +4755,9 @@ mod tests {
             },
         )
         .expect("expected successful canonicalization");
-        insta::assert_debug_snapshot!(result);
+        insta::with_settings!({description => input, omit_expression => true}, {
+            insta::assert_debug_snapshot!(result);
+        });
     }
 
     #[test]
@@ -4768,7 +4774,9 @@ mod tests {
             },
         )
         .expect("expected successful canonicalization");
-        insta::assert_debug_snapshot!(result);
+        insta::with_settings!({description => input, omit_expression => true}, {
+            insta::assert_debug_snapshot!(result);
+        });
     }
 
     #[test]

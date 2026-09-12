@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "f (x as\nname) = x"
 ---
 nash::syntax
 
   × Expected a variable after `as`.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:2:1]
+ 1 │ f (x as
+ 2 │ name) = x
+   · ─
    ╰────
   help: Name the whole matched value, as in `(pattern as name)`.

@@ -1,0 +1,6 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "Source read: /project/src/Main.nash returns a deterministic NotFound error."
+---
+  × failed to read file /project/src/Main.nash: fixture file missing
+  ╰─▶ fixture file missing

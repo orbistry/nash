@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "f : { x int }"
 ---
 nash::syntax
 
   × Expected `:` after the field name.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:9]
+ 1 │ f : { x int }
+   ·         ─
    ╰────
   help: Separate the field name and its type with `:`.

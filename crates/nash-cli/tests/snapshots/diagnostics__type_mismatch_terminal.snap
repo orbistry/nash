@@ -1,6 +1,6 @@
 ---
 source: crates/nash-cli/tests/diagnostics.rs
-expression: text
+description: "src/Main.nash:\n\nmodule Main exposing (..)\nimport Builtin exposing (type bool(..))\n\nidentity : bool -> unit\nidentity flag = flag\n"
 ---
 nash::type::mismatch
 

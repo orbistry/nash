@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::List(&List::Expr(&Expr::Start(1, 13), 1, 13), 1, 9),\n\"value = [1, ]\")"
+description: "value = [1, ]"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 13 }, end: Position { line: 1, column: 13 } }
+nash::syntax
 
-Expected an expression before the closing delimiter.
-
-Add the missing expression, or remove a trailing comma.
+  × Expected an expression before the closing delimiter.
+   ╭─[src/Main.nash:1:13]
+ 1 │ value = [1, ]
+   ·             ─
+   ╰────
+  help: Add the missing expression, or remove a trailing comma.

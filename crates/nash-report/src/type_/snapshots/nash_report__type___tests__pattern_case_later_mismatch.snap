@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(& Error ::\nBadPattern(region(), PCategory :: Str, & string(), PExpected ::\nFromContext(region(), PContext::CaseMatch(1), & int())))"
+description: "module Main exposing (..)\nvalue number =\n    case number of\n        0 -> 1\n        \"hello\" -> 2\n"
 ---
 nash::type::pattern_mismatch
 
   × Type mismatch: expected `int`, found `string`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── case pattern 2
+   ╭─[Main.nash:5:9]
+ 4 │         0 -> 1
+ 5 │         "hello" -> 2
+   ·         ───┬───
+   ·            ╰── case pattern 2
    ╰────

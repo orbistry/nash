@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/src/solve.rs
-expression: lines
+description: "module Main exposing (..)\ntype Container 'a = Wrap 'a\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    ord : 'a -> 'a\ntrait Ord 'a => Top 'a where\n    top : 'a -> 'a\ntrait Eq 'b => Select 'a 'b where\n    select : 'a -> 'b -> 'a\nf : Top 'a => 'a -> 'a\nf x = eq x\ng : Select 'a 'b => 'a -> 'b -> 'b\ng x y = eq y\nh : (Top 'a, Eq 'a) => 'a -> 'a\nh x = eq x\n"
 ---
 eq@12:7 : [a] [Super 0 (Super 0 (Given f@12:1#0))]
 eq@14:9 : [b] [Super 0 (Given g@14:1#0)]

@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: ","
+description: "f : { x : int, , y : int }"
 ---
 nash::syntax
 
   × Extra comma in record type.
-   ╭─[src/Main.nash:1:1]
- 1 │ ,
-   · ─
+   ╭─[src/Main.nash:1:16]
+ 1 │ f : { x : int, , y : int }
+   ·                ─
    ╰────
   help: Remove the repeated comma.

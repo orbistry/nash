@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "f : Eq 'a =>\nint"
 ---
 nash::syntax
 
   × Expected a type after `=>`.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:2:1]
+ 1 │ f : Eq 'a =>
+ 2 │ int
+   · ─
    ╰────
   help: Indent the type to continue the annotation.

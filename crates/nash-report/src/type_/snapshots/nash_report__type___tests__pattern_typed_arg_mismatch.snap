@@ -1,13 +1,16 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(& Error ::\nBadPattern(region(), PCategory :: Str, & string(), PExpected ::\nFromContext(region(), PContext::TypedArg(\"f\", 0, Region::zero()), & int())))"
+description: "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf \"hello\" = 1\n"
 ---
 nash::type::pattern_mismatch
 
   × Type mismatch: expected `int`, found `string`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──┬
-   ·   │  ╰── declared argument type
-   ·   ╰── argument 1 of `f`
+   ╭─[Main.nash:3:3]
+ 1 │ module Main exposing (..)
+ 2 │ f : Builtin.int -> Builtin.int
+   ·     ─────────────┬────────────
+   ·                  ╰── declared argument type
+ 3 │ f "hello" = 1
+   ·   ───┬───
+   ·      ╰── argument 1 of `f`
    ╰────

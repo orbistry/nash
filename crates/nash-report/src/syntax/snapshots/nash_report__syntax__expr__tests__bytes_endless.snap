@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Bytes(Bytes::Endless(nash_region::Position::new(1, 9)), 1, 12),\n\"value = #\\\"aa\")"
+description: "value = #\"aa"
 ---
-ENDLESS BYTE STRING
-Region { start: Position { line: 1, column: 12 }, end: Position { line: 1, column: 12 } }
+nash::syntax::unclosed_delimiter
 
-Expected `"` to close `#"`.
-
-Add `"` here.
+  × Expected `"` to close `#"`.
+   ╭─[src/Main.nash:1:12]
+ 1 │ value = #"aa
+   ·         ─┬ ┬
+   ·          │ ╰── expected `"`
+   ·          ╰── opened here
+   ╰────
+  help: Add `"` here.

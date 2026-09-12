@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/json.rs
-expression: "serde_json::to_string_pretty(&value).unwrap()"
+description: "Code:\n\nmain =\n    missing"
 ---
 {
   "name": "Main",

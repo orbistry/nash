@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-expression: result
+description: "Equality.Eq 'a => 'a -> 'a"
 ---
 Annotation {
     context: [

@@ -8,25 +8,85 @@ use nash_can::{
 use nash_region::Region;
 
 #[cfg(test)]
+fn marked_source(input: &str) -> (String, Vec<Region>) {
+    let mut text = String::new();
+    let mut regions = Vec::new();
+    let mut start = None;
+    let mut row = 1;
+    let mut column = 1;
+    for ch in input.chars() {
+        match ch {
+            '«' => {
+                assert!(start.is_none());
+                start = Some(nash_region::Position::new(row, column));
+            }
+            '»' => regions.push(Region::new(
+                start.take().expect("opening marker"),
+                nash_region::Position::new(row, column),
+            )),
+            _ => {
+                text.push(ch);
+                if ch == '\n' {
+                    row += 1;
+                    column = 1;
+                } else {
+                    column += ch.len_utf8();
+                }
+            }
+        }
+    }
+    assert!(start.is_none());
+    (text, regions)
+}
+
+// Render-only fixtures isolate diagnostic branches, including errors that require
+// foreign interfaces or exhausted solver budgets. Markers give their source spans.
+// Pipeline fixtures additionally require the real canonicalizer to emit the variant.
+#[cfg(test)]
+macro_rules! source_snapshot {
+    (@pipeline $name:expr, $input:expr, $r:ident, $r2:ident, $error:expr $(,)?) => {
+        source_snapshot!(@render true, $name, $input, $r, $r2, $error);
+    };
+    ($name:expr, $input:expr, $r:ident, $r2:ident, $error:expr $(,)?) => {
+        source_snapshot!(@render false, $name, $input, $r, $r2, $error);
+    };
+    (@render $pipeline:expr, $name:expr, $input:expr, $r:ident, $r2:ident, $error:expr $(,)?) => {{
+        let (text, regions) = marked_source($input);
+        #[allow(unused_variables)]
+        let $r = || regions.first().copied().unwrap_or_else(Region::one);
+        #[allow(unused_variables)]
+        let $r2 = || regions.get(1).copied().unwrap_or_else($r);
+        let error = $error;
+        let text = if $pipeline { format!("module Main exposing (..)\n{text}\n") } else { text };
+        let source = Source::new(&text);
+        let rendered = if $pipeline {
+            let bump = bumpalo::Bump::new();
+            let mut parser = nash_parse::Parser::new(&bump, bump.alloc_str(&text));
+            let module = parser.module().expect("fixture parses");
+            let errors = nash_can::canonicalize(&bump, nash_can::Context::default(), &module)
+                .expect_err("fixture has canonical errors");
+            let actual = errors.iter().find(|actual| std::mem::discriminant(*actual) == std::mem::discriminant(&error))
+                .unwrap_or_else(|| panic!("expected {error:?}, got {errors:?}"));
+            crate::render_plain(&to_report(&source, actual), &source, "Main.nash")
+        } else {
+            crate::render_plain(&to_report(&source, &error), &source, "Main.nash")
+        };
+        insta::with_settings!({ description => text.as_str(), omit_expression => true }, {
+            insta::assert_snapshot!($name, rendered);
+        });
+    }};
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use nash_region::Position;
-    fn region() -> Region {
-        Region::new(Position::new(1, 1), Position::new(1, 5))
-    }
-    fn snapshot(name: &str, error: Error<'_>) {
-        let source = Source::new("name = other\n");
-        insta::assert_snapshot!(
-            name,
-            crate::render_plain(&to_report(&source, &error), &source, "Main.nash")
-        );
-    }
     #[test]
     fn not_found_var() {
-        snapshot(
+        source_snapshot!(@pipeline
             "not_found_var",
+            "result = «name»", r, r2,
             Error::NotFoundVar {
-                region: region(),
+                region: r(),
                 prefix: None,
                 name: "name",
                 suggestions: PossibleNames {
@@ -38,10 +98,11 @@ mod tests {
     }
     #[test]
     fn not_found_var_with_suggestion() {
-        snapshot(
+        source_snapshot!(@pipeline
             "not_found_var_with_suggestion",
+            "name = 1\nother = 2\nresult = «naem»", r, r2,
             Error::NotFoundVar {
-                region: region(),
+                region: r(),
                 prefix: None,
                 name: "naem",
                 suggestions: PossibleNames {
@@ -53,15 +114,21 @@ mod tests {
     }
     #[test]
     fn validator_main_errors() {
-        snapshot(
+        source_snapshot!(
             "validator_missing_main",
+            "«validator module Main exposing (..)»\nvalue = 1",
+            r,
+            r2,
             Error::ValidatorMissingMain {
                 region: Region::one(),
                 module: "Main",
             },
         );
-        snapshot(
+        source_snapshot!(
             "validator_main_not_exposed",
+            "«validator module Main exposing (value)»\nvalue = 1\nmain context = True",
+            r,
+            r2,
             Error::ValidatorMainNotExposed {
                 region: Region::one(),
                 module: "Main",
@@ -71,14 +138,23 @@ mod tests {
 
     #[test]
     fn missing_module_header() {
-        snapshot("missing_module_header", Error::MissingModuleHeader);
+        source_snapshot!(
+            "missing_module_header",
+            "value = 1",
+            r,
+            r2,
+            Error::MissingModuleHeader
+        );
     }
     #[test]
     fn kind_mismatch() {
-        snapshot(
+        source_snapshot!(
             "kind_mismatch",
+            "value : «List»\nvalue = []",
+            r,
+            r2,
             Error::KindMismatch {
-                region: region(),
+                region: r(),
                 context: &KindContext::TypeAnnotation,
                 expected: &Kind::Type,
                 actual: &Kind::Arrow(&Kind::Type, &Kind::Type),
@@ -1424,13 +1500,7 @@ fn predicate(value: &nash_ast::Pred<'_>) -> String {
 #[cfg(test)]
 mod coverage {
     use super::*;
-    use nash_region::{Located, Position};
-    fn r() -> Region {
-        Region::new(Position::new(1, 1), Position::new(1, 5))
-    }
-    fn r2() -> Region {
-        Region::new(Position::new(2, 1), Position::new(2, 6))
-    }
+    use nash_region::Located;
     fn home() -> ModuleName<'static> {
         ModuleName {
             package: None,
@@ -1449,15 +1519,13 @@ mod coverage {
             name: "Equal",
         }
     }
-    fn check(name: &str, error: Error<'_>) {
-        let source = Source::new("name = other\nother = name\n");
-        let report = to_report(&source, &error);
-        insta::assert_snapshot!(name, crate::render_plain(&report, &source, "Main.nash"));
-    }
     #[test]
     fn record_literal_no_alias() {
-        check(
+        source_snapshot!(
             "variant_record_literal_no_alias",
+            "value = «{ x = 1, y = 2 }»",
+            r,
+            r2,
             Error::RecordLiteralNoAlias {
                 region: r(),
                 fields: &["x", "y"],
@@ -1466,8 +1534,11 @@ mod coverage {
     }
     #[test]
     fn record_literal_ambiguous() {
-        check(
+        source_snapshot!(
             "variant_record_literal_ambiguous",
+            "import First exposing (Equal)\nimport Second exposing (Other)\nvalue = «{ x = 1, y = 2 }»",
+            r,
+            r2,
             Error::RecordLiteralAmbiguous {
                 region: r(),
                 candidates: &[
@@ -1482,43 +1553,61 @@ mod coverage {
     }
     #[test]
     fn record_type_outside_alias() {
-        check(
+        source_snapshot!(
             "variant_record_type_outside_alias",
+            "value : «{ x : Int }»\nvalue = { x = 1 }",
+            r,
+            r2,
             Error::RecordTypeOutsideAlias { region: r() },
         );
     }
     #[test]
     fn impl_pattern_limit() {
-        check(
+        source_snapshot!(
             "variant_impl_pattern_limit",
+            "-- Reduced head from an impl-pattern budget exhaustion.\nimpl Equal «(List (List 'a))» where\n    equal x y = True",
+            r,
+            r2,
             Error::ImplPatternLimit { region: r() },
         );
     }
     #[test]
     fn negate_without_num() {
-        check(
+        source_snapshot!(
             "variant_negate_without_num",
+            "value = «-1»",
+            r,
+            r2,
             Error::NegateWithoutNum { region: r() },
         );
     }
     #[test]
     fn do_without_monad() {
-        check(
+        source_snapshot!(
             "variant_do_without_monad",
+            "value = «do\n    pure ()»",
+            r,
+            r2,
             Error::DoWithoutMonad { region: r() },
         );
     }
     #[test]
     fn refutable_bind_pattern() {
-        check(
+        source_snapshot!(
             "variant_refutable_bind_pattern",
+            "value = do\n    «Just x» <- action\n    pure x",
+            r,
+            r2,
             Error::RefutableBindPattern { region: r() },
         );
     }
     #[test]
     fn structural_eq_override() {
-        check(
+        source_snapshot!(
             "variant_structural_eq_override",
+            "impl (Big 'a) => Eq «'a» where\n    eq x y = True",
+            r,
+            r2,
             Error::StructuralEqOverride {
                 head: &Located::at(r(), nash_ast::Type::Var("a")),
             },
@@ -1526,8 +1615,11 @@ mod coverage {
     }
     #[test]
     fn reflexive_lift_overlap() {
-        check(
+        source_snapshot!(
             "variant_reflexive_lift_overlap",
+            "impl (Big 'a) => Lift «'a 'a» where\n    lift x = x",
+            r,
+            r2,
             Error::ReflexiveLiftOverlap {
                 heads: &[&Located::at(r(), nash_ast::Type::Var("a"))],
             },
@@ -1535,8 +1627,11 @@ mod coverage {
     }
     #[test]
     fn missing_superclass() {
-        check(
+        source_snapshot!(
             "variant_missing_superclass",
+            "impl «First.Equal 'a» where\n    equal x y = True",
+            r,
+            r2,
             Error::MissingSuperclass {
                 region: r(),
                 trait_: q(),
@@ -1552,8 +1647,11 @@ mod coverage {
     }
     #[test]
     fn bad_instance_head() {
-        check(
+        source_snapshot!(
             "variant_bad_instance_head",
+            "impl Equal «'a» where\n    equal x y = True",
+            r,
+            r2,
             Error::BadInstanceHead {
                 region: r(),
                 reason: nash_can::BadHead::BareVariable,
@@ -1562,8 +1660,11 @@ mod coverage {
     }
     #[test]
     fn impl_context_var_not_in_head() {
-        check(
+        source_snapshot!(
             "variant_impl_context_var_not_in_head",
+            "impl (Equal «'name») => Equal (List 'a) where\n    equal x y = True",
+            r,
+            r2,
             Error::ImplContextVarNotInHead {
                 region: r(),
                 name: "name",
@@ -1572,8 +1673,11 @@ mod coverage {
     }
     #[test]
     fn missing_method() {
-        check(
+        source_snapshot!(
             "variant_missing_method",
+            "trait Equal 'a where\n    name : 'a -> Bool\n«impl Equal () where»\n    equal x = True",
+            r,
+            r2,
             Error::MissingMethod {
                 region: r(),
                 trait_: "Equal",
@@ -1583,8 +1687,11 @@ mod coverage {
     }
     #[test]
     fn unknown_method() {
-        check(
+        source_snapshot!(
             "variant_unknown_method",
+            "trait Equal 'a where\n    equal : 'a -> Bool\nimpl Equal () where\n    «name» x = True",
+            r,
+            r2,
             Error::UnknownMethod {
                 region: r(),
                 trait_: "Equal",
@@ -1594,8 +1701,11 @@ mod coverage {
     }
     #[test]
     fn orphan_impl() {
-        check(
+        source_snapshot!(
             "variant_orphan_impl",
+            "import First exposing (Equal)\n«impl First.Equal First.Equal where»\n    equal x y = True",
+            r,
+            r2,
             Error::OrphanImpl {
                 region: r(),
                 trait_: q(),
@@ -1605,8 +1715,11 @@ mod coverage {
     }
     #[test]
     fn overlapping_impls() {
-        check(
+        source_snapshot!(
             "variant_overlapping_impls",
+            "«impl First.Equal 'a where»\n    equal x y = True\n«impl First.Equal 'a where»\n    equal x y = False",
+            r,
+            r2,
             Error::OverlappingImpls {
                 key: &nash_ast::ImplKey {
                     trait_: q(),
@@ -1621,20 +1734,24 @@ mod coverage {
     }
     #[test]
     fn import_open_trait() {
-        check(
+        source_snapshot!(
             "variant_import_open_trait",
+            "import First exposing («Name(..)»)",
+            r,
+            r2,
             Error::ImportOpenTrait {
                 region: r(),
-                name: "name",
+                name: "Name",
             },
         );
     }
     #[test]
     fn duplicate_trait() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_trait",
+            "trait «Name» 'a where\n    first : 'a -> 'a\ntrait «Name» 'a where\n    second : 'a -> 'a", r, r2,
             Error::DuplicateTrait {
-                name: "name",
+                name: "Name",
                 first: r(),
                 second: r2(),
             },
@@ -1642,8 +1759,9 @@ mod coverage {
     }
     #[test]
     fn duplicate_method() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_method",
+            "trait Equal 'a where\n    «name» : 'a -> 'a\n    name x = x\n    «name» : 'a -> Bool\n    name x = True", r, r2,
             Error::DuplicateMethod {
                 name: "name",
                 first: r(),
@@ -1653,8 +1771,9 @@ mod coverage {
     }
     #[test]
     fn duplicate_trait_parameter() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_trait_parameter",
+            "trait Equal '«name» '«name» where\n    equal : 'name -> Bool", r, r2,
             Error::DuplicateTraitParameter {
                 name: "name",
                 first: r(),
@@ -1664,8 +1783,11 @@ mod coverage {
     }
     #[test]
     fn superclass_bad_arg() {
-        check(
+        source_snapshot!(
             "variant_superclass_bad_arg",
+            "trait (Equal «(List 'a)») => Ordered 'a where\n    compare : 'a -> 'a -> Int",
+            r,
+            r2,
             Error::SuperclassBadArg {
                 region: r(),
                 trait_: "Equal",
@@ -1674,8 +1796,11 @@ mod coverage {
     }
     #[test]
     fn method_missing_parameter() {
-        check(
+        source_snapshot!(
             "variant_method_missing_parameter",
+            "trait Equal 'a where\n    «a : Int -> Bool»",
+            r,
+            r2,
             Error::MethodMissingParameter {
                 region: r(),
                 method: "a",
@@ -1685,8 +1810,11 @@ mod coverage {
     }
     #[test]
     fn recursive_superclass() {
-        check(
+        source_snapshot!(
             "variant_recursive_superclass",
+            "trait (Second 'a) => «First» 'a where\n    first : 'a -> 'a\ntrait (First 'a) => «Second» 'a where\n    second : 'a -> 'a",
+            r,
+            r2,
             Error::RecursiveSuperclass {
                 names: &[&Located::at(r(), "First"), &Located::at(r2(), "Second")],
             },
@@ -1694,33 +1822,40 @@ mod coverage {
     }
     #[test]
     fn export_open_trait() {
-        check(
+        source_snapshot!(
             "variant_export_open_trait",
+            "module Main exposing («Name(..)»)\ntrait Name 'a where\n    name : 'a -> 'a",
+            r,
+            r2,
             Error::ExportOpenTrait {
                 region: r(),
-                name: "name",
+                name: "Name",
             },
         );
     }
     #[test]
     fn not_found_trait() {
-        check(
+        source_snapshot!(@pipeline
             "variant_not_found_trait",
+            "value : («Name» 'a) => 'a -> 'a\nvalue x = x", r, r2,
             Error::NotFoundTrait {
                 region: r(),
                 prefix: None,
-                name: "name",
+                name: "Name",
             },
         );
     }
     #[test]
     fn ambiguous_trait() {
-        check(
+        source_snapshot!(
             "variant_ambiguous_trait",
+            "import First exposing (Name)\nimport Second exposing (Name)\nvalue : («Name» 'a) => 'a -> 'a\nvalue x = x",
+            r,
+            r2,
             Error::AmbiguousTrait {
                 region: r(),
                 prefix: None,
-                name: "name",
+                name: "Name",
                 first_module: home(),
                 other_modules: &[other()],
             },
@@ -1728,11 +1863,14 @@ mod coverage {
     }
     #[test]
     fn trait_arity() {
-        check(
+        source_snapshot!(
             "variant_trait_arity",
+            "value : («Name 'a 'b») => 'a -> 'b\nvalue x = x",
+            r,
+            r2,
             Error::TraitArity {
                 region: r(),
-                name: "name",
+                name: "Name",
                 expected: 1,
                 actual: 2,
             },
@@ -1740,8 +1878,11 @@ mod coverage {
     }
     #[test]
     fn context_var_not_in_type() {
-        check(
+        source_snapshot!(
             "variant_context_var_not_in_type",
+            "value : (Equal '«name») => Int\nvalue = 1",
+            r,
+            r2,
             Error::ContextVarNotInType {
                 region: r(),
                 name: "name",
@@ -1750,8 +1891,11 @@ mod coverage {
     }
     #[test]
     fn kind_mismatch() {
-        check(
+        source_snapshot!(
             "variant_kind_mismatch",
+            "value : «List»\nvalue = []",
+            r,
+            r2,
             Error::KindMismatch {
                 region: r(),
                 context: &KindContext::TypeAnnotation,
@@ -1762,8 +1906,9 @@ mod coverage {
     }
     #[test]
     fn kind_infinite() {
-        check(
+        source_snapshot!(@pipeline
             "variant_kind_infinite",
+            "name : «'a 'a»\nname = 1", r, r2,
             Error::KindInfinite {
                 region: r(),
                 context: &KindContext::Annotation { name: "name" },
@@ -1772,8 +1917,11 @@ mod coverage {
     }
     #[test]
     fn representation_mismatch() {
-        check(
+        source_snapshot!(
             "variant_representation_mismatch",
+            "value : «(Int -> Int : Storable)»\nvalue x = x",
+            r,
+            r2,
             Error::RepresentationMismatch {
                 region: r(),
                 context: &KindContext::TypeAnnotation,
@@ -1784,8 +1932,11 @@ mod coverage {
     }
     #[test]
     fn contradictory_representation() {
-        check(
+        source_snapshot!(
             "variant_contradictory_representation",
+            "value : (Storable '«a», Term 'a) => 'a -> 'a\nvalue x = x",
+            r,
+            r2,
             Error::ContradictoryRepresentation {
                 region: r(),
                 variable: "a",
@@ -1794,18 +1945,24 @@ mod coverage {
     }
     #[test]
     fn impl_of_builtin_trait() {
-        check(
+        source_snapshot!(
             "variant_impl_of_builtin_trait",
+            "«impl Storable Int where»",
+            r,
+            r2,
             Error::ImplOfBuiltinTrait {
                 region: r(),
-                trait_: q(),
+                trait_: nash_ast::primitives::ReprTrait::Storable.qualified(),
             },
         );
     }
     #[test]
     fn irregular_recursion() {
-        check(
+        source_snapshot!(
             "variant_irregular_recursion",
+            "type Equal 'a = More «(Equal (List 'a))»",
+            r,
+            r2,
             Error::IrregularRecursion {
                 region: r(),
                 constructor: q(),
@@ -1815,28 +1972,38 @@ mod coverage {
     }
     #[test]
     fn unsupported() {
-        check(
+        source_snapshot!(
             "variant_unsupported",
+            "value = «[1, 2]»",
+            r,
+            r2,
             Error::Unsupported {
-                feature: "a",
+                feature: "list literals",
                 region: r(),
             },
         );
     }
     #[test]
     fn missing_module_header() {
-        check("variant_missing_module_header", Error::MissingModuleHeader);
+        source_snapshot!(
+            "variant_missing_module_header",
+            "value = 1",
+            r,
+            r2,
+            Error::MissingModuleHeader
+        );
     }
     #[test]
     fn not_found_type() {
-        check(
+        source_snapshot!(@pipeline
             "variant_not_found_type",
+            "value : «Name»\nvalue = 1", r, r2,
             Error::NotFoundType {
                 region: r(),
                 prefix: None,
-                name: "name",
+                name: "Name",
                 suggestions: PossibleNames {
-                    locals: &["name"],
+                    locals: &["Named"],
                     qualified: &[],
                 },
             },
@@ -1844,8 +2011,11 @@ mod coverage {
     }
     #[test]
     fn import_not_found() {
-        check(
+        source_snapshot!(
             "variant_import_not_found",
+            "import «Missing»",
+            r,
+            r2,
             Error::ImportNotFound {
                 region: r(),
                 module: "Missing",
@@ -1854,12 +2024,15 @@ mod coverage {
     }
     #[test]
     fn ambiguous_type() {
-        check(
+        source_snapshot!(
             "variant_ambiguous_type",
+            "import First exposing (Name)\nimport Second exposing (Name)\nvalue : «Name»\nvalue = 1",
+            r,
+            r2,
             Error::AmbiguousType {
                 region: r(),
                 prefix: None,
-                name: "name",
+                name: "Name",
                 first_module: home(),
                 other_modules: &[other()],
             },
@@ -1867,8 +2040,11 @@ mod coverage {
     }
     #[test]
     fn bad_arity() {
-        check(
+        source_snapshot!(
             "variant_bad_arity",
+            "type alias Box 'a = List 'a\nvalue : «Box Int Int»\nvalue = []",
+            r,
+            r2,
             Error::BadArity {
                 region: r(),
                 context: BadArityContext::TypeArity,
@@ -1880,8 +2056,11 @@ mod coverage {
     }
     #[test]
     fn export_not_found() {
-        check(
+        source_snapshot!(
             "variant_export_not_found",
+            "module Main exposing («naem»)\nname = 1",
+            r,
+            r2,
             Error::ExportNotFound {
                 region: r(),
                 kind: VarKind::BadVar,
@@ -1892,18 +2071,22 @@ mod coverage {
     }
     #[test]
     fn export_open_alias() {
-        check(
+        source_snapshot!(
             "variant_export_open_alias",
+            "module Main exposing («Name(..)»)\ntype alias Name = Int",
+            r,
+            r2,
             Error::ExportOpenAlias {
                 region: r(),
-                name: "name",
+                name: "Name",
             },
         );
     }
     #[test]
     fn duplicate_decl() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_decl",
+            "«name» = 1\n«name» = 2", r, r2,
             Error::DuplicateDecl {
                 name: "name",
                 first: r(),
@@ -1913,10 +2096,11 @@ mod coverage {
     }
     #[test]
     fn duplicate_type() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_type",
+            "type «Name» = One\ntype «Name» = Two", r, r2,
             Error::DuplicateType {
-                name: "name",
+                name: "Name",
                 first: r(),
                 second: r2(),
             },
@@ -1924,10 +2108,11 @@ mod coverage {
     }
     #[test]
     fn duplicate_ctor() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_ctor",
+            "type First = «Name»\ntype Second = «Name»", r, r2,
             Error::DuplicateCtor {
-                name: "name",
+                name: "Name",
                 first: r(),
                 second: r2(),
             },
@@ -1935,10 +2120,13 @@ mod coverage {
     }
     #[test]
     fn duplicate_binop() {
-        check(
+        source_snapshot!(
             "variant_duplicate_binop",
+            "infix left 5 («++») = append\ninfix right 5 («++») = append",
+            r,
+            r2,
             Error::DuplicateBinop {
-                name: "name",
+                name: "++",
                 first: r(),
                 second: r2(),
             },
@@ -1946,21 +2134,25 @@ mod coverage {
     }
     #[test]
     fn binop_function_not_found() {
-        check(
+        source_snapshot!(
             "variant_binop_function_not_found",
+            "infix left 5 (+) = «add»",
+            r,
+            r2,
             Error::BinopFunctionNotFound {
                 region: r(),
-                op: "a",
-                function: "a",
+                op: "+",
+                function: "add",
             },
         );
     }
     #[test]
     fn duplicate_union_arg() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_union_arg",
+            "type Box '«a» '«a» = Box 'a", r, r2,
             Error::DuplicateUnionArg {
-                type_name: "a",
+                type_name: "Box",
                 arg_name: "a",
                 first: r(),
                 second: r2(),
@@ -1969,10 +2161,11 @@ mod coverage {
     }
     #[test]
     fn duplicate_alias_arg() {
-        check(
+        source_snapshot!(@pipeline
             "variant_duplicate_alias_arg",
+            "type alias Box '«a» '«a» = List 'a", r, r2,
             Error::DuplicateAliasArg {
-                type_name: "a",
+                type_name: "Box",
                 arg_name: "a",
                 first: r(),
                 second: r2(),
@@ -1981,8 +2174,11 @@ mod coverage {
     }
     #[test]
     fn recursive_alias() {
-        check(
+        source_snapshot!(
             "variant_recursive_alias",
+            "type alias «Loop» 'a = Loop 'a",
+            r,
+            r2,
             Error::RecursiveAlias {
                 region: r(),
                 name: "Loop",
@@ -1994,8 +2190,11 @@ mod coverage {
     }
     #[test]
     fn type_vars_unbound_in_union() {
-        check(
+        source_snapshot!(
             "variant_type_vars_unbound_in_union",
+            "type Box = Box '«a»",
+            r,
+            r2,
             Error::TypeVarsUnboundInUnion {
                 region: r(),
                 name: "Box",
@@ -2007,8 +2206,11 @@ mod coverage {
     }
     #[test]
     fn type_vars_messed_up_in_alias() {
-        check(
+        source_snapshot!(
             "variant_type_vars_messed_up_in_alias",
+            "type alias Box '«a» = List '«b»",
+            r,
+            r2,
             Error::TypeVarsMessedUpInAlias {
                 region: r(),
                 name: "Box",
@@ -2020,41 +2222,53 @@ mod coverage {
     }
     #[test]
     fn labeled_ctor_missing_field() {
-        check(
+        source_snapshot!(
             "variant_labeled_ctor_missing_field",
+            "type Point = Point { x : Int, y : Int }\nvalue = «Point { x = 1 }»",
+            r,
+            r2,
             Error::LabeledCtorMissingField {
                 region: r(),
-                ctor: "a",
-                field: "a",
+                ctor: "Point",
+                field: "y",
             },
         );
     }
     #[test]
     fn labeled_ctor_extra_field() {
-        check(
+        source_snapshot!(
             "variant_labeled_ctor_extra_field",
+            "type Point = Point Int\nvalue = Point { «x = 1» }",
+            r,
+            r2,
             Error::LabeledCtorExtraField {
                 region: r(),
-                ctor: "a",
-                field: "a",
+                ctor: "Point",
+                field: "x",
             },
         );
     }
     #[test]
     fn labeled_ctor_unknown_field() {
-        check(
+        source_snapshot!(
             "variant_labeled_ctor_unknown_field",
+            "type Point = Point { x : Int }\nvalue = Point { «y = 1» }",
+            r,
+            r2,
             Error::LabeledCtorUnknownField {
                 region: r(),
-                ctor: "a",
-                field: "a",
+                ctor: "Point",
+                field: "y",
             },
         );
     }
     #[test]
     fn duplicate_field() {
-        check(
+        source_snapshot!(
             "variant_duplicate_field",
+            "value = { «name» = 1, «name» = 2 }",
+            r,
+            r2,
             Error::DuplicateField {
                 name: "name",
                 first: r(),
@@ -2064,8 +2278,11 @@ mod coverage {
     }
     #[test]
     fn export_duplicate() {
-        check(
+        source_snapshot!(
             "variant_export_duplicate",
+            "module Main exposing («name», «name»)\nname = 1",
+            r,
+            r2,
             Error::ExportDuplicate {
                 name: "name",
                 first: r(),
@@ -2075,14 +2292,15 @@ mod coverage {
     }
     #[test]
     fn not_found_ctor() {
-        check(
+        source_snapshot!(@pipeline
             "variant_not_found_ctor",
+            "value = «Name»", r, r2,
             Error::NotFoundCtor {
                 region: r(),
                 prefix: None,
-                name: "name",
+                name: "Name",
                 suggestions: PossibleNames {
-                    locals: &["name"],
+                    locals: &["Named"],
                     qualified: &[],
                 },
             },
@@ -2090,12 +2308,15 @@ mod coverage {
     }
     #[test]
     fn ambiguous_ctor() {
-        check(
+        source_snapshot!(
             "variant_ambiguous_ctor",
+            "import First exposing (First(..))\nimport Second exposing (Second(..))\nvalue = «Name»",
+            r,
+            r2,
             Error::AmbiguousCtor {
                 region: r(),
                 prefix: None,
-                name: "name",
+                name: "Name",
                 first_module: home(),
                 other_modules: &[other()],
             },
@@ -2103,18 +2324,24 @@ mod coverage {
     }
     #[test]
     fn pattern_has_record_ctor() {
-        check(
+        source_snapshot!(
             "variant_pattern_has_record_ctor",
+            "type alias Name = { x : Int }\nvalue («Name» x) = x",
+            r,
+            r2,
             Error::PatternHasRecordCtor {
                 region: r(),
-                name: "name",
+                name: "Name",
             },
         );
     }
     #[test]
     fn duplicate_pattern() {
-        check(
+        source_snapshot!(
             "variant_duplicate_pattern",
+            "value pair =\n    case pair of\n        («x», «x») -> x",
+            r,
+            r2,
             Error::DuplicatePattern {
                 context: DuplicatePatternContext::CaseBranch,
                 name: "x",
@@ -2125,14 +2352,17 @@ mod coverage {
     }
     #[test]
     fn not_found_var() {
-        check(
+        source_snapshot!(
             "variant_not_found_var",
+            "result = «name»",
+            r,
+            r2,
             Error::NotFoundVar {
                 region: r(),
                 prefix: None,
                 name: "name",
                 suggestions: PossibleNames {
-                    locals: &["name"],
+                    locals: &["named"],
                     qualified: &[],
                 },
             },
@@ -2140,8 +2370,11 @@ mod coverage {
     }
     #[test]
     fn ambiguous_var() {
-        check(
+        source_snapshot!(
             "variant_ambiguous_var",
+            "import First exposing (name)\nimport Second exposing (name)\nvalue = «name»",
+            r,
+            r2,
             Error::AmbiguousVar {
                 region: r(),
                 prefix: None,
@@ -2153,22 +2386,28 @@ mod coverage {
     }
     #[test]
     fn not_found_binop() {
-        check(
+        source_snapshot!(
             "variant_not_found_binop",
+            "value = 1 «<+>» 2",
+            r,
+            r2,
             Error::NotFoundBinop {
                 region: r(),
-                name: "name",
-                available: &["other"],
+                name: "<+>",
+                available: &["+"],
             },
         );
     }
     #[test]
     fn ambiguous_binop() {
-        check(
+        source_snapshot!(
             "variant_ambiguous_binop",
+            "import First exposing ((++))\nimport Second exposing ((++))\nvalue = [] «++» []",
+            r,
+            r2,
             Error::AmbiguousBinop {
                 region: r(),
-                name: "name",
+                name: "++",
                 first_module: home(),
                 other_modules: &[other()],
             },
@@ -2176,19 +2415,25 @@ mod coverage {
     }
     #[test]
     fn binop_conflict() {
-        check(
+        source_snapshot!(
             "variant_binop_conflict",
+            "value = «1 < 2 > 3»",
+            r,
+            r2,
             Error::BinopConflict {
                 region: r(),
-                op1: "a",
-                op2: "a",
+                op1: "<",
+                op2: ">",
             },
         );
     }
     #[test]
     fn shadowing() {
-        check(
+        source_snapshot!(
             "variant_shadowing",
+            "«name» = 1\nvalue «name» = name",
+            r,
+            r2,
             Error::Shadowing {
                 name: "name",
                 original: r(),
@@ -2198,8 +2443,9 @@ mod coverage {
     }
     #[test]
     fn recursive_let() {
-        check(
+        source_snapshot!(@pipeline
             "variant_recursive_let",
+            "value =\n    let\n        «name» = other\n        other = name\n    in\n    name", r, r2,
             Error::RecursiveLet {
                 name: &Located::at(r(), "name"),
                 others: &["other"],
@@ -2208,8 +2454,9 @@ mod coverage {
     }
     #[test]
     fn recursive_decl() {
-        check(
+        source_snapshot!(@pipeline
             "variant_recursive_decl",
+            "«name» = name", r, r2,
             Error::RecursiveDecl {
                 name: &Located::at(r(), "name"),
                 others: &[],
@@ -2218,8 +2465,11 @@ mod coverage {
     }
     #[test]
     fn annotation_too_short() {
-        check(
+        source_snapshot!(
             "variant_annotation_too_short",
+            "name : Int -> Int\n«name x y z» = x",
+            r,
+            r2,
             Error::AnnotationTooShort {
                 region: r(),
                 name: "name",
@@ -2230,8 +2480,11 @@ mod coverage {
     }
     #[test]
     fn import_exposing_not_found() {
-        check(
+        source_snapshot!(
             "variant_import_exposing_not_found",
+            "import First exposing («name»)",
+            r,
+            r2,
             Error::ImportExposingNotFound {
                 region: r(),
                 module: home(),
@@ -2242,22 +2495,28 @@ mod coverage {
     }
     #[test]
     fn import_ctor_by_name() {
-        check(
+        source_snapshot!(
             "variant_import_ctor_by_name",
+            "import First exposing («Just»)",
+            r,
+            r2,
             Error::ImportCtorByName {
                 region: r(),
-                name: "name",
-                type_name: "a",
+                name: "Just",
+                type_name: "Maybe",
             },
         );
     }
     #[test]
     fn import_open_alias() {
-        check(
+        source_snapshot!(
             "variant_import_open_alias",
+            "import First exposing («Name(..)»)",
+            r,
+            r2,
             Error::ImportOpenAlias {
                 region: r(),
-                name: "name",
+                name: "Name",
             },
         );
     }
@@ -2266,21 +2525,14 @@ mod coverage {
 #[cfg(test)]
 mod branches {
     use super::*;
-    use nash_region::{Located, Position};
-    fn r() -> Region {
-        Region::new(Position::new(1, 1), Position::new(1, 5))
-    }
-    fn snapshot(name: &str, error: Error<'_>) {
-        let source = Source::new("name = other\n");
-        insta::assert_snapshot!(
-            name,
-            crate::render_plain(&to_report(&source, &error), &source, "Main.nash")
-        );
-    }
+    use nash_region::Located;
     #[test]
     fn qualified_missing_import() {
-        snapshot(
+        source_snapshot!(
             "qualified_missing_import",
+            "value = «Missing.value»",
+            r,
+            r2,
             Error::NotFoundVar {
                 region: r(),
                 prefix: Some("Missing"),
@@ -2294,8 +2546,11 @@ mod branches {
     }
     #[test]
     fn qualified_not_exposed() {
-        snapshot(
+        source_snapshot!(
             "qualified_not_exposed",
+            "import Known\nvalue : «Known.Box»\nvalue = 1",
+            r,
+            r2,
             Error::NotFoundType {
                 region: r(),
                 prefix: Some("Known"),
@@ -2309,8 +2564,11 @@ mod branches {
     }
     #[test]
     fn qualified_ambiguity() {
-        snapshot(
+        source_snapshot!(
             "qualified_ambiguity",
+            "import First as A\nimport Second as A\nvalue : «A.Box»\nvalue = 1",
+            r,
+            r2,
             Error::AmbiguousType {
                 region: r(),
                 prefix: Some("A"),
@@ -2328,8 +2586,11 @@ mod branches {
     }
     #[test]
     fn too_few_args() {
-        snapshot(
+        source_snapshot!(
             "too_few_args",
+            "type Pair 'a 'b = Pair 'a 'b\nvalue («Pair x») = x",
+            r,
+            r2,
             Error::BadArity {
                 region: r(),
                 context: BadArityContext::PatternArity,
@@ -2341,8 +2602,11 @@ mod branches {
     }
     #[test]
     fn too_many_args_plural() {
-        snapshot(
+        source_snapshot!(
             "too_many_args_plural",
+            "type One 'a = One 'a\nvalue («One x y z») = x",
+            r,
+            r2,
             Error::BadArity {
                 region: r(),
                 context: BadArityContext::PatternArity,
@@ -2354,8 +2618,11 @@ mod branches {
     }
     #[test]
     fn recursive_alias_cycle() {
-        snapshot(
+        source_snapshot!(
             "recursive_alias_cycle",
+            "type alias «First» = Second\ntype alias Second = Third\ntype alias Third = First",
+            r,
+            r2,
             Error::RecursiveAlias {
                 region: r(),
                 name: "First",
@@ -2367,8 +2634,9 @@ mod branches {
     }
     #[test]
     fn recursive_decl_cycle() {
-        snapshot(
+        source_snapshot!(@pipeline
             "recursive_decl_cycle",
+            "«name» = other\nother = name", r, r2,
             Error::RecursiveDecl {
                 name: &Located::at(r(), "name"),
                 others: &["other"],
@@ -2377,8 +2645,9 @@ mod branches {
     }
     #[test]
     fn recursive_let_self() {
-        snapshot(
+        source_snapshot!(@pipeline
             "recursive_let_self",
+            "value =\n    let\n        «name» = name\n    in\n    name", r, r2,
             Error::RecursiveLet {
                 name: &Located::at(r(), "name"),
                 others: &[],
@@ -2387,8 +2656,11 @@ mod branches {
     }
     #[test]
     fn unused_alias_variable() {
-        snapshot(
+        source_snapshot!(
             "unused_alias_variable",
+            "type alias Box '«a» = Int",
+            r,
+            r2,
             Error::TypeVarsMessedUpInAlias {
                 region: r(),
                 name: "Box",
@@ -2400,21 +2672,27 @@ mod branches {
     }
     #[test]
     fn unused_alias_variables() {
-        snapshot(
+        source_snapshot!(
             "unused_alias_variables",
+            "type alias Box '«a» '«b» = Int",
+            r,
+            r2,
             Error::TypeVarsMessedUpInAlias {
                 region: r(),
                 name: "Box",
                 args: &["a", "b"],
-                unused: &[("a", r()), ("b", r())],
+                unused: &[("a", r()), ("b", r2())],
                 unbound: &[],
             },
         );
     }
     #[test]
     fn unbound_alias_variable() {
-        snapshot(
+        source_snapshot!(
             "unbound_alias_variable",
+            "type alias Box = List '«a»",
+            r,
+            r2,
             Error::TypeVarsMessedUpInAlias {
                 region: r(),
                 name: "Box",
@@ -2426,21 +2704,27 @@ mod branches {
     }
     #[test]
     fn unbound_union_variables() {
-        snapshot(
+        source_snapshot!(
             "unbound_union_variables",
+            "type Box = Box '«a» '«b»",
+            r,
+            r2,
             Error::TypeVarsUnboundInUnion {
                 region: r(),
                 name: "Box",
                 args: &[],
                 unbound: ("a", r()),
-                more_unbound: &[("b", r())],
+                more_unbound: &[("b", r2())],
             },
         );
     }
     #[test]
     fn operator_javascript_equal() {
-        snapshot(
+        source_snapshot!(
             "operator_javascript_equal",
+            "value = 1 «===» 2",
+            r,
+            r2,
             Error::NotFoundBinop {
                 region: r(),
                 name: "===",
@@ -2450,8 +2734,11 @@ mod branches {
     }
     #[test]
     fn operator_javascript_not_equal() {
-        snapshot(
+        source_snapshot!(
             "operator_javascript_not_equal",
+            "value = 1 «!=» 2",
+            r,
+            r2,
             Error::NotFoundBinop {
                 region: r(),
                 name: "!=",
@@ -2461,8 +2748,11 @@ mod branches {
     }
     #[test]
     fn operator_javascript_strict_not_equal() {
-        snapshot(
+        source_snapshot!(
             "operator_javascript_strict_not_equal",
+            "value = 1 «!==» 2",
+            r,
+            r2,
             Error::NotFoundBinop {
                 region: r(),
                 name: "!==",
@@ -2472,8 +2762,11 @@ mod branches {
     }
     #[test]
     fn operator_power() {
-        snapshot(
+        source_snapshot!(
             "operator_power",
+            "value = 1 «**» 2",
+            r,
+            r2,
             Error::NotFoundBinop {
                 region: r(),
                 name: "**",
@@ -2483,8 +2776,11 @@ mod branches {
     }
     #[test]
     fn operator_percent() {
-        snapshot(
+        source_snapshot!(
             "operator_percent",
+            "value = 1 «%» 2",
+            r,
+            r2,
             Error::NotFoundBinop {
                 region: r(),
                 name: "%",
@@ -2494,8 +2790,11 @@ mod branches {
     }
     #[test]
     fn operator_missing() {
-        snapshot(
+        source_snapshot!(
             "operator_missing",
+            "value = 1 «<+>» 2",
+            r,
+            r2,
             Error::NotFoundBinop {
                 region: r(),
                 name: "<+>",
@@ -2507,7 +2806,9 @@ mod branches {
     fn module_name_is_preserved() {
         let source = Source::new("");
         let report = to_report_with_name(&source, &Error::MissingModuleHeader, "App.Main");
-        insta::assert_snapshot!(crate::render_plain(&report, &source, "App/Main.nash"));
+        insta::with_settings!({ description => "", omit_expression => true }, {
+            insta::assert_snapshot!(crate::render_plain(&report, &source, "App/Main.nash"));
+        });
     }
     #[test]
     fn closed_kind_precedence() {
@@ -2559,13 +2860,31 @@ mod branches {
             KindContext::Annotation { name: "map" },
             KindContext::ImplHead { trait_, index: 1 },
         ];
-        insta::assert_snapshot!(
-            contexts
-                .iter()
-                .map(kind_context)
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
+        let inputs = [
+            "value : «List»\nvalue = []",
+            "type Tree = Node Int «List»",
+            "type tree = Node «List»",
+            "type alias State = { x : «List» }",
+            "type alias state = { x : «List» }",
+            "type alias Box = «List»",
+            "type alias box = «List»",
+            "map : «List»\nmap = []",
+            "impl Core.Functor Int «List» where\n    map f x = x",
+        ];
+        for (index, (context, input)) in contexts.iter().zip(inputs).enumerate() {
+            source_snapshot!(
+                format!("formation_context_{index}"),
+                input,
+                r,
+                r2,
+                Error::KindMismatch {
+                    region: r(),
+                    context,
+                    expected: &Kind::Type,
+                    actual: &Kind::Arrow(&Kind::Type, &Kind::Type),
+                }
+            );
+        }
     }
     #[test]
     fn source_pipeline_reports_all_missing_names() {
@@ -2578,6 +2897,7 @@ mod branches {
             .expect_err("canonical errors");
         assert_eq!(errors.len(), 2);
         let source = Source::new(input);
+        insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(
             errors
                 .iter()
@@ -2585,19 +2905,32 @@ mod branches {
                 .collect::<Vec<_>>()
                 .join("\n")
         );
+        });
     }
     #[test]
     fn bad_impl_head_reasons() {
-        for (name, reason) in [
-            ("bad_head_function", nash_can::BadHead::Function),
-            ("bad_head_record", nash_can::BadHead::Record),
+        for (name, input, reason) in [
+            (
+                "bad_head_function",
+                "impl Equal «(Int -> Int)» where\n    equal x y = True",
+                nash_can::BadHead::Function,
+            ),
+            (
+                "bad_head_record",
+                "impl Equal «{ x : Int }» where\n    equal x y = True",
+                nash_can::BadHead::Record,
+            ),
             (
                 "bad_head_variable_application",
+                "impl Equal «('f 'a)» where\n    equal x y = True",
                 nash_can::BadHead::VariableApplication,
             ),
         ] {
-            snapshot(
+            source_snapshot!(
                 name,
+                input,
+                r,
+                r2,
                 Error::BadInstanceHead {
                     region: r(),
                     reason,
@@ -2614,13 +2947,19 @@ mod branches {
             },
             name: "Equal",
         };
-        let arg = Located::at(r(), nash_ast::Type::Var("a"));
+
         for (name, reason) in [
             ("superclass_cycle", nash_can::EntailmentFailure::Cycle),
             ("superclass_limit", nash_can::EntailmentFailure::Limit),
         ] {
-            snapshot(
+            let (_, regions) = marked_source("impl «Core.Equal 'a» where\n    equal x y = True");
+            let r = || regions[0];
+            let arg = Located::at(r(), nash_ast::Type::Var("a"));
+            source_snapshot!(
                 name,
+                "impl «Core.Equal 'a» where\n    equal x y = True",
+                r,
+                r2,
                 Error::MissingSuperclass {
                     region: r(),
                     trait_,
@@ -2637,30 +2976,49 @@ mod branches {
     }
     #[test]
     fn duplicate_pattern_contexts() {
-        for (name, context) in [
-            ("duplicate_lambda", DuplicatePatternContext::LambdaArgs),
+        for (name, input, context) in [
+            (
+                "duplicate_lambda",
+                "value = \\«x» «x» -> x",
+                DuplicatePatternContext::LambdaArgs,
+            ),
             (
                 "duplicate_function",
+                "map «x» «x» = x",
                 DuplicatePatternContext::FuncArgs("map"),
             ),
-            ("duplicate_let", DuplicatePatternContext::LetBinding),
-            ("duplicate_destruct", DuplicatePatternContext::Destruct),
+            (
+                "duplicate_let",
+                "value =\n    let\n        «x» = 1\n        «x» = 2\n    in\n    x",
+                DuplicatePatternContext::LetBinding,
+            ),
+            (
+                "duplicate_destruct",
+                "value =\n    let\n        («x», «x») = (1, 2)\n    in\n    x",
+                DuplicatePatternContext::Destruct,
+            ),
         ] {
-            snapshot(
+            source_snapshot!(
                 name,
+                input,
+                r,
+                r2,
                 Error::DuplicatePattern {
                     context,
                     name: "x",
                     first: r(),
-                    second: r(),
+                    second: r2(),
                 },
             );
         }
     }
     #[test]
     fn export_suggestion_counts() {
-        snapshot(
+        source_snapshot!(
             "export_no_suggestions",
+            "module Main exposing («Box»)\nvalue = 1",
+            r,
+            r2,
             Error::ExportNotFound {
                 region: r(),
                 kind: VarKind::BadType,
@@ -2668,8 +3026,11 @@ mod branches {
                 suggestions: &[],
             },
         );
-        snapshot(
+        source_snapshot!(
             "export_multiple_suggestions",
+            "module Main exposing ((«<+>»))\ninfix left 5 (+) = add\ninfix right 5 (++) = append",
+            r,
+            r2,
             Error::ExportNotFound {
                 region: r(),
                 kind: VarKind::BadOp,
@@ -2698,6 +3059,8 @@ mod branches {
         let rendered = crate::render_plain(&report, &source, "Bad.nash");
         assert!(!rendered.contains("Rename"));
         assert!(rendered.contains("context constraints"));
-        insta::assert_snapshot!(rendered);
+        insta::with_settings!({ description => input, omit_expression => true }, {
+            insta::assert_snapshot!(rendered);
+        });
     }
 }

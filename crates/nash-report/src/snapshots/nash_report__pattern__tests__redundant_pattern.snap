@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/pattern.rs
-expression: "render_plain(report, &Source::new(input), \"src/Main.nash\")"
+description: "Code:\n\nmodule Main exposing (..)\nf xs =\n    case xs of\n        _ -> 0\n        [] -> 1\n"
 ---
 nash::pattern::redundant
 

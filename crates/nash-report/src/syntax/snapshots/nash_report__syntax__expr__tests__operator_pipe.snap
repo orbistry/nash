@@ -1,11 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::OperatorReserved(BadOperator::Pipe, 1, 9), \"value = \")"
+description: value = 1 | 2
 ---
-UNEXPECTED SYMBOL
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
+nash::syntax
 
-Unexpected `|` in expression.
-
-Use `||` for boolean disjunction; `|` belongs in datatype declarations and
-record updates.
+  × Unexpected `|` in expression.
+   ╭─[src/Main.nash:1:11]
+ 1 │ value = 1 | 2
+   ·           ─
+   ╰────
+  help: Use `||` for boolean disjunction; `|` belongs in datatype declarations and
+        record updates.

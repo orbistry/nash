@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/twins.rs
-expression: "diagnostics.join(\"\\n\")"
+description: "module Status exposing (..)\ntype status = Ready\ntype Other = Ready\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status = Ready\ntype Other = Ready\n\n\nmodule Status exposing (..)\ntype status = Ready | Ready\ntype Status = Ready | Ready\n\n\nmodule Status exposing (..)\ntype status = Ready | Waiting\ntype Status = Waiting | Ready\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status 'a = Ready\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status = Ready Int\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status = Ready\ntype alias Ready = { value : Int }\n"
 ---
 type status = Ready
 type Other = Ready

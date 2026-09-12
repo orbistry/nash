@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "type Point = Point { x : Int }\nvalue = Point { y = 1 }"
 ---
 nash::names::labeled_ctor_unknown_field
 
-  × The `a` constructor has no `a` field:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × The `Point` constructor has no `y` field:
+   ╭─[Main.nash:2:17]
+ 1 │ type Point = Point { x : Int }
+ 2 │ value = Point { y = 1 }
+   ·                 ─────
    ╰────
   help: Check the field name against the constructor declaration.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/evidence.rs
-expression: results
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list (list 'a)) => Keep (list 'a) where\n    keep x = x\nimpl Keep bool => Keep bool where\n    keep x = x\ngrowing : list int -> list int\ngrowing x = x\nmissing : int -> int\nmissing x = x\nopen : 'a -> 'a\nopen x = x\ncycle : bool -> bool\ncycle x = x\nfunction : (int -> int) -> (int -> int)\nfunction x = x\n"
 ---
 [
     (

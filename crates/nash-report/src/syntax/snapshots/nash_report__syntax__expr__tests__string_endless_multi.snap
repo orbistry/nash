@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::String(StringError::EndlessMulti(nash_region::Position::new(1,\n9)), 1, 9), \"value = \")"
+description: "value = \"\"\"unfinished"
 ---
-ENDLESS STRING
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax::unclosed_delimiter
 
-Expected `"""` to close `"""`.
-
-Add `"""` here.
+  × Expected `"""` to close `"""`.
+   ╭─[src/Main.nash:1:9]
+ 1 │ value = """unfinished
+   ·         ┬─┬
+   ·         │ ╰── opened here
+   ·         ╰── expected `"""`
+   ╰────
+  help: Add `"""` here.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: proofs
+description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntype alias bigIdentity ('a : Big) = 'a -> 'a\nconcrete : Color -> Color\nconcrete x = lift x\nrigid : bigIdentity 'a\nrigid x = lift x\nsame : 'a -> 'a -> 'a\nsame x y = x\ninferred x = (rigid x, same x (lift x))\nexplicit : () -> ()\nexplicit x = lift x\ntype Box 'a = Box 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Lift 'a 'a => Keep (Box 'a) where\n    keep x = x\nnested = keep (Box Red)\n"
 ---
 [
     Impl {

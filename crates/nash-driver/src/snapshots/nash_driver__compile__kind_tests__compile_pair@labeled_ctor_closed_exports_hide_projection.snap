@@ -1,0 +1,13 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type box)\ntype box 'a = Box { value : 'a }\n\nmodule Main exposing (..)\nimport Types\nget : Types.box 'a -> 'a\nget x = x.value\n"
+---
+nash::type::not_a_record
+
+  × Expected a record, found `Types.box 'a`.
+   ╭─[/Main.nash:4:9]
+ 3 │ get : Types.box 'a -> 'a
+ 4 │ get x = x.value
+   ·         ───┬───
+   ·            ╰── field `value` of `x`
+   ╰────

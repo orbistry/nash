@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/src/compile/nitpick_tests.rs
-expression: message
+description: "module Main exposing (..)\nf (x :: _) = x\n"
 ---
 nash::pattern::incomplete
 

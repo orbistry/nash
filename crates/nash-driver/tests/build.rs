@@ -29,14 +29,21 @@ async fn outputs(files: &[(&str, &str)]) -> Vec<nash_driver::build::ValidatorOut
 
 #[tokio::test]
 async fn source_dependency_compiles_to_roundtrippable_script() {
-    let artifacts = outputs(&[
-        ("Helper", "module Helper exposing (identity)\nidentity x = x\n"),
-        ("Main", "validator module Main exposing (main)\nimport Helper\nmain : Data -> unit\nmain _ = Helper.identity ()\n"),
-    ]).await;
+    let files = [
+        (
+            "Helper",
+            "module Helper exposing (identity)\nidentity x = x\n",
+        ),
+        (
+            "Main",
+            "validator module Main exposing (main)\nimport Helper\nmain : Data -> unit\nmain _ = Helper.identity ()\n",
+        ),
+    ];
+    let artifacts = outputs(&files).await;
     assert_eq!(artifacts.len(), 1);
     let output = &artifacts[0];
     assert_eq!(output.module, "Main");
-    insta::assert_snapshot!(output.uplc);
+    insta::with_settings!({ description => files.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true }, { insta::assert_snapshot!(output.uplc); });
     let arena = Arena::new();
     let parsed = syn::parse_program(&arena, &output.uplc).unwrap();
     assert_eq!(flat::encode(parsed).unwrap(), output.flat);

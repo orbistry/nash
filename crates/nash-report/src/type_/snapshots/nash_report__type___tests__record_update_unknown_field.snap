@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadExpr(region(), Category::Record, &record,\nExpected::FromContext(region(), Context::RecordUpdateKeys(\"person\", &updates),\n&int())))"
+description: "module Main exposing (..)\nperson = { name = \"hello\" }\nvalue = { person | naem = () }\n"
 ---
 nash::type::mismatch
 
   × Record `person` has no field `naem`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:3:20]
+ 2 │ person = { name = "hello" }
+ 3 │ value = { person | naem = () }
+   ·                    ────
    ╰────
   help: Did you mean `name`?
 

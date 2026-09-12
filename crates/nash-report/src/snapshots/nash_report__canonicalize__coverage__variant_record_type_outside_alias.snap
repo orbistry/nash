@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value : { x : Int }\nvalue = { x = 1 }"
 ---
 nash::names::record_type_outside_alias
 
   × This record type needs a name:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:9]
+ 1 │ value : { x : Int }
+   ·         ───────────
+ 2 │ value = { x = 1 }
    ╰────
   help: A record type is only allowed as the direct body of a type alias. Give this
         record a named alias.

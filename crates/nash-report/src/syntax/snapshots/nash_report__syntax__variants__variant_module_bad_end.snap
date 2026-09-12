@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "f = 1\n)"
 ---
 nash::syntax
 
-  × Unexpected operator `(=)`.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+  × Unexpected closing `)`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ f = 1
+ 2 │ )
+   · ─
    ╰────
-  help: Put the operator in an expression, or indent this line to continue the preceding
-        expression.
+  help: Remove the unmatched delimiter.

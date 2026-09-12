@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Record(&Record::Expr(&Expr::OperatorReserved(BadOperator::Equals,\n1, 9), 1, 9), 1, 9), \"value = =\")"
+description: "value = { x = 1 = 2 }"
 ---
-UNEXPECTED SYMBOL
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
+nash::syntax
 
-Unexpected `=` in expression.
-
-Separate record fields with commas; use `==` for a comparison.
+  × Unexpected `=` in expression.
+   ╭─[src/Main.nash:1:17]
+ 1 │ value = { x = 1 = 2 }
+   ·                 ─
+   ╰────
+  help: Separate record fields with commas; use `==` for a comparison.

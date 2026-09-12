@@ -46,6 +46,43 @@ fn normalized(text: &[u8], root: &Path) -> String {
         .replace(root.to_str().unwrap(), "<project>")
 }
 
+// Collect the actual project fixtures in stable path order, including every
+// local module in a multi-module test. Dependency libraries are not test input.
+fn snapshot_settings(root: &Path) -> insta::Settings {
+    fn collect(
+        root: &Path,
+        directory: &Path,
+        sources: &mut std::collections::BTreeMap<PathBuf, String>,
+    ) {
+        for entry in std::fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                collect(root, &path, sources);
+            } else if path
+                .extension()
+                .is_some_and(|extension| extension == "nash")
+            {
+                sources.insert(
+                    path.strip_prefix(root).unwrap().to_owned(),
+                    std::fs::read_to_string(&path).unwrap(),
+                );
+            }
+        }
+    }
+    let mut sources = std::collections::BTreeMap::new();
+    collect(root, root, &mut sources);
+    assert!(!sources.is_empty(), "expected Nash fixture input");
+    let input = sources
+        .into_iter()
+        .map(|(path, source)| format!("{}:\n\n{source}", path.display()))
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    let mut settings = insta::Settings::clone_current();
+    settings.set_description(input);
+    settings.set_omit_expression(true);
+    settings
+}
+
 #[test]
 fn package_and_workspace_source_labels_have_absolute_links() {
     for workspace in [false, true] {
@@ -115,6 +152,8 @@ fn terminal_and_json_type_mismatch() {
         .join("tests/fixtures/type-mismatch")
         .canonicalize()
         .unwrap();
+    let settings = snapshot_settings(&root);
+    let _settings = settings.bind_to_scope();
     let human = check(&root, &[]);
     assert_eq!(human.status.code(), Some(1));
     assert!(human.stdout.is_empty());
@@ -143,6 +182,8 @@ fn terminal_and_json_type_mismatch() {
 #[test]
 fn warnings_keep_success_exit_and_can_be_hidden() {
     let project = Project::new(&[("Main", "module Main exposing (..)\nf unused = ()\n")]);
+    let settings = snapshot_settings(&project.0);
+    let _settings = settings.bind_to_scope();
     let output = check(&project.0, &["--report=json"]);
     assert!(output.status.success());
     let errors: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
@@ -153,9 +194,38 @@ fn warnings_keep_success_exit_and_can_be_hidden() {
         warnings["errors"][0]["problems"][0]["title"],
         "unused variable"
     );
+    let human = check(&project.0, &[]);
+    assert!(human.status.success());
+    insta::assert_snapshot!(
+        "unused_variable_warning_terminal",
+        normalized(&human.stderr, &project.0)
+    );
     let hidden = check(&project.0, &["--report=json", "--no-warnings"]);
     assert!(hidden.status.success());
     assert!(hidden.stderr.is_empty());
+}
+
+#[test]
+fn codegen_failure_is_a_rendered_diagnostic() {
+    let project = Project::new(&[(
+        "Main",
+        "validator module Main exposing (main)\nmain context = comptime context\n",
+    )]);
+    let settings = snapshot_settings(&project.0);
+    let _settings = settings.bind_to_scope();
+    let output = Command::new(env!("CARGO_BIN_EXE_nash"))
+        .env("NASH_PROXY_VERSION", env!("CARGO_PKG_VERSION"))
+        .env("NO_COLOR", "1")
+        .env("FORCE_HYPERLINK", "0")
+        .args(["build"])
+        .arg(&project.0)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let rendered = normalized(&output.stderr, &project.0);
+    assert!(rendered.contains("code generation failed"), "{rendered}");
+    assert!(!rendered.contains('\x1b'));
+    insta::assert_snapshot!(rendered);
 }
 
 #[test]
@@ -203,6 +273,8 @@ fn documented_examples_run_through_the_real_core_package() {
         .join("tests/fixtures/diagnostic-examples")
         .canonicalize()
         .unwrap();
+    let settings = snapshot_settings(&root);
+    let _settings = settings.bind_to_scope();
     let human = check(&root, &["--no-warnings"]);
     assert_eq!(human.status.code(), Some(1));
     let text = normalized(&human.stderr, &root);
@@ -360,6 +432,8 @@ fn poisoned_tuple_child_keeps_independent_type_mismatch() {
         "Main",
         "module Main exposing (..)\nbad : ((), ())\nbad = (().field, \\x -> x)\n",
     )]);
+    let settings = snapshot_settings(&project.0);
+    let _settings = settings.bind_to_scope();
     let json = check(&project.0, &["--report=json", "--no-warnings"]);
     assert_eq!(json.status.code(), Some(1));
     let value: serde_json::Value = serde_json::from_slice(&json.stdout).unwrap();

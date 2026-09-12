@@ -1,0 +1,15 @@
+---
+source: crates/nash-cli/tests/diagnostics.rs
+description: "src/Main.nash:\n\nmodule Main exposing (..)\nf unused = ()\n"
+---
+nash::warning::unused_variable
+
+  ⚠ Unused variable `unused`.
+   ╭─[src/Main.nash:2:3]
+ 1 │ module Main exposing (..)
+ 2 │ f unused = ()
+   ·   ──────
+   ╰────
+  help: Replace `unused` with `_`.
+
+Success! Compiled 1 modules (1 declarations)

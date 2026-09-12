@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Case(&Case::PatternAlignment(4, 1, 9), 1, 9), \"value = \")"
+description: "value = case x of\n    Some x -> x\n  None -> 0"
 ---
-INDENTATION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Case patterns must align.
-
-Indent this pattern with 4 spaces.
+  × Case patterns must align.
+   ╭─[src/Main.nash:3:3]
+ 1 │ value = case x of
+ 2 │     Some x -> x
+ 3 │   None -> 0
+   ·   ─
+   ╰────
+  help: Indent this pattern with 4 spaces.

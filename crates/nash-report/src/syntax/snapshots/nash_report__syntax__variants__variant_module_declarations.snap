@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "="
 ---
 nash::syntax
 
   × Expected a declaration.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:1]
+ 1 │ =
+   · ─
    ╰────
   help: Start a named definition here, or indent this line to continue the preceding
         definition.

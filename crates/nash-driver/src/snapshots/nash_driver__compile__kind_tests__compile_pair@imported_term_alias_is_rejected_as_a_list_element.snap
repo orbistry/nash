@@ -1,0 +1,15 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n\nmodule Main exposing (..)\n\nimport Builtin exposing (..)\nimport Types exposing (type item)\n\ntype alias items = list item\n"
+---
+nash::names::representation_mismatch
+
+  × This position requires `Storable` in the lowercase name of alias `items`:
+   ╭─[/Main.nash:5:1]
+ 4 │ import Types exposing (type item)
+ 5 │ 
+   · ─
+ 6 │ type alias items = list item
+   ╰────
+  help: The type has `Term` representation, but `Storable` admits Big or Const types.
+        Change the type or the representation requirement.

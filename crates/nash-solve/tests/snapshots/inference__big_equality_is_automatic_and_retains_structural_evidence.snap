@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: "format!(\"{}\\nStructural evidence: {}\", render_annotations(&annotations),\nevidence.join(\", \"))"
+description: "module Eq exposing (Eq)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\ntype Token = Token Int\ntype alias Box = { token : Token }\nsame : Token -> Token -> bool\nsame = eq\nsameBox : Box -> Box -> bool\nsameBox = eq\nsameList : List 'a -> List 'a -> bool\nsameList = eq\ntrait Eq 'a => Compare 'a where\n    compare : 'a -> 'a -> bool\nimpl Compare Token where\n    compare = eq\n"
 ---
 same : Token -> Token -> bool
 sameBox : Box -> Box -> bool

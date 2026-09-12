@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Bytes(Bytes::BadHexDigit(12), 1, 12), \"value = #\\\"ag\\\"\")"
+description: "value = #\"ag\""
 ---
-BAD BYTE STRING
-Region { start: Position { line: 1, column: 12 }, end: Position { line: 1, column: 12 } }
+nash::syntax
 
-Invalid hexadecimal digit in byte string.
-
-Use digits from `0123456789abcdefABCDEF`.
+  × Invalid hexadecimal digit in byte string.
+   ╭─[src/Main.nash:1:12]
+ 1 │ value = #"ag"
+   ·            ─
+   ╰────
+  help: Use digits from `0123456789abcdefABCDEF`.

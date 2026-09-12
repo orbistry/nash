@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(& Error::UpdateNotRecord { region: region(), record: &int() })"
+description: "module Main exposing (..)\nperson = 1\nvalue = { person | age = 2 }\n"
 ---
 nash::type::update_not_record
 
   × Cannot update fields of `int`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:3:11]
+ 2 │ person = 1
+ 3 │ value = { person | age = 2 }
+   ·           ────────────────
    ╰────
   help: Rebuild the value with its constructor.

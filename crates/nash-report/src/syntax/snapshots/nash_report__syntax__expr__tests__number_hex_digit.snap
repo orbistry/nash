@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Number(Number::HexDigit, 1, 9), \"value = \")"
+description: value = 0xg
 ---
-INVALID HEXADECIMAL
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a hexadecimal digit.
-
-Use digits from `0123456789abcdefABCDEF`.
+  × Expected a hexadecimal digit.
+   ╭─[src/Main.nash:1:9]
+ 1 │ value = 0xg
+   ·         ─
+   ╰────
+  help: Use digits from `0123456789abcdefABCDEF`.

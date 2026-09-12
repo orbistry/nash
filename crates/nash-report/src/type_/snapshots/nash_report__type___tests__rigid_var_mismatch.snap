@@ -1,14 +1,17 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadExpr(region(), Category::CallResult(MaybeName::NoName),\n&int(),\nExpected::FromAnnotation(\"f\", Region::zero(), 0, SubContext::TypedBody,\n&ErrorType::RigidVar(\"a\"))))"
+description: "module Main exposing (..)\nf : 'a\nf = 1\n"
 ---
 nash::type::mismatch
 
   × Type mismatch: expected `'a`, found `int`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──┬
-   ·   │  ╰── declared type
-   ·   ╰── body of `f`
+   ╭─[Main.nash:3:5]
+ 1 │ module Main exposing (..)
+ 2 │ f : 'a
+   ·     ─┬
+   ·      ╰── declared type
+ 3 │ f = 1
+   ·     ┬
+   ·     ╰── body of `f`
    ╰────
   help: Keep the implementation generic over `'a`, or specialize its annotation.

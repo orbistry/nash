@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::AmbiguousRecordAccess\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Accessor,\n    field: Some(\"name\"), record: &ErrorType::FlexVar(\"a\")\n})"
+description: "module Main exposing (..)\nvalue = .name\n"
 ---
 nash::type::ambiguous_record_access
 
   × Cannot determine record type `'a`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── field `name` accessor
+   ╭─[Main.nash:2:9]
+ 1 │ module Main exposing (..)
+ 2 │ value = .name
+   ·         ──┬──
+   ·           ╰── field `name` accessor
    ╰────
   help: Add a type annotation that identifies the record.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/tests/build.rs
-expression: output.uplc
+description: "module Helper exposing (identity)\nidentity x = x\n\nvalidator module Main exposing (main)\nimport Helper\nmain : Data -> unit\nmain _ = Helper.identity ()\n"
 ---
 (program 1.1.0
   [(lam identity_3

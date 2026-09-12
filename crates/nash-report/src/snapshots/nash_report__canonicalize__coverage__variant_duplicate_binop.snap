@@ -1,16 +1,16 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "infix left 5 (++) = append\ninfix right 5 (++) = append"
 ---
 nash::names::duplicate_binop
 
-  × This file defines multiple (name) operators.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+  × This file defines multiple (++) operators.
+   ╭─[Main.nash:2:16]
+ 1 │ infix left 5 (++) = append
+   ·               ─┬
+   ·                ╰── first definition
+ 2 │ infix right 5 (++) = append
+   ·                ─┬
+   ·                 ╰── and another first definition
    ╰────
   help: Rename one of the definitions.

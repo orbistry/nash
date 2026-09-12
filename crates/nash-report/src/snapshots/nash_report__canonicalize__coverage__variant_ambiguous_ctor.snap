@@ -1,16 +1,16 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "import First exposing (First(..))\nimport Second exposing (Second(..))\nvalue = Name"
 ---
 nash::names::ambiguous_ctor
 
-  × Ambiguous variant `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Ambiguous variant `Name`.
+   ╭─[Main.nash:3:9]
+ 2 │ import Second exposing (Second(..))
+ 3 │ value = Name
+   ·         ────
    ╰────
-  help:     First.name
-            Second.name
+  help:     First.Name
+            Second.Name
 
         Use a qualified name.

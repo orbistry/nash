@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: results
+description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntrait Lift 'a 'a => RoundTrip 'a where\n    roundTrip : 'a -> 'a\nimpl RoundTrip Color where\n    roundTrip x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntrait Lift 'a 'a => RoundTrip 'a where\n    roundTrip : 'a -> 'a\nimpl RoundTrip () where\n    roundTrip x = x\n"
 ---
 [
     Ok(

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Status exposing (..)\ntype Status = Ready | Waiting\ntype status = Ready | Waiting\ntype payload 'a = Payload int 'a\ntype Payload 'a = Payload Int 'a\nsmallPayload x y = Payload x y\nbigPayload x y = Status.Payload x y\nreadSmall (Payload x y) = (x, y)\nreadBig (Status.Payload x y) = (x, y)\nlittle = Ready\nbig = Status.Ready\nlocalLittle x = case x of\n    Ready -> ()\n    Waiting -> ()\nlocalBig x = case x of\n    Status.Ready -> ()\n    Status.Waiting -> ()\n\n\nmodule Main exposing (..)\nimport Status as S exposing (..)\nsmallPayload x y = Payload x y\nbigPayload x y = S.Payload x y\nreadSmall (Payload x y) = (x, y)\nreadBig (S.Payload x y) = (x, y)\nlittleUse = Ready\nbigUse = S.Ready\nlittlePattern x = case x of\n    Ready -> ()\n    Waiting -> ()\nbigPattern x = case x of\n    S.Ready -> ()\n    S.Waiting -> ()\n"
 ---
 bigPattern : Status -> unit
 bigPayload : forall a. Big a => Int -> a -> Payload a

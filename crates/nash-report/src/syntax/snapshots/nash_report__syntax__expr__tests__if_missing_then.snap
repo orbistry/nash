@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::If(&If::Then(1, 9), 1, 9), \"value = \")"
+description: "value = if True "
 ---
-MISSING THEN
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `then` after the condition.
-
-Add `then` before the first branch.
+  × Expected `then` after the condition.
+   ╭─[src/Main.nash:1:17]
+ 1 │ value = if True 
+   ·                 ─
+   ╰────
+  help: Add `then` before the first branch.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-expression: "render_plain(&to_report(&Source::new(\"\"),\n&Error::ModuleNameUnspecified(\"Main\")), &Source::new(\"\"), \"src/Main.nash\")"
+description: answer = 42
 ---
 nash::syntax::missing_module_name
 

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/warning.rs
-expression: "render_plain(&report, &Source::new(input), \"src/Main.nash\")"
+description: "Code:\n\nmodule Main exposing (..)\nimport Tools\nx = 1\n"
 ---
 nash::warning::unused_import
 

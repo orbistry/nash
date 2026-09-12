@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-expression: errors
+description: "module Main exposing (..)\n\ntype wrap 'a = Wrap ('f 'a)\n"
 ---
 [
     TypeVarsUnboundInUnion {

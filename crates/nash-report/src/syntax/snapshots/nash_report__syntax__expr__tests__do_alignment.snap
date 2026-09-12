@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Do(&Do::Alignment(4, 1, 9), 1, 9), \"value = \")"
+description: "value = do\n    x <- action\n  next"
 ---
-INDENTATION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Do statements must align.
-
-Indent the statement with 4 spaces.
+  × Do statements must align.
+   ╭─[src/Main.nash:3:3]
+ 1 │ value = do
+ 2 │     x <- action
+ 3 │   next
+   ·   ─
+   ╰────
+  help: Indent the statement with 4 spaces.

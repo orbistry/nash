@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadPattern(region(), PCategory::Str, &string(),\nPExpected::FromContext(region(), PContext::Tail, &list)))"
+description: "module Main exposing (..)\nvalue (first :: \"hello\") = first\n"
 ---
 nash::type::pattern_mismatch
 
   × Type mismatch: expected `list int`, found `string`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── list tail pattern
+   ╭─[Main.nash:2:17]
+ 1 │ module Main exposing (..)
+ 2 │ value (first :: "hello") = first
+   ·                 ───┬───
+   ·                    ╰── list tail pattern
    ╰────

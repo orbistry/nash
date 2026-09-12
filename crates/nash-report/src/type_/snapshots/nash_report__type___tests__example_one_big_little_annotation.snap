@@ -1,21 +1,15 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "crate::render_plain(&report, &crate::Source::new(source), \"src/Ledger.nash\")"
+description: "module Ledger exposing (settle)\n\ntype alias Account = { owner : Bytes, balance : Int }\n\nbalanceOf : Account -> Int\nbalanceOf account = account.balance\n\nsettle : list Account -> list int\nsettle accounts =\n    List.map balanceOf accounts\n"
 ---
 nash::type::mismatch
 
   × Type mismatch: expected `list int`, found `list Int`.
     ╭─[src/Ledger.nash:10:5]
-  1 │ module Ledger exposing (settle)
-    · ┬
-    · ╰── declared type
-  2 │ 
-  3 │ type alias Account = { owner : Bytes, balance : Int }
-  4 │ 
-  5 │ balanceOf : Account -> Int
-  6 │ balanceOf account = account.balance
   7 │ 
   8 │ settle : list Account -> list int
+    ·          ────────────┬───────────
+    ·                      ╰── declared type
   9 │ settle accounts =
  10 │     List.map balanceOf accounts
     ·     ─────────────┬─────────────

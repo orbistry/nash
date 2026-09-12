@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(schemes, context)"
+description: "module Main exposing (..)\n\ntrait Applicative 'f where\n    pure : 'a -> 'f 'a\n\ntrait Traversable 't where\n    traverse : Applicative 'f => ('a -> 'f 'b) -> 't 'a -> 'f ('t 'b)\n"
 ---
 (
     [

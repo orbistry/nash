@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Number(Number::NoLeadingZero, 1, 9), \"value = \")"
+description: value = 01
 ---
-LEADING ZEROS
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Integer has leading zeros.
-
-Remove the leading zeros.
+  × Integer has leading zeros.
+   ╭─[src/Main.nash:1:9]
+ 1 │ value = 01
+   ·         ─
+   ╰────
+  help: Remove the leading zeros.

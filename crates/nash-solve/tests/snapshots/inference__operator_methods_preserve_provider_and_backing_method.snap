@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: "output.join(\"\\n\")"
+description: "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select () where\n    select x _ = x\nplain : 'a -> 'a -> 'a\nplain x _ = x\n\n\nmodule Operators exposing ((<*>), (<|>))\nimport Methods exposing (Select, plain)\ninfix left 5 (<*>) = select\ninfix left 5 (<|>) = plain\n\n\nmodule Main exposing (..)\nimport Methods exposing ((<+>))\nimport Operators exposing ((<*>))\npick x y = x <*> y\nleft = () <+> ()\nright = () <*> ()\nsection = (() <*>)\noperator = (<*>)\n\n\nmodule OnlyOperators exposing (..)\nimport Operators exposing ((<*>), (<|>))\nvalue = () <*> ()\nordinary = () <|> ()\n"
 ---
 Main:
 left : unit

@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: import First exposing (Name(..))
 ---
 nash::names::import_open_alias
 
-  × Type alias `name` has no variants to import.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Type alias `Name` has no variants to import.
+   ╭─[Main.nash:1:24]
+ 1 │ import First exposing (Name(..))
+   ·                        ────────
    ╰────
   help: Remove `(..)`.

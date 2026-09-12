@@ -1,5 +1,5 @@
 ---
 source: crates/nash-driver/src/compile/nitpick_source_tests.rs
-expression: rendered
+description: "module Main exposing (..)\nf \"a\\\"\\\\\\n\\r\\t\\u{0000}\\u{001b}λ\" = ()\n"
 ---
 "a\"\\\n\r\t\u{0000}\u{001b}λ"

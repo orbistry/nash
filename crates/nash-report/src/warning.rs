@@ -92,16 +92,16 @@ mod tests {
         assert_eq!(can.warnings.len(), 1);
         let report = to_report(&can.warnings[0]);
         assert_eq!(report.severity, Severity::Warning);
-        insta::assert_snapshot!(render_plain(&report, &Source::new(input), "src/Main.nash"));
+        insta::with_settings!({ description => format!("Code:\n\n{input}"), omit_expression => true }, {
+            insta::assert_snapshot!(render_plain(&report, &Source::new(input), "src/Main.nash"));
+        });
     }
     #[test]
     fn unused_variable_pattern() {
         let input = "module Main exposing (..)\nf unused = 1\n";
-        insta::assert_snapshot!(render_plain(
-            &only_warning(input),
-            &Source::new(input),
-            "src/Main.nash"
-        ));
+        insta::with_settings!({ description => format!("Code:\n\n{input}"), omit_expression => true }, {
+            insta::assert_snapshot!(render_plain(&only_warning(input), &Source::new(input), "src/Main.nash"));
+        });
     }
     #[test]
     fn unused_definition() {
@@ -113,10 +113,8 @@ mod tests {
                 in
                 2
         "#};
-        insta::assert_snapshot!(render_plain(
-            &only_warning(input),
-            &Source::new(input),
-            "src/Main.nash"
-        ));
+        insta::with_settings!({ description => format!("Code:\n\n{input}"), omit_expression => true }, {
+            insta::assert_snapshot!(render_plain(&only_warning(input), &Source::new(input), "src/Main.nash"));
+        });
     }
 }

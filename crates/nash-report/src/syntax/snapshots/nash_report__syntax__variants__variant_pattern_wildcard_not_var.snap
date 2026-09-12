@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: f _name = 1
 ---
 nash::diagnostic
 
   × Variable `_foo` starts with an underscore.
    ╭─[src/Main.nash:1:3]
- 1 │ f = value
+ 1 │ f _name = 1
    ·   ────
    ╰────
   help: Use `_` to ignore the value, or a name without a leading underscore.

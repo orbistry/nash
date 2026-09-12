@@ -98,7 +98,9 @@ mod tests {
         );
         assert_eq!(value.as_object().unwrap().len(), 3);
         assert_eq!(value["problems"][0]["suggestions"], json!(["found"]));
-        insta::assert_snapshot!(serde_json::to_string_pretty(&value).unwrap());
+        insta::with_settings!({ description => format!("Code:\n\n{}", module.source), omit_expression => true }, {
+            insta::assert_snapshot!(serde_json::to_string_pretty(&value).unwrap());
+        });
     }
 
     #[test]

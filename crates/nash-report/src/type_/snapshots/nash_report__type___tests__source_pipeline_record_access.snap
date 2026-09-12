@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype alias Person = { age : A }\\nf : Person -> A\\nf p = p.aeg\\n\")"
+description: "module Main exposing (..)\ntype A = A\ntype alias Person = { age : A }\nf : Person -> A\nf p = p.aeg\n"
 ---
 nash::type::missing_field
 

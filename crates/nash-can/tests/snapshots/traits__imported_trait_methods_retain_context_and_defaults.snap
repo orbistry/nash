@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(interfaces[\"Identity\"].traits, references)"
+description: "module Identity exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep x = x\n\n\nmodule Main exposing (..)\nimport Identity as I exposing (Keep)\n\nlocal : Keep 'a => 'a -> 'a\nlocal x = keep x\n\nqualified : I.Keep 'a => 'a -> 'a\nqualified x = I.keep x\n"
 ---
 (
     [

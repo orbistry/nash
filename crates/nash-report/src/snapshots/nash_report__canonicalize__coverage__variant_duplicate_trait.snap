@@ -1,16 +1,19 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\ntrait Name 'a where\n    first : 'a -> 'a\ntrait Name 'a where\n    second : 'a -> 'a\n"
 ---
 nash::names::duplicate_trait
 
-  × This file defines multiple `name` traits.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+  × This file defines multiple `Name` traits.
+   ╭─[Main.nash:4:7]
+ 1 │ module Main exposing (..)
+ 2 │ trait Name 'a where
+   ·       ──┬─
+   ·         ╰── first definition
+ 3 │     first : 'a -> 'a
+ 4 │ trait Name 'a where
+   ·       ──┬─
+   ·         ╰── and another first definition
+ 5 │     second : 'a -> 'a
    ╰────
   help: Rename one of the definitions.

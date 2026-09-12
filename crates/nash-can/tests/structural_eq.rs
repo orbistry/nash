@@ -1,9 +1,13 @@
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use nash_ast::{PackageName, primitives::CORE};
 use nash_can::Context;
 
 #[test]
 fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
+    let snapshot_inputs = SnapshotInputs::default();
     let mut errors = Vec::new();
     for package in [
         CORE,
@@ -19,7 +23,9 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                 nash_can::kinds::builtin_interface(&bump),
             )]);
             let source = "module Eq exposing (Eq)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n";
-            let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+            let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+                .module()
+                .unwrap();
             let canonical = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -35,7 +41,9 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                 nash_can::from_module(&bump, &canonical.module, &Default::default()),
             );
             let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = {{ item : Int }}\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq {head} where\n    eq _ _ = Builtin.True\n"));
-            let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+            let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+                .module()
+                .unwrap();
             let result = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -56,5 +64,7 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
             }
         }
     }
-    insta::assert_snapshot!(errors.join("\n"));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(errors.join("\n"));
+    });
 }

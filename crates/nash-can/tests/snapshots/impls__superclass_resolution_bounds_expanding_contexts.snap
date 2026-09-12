@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: result.unwrap_err()
+description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq (List (List 'a)) => Eq (List 'a) where\n    eq x = x\nimpl Ord (List 'a) where\n    compare x = x\n"
 ---
 [
     MissingSuperclass {

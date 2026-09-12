@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: infix left 5 (+) = add
 ---
 nash::names::binop_function_not_found
 
-  × Operator `(a)` refers to undefined function `a`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Operator `(+)` refers to undefined function `add`.
+   ╭─[Main.nash:1:20]
+ 1 │ infix left 5 (+) = add
+   ·                    ───
    ╰────
   help: Define it, or point the `infix` declaration at an existing top-level value.

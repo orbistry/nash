@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::IndentDef(1, 9), 1, 9), \"value = \")"
+description: "value = let\nx = 1"
 ---
-MISSING DEFINITION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a definition after `let`.
-
-Add an indented definition.
+  × Expected a definition after `let`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = let
+ 2 │ x = 1
+   · ─
+   ╰────
+  help: Add an indented definition.

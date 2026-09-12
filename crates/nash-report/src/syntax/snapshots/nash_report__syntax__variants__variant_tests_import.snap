@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "tests\n    import lower"
 ---
 nash::syntax
 
   × Incomplete module declaration.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:2:12]
+ 1 │ tests
+ 2 │     import lower
+   ·            ─
    ╰────
   help: Write `module Name exposing (..)`.

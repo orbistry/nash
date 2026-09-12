@@ -1,13 +1,19 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\nvalue : Name\nvalue = 1\n"
 ---
 nash::names::not_found_type
 
-  × Unknown type `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Unknown type `Name`.
+   ╭─[Main.nash:2:9]
+ 1 │ module Main exposing (..)
+ 2 │ value : Name
+   ·         ────
+ 3 │ value = 1
    ╰────
-  help: Try name instead.
+  help: Similar names:
+
+            Data
+            Map
+            pair
+            value

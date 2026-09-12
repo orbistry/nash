@@ -1,16 +1,17 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\ntype Name = One\ntype Name = Two\n"
 ---
 nash::names::duplicate_type
 
-  × This file defines multiple `name` types.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+  × This file defines multiple `Name` types.
+   ╭─[Main.nash:3:6]
+ 1 │ module Main exposing (..)
+ 2 │ type Name = One
+   ·      ──┬─
+   ·        ╰── first definition
+ 3 │ type Name = Two
+   ·      ──┬─
+   ·        ╰── and another first definition
    ╰────
   help: Rename one of the definitions.

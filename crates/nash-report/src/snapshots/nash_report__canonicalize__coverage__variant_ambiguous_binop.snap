@@ -1,16 +1,16 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "import First exposing ((++))\nimport Second exposing ((++))\nvalue = [] ++ []"
 ---
 nash::names::ambiguous_binop
 
-  × Ambiguous operator `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Ambiguous operator `++`.
+   ╭─[Main.nash:3:12]
+ 2 │ import Second exposing ((++))
+ 3 │ value = [] ++ []
+   ·            ──
    ╰────
-  help:     First.name
-            Second.name
+  help:     First.++
+            Second.++
 
         Use a qualified name.

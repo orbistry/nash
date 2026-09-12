@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::AmbiguousType\n{\n    region: region(), name: \"value\", variable: &ErrorType::FlexVar(\"a\"),\n    predicates:\n    &[nash_constrain::error::AmbiguousPredicate\n    {\n        trait_: nash_ast::primitives::num_trait(), args:\n        &[&ErrorType::FlexVar(\"a\")]\n    }]\n})"
+description: "module Main exposing (..)\nvalue = let unused = 1 in ()\n"
 ---
 nash::type::ambiguous_type
 
   × Cannot determine type `'a` in `value`.
-   ╭─[Main.nash:1:1]
- 1 │ value
+   ╭─[Main.nash:2:1]
+ 1 │ module Main exposing (..)
+ 2 │ value = let unused = 1 in ()
    · ─────
    ╰────
   help: Required constraints: Num 'a

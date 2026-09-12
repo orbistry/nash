@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value : (Int -> Int : Storable)\nvalue x = x"
 ---
 nash::names::representation_mismatch
 
   × This position requires `Storable` in the type annotation:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:9]
+ 1 │ value : (Int -> Int : Storable)
+   ·         ───────────────────────
+ 2 │ value x = x
    ╰────
   help: The type has `Term` representation, but `Storable` admits Big or Const types.
         Change the type or the representation requirement.

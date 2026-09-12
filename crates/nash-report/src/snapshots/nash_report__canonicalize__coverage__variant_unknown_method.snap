@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "trait Equal 'a where\n    equal : 'a -> Bool\nimpl Equal () where\n    name x = True"
 ---
 nash::names::unknown_method
 
   × The `Equal` trait has no `name` method:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:4:5]
+ 3 │ impl Equal () where
+ 4 │     name x = True
+   ·     ────
    ╰────
   help: Remove or rename this method to match the trait declaration.

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "categories.into_iter().map(|category|\npattern_label(category)).collect::<Vec<_>>().join(\"\\n\")"
 ---
 record pattern
 unit pattern

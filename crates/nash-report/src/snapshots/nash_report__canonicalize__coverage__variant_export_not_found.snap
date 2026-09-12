@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (naem)\nname = 1"
 ---
 nash::names::export_not_found
 
   × Unknown exported value `naem`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:23]
+ 1 │ module Main exposing (naem)
+   ·                       ────
+ 2 │ name = 1
    ╰────
   help: Try name instead.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"App/Main.nash\")"
+description: ""
 ---
 nash::names::missing_module_header
 

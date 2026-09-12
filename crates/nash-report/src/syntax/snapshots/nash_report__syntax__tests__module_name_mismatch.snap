@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-expression: "render_plain(&to_report(&Source::new(input), &error), &Source::new(input),\n\"src/Main.nash\")"
+description: module Other exposing (..)
 ---
 nash::syntax::module_name_mismatch
 

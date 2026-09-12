@@ -1,3 +1,6 @@
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use std::collections::BTreeMap;
 
 use bumpalo::Bump;
@@ -258,11 +261,14 @@ fn partial_constructor_is_not_a_value_type() {
 
 #[test]
 fn named_constructor_arity_remains_a_canonicalization_error() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = bump.alloc_str(
         "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias x = int Int\n",
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
     let errors = canonicalize(
         &bump,
@@ -274,7 +280,9 @@ fn named_constructor_arity_remains_a_canonicalization_error() {
     )
     .unwrap_err();
     assert!(matches!(errors.as_slice(), [Error::BadArity { .. }]));
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]
@@ -313,20 +321,27 @@ fn alias_substitution_preserves_application_head_and_argument() {
     assert_eq!(reference.home, nash_ast::primitives::builtin_home());
     assert_eq!(reference.name, "list");
     assert!(std::ptr::eq(args[0], unit));
-    insta::assert_debug_snapshot!(substituted);
+    insta::with_settings!({omit_expression => true}, {
+        insta::assert_debug_snapshot!(substituted);
+    });
 }
 
 #[test]
 fn applied_head_is_a_free_variable() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = bump.alloc_str("module Main exposing (..)\n\ntype wrap 'a = Wrap ('f 'a)\n");
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let errors = canonicalize(&bump, Context::default(), &module).unwrap_err();
     assert!(matches!(
         errors.as_slice(),
         [Error::TypeVarsUnboundInUnion { .. }]
     ));
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]
@@ -402,12 +417,13 @@ fn annotation_parameter_occurrences_share_one_kind() {
 
 #[test]
 fn imported_interfaces_retain_higher_kinded_types() {
+    let snapshot_inputs = SnapshotInputs::default();
     use nash_ast::{Kind, Type};
     let destination = Bump::new();
     let interface = {
         let source_arena = &destination;
         let source = source_arena.alloc_str("module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 'f 'a = Wrap ('f 'a)\ntype alias applied 'f 'a = 'f 'a\n");
-        let module = nash_parse::Parser::new(source_arena, source)
+        let module = nash_parse::Parser::new(source_arena, snapshot_inputs.record(source))
             .module()
             .unwrap();
         let canonical = canonicalize(source_arena, Context::default(), &module).unwrap();
@@ -428,7 +444,7 @@ fn imported_interfaces_retain_higher_kinded_types() {
     assert!(matches!(interface.aliases[0].typ.value, Type::App { .. }));
     let interfaces = BTreeMap::from([("Shapes", interface)]);
     let source = destination.alloc_str("module Main exposing (..)\n\nimport Shapes exposing (type wrap)\n\ntype holder 'f 'a = Holder (wrap 'f 'a)\n");
-    let module = nash_parse::Parser::new(&destination, source)
+    let module = nash_parse::Parser::new(&destination, snapshot_inputs.record(source))
         .module()
         .unwrap();
     let canonical = canonicalize(
@@ -444,11 +460,13 @@ fn imported_interfaces_retain_higher_kinded_types() {
         canonical.module.unions[0].value.context,
         [nash_ast::Pred::Apply { .. }]
     ));
-    insta::assert_debug_snapshot!((
-        interface,
-        canonical.module.unions[0].value.kind,
-        canonical.module.unions[0].value.context
-    ));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((
+            interface,
+            canonical.module.unions[0].value.kind,
+            canonical.module.unions[0].value.context
+        ));
+    });
 }
 
 #[test]
@@ -499,7 +517,9 @@ fn annotation_kinds_keep_application_parameters_correlated() {
     assert!(
         matches!(copied, nash_ast::Pred::Apply { head, args: [a,b] } if matches!(head.value, Type::Var("g")) && matches!(a.value, Type::Var("x")) && matches!(b.value, Type::Var("y")))
     );
-    insta::assert_debug_snapshot!(kinds);
+    insta::with_settings!({omit_expression => true}, {
+        insta::assert_debug_snapshot!(kinds);
+    });
 }
 
 #[test]
@@ -529,11 +549,14 @@ fn annotation_retains_one_storable_predicate() {
     assert!(
         matches!(kinds.context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()) && matches!(pred.args()[0].value, nash_ast::Type::Var("a")))
     );
-    insta::assert_debug_snapshot!(kinds);
+    insta::with_settings!({omit_expression => true}, {
+        insta::assert_debug_snapshot!(kinds);
+    });
 }
 
 #[test]
 fn annotation_checks_alias_contract_before_argument_splitting() {
+    let snapshot_inputs = SnapshotInputs::default();
     use nash_ast::{Kind, Type};
     use nash_region::Located;
     let bump = Bump::new();
@@ -563,7 +586,9 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
     };
     let interfaces = BTreeMap::from([("Restricted", interface)]);
     let source = bump.alloc_str("module Main exposing (..)\n\nimport Restricted exposing (type restricted)\n\nf : restricted ()\nf x = x\n");
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let errors = canonicalize(
         &bump,
         Context {
@@ -577,7 +602,9 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
         errors.as_slice(),
         [Error::RepresentationMismatch { .. }]
     ));
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]
@@ -778,7 +805,9 @@ macro_rules! self_application_cases {
             let result = canonicalize(&bump, Context { package: None, interfaces: None }, &module);
             let errors = result.expect_err("self application fails the H98 occurs check");
             assert!(errors.iter().all(|error| matches!(error, Error::KindInfinite { .. })), "declaration-time occurs check: {errors:?}");
-            insta::assert_debug_snapshot!(errors);
+            insta::with_settings!({description => &*source, omit_expression => true}, {
+                insta::assert_debug_snapshot!(errors);
+            });
         }
     )*};
 }

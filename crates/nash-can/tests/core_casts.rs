@@ -1,9 +1,13 @@
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use nash_ast::{PackageName, primitives::CORE};
 use nash_can::Context;
 
 #[test]
 fn casts_require_exact_core_package_for_every_import_route() {
+    let snapshot_inputs = SnapshotInputs::default();
     let mut diagnostics = Vec::new();
     for cast in [
         "castLift",
@@ -36,7 +40,9 @@ fn casts_require_exact_core_package_for_every_import_route() {
                 let source = bump.alloc_str(&format!(
                     "module Main exposing (..)\n{import}\nlift : int -> Int\nlift = {reference}\n"
                 ));
-                let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+                let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+                    .module()
+                    .unwrap();
                 let interfaces = std::collections::BTreeMap::from([(
                     "Builtin",
                     nash_can::kinds::builtin_interface(&bump),
@@ -60,5 +66,7 @@ fn casts_require_exact_core_package_for_every_import_route() {
             }
         }
     }
-    insta::assert_snapshot!(diagnostics.join("\n"));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(diagnostics.join("\n"));
+    });
 }

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/render.rs
-expression: output
+description: "Code:\n\na😀é\r\n\tx\r\n"
 ---
 nash::test::source_edges
 

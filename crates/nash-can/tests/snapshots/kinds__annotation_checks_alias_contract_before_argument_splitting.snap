@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-expression: errors
+description: "module Main exposing (..)\n\nimport Restricted exposing (type restricted)\n\nf : restricted ()\nf x = x\n"
 ---
 [
     RepresentationMismatch {

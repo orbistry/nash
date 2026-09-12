@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value : (Storable 'a, Term 'a) => 'a -> 'a\nvalue x = x"
 ---
 nash::names::contradictory_representation
 
   × The representation requirements on 'a are incompatible:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:20]
+ 1 │ value : (Storable 'a, Term 'a) => 'a -> 'a
+   ·                    ─
+ 2 │ value x = x
    ╰────
   help: Change the incompatible constraints or uses of this variable.

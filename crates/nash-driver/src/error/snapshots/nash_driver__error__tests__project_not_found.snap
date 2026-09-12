@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "Project discovery: /project and its parents contain no nash.jsonc."
+---
+  × project root not found: no nash.jsonc in /project or parent directories

@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(& Error ::\nBadPattern(region(), PCategory :: Str, & string(), PExpected ::\nFromContext(region(), PContext::CtorArg(\"Some\", 0), & int())))"
+description: "module Main exposing (..)\ntype Option = Some Builtin.int\nvalue (Some \"hello\") = 1\n"
 ---
 nash::type::pattern_mismatch
 
   × Type mismatch: expected `int`, found `string`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── argument 1 of `Some`
+   ╭─[Main.nash:3:13]
+ 2 │ type Option = Some Builtin.int
+ 3 │ value (Some "hello") = 1
+   ·             ───┬───
+   ·                ╰── argument 1 of `Some`
    ╰────

@@ -1,16 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value = { name = 1, name = 2 }"
 ---
 nash::names::duplicate_field
 
   × This record has multiple `name` fields.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+   ╭─[Main.nash:1:21]
+ 1 │ value = { name = 1, name = 2 }
+   ·           ──┬─      ──┬─
+   ·             │         ╰── and another first definition
+   ·             ╰── first definition
    ╰────
   help: Rename one of the definitions.

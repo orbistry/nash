@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: "}"
+description: "f : { x : int, }"
 ---
 nash::syntax
 
   × Trailing comma in record type.
-   ╭─[src/Main.nash:1:1]
- 1 │ }
-   · ─
+   ╭─[src/Main.nash:1:16]
+ 1 │ f : { x : int, }
+   ·                ─
    ╰────
   help: Remove the comma before `}`.

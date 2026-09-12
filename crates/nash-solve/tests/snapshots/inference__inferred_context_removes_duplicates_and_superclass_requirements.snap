@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\ntrait Base 'b => Select 'a 'b where\n    select : 'a -> 'b -> 'b\nreduced x = (base x, top x, strong (base x))\nreversed x = (top x, strong x, base x)\ndistinct x y = (base x, top y, base x)\npermuted x y = (base x, select x y, base y)\n"
 ---
 distinct : forall a a1. (Base a, Top a1) => a -> a1 -> ( a, a1, a )
 permuted : forall a a1. (Base a1, Select a1 a) => a1 -> a -> ( a1, a, a )

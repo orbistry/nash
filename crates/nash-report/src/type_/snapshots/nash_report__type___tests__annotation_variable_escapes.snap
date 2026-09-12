@@ -1,12 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::AnnotationVariableEscapes\n{ region: region(), name: Some(\"f\"), variable: &ErrorType::RigidVar(\"a\") })"
+description: "module Main exposing (..)\nf x =\n    let\n        inner : 'a\n        inner = x\n    in\n    inner\n"
 ---
 nash::type::annotation_variable_escapes
 
   × Annotation for `f` quantifies type variable `'a`, already fixed by the enclosing scope.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:5:9]
+ 4 │         inner : 'a
+ 5 │         inner = x
+   ·         ─────────
+ 6 │     in
    ╰────
   help: Use the enclosing variable without quantifying it again.

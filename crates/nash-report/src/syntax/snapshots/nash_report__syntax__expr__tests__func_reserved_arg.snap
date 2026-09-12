@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Func(&Func::Arrow(1, 9), 1, 9), \"value = if\")"
+description: "value = \\if -> 1"
 ---
-MISSING ARROW
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `->` after the arguments.
-
-Separate the argument patterns and function body with `->`.
+  × Expected `->` after the arguments.
+   ╭─[src/Main.nash:1:10]
+ 1 │ value = \if -> 1
+   ·          ─
+   ╰────
+  help: Separate the argument patterns and function body with `->`.

@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::If(&If::IndentElse(1, 25), 1, 9),\n\"value = if True then 1\\nelse 2\")"
+description: "value = if True then 1\nelse 2"
 ---
-INDENTATION
-Region { start: Position { line: 2, column: 1 }, end: Position { line: 2, column: 5 } }
+nash::syntax
 
-The else branch is not indented enough.
-
-Indent `else` to continue this if expression.
+  × The else branch is not indented enough.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = if True then 1
+ 2 │ else 2
+   · ────
+   ╰────
+  help: Indent `else` to continue this if expression.

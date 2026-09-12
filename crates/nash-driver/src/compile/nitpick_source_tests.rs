@@ -27,11 +27,11 @@ fn solve_source<'a>(
     (bump.alloc(can.module), annotations)
 }
 
-fn run(source: &str) -> Result<(), Vec<String>> {
+fn run(source: &str) -> Result<(), Diagnostics> {
     run_modules(&[], source)
 }
 
-fn run_modules(providers: &[(&str, &str)], source: &str) -> Result<(), Vec<String>> {
+fn run_modules(providers: &[(&str, &str)], source: &str) -> Result<(), Diagnostics> {
     let bump = Bump::new();
     let mut interfaces = core_interfaces(&bump);
     for (name, provider) in providers {
@@ -40,7 +40,55 @@ fn run_modules(providers: &[(&str, &str)], source: &str) -> Result<(), Vec<Strin
         interfaces.insert(name, nash_can::from_module(&bump, module, &annotations));
     }
     let (module, _) = solve_source(&bump, source, &interfaces, None);
-    check(&bump, module).map_err(|errors| errors.iter().map(describe).collect())
+    check(&bump, module).map_err(|errors| {
+        let source_view = nash_report::Source::new(source);
+        let summaries: Vec<_> = errors.iter().map(describe).collect();
+        let reports = nash_report::to_reports(
+            &source_view,
+            "Main",
+            &nash_report::ModuleError::Patterns(errors),
+        );
+        assert_eq!(reports.len(), summaries.len());
+        Diagnostics {
+            summaries,
+            rendered: reports
+                .iter()
+                .map(|report| nash_report::render_plain(report, &source_view, "Main.nash"))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            description: source_description(providers, source),
+        }
+    })
+}
+
+#[derive(Debug)]
+struct Diagnostics {
+    summaries: Vec<String>,
+    rendered: String,
+    description: String,
+}
+
+fn source_description(providers: &[(&str, &str)], source: &str) -> String {
+    [
+        include_str!("fixtures/Eq.nash"),
+        include_str!("fixtures/Literal.nash"),
+        include_str!("fixtures/Monad.nash"),
+    ]
+    .into_iter()
+    .chain(providers.iter().map(|(_, source)| *source))
+    .chain([source])
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+macro_rules! assert_diagnostics_snapshot {
+    ($errors:expr) => {{
+        let diagnostics = &$errors;
+        assert!(!diagnostics.summaries.is_empty());
+        insta::with_settings!({ description => &diagnostics.description, omit_expression => true }, {
+            insta::assert_snapshot!(diagnostics.rendered);
+        });
+    }};
 }
 
 fn describe(error: &Error<'_>) -> String {
@@ -82,15 +130,14 @@ macro_rules! assert_nitpick_snapshot {
     ($source:literal) => {{
         let source = indoc::indoc!($source);
         let value = run(source).expect("expected complete, useful patterns");
-        insta::with_settings!({ description => source }, { insta::assert_debug_snapshot!(value); });
+        insta::with_settings!({ description => source_description(&[], source), omit_expression => true }, { insta::assert_debug_snapshot!(value); });
     }};
 }
 macro_rules! assert_nitpick_error_snapshot {
     ($source:literal) => {{
         let source = indoc::indoc!($source);
         let errors = run(source).expect_err("expected incomplete or redundant patterns");
-        assert!(!errors.is_empty());
-        insta::with_settings!({ description => source }, { insta::assert_debug_snapshot!(errors); });
+        assert_diagnostics_snapshot!(errors);
     }};
 }
 
@@ -1280,7 +1327,7 @@ fn binop_operands_checked() {
         ),
     )
     .expect_err("both operator operands need checking");
-    insta::assert_debug_snapshot!(errors);
+    assert_diagnostics_snapshot!(errors);
 }
 
 #[test]
@@ -1301,37 +1348,43 @@ fn imported_qualified_union_missing_constructor() {
         ),
     )
     .expect_err("imported constructor coverage must retain Other");
-    insta::assert_debug_snapshot!(errors);
+    assert_diagnostics_snapshot!(errors);
 }
 
 #[test]
 fn imported_labeled_constructor_subset() {
-    run_modules(&[("Shapes", "module Shapes exposing (type choice(..))\ntype choice = Choice { left : bool, right : unit } | Other\n")], indoc::indoc!(r#"
+    let providers = &[(
+        "Shapes",
+        "module Shapes exposing (type choice(..))\ntype choice = Choice { left : bool, right : unit } | Other\n",
+    )];
+    let source = indoc::indoc!(
+        r#"
         module Main exposing (..)
         import Shapes as S
         f x =
             case x of
                 S.Choice { right } -> right
                 S.Other -> ()
-    "#)).expect("omitted imported labels are wildcards");
-    insta::assert_debug_snapshot!(());
+    "#
+    );
+    run_modules(providers, source).expect("omitted imported labels are wildcards");
+    insta::with_settings!({ description => source_description(providers, source), omit_expression => true }, { insta::assert_debug_snapshot!(()); });
 }
 
 #[test]
 fn same_constructor_names_in_distinct_imported_types() {
-    run_modules(
-        &[
-            (
-                "A",
-                "module A exposing (type choice(..))\ntype choice = Yes | No\n",
-            ),
-            (
-                "B",
-                "module B exposing (Choice(..))\ntype Choice = Yes | No\n",
-            ),
-        ],
-        indoc::indoc!(
-            r#"
+    let providers = &[
+        (
+            "A",
+            "module A exposing (type choice(..))\ntype choice = Yes | No\n",
+        ),
+        (
+            "B",
+            "module B exposing (Choice(..))\ntype Choice = Yes | No\n",
+        ),
+    ];
+    let source = indoc::indoc!(
+        r#"
         module Main exposing (..)
         import A
         import B
@@ -1343,10 +1396,9 @@ fn same_constructor_names_in_distinct_imported_types() {
                 (A.No, B.Yes) -> ()
                 (A.No, B.No) -> ()
     "#
-        ),
-    )
-    .expect("different columns keep separate union identities");
-    insta::assert_debug_snapshot!(());
+    );
+    run_modules(providers, source).expect("different columns keep separate union identities");
+    insta::with_settings!({ description => source_description(providers, source), omit_expression => true }, { insta::assert_debug_snapshot!(()); });
 }
 
 #[test]
@@ -1366,10 +1418,10 @@ fn do_binding_rhs_before_continuation() {
     ))
     .expect_err("both cases are incomplete");
     assert!(
-        errors[0].contains("BadCase 6:"),
+        errors.summaries[0].contains("BadCase 6:"),
         "RHS must come first: {errors:?}"
     );
-    insta::assert_debug_snapshot!(errors);
+    assert_diagnostics_snapshot!(errors);
 }
 
 #[test]
@@ -1425,7 +1477,7 @@ fn string_escapes_round_trip() {
         panic!("expected string pattern")
     };
     assert_eq!(value, original);
-    insta::assert_snapshot!(rendered);
+    insta::with_settings!({ description => &*source, omit_expression => true }, { insta::assert_snapshot!(rendered); });
 }
 
 #[test]
@@ -1442,10 +1494,11 @@ fn keyword_children_keep_pattern_coverage_checks() {
             "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nf x = {wrapper}\n"
         );
         let errors = run(&source).expect_err("keyword child contains an incomplete match");
-        assert_eq!(errors.len(), 1, "{wrapper}: {errors:?}");
+        assert_eq!(errors.summaries.len(), 1, "{wrapper}: {errors:?}");
         assert!(
-            errors[0].contains("Incomplete BadCase"),
+            errors.summaries[0].contains("Incomplete BadCase"),
             "{wrapper}: {errors:?}"
         );
+        assert_diagnostics_snapshot!(errors);
     }
 }

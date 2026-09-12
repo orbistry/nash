@@ -1,5 +1,4 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "Doc::stack(problem_to_hint(&problem)).render(80, false)"
 ---
 Use `lift` to convert `int` to `Int` where a `Lift` impl is available.

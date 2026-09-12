@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Main exposing (..)\n\nimport Builtin exposing (type list)\n\nempty : list 'a\nempty = []\n\nfirst : list 'a -> 'a\nfirst xs =\n    case xs of\n        head :: tail -> head\n"
 ---
 empty : forall a. Storable a => list a
 first : forall a. Storable a => list a -> a

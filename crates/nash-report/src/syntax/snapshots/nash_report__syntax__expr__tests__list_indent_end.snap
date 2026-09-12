@@ -1,10 +1,16 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::List(&List::IndentEnd(1, 9), 1, 9), \"value = \")"
+description: "value = [1\n]"
 ---
-UNCLOSED DELIMITER
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax::indentation
 
-Expected `]` to close `[`.
-
-Add `]` here.
+  × Closing `]` is underindented.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = [1
+   ·         ┬
+   ·         ╰── opened here
+ 2 │ ]
+   · ┬
+   · ╰── underindented closing delimiter
+   ╰────
+  help: Indent `]` to continue this construct.
