@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::orphan_impl
-
   × This module cannot define an impl of `First.Equal` for First.Equal:
    ╭─[Main.nash:1:1]
  1 │ name = other

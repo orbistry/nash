@@ -2,8 +2,6 @@
 source: crates/nash-cli/tests/diagnostics.rs
 expression: text
 ---
-nash::type::mismatch
-
   × Type mismatch: expected `unit`, found `bool`.
    ╭─[<project>/src/Main.nash:5:17]
  3 │ 

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::import_ctor_by_name
-
   × Cannot import variant `name` directly.
    ╭─[Main.nash:1:1]
  1 │ name = other

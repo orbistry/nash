@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::MissingImpl\n{\n    region: region(), name: \"values\", trait_:\n    nash_ast::primitives::ReprTrait::Storable.qualified(), args:\n    &[&ErrorType::Lambda(&int(), &int(), &[])], available: &[], because:\n    &[nash_constrain::error::Requirement::Formation(&ErrorType::Type\n    {\n        home: nash_ast::primitives::builtin_home(), name: \"list\", args:\n        &[&ErrorType::Lambda(&int(), &int(), &[])]\n    })]\n})"
 ---
-nash::type::missing_impl
-
   × Unsatisfied representation constraint `Storable (int -> int)`.
    ╭─[Main.nash:1:1]
  1 │ value

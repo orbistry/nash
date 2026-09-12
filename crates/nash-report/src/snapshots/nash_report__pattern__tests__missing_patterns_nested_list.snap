@@ -2,8 +2,6 @@
 source: crates/nash-report/src/pattern.rs
 expression: "render(indoc::indoc!\n{r#\"\n            module Main exposing (..)\n            first xs =\n                case xs of\n                    [] -> 0\n                    [] :: _ -> 1\n        \"#})"
 ---
-nash::pattern::incomplete
-
   × Case expression is not exhaustive.
    ╭─[src/Main.nash:3:5]
  2 │     first xs =

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf x"
 ---
-nash::syntax
-
   × Expected `=` in the definition of `f`.
    ╭─[src/Main.nash:1:4]
  1 │ f x

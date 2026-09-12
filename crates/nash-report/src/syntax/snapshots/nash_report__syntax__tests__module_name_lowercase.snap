@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule main exposing (..)"
 ---
-nash::syntax
-
   × Expected an uppercase module name.
    ╭─[src/Main.nash:1:8]
  1 │ module main exposing (..)

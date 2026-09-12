@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadExpr(region(), Category::List, &actual,\nExpected::FromContext(region(), Context::OpRight(\"::\"), &expected)))"
 ---
-nash::type::mismatch
-
   × Type mismatch: expected `list int`, found `list string`.
    ╭─[Main.nash:1:1]
  1 │ value

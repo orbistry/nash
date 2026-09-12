@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-nash::syntax
-
   × Reserved word `if` cannot be a field name.
    ╭─[Main.nash:1:11]
  1 │ value = { if = 1 }

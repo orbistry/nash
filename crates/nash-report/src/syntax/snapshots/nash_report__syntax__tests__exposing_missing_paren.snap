@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule Main exposing .."
 ---
-nash::syntax
-
   × Expected `(` after `exposing`.
    ╭─[src/Main.nash:1:22]
  1 │ module Main exposing ..

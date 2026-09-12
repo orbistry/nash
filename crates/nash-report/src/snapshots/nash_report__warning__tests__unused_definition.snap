@@ -2,8 +2,6 @@
 source: crates/nash-report/src/warning.rs
 expression: "render_plain(&only_warning(input), &Source::new(input), \"src/Main.nash\")"
 ---
-nash::warning::unused_definition
-
   ⚠ Unused definition `unused`.
    ╭─[src/Main.nash:4:9]
  3 │     let

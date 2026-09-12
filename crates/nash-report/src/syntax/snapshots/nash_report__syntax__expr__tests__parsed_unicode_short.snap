@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
-nash::syntax
-
   × Unicode escape needs 4 digits, found 1.
    ╭─[Main.nash:1:11]
  1 │ value = "\u{1}"

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule Main exposing (1)"
 ---
-nash::syntax
-
   × Expected a value, type, or operator to expose.
    ╭─[src/Main.nash:1:23]
  1 │ module Main exposing (1)

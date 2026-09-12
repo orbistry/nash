@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::refutable_bind_pattern
-
   × This `do` binding has a pattern that can fail to match:
    ╭─[Main.nash:1:1]
  1 │ name = other

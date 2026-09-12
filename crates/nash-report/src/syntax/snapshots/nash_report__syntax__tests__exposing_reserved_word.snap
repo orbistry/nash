@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: if
 ---
-nash::diagnostic
-
   × Cannot expose reserved word `if`.
    ╭─[src/Main.nash:1:1]
  1 │ if

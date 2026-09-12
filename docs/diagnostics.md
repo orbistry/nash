@@ -206,7 +206,7 @@ produces a value implementing `miette::Diagnostic`:
 
 | miette | from `Report` |
 |---|---|
-| `code()` | `code` |
+| `code()` | omitted in terminal output; retained in JSON and LSP |
 | `severity()` | `severity` |
 | `Display` (the `×` line) | `before` rendered at 80 columns |
 | `labels()` | primary region and secondary labels, converted to byte spans by `Source` |
@@ -246,8 +246,6 @@ settle accounts =
 ```
 
 ```text
-nash::type::mismatch
-
   × Type mismatch: expected `list int`, found `list Int`.
     ╭─[src/Ledger.nash:11:5]
   8 │ 
@@ -276,8 +274,6 @@ isDone s = s == Done
 ```
 
 ```text
-nash::type::missing_impl
-
   × No impl for `Eq step`.
    ╭─[src/Steps.nash:8:12]
  7 │ isDone : step -> bool
@@ -312,8 +308,6 @@ tag d =
 ```
 
 ```text
-nash::pattern::incomplete
-
   × Case expression is not exhaustive.
    ╭─[src/Tag.nash:7:5]
  6 │     tag d =
@@ -335,7 +329,7 @@ nash::pattern::incomplete
 `nash_can::Warning` (`UnusedVariable`, `UnusedImport`) and, later, the
 trait solver's `MissingTypeAnnotation` (Elm `Reporting/Warning.hs`)
 become `Report`s with `Severity::Warning`. They render identically with
-miette's `Warning:` header, never fail the build, and are suppressed by
+miette's warning marker, never fail the build, and are suppressed by
 `nash check --no-warnings`. The LSP publishes them as
 `DiagnosticSeverity::WARNING`.
 

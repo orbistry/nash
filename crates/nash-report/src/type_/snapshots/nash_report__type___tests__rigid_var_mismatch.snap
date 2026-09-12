@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadExpr(region(), Category::CallResult(MaybeName::NoName),\n&int(),\nExpected::FromAnnotation(\"f\", Region::zero(), 0, SubContext::TypedBody,\n&ErrorType::RigidVar(\"a\"))))"
 ---
-nash::type::mismatch
-
   × Type mismatch: expected `'a`, found `int`.
    ╭─[Main.nash:1:1]
  1 │ value

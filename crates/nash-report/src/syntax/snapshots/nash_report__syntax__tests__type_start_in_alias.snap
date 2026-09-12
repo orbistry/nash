@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "42"
 ---
-nash::syntax
-
   × Expected a type in the type alias.
    ╭─[src/Main.nash:1:1]
  1 │ 42

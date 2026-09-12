@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : int\ng = 1"
 ---
-nash::syntax
-
   × Expected definition `f`, found `g`.
    ╭─[src/Main.nash:2:2]
  1 │ f : int

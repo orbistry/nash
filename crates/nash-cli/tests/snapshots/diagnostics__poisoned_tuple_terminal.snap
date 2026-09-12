@@ -2,8 +2,6 @@
 source: crates/nash-cli/tests/diagnostics.rs
 expression: "normalized(&human.stderr, &project.0)"
 ---
-nash::type::mismatch
-
   × Type mismatch: expected `( ?, unit )`, found `( ?, 'a -> 'a )`.
    ╭─[<project>/src/Main.nash:3:7]
  1 │ module Main exposing (..)
@@ -14,8 +12,6 @@ nash::type::mismatch
    ·       ─────────┬─────────
    ·                ╰── body of `bad`
    ╰────
-
-nash::type::not_a_record
 
   × Expected a record, found `unit`.
    ╭─[<project>/src/Main.nash:3:8]

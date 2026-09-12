@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
 ---
-nash::validator::missing_main
-
   × This validator module requires a main value to compile into a script.
    ╭─[Main.nash:1:1]
  1 │ name = other

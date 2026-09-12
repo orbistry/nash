@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::method_missing_parameter
-
   × The `a` method does not mention trait parameter 'a:
    ╭─[Main.nash:1:1]
  1 │ name = other

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntrait Eq 'a where\\n    eq : 'a -> 'a -> Builtin.bool\\nf : A -> Builtin.bool\\nf a = eq a a\\n\")"
 ---
-nash::type::missing_impl
-
   × No impl for `Eq A`.
    ╭─[Main.nash:6:7]
  5 │ f : A -> Builtin.bool

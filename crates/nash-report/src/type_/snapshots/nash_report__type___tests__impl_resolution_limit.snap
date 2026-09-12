@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::ImplResolutionLimit\n{ region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait() })"
 ---
-nash::type::impl_resolution_limit
-
   × Impl resolution for `Eq` in `f` exceeded the work limit.
    ╭─[Main.nash:1:1]
  1 │ value

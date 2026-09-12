@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule Main exposing (..)\n\n)"
 ---
-nash::syntax
-
   × Unexpected closing `)`.
    ╭─[src/Main.nash:3:1]
  2 │ 

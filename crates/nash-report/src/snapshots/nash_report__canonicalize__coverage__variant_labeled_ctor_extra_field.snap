@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::labeled_ctor_extra_field
-
   × The `a` constructor has no `a` field:
    ╭─[Main.nash:1:1]
  1 │ name = other

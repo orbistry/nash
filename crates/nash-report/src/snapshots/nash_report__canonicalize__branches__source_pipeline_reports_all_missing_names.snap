@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "errors.iter().map(|e|\ncrate::render_plain(&to_report(&source, e), &source,\n\"Main.nash\")).collect::<Vec<_>>().join(\"\\n\")"
 ---
-nash::names::not_found_var
-
   × Unknown variable `missing`.
    ╭─[Main.nash:2:9]
  1 │ module Main exposing (..)
@@ -15,8 +13,6 @@ nash::names::not_found_var
 
             first
             second
-
-nash::names::not_found_var
 
   × Unknown variable `absent`.
    ╭─[Main.nash:3:10]

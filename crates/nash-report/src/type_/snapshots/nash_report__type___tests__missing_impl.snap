@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::MissingImpl\n{\n    region: region(), name: \"==\", trait_: nash_ast::primitives::eq_trait(),\n    args:\n    &[&ErrorType::Type\n    {\n        home: nash_ast::ModuleName { package: None, name: \"Main\" }, name:\n        \"step\", args: &[]\n    }], available:\n    &[&[nash_ast::Head::Named\n    {\n        reference: nash_ast::QualifiedName\n        { home: nash_ast::primitives::builtin_home(), name: \"int\" }, args: &[]\n    }]], because: &[]\n})"
 ---
-nash::type::missing_impl
-
   × No impl for `Eq step`.
    ╭─[Main.nash:1:1]
  1 │ value

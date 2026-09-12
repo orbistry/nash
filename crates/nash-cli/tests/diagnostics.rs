@@ -56,7 +56,8 @@ fn terminal_and_json_type_mismatch() {
     assert!(human.stdout.is_empty());
     let text = normalized(&human.stderr, &root);
     assert!(!text.contains('\u{1b}'));
-    assert!(text.contains("nash::type::mismatch"));
+    assert!(!text.contains("nash::type::mismatch"));
+    assert!(!text.contains("TYPE MISMATCH"));
     insta::assert_snapshot!("type_mismatch_terminal", text);
     let json = check(&root, &["--report=json"]);
     assert_eq!(json.status.code(), Some(1));
@@ -118,7 +119,7 @@ fn independent_errors_are_stable_and_dependents_are_blocked() {
     assert_eq!(modules[0]["problems"].as_array().unwrap().len(), 2);
     let human = check(&project.0, &[]);
     let text = String::from_utf8(human.stderr).unwrap();
-    assert_eq!(text.matches("nash::names::not_found_var").count(), 3);
+    assert_eq!(text.matches("  × ").count(), 3);
     assert!(text.contains("Skipped"));
     assert!(!text.contains("IMPORT PROBLEM"));
 }
@@ -144,18 +145,13 @@ fn documented_examples_run_through_the_real_core_package() {
     let text = normalized(&human.stderr, &root);
     assert!(text.contains("found `list Int`"), "{text}");
     let docs = include_str!("../../../docs/diagnostics.md");
-    let names = [
-        "nash::type::mismatch",
-        "nash::type::missing_impl",
-        "nash::pattern::incomplete",
-        "Compilation failed:",
-    ];
-    for pair in names.windows(2) {
-        let start = text.find(&format!("{}\n", pair[0])).unwrap();
-        let end = text[start..].find(pair[1]).unwrap() + start;
-        let block = text[start..end]
-            .trim_end()
-            .replace("<project>/app/src/", "src/");
+    for diagnostic in text.split("  × ").skip(1) {
+        let block = format!(
+            "  × {}",
+            diagnostic.split("Compilation failed:").next().unwrap()
+        )
+        .trim_end()
+        .replace("<project>/app/src/", "src/");
         assert!(docs.contains(&block), "documented output differs:\n{block}");
     }
     insta::assert_snapshot!("documented_examples_terminal", text);
@@ -227,14 +223,8 @@ async fn mixed_errors_match_across_terminal_json_and_lsp() {
         );
         let human = check(&project.0, &["--no-warnings"]);
         let text = String::from_utf8(human.stderr).unwrap();
-        let mut previous = 0;
-        for problem in problems {
-            let title = problem["code"].as_str().unwrap();
-            assert_eq!(text.matches(&format!("{title}\n")).count(), 1);
-            let position = text.find(&format!("{title}\n")).unwrap();
-            assert!(position >= previous);
-            previous = position;
-        }
+        assert!(!text.contains("nash::"));
+        assert_eq!(text.matches("  × ").count(), problems.len());
         let db = Arc::new(Mutex::new(Database::new(FileSystemSource::new())));
         let loaded = DriverProject::load(&project.0).await.unwrap();
         let modules = loaded.discover_modules(&*db.lock().await).await.unwrap();
@@ -253,6 +243,7 @@ async fn mixed_errors_match_across_terminal_json_and_lsp() {
             .filter(|report| report.severity == nash_report::Severity::Error)
             .collect();
         assert_eq!(errors.len(), problems.len());
+        let mut previous = 0;
         for (report, json) in errors.into_iter().zip(problems) {
             assert_eq!(report.title, json["title"]);
             assert_eq!(
@@ -268,6 +259,11 @@ async fn mixed_errors_match_across_terminal_json_and_lsp() {
                 rendered.contains(&location),
                 "{rendered}\nExpected {location}"
             );
+            let position = text
+                .find(rendered.trim())
+                .expect("terminal contains diagnostic");
+            assert!(position >= previous);
+            previous = position;
             let lsp = nash_language_server::diagnostics::to_lsp(report, &source, &uri);
             assert_eq!(serde_json::to_value(&lsp).unwrap()["code"], json["code"]);
             assert_eq!(

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::PolymorphicRecursion\n{\n    region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::FlexVar(\"a\")]\n})"
 ---
-nash::type::polymorphic_recursion
-
   × Recursive call to `f` grows its trait requirement.
    ╭─[Main.nash:1:1]
  1 │ value

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf : A\\nf = B\\n\")"
 ---
-nash::type::mismatch
-
   × Type mismatch: expected `A`, found `B`.
    ╭─[Main.nash:5:5]
  3 │ type B = B

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadExpr(region(), Category::Lambda, &function,\nExpected::FromContext(region(),\nContext::CallArity(MaybeName::FuncName(\"f\"), 3), &i)))"
 ---
-nash::type::mismatch
-
   × `f` expects 1 argument, but received 3.
    ╭─[Main.nash:1:1]
  1 │ value

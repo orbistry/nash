@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::bad_instance_head
-
   × This impl head is a bare type variable:
    ╭─[Main.nash:1:1]
  1 │ name = other

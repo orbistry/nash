@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::export_open_alias
-
   × Type alias `name` has no variants to expose.
    ╭─[Main.nash:1:1]
  1 │ name = other
