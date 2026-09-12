@@ -1,16 +1,16 @@
 ---
 source: crates/nash-parse/src/declaration/attribute.rs
 description: "@derive(Eq\ntype T = A"
+info: diagnostic
 ---
-Attribute(
-    IndentEnd(
-        Position {
-            line: 1,
-            column: 8,
-        },
-        1,
-        11,
-    ),
-    1,
-    1,
-)
+nash::syntax::unclosed_delimiter
+
+  × Expected `)` to close `(`.
+   ╭─[src/Main.nash:1:11]
+ 1 │ @derive(Eq
+   ·        ┬  ┬
+   ·        │  ╰── expected `)`
+   ·        ╰── opened here
+ 2 │ type T = A
+   ╰────
+  help: Add `)` here.

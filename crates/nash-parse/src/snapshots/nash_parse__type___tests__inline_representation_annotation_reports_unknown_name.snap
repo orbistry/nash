@@ -1,17 +1,13 @@
 ---
 source: crates/nash-parse/src/type_.rs
 description: "Code:\n\nlist ('a : Wrong)"
+info: diagnostic
 ---
-Tuple(
-    Repr(
-        Name(
-            "Wrong",
-            1,
-            12,
-        ),
-        1,
-        12,
-    ),
-    1,
-    6,
-)
+nash::syntax
+
+  × Unknown representation bound `Wrong`.
+   ╭─[src/Main.nash:1:12]
+ 1 │ list ('a : Wrong)
+   ·            ─
+   ╰────
+  help: Use `Big`, `Const`, `Term`, or `Storable`.

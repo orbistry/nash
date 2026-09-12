@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Fix 'f = Fix ('f (Fix 'f))"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Fix 'f = Fix ('f (Fix 'f))\n"
 ---
 (
     [

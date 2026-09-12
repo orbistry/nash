@@ -1,25 +1,13 @@
 ---
 source: crates/nash-parse/src/module.rs
 description: "Code:\n\nvalue = if True then 42"
+info: diagnostic
 ---
-Declarations(
-    Def(
-        "value",
-        Body(
-            If(
-                Else(
-                    1,
-                    24,
-                ),
-                1,
-                9,
-            ),
-            1,
-            9,
-        ),
-        1,
-        6,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected an else branch.
+   ╭─[src/Main.nash:1:24]
+ 1 │ value = if True then 42
+   ·                        ─
+   ╰────
+  help: Add `else` and an expression; every if expression needs both branches.

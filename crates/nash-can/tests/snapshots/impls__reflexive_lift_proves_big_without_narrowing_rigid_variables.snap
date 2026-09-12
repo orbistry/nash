@@ -1,213 +1,29 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Container 'a = Wrap 'a\ntrait Tag 'a where\n    tag : 'a -> 'a\ntrait Tag 'a => Top 'a where\n    top : 'a -> 'a\nimpl Lift 'a 'a => Tag (Container 'a) where\n    tag x = x\nimpl Top (Container 'a) where\n    top x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype container 'a = Wrap 'a\ntrait Tag 'a where\n    tag : 'a -> 'a\ntrait Tag 'a => Top 'a where\n    top : 'a -> 'a\nimpl Lift 'a 'a => Tag (container 'a) where\n    tag x = x\nimpl Top (container 'a) where\n    top x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype container 'a = Wrap 'a\ntrait Tag 'a where\n    tag : 'a -> 'a\ntrait Tag 'a => Top 'a where\n    top : 'a -> 'a\nimpl Lift (List 'a) (List 'a) => Tag (container 'a) where\n    tag x = x\nimpl Top (container 'a) where\n    top x = x\n"
+info: diagnostic
 ---
-[
-    Ok(
-        (),
-    ),
-    Err(
-        [
-            MissingSuperclass {
-                region: Region {
-                    start: Position {
-                        line: 10,
-                        column: 1,
-                    },
-                    end: Position {
-                        line: 11,
-                        column: 14,
-                    },
-                },
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Top",
-                },
-                heads: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 10,
-                                column: 11,
-                            },
-                            end: Position {
-                                line: 10,
-                                column: 23,
-                            },
-                        },
-                        value: Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "container",
-                            },
-                            args: [
-                                Var(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-                superclass: Trait {
-                    trait_: QualifiedName {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "Tag",
-                    },
-                    args: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 10,
-                                    column: 11,
-                                },
-                                end: Position {
-                                    line: 10,
-                                    column: 23,
-                                },
-                            },
-                            value: Named {
-                                reference: QualifiedName {
-                                    home: ModuleName {
-                                        package: None,
-                                        name: "Main",
-                                    },
-                                    name: "container",
-                                },
-                                args: [
-                                    Located {
-                                        region: Region {
-                                            start: Position {
-                                                line: 10,
-                                                column: 11,
-                                            },
-                                            end: Position {
-                                                line: 10,
-                                                column: 23,
-                                            },
-                                        },
-                                        value: Var(
-                                            "a",
-                                        ),
-                                    },
-                                ],
-                            },
-                        },
-                    ],
-                },
-                index: 0,
-                reason: Missing,
-            },
-        ],
-    ),
-    Err(
-        [
-            MissingSuperclass {
-                region: Region {
-                    start: Position {
-                        line: 10,
-                        column: 1,
-                    },
-                    end: Position {
-                        line: 11,
-                        column: 14,
-                    },
-                },
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Top",
-                },
-                heads: [
-                    Located {
-                        region: Region {
-                            start: Position {
-                                line: 10,
-                                column: 11,
-                            },
-                            end: Position {
-                                line: 10,
-                                column: 23,
-                            },
-                        },
-                        value: Named {
-                            reference: QualifiedName {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "container",
-                            },
-                            args: [
-                                Var(
-                                    0,
-                                ),
-                            ],
-                        },
-                    },
-                ],
-                superclass: Trait {
-                    trait_: QualifiedName {
-                        home: ModuleName {
-                            package: None,
-                            name: "Main",
-                        },
-                        name: "Tag",
-                    },
-                    args: [
-                        Located {
-                            region: Region {
-                                start: Position {
-                                    line: 10,
-                                    column: 11,
-                                },
-                                end: Position {
-                                    line: 10,
-                                    column: 23,
-                                },
-                            },
-                            value: Named {
-                                reference: QualifiedName {
-                                    home: ModuleName {
-                                        package: None,
-                                        name: "Main",
-                                    },
-                                    name: "container",
-                                },
-                                args: [
-                                    Located {
-                                        region: Region {
-                                            start: Position {
-                                                line: 10,
-                                                column: 11,
-                                            },
-                                            end: Position {
-                                                line: 10,
-                                                column: 23,
-                                            },
-                                        },
-                                        value: Var(
-                                            "a",
-                                        ),
-                                    },
-                                ],
-                            },
-                        },
-                    ],
-                },
-                index: 0,
-                reason: Missing,
-            },
-        ],
-    ),
-]
+Case 1: accepted
+nash::names::missing_superclass
+
+  × The `Main.Top` impl for (Main.container 'a0) does not establish superclass 1:
+    ╭─[src/Main.nash:10:1]
+  9 │         tag x = x
+ 10 │ ╭─▶ impl Top (container 'a) where
+ 11 │ ╰─▶     top x = x
+    ╰────
+  help: It must also satisfy `Main.Tag (Main.container 'a)`. I cannot find an impl or
+        context constraint that provides it. Add the required impl or include the
+        necessary constraint in this impl's context.
+
+nash::names::missing_superclass
+
+  × The `Main.Top` impl for (Main.container 'a0) does not establish superclass 1:
+    ╭─[src/Main.nash:10:1]
+  9 │         tag x = x
+ 10 │ ╭─▶ impl Top (container 'a) where
+ 11 │ ╰─▶     top x = x
+    ╰────
+  help: It must also satisfy `Main.Tag (Main.container 'a)`. I cannot find an impl or
+        context constraint that provides it. Add the required impl or include the
+        necessary constraint in this impl's context.

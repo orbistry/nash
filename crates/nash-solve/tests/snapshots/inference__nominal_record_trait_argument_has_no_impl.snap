@@ -1,71 +1,15 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a 'b where\n    keep : 'a -> 'b -> 'a\ntype alias item = { item : unit }\nvalue = keep () { item = () }\n"
+description: "module Main exposing (..)\ntrait Keep 'a 'b where\n    keep : 'a -> 'b -> 'a\ntype alias item = { item : unit }\nvalue = keep () { item = () }\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 9,
-            },
-            end: Position {
-                line: 5,
-                column: 13,
-            },
-        },
-        name: "keep",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Keep",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-            Alias {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "item",
-                args: [],
-                real: Record {
-                    fields: [
-                        (
-                            "item",
-                            Type {
-                                home: ModuleName {
-                                    package: Some(
-                                        PackageName {
-                                            author: "nash",
-                                            project: "core",
-                                        },
-                                    ),
-                                    name: "Builtin",
-                                },
-                                name: "unit",
-                                args: [],
-                            },
-                        ),
-                    ],
-                },
-            },
-        ],
-        available: [],
-        because: [],
-    },
-]
+nash::type::missing_impl
+
+  × No impl for `Keep unit item`.
+   ╭─[Main.nash:5:9]
+ 4 │ type alias item = { item : unit }
+ 5 │ value = keep () { item = () }
+   ·         ──┬─
+   ·           ╰── required by `keep`
+   ╰────
+  help: Import or define an impl for `Keep unit item`.

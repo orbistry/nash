@@ -1,7 +1,46 @@
 ---
 source: crates/nash-can/tests/twins.rs
 description: "module Status exposing (type status(..), Status)\ntype status = Ready | Waiting\ntype Status = Ready | Waiting\n\n\nmodule Main exposing (..)\nimport Status as S exposing (..)\nvalue = Ready\n\n\nmodule Main exposing (..)\nimport Status as S exposing (..)\nvalue = S.Ready\n\n\nmodule Status exposing (type status, Status(..))\ntype status = Ready | Waiting\ntype Status = Ready | Waiting\n\n\nmodule Status exposing (..)\ntype status = Ready | Waiting\ntype Status = Ready | Waiting\n\n\nmodule Main exposing (..)\nimport Status as S exposing (Status(..))\nvalue = Ready\n\n\nmodule Main exposing (..)\nimport Status as S exposing (Status(..))\nvalue = S.Ready\n"
+info: diagnostic
 ---
-exports=type status(..), Status; imports=..; S.Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 16 } }, prefix: Some("S"), name: "Ready", suggestions: PossibleNames { locals: ["Ready", "Waiting"], qualified: [] } }]
-exports=type status, Status(..); imports=..; Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 14 } }, prefix: None, name: "Ready", suggestions: PossibleNames { locals: [], qualified: [("S", ["Ready", "Waiting"])] } }]
-exports=..; imports=Status(..); Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 14 } }, prefix: None, name: "Ready", suggestions: PossibleNames { locals: [], qualified: [("S", ["Ready", "Waiting"])] } }]
+exports=type status(..), Status; imports=..; S.Ready:
+nash::names::not_found_ctor
+
+  × Unknown variant `S.Ready`.
+   ╭─[src/Main.nash:3:9]
+ 2 │ import Status as S exposing (..)
+ 3 │ value = S.Ready
+   ·         ───────
+   ╰────
+  help: Similar names:
+
+            Ready
+            Waiting
+
+exports=type status, Status(..); imports=..; Ready:
+nash::names::not_found_ctor
+
+  × Unknown variant `Ready`.
+   ╭─[src/Main.nash:3:9]
+ 2 │ import Status as S exposing (..)
+ 3 │ value = Ready
+   ·         ─────
+   ╰────
+  help: Similar names:
+
+            S.Ready
+            S.Waiting
+
+exports=..; imports=Status(..); Ready:
+nash::names::not_found_ctor
+
+  × Unknown variant `Ready`.
+   ╭─[src/Main.nash:3:9]
+ 2 │ import Status as S exposing (Status(..))
+ 3 │ value = Ready
+   ·         ─────
+   ╰────
+  help: Similar names:
+
+            S.Ready
+            S.Waiting

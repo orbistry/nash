@@ -1,14 +1,15 @@
 ---
 source: crates/nash-parse/src/expression/bytes.rs
 description: "Code:\n\n#\"ab"
+info: diagnostic
 ---
-Bytes(
-    Endless(
-        Position {
-            line: 1,
-            column: 1,
-        },
-    ),
-    1,
-    5,
-)
+nash::syntax::unclosed_delimiter
+
+  × Expected `"` to close `#"`.
+   ╭─[src/Main.nash:1:5]
+ 1 │ #"ab
+   · ─┬  ┬
+   ·  │  ╰── expected `"`
+   ·  ╰── opened here
+   ╰────
+  help: Add `"` here.

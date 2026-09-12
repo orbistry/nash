@@ -1,18 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\nf : { x : int } -> int\nf r = r.x\n"
+info: diagnostic
 ---
-[
-    RecordTypeOutsideAlias {
-        region: Region {
-            start: Position {
-                line: 2,
-                column: 5,
-            },
-            end: Position {
-                line: 2,
-                column: 16,
-            },
-        },
-    },
-]
+nash::names::record_type_outside_alias
+
+  × This record type needs a name:
+   ╭─[src/Main.nash:2:5]
+ 1 │ module Main exposing (..)
+ 2 │ f : { x : int } -> int
+   ·     ───────────
+ 3 │ f r = r.x
+   ╰────
+  help: A record type is only allowed as the direct body of a type alias. Give this
+        record a named alias.

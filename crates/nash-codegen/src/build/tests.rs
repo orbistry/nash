@@ -1068,3 +1068,124 @@ fn accessor_sharing_keeps_unselected_branch_decoding_lazy() {
         },
     );
 }
+
+// Keep snapshots at the source boundary; direct Core fixtures retain focused
+// assertions for representations that source compilation can normalize away.
+macro_rules! source_codegen_snapshot {
+    ($name:ident, $source:literal, $expected:literal) => {
+        #[test]
+        fn $name() {
+            with_core(indoc::indoc!($source), |arena, build, root| {
+                let compiled = build
+                    .compile(arena, root, None, TraceConfig::default())
+                    .unwrap();
+                let rewritten =
+                    crate::recursion::rewrite(&nash_ir::build::Builder::new(arena), compiled.core)
+                        .unwrap();
+                let evaluated = crate::harness::eval_core(arena, rewritten);
+                assert_eq!(evaluated.result, $expected);
+                insta::assert_snapshot!(
+                    stringify!($name),
+                    format!(
+                        "--- core\n{}\n{evaluated}",
+                        nash_ir::pretty::pretty(rewritten)
+                    )
+                );
+            });
+        }
+    };
+}
+
+source_codegen_snapshot!(
+    source_let_application,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    main : int
+    main =
+        let
+            x = 1
+        in
+        (\y -> Builtin.addInteger x y) 2
+"#,
+    "(con integer 3)"
+);
+
+source_codegen_snapshot!(
+    source_lazy_boolean_branch,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    main : int
+    main = if True then 42 else fail
+"#,
+    "(con integer 42)"
+);
+
+source_codegen_snapshot!(
+    source_reachable_binding_chain,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    x : int
+    x = 40
+    y : int
+    y = Builtin.addInteger x 2
+    unused : int
+    unused = fail
+    main : int
+    main = y
+"#,
+    "(con integer 42)"
+);
+
+source_codegen_snapshot!(
+    source_static_second_parameter,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    count : int -> int -> int
+    count n step =
+        if Builtin.equalsInteger n 0 then 0
+        else Builtin.addInteger step (count (Builtin.subtractInteger n 1) step)
+    main : int
+    main = count 3 7
+"#,
+    "(con integer 21)"
+);
+
+source_codegen_snapshot!(
+    source_shared_default_leaf,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    main : bool
+    main =
+        case (False, False) of
+            (True, True) -> True
+            _ -> trace "default" False
+"#,
+    "(con bool False)"
+);
+
+#[test]
+fn source_trace_precedes_failure() {
+    with_core(
+        indoc::indoc!(
+            r#"
+        module Main exposing (..)
+        main : unit
+        main = trace "before failure" fail
+    "#
+        ),
+        |arena, build, root| {
+            let compiled = build
+                .compile(arena, root, None, TraceConfig::default())
+                .unwrap();
+            let evaluated = crate::harness::eval_core(arena, compiled.core);
+            assert!(evaluated.result.starts_with("error:"));
+            assert_eq!(evaluated.logs, ["before failure"]);
+            insta::assert_snapshot!(evaluated);
+        },
+    );
+}

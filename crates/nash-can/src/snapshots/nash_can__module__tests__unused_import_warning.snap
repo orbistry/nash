@@ -1,19 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Foo\n\nx = 1\n"
+info: diagnostic
 ---
-[
-    UnusedImport {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 8,
-            },
-            end: Position {
-                line: 3,
-                column: 11,
-            },
-        },
-        module_name: "Foo",
-    },
-]
+nash::warning::unused_import
+
+  ⚠ Unused import `Foo`.
+   ╭─[src/Main.nash:3:8]
+ 2 │ 
+ 3 │ import Foo
+   ·        ───
+ 4 │ 
+   ╰────
+  help: Remove the import.

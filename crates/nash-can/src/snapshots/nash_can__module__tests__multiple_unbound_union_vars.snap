@@ -1,138 +1,34 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype Foo\n    = Bar a b\n"
+info: diagnostic
 ---
-[
-    NotFoundType {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 11,
-            },
-            end: Position {
-                line: 4,
-                column: 12,
-            },
-        },
-        prefix: None,
-        name: "a",
-        suggestions: PossibleNames {
-            locals: [
-                "Bytes",
-                "Data",
-                "Foo",
-                "Int",
-                "List",
-                "Map",
-                "array",
-                "bls_g1",
-                "bls_g2",
-                "bls_mlr",
-                "bool",
-                "bytes",
-                "int",
-                "list",
-                "pair",
-                "string",
-                "unit",
-                "value",
-            ],
-            qualified: [
-                (
-                    "Builtin",
-                    [
-                        "Bytes",
-                        "Data",
-                        "Int",
-                        "List",
-                        "Map",
-                        "array",
-                        "bls_g1",
-                        "bls_g2",
-                        "bls_mlr",
-                        "bool",
-                        "bytes",
-                        "int",
-                        "list",
-                        "pair",
-                        "string",
-                        "unit",
-                        "value",
-                    ],
-                ),
-                (
-                    "Main",
-                    [
-                        "Foo",
-                    ],
-                ),
-            ],
-        },
-    },
-    NotFoundType {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 13,
-            },
-            end: Position {
-                line: 4,
-                column: 14,
-            },
-        },
-        prefix: None,
-        name: "b",
-        suggestions: PossibleNames {
-            locals: [
-                "Bytes",
-                "Data",
-                "Foo",
-                "Int",
-                "List",
-                "Map",
-                "array",
-                "bls_g1",
-                "bls_g2",
-                "bls_mlr",
-                "bool",
-                "bytes",
-                "int",
-                "list",
-                "pair",
-                "string",
-                "unit",
-                "value",
-            ],
-            qualified: [
-                (
-                    "Builtin",
-                    [
-                        "Bytes",
-                        "Data",
-                        "Int",
-                        "List",
-                        "Map",
-                        "array",
-                        "bls_g1",
-                        "bls_g2",
-                        "bls_mlr",
-                        "bool",
-                        "bytes",
-                        "int",
-                        "list",
-                        "pair",
-                        "string",
-                        "unit",
-                        "value",
-                    ],
-                ),
-                (
-                    "Main",
-                    [
-                        "Foo",
-                    ],
-                ),
-            ],
-        },
-    },
-]
+nash::names::not_found_type
+
+  × Unknown type `a`.
+   ╭─[src/Main.nash:4:11]
+ 3 │ type Foo
+ 4 │     = Bar a b
+   ·           ─
+   ╰────
+  help: Similar names:
+
+            Map
+            Data
+            Foo
+            Int
+
+nash::names::not_found_type
+
+  × Unknown type `b`.
+   ╭─[src/Main.nash:4:13]
+ 3 │ type Foo
+ 4 │     = Bar a b
+   ·             ─
+   ╰────
+  help: Similar names:
+
+            Foo
+            Int
+            Map
+            bool

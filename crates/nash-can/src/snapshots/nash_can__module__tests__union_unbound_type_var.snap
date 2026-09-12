@@ -1,36 +1,17 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype MyType 'a\n    = MyTag 'b\n"
+info: diagnostic
 ---
-[
-    TypeVarsUnboundInUnion {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 5,
-                column: 1,
-            },
-        },
-        name: "MyType",
-        args: [
-            "a",
-        ],
-        unbound: (
-            "b",
-            Region {
-                start: Position {
-                    line: 4,
-                    column: 13,
-                },
-                end: Position {
-                    line: 4,
-                    column: 15,
-                },
-            },
-        ),
-        more_unbound: [],
-    },
-]
+nash::names::type_vars_unbound_in_union
+
+  × The `MyType` type uses an unbound type variable `b` in its definition:
+   ╭─[src/Main.nash:4:13]
+ 2 │ 
+ 3 │ type MyType 'a
+ 4 │     = MyTag 'b
+   ·             ──
+   ╰────
+  help: Declare the type variables:
+
+            type MyType 'a 'b = ...

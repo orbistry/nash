@@ -1,70 +1,19 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nbad = [\\x -> x]\n"
+description: "module Main exposing (..)\nbad = [\\x -> x]\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 2,
-                column: 7,
-            },
-            end: Position {
-                line: 2,
-                column: 16,
-            },
-        },
-        name: "type application",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            Lambda(
-                FlexVar(
-                    "a",
-                ),
-                FlexVar(
-                    "a",
-                ),
-                [],
-            ),
-        ],
-        available: [],
-        because: [
-            Formation(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "list",
-                    args: [
-                        Lambda(
-                            FlexVar(
-                                "a",
-                            ),
-                            FlexVar(
-                                "a",
-                            ),
-                            [],
-                        ),
-                    ],
-                },
-            ),
-        ],
-    },
-]
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+   ╭─[Main.nash:2:7]
+ 1 │ module Main exposing (..)
+ 2 │ bad = [\x -> x]
+   ·       ────┬────
+   ·           ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.

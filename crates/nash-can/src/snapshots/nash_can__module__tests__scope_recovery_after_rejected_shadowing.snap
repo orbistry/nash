@@ -1,51 +1,34 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf outer =\n    case outer of\n        outer -> outer\n        next -> unknown\n"
+info: diagnostic
 ---
-[
-    Shadowing {
-        name: "outer",
-        original: Region {
-            start: Position {
-                line: 3,
-                column: 3,
-            },
-            end: Position {
-                line: 3,
-                column: 8,
-            },
-        },
-        new: Region {
-            start: Position {
-                line: 5,
-                column: 9,
-            },
-            end: Position {
-                line: 5,
-                column: 14,
-            },
-        },
-    },
-    NotFoundVar {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 17,
-            },
-            end: Position {
-                line: 6,
-                column: 24,
-            },
-        },
-        prefix: None,
-        name: "unknown",
-        suggestions: PossibleNames {
-            locals: [
-                "f",
-                "next",
-                "outer",
-            ],
-            qualified: [],
-        },
-    },
-]
+nash::names::shadowing
+
+  × Name `outer` is already defined.
+   ╭─[src/Main.nash:5:9]
+ 2 │ 
+ 3 │ f outer =
+   ·   ──┬──
+   ·     ╰── first defined here
+ 4 │     case outer of
+ 5 │         outer -> outer
+   ·         ──┬──
+   ·           ╰── shadows this name
+ 6 │         next -> unknown
+   ╰────
+  help: Rename one of these bindings.
+
+nash::names::not_found_var
+
+  × Unknown variable `unknown`.
+   ╭─[src/Main.nash:6:17]
+ 5 │         outer -> outer
+ 6 │         next -> unknown
+   ·                 ───────
+   ╰────
+  help: Similar names:
+
+            next
+            f
+            outer

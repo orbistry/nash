@@ -64,10 +64,10 @@ fn superclass_cycle() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&
             nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-        );
+        ));
     });
 }
 
@@ -86,10 +86,10 @@ fn method_requires_each_trait_parameter() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&
             nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-        );
+        ));
     });
 }
 
@@ -142,8 +142,8 @@ fn method_predicate_checks_argument_kind() {
     );
     let interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&
             nash_can::canonicalize(
                 &bump,
                 nash_can::Context {
@@ -153,7 +153,7 @@ fn method_predicate_checks_argument_kind() {
                 source
             )
             .unwrap_err()
-        );
+        ));
     });
 }
 
@@ -181,8 +181,8 @@ fn default_body_checks_nested_annotation_kinds() {
     );
     let interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&
             nash_can::canonicalize(
                 &bump,
                 nash_can::Context {
@@ -192,7 +192,7 @@ fn default_body_checks_nested_annotation_kinds() {
                 source
             )
             .unwrap_err()
-        );
+        ));
     });
 }
 
@@ -242,10 +242,10 @@ fn default_parameter_cannot_shadow_local_method() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&
             nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-        );
+        ));
     });
 }
 
@@ -364,12 +364,12 @@ fn private_trait_metadata_does_not_expose_names() {
             "module Main exposing (..)\nimport Identity exposing (..)\n\nf x = Identity.hidden x\n",
         ),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!((
-            can.module.traits[0].value.kinds,
-            nash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),
-            nash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),
-        ));
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        assert_eq!(can.module.traits[0].value.kinds, &[&nash_ast::Kind::Type]);
+        insta::assert_snapshot!([
+            snapshot_inputs.errors_before(1, &nash_can::canonicalize(&bump, context, hidden_trait).unwrap_err()),
+            snapshot_inputs.errors(&nash_can::canonicalize(&bump, context, hidden_method).unwrap_err()),
+        ].join("\n"));
     });
 }
 
@@ -400,11 +400,11 @@ fn imported_trait_and_method_ambiguity() {
         &bump,
         snapshot_inputs.record("module Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf x = keep x\n"),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!((
-            nash_can::canonicalize(&bump, context, trait_source).unwrap_err(),
-            nash_can::canonicalize(&bump, context, method_source).unwrap_err(),
-        ));
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!([
+            snapshot_inputs.errors_before(1, &nash_can::canonicalize(&bump, context, trait_source).unwrap_err()),
+            snapshot_inputs.errors(&nash_can::canonicalize(&bump, context, method_source).unwrap_err()),
+        ].join("\n"));
     });
 }
 
@@ -457,9 +457,9 @@ fn methods_share_the_module_value_namespace() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&
             nash_can::canonicalize(&bump, nash_can::Context::default(), source).unwrap_err()
-        );
+        ));
     });
 }

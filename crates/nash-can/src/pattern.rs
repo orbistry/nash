@@ -311,12 +311,14 @@ mod tests {
     use super::*;
     use bumpalo::Bump;
     use nash_ast::{CtorOpts, ModuleName, Type as CanType, Union};
+    use nash_can::DuplicatePatternContext;
+    use nash_can::pattern::verify;
 
-    use crate::environment::{Ctor, Env, Info};
+    use nash_can::environment::{Ctor, Env, Info};
 
     fn empty_env<'a>(_bump: &'a Bump) -> Env<'a> {
         Env {
-            kinds: crate::kinds::KindEnv::from_interfaces(None),
+            kinds: nash_can::kinds::KindEnv::from_interfaces(None),
             traits: Default::default(),
             q_traits: Default::default(),
             home: ModuleName {
@@ -426,9 +428,14 @@ mod tests {
             },
         ));
         let ctor = match &record_type.value {
-            CanType::Record { fields, .. } => {
-                crate::environment::make_record_ctor(bump, home, "Point", &[], record_type, fields)
-            }
+            CanType::Record { fields, .. } => nash_can::environment::make_record_ctor(
+                bump,
+                home,
+                "Point",
+                &[],
+                record_type,
+                fields,
+            ),
             _ => unreachable!(),
         };
         env.ctors.insert("Point", Info::Specific(home, ctor));
@@ -443,9 +450,11 @@ mod tests {
         )
         .module()
         .unwrap();
-        let interfaces =
-            std::collections::BTreeMap::from([("Builtin", crate::kinds::builtin_interface(bump))]);
-        crate::environment::foreign::create_initial_env(
+        let interfaces = std::collections::BTreeMap::from([(
+            "Builtin",
+            nash_can::kinds::builtin_interface(bump),
+        )]);
+        nash_can::environment::foreign::create_initial_env(
             bump,
             empty_env(bump).home,
             Some(&interfaces),
@@ -482,11 +491,11 @@ mod tests {
             let env = $env_fn(&bump);
             let pat = parse_pattern(&bump, $input);
             let result = verify(&bump, &env, DuplicatePatternContext::CaseBranch, pat);
-            insta::with_settings!({
+            insta::with_settings!({info => &"diagnostic",
                 description => $input,
                 omit_expression => true,
             }, {
-                insta::assert_debug_snapshot!(result.unwrap_err());
+                insta::assert_snapshot!(crate::snapshot_support::errors($input, &result.unwrap_err()));
             });
         }};
     }
@@ -603,20 +612,12 @@ mod tests {
     #[test]
     fn duplicate_across_sibling_patterns() {
         let bump = Bump::new();
-        let env = empty_env(&bump);
-        let first = parse_pattern(&bump, "x");
-        let second = parse_pattern(&bump, "x");
-        let result = verify_all(
-            &bump,
-            &env,
-            DuplicatePatternContext::LambdaArgs,
-            &[first, second],
-        );
-        insta::with_settings!({
-            description => "verify_all over `x` and `x`",
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(result.unwrap_err());
+        let input = "module Main exposing (..)\nf = \\x x -> x\n";
+        let module = nash_parse::Parser::new(&bump, input).module().unwrap();
+        let errors =
+            nash_can::canonicalize(&bump, nash_can::Context::default(), &module).unwrap_err();
+        insta::with_settings!({info => &"diagnostic", description => input, omit_expression => true}, {
+            insta::assert_snapshot!(crate::snapshot_support::errors(input, &errors));
         });
     }
 }

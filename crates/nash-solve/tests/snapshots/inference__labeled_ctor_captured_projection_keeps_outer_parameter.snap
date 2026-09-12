@@ -1,62 +1,22 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype box 'a = Box { value : 'a }\nbad : box 'a -> ('a, unit)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n"
+description: "module Main exposing (..)\ntype box 'a = Box { value : 'a }\nbad : box 'a -> ('a, unit)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 8,
-                column: 5,
-            },
-            end: Position {
-                line: 8,
-                column: 21,
-            },
-        },
-        Tuple,
-        Tuple(
-            RigidVar(
-                "a",
-            ),
-            RigidVar(
-                "a",
-            ),
-            [],
-        ),
-        FromAnnotation(
-            "bad",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 7,
-                },
-                end: Position {
-                    line: 3,
-                    column: 27,
-                },
-            },
-            1,
-            TypedBody,
-            Tuple(
-                RigidVar(
-                    "a",
-                ),
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                [],
-            ),
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `( 'a, unit )`, found `( 'a, 'a )`.
+   ╭─[Main.nash:8:5]
+ 2 │ type box 'a = Box { value : 'a }
+ 3 │ bad : box 'a -> ('a, unit)
+   ·       ──────────┬─────────
+   ·                 ╰── declared type
+ 4 │ bad b =
+ 5 │     let
+ 6 │         get ignored = b.value
+ 7 │     in
+ 8 │     (get (), get ())
+   ·     ────────┬───────
+   ·             ╰── body of `bad`
+   ╰────
+  help: Keep the implementation generic over `'a`, or specialize its annotation.

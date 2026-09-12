@@ -1,20 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf = \\x -> 1\n"
+info: diagnostic
 ---
-[
-    UnusedVariable {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 6,
-            },
-            end: Position {
-                line: 3,
-                column: 7,
-            },
-        },
-        context: Pattern,
-        name: "x",
-    },
-]
+nash::warning::unused_variable
+
+  ⚠ Unused variable `x`.
+   ╭─[src/Main.nash:3:6]
+ 2 │ 
+ 3 │ f = \x -> 1
+   ·      ─
+   ╰────
+  help: Replace `x` with `_`.

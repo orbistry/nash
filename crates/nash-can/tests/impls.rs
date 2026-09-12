@@ -103,8 +103,8 @@ fn impl_cannot_own_an_imported_trait_and_imported_heads() {
         result.as_slice(),
         [nash_can::Error::OrphanImpl { .. }]
     ));
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result));
     });
 }
 
@@ -129,10 +129,10 @@ fn impl_heads_reject_non_constructor_shapes() {
             result.as_slice(),
             [nash_can::Error::BadInstanceHead { .. }]
         ));
-        errors.push((head, result));
+        errors.push(format!("{head}\n{}", snapshot_inputs.errors(&result)));
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(errors.join("\n"));
     });
 }
 
@@ -181,8 +181,8 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
         results[3].as_ref().unwrap_err().as_slice(),
         [nash_can::Error::ReflexiveLiftOverlap { .. }]
     ));
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(results);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
     });
 }
 
@@ -233,8 +233,8 @@ fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
     assert!(results[0].is_ok());
     assert!(results[1].is_err());
     assert!(results[2].is_err());
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(results);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
     });
 }
 
@@ -264,8 +264,8 @@ fn reflexive_lift_accepts_big_but_not_const() {
     }
     assert!(results[0].is_ok());
     assert!(results[1].is_err());
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(results);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
     });
 }
 
@@ -354,8 +354,8 @@ fn superclass_givens_preserve_nominal_alias_identity() {
         );
         results.push(canonicalize(&bump, snapshot_inputs.record(&source)).map(|_| ()));
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(results);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
     });
 }
 
@@ -482,8 +482,8 @@ fn superclass_resolution_bounds_expanding_contexts() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -506,8 +506,8 @@ fn missing_superclass_is_rejected() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -559,8 +559,8 @@ fn superclass_resolution_rejects_context_cycles() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -621,8 +621,8 @@ fn global_overlap_between_core_modules() {
         },
         &module,
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -721,8 +721,8 @@ fn unit_and_tuple_impls_belong_to_core() {
     .unwrap();
     assert!(core.warnings.is_empty(), "{:?}", core.warnings);
     let heads: Vec<_> = core.module.impls.iter().map(|i| i.value.heads).collect();
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!((ordinary, heads));
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(format!("{}\nCore impl heads:\n{heads:#?}", snapshot_support::errors(source, &ordinary)));
     });
 }
 
@@ -771,8 +771,8 @@ fn impl_duplicate_methods_preserve_both_locations() {
         errors.as_slice(),
         [nash_can::Error::DuplicateMethod { .. }]
     ));
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&errors));
     });
 }
 
@@ -790,10 +790,10 @@ fn impl_overapplied_heads_report_type_arity() {
             result.as_slice(),
             [nash_can::Error::BadArity { .. }]
         ));
-        errors.push(result);
+        errors.push(snapshot_inputs.errors(&result));
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(errors.join("\n"));
     });
 }
 
@@ -813,8 +813,8 @@ fn impl_unknown_method_precedes_missing_method() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -835,8 +835,8 @@ fn impl_missing_required_method() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -879,8 +879,8 @@ fn impl_context_cannot_introduce_variables() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -902,8 +902,8 @@ fn impl_overlap_ignores_variable_names() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }
 
@@ -1056,7 +1056,7 @@ fn impl_head_kind_mismatch() {
     "
         )),
     );
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }

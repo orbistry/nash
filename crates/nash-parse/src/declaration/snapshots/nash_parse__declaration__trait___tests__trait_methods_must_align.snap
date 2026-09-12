@@ -1,13 +1,15 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
 description: "trait Eq 'a where\n    eq : 'a -> bool\n     neq : 'a -> bool\n"
+info: diagnostic
 ---
-Trait(
-    Alignment(
-        5,
-        3,
-        10,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Trait methods must align.
+   ╭─[src/Main.nash:3:10]
+ 1 │ trait Eq 'a where
+ 2 │     eq : 'a -> bool
+ 3 │      neq : 'a -> bool
+   ·          ─
+   ╰────
+  help: Start each method in column 5.

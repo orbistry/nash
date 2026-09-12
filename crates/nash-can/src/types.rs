@@ -1,7 +1,3 @@
-#[cfg(test)]
-#[path = "../tests/snapshot_support/mod.rs"]
-mod snapshot_support;
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use bumpalo::Bump;
@@ -664,8 +660,9 @@ mod tests {
     use super::*;
     use bumpalo::Bump;
     use nash_ast::ModuleName;
+    use nash_can::types::{canonicalize_type, to_annotation};
 
-    use crate::environment::{Env, Info, Type as EnvType};
+    use nash_can::environment::{Env, Info, Type as EnvType};
 
     #[test]
     fn partial_alias_keeps_formal_parameters_bound() {
@@ -692,8 +689,8 @@ mod tests {
                 remaining: source.alloc_slice_fill_iter([&*source.alloc_str("right")]),
                 target: CanAliasType::Open(body),
             }));
-            let mut interface = crate::kinds::builtin_interface(source);
-            interface.values = source.alloc_slice_fill_iter([crate::InterfaceValue {
+            let mut interface = nash_can::kinds::builtin_interface(source);
+            interface.values = source.alloc_slice_fill_iter([nash_can::InterfaceValue {
                 name: "partial",
                 annotation: source.alloc(nash_ast::Annotation {
                     free_vars: &["right"],
@@ -778,7 +775,7 @@ mod tests {
     fn empty_env<'a>(bump: &'a Bump) -> Env<'a> {
         let _ = bump;
         Env {
-            kinds: crate::kinds::KindEnv::from_interfaces(None),
+            kinds: nash_can::kinds::KindEnv::from_interfaces(None),
             traits: Default::default(),
             q_traits: Default::default(),
             home: ModuleName {
@@ -888,11 +885,11 @@ mod tests {
             let env = $env_fn(&bump);
             let typ = parse_type(&bump, $input);
             let result = canonicalize_type(&bump, &env, typ);
-            insta::with_settings!({
+            insta::with_settings!({info => &"diagnostic",
                 description => $input,
                 omit_expression => true,
             }, {
-                insta::assert_debug_snapshot!(result.unwrap_err());
+                insta::assert_snapshot!(crate::snapshot_support::errors($input, &result.unwrap_err()));
             });
         }};
     }
@@ -1026,17 +1023,25 @@ mod tests {
 
 #[cfg(test)]
 mod context_tests {
-    use super::snapshot_support::SnapshotInputs;
     use super::*;
-    use crate::environment::TraitInfo;
+    use crate::snapshot_support::SnapshotInputs;
     use nash_ast::{Kind, ModuleName};
+    use nash_can::environment::TraitInfo;
+    use nash_can::environment::{self, Env, Info};
+    use nash_can::types::to_annotation;
 
-    fn source_annotation<'a>(bump: &'a Bump, annotation: &str) -> &'a nash_source::Annotation<'a> {
+    fn source_annotation<'a>(
+        bump: &'a Bump,
+        annotation: &str,
+    ) -> (&'a str, &'a nash_source::Annotation<'a>) {
         let source = bump.alloc_str(&format!(
             "module Main exposing (..)\n\nf : {annotation}\nf x = x\n"
         ));
         let mut parser = nash_parse::Parser::new(bump, source);
-        parser.module().unwrap().values[0].value.annotation.unwrap()
+        (
+            source,
+            parser.module().unwrap().values[0].value.annotation.unwrap(),
+        )
     }
 
     fn trait_env(bump: &Bump) -> Env<'_> {
@@ -1074,10 +1079,10 @@ mod context_tests {
         let snapshot_inputs = SnapshotInputs::default();
         let bump = Bump::new();
         let env = trait_env(&bump);
-        let annotation =
+        let (source, annotation) =
             source_annotation(&bump, snapshot_inputs.record("Equality.Eq 'a => 'a -> 'a"));
         let result = to_annotation(&bump, &env, annotation).unwrap();
-        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::with_settings!({description => source, omit_expression => true}, {
             insta::assert_debug_snapshot!(result);
         });
     }
@@ -1087,9 +1092,10 @@ mod context_tests {
         let snapshot_inputs = SnapshotInputs::default();
         let bump = Bump::new();
         let env = trait_env(&bump);
-        let annotation = source_annotation(&bump, snapshot_inputs.record("Eq 'b => 'a -> 'a"));
-        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-            insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
+        let (source, annotation) =
+            source_annotation(&bump, snapshot_inputs.record("Eq 'b => 'a -> 'a"));
+        insta::with_settings!({info => &"diagnostic", description => source, omit_expression => true}, {
+            insta::assert_snapshot!(crate::snapshot_support::errors(source, &to_annotation(&bump, &env, annotation).unwrap_err()));
         });
     }
 
@@ -1098,9 +1104,10 @@ mod context_tests {
         let snapshot_inputs = SnapshotInputs::default();
         let bump = Bump::new();
         let env = trait_env(&bump);
-        let annotation = source_annotation(&bump, snapshot_inputs.record("Eq 'a 'b => 'a -> 'b"));
-        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-            insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
+        let (source, annotation) =
+            source_annotation(&bump, snapshot_inputs.record("Eq 'a 'b => 'a -> 'b"));
+        insta::with_settings!({info => &"diagnostic", description => source, omit_expression => true}, {
+            insta::assert_snapshot!(crate::snapshot_support::errors(source, &to_annotation(&bump, &env, annotation).unwrap_err()));
         });
     }
 }

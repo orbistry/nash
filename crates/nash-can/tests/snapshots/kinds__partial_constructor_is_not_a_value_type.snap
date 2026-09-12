@@ -1,46 +1,26 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "value : list\nvalue = ()\nother : pair int\nother = ()"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\nvalue : list\nvalue = ()\nother : pair int\nother = ()\n"
+info: diagnostic
 ---
-[
-    KindMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 9,
-            },
-            end: Position {
-                line: 5,
-                column: 13,
-            },
-        },
-        context: Annotation {
-            name: "value",
-        },
-        expected: Type,
-        actual: Arrow(
-            Type,
-            Type,
-        ),
-    },
-    KindMismatch {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 9,
-            },
-            end: Position {
-                line: 7,
-                column: 17,
-            },
-        },
-        context: Annotation {
-            name: "other",
-        },
-        expected: Type,
-        actual: Arrow(
-            Type,
-            Type,
-        ),
-    },
-]
+nash::names::kind_mismatch
+
+  × Kind mismatch in the annotation for `value`.
+   ╭─[src/Main.nash:5:9]
+ 4 │ 
+ 5 │ value : list
+   ·         ────
+ 6 │ value = ()
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.
+
+nash::names::kind_mismatch
+
+  × Kind mismatch in the annotation for `other`.
+   ╭─[src/Main.nash:7:9]
+ 6 │ value = ()
+ 7 │ other : pair int
+   ·         ────────
+ 8 │ other = ()
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

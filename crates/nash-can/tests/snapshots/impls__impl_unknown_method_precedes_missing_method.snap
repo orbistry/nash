@@ -1,20 +1,14 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (List 'a) where\n    typo x = x\n"
+info: diagnostic
 ---
-[
-    UnknownMethod {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 5,
-            },
-            end: Position {
-                line: 5,
-                column: 9,
-            },
-        },
-        trait_: "Keep",
-        name: "typo",
-    },
-]
+nash::names::unknown_method
+
+  × The `Keep` trait has no `typo` method:
+   ╭─[src/Main.nash:5:5]
+ 4 │ impl Keep (List 'a) where
+ 5 │     typo x = x
+   ·     ────
+   ╰────
+  help: Remove or rename this method to match the trait declaration.

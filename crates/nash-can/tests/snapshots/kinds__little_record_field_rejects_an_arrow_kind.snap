@@ -1,28 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type alias record 'f 'a = { applied : 'f 'a, head : 'f }"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias record 'f 'a = { applied : 'f 'a, head : 'f }\n"
+info: diagnostic
 ---
-[
-    KindMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 53,
-            },
-            end: Position {
-                line: 5,
-                column: 55,
-            },
-        },
-        context: RecordField {
-            alias: "record",
-            field: "head",
-            big: false,
-        },
-        expected: Type,
-        actual: Arrow(
-            Type,
-            Type,
-        ),
-    },
-]
+nash::names::kind_mismatch
+
+  × Kind mismatch in field `head` of little record alias `record`.
+   ╭─[src/Main.nash:5:53]
+ 4 │ 
+ 5 │ type alias record 'f 'a = { applied : 'f 'a, head : 'f }
+   ·                                                     ──
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

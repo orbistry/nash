@@ -1,12 +1,13 @@
 ---
 source: crates/nash-parse/src/declaration/impl_.rs
 description: impl Eq where
+info: diagnostic
 ---
-Impl(
-    BadHead(
-        1,
-        6,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected a trait name and type arguments.
+   ╭─[src/Main.nash:1:6]
+ 1 │ impl Eq where
+   ·      ─
+   ╰────
+  help: Write `impl Trait Type where`.

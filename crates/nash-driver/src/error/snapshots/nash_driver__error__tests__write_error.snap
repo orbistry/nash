@@ -1,6 +1,7 @@
 ---
 source: crates/nash-driver/src/error/tests.rs
 description: "Artifact write: /project/build/Main.flat returns a deterministic PermissionDenied error."
+info: diagnostic
 ---
   × failed to write file /project/build/Main.flat: fixture directory is read-
   │ only

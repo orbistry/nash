@@ -1,16 +1,13 @@
 ---
 source: crates/nash-parse/src/pattern/list.rs
 description: "Code:\n\n[a, b,]"
+info: diagnostic
 ---
-List(
-    Expr(
-        Start(
-            1,
-            7,
-        ),
-        1,
-        7,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected an argument pattern.
+   ╭─[src/Main.nash:1:7]
+ 1 │ [a, b,]
+   ·       ─
+   ╰────
+  help: Use a variable, constructor pattern, or `_`.

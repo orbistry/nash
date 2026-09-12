@@ -1,26 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias bigUse ('a : Big) = 'a -> ()\ntype alias termUse ('a : Term) = 'a -> ()\nuseBig : bigUse 'a\nuseBig x = ()\nuseTerm : termUse 'a\nuseTerm x = ()\nloop x = loop x\ndiscard x y = ()\nbad : ()\nbad = (\\x -> discard (useBig x) (useTerm x)) (loop ())\n"
+description: "module Main exposing (..)\ntype alias bigUse ('a : Big) = 'a -> ()\ntype alias termUse ('a : Term) = 'a -> ()\nuseBig : bigUse 'a\nuseBig x = ()\nuseTerm : termUse 'a\nuseTerm x = ()\nloop x = loop x\ndiscard x y = ()\nbad : ()\nbad = (\\x -> discard (useBig x) (useTerm x)) (loop ())\n"
+info: diagnostic
 ---
-[
-    ContradictoryRepresentation {
-        region: Region {
-            start: Position {
-                line: 11,
-                column: 1,
-            },
-            end: Position {
-                line: 11,
-                column: 4,
-            },
-        },
-        name: "bad",
-        typ: FlexVar(
-            "a",
-        ),
-        requirements: [
-            Big,
-            Term,
-        ],
-    },
-]
+nash::type::contradictory_representation
+
+  × `bad` requires incompatible representations for `'a`.
+    ╭─[Main.nash:11:1]
+ 10 │ bad : ()
+ 11 │ bad = (\x -> discard (useBig x) (useTerm x)) (loop ())
+    · ───
+    ╰────
+  help: Required: Big, Term.
+
+        Use a consistent representation or convert the value explicitly.

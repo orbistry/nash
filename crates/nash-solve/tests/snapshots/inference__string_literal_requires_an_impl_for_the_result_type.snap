@@ -1,61 +1,19 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (Msg(..), broken)\n\ntype Msg\n    = Ping\n\nbroken : Msg\nbroken = \"not a msg\"\n"
+description: "module Main exposing (Msg(..), broken)\n\ntype Msg\n    = Ping\n\nbroken : Msg\nbroken = \"not a msg\"\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 10,
-            },
-            end: Position {
-                line: 7,
-                column: 21,
-            },
-        },
-        name: "fromString",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Literal",
-            },
-            name: "FromString",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Msg",
-                args: [],
-            },
-        ],
-        available: [
-            [
-                Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "string",
-                    },
-                    args: [],
-                },
-            ],
-        ],
-        because: [],
-    },
-]
+nash::type::missing_impl
+
+  × No impl for `Literal.FromString Msg`.
+   ╭─[Main.nash:7:10]
+ 6 │ broken : Msg
+ 7 │ broken = "not a msg"
+   ·          ─────┬─────
+   ·               ╰── required by `fromString`
+   ╰────
+  help: Available impl heads:
+
+            string
+
+        Import or define an impl for `Literal.FromString Msg`.

@@ -1,20 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nid : Eq 'a => 'a -> 'a\nid x = x\n"
+info: diagnostic
 ---
-[
-    NotFoundTrait {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 6,
-            },
-            end: Position {
-                line: 3,
-                column: 8,
-            },
-        },
-        prefix: None,
-        name: "Eq",
-    },
-]
+nash::names::not_found_trait
+
+  × Unknown trait `Eq`.
+   ╭─[src/Main.nash:3:6]
+ 2 │ 
+ 3 │ id : Eq 'a => 'a -> 'a
+   ·      ──
+ 4 │ id x = x
+   ╰────
+  help: Define or import this name.

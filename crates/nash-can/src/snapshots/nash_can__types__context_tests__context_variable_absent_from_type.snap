@@ -1,19 +1,15 @@
 ---
 source: crates/nash-can/src/types.rs
-description: "Eq 'b => 'a -> 'a"
+description: "module Main exposing (..)\n\nf : Eq 'b => 'a -> 'a\nf x = x\n"
+info: diagnostic
 ---
-[
-    ContextVarNotInType {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 8,
-            },
-            end: Position {
-                line: 3,
-                column: 10,
-            },
-        },
-        name: "b",
-    },
-]
+nash::names::context_var_not_in_type
+
+  × The context mentions 'b, but this variable does not occur in the annotated type:
+   ╭─[src/Main.nash:3:8]
+ 2 │ 
+ 3 │ f : Eq 'b => 'a -> 'a
+   ·        ──
+ 4 │ f x = x
+   ╰────
+  help: Use the variable in the type, or remove the constraint that mentions it.

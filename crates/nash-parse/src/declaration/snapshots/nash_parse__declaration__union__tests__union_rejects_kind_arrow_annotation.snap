@@ -1,24 +1,13 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
 description: "type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))"
+info: diagnostic
 ---
-Type(
-    Union(
-        Param(
-            Repr(
-                Arrow(
-                    1,
-                    20,
-                ),
-                1,
-                16,
-            ),
-            1,
-            10,
-        ),
-        1,
-        6,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Representation bounds cannot contain arrows.
+   ╭─[src/Main.nash:1:20]
+ 1 │ type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))
+   ·                    ─
+   ╰────
+  help: Use a bound such as `Storable`; constructor kinds are inferred.

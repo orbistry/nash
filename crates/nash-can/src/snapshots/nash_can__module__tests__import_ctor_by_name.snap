@@ -1,20 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Maybe exposing (Just)\n\nx = 1\n"
+info: diagnostic
 ---
-[
-    ImportCtorByName {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 24,
-            },
-            end: Position {
-                line: 3,
-                column: 28,
-            },
-        },
-        name: "Just",
-        type_name: "Maybe",
-    },
-]
+nash::names::import_ctor_by_name
+
+  × Cannot import variant `Just` directly.
+   ╭─[src/Main.nash:3:24]
+ 2 │ 
+ 3 │ import Maybe exposing (Just)
+   ·                        ────
+ 4 │ 
+   ╰────
+  help: Import `Maybe(..)` to make its variants available.

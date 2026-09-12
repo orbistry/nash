@@ -1,120 +1,24 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nf : ((), ()) -> ()\nf (((True as a), (() as b)) as whole) = whole ()\n"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nf : ((), ()) -> ()\nf (((True as a), (() as b)) as whole) = whole ()\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 4,
-                column: 41,
-            },
-            end: Position {
-                line: 4,
-                column: 46,
-            },
-        },
-        CallResult(
-            FuncName(
-                "whole",
-            ),
-        ),
-        Tuple(
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-            [],
-        ),
-        FromContext(
-            Region {
-                start: Position {
-                    line: 4,
-                    column: 41,
-                },
-                end: Position {
-                    line: 4,
-                    column: 49,
-                },
-            },
-            CallArity(
-                FuncName(
-                    "whole",
-                ),
-                1,
-            ),
-            Lambda(
-                FlexVar(
-                    "a",
-                ),
-                FlexVar(
-                    "b",
-                ),
-                [],
-            ),
-        ),
-    ),
-    BadPattern(
-        Region {
-            start: Position {
-                line: 4,
-                column: 6,
-            },
-            end: Position {
-                line: 4,
-                column: 11,
-            },
-        },
-        Bool,
-        Type {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "bool",
-            args: [],
-        },
-        NoExpectation(
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "unit",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × `whole` is not a function; received 1 argument.
+   ╭─[Main.nash:4:41]
+ 3 │ f : ((), ()) -> ()
+ 4 │ f (((True as a), (() as b)) as whole) = whole ()
+   ·                                         ─────
+   ╰────
+
+
+nash::type::pattern_mismatch
+
+  × Type mismatch: expected `unit`, found `bool`.
+   ╭─[Main.nash:4:6]
+ 3 │ f : ((), ()) -> ()
+ 4 │ f (((True as a), (() as b)) as whole) = whole ()
+   ·      ──┬──
+   ·        ╰── boolean pattern
+   ╰────

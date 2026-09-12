@@ -15,3 +15,6 @@ nash-source = { path = "../nash-source", version = "0.6.0" }
 [dev-dependencies]
 indoc.workspace = true
 insta.workspace = true
+nash-report = { path = "../nash-report", version = "0.2.0" }
+# Reporter tests need the normal library types, not the separate unit-test crate.
+nash-parse = { path = ".", version = "0.5.1" }

@@ -1,28 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype w = W (app tag (app option))"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype w = W (app tag (app option))\n"
+info: diagnostic
 ---
-[
-    KindMismatch {
-        region: Region {
-            start: Position {
-                line: 8,
-                column: 22,
-            },
-            end: Position {
-                line: 8,
-                column: 32,
-            },
-        },
-        context: LittleField {
-            union: "w",
-            ctor: "W",
-            index: 0,
-        },
-        expected: Type,
-        actual: Arrow(
-            Type,
-            Type,
-        ),
-    },
-]
+nash::names::kind_mismatch
+
+  × Kind mismatch in field 1 of little constructor `W` in `w`.
+   ╭─[src/Main.nash:8:22]
+ 7 │ type app 'f 'a = App ('f 'a)
+ 8 │ type w = W (app tag (app option))
+   ·                      ──────────
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

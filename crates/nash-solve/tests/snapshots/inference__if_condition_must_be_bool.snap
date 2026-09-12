@@ -1,66 +1,19 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (main)\n\nmain = if 1 then 2 else 3\n"
+description: "module Main exposing (main)\n\nmain = if 1 then 2 else 3\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 11,
-            },
-            end: Position {
-                line: 3,
-                column: 12,
-            },
-        },
-        name: "fromInt",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Literal",
-            },
-            name: "FromInt",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "bool",
-                args: [],
-            },
-        ],
-        available: [
-            [
-                Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "int",
-                    },
-                    args: [],
-                },
-            ],
-        ],
-        because: [],
-    },
-]
+nash::type::missing_impl
+
+  × No impl for `Literal.FromInt bool`.
+   ╭─[Main.nash:3:11]
+ 2 │ 
+ 3 │ main = if 1 then 2 else 3
+   ·           ┬
+   ·           ╰── required by `fromInt`
+   ╰────
+  help: Available impl heads:
+
+            int
+
+        Import or define an impl for `Literal.FromInt bool`.

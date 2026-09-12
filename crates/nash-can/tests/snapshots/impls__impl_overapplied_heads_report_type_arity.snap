@@ -1,42 +1,26 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Main exposing (..)\ntype alias listAlias 'a = list 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list 'a 'b) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias listAlias 'a = list 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (listAlias 'a 'b) where\n    keep x = x\n"
+info: diagnostic
 ---
-[
-    [
-        BadArity {
-            region: Region {
-                start: Position {
-                    line: 5,
-                    column: 12,
-                },
-                end: Position {
-                    line: 5,
-                    column: 22,
-                },
-            },
-            context: TypeArity,
-            name: "list",
-            expected: 1,
-            actual: 2,
-        },
-    ],
-    [
-        BadArity {
-            region: Region {
-                start: Position {
-                    line: 5,
-                    column: 12,
-                },
-                end: Position {
-                    line: 5,
-                    column: 27,
-                },
-            },
-            context: TypeArity,
-            name: "listAlias",
-            expected: 1,
-            actual: 2,
-        },
-    ],
-]
+nash::names::bad_arity
+
+  × The `list` type needs 1 argument, but I see 2 instead:
+   ╭─[src/Main.nash:5:12]
+ 4 │     keep : 'a -> 'a
+ 5 │ impl Keep (list 'a 'b) where
+   ·            ──────────
+ 6 │     keep x = x
+   ╰────
+  help: Remove the extra arguments or check the grouping.
+
+nash::names::bad_arity
+
+  × The `listAlias` type needs 1 argument, but I see 2 instead:
+   ╭─[src/Main.nash:5:12]
+ 4 │     keep : 'a -> 'a
+ 5 │ impl Keep (listAlias 'a 'b) where
+   ·            ───────────────
+ 6 │     keep x = x
+   ╰────
+  help: Remove the extra arguments or check the grouping.

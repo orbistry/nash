@@ -107,7 +107,15 @@ fn scalar_lifts_and_reflexive_data() {
     let unions = HashMap::new();
     let mut env = TypeEnv::new(&a, &unions);
     let lifted = b.cast(CastKind::Lift, Ty::Const(&ConstTy::Int), int(), b.int(41));
-    insta::assert_snapshot!(run(&b,&mut env,b.cast(CastKind::Lower,int(),Ty::Const(&ConstTy::Int),lifted)).unwrap(),@"(con integer 41)");
+    assert_eq!(
+        run(
+            &b,
+            &mut env,
+            b.cast(CastKind::Lower, int(), Ty::Const(&ConstTy::Int), lifted)
+        )
+        .unwrap(),
+        "(con integer 41)"
+    );
     let lit = b.lit(Constant::byte_string(&a, &[0xaa]));
     let lifted = b.cast(CastKind::Lift, Ty::Const(&ConstTy::Bytes), bytes(), lit);
     assert_eq!(
@@ -422,7 +430,11 @@ fn repeated_casts_share_one_checker() {
         panic!("expected checker bindings")
     };
     assert_eq!(binders.len(), 1);
-    insta::assert_snapshot!(nash_ir::pretty::pretty(expanded));
+    let rewritten = crate::recursion::rewrite(&b, expanded).unwrap();
+    assert_eq!(
+        crate::harness::eval_core(&a, rewritten).result,
+        "(con data (I 2))"
+    );
 }
 
 #[test]

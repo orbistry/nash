@@ -1,26 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Foo exposing (nonexistent)\n\nx = 1\n"
+info: diagnostic
 ---
-[
-    ImportExposingNotFound {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 22,
-            },
-            end: Position {
-                line: 3,
-                column: 33,
-            },
-        },
-        module: ModuleName {
-            package: None,
-            name: "Foo",
-        },
-        name: "nonexistent",
-        available: [
-            "bar",
-        ],
-    },
-]
+nash::names::import_exposing_not_found
+
+  × The `Foo` module does not expose `nonexistent`:
+   ╭─[src/Main.nash:3:22]
+ 2 │ 
+ 3 │ import Foo exposing (nonexistent)
+   ·                      ───────────
+ 4 │ 
+   ╰────
+  help: Try bar instead.

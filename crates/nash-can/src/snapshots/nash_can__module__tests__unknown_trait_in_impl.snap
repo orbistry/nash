@@ -1,20 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimpl Eq int where\n    eq a b = true\n"
+info: diagnostic
 ---
-[
-    NotFoundTrait {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 6,
-            },
-            end: Position {
-                line: 3,
-                column: 8,
-            },
-        },
-        prefix: None,
-        name: "Eq",
-    },
-]
+nash::names::not_found_trait
+
+  × Unknown trait `Eq`.
+   ╭─[src/Main.nash:3:6]
+ 2 │ 
+ 3 │ impl Eq int where
+   ·      ──
+ 4 │     eq a b = true
+   ╰────
+  help: Define or import this name.

@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Pair(..))\n\ntype alias Pair 'a = 'a\n"
+info: diagnostic
 ---
-[
-    ExportOpenAlias {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 28,
-            },
-            end: Position {
-                line: 1,
-                column: 30,
-            },
-        },
-        name: "Pair",
-    },
-]
+nash::names::export_open_alias
+
+  × Type alias `Pair` has no variants to expose.
+   ╭─[src/Main.nash:1:28]
+ 1 │ module Main exposing (Pair(..))
+   ·                            ──
+ 2 │ 
+   ╰────
+  help: Remove `(..)`.

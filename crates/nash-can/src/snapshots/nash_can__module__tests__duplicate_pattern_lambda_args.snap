@@ -1,30 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf = \\x x -> x\n"
+info: diagnostic
 ---
-[
-    DuplicatePattern {
-        context: LambdaArgs,
-        name: "x",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 6,
-            },
-            end: Position {
-                line: 3,
-                column: 7,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 8,
-            },
-            end: Position {
-                line: 3,
-                column: 9,
-            },
-        },
-    },
-]
+nash::names::duplicate_pattern
+
+  × This anonymous function has multiple `x` arguments.
+   ╭─[src/Main.nash:3:8]
+ 2 │ 
+ 3 │ f = \x x -> x
+   ·      ┬ ┬
+   ·      │ ╰── and another first definition
+   ·      ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

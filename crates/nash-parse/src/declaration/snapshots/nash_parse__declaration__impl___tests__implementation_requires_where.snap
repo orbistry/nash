@@ -1,12 +1,13 @@
 ---
 source: crates/nash-parse/src/declaration/impl_.rs
 description: impl Eq int
+info: diagnostic
 ---
-Impl(
-    Where(
-        1,
-        12,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected `where` after the impl head.
+   ╭─[src/Main.nash:1:12]
+ 1 │ impl Eq int
+   ·            ─
+   ╰────
+  help: Add `where`, then indent the method definitions.

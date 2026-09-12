@@ -1,20 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Maybe exposing (Maybe(..))\n\nf x =\n    case x of\n        Just y -> 1\n        Nothing -> 0\n"
+info: diagnostic
 ---
-[
-    UnusedVariable {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 14,
-            },
-            end: Position {
-                line: 7,
-                column: 15,
-            },
-        },
-        context: Pattern,
-        name: "y",
-    },
-]
+nash::warning::unused_variable
+
+  ⚠ Unused variable `y`.
+   ╭─[src/Main.nash:7:14]
+ 6 │     case x of
+ 7 │         Just y -> 1
+   ·              ─
+ 8 │         Nothing -> 0
+   ╰────
+  help: Replace `y` with `_`.

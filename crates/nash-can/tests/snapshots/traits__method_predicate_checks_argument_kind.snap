@@ -1,23 +1,15 @@
 ---
 source: crates/nash-can/tests/traits.rs
 description: "module Main exposing (..)\nimport Builtin exposing (..)\n\ntrait BigOnly ('a : Big) where\n    bigOnly : 'a -> 'a\n\ntrait Uses 'a where\n    use : BigOnly int => 'a -> 'a\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 8,
-                column: 19,
-            },
-            end: Position {
-                line: 8,
-                column: 22,
-            },
-        },
-        context: Annotation {
-            name: "use",
-        },
-        required: Big,
-        actual: Const,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Big` in the annotation for `use`:
+   ╭─[src/Main.nash:8:19]
+ 7 │ trait Uses 'a where
+ 8 │     use : BigOnly int => 'a -> 'a
+   ·                   ───
+   ╰────
+  help: The type has `Const` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

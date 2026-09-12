@@ -1,16 +1,14 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    prop \"p\" = let x = int in x\n"
+info: diagnostic
 ---
-Tests(
-    Test(
-        Via(
-            4,
-            22,
-        ),
-        4,
-        5,
-    ),
-    3,
-    1,
-)
+nash::syntax
+
+  × Expected `via` after the input pattern.
+   ╭─[src/Main.nash:4:22]
+ 3 │ tests
+ 4 │     prop "p" = let x = int in x
+   ·                      ─
+   ╰────
+  help: Add `via` followed by the fuzzer expression.

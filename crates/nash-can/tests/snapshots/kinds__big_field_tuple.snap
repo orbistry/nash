@@ -1,25 +1,15 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Datum = Datum (Int, Int)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Datum = Datum (Int, Int)\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 20,
-            },
-            end: Position {
-                line: 5,
-                column: 30,
-            },
-        },
-        context: BigField {
-            union: "Datum",
-            ctor: "Datum",
-            index: 0,
-        },
-        required: Big,
-        actual: Term,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Big` in field 1 of Big constructor `Datum` in `Datum`:
+   ╭─[src/Main.nash:5:20]
+ 4 │ 
+ 5 │ type Datum = Datum (Int, Int)
+   ·                    ──────────
+   ╰────
+  help: The type has `Term` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

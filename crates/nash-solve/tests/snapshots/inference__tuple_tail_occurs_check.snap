@@ -1,69 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nloop x = x ((), (), (), x)\n"
+description: "module Main exposing (..)\nloop x = x ((), (), (), x)\n"
+info: diagnostic
 ---
-[
-    InfiniteType {
-        region: Region {
-            start: Position {
-                line: 2,
-                column: 6,
-            },
-            end: Position {
-                line: 2,
-                column: 7,
-            },
-        },
-        name: "x",
-        overall_type: Lambda(
-            Tuple(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "unit",
-                    args: [],
-                },
-                [
-                    Type {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
-                        args: [],
-                    },
-                    Infinite,
-                ],
-            ),
-            FlexVar(
-                "a",
-            ),
-            [],
-        ),
-    },
-]
+nash::type::infinite_type
+
+  × `x` has a self-referential type: ( unit, unit, unit, ∞ ) -> 'a
+   ╭─[Main.nash:2:6]
+ 1 │ module Main exposing (..)
+ 2 │ loop x = x ((), (), (), x)
+   ·      ─
+   ╰────
+  help: Break the type cycle; ∞ marks a repeated part of the type.

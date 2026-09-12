@@ -1,21 +1,15 @@
 ---
 source: crates/nash-can/src/types.rs
-description: "Eq 'a 'b => 'a -> 'b"
+description: "module Main exposing (..)\n\nf : Eq 'a 'b => 'a -> 'b\nf x = x\n"
+info: diagnostic
 ---
-[
-    TraitArity {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 5,
-            },
-            end: Position {
-                line: 3,
-                column: 13,
-            },
-        },
-        name: "Eq",
-        expected: 1,
-        actual: 2,
-    },
-]
+nash::names::trait_arity
+
+  × The `Eq` trait needs 1 argument, but I see 2 instead:
+   ╭─[src/Main.nash:3:5]
+ 2 │ 
+ 3 │ f : Eq 'a 'b => 'a -> 'b
+   ·     ────────
+ 4 │ f x = x
+   ╰────
+  help: Remove the extra arguments or check the grouping.

@@ -1,28 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type wrong 'f = Wrong 'f ('f Int)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype wrong 'f = Wrong 'f ('f Int)\n"
+info: diagnostic
 ---
-[
-    KindMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 30,
-            },
-            end: Position {
-                line: 5,
-                column: 33,
-            },
-        },
-        context: LittleField {
-            union: "wrong",
-            ctor: "Wrong",
-            index: 1,
-        },
-        expected: Type,
-        actual: Arrow(
-            Type,
-            Type,
-        ),
-    },
-]
+nash::names::kind_mismatch
+
+  × Kind mismatch in field 2 of little constructor `Wrong` in `wrong`.
+   ╭─[src/Main.nash:5:30]
+ 4 │ 
+ 5 │ type wrong 'f = Wrong 'f ('f Int)
+   ·                              ───
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

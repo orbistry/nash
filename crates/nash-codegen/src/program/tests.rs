@@ -46,11 +46,6 @@ fn assemble_lets_chain() {
         pretty::term(compiled.program.eval(&a).term.unwrap()),
         "(con integer 42)"
     );
-    insta::assert_snapshot!(pretty::program(Program::new(
-        &a,
-        Version::plutus_v3(&a),
-        compiled.named
-    )));
 }
 #[test]
 fn reachable_keeps_transitive_bindings_and_cycles() {
@@ -185,7 +180,7 @@ fn comptime_folds_with_reachable_dependencies() {
     let dead = binder(&b, "dead");
     let core = b.builtin(F::AddInteger, &[b.var(x.name), b.int(2)]);
     let c = comptime::eval_closed(&a, &[(x, b.int(40)), (dead, b.error())], core).unwrap();
-    insta::assert_snapshot!(nash_ir::pretty::pretty(b.lit(c)),@"42");
+    assert_eq!(nash_ir::pretty::pretty(b.lit(c)), "42");
 }
 #[test]
 fn comptime_reports_open_terms_errors_and_nonconstants() {
@@ -200,10 +195,11 @@ fn comptime_reports_open_terms_errors_and_nonconstants() {
         Err(ComptimeError::NotAConstant)
     ));
     let fail = b.trace(b.lit(Constant::string(&a, "x")), b.error());
-    insta::assert_snapshot!(
+    assert_eq!(
         comptime::eval_closed(&a, &[], fail)
             .unwrap_err()
-            .to_string()
+            .to_string(),
+        "comptime evaluation failed: ExplicitErrorTerm\ntraces: x"
     );
 }
 #[test]

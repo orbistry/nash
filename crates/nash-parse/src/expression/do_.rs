@@ -173,7 +173,7 @@ mod tests {
             let bump = bumpalo::Bump::new();
             let indented = crate::test_support::indent_fragment(indoc::indoc!($code));
             let source = bump.alloc_str(&indented);
-            let mut parser = crate::Parser::new(&bump, source);
+            let mut parser = nash_parse::Parser::new(&bump, source);
             parser
                 .chomp(|_, _, _| "space error")
                 .expect("expected leading indent");
@@ -181,8 +181,9 @@ mod tests {
             insta::with_settings!({
                 description => format!("Code (indented inside a def):\n\n{}", indented),
                 omit_expression => true,
+                info => &"diagnostic",
             }, {
-                insta::assert_debug_snapshot!(error);
+                insta::assert_snapshot!($crate::test_support::render_expr_error(source, &error));
             });
         }};
     }

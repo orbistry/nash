@@ -92,9 +92,9 @@ fn do_rejects_missing_core_and_refutable_patterns() {
                 || matches!(errors.as_slice(), [nash_can::Error::RefutableBindPattern { .. }] if core && rhs == "m")
                 || matches!(errors.as_slice(), [nash_can::Error::NotFoundVar { .. }] if rhs == "x")
         );
-        results.push(errors);
+        results.push(snapshot_support::errors(source, &errors));
     }
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(results);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(results.join("\n"));
     });
 }

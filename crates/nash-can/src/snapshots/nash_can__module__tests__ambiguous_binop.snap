@@ -1,29 +1,17 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Basics exposing (..)\n\nimport MyMath exposing (..)\n\nx a b = a + b\n"
+info: diagnostic
 ---
-[
-    AmbiguousBinop {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 11,
-            },
-            end: Position {
-                line: 7,
-                column: 12,
-            },
-        },
-        name: "+",
-        first_module: ModuleName {
-            package: None,
-            name: "Basics",
-        },
-        other_modules: [
-            ModuleName {
-                package: None,
-                name: "MyMath",
-            },
-        ],
-    },
-]
+nash::names::ambiguous_binop
+
+  × Ambiguous operator `+`.
+   ╭─[src/Main.nash:7:11]
+ 6 │ 
+ 7 │ x a b = a + b
+   ·           ─
+   ╰────
+  help:     Basics.+
+            MyMath.+
+
+        Use a qualified name.

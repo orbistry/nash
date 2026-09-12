@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type alias fn ('a : Big) = 'a -> 'a\nf : fn Int\nf x = x"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias fn ('a : Big) = 'a -> 'a\nf : fn Int\nf x = x\n"
 ---
 (
     [],

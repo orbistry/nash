@@ -1,23 +1,15 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type bad 'f = Bad (bad bad)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype bad 'f = Bad (bad bad)\n"
+info: diagnostic
 ---
-[
-    KindInfinite {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 24,
-            },
-            end: Position {
-                line: 5,
-                column: 27,
-            },
-        },
-        context: LittleField {
-            union: "bad",
-            ctor: "Bad",
-            index: 0,
-        },
-    },
-]
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `Bad` in `bad` would require
+  │ an infinite kind:
+   ╭─[src/Main.nash:5:24]
+ 4 │ 
+ 5 │ type bad 'f = Bad (bad bad)
+   ·                        ───
+   ╰────
+  help: Check the type application and the kinds of its arguments.

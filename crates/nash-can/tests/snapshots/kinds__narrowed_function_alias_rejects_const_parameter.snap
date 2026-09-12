@@ -1,23 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type alias fn ('a : Big) = 'a -> 'a\nf : fn int\nf x = x"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias fn ('a : Big) = 'a -> 'a\nf : fn int\nf x = x\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 8,
-            },
-            end: Position {
-                line: 6,
-                column: 11,
-            },
-        },
-        context: Annotation {
-            name: "f",
-        },
-        required: Big,
-        actual: Const,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Big` in the annotation for `f`:
+   ╭─[src/Main.nash:6:8]
+ 5 │ type alias fn ('a : Big) = 'a -> 'a
+ 6 │ f : fn int
+   ·        ───
+ 7 │ f x = x
+   ╰────
+  help: The type has `Const` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

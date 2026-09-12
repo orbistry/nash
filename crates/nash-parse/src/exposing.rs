@@ -215,13 +215,14 @@ mod tests {
             let input = indoc!($input);
             let bump = Bump::new();
             let src = bump.alloc_str(input);
-            let mut parser = Parser::new(&bump, src);
+            let mut parser = nash_parse::Parser::new(&bump, src);
             let error = parser.exposing().expect_err("expected exposing parse error");
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),
                 omit_expression => true,
+                info => &"diagnostic",
             }, {
-                insta::assert_debug_snapshot!(error);
+                insta::assert_snapshot!($crate::test_support::render_exposing_error(src, &error));
             });
         }};
     }

@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Box ('a : Const) = Box 'a"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Box ('a : Const) = Box 'a\n"
+info: diagnostic
 ---
-[
-    ContradictoryRepresentation {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 11,
-            },
-            end: Position {
-                line: 5,
-                column: 13,
-            },
-        },
-        variable: "a",
-    },
-]
+nash::names::contradictory_representation
+
+  × The representation requirements on 'a are incompatible:
+   ╭─[src/Main.nash:5:11]
+ 4 │ 
+ 5 │ type Box ('a : Const) = Box 'a
+   ·           ──
+   ╰────
+  help: Change the incompatible constraints or uses of this variable.

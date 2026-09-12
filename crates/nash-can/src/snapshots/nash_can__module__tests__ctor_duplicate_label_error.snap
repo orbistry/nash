@@ -1,29 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit, z : unit }\n"
+info: diagnostic
 ---
-[
-    DuplicateField {
-        name: "z",
-        first: Region {
-            start: Position {
-                line: 2,
-                column: 24,
-            },
-            end: Position {
-                line: 2,
-                column: 25,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 2,
-                column: 34,
-            },
-            end: Position {
-                line: 2,
-                column: 35,
-            },
-        },
-    },
-]
+nash::names::duplicate_field
+
+  × This record has multiple `z` fields.
+   ╭─[src/Main.nash:2:34]
+ 1 │ module Main exposing (..)
+ 2 │ type packet = Packet { z : unit, z : unit }
+   ·                        ┬         ┬
+   ·                        │         ╰── and another first definition
+   ·                        ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

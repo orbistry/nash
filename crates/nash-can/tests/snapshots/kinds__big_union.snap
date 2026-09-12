@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: type Box = Box Int
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Box = Box Int\n"
 ---
 (
     [

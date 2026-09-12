@@ -1,29 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf r = { r | x = 1, x = 2 }\n"
+info: diagnostic
 ---
-[
-    DuplicateField {
-        name: "x",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 13,
-            },
-            end: Position {
-                line: 3,
-                column: 14,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 20,
-            },
-            end: Position {
-                line: 3,
-                column: 21,
-            },
-        },
-    },
-]
+nash::names::duplicate_field
+
+  × This record has multiple `x` fields.
+   ╭─[src/Main.nash:3:20]
+ 2 │ 
+ 3 │ f r = { r | x = 1, x = 2 }
+   ·             ┬      ┬
+   ·             │      ╰── and another first definition
+   ·             ╰── first definition
+   ╰────
+  help: Rename one of the definitions.

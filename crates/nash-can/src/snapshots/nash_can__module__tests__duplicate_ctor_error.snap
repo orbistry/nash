@@ -1,29 +1,21 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Point 'a = { x : 'a, y : 'a }\n\ntype Shape 'a\n    = Point 'a 'a\n    | Circle 'a\n"
+info: diagnostic
 ---
-[
-    DuplicateCtor {
-        name: "Point",
-        first: Region {
-            start: Position {
-                line: 6,
-                column: 7,
-            },
-            end: Position {
-                line: 6,
-                column: 12,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 3,
-                column: 12,
-            },
-            end: Position {
-                line: 3,
-                column: 17,
-            },
-        },
-    },
-]
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Point` type constructors.
+   ╭─[src/Main.nash:3:12]
+ 2 │ 
+ 3 │ type alias Point 'a = { x : 'a, y : 'a }
+   ·            ──┬──
+   ·              ╰── and another first definition
+ 4 │ 
+ 5 │ type Shape 'a
+ 6 │     = Point 'a 'a
+   ·       ──┬──
+   ·         ╰── first definition
+ 7 │     | Circle 'a
+   ╰────
+  help: Rename one of the definitions.

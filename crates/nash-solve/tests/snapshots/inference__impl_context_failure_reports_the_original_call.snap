@@ -1,111 +1,24 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [Red]\n"
+description: "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [Red]\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 9,
-                column: 9,
-            },
-            end: Position {
-                line: 9,
-                column: 13,
-            },
-        },
-        name: "keep",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Keep",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Color",
-                args: [],
-            },
-        ],
-        available: [
-            [
-                Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "list",
-                    },
-                    args: [
-                        Var(
-                            0,
-                        ),
-                    ],
-                },
-            ],
-            [
-                Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
-                    },
-                    args: [],
-                },
-            ],
-        ],
-        because: [
-            Trait {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Keep",
-                },
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "list",
-                        args: [
-                            Type {
-                                home: ModuleName {
-                                    package: None,
-                                    name: "Main",
-                                },
-                                name: "Color",
-                                args: [],
-                            },
-                        ],
-                    },
-                ],
-            },
-        ],
-    },
-]
+nash::type::missing_impl
+
+  × No impl for `Keep Color`.
+   ╭─[Main.nash:9:9]
+ 8 │     keep xs = xs
+ 9 │ value = keep [Red]
+   ·         ──┬─
+   ·           ╰── required by `keep`
+   ╰────
+  help: Available impl heads:
+
+            (list 'a0)
+            unit
+
+        Requirement chain:
+
+            Keep (list Color)
+
+        Import or define an impl for `Keep Color`.

@@ -19,3 +19,4 @@ indoc.workspace = true
 insta.workspace = true
 nash-parse = { path = "../nash-parse", version = "0.5.1" }
 nash-source = { path = "../nash-source", version = "0.6.0" }
+nash-report = { path = "../nash-report", version = "0.2.0" }

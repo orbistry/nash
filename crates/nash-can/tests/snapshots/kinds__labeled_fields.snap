@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type Datum = Datum { owner : Bytes, amount : Int }"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Datum = Datum { owner : Bytes, amount : Int }\n"
 ---
 (
     [

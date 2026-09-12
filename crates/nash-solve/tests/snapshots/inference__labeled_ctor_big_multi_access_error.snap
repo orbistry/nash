@@ -1,44 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype Redeemer = Claim { owner : Bytes } | Cancel { owner : Bytes }\nwho : Redeemer -> Bytes\nwho r = r.owner\n"
+description: "module Main exposing (..)\ntype Redeemer = Claim { owner : Bytes } | Cancel { owner : Bytes }\nwho : Redeemer -> Bytes\nwho r = r.owner\n"
+info: diagnostic
 ---
-[
-    NotARecord {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 9,
-            },
-            end: Position {
-                line: 4,
-                column: 16,
-            },
-        },
-        context: Access {
-            record_region: Region {
-                start: Position {
-                    line: 4,
-                    column: 9,
-                },
-                end: Position {
-                    line: 4,
-                    column: 10,
-                },
-            },
-            maybe_name: Some(
-                "r",
-            ),
-        },
-        field: Some(
-            "owner",
-        ),
-        record: Type {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Redeemer",
-            args: [],
-        },
-    },
-]
+nash::type::not_a_record
+
+  × Expected a record, found `Redeemer`.
+   ╭─[Main.nash:4:9]
+ 3 │ who : Redeemer -> Bytes
+ 4 │ who r = r.owner
+   ·         ───┬───
+   ·            ╰── field `owner` of `r`
+   ╰────

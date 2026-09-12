@@ -1,19 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Result\n\ntype alias Wrapped 'e 'a = Result.Result 'e 'a\n"
+info: diagnostic
 ---
-[
-    ImportNotFound {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 8,
-            },
-            end: Position {
-                line: 3,
-                column: 14,
-            },
-        },
-        module: "Result",
-    },
-]
+nash::names::import_not_found
+
+  × Unknown module `Result`.
+   ╭─[src/Main.nash:3:8]
+ 2 │ 
+ 3 │ import Result
+   ·        ──────
+ 4 │ 
+   ╰────

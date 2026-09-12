@@ -1,25 +1,15 @@
 ---
 source: crates/nash-can/tests/kind_predicates.rs
 description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Bad 'a = Bad (list 'a)\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 20,
-            },
-            end: Position {
-                line: 5,
-                column: 27,
-            },
-        },
-        context: BigField {
-            union: "Bad",
-            ctor: "Bad",
-            index: 0,
-        },
-        required: Big,
-        actual: Const,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Big` in field 1 of Big constructor `Bad` in `Bad`:
+   ╭─[src/Main.nash:5:20]
+ 4 │ 
+ 5 │ type Bad 'a = Bad (list 'a)
+   ·                    ───────
+   ╰────
+  help: The type has `Const` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

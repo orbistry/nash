@@ -1,29 +1,18 @@
 ---
 source: crates/nash-can/tests/traits.rs
 description: "module Main exposing (..)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep keep = keep\n"
+info: diagnostic
 ---
-[
-    Shadowing {
-        name: "keep",
-        original: Region {
-            start: Position {
-                line: 4,
-                column: 5,
-            },
-            end: Position {
-                line: 4,
-                column: 9,
-            },
-        },
-        new: Region {
-            start: Position {
-                line: 5,
-                column: 10,
-            },
-            end: Position {
-                line: 5,
-                column: 14,
-            },
-        },
-    },
-]
+nash::names::shadowing
+
+  × Name `keep` is already defined.
+   ╭─[src/Main.nash:5:10]
+ 3 │ trait Keep 'a where
+ 4 │     keep : 'a -> 'a
+   ·     ──┬─
+   ·       ╰── first defined here
+ 5 │     keep keep = keep
+   ·          ──┬─
+   ·            ╰── shadows this name
+   ╰────
+  help: Rename one of these bindings.

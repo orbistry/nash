@@ -1,25 +1,15 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type option 'a = None | Some 'a\ntype use 'f = Use ('f int)\ntype w = W (use (pair (option int)))"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype option 'a = None | Some 'a\ntype use 'f = Use ('f int)\ntype w = W (use (pair (option int)))\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 7,
-                column: 24,
-            },
-            end: Position {
-                line: 7,
-                column: 34,
-            },
-        },
-        context: LittleField {
-            union: "w",
-            ctor: "W",
-            index: 0,
-        },
-        required: Storable,
-        actual: Term,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Storable` in field 1 of little constructor `W` in `w`:
+   ╭─[src/Main.nash:7:24]
+ 6 │ type use 'f = Use ('f int)
+ 7 │ type w = W (use (pair (option int)))
+   ·                        ──────────
+   ╰────
+  help: The type has `Term` representation, but `Storable` admits Big or Const types.
+        Change the type or the representation requirement.

@@ -1,20 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit }\nget (Packet { a }) = a\n"
+info: diagnostic
 ---
-[
-    LabeledCtorUnknownField {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 15,
-            },
-            end: Position {
-                line: 3,
-                column: 16,
-            },
-        },
-        ctor: "Packet",
-        field: "a",
-    },
-]
+nash::names::labeled_ctor_unknown_field
+
+  × The `Packet` constructor has no `a` field:
+   ╭─[src/Main.nash:3:15]
+ 2 │ type packet = Packet { z : unit }
+ 3 │ get (Packet { a }) = a
+   ·               ─
+   ╰────
+  help: Check the field name against the constructor declaration.

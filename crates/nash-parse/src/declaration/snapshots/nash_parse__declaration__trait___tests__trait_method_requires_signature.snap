@@ -1,12 +1,14 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
 description: "trait Eq 'a where\n    eq a = true\n"
+info: diagnostic
 ---
-Trait(
-    Colon(
-        2,
-        8,
-    ),
-    1,
-    1,
-)
+nash::syntax
+
+  × Expected `:` after the method name.
+   ╭─[src/Main.nash:2:8]
+ 1 │ trait Eq 'a where
+ 2 │     eq a = true
+   ·        ─
+   ╰────
+  help: Separate the method name and its type with `:`.

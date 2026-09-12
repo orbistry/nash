@@ -106,8 +106,8 @@ fn bad_big_field_is_a_representation_error() {
         errors.as_slice(),
         [Error::RepresentationMismatch { .. }]
     ));
-    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&errors));
     });
 }
 

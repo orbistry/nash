@@ -1,27 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Wrapped, Maybe(..))\n\ntype alias Wrapped = Maybe\n\ntype Maybe 'a\n    = Just 'a\n    | Nothing\n"
+info: diagnostic
 ---
-[
-    KindMismatch {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 22,
-            },
-            end: Position {
-                line: 3,
-                column: 27,
-            },
-        },
-        context: AliasCasing {
-            alias: "Wrapped",
-            big: true,
-        },
-        expected: Type,
-        actual: Arrow(
-            Type,
-            Type,
-        ),
-    },
-]
+nash::names::kind_mismatch
+
+  × Kind mismatch in the uppercase name of alias `Wrapped`.
+   ╭─[src/Main.nash:3:22]
+ 2 │ 
+ 3 │ type alias Wrapped = Maybe
+   ·                      ─────
+ 4 │ 
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

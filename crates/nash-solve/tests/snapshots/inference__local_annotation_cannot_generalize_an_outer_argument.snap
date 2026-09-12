@@ -1,24 +1,15 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nouter x =\n    let\n        inner : 'a\n        inner = x\n    in\n    inner\n"
+description: "module Main exposing (..)\nouter x =\n    let\n        inner : 'a\n        inner = x\n    in\n    inner\n"
+info: diagnostic
 ---
-[
-    AnnotationVariableEscapes {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 9,
-            },
-            end: Position {
-                line: 5,
-                column: 14,
-            },
-        },
-        name: Some(
-            "inner",
-        ),
-        variable: RigidVar(
-            "a",
-        ),
-    },
-]
+nash::type::annotation_variable_escapes
+
+  × Annotation for `inner` quantifies type variable `'a`, already fixed by the enclosing scope.
+   ╭─[Main.nash:5:9]
+ 4 │         inner : 'a
+ 5 │         inner = x
+   ·         ─────
+ 6 │     in
+   ╰────
+  help: Use the enclosing variable without quantifying it again.

@@ -33,7 +33,6 @@ fn let_application_evaluates() {
     };
     let add = b.builtin(DefaultFunction::AddInteger, &[b.var(x.name), b.var(y.name)]);
     let core = b.let_(x, b.int(1), b.app(b.lam(&[y], add), &[b.int(2)]));
-    insta::assert_snapshot!(crate::harness::eval_core(&arena, core));
     let result = evaluate(&arena, core);
     assert_eq!(result.term.unwrap(), Term::integer_from(&arena, 3));
     assert!(result.info.consumed_budget.cpu > 0);
@@ -44,7 +43,6 @@ fn boolean_case_does_not_evaluate_unselected_failure() {
     let arena = Arena::new();
     let b = Builder::new(&arena);
     let core = b.if_(b.lit(Constant::bool(&arena, true)), b.int(42), b.error());
-    insta::assert_snapshot!(crate::harness::eval_core(&arena, core));
     assert_eq!(
         evaluate(&arena, core).term.unwrap(),
         Term::integer_from(&arena, 42)
@@ -56,7 +54,6 @@ fn trace_precedes_failure() {
     let arena = Arena::new();
     let b = Builder::new(&arena);
     let core = b.trace(b.lit(Constant::string(&arena, "before failure")), b.error());
-    insta::assert_snapshot!(crate::harness::eval_core(&arena, core));
     let result = evaluate(&arena, core);
     assert!(result.term.is_err());
     assert_eq!(result.info.logs, ["before failure"]);
@@ -87,7 +84,6 @@ fn field_projection_and_tag_order_are_semantic() {
         ],
         None,
     );
-    insta::assert_snapshot!(crate::harness::eval_core(&arena, core));
     assert_eq!(
         evaluate(&arena, core).term.unwrap(),
         Term::integer_from(&arena, 17)

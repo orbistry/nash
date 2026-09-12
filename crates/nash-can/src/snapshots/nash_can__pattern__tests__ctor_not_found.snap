@@ -1,24 +1,13 @@
 ---
 source: crates/nash-can/src/pattern.rs
 description: Foo
+info: diagnostic
 ---
-[
-    NotFoundCtor {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 4,
-            },
-        },
-        prefix: None,
-        name: "Foo",
-        suggestions: PossibleNames {
-            locals: [],
-            qualified: [],
-        },
-    },
-]
+nash::names::not_found_ctor
+
+  × Unknown variant `Foo`.
+   ╭─[src/Main.nash:1:1]
+ 1 │ Foo
+   · ───
+   ╰────
+  help: Define or import this name.

@@ -1,16 +1,15 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"t\" = let x via int in do\n        assert True\n"
+info: diagnostic
 ---
-Tests(
-    Test(
-        Do(
-            4,
-            16,
-        ),
-        4,
-        5,
-    ),
-    3,
-    1,
-)
+nash::syntax
+
+  × Expected a do block for the test body.
+   ╭─[src/Main.nash:4:16]
+ 3 │ tests
+ 4 │     test "t" = let x via int in do
+   ·                ─
+ 5 │         assert True
+   ╰────
+  help: Write `do` and indent its statements.

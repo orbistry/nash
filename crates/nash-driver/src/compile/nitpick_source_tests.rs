@@ -85,7 +85,7 @@ macro_rules! assert_diagnostics_snapshot {
     ($errors:expr) => {{
         let diagnostics = &$errors;
         assert!(!diagnostics.summaries.is_empty());
-        insta::with_settings!({ description => &diagnostics.description, omit_expression => true }, {
+        insta::with_settings!({ description => &diagnostics.description, omit_expression => true, info => &"diagnostic" }, {
             insta::assert_snapshot!(diagnostics.rendered);
         });
     }};

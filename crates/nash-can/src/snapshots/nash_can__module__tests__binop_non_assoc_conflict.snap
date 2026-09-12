@@ -1,20 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nimport Basics exposing (..)\n\nx a b c = a == b == c\n"
+info: diagnostic
 ---
-[
-    BinopConflict {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 11,
-            },
-            end: Position {
-                line: 5,
-                column: 22,
-            },
-        },
-        op1: "==",
-        op2: "==",
-    },
-]
+nash::names::binop_conflict
+
+  × You cannot mix (==) and (==) without parentheses.
+   ╭─[src/Main.nash:5:11]
+ 4 │ 
+ 5 │ x a b c = a == b == c
+   ·           ───────────
+   ╰────
+  help: Add parentheses to specify the grouping.

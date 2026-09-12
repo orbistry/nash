@@ -1,67 +1,19 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Wrapped)\n\ntype alias Wrapped = Missing.Maybe\n"
+info: diagnostic
 ---
-[
-    NotFoundType {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 22,
-            },
-            end: Position {
-                line: 3,
-                column: 35,
-            },
-        },
-        prefix: Some(
-            "Missing",
-        ),
-        name: "Maybe",
-        suggestions: PossibleNames {
-            locals: [
-                "Bytes",
-                "Data",
-                "Int",
-                "List",
-                "Map",
-                "array",
-                "bls_g1",
-                "bls_g2",
-                "bls_mlr",
-                "bool",
-                "bytes",
-                "int",
-                "list",
-                "pair",
-                "string",
-                "unit",
-                "value",
-            ],
-            qualified: [
-                (
-                    "Builtin",
-                    [
-                        "Bytes",
-                        "Data",
-                        "Int",
-                        "List",
-                        "Map",
-                        "array",
-                        "bls_g1",
-                        "bls_g2",
-                        "bls_mlr",
-                        "bool",
-                        "bytes",
-                        "int",
-                        "list",
-                        "pair",
-                        "string",
-                        "unit",
-                        "value",
-                    ],
-                ),
-            ],
-        },
-    },
-]
+nash::names::not_found_type
+
+  × Unknown type `Missing.Maybe`.
+   ╭─[src/Main.nash:3:22]
+ 2 │ 
+ 3 │ type alias Wrapped = Missing.Maybe
+   ·                      ─────────────
+   ╰────
+  help: Similar names:
+
+            Builtin.Map
+            Builtin.value
+            Builtin.Bytes
+            Builtin.Data

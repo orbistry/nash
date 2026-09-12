@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type app 'f 'a = App ('f 'a)\ntype w = W (app (app list) int)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype app 'f 'a = App ('f 'a)\ntype w = W (app (app list) int)\n"
 ---
 (
     [

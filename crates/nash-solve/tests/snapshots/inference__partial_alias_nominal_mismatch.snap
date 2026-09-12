@@ -1,64 +1,19 @@
 ---
 source: crates/nash-solve/tests/inference.rs
 description: "module Higher exposing (..)\ntype alias Pair 'left 'right = { first : 'left, second : 'right }\ntrait Keep 'f where\n    keep : 'f 'a -> 'f 'a\nimpl Keep (Pair 'a) where\n    keep x = x\nthrough x = keep x\n\n\nmodule Main exposing (..)\nimport Higher exposing (..)\ntype Color = Red | Blue\ntype Mood = Calm | Busy\npair : Pair Color Color\npair = { first = Red, second = Blue }\nother : Pair Mood Color\nother = Pair Calm Red\nkept = through pair\nkeptOther = through other\n\n\nmodule Reject exposing (..)\nimport Higher exposing (..)\ntype Color = Red | Blue\ntype alias Other 'left 'right = { first : 'left, second : 'right }\nbad = through (Other Red Blue)\n"
+info: diagnostic
 ---
-[
-    MissingImpl {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 7,
-            },
-            end: Position {
-                line: 5,
-                column: 14,
-            },
-        },
-        name: "through",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Higher",
-            },
-            name: "Keep",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Reject",
-                },
-                name: "Other",
-                args: [
-                    Type {
-                        home: ModuleName {
-                            package: None,
-                            name: "Reject",
-                        },
-                        name: "Color",
-                        args: [],
-                    },
-                ],
-            },
-        ],
-        available: [
-            [
-                Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: None,
-                            name: "Higher",
-                        },
-                        name: "Pair",
-                    },
-                    args: [
-                        Var(
-                            0,
-                        ),
-                    ],
-                },
-            ],
-        ],
-        because: [],
-    },
-]
+nash::type::missing_impl
+
+  × No impl for `Keep (Other Color)`.
+   ╭─[Reject.nash:5:7]
+ 4 │ type alias Other 'left 'right = { first : 'left, second : 'right }
+ 5 │ bad = through (Other Red Blue)
+   ·       ───┬───
+   ·          ╰── required by `through`
+   ╰────
+  help: Available impl heads:
+
+            (Pair 'a0)
+
+        Import or define an impl for `Keep (Other Color)`.

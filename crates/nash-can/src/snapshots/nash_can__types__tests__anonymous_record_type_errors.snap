@@ -1,18 +1,14 @@
 ---
 source: crates/nash-can/src/types.rs
 description: "{ z : Int, a : Int }"
+info: diagnostic
 ---
-[
-    RecordTypeOutsideAlias {
-        region: Region {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 21,
-            },
-        },
-    },
-]
+nash::names::record_type_outside_alias
+
+  × This record type needs a name:
+   ╭─[src/Main.nash:1:1]
+ 1 │ { z : Int, a : Int }
+   · ────────────────────
+   ╰────
+  help: A record type is only allowed as the direct body of a type alias. Give this
+        record a named alias.

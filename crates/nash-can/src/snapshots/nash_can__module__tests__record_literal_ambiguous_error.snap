@@ -1,34 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype alias first = { x : unit }\ntype alias second = { x : unit }\nvalue = { x = () }\n"
+info: diagnostic
 ---
-[
-    RecordLiteralAmbiguous {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 9,
-            },
-            end: Position {
-                line: 4,
-                column: 19,
-            },
-        },
-        candidates: [
-            QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "first",
-            },
-            QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "second",
-            },
-        ],
-    },
-]
+nash::names::record_literal_ambiguous
+
+  × Several visible record aliases have exactly these fields:
+   ╭─[src/Main.nash:4:9]
+ 3 │ type alias second = { x : unit }
+ 4 │ value = { x = () }
+   ·         ──────────
+   ╰────
+  help: The candidates are Main.first, Main.second. Use the intended alias constructor
+        to make the record type clear.

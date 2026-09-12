@@ -1,22 +1,17 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf =\n    let\n        x = x\n    in\n    x\n"
+info: diagnostic
 ---
-[
-    RecursiveLet {
-        name: Located {
-            region: Region {
-                start: Position {
-                    line: 5,
-                    column: 9,
-                },
-                end: Position {
-                    line: 5,
-                    column: 10,
-                },
-            },
-            value: "x",
-        },
-        others: [],
-    },
-]
+nash::names::recursive_let
+
+  × Value `x` depends on itself.
+   ╭─[src/Main.nash:5:9]
+ 4 │     let
+ 5 │         x = x
+   ·         ─
+ 6 │     in
+   ╰────
+  help:
+
+        Break the cycle between these value definitions.

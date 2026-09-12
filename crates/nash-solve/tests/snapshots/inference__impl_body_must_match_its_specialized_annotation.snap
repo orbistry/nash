@@ -1,55 +1,18 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = ()\n"
+description: "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = ()\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 6,
-                column: 14,
-            },
-            end: Position {
-                line: 6,
-                column: 16,
-            },
-        },
-        Unit,
-        Type {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "unit",
-            args: [],
-        },
-        FromAnnotation(
-            "keep",
-            Region {
-                start: Position {
-                    line: 4,
-                    column: 12,
-                },
-                end: Position {
-                    line: 4,
-                    column: 20,
-                },
-            },
-            1,
-            TypedBody,
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Color",
-                args: [],
-            },
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `Color`, found `unit`.
+   ╭─[Main.nash:6:14]
+ 3 │ trait Keep 'a where
+ 4 │     keep : 'a -> 'a
+   ·            ────┬───
+   ·                ╰── declared type
+ 5 │ impl Keep Color where
+ 6 │     keep x = ()
+   ·              ─┬
+   ·               ╰── body of `keep`
+   ╰────

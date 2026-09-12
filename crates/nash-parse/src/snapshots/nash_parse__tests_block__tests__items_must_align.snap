@@ -1,21 +1,16 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"first\" = do\n        assert True\n     test \"second\" = do\n         assert True\n"
+info: diagnostic
 ---
-Tests(
-    Test(
-        Body(
-            Alignment(
-                9,
-                6,
-                6,
-            ),
-            5,
-            9,
-        ),
-        4,
-        5,
-    ),
-    3,
-    1,
-)
+nash::syntax
+
+  × Do statements must align.
+   ╭─[src/Main.nash:6:6]
+ 4 │     test "first" = do
+ 5 │         assert True
+ 6 │      test "second" = do
+   ·      ─
+ 7 │          assert True
+   ╰────
+  help: Indent the statement with 9 spaces.

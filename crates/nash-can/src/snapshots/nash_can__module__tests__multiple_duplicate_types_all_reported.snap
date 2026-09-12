@@ -1,52 +1,35 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Foo = Int\n\ntype alias Foo = String\n\ntype alias Bar = Int\n\ntype alias Bar = String\n"
+info: diagnostic
 ---
-[
-    DuplicateType {
-        name: "Bar",
-        first: Region {
-            start: Position {
-                line: 7,
-                column: 12,
-            },
-            end: Position {
-                line: 7,
-                column: 15,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 9,
-                column: 12,
-            },
-            end: Position {
-                line: 9,
-                column: 15,
-            },
-        },
-    },
-    DuplicateType {
-        name: "Foo",
-        first: Region {
-            start: Position {
-                line: 3,
-                column: 12,
-            },
-            end: Position {
-                line: 3,
-                column: 15,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 5,
-                column: 12,
-            },
-            end: Position {
-                line: 5,
-                column: 15,
-            },
-        },
-    },
-]
+nash::names::duplicate_type
+
+  × This file defines multiple `Bar` types.
+   ╭─[src/Main.nash:9:12]
+ 6 │ 
+ 7 │ type alias Bar = Int
+   ·            ─┬─
+   ·             ╰── first definition
+ 8 │ 
+ 9 │ type alias Bar = String
+   ·            ─┬─
+   ·             ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_type
+
+  × This file defines multiple `Foo` types.
+   ╭─[src/Main.nash:5:12]
+ 2 │ 
+ 3 │ type alias Foo = Int
+   ·            ─┬─
+   ·             ╰── first definition
+ 4 │ 
+ 5 │ type alias Foo = String
+   ·            ─┬─
+   ·             ╰── and another first definition
+ 6 │ 
+   ╰────
+  help: Rename one of the definitions.

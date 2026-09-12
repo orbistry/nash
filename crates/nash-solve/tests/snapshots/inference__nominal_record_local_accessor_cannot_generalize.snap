@@ -1,39 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\nf p =\n    let\n        get r = r.x\n    in\n    get (point p)\n"
+description: "module Main exposing (..)\ntype alias point = { x : int }\nf p =\n    let\n        get r = r.x\n    in\n    get (point p)\n"
+info: diagnostic
 ---
-[
-    AmbiguousRecordAccess {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 17,
-            },
-            end: Position {
-                line: 5,
-                column: 20,
-            },
-        },
-        context: Access {
-            record_region: Region {
-                start: Position {
-                    line: 5,
-                    column: 17,
-                },
-                end: Position {
-                    line: 5,
-                    column: 18,
-                },
-            },
-            maybe_name: Some(
-                "r",
-            ),
-        },
-        field: Some(
-            "x",
-        ),
-        record: FlexVar(
-            "a",
-        ),
-    },
-]
+nash::type::ambiguous_record_access
+
+  × Cannot determine record type `'a`.
+   ╭─[Main.nash:5:17]
+ 4 │     let
+ 5 │         get r = r.x
+   ·                 ─┬─
+   ·                  ╰── field `x` of `r`
+ 6 │     in
+   ╰────
+  help: Add a type annotation that identifies the record.

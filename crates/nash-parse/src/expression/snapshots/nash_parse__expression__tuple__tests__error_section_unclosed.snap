@@ -1,12 +1,15 @@
 ---
 source: crates/nash-parse/src/expression/tuple.rs
 description: "Code:\n\n(> 5"
+info: diagnostic
 ---
-Tuple(
-    OperatorClose(
-        1,
-        5,
-    ),
-    1,
-    1,
-)
+nash::syntax::unclosed_delimiter
+
+  × Expected `)` to close `(`.
+   ╭─[src/Main.nash:1:5]
+ 1 │ (> 5
+   · ┬   ┬
+   · │   ╰── expected `)`
+   · ╰── opened here
+   ╰────
+  help: Add `)` here.

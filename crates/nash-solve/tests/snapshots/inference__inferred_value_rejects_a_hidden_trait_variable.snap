@@ -1,38 +1,16 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\nvalue = discard (create ())\n"
+description: "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\nvalue = discard (create ())\n"
+info: diagnostic
 ---
-[
-    AmbiguousType {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 1,
-            },
-            end: Position {
-                line: 5,
-                column: 6,
-            },
-        },
-        name: "value",
-        variable: FlexVar(
-            "a",
-        ),
-        predicates: [
-            AmbiguousPredicate {
-                trait_: QualifiedName {
-                    home: ModuleName {
-                        package: None,
-                        name: "Main",
-                    },
-                    name: "Round",
-                },
-                args: [
-                    FlexVar(
-                        "a",
-                    ),
-                ],
-            },
-        ],
-    },
-]
+nash::type::ambiguous_type
+
+  × Cannot determine type `'a` in `value`.
+   ╭─[Main.nash:5:1]
+ 4 │     discard : 'a -> ()
+ 5 │ value = discard (create ())
+   · ─────
+   ╰────
+  help: Required constraints: Round 'a
+
+        Add a type annotation that determines this variable.

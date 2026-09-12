@@ -1,27 +1,117 @@
 ---
 source: crates/nash-can/tests/twins.rs
 description: "module Status exposing (..)\ntype status = Ready\ntype Other = Ready\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status = Ready\ntype Other = Ready\n\n\nmodule Status exposing (..)\ntype status = Ready | Ready\ntype Status = Ready | Ready\n\n\nmodule Status exposing (..)\ntype status = Ready | Waiting\ntype Status = Waiting | Ready\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status 'a = Ready\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status = Ready Int\n\n\nmodule Status exposing (..)\ntype status = Ready\ntype Status = Ready\ntype alias Ready = { value : Int }\n"
+info: diagnostic
 ---
-type status = Ready
-type Other = Ready
-[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 14 }, end: Position { line: 3, column: 19 } } }]
-type status = Ready
-type Status = Ready
-type Other = Ready
-[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 4, column: 14 }, end: Position { line: 4, column: 19 } } }]
-type status = Ready | Ready
-type Status = Ready | Ready
-[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 2, column: 23 }, end: Position { line: 2, column: 28 } } }]
-type status = Ready | Waiting
-type Status = Waiting | Ready
-[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 25 }, end: Position { line: 3, column: 30 } } }, DuplicateCtor { name: "Waiting", first: Region { start: Position { line: 2, column: 23 }, end: Position { line: 2, column: 30 } }, second: Region { start: Position { line: 3, column: 15 }, end: Position { line: 3, column: 22 } } }]
-type status = Ready
-type Status 'a = Ready
-[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 18 }, end: Position { line: 3, column: 23 } } }]
-type status = Ready
-type Status = Ready Int
-[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 3, column: 15 }, end: Position { line: 3, column: 20 } } }]
-type status = Ready
-type Status = Ready
-type alias Ready = { value : Int }
-[DuplicateCtor { name: "Ready", first: Region { start: Position { line: 2, column: 15 }, end: Position { line: 2, column: 20 } }, second: Region { start: Position { line: 4, column: 12 }, end: Position { line: 4, column: 17 } } }]
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Ready` type constructors.
+   ╭─[src/Status.nash:3:14]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready
+   ·               ──┬──
+   ·                 ╰── first definition
+ 3 │ type Other = Ready
+   ·              ──┬──
+   ·                ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Ready` type constructors.
+   ╭─[src/Status.nash:4:14]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready
+   ·               ──┬──
+   ·                 ╰── first definition
+ 3 │ type Status = Ready
+ 4 │ type Other = Ready
+   ·              ──┬──
+   ·                ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Ready` type constructors.
+   ╭─[src/Status.nash:2:23]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready | Ready
+   ·               ──┬──   ──┬──
+   ·                 │       ╰── and another first definition
+   ·                 ╰── first definition
+ 3 │ type Status = Ready | Ready
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Ready` type constructors.
+   ╭─[src/Status.nash:3:25]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready | Waiting
+   ·               ──┬──
+   ·                 ╰── first definition
+ 3 │ type Status = Waiting | Ready
+   ·                         ──┬──
+   ·                           ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Waiting` type constructors.
+   ╭─[src/Status.nash:3:15]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready | Waiting
+   ·                       ───┬───
+   ·                          ╰── first definition
+ 3 │ type Status = Waiting | Ready
+   ·               ───┬───
+   ·                  ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Ready` type constructors.
+   ╭─[src/Status.nash:3:18]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready
+   ·               ──┬──
+   ·                 ╰── first definition
+ 3 │ type Status 'a = Ready
+   ·                  ──┬──
+   ·                    ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Ready` type constructors.
+   ╭─[src/Status.nash:3:15]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready
+   ·               ──┬──
+   ·                 ╰── first definition
+ 3 │ type Status = Ready Int
+   ·               ──┬──
+   ·                 ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.
+
+nash::names::duplicate_ctor
+
+  × This file defines multiple `Ready` type constructors.
+   ╭─[src/Status.nash:4:12]
+ 1 │ module Status exposing (..)
+ 2 │ type status = Ready
+   ·               ──┬──
+   ·                 ╰── first definition
+ 3 │ type Status = Ready
+ 4 │ type alias Ready = { value : Int }
+   ·            ──┬──
+   ·              ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.

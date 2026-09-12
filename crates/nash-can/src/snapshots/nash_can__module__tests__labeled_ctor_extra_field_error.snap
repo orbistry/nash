@@ -1,20 +1,15 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit }\nmain = Packet { z = (), a = () }\n"
+info: diagnostic
 ---
-[
-    LabeledCtorExtraField {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 25,
-            },
-            end: Position {
-                line: 3,
-                column: 26,
-            },
-        },
-        ctor: "Packet",
-        field: "a",
-    },
-]
+nash::names::labeled_ctor_extra_field
+
+  × The `Packet` constructor has no `a` field:
+   ╭─[src/Main.nash:3:25]
+ 2 │ type packet = Packet { z : unit }
+ 3 │ main = Packet { z = (), a = () }
+   ·                         ─
+   ╰────
+  help: Remove this extra field or check its spelling against the constructor
+        declaration.

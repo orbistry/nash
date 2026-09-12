@@ -1,92 +1,37 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nignore value = ()\nbad : 'a -> ()\nbad x =\n    let\n        helper ignored = ignore (first x)\n    in\n    helper ()\n"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nignore value = ()\nbad : 'a -> ()\nbad x =\n    let\n        helper ignored = ignore (first x)\n    in\n    helper ()\n"
+info: diagnostic
 ---
-[
-    MissingConstraint {
-        region: Region {
-            start: Position {
-                line: 9,
-                column: 34,
-            },
-            end: Position {
-                line: 9,
-                column: 39,
-            },
-        },
-        name: "type application",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            RigidVar(
-                "a",
-            ),
-        ],
-        binder: Located {
-            region: Region {
-                start: Position {
-                    line: 7,
-                    column: 1,
-                },
-                end: Position {
-                    line: 7,
-                    column: 4,
-                },
-            },
-            value: "bad",
-        },
-    },
-    MissingConstraint {
-        region: Region {
-            start: Position {
-                line: 9,
-                column: 34,
-            },
-            end: Position {
-                line: 9,
-                column: 39,
-            },
-        },
-        name: "first",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Builtin",
-            },
-            name: "Storable",
-        },
-        args: [
-            RigidVar(
-                "a",
-            ),
-        ],
-        binder: Located {
-            region: Region {
-                start: Position {
-                    line: 7,
-                    column: 1,
-                },
-                end: Position {
-                    line: 7,
-                    column: 4,
-                },
-            },
-            value: "bad",
-        },
-    },
-]
+nash::type::missing_constraint
+
+  × `type application` requires undeclared constraint `Storable 'a`.
+    ╭─[Main.nash:9:34]
+  6 │ bad : 'a -> ()
+  7 │ bad x =
+    · ─┬─
+    ·  ╰── annotation for `bad`
+  8 │     let
+  9 │         helper ignored = ignore (first x)
+    ·                                  ──┬──
+    ·                                    ╰── constraint required here
+ 10 │     in
+    ╰────
+  help: Add `Storable 'a` to the annotation for `bad`.
+
+
+nash::type::missing_constraint
+
+  × `first` requires undeclared constraint `Storable 'a`.
+    ╭─[Main.nash:9:34]
+  6 │ bad : 'a -> ()
+  7 │ bad x =
+    · ─┬─
+    ·  ╰── annotation for `bad`
+  8 │     let
+  9 │         helper ignored = ignore (first x)
+    ·                                  ──┬──
+    ·                                    ╰── constraint required here
+ 10 │     in
+    ╰────
+  help: Add `Storable 'a` to the annotation for `bad`.

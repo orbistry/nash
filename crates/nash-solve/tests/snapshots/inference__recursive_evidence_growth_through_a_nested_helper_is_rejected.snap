@@ -1,40 +1,17 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype option 'a = Some 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (option 'a) where\n    keep xs = xs\nnest : Keep 'a => 'a -> ()\nnest x =\n    let\n        helper : Keep 'b => 'b -> ()\n        helper y = nest (Some y)\n    in\n    helper x\n"
+description: "module Main exposing (..)\ntype option 'a = Some 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep 'a => Keep (option 'a) where\n    keep xs = xs\nnest : Keep 'a => 'a -> ()\nnest x =\n    let\n        helper : Keep 'b => 'b -> ()\n        helper y = nest (Some y)\n    in\n    helper x\n"
+info: diagnostic
 ---
-[
-    PolymorphicRecursion {
-        region: Region {
-            start: Position {
-                line: 11,
-                column: 20,
-            },
-            end: Position {
-                line: 11,
-                column: 24,
-            },
-        },
-        name: "nest",
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Keep",
-        },
-        args: [
-            Type {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "option",
-                args: [
-                    RigidVar(
-                        "b",
-                    ),
-                ],
-            },
-        ],
-    },
-]
+nash::type::polymorphic_recursion
+
+  × Recursive call to `nest` grows its trait requirement.
+    ╭─[Main.nash:11:20]
+ 10 │         helper : Keep 'b => 'b -> ()
+ 11 │         helper y = nest (Some y)
+    ·                    ────
+ 12 │     in
+    ╰────
+  help: Keep (option 'b)
+
+        Keep trait arguments stable across recursive calls, or split the recursion.

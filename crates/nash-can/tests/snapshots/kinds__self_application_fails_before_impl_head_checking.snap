@@ -1,23 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()\n"
+info: diagnostic
 ---
-[
-    KindInfinite {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 25,
-            },
-            end: Position {
-                line: 5,
-                column: 27,
-            },
-        },
-        context: LittleField {
-            union: "self",
-            ctor: "Self",
-            index: 0,
-        },
-    },
-]
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `Self` in `self` would require
+  │ an infinite kind:
+   ╭─[src/Main.nash:5:25]
+ 4 │ 
+ 5 │ type self 'f = Self ('f 'f)
+   ·                         ──
+ 6 │ trait Marker 'a where
+   ╰────
+  help: Check the type application and the kinds of its arguments.

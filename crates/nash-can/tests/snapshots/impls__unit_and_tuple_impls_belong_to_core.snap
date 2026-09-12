@@ -1,98 +1,73 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Keep exposing (Keep)\ntrait Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule Instances exposing (..)\nimport Keep exposing (Keep)\nimpl Keep () where\n    keep x = x\nimpl Keep ('a, 'b) where\n    keep x = x\n"
+info: diagnostic
 ---
-(
+nash::names::orphan_impl
+
+  × This module cannot define an impl of `Keep.Keep` for Builtin.unit:
+   ╭─[src/Instances.nash:3:1]
+ 2 │     import Keep exposing (Keep)
+ 3 │ ╭─▶ impl Keep () where
+ 4 │ ╰─▶     keep x = x
+ 5 │     impl Keep ('a, 'b) where
+   ╰────
+  help: An impl must be defined in the module that defines its trait or one of its head
+        types. Move this impl to one of those modules.
+
+Core impl heads:
+[
     [
-        OrphanImpl {
+        Located {
             region: Region {
                 start: Position {
                     line: 3,
-                    column: 1,
+                    column: 11,
                 },
                 end: Position {
-                    line: 4,
-                    column: 15,
+                    line: 3,
+                    column: 13,
                 },
             },
-            trait_: QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "Keep",
-                },
-                name: "Keep",
-            },
-            heads: [
-                Named(
-                    QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
+            value: Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
                     },
-                ),
-            ],
+                    name: "unit",
+                },
+                args: [],
+            },
         },
     ],
     [
-        [
-            Located {
-                region: Region {
-                    start: Position {
-                        line: 3,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 13,
-                    },
+        Located {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 11,
                 },
-                value: Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "unit",
-                    },
-                    args: [],
+                end: Position {
+                    line: 5,
+                    column: 19,
                 },
             },
-        ],
-        [
-            Located {
-                region: Region {
-                    start: Position {
-                        line: 5,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 5,
-                        column: 19,
-                    },
-                },
-                value: Tuple(
-                    [
-                        Var(
-                            0,
-                        ),
-                        Var(
-                            1,
-                        ),
-                    ],
-                ),
-            },
-        ],
+            value: Tuple(
+                [
+                    Var(
+                        0,
+                    ),
+                    Var(
+                        1,
+                    ),
+                ],
+            ),
+        },
     ],
-)
+]

@@ -1,23 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (s s tag tag) where\n    marker _ = ()"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (s s tag tag) where\n    marker _ = ()\n"
+info: diagnostic
 ---
-[
-    KindInfinite {
-        region: Region {
-            start: Position {
-                line: 6,
-                column: 29,
-            },
-            end: Position {
-                line: 6,
-                column: 31,
-            },
-        },
-        context: LittleField {
-            union: "s",
-            ctor: "S",
-            index: 0,
-        },
-    },
-]
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `S` in `s` would require an
+  │ infinite kind:
+   ╭─[src/Main.nash:6:29]
+ 5 │ type tag 'a = Tag
+ 6 │ type s 'f 'g 'a = S ('g ('f 'f 'a))
+   ·                             ──
+ 7 │ trait Marker 'a where
+   ╰────
+  help: Check the type application and the kinds of its arguments.

@@ -1,92 +1,21 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\nf : point -> (int, string)\nf p =\n    let\n        get ignored = p.x\n    in\n    (get (), get ())\n"
+description: "module Main exposing (..)\ntype alias point = { x : int }\nf : point -> (int, string)\nf p =\n    let\n        get ignored = p.x\n    in\n    (get (), get ())\n"
+info: diagnostic
 ---
-[
-    BadExpr(
-        Region {
-            start: Position {
-                line: 8,
-                column: 5,
-            },
-            end: Position {
-                line: 8,
-                column: 21,
-            },
-        },
-        Tuple,
-        Tuple(
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "int",
-                args: [],
-            },
-            Type {
-                home: ModuleName {
-                    package: Some(
-                        PackageName {
-                            author: "nash",
-                            project: "core",
-                        },
-                    ),
-                    name: "Builtin",
-                },
-                name: "int",
-                args: [],
-            },
-            [],
-        ),
-        FromAnnotation(
-            "f",
-            Region {
-                start: Position {
-                    line: 3,
-                    column: 5,
-                },
-                end: Position {
-                    line: 3,
-                    column: 27,
-                },
-            },
-            1,
-            TypedBody,
-            Tuple(
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "int",
-                    args: [],
-                },
-                Type {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "string",
-                    args: [],
-                },
-                [],
-            ),
-        ),
-    ),
-]
+nash::type::mismatch
+
+  × Type mismatch: expected `( int, string )`, found `( int, int )`.
+   ╭─[Main.nash:8:5]
+ 2 │ type alias point = { x : int }
+ 3 │ f : point -> (int, string)
+   ·     ───────────┬──────────
+   ·                ╰── declared type
+ 4 │ f p =
+ 5 │     let
+ 6 │         get ignored = p.x
+ 7 │     in
+ 8 │     (get (), get ())
+   ·     ────────┬───────
+   ·             ╰── body of `f`
+   ╰────

@@ -1,7 +1,0 @@
----
-source: crates/nash-codegen/src/program/tests.rs
-expression: "pretty::program(Program::new(&a, Version::plutus_v3(&a), compiled.named))"
----
-(program 1.1.0
-  [(lam x_1 [(lam y_2 y_2) [[(builtin addInteger) x_1] (con integer 2)]])
-    (con integer 40)])

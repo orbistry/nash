@@ -1,23 +1,16 @@
 ---
 source: crates/nash-can/tests/traits.rs
 description: "module Main exposing (..)\nimport Builtin exposing (..)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep x =\n        let\n            bad : list ('b -> 'b)\n            bad = []\n        in\n        x\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 8,
-                column: 25,
-            },
-            end: Position {
-                line: 8,
-                column: 33,
-            },
-        },
-        context: Annotation {
-            name: "bad",
-        },
-        required: Storable,
-        actual: Term,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Storable` in the annotation for `bad`:
+   ╭─[src/Main.nash:8:25]
+ 7 │         let
+ 8 │             bad : list ('b -> 'b)
+   ·                         ────────
+ 9 │             bad = []
+   ╰────
+  help: The type has `Term` representation, but `Storable` admits Big or Const types.
+        Change the type or the representation requirement.

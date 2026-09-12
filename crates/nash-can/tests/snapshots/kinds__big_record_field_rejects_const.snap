@@ -1,25 +1,15 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type alias Vault = { amount : int }"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias Vault = { amount : int }\n"
+info: diagnostic
 ---
-[
-    RepresentationMismatch {
-        region: Region {
-            start: Position {
-                line: 5,
-                column: 31,
-            },
-            end: Position {
-                line: 5,
-                column: 34,
-            },
-        },
-        context: RecordField {
-            alias: "Vault",
-            field: "amount",
-            big: true,
-        },
-        required: Big,
-        actual: Const,
-    },
-]
+nash::names::representation_mismatch
+
+  × This position requires `Big` in field `amount` of Big record alias `Vault`:
+   ╭─[src/Main.nash:5:31]
+ 4 │ 
+ 5 │ type alias Vault = { amount : int }
+   ·                               ───
+   ╰────
+  help: The type has `Const` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

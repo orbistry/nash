@@ -1,29 +1,22 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nx = 1\n\nf =\n    let\n        x = 2\n    in\n    x\n"
+info: diagnostic
 ---
-[
-    Shadowing {
-        name: "x",
-        original: Region {
-            start: Position {
-                line: 3,
-                column: 1,
-            },
-            end: Position {
-                line: 3,
-                column: 2,
-            },
-        },
-        new: Region {
-            start: Position {
-                line: 7,
-                column: 9,
-            },
-            end: Position {
-                line: 7,
-                column: 10,
-            },
-        },
-    },
-]
+nash::names::shadowing
+
+  × Name `x` is already defined.
+   ╭─[src/Main.nash:7:9]
+ 2 │ 
+ 3 │ x = 1
+   · ┬
+   · ╰── first defined here
+ 4 │ 
+ 5 │ f =
+ 6 │     let
+ 7 │         x = 2
+   ·         ┬
+   ·         ╰── shadows this name
+ 8 │     in
+   ╰────
+  help: Rename one of these bindings.

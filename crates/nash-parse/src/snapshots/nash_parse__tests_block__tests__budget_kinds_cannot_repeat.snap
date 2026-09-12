@@ -1,16 +1,15 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"t\" within (cpu 1, cpu 2) = do\n        assert True\n"
+info: diagnostic
 ---
-Tests(
-    Test(
-        WithinDuplicate(
-            4,
-            29,
-        ),
-        4,
-        5,
-    ),
-    3,
-    1,
-)
+nash::syntax
+
+  × Budget kind is specified more than once.
+   ╭─[src/Main.nash:4:29]
+ 3 │ tests
+ 4 │     test "t" within (cpu 1, cpu 2) = do
+   ·                             ─
+ 5 │         assert True
+   ╰────
+  help: Keep one limit for each budget kind.

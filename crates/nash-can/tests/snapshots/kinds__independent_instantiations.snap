@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "type option 'a = None | Some 'a\ntype both = Both (option Int) (option int)"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype option 'a = None | Some 'a\ntype both = Both (option Int) (option int)\n"
 ---
 (
     [

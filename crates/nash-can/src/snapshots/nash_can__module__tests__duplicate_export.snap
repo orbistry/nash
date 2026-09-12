@@ -1,29 +1,16 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Foo, Foo)\n\ntype alias Foo = Int\n"
+info: diagnostic
 ---
-[
-    ExportDuplicate {
-        name: "Foo",
-        first: Region {
-            start: Position {
-                line: 1,
-                column: 23,
-            },
-            end: Position {
-                line: 1,
-                column: 26,
-            },
-        },
-        second: Region {
-            start: Position {
-                line: 1,
-                column: 28,
-            },
-            end: Position {
-                line: 1,
-                column: 31,
-            },
-        },
-    },
-]
+nash::names::export_duplicate
+
+  × Duplicate export `Foo`.
+   ╭─[src/Main.nash:1:28]
+ 1 │ module Main exposing (Foo, Foo)
+   ·                       ─┬─  ─┬─
+   ·                        │    ╰── duplicate export
+   ·                        ╰── first export
+ 2 │ 
+   ╰────
+  help: Remove the duplicate export.

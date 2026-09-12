@@ -1,60 +1,16 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\nimport Builtin exposing (List)\nimpl Lift (List 'a) (List 'b) where\n    lift x = x\n    lower x = x\n"
+info: diagnostic
 ---
-[
-    OrphanImpl {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 1,
-            },
-            end: Position {
-                line: 6,
-                column: 16,
-            },
-        },
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: Some(
-                    PackageName {
-                        author: "nash",
-                        project: "core",
-                    },
-                ),
-                name: "Lift",
-            },
-            name: "Lift",
-        },
-        heads: [
-            Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "List",
-                },
-            ),
-            Named(
-                QualifiedName {
-                    home: ModuleName {
-                        package: Some(
-                            PackageName {
-                                author: "nash",
-                                project: "core",
-                            },
-                        ),
-                        name: "Builtin",
-                    },
-                    name: "List",
-                },
-            ),
-        ],
-    },
-]
+nash::names::orphan_impl
+
+  × This module cannot define an impl of `Lift.Lift` for Builtin.List, Builtin.List:
+   ╭─[src/Main.nash:4:1]
+ 3 │     import Builtin exposing (List)
+ 4 │ ╭─▶ impl Lift (List 'a) (List 'b) where
+ 5 │ │       lift x = x
+ 6 │ ╰─▶     lower x = x
+   ╰────
+  help: An impl must be defined in the module that defines its trait or one of its head
+        types. Move this impl to one of those modules.

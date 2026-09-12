@@ -1,20 +1,14 @@
 ---
 source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nx = (+)\n"
+info: diagnostic
 ---
-[
-    NotFoundBinop {
-        region: Region {
-            start: Position {
-                line: 3,
-                column: 5,
-            },
-            end: Position {
-                line: 3,
-                column: 8,
-            },
-        },
-        name: "+",
-        available: [],
-    },
-]
+nash::names::not_found_binop
+
+  × Unknown operator `(+)`.
+   ╭─[src/Main.nash:3:5]
+ 2 │ 
+ 3 │ x = (+)
+   ·     ───
+   ╰────
+  help: Import and expose the operator.

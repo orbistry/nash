@@ -1,114 +1,16 @@
 ---
 source: crates/nash-can/tests/impls.rs
 description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq (List (List 'a)) => Eq (List 'a) where\n    eq x = x\nimpl Ord (List 'a) where\n    compare x = x\n"
+info: diagnostic
 ---
-[
-    MissingSuperclass {
-        region: Region {
-            start: Position {
-                line: 8,
-                column: 1,
-            },
-            end: Position {
-                line: 9,
-                column: 18,
-            },
-        },
-        trait_: QualifiedName {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "Ord",
-        },
-        heads: [
-            Located {
-                region: Region {
-                    start: Position {
-                        line: 8,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 8,
-                        column: 18,
-                    },
-                },
-                value: Named {
-                    reference: QualifiedName {
-                        home: ModuleName {
-                            package: Some(
-                                PackageName {
-                                    author: "nash",
-                                    project: "core",
-                                },
-                            ),
-                            name: "Builtin",
-                        },
-                        name: "List",
-                    },
-                    args: [
-                        Var(
-                            0,
-                        ),
-                    ],
-                },
-            },
-        ],
-        superclass: Trait {
-            trait_: QualifiedName {
-                home: ModuleName {
-                    package: None,
-                    name: "Main",
-                },
-                name: "Eq",
-            },
-            args: [
-                Located {
-                    region: Region {
-                        start: Position {
-                            line: 8,
-                            column: 11,
-                        },
-                        end: Position {
-                            line: 8,
-                            column: 18,
-                        },
-                    },
-                    value: Named {
-                        reference: QualifiedName {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "List",
-                        },
-                        args: [
-                            Located {
-                                region: Region {
-                                    start: Position {
-                                        line: 8,
-                                        column: 11,
-                                    },
-                                    end: Position {
-                                        line: 8,
-                                        column: 18,
-                                    },
-                                },
-                                value: Var(
-                                    "a",
-                                ),
-                            },
-                        ],
-                    },
-                },
-            ],
-        },
-        index: 0,
-        reason: Limit,
-    },
-]
+nash::names::missing_superclass
+
+  × The `Main.Ord` impl for (Builtin.List 'a0) does not establish superclass 1:
+   ╭─[src/Main.nash:8:1]
+ 7 │         eq x = x
+ 8 │ ╭─▶ impl Ord (List 'a) where
+ 9 │ ╰─▶     compare x = x
+   ╰────
+  help: It must also satisfy `Main.Eq (Builtin.List 'a)`. Resolving it exceeded the
+        search limit because the requirements keep expanding. Add the required impl or
+        include the necessary constraint in this impl's context.

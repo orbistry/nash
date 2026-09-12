@@ -1,65 +1,18 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\nget : point -> int\nget p = p.y\n"
+description: "module Main exposing (..)\ntype alias point = { x : int }\nget : point -> int\nget p = p.y\n"
+info: diagnostic
 ---
-[
-    MissingField {
-        region: Region {
-            start: Position {
-                line: 4,
-                column: 9,
-            },
-            end: Position {
-                line: 4,
-                column: 12,
-            },
-        },
-        context: Access {
-            record_region: Region {
-                start: Position {
-                    line: 4,
-                    column: 9,
-                },
-                end: Position {
-                    line: 4,
-                    column: 10,
-                },
-            },
-            maybe_name: Some(
-                "p",
-            ),
-        },
-        field: "y",
-        record: Alias {
-            home: ModuleName {
-                package: None,
-                name: "Main",
-            },
-            name: "point",
-            args: [],
-            real: Record {
-                fields: [
-                    (
-                        "x",
-                        Type {
-                            home: ModuleName {
-                                package: Some(
-                                    PackageName {
-                                        author: "nash",
-                                        project: "core",
-                                    },
-                                ),
-                                name: "Builtin",
-                            },
-                            name: "int",
-                            args: [],
-                        },
-                    ),
-                ],
-            },
-        },
-        available: [
-            "x",
-        ],
-    },
-]
+nash::type::missing_field
+
+  × Record has no field `y`.
+   ╭─[Main.nash:4:9]
+ 3 │ get : point -> int
+ 4 │ get p = p.y
+   ·         ─┬─
+   ·          ╰── field `y` of `p`
+   ╰────
+  help: Did you mean `x`?
+
+        Available fields: { x : int
+        }
