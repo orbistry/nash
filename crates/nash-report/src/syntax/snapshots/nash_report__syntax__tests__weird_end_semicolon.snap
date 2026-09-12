@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ;
 ---
+nash::syntax
+
   × Semicolons do not separate declarations.
    ╭─[src/Main.nash:1:1]
  1 │ ;

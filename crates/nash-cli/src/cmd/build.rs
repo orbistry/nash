@@ -55,7 +55,7 @@ impl Args {
             report: super::check::ReportFormat::Human,
             no_warnings: false,
         }
-        .report_result(Ok(report), color)?;
+        .report_result(Ok((project.root.clone(), report)), color)?;
         let outputs = output
             .expect("successful frontend invokes finish")
             .into_diagnostic()?;

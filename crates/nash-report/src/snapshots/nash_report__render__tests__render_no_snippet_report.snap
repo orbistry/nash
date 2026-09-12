@@ -2,5 +2,7 @@
 source: crates/nash-report/src/render.rs
 expression: plain(&none)
 ---
+nash::diagnostic
+
   × Before:
   help: After.

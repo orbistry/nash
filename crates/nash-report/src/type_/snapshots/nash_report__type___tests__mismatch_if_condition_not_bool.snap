@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadExpr(region(), Category::String, &string(),\nExpected::FromContext(region(), Context::IfCondition, &boolean)))"
 ---
+nash::type::mismatch
+
   × Type mismatch: expected `bool`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value

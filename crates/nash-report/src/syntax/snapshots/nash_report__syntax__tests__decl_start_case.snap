@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: case
 ---
+nash::diagnostic
+
   × Unexpected `case` at the start of a declaration.
    ╭─[src/Main.nash:1:1]
  1 │ case

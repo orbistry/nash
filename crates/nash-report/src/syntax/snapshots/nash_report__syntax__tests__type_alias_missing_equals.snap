@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\ntype alias account"
 ---
+nash::syntax
+
   × Expected `=` in the type alias.
    ╭─[src/Main.nash:1:19]
  1 │ type alias account

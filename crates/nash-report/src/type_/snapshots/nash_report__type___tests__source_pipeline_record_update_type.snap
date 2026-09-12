@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\ntype alias Person = { age : A }\\nf : Person -> Person\\nf p = { p | age = B }\\n\")"
 ---
+nash::type::field_mismatch
+
   × Type mismatch: expected `A`, found `B`.
    ╭─[Main.nash:6:13]
  5 │ f : Person -> Person

@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: module
 ---
+nash::syntax
+
   × Top-level declarations must start on separate lines.
    ╭─[src/Main.nash:1:1]
  1 │ module

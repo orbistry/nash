@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
+nash::syntax::unclosed_delimiter
+
   × Expected `)` to close `(`.
    ╭─[Main.nash:1:15]
  1 │ value = foo!(1

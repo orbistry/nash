@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "crate::render_plain(&report, &crate::Source::new(source), \"src/Ledger.nash\")"
 ---
+nash::type::mismatch
+
   × Type mismatch: expected `list int`, found `list Int`.
     ╭─[src/Ledger.nash:10:5]
   1 │ module Ledger exposing (settle)

@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::BadExpr(region(), Category::Record, &record,\nExpected::FromContext(region(), Context::RecordUpdateKeys(\"person\", &updates),\n&int())))"
 ---
+nash::type::mismatch
+
   × Record `person` has no field `naem`.
    ╭─[Main.nash:1:1]
  1 │ value

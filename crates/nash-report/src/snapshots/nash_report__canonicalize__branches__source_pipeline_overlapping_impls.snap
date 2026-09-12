@@ -2,6 +2,8 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: rendered
 ---
+nash::names::overlapping_impls
+
   × These `Bad.Keep` impls can both match the same trait arguments. The overlapping
   │ head is Builtin.unit:
    ╭─[Bad.nash:6:1]

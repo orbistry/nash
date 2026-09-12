@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 expression: "render_plain(&to_report(&Source::new(input), &error), &Source::new(input),\n\"src/Main.nash\")"
 ---
+nash::syntax::module_name_mismatch
+
   × Module name must be `Main`, found `Other`.
    ╭─[src/Main.nash:1:8]
  1 │ module Other exposing (..)

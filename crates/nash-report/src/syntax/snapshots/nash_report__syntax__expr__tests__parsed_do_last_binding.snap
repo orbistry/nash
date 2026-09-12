@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/expr.rs
 expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
 ---
+nash::syntax
+
   × A do block must end with an expression.
    ╭─[Main.nash:2:5]
  1 │ value = do

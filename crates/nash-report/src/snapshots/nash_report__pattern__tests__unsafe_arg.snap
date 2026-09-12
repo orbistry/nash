@@ -2,6 +2,8 @@
 source: crates/nash-report/src/pattern.rs
 expression: "render(\"module Main exposing (..)\\nf [x] = x\\n\")"
 ---
+nash::pattern::incomplete
+
   × Argument pattern is not exhaustive.
    ╭─[src/Main.nash:2:3]
  1 │ module Main exposing (..)

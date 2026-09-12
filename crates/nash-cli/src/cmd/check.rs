@@ -32,10 +32,10 @@ impl Args {
 
     pub(crate) fn report_result(
         &self,
-        result: Result<nash_driver::BuildResult>,
+        result: Result<(PathBuf, nash_driver::BuildResult)>,
         color: bool,
     ) -> Result<()> {
-        let result = match result {
+        let (root, result) = match result {
             Ok(result) => result,
             Err(error) if self.report == ReportFormat::Json => {
                 println!(
@@ -47,6 +47,14 @@ impl Args {
                 std::process::exit(1);
             }
             Err(error) => return Err(error),
+        };
+        let links = supports_hyperlinks::on(supports_hyperlinks::Stream::Stderr);
+        let source_name = |name: &str| crate::reporting::source_name(&root, links, name);
+        let uri_name = |uri: &url::Url| {
+            source_name(&uri.to_file_path().map_or_else(
+                |_| uri.to_string(),
+                |path| path.to_string_lossy().into_owned(),
+            ))
         };
         let modules = result.ordered_reports();
         if self.report == ReportFormat::Json {
@@ -81,7 +89,11 @@ impl Args {
                     }
                     eprintln!(
                         "{:?}",
-                        miette::Report::new(report.render(&source, &module.path, color))
+                        miette::Report::new(
+                            report
+                                .render(&source, &module.path, color)
+                                .map_source_names(&source_name)
+                        )
                     );
                 }
             }
@@ -93,10 +105,10 @@ impl Args {
                 ModuleResult::Blocked { dependencies } if self.report == ReportFormat::Human => {
                     eprintln!(
                         "Skipped {} because these dependencies failed: {}",
-                        uri.path(),
+                        uri_name(uri),
                         dependencies
                             .iter()
-                            .map(|uri| uri.path())
+                            .map(&uri_name)
                             .collect::<Vec<_>>()
                             .join(", ")
                     );
@@ -108,7 +120,7 @@ impl Args {
                             serde_json::json!({"type":"error", "path":uri.path(), "title":"SOURCE UNAVAILABLE", "message":[message]})
                         );
                     } else {
-                        eprintln!("Could not read {}: {}", uri.path(), message);
+                        eprintln!("Could not read {}: {}", uri_name(uri), message);
                     }
                 }
                 _ => {}
@@ -141,7 +153,7 @@ impl Args {
         }
     }
 
-    async fn check(&self) -> Result<nash_driver::BuildResult> {
+    async fn check(&self) -> Result<(PathBuf, nash_driver::BuildResult)> {
         let project = Project::load(&self.path).await.into_diagnostic()?;
         let db = Arc::new(Mutex::new(Database::new(FileSystemSource::new())));
         let modules = project
@@ -151,6 +163,6 @@ impl Args {
         let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
             .await
             .into_diagnostic()?;
-        Ok(build(db, &graph, &modules).await)
+        Ok((project.root, build(db, &graph, &modules).await))
     }
 }

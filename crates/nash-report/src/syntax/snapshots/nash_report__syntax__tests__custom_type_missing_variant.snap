@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\ntype option 'a ="
 ---
+nash::syntax
+
   × Expected a constructor name.
    ╭─[src/Main.nash:1:17]
  1 │ type option 'a =

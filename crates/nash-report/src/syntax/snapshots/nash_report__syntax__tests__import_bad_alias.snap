@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nimport Cardano.Tx as tx"
 ---
+nash::syntax
+
   × Expected an alias after `as`.
    ╭─[src/Main.nash:1:22]
  1 │ import Cardano.Tx as tx

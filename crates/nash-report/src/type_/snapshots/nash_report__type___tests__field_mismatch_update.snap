@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::FieldMismatch\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Update\n    { record: \"person\" }, field: \"age\", actual: &string(), expected: &int()\n})"
 ---
+nash::type::field_mismatch
+
   × Type mismatch: expected `string`, found `int`.
    ╭─[Main.nash:1:1]
  1 │ value

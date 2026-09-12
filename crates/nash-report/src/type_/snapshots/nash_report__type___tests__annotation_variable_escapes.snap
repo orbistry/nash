@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::AnnotationVariableEscapes\n{ region: region(), name: Some(\"f\"), variable: &ErrorType::RigidVar(\"a\") })"
 ---
+nash::type::annotation_variable_escapes
+
   × Annotation for `f` quantifies type variable `'a`, already fixed by the enclosing scope.
    ╭─[Main.nash:1:1]
  1 │ value

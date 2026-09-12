@@ -15,12 +15,30 @@ pub const WIDTH: usize = 80;
 /// A `Report` bound to its file, owning everything miette needs.
 #[derive(Debug)]
 pub struct Rendered {
+    code: &'static str,
     severity: Severity,
     message: String,
     help: Option<String>,
     labels: Vec<LabeledSpan>,
     source: RenderSource,
     related: Vec<Rendered>,
+}
+
+impl Rendered {
+    /// Change terminal source labels without changing diagnostic identities.
+    /// The same mapping applies to related reports in other files.
+    pub fn map_source_names(mut self, rename: &impl Fn(&str) -> String) -> Self {
+        self.source.source = NamedSource::new(
+            rename(self.source.source.name()),
+            self.source.source.inner().clone(),
+        );
+        self.related = self
+            .related
+            .into_iter()
+            .map(|report| report.map_source_names(rename))
+            .collect();
+        self
+    }
 }
 
 /// Expand miette's source read to the report's requested surrounding region.
@@ -86,6 +104,7 @@ impl Report {
         }
         let after = self.after.render(WIDTH, color);
         Rendered {
+            code: self.code,
             severity: self.severity,
             message: self.before.render(WIDTH, color),
             help: (!after.is_empty()).then_some(after),
@@ -112,6 +131,10 @@ impl fmt::Display for Rendered {
 impl std::error::Error for Rendered {}
 
 impl Diagnostic for Rendered {
+    fn code(&self) -> Option<Box<dyn fmt::Display + '_>> {
+        Some(Box::new(self.code))
+    }
+
     fn severity(&self) -> Option<miette::Severity> {
         Some(match self.severity {
             Severity::Error => miette::Severity::Error,
@@ -220,6 +243,17 @@ mod tests {
         ] {
             assert!(output.contains(expected), "{output}");
         }
+
+        let rendered = report
+            .render(&Source::new("f = x + 1"), "Main.nash", false)
+            .map_source_names(&|name| format!("member/src/{name}"));
+        let mut output = String::new();
+        GraphicalReportHandler::new_themed(GraphicalTheme::unicode_nocolor())
+            .render_report(&mut output, &rendered)
+            .unwrap();
+        assert!(output.contains("[member/src/Main.nash:1:5]"), "{output}");
+        assert!(output.contains("[member/src/Other.nash:1:5]"), "{output}");
+        assert_eq!(report.related[0].path, "Other.nash");
     }
 
     #[test]
@@ -231,13 +265,17 @@ mod tests {
         insta::assert_snapshot!(plain(&snippet().warning()));
     }
     #[test]
-    fn terminal_omits_identifiers_for_errors_and_warnings() {
+    fn terminal_keeps_miette_codes_and_markers_without_uppercase_titles() {
         for report in [snippet(), snippet().warning()] {
             let rendered = report.render(&Source::new("f = x + 1"), "Main.nash", false);
-            assert!(rendered.code().is_none());
+            assert_eq!(rendered.code().unwrap().to_string(), report.code);
             let output = plain(&report);
             assert!(!output.contains(&report.title));
-            assert!(!output.contains(report.code));
+            assert!(output.contains(report.code));
+            assert!(output.contains(match report.severity {
+                Severity::Error => "×",
+                Severity::Warning => "⚠",
+            }));
             assert!(output.contains("Before:"));
         }
     }

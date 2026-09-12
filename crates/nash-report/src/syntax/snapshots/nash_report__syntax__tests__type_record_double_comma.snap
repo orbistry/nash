@@ -2,6 +2,8 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: ","
 ---
+nash::syntax
+
   × Extra comma in record type.
    ╭─[src/Main.nash:1:1]
  1 │ ,

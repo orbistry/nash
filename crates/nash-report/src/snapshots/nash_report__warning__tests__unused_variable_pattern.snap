@@ -2,6 +2,8 @@
 source: crates/nash-report/src/warning.rs
 expression: "render_plain(&only_warning(input), &Source::new(input), \"src/Main.nash\")"
 ---
+nash::warning::unused_variable
+
   ⚠ Unused variable `unused`.
    ╭─[src/Main.nash:2:3]
  1 │ module Main exposing (..)

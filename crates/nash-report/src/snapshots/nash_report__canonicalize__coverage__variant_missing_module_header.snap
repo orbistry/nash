@@ -2,5 +2,7 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
+nash::names::missing_module_header
+
   × Missing module declaration.
   help: Add `module Main exposing (..)` at the start of the file.

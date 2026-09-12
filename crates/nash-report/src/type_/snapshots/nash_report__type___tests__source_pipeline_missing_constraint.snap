@@ -2,6 +2,8 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "type_error_reports(\"module Main exposing (..)\\ntrait Eq 'a where\\n    eq : 'a -> 'a -> Builtin.bool\\nf : 'a -> Builtin.bool\\nf a = eq a a\\n\")"
 ---
+nash::type::missing_constraint
+
   × `eq` requires undeclared constraint `Eq 'a`.
    ╭─[Main.nash:5:7]
  4 │ f : 'a -> Builtin.bool

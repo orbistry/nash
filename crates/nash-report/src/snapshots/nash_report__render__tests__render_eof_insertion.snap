@@ -2,6 +2,8 @@
 source: crates/nash-report/src/render.rs
 expression: "render_plain(&eof, &Source::new(\"f =\"), \"Main.nash\")"
 ---
+nash::diagnostic
+
   × I need an expression here:
    ╭─[Main.nash:1:4]
  1 │ f =
