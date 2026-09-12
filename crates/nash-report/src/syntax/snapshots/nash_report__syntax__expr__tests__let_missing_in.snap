@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::In(1, 9), 1, 9), \"value = \")"
+description: "value = let x = 1 "
 ---
-MISSING IN
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `in` after the let definitions.
-
-Add `in` before the expression that uses these definitions.
+  × Expected `in` after the let definitions.
+   ╭─[src/Main.nash:1:19]
+ 1 │ value = let x = 1 
+   ·                   ─
+   ╰────
+  help: Add `in` before the expression that uses these definitions.

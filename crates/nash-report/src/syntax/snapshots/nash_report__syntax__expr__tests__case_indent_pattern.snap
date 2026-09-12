@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Case(&Case::IndentPattern(1, 9), 1, 9), \"value = \")"
+description: "value = case x of\nSome x -> x"
 ---
-MISSING PATTERN
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a case pattern.
-
-Indent the pattern beneath `case`.
+  × Expected a case pattern.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = case x of
+ 2 │ Some x -> x
+   · ─
+   ╰────
+  help: Indent the pattern beneath `case`.

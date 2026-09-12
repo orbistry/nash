@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Do(&Do::LastNotExpr(2, 5), 1, 9), \"value = do\\n    let x = 1\")"
+description: "value = do\n    let x = 1"
 ---
-MISSING RESULT
-Region { start: Position { line: 2, column: 5 }, end: Position { line: 2, column: 5 } }
+nash::syntax
 
-A do block must end with an expression.
-
-Add a final expression after this binding.
+  × A do block must end with an expression.
+   ╭─[src/Main.nash:2:5]
+ 1 │ value = do
+ 2 │     let x = 1
+   ·     ─
+   ╰────
+  help: Add a final expression after this binding.

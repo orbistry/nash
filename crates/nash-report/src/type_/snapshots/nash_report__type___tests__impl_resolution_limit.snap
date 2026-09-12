@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::ImplResolutionLimit\n{ region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait() })"
+description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nimpl Eq (Builtin.list 'a) => Eq 'a where\n    eq xs ys = True\nf xs = eq xs xs\n"
 ---
 nash::type::impl_resolution_limit
 
   × Impl resolution for `Eq` in `f` exceeded the work limit.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:6:8]
+ 5 │     eq xs ys = True
+ 6 │ f xs = eq xs xs
+   ·        ────────
    ╰────
   help: This requirement remains unchecked; other reported errors still apply.
 

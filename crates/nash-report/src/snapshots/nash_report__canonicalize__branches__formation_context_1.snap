@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+description: type Tree = Node Int List
+---
+nash::names::kind_mismatch
+
+  × Kind mismatch in field 2 of Big constructor `Node` in `Tree`.
+   ╭─[Main.nash:1:22]
+ 1 │ type Tree = Node Int List
+   ·                      ────
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

@@ -1,5 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: text
+description: "module Main exposing (..)\ntype step = Done | Next Builtin.int\nf = Done == Done\n"
 ---
-Import or define an impl for `Eq.Eq step`.
+nash::type::missing_impl
+
+  × No impl for `Eq.Eq step`.
+   ╭─[Main.nash:3:5]
+ 2 │ type step = Done | Next Builtin.int
+ 3 │ f = Done == Done
+   ·     ──────┬─────
+   ·           ╰── required by `==`
+   ╰────
+  help: Import or define an impl for `Eq.Eq step`.

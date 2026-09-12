@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "import Main exposing\n(x)"
 ---
 nash::syntax
 
   × Expected an exposing list.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:2:1]
+ 1 │ import Main exposing
+ 2 │ (x)
+   · ─
    ╰────
   help: Put exposed names inside parentheses.

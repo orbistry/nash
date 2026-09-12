@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-expression: "(interface, canonical.module.unions[0].value.kind,\ncanonical.module.unions[0].value.context)"
+description: "module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 'f 'a = Wrap ('f 'a)\ntype alias applied 'f 'a = 'f 'a\n\n\nmodule Main exposing (..)\n\nimport Shapes exposing (type wrap)\n\ntype holder 'f 'a = Holder (wrap 'f 'a)\n"
 ---
 (
     Interface {

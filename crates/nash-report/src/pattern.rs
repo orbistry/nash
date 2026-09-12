@@ -112,41 +112,49 @@ mod tests {
         assert_eq!(reports.len(), 1);
         render_plain(&reports[0], &Source::new(input), "src/Main.nash")
     }
+    macro_rules! assert_pattern_snapshot {
+        ($input:expr) => {{
+            let input = $input;
+            insta::with_settings!({ description => format!("Code:\n\n{input}"), omit_expression => true }, {
+                insta::assert_snapshot!(render(input));
+            });
+        }};
+    }
     #[test]
     fn missing_patterns_data() {
-        insta::assert_snapshot!(render(indoc::indoc! {r#"
+        assert_pattern_snapshot!(indoc::indoc! {r#"
             module Main exposing (..)
             import Builtin exposing (Data(..))
             tag d =
                 case d of
                     Constr _ _ -> ()
                     List _ -> ()
-        "#}));
+        "#});
     }
     #[test]
     fn missing_patterns_nested_list() {
-        insta::assert_snapshot!(render(indoc::indoc! {r#"
+        assert_pattern_snapshot!(indoc::indoc! {r#"
             module Main exposing (..)
             first xs =
                 case xs of
                     [] -> 0
                     [] :: _ -> 1
-        "#}));
+        "#});
     }
     #[test]
     fn unsafe_arg() {
-        insta::assert_snapshot!(render("module Main exposing (..)\nf [x] = x\n"));
+        assert_pattern_snapshot!("module Main exposing (..)\nf [x] = x\n");
     }
     #[test]
     fn unsafe_destruct() {
-        insta::assert_snapshot!(render(indoc::indoc! {r#"
+        assert_pattern_snapshot!(indoc::indoc! {r#"
             module Main exposing (..)
             f xs =
                 let
                     [x] = xs
                 in
                 x
-        "#}));
+        "#});
     }
     #[test]
     fn redundant_pattern() {
@@ -162,7 +170,9 @@ mod tests {
         let report = &reports[0];
         assert_eq!(report.region.start.line, 5);
         assert!(report.context.is_some_and(|region| region.start.line == 3));
-        insta::assert_snapshot!(render_plain(report, &Source::new(input), "src/Main.nash"));
+        insta::with_settings!({ description => format!("Code:\n\n{input}"), omit_expression => true }, {
+            insta::assert_snapshot!(render_plain(report, &Source::new(input), "src/Main.nash"));
+        });
     }
     #[test]
     fn literal_witnesses_escape_source_text() {

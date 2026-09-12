@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Monad exposing (..)\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\ntrait Functor 'f => Applicative 'f where\n    pure : 'a -> 'f 'a\n    apply : 'f ('a -> 'b) -> 'f 'a -> 'f 'b\ntrait Applicative 'm => Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n\n\nmodule Main exposing (..)\nimport Monad exposing (..)\nrun m = do\n    x <- m\n    y <- m\n    pure (x, y)\nexpanded m = bind m (\\x -> bind m (\\y -> pure (x, y)))\n"
 ---
 expanded : forall a m. (Monad m, Apply m a, Apply m ( a, a )) => m a -> m ( a, a )
 run : forall a m. (Monad m, Apply m a, Apply m ( a, a )) => m a -> m ( a, a )

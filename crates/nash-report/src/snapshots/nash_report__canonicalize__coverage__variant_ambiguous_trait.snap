@@ -1,16 +1,17 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "import First exposing (Name)\nimport Second exposing (Name)\nvalue : (Name 'a) => 'a -> 'a\nvalue x = x"
 ---
 nash::names::ambiguous_trait
 
-  × Ambiguous trait `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Ambiguous trait `Name`.
+   ╭─[Main.nash:3:10]
+ 2 │ import Second exposing (Name)
+ 3 │ value : (Name 'a) => 'a -> 'a
+   ·          ────
+ 4 │ value x = x
    ╰────
-  help:     First.name
-            Second.name
+  help:     First.Name
+            Second.Name
 
         Use a qualified name.

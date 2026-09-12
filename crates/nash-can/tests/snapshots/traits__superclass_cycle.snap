@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "nash_can::canonicalize(&bump, nash_can::Context::default(),\nsource).unwrap_err()"
+description: "module Main exposing (..)\n\ntrait Second 'a => First 'a where\n    first : 'a -> 'a\n\ntrait First 'a => Second 'a where\n    second : 'a -> 'a\n"
 ---
 [
     RecursiveSuperclass {

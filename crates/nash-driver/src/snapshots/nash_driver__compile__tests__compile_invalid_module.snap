@@ -1,0 +1,12 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "this is not valid nash syntax {{{{"
+---
+nash::syntax
+
+  × Expected a field name in this record pattern.
+   ╭─[/Bad.nash:1:32]
+ 1 │ this is not valid nash syntax {{{{
+   ·                                ─
+   ╰────
+  help: List the required field names, separated by commas.

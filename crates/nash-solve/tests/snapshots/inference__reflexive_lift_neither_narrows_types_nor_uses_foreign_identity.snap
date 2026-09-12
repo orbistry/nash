@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: results
+description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : 'a -> 'a\nbad x = lift x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : 'a -> 'b\nbad x = lift x\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : Color -> Color\nbad x = lift x\n"
 ---
 [
     (

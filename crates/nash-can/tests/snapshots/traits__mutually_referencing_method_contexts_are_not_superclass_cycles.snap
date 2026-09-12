@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: schemes
+description: "module Main exposing (..)\n\ntrait First 'a where\n    first : Second 'a => 'a -> 'a\n\ntrait Second 'a where\n    second : First 'a => 'a -> 'a\n"
 ---
 [
     (

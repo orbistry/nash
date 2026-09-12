@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Case(&Case::IndentArrow(1, 9), 1, 9), \"value = \")"
+description: "value = case x of\n    Some x\n-> x"
 ---
-MISSING ARROW
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `->` after the pattern.
-
-Separate the pattern and branch body with `->`.
+  × Expected `->` after the pattern.
+   ╭─[src/Main.nash:3:1]
+ 1 │ value = case x of
+ 2 │     Some x
+ 3 │ -> x
+   · ─
+   ╰────
+  help: Separate the pattern and branch body with `->`.

@@ -1,13 +1,15 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "import First as A\nimport Second as A\nvalue : A.Box\nvalue = 1"
 ---
 nash::names::ambiguous_type
 
   × Ambiguous type `A.Box`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:3:9]
+ 2 │ import Second as A
+ 3 │ value : A.Box
+   ·         ─────
+ 4 │ value = 1
    ╰────
   help:     First.Box
             Second.Box

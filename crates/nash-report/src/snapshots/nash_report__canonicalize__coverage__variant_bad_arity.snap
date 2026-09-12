@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "type alias Box 'a = List 'a\nvalue : Box Int Int\nvalue = []"
 ---
 nash::names::bad_arity
 
   × The `Box` type needs 1 argument, but I see 2 instead:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:2:9]
+ 1 │ type alias Box 'a = List 'a
+ 2 │ value : Box Int Int
+   ·         ───────────
+ 3 │ value = []
    ╰────
   help: Remove the extra arguments or check the grouping.

@@ -1,0 +1,13 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+description: "impl Core.Functor Int List where\n    map f x = x"
+---
+nash::names::kind_mismatch
+
+  × Kind mismatch in head 2 of impl `Core.Functor`.
+   ╭─[Main.nash:1:23]
+ 1 │ impl Core.Functor Int List where
+   ·                       ────
+ 2 │     map f x = x
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

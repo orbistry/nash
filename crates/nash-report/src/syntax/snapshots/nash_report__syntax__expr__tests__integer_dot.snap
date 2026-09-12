@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Number(Number::Dot(42), 1, 11), \"value = 42.\")"
+description: value = 42.
 ---
-INVALID NUMBER
-Region { start: Position { line: 1, column: 11 }, end: Position { line: 1, column: 11 } }
+nash::syntax
 
-Floating point numbers are not supported.
-
-Use an integer such as `42`.
+  × Floating point numbers are not supported.
+   ╭─[src/Main.nash:1:11]
+ 1 │ value = 42.
+   ·           ─
+   ╰────
+  help: Use an integer such as `42`.

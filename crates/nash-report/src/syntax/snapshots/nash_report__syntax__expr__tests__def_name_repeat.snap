@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::NameRepeat(1, 9), 1, 9), 1, 9),\n\"value = \")"
+description: "value = let\n    x : int\n    "
 ---
-MISSING DEFINITION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected the definition of `x` after its annotation.
-
-Repeat the annotated name and add its arguments and body.
+  × Expected the definition of `x` after its annotation.
+   ╭─[src/Main.nash:3:5]
+ 2 │     x : int
+ 3 │     
+   ·     ─
+   ╰────
+  help: Repeat the annotated name and add its arguments and body.

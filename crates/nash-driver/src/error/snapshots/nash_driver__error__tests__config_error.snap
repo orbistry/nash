@@ -1,0 +1,7 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "nash.jsonc:\n\n{\n\nConfiguration parser returned: unclosed object."
+---
+  × failed to parse config: invalid JSONC in '/project/nash.jsonc': unclosed
+  │ object
+  ╰─▶ invalid JSONC in '/project/nash.jsonc': unclosed object

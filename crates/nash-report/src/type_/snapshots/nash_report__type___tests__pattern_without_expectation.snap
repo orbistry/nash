@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadPattern(region(), PCategory::Str, &string(),\nPExpected::NoExpectation(&int())))"
+description: "module Main exposing (..)\nvalue [0, \"hello\"] = 1\n"
 ---
 nash::type::pattern_mismatch
 
   × Type mismatch: expected `int`, found `string`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── string pattern
+   ╭─[Main.nash:2:11]
+ 1 │ module Main exposing (..)
+ 2 │ value [0, "hello"] = 1
+   ·           ───┬───
+   ·              ╰── string pattern
    ╰────

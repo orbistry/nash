@@ -2903,7 +2903,7 @@ mod copy_tests {
     }
 
     macro_rules! assert_evidence_snapshot {
-        ($solver:expr, $solved:expr) => {{
+        ($source:expr, $solver:expr, $solved:expr) => {{
             let solver = &$solver;
             let solved = &$solved;
             let mut uses = solver.uses.iter().collect::<Vec<_>>();
@@ -2939,7 +2939,9 @@ mod copy_tests {
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
-            insta::assert_snapshot!(lines);
+            insta::with_settings!({description => $source, omit_expression => true}, {
+                insta::assert_snapshot!(lines);
+            });
         }};
     }
 
@@ -3099,7 +3101,7 @@ mod copy_tests {
             "explicit Eq evidence precedes its superclass projection"
         );
         let (_, solved) = solver.finish(&mut uf, &result.env).unwrap();
-        assert_evidence_snapshot!(solver, solved);
+        assert_evidence_snapshot!(source, solver, solved);
     }
 
     #[test]
@@ -3361,7 +3363,7 @@ mod copy_tests {
             matches!(solver.predicates.get(subs[0]).solution.as_ref(), Some(crate::preds::Solution::Impl { type_vars, subs, .. }) if type_vars.is_empty() && subs.is_empty())
         );
         let (_, solved) = solver.finish(&mut uf, &result.env).unwrap();
-        assert_evidence_snapshot!(solver, solved);
+        assert_evidence_snapshot!(source, solver, solved);
     }
 
     #[test]
@@ -3552,7 +3554,7 @@ mod copy_tests {
                     if *binder == group_binder));
             }
         }
-        assert_evidence_snapshot!(solver, solved);
+        assert_evidence_snapshot!(source, solver, solved);
     }
 
     #[test]

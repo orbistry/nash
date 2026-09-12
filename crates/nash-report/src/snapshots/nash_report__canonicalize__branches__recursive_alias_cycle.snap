@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "type alias First = Second\ntype alias Second = Third\ntype alias Third = First"
 ---
 nash::names::recursive_alias
 
   × Type alias `First` expands recursively.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:12]
+ 1 │ type alias First = Second
+   ·            ─────
+ 2 │ type alias Second = Third
    ╰────
   help:     ┌─────┐
             │    First

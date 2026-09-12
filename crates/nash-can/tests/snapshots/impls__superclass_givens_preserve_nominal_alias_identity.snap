@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: results
+description: "module Main exposing (..)\ntype alias Box 'a = { value : 'a }\ntype alias Other 'a = { value : 'a }\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq (Box 'a) => Ord (Box 'a) where\n    compare x = x\n\n\nmodule Main exposing (..)\ntype alias Box 'a = { value : 'a }\ntype alias Other 'a = { value : 'a }\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq (Other 'a) => Ord (Box 'a) where\n    compare x = x\n"
 ---
 [
     Ok(

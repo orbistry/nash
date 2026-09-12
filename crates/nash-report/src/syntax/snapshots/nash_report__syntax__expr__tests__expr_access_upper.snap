@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Access(1, 9), \"value = \")"
+description: value = x.Name
 ---
-EXPECTED FIELD
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a field name after `.`.
-
-Use a lowercase field name.
+  × Expected a field name after `.`.
+   ╭─[src/Main.nash:1:11]
+ 1 │ value = x.Name
+   ·           ─
+   ╰────
+  help: Use a lowercase field name.

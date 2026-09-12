@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(can.module.traits[0].value.kinds,\nnash_can::canonicalize(&bump, context, hidden_trait).unwrap_err(),\nnash_can::canonicalize(&bump, context, hidden_method).unwrap_err(),)"
+description: "module Identity exposing (Keep)\n\ntrait Hidden ('a : Big) where\n    hidden : 'a -> 'a\n\ntrait Hidden 'a => Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule Main exposing (..)\nimport Identity exposing (Keep)\n\ntrait Keep 'a => Child 'a where\n    child : 'a -> 'a\n\n\nmodule Main exposing (..)\nimport Identity exposing (..)\n\nf : Identity.Hidden 'a => 'a -> 'a\nf x = x\n\n\nmodule Main exposing (..)\nimport Identity exposing (..)\n\nf x = Identity.hidden x\n"
 ---
 (
     [

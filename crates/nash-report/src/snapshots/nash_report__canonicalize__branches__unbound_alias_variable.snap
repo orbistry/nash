@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "type alias Box = List 'a"
 ---
 nash::names::type_vars_messed_up_in_alias
 
   × The `Box` type alias uses an unbound type variable `a` in its definition:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:24]
+ 1 │ type alias Box = List 'a
+   ·                        ─
    ╰────
   help: Declare the type variables:
 

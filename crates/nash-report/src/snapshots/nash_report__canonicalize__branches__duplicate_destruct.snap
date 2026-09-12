@@ -1,14 +1,16 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "value =\n    let\n        (x, x) = (1, 2)\n    in\n    x"
 ---
 nash::names::duplicate_pattern
 
   × This pattern contains multiple `x` variables.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ──┬─┬
-   ·   │ ╰── first definition
-   ·   ╰── and another first definition
+   ╭─[Main.nash:3:13]
+ 2 │     let
+ 3 │         (x, x) = (1, 2)
+   ·          ┬  ┬
+   ·          │  ╰── and another first definition
+   ·          ╰── first definition
+ 4 │     in
    ╰────
   help: Rename one of the definitions.

@@ -1,0 +1,6 @@
+---
+source: crates/nash-cli/tests/diagnostics.rs
+description: "src/Main.nash:\n\nvalidator module Main exposing (main)\nmain context = comptime context\n"
+---
+Success! Compiled 1 modules (1 declarations)
+Error:   × code generation failed in Main: comptime expression is not closed or could not be assembled: comptime expression is not closed: Name { text: "context", unique: 2 }

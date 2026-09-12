@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\nf a =\\n    case a of\\n        A -> A\\n        _ -> B\\n\")"
+description: "module Main exposing (..)\ntype A = A\ntype B = B\nf a =\n    case a of\n        A -> A\n        _ -> B\n"
 ---
 nash::type::mismatch
 

@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::String(StringError::Escape(Escape::BadUnicodeLength\n{ code: 5, expected: 4, actual: 1 }), 1, 9), \"value = \")"
+description: "value = \"\\u{5}\""
 ---
-BAD UNICODE ESCAPE
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 14 } }
+nash::syntax
 
-Unicode escape needs 4 digits, found 1.
-
-Use four to six hexadecimal digits; adjust leading zeros.
+  × Unicode escape needs 4 digits, found 1.
+   ╭─[src/Main.nash:1:10]
+ 1 │ value = "\u{5}"
+   ·          ─────
+   ╰────
+  help: Use four to six hexadecimal digits; adjust leading zeros.

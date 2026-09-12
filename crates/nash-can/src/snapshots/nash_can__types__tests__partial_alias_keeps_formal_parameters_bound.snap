@@ -1,6 +1,5 @@
 ---
 source: crates/nash-can/src/types.rs
-expression: "(partial, applied, expanded)"
 ---
 (
     Located {

@@ -136,6 +136,17 @@ struct Unit<'a> {
     solved: SolvedTypes<'a>,
 }
 fn with_core(source: &str, check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedName<'_>)) {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_description(
+        [
+            include_str!("../../../../core/src/Literal.nash"),
+            include_str!("../../../../core/src/Eq.nash"),
+            source,
+        ]
+        .join("\n"),
+    );
+    settings.set_omit_expression(true);
+    let _guard = settings.bind_to_scope();
     let arena = Arena::new();
     let bump = arena.as_bump();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);

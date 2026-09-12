@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/render.rs
-expression: "render_plain(&eof, &Source::new(\"f =\"), \"Main.nash\")"
+description: "Code:\n\nf ="
 ---
 nash::diagnostic
 

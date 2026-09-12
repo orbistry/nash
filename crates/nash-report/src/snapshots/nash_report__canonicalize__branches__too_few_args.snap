@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "type Pair 'a 'b = Pair 'a 'b\nvalue (Pair x) = x"
 ---
 nash::names::bad_arity
 
   × The `Pair` variant needs 2 arguments, but I see 1 instead:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:2:8]
+ 1 │ type Pair 'a 'b = Pair 'a 'b
+ 2 │ value (Pair x) = x
+   ·        ──────
    ╰────
   help: Supply the missing arguments.

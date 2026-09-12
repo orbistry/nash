@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/twins.rs
-expression: "diagnostics.join(\"\\n\")"
+description: "module Status exposing (type status(..), Status)\ntype status = Ready | Waiting\ntype Status = Ready | Waiting\n\n\nmodule Main exposing (..)\nimport Status as S exposing (..)\nvalue = Ready\n\n\nmodule Main exposing (..)\nimport Status as S exposing (..)\nvalue = S.Ready\n\n\nmodule Status exposing (type status, Status(..))\ntype status = Ready | Waiting\ntype Status = Ready | Waiting\n\n\nmodule Status exposing (..)\ntype status = Ready | Waiting\ntype Status = Ready | Waiting\n\n\nmodule Main exposing (..)\nimport Status as S exposing (Status(..))\nvalue = Ready\n\n\nmodule Main exposing (..)\nimport Status as S exposing (Status(..))\nvalue = S.Ready\n"
 ---
 exports=type status(..), Status; imports=..; S.Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 16 } }, prefix: Some("S"), name: "Ready", suggestions: PossibleNames { locals: ["Ready", "Waiting"], qualified: [] } }]
 exports=type status, Status(..); imports=..; Ready: [NotFoundCtor { region: Region { start: Position { line: 3, column: 9 }, end: Position { line: 3, column: 14 } }, prefix: None, name: "Ready", suggestions: PossibleNames { locals: [], qualified: [("S", ["Ready", "Waiting"])] } }]

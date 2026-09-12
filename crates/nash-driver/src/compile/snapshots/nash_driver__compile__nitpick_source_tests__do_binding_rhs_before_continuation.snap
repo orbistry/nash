@@ -1,8 +1,32 @@
 ---
 source: crates/nash-driver/src/compile/nitpick_source_tests.rs
-expression: errors
+description: "module Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Monad exposing (Monad)\n\n-- Minimal provider for traversal tests of the generated bind call.\ntrait Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n\nmodule Main exposing (..)\nimport Builtin exposing (type bool(..))\nimport Monad exposing (Monad)\nf flag value =\n    do\n        x <- (case flag of\n                  True -> value)\n        case flag of\n            False -> value\n"
 ---
-[
-    "Incomplete BadCase 6:15-7:32 [False]",
-    "Incomplete BadCase 8:9-10:1 [True]",
-]
+nash::pattern::incomplete
+
+  × Case expression is not exhaustive.
+   ╭─[Main.nash:6:15]
+ 5 │         do
+ 6 │ ╭─▶         x <- (case flag of
+ 7 │ ╰─▶                   True -> value)
+ 8 │             case flag of
+   ╰────
+  help: Missing patterns:
+
+            False
+
+        Add the missing branches; use `todo` for unfinished bodies.
+
+nash::pattern::incomplete
+
+  × Case expression is not exhaustive.
+   ╭─[Main.nash:8:9]
+ 7 │                       True -> value)
+ 8 │ ╭─▶         case flag of
+ 9 │ ╰─▶             False -> value
+   ╰────
+  help: Missing patterns:
+
+            True
+
+        Add the missing branches; use `todo` for unfinished bodies.

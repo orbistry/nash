@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Record(&Record::End(1, 9), 1, 9), \"value = \")"
+description: "value = { x = 1 "
 ---
-UNCLOSED DELIMITER
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax::unclosed_delimiter
 
-Expected `}` to close `{`.
-
-Add `}` here.
+  × Expected `}` to close `{`.
+   ╭─[src/Main.nash:1:17]
+ 1 │ value = { x = 1 
+   ·         ┬       ┬
+   ·         │       ╰── expected `}`
+   ·         ╰── opened here
+   ╰────
+  help: Add `}` here.

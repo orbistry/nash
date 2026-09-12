@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "f [= = 1"
 ---
 nash::syntax
 
   × Expected a pattern or `]`.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:4]
+ 1 │ f [= = 1
+   ·    ─
    ╰────
   help: Add a list element, or close an empty list with `]`.

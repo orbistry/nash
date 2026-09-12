@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: "42"
+description: type alias box = 42
 ---
 nash::syntax
 
   × Expected a type in the type alias.
-   ╭─[src/Main.nash:1:1]
- 1 │ 42
-   · ─
+   ╭─[src/Main.nash:1:18]
+ 1 │ type alias box = 42
+   ·                  ─
    ╰────
   help: Write a type name or a quoted type variable, such as `'a`.

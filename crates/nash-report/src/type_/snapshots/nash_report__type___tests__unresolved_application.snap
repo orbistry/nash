@@ -1,12 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::UnresolvedApplication\n{\n    region: region(), name: \"f\", head: &ErrorType::FlexVar(\"f\"), args:\n    &[&int()]\n})"
+description: "module Main exposing (..)\nf : 'f Builtin.int -> Builtin.int\nf x = 1\n"
 ---
 nash::type::unresolved_application
 
   × Cannot establish the datatype context for `f`: 'f int
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:2:5]
+ 1 │ module Main exposing (..)
+ 2 │ f : 'f Builtin.int -> Builtin.int
+   ·     ──────────────
+ 3 │ f x = 1
    ╰────
   help: Add an annotation that determines the type constructor and its arguments.

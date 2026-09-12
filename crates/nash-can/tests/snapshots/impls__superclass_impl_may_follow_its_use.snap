@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "result.tables.impls.keys().collect::<Vec<_>>()"
+description: "module Main exposing (..)\ntype Color = Red\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Ord Color where\n    compare x = x\nimpl Eq Color where\n    eq x = x\n"
 ---
 [
     ImplKey {

@@ -1,16 +1,15 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (name, name)\nname = 1"
 ---
 nash::names::export_duplicate
 
   × Duplicate export `name`.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first export
- 2 │ other = name
-   · ──┬──
-   ·   ╰── duplicate export
+   ╭─[Main.nash:1:29]
+ 1 │ module Main exposing (name, name)
+   ·                       ──┬─  ──┬─
+   ·                         │     ╰── duplicate export
+   ·                         ╰── first export
+ 2 │ name = 1
    ╰────
   help: Remove the duplicate export.

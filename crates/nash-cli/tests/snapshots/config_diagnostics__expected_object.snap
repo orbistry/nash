@@ -1,0 +1,6 @@
+---
+source: crates/nash-cli/tests/config_diagnostics.rs
+description: "nash.jsonc (complete input):\n[]"
+---
+Error:   × failed to parse config: '<project>/nash.jsonc' at 1:1: expected an object
+  ╰─▶ '<project>/nash.jsonc' at 1:1: expected an object

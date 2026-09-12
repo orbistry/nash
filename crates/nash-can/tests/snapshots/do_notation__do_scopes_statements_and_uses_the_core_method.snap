@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/do_notation.rs
-expression: canonical.module.decls
+description: "module Monad exposing (Monad)\ntrait Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n\n\nmodule Main exposing (..)\nimport Monad as M\nbind x = x\nrun m pure = do\n    (x, y) <- m\n    let\n        saved = (x, y)\n    m\n    pure saved\nsingle x = do\n    x\n"
 ---
 Declare {
     definition: Def {

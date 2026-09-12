@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "nash_can::canonicalize(&bump, nash_can::Context\n{ package: None, interfaces: Some(&interfaces) }, source).unwrap_err()"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\n\ntrait BigOnly ('a : Big) where\n    bigOnly : 'a -> 'a\n\ntrait Uses 'a where\n    use : BigOnly int => 'a -> 'a\n"
 ---
 [
     RepresentationMismatch {

@@ -1,7 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\nmismatch : ()\nmismatch = \\x -> x\nmissing = discard ()\nconstraint : 'a -> ()\nconstraint x = discard x\nambiguous = discard (create ())\nkind = idfa (Higher [])\n"
-expression: errors
+description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\nmismatch : ()\nmismatch = \\x -> x\nmissing = discard ()\nconstraint : 'a -> ()\nconstraint x = discard x\nambiguous = discard (create ())\nkind = idfa (Higher [])\n"
 ---
 [
     BadKind {

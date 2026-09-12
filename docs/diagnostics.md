@@ -408,6 +408,44 @@ The server runs the same driver pipeline on `didOpen`/`didChange` and
 publishes one `PublishDiagnostics` per module, including modules that
 became clean (empty list).
 
+## Snapshot contract
+
+Every snapshot driven by Nash source includes the exact test input in its
+`description`, with named files for multi-module fixtures. This applies to
+parsed/canonical ASTs, inferred types, diagnostics, generated Core and UPLC,
+and execution results. Set `omit_expression => true` so insta does not capture
+the Rust assertion expression. The `source:` metadata remains the location of
+the Rust test, not the test's language input.
+
+```rust
+insta::with_settings!({
+    description => format!("Code:\n\n{input}"),
+    omit_expression => true,
+}, {
+    insta::assert_snapshot!(render_plain(&report, &Source::new(input), "src/Main.nash"));
+});
+```
+
+Diagnostic snapshots use `render_plain` (miette's `unicode_nocolor()` theme)
+and show the actual message, source labels, related diagnostics, and help.
+Synthetic reporter-branch tests use relevant source and explicit spans;
+source-pipeline tests also verify that parsing/checking produces the expected
+error. A Debug error enum or a title/region/prose summary is not a substitute
+for a rendered diagnostic test. AST structure, JSON/LSP contracts, and internal
+error-data assertions remain useful additional tests.
+
+Configuration and filesystem errors use their configuration or operation as
+the fixture description instead of invented Nash code. Pure tests built from
+Rust IR/type/formatting values have no Nash input. The exact reviewed exceptions
+are listed in `crates/nash-cli/tests/snapshot_hygiene.rs`; new snapshots default
+to requiring a description and suppressed Rust expression metadata. That test
+also rejects terminal escape codes and non-rendered reporter snapshots.
+
+After reviewing updates, run `cargo insta test --workspace --test-runner
+cargo-test --unreferenced reject --check` to check both output and stale files.
+When only input metadata changes, use insta's force-update mode; ordinary
+acceptance can retain an old header when the output body is unchanged.
+
 ## What each crate's errors become
 
 `nash-report` defines one enum tying a module's errors together, like

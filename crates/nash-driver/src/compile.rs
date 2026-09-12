@@ -652,10 +652,8 @@ mod tests {
     async fn test_compile_invalid_module() {
         let mem = InMemorySource::new();
         let uri = url("Bad.nash");
-        mem.insert(
-            uri.clone(),
-            "this is not valid nash syntax {{{{".to_string(),
-        );
+        let source = "this is not valid nash syntax {{{{";
+        mem.insert(uri.clone(), source.to_owned());
 
         let db = Arc::new(Mutex::new(Database::new(mem)));
         let modules = vec![uri];
@@ -669,33 +667,26 @@ mod tests {
 
         assert_eq!(result.total, 1);
         assert_eq!(result.failed, 1);
+        let ModuleResult::Failed(reports) = &result.modules[&url("Bad.nash")] else {
+            panic!("invalid syntax must fail")
+        };
+        insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(report_text(reports)); });
     }
 
     #[tokio::test]
     async fn test_cross_module_type_error() {
         let mem = InMemorySource::new();
 
-        mem.insert(
-            url("Utils.nash"),
-            r#"
-module Utils exposing (..)
-
-helper = 1
-"#
-            .to_string(),
-        );
-
-        mem.insert(
-            url("Main.nash"),
-            r#"
-module Main exposing (..)
-
-import Utils
-
-main = Utils.helper "not a function argument"
-"#
-            .to_string(),
-        );
+        let sources = [
+            ("Utils.nash", "\nmodule Utils exposing (..)\n\nhelper = 1\n"),
+            (
+                "Main.nash",
+                "\nmodule Main exposing (..)\n\nimport Utils\n\nmain = Utils.helper \"not a function argument\"\n",
+            ),
+        ];
+        for (name, source) in sources {
+            mem.insert(url(name), source.to_owned());
+        }
 
         let db = Arc::new(Mutex::new(Database::new(mem)));
         let modules = vec![url("Utils.nash"), url("Main.nash")];
@@ -717,6 +708,10 @@ main = Utils.helper "not a function argument"
             result.modules[&url("Main.nash")],
             ModuleResult::Failed(_)
         ));
+        let ModuleResult::Failed(reports) = &result.modules[&url("Main.nash")] else {
+            panic!("consumer must fail")
+        };
+        insta::with_settings!({ description => sources.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true }, { insta::assert_snapshot!(report_text(reports)); });
     }
 
     /// Unannotated mutually recursive exports used from another module:
@@ -809,6 +804,7 @@ mod trait_tests {
     #[tokio::test]
     async fn driver_reports_orphan_and_overlap_at_the_impl_module() {
         let mut diagnostics = Vec::new();
+        let mut sources = Vec::new();
         for (case, bad, expected) in [
             (
                 "orphan",
@@ -821,7 +817,7 @@ mod trait_tests {
                 "nash::names::overlapping_impls",
             ),
         ] {
-            let result = compile_sources(&[
+            let modules = [
                 ("Bad", bad),
                 (
                     "Types",
@@ -831,8 +827,15 @@ mod trait_tests {
                     "Methods",
                     "module Methods exposing (Keep)\ntrait Keep 'a where\n    keep : 'a -> 'a\n",
                 ),
-            ])
-            .await;
+            ];
+            sources.push(
+                modules
+                    .iter()
+                    .map(|(_, source)| *source)
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            );
+            let result = compile_sources(&modules).await;
             assert_eq!(result.success, 2, "{result:?}");
             assert_eq!(result.failed, 1, "{result:?}");
             let ModuleResult::Failed(reports) =
@@ -844,7 +847,7 @@ mod trait_tests {
             assert!(message.contains(expected), "{message}");
             diagnostics.push(format!("{case}: {message}"));
         }
-        insta::assert_snapshot!(diagnostics.join("\n"));
+        insta::with_settings!({ description => sources.join("\n"), omit_expression => true }, { insta::assert_snapshot!(diagnostics.join("\n")); });
     }
 }
 
@@ -861,12 +864,26 @@ mod kind_tests {
         mem.insert(main.clone(), consumer.to_owned());
         let db = Arc::new(Mutex::new(Database::new(mem)));
         let graph = build_graph(db.clone(), &[main, types]).await.unwrap();
-        build(
+        let result = build(
             db,
             &graph,
             &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
         )
-        .await
+        .await;
+        let diagnostics = result
+            .modules
+            .values()
+            .filter_map(|module| match module {
+                ModuleResult::Failed(reports) => Some(report_text(reports)),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        if !diagnostics.is_empty() {
+            insta::with_settings!({ description => [producer, consumer].join("\n"), omit_expression => true, snapshot_suffix => std::thread::current().name().expect("named test thread").rsplit("::").next().unwrap() }, {
+                insta::assert_snapshot!(diagnostics.join("\n"));
+            });
+        }
+        result
     }
 
     #[tokio::test]

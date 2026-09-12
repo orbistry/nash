@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::Destruct(&Destruct::IndentEquals(1, 9), 1, 9), 1, 9),\n\"value = \")"
+description: "value = let (x, y)\n= pair"
 ---
-MISSING EQUALS
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `=` after the binding pattern.
-
-Add `=` before the value to destructure.
+  × Expected `=` after the binding pattern.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = let (x, y)
+ 2 │ = pair
+   · ─
+   ╰────
+  help: Add `=` before the value to destructure.

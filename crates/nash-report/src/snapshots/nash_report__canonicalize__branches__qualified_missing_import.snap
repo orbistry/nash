@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: value = Missing.value
 ---
 nash::names::not_found_var
 
   × Unknown variable `Missing.value`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:9]
+ 1 │ value = Missing.value
+   ·         ─────────────
    ╰────
   help: Import `Missing` or check its alias.

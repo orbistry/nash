@@ -1,3 +1,6 @@
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use indoc::indoc;
 
@@ -67,6 +70,8 @@ fn recursive_overlap_ignores_representation_contexts() {
 
 #[test]
 fn impl_cannot_own_an_imported_trait_and_imported_heads() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
     let interfaces = std::collections::BTreeMap::from([
         ("Lift", core_lift(&bump)),
@@ -82,7 +87,9 @@ fn impl_cannot_own_an_imported_trait_and_imported_heads() {
             lower x = x
     "
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let result = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -96,11 +103,14 @@ fn impl_cannot_own_an_imported_trait_and_imported_heads() {
         result.as_slice(),
         [nash_can::Error::OrphanImpl { .. }]
     ));
-    insta::assert_debug_snapshot!(result);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result);
+    });
 }
 
 #[test]
 fn impl_heads_reject_non_constructor_shapes() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut errors = Vec::new();
     for head in [
@@ -114,18 +124,22 @@ fn impl_heads_reject_non_constructor_shapes() {
         let source = format!(
             "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep {head} where\n    keep x = x\n"
         );
-        let result = canonicalize(&bump, &source).unwrap_err();
+        let result = canonicalize(&bump, snapshot_inputs.record(&source)).unwrap_err();
         assert!(matches!(
             result.as_slice(),
             [nash_can::Error::BadInstanceHead { .. }]
         ));
         errors.push((head, result));
     }
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]
 fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
     let interfaces = std::collections::BTreeMap::from([("Lift", core_lift(&bump))]);
     let mut results = Vec::new();
@@ -139,7 +153,9 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
         ("type alias Alias 'a = 'a", "(Alias 'a) (Alias 'b)"),
     ] {
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\n{declaration}\nimpl Lift {heads} where\n    lift x = x\n    lower x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         results.push(
             nash_can::canonicalize(
                 &bump,
@@ -165,11 +181,15 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
         results[3].as_ref().unwrap_err().as_slice(),
         [nash_can::Error::ReflexiveLiftOverlap { .. }]
     ));
-    insta::assert_debug_snapshot!(results);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(results);
+    });
 }
 
+const LIFT_SOURCE: &str = "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n";
+
 fn core_lift<'a>(bump: &'a Bump) -> nash_can::Interface<'a> {
-    let module = nash_parse::Parser::new(bump, "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n").module().unwrap();
+    let module = nash_parse::Parser::new(bump, LIFT_SOURCE).module().unwrap();
     let result = nash_can::canonicalize(
         bump,
         nash_can::Context {
@@ -184,6 +204,8 @@ fn core_lift<'a>(bump: &'a Bump) -> nash_can::Interface<'a> {
 
 #[test]
 fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
     let interfaces = std::collections::BTreeMap::from([("Lift", core_lift(&bump))]);
     let mut results = Vec::new();
@@ -193,7 +215,9 @@ fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
         ("container", "(List 'a)"),
     ] {
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype {container} 'a = Wrap 'a\ntrait Tag 'a where\n    tag : 'a -> 'a\ntrait Tag 'a => Top 'a where\n    top : 'a -> 'a\nimpl Lift {lifted} {lifted} => Tag ({container} 'a) where\n    tag x = x\nimpl Top ({container} 'a) where\n    top x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         results.push(
             nash_can::canonicalize(
                 &bump,
@@ -209,17 +233,23 @@ fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
     assert!(results[0].is_ok());
     assert!(results[1].is_err());
     assert!(results[2].is_err());
-    insta::assert_debug_snapshot!(results);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(results);
+    });
 }
 
 #[test]
 fn reflexive_lift_accepts_big_but_not_const() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
     let interfaces = std::collections::BTreeMap::from([("Lift", core_lift(&bump))]);
     let mut results = Vec::new();
     for head in ["Color", "()"] {
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\ntrait Lift 'a 'a => RoundTrip 'a where\n    roundTrip : 'a -> 'a\nimpl RoundTrip {head} where\n    roundTrip x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         results.push(
             nash_can::canonicalize(
                 &bump,
@@ -234,7 +264,9 @@ fn reflexive_lift_accepts_big_but_not_const() {
     }
     assert!(results[0].is_ok());
     assert!(results[1].is_err());
-    insta::assert_debug_snapshot!(results);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(results);
+    });
 }
 
 #[test]
@@ -275,10 +307,11 @@ fn reflexive_lift_requires_the_exact_core_trait_identity() {
 
 #[test]
 fn partially_applied_alias_binds_remaining_method_arguments() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         type alias Pair 'left 'right = { first : 'left, second : 'right }
@@ -287,7 +320,7 @@ fn partially_applied_alias_binds_remaining_method_arguments() {
         impl Keep (Pair 'a) where
             keep x = x
     "
-        ),
+        )),
     )
     .unwrap();
     let nash_ast::Def::TypedDef {
@@ -305,28 +338,34 @@ fn partially_applied_alias_binds_remaining_method_arguments() {
         matches!(from.value, nash_ast::Type::Alias { .. }),
         "applied alias must normalize: {from:#?}"
     );
-    insta::assert_debug_snapshot!((from, free_vars));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((from, free_vars));
+    });
 }
 
 #[test]
 fn superclass_givens_preserve_nominal_alias_identity() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut results = Vec::new();
     for given in ["Box", "Other"] {
         let source = format!(
             "module Main exposing (..)\ntype alias Box 'a = {{ value : 'a }}\ntype alias Other 'a = {{ value : 'a }}\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq ({given} 'a) => Ord (Box 'a) where\n    compare x = x\n"
         );
-        results.push(canonicalize(&bump, &source).map(|_| ()));
+        results.push(canonicalize(&bump, snapshot_inputs.record(&source)).map(|_| ()));
     }
-    insta::assert_debug_snapshot!(results);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(results);
+    });
 }
 
 #[test]
 fn superclass_context_substitutes_higher_kinded_arguments() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         type Wrap 'f 'a = Wrap ('f 'a)
@@ -339,18 +378,21 @@ fn superclass_context_substitutes_higher_kinded_arguments() {
         impl Eq ('f 'a) => Ord (Wrap 'f 'a) where
             compare x = x
     "
-        ),
+        )),
     )
     .unwrap();
-    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    });
 }
 
 #[test]
 fn superclass_impl_is_available_from_an_interface() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let base = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Base exposing (..)
         type Color = Red
@@ -359,7 +401,7 @@ fn superclass_impl_is_available_from_an_interface() {
         impl Eq Color where
             eq x = x
     "
-        ),
+        )),
     )
     .unwrap();
     let interfaces = std::collections::BTreeMap::from([(
@@ -376,7 +418,9 @@ fn superclass_impl_is_available_from_an_interface() {
             compare x = x
     "
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let result = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -387,15 +431,18 @@ fn superclass_impl_is_available_from_an_interface() {
     )
     .unwrap();
     assert!(result.warnings.is_empty(), "{:?}", result.warnings);
-    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    });
 }
 
 #[test]
 fn superclass_context_uses_given_superclasses() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Eq 'a where
@@ -407,18 +454,21 @@ fn superclass_context_uses_given_superclasses() {
         impl Ord 'a => Ord (List 'a) where
             compare x = x
     "
-        ),
+        )),
     )
     .unwrap();
-    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    });
 }
 
 #[test]
 fn superclass_resolution_bounds_expanding_contexts() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Eq 'a where
@@ -430,17 +480,20 @@ fn superclass_resolution_bounds_expanding_contexts() {
         impl Ord (List 'a) where
             compare x = x
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
 fn missing_superclass_is_rejected() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         type Color = Red
@@ -451,17 +504,20 @@ fn missing_superclass_is_rejected() {
         impl Ord Color where
             compare x = x
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
 fn superclass_impl_may_follow_its_use() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         type Color = Red
@@ -474,18 +530,21 @@ fn superclass_impl_may_follow_its_use() {
         impl Eq Color where
             eq x = x
     "
-        ),
+        )),
     )
     .unwrap();
-    insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.tables.impls.keys().collect::<Vec<_>>());
+    });
 }
 
 #[test]
 fn superclass_resolution_rejects_context_cycles() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         type Color = Red
@@ -498,23 +557,26 @@ fn superclass_resolution_rejects_context_cycles() {
         impl Ord Color where
             compare x = x
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
 fn global_overlap_between_core_modules() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let trait_module = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Keep exposing (Keep)
         trait Keep 'a where
             keep : 'a -> 'a
     "
-        ),
+        )),
     )
     .unwrap();
     let interfaces = std::collections::BTreeMap::from([(
@@ -528,7 +590,9 @@ fn global_overlap_between_core_modules() {
         ("Second", "(list int, list int)"),
     ] {
         let source = bump.alloc_str(&format!("module {name} exposing (..)\nimport Keep exposing (Keep)\nimpl Keep {head} where\n    keep x = x\n"));
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let result = nash_can::canonicalize(
             &bump,
             nash_can::Context {
@@ -545,9 +609,10 @@ fn global_overlap_between_core_modules() {
     }
     let mut all_interfaces = interfaces.clone();
     all_interfaces.extend(compiled);
-    let module = nash_parse::Parser::new(&bump, "module Main exposing (..)\n")
-        .module()
-        .unwrap();
+    let module =
+        nash_parse::Parser::new(&bump, snapshot_inputs.record("module Main exposing (..)\n"))
+            .module()
+            .unwrap();
     let result = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -556,17 +621,20 @@ fn global_overlap_between_core_modules() {
         },
         &module,
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
 fn global_impl_metadata_is_available_without_imports() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let interface = {
         let source_arena = &bump;
         let result = canonicalize(
             source_arena,
-            indoc!(
+            snapshot_inputs.record(indoc!(
                 "
             module Instances exposing (Keep)
             trait Hidden 'a where
@@ -576,14 +644,16 @@ fn global_impl_metadata_is_available_without_imports() {
             impl Hidden 'a => Keep (List 'a) where
                 keep x = x
         "
-            ),
+            )),
         )
         .unwrap();
         nash_can::from_module(source_arena, &result.module, &Default::default())
     };
     let interfaces = std::collections::BTreeMap::from([("Instances", interface)]);
     let source = "module Main exposing (..)\n";
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let result = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -594,21 +664,24 @@ fn global_impl_metadata_is_available_without_imports() {
     )
     .unwrap();
     let traits: Vec<_> = result.tables.traits.keys().collect();
-    insta::assert_debug_snapshot!((traits, result.tables.impls));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((traits, result.tables.impls));
+    });
 }
 
 #[test]
 fn unit_and_tuple_impls_belong_to_core() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let trait_module = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Keep exposing (Keep)
         trait Keep 'a where
             keep : 'a -> 'a
     "
-        ),
+        )),
     )
     .unwrap();
     let interfaces = std::collections::BTreeMap::from([(
@@ -625,7 +698,9 @@ fn unit_and_tuple_impls_belong_to_core() {
             keep x = x
     "
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let ordinary = nash_can::canonicalize(
         &bump,
         nash_can::Context {
@@ -646,7 +721,9 @@ fn unit_and_tuple_impls_belong_to_core() {
     .unwrap();
     assert!(core.warnings.is_empty(), "{:?}", core.warnings);
     let heads: Vec<_> = core.module.impls.iter().map(|i| i.value.heads).collect();
-    insta::assert_debug_snapshot!((ordinary, heads));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((ordinary, heads));
+    });
 }
 
 #[test]
@@ -674,10 +751,11 @@ fn tuple_impl_keys_preserve_large_arities() {
 
 #[test]
 fn impl_duplicate_methods_preserve_both_locations() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Keep 'a where
@@ -686,40 +764,46 @@ fn impl_duplicate_methods_preserve_both_locations() {
             keep x = x
             keep y = y
     "
-        ),
+        )),
     );
     let errors = result.unwrap_err();
     assert!(matches!(
         errors.as_slice(),
         [nash_can::Error::DuplicateMethod { .. }]
     ));
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]
 fn impl_overapplied_heads_report_type_arity() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut errors = Vec::new();
     for head in ["list 'a 'b", "listAlias 'a 'b"] {
         let source = format!(
             "module Main exposing (..)\ntype alias listAlias 'a = list 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ({head}) where\n    keep x = x\n"
         );
-        let result = canonicalize(&bump, &source).unwrap_err();
+        let result = canonicalize(&bump, snapshot_inputs.record(&source)).unwrap_err();
         assert!(matches!(
             result.as_slice(),
             [nash_can::Error::BadArity { .. }]
         ));
         errors.push(result);
     }
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]
 fn impl_unknown_method_precedes_missing_method() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Keep 'a where
@@ -727,17 +811,20 @@ fn impl_unknown_method_precedes_missing_method() {
         impl Keep (List 'a) where
             typo x = x
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
 fn impl_missing_required_method() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Keep 'a where
@@ -746,9 +833,11 @@ fn impl_missing_required_method() {
         impl Keep (List 'a) where
             keep x = x
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
@@ -776,10 +865,11 @@ fn impl_reuses_one_variable_across_heads() {
 
 #[test]
 fn impl_context_cannot_introduce_variables() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Keep 'a where
@@ -787,17 +877,20 @@ fn impl_context_cannot_introduce_variables() {
         impl Keep 'b => Keep (List 'a) where
             keep x = x
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
 fn impl_overlap_ignores_variable_names() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Keep 'a where
@@ -807,17 +900,20 @@ fn impl_overlap_ignores_variable_names() {
         impl Keep (list (pair 'b 'b)) where
             keep x = x
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }
 
 #[test]
 fn impl_default_does_not_require_an_override() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
         trait Keep 'a where
@@ -827,10 +923,12 @@ fn impl_default_does_not_require_an_override() {
         impl Keep (List 'a) where
             other x = keep x
     "
-        ),
+        )),
     )
     .unwrap();
-    insta::assert_debug_snapshot!(result.module.impls[0].value.methods);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.module.impls[0].value.methods);
+    });
 }
 
 fn canonicalize<'a>(
@@ -844,10 +942,11 @@ fn canonicalize<'a>(
 
 #[test]
 fn impl_method_substitution_does_not_capture_head_variables() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -857,7 +956,7 @@ fn impl_method_substitution_does_not_capture_head_variables() {
         impl Keep (List 'b) where
             keep xs value = value
     "
-        ),
+        )),
     )
     .unwrap();
     let nash_ast::Def::TypedDef {
@@ -869,15 +968,18 @@ fn impl_method_substitution_does_not_capture_head_variables() {
     else {
         panic!("typed method")
     };
-    insta::assert_debug_snapshot!((annotation, free_vars, context));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!((annotation, free_vars, context));
+    });
 }
 
 #[test]
 fn impl_unapplied_constructor() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -887,10 +989,12 @@ fn impl_unapplied_constructor() {
         impl Functor List where
             map f xs = xs
     "
-        ),
+        )),
     )
     .unwrap();
-    insta::assert_debug_snapshot!(result.module.impls[0].value.heads);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.module.impls[0].value.heads);
+    });
 }
 
 #[test]
@@ -935,10 +1039,11 @@ fn impl_method_retains_owner_kind_restriction() {
 
 #[test]
 fn impl_head_kind_mismatch() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let result = canonicalize(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
 
@@ -949,7 +1054,9 @@ fn impl_head_kind_mismatch() {
         impl Functor Color where
             map f xs = xs
     "
-        ),
+        )),
     );
-    insta::assert_debug_snapshot!(result.unwrap_err());
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.unwrap_err());
+    });
 }

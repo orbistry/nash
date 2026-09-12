@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: import First exposing (name)
 ---
 nash::names::import_exposing_not_found
 
   × The `First` module does not expose `name`:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:24]
+ 1 │ import First exposing (name)
+   ·                        ────
    ╰────
   help: Try other instead.

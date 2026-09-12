@@ -1,12 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "import Known\nvalue : Known.Box\nvalue = 1"
 ---
 nash::names::not_found_type
 
   × Unknown type `Known.Box`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:2:9]
+ 1 │ import Known
+ 2 │ value : Known.Box
+   ·         ─────────
+ 3 │ value = 1
    ╰────
   help: Try Known.Bag instead.

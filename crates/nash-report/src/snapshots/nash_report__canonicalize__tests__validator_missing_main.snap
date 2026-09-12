@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "validator module Main exposing (..)\nvalue = 1"
 ---
 nash::validator::missing_main
 
   × This validator module requires a main value to compile into a script.
    ╭─[Main.nash:1:1]
- 1 │ name = other
+ 1 │ validator module Main exposing (..)
    · ─
+ 2 │ value = 1
    ╰────
   help: Add a main value, or remove the validator keyword from the module header.

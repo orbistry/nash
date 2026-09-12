@@ -1,18 +1,20 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "impl First.Equal 'a where\n    equal x y = True\nimpl First.Equal 'a where\n    equal x y = False"
 ---
 nash::names::overlapping_impls
 
   × These `First.Equal` impls can both match the same trait arguments. The
   │ overlapping head is 'a0:
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first impl in `First`
- 2 │ other = name
-   · ──┬──
-   ·   ╰── overlapping impl in `Second`
+   ╭─[Main.nash:3:1]
+ 1 │ impl First.Equal 'a where
+   · ────────────┬────────────
+   ·             ╰── first impl in `First`
+ 2 │     equal x y = True
+ 3 │ impl First.Equal 'a where
+   · ────────────┬────────────
+   ·             ╰── overlapping impl in `Second`
+ 4 │     equal x y = False
    ╰────
   help: Remove one impl or make their heads disjoint; context constraints do not
         disambiguate heads.

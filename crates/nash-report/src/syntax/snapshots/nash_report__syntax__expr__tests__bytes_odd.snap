@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Bytes(Bytes::OddLength, 1, 12), \"value = #\\\"a\\\"\")"
+description: "value = #\"a\""
 ---
-INCOMPLETE BYTE
-Region { start: Position { line: 1, column: 12 }, end: Position { line: 1, column: 12 } }
+nash::syntax
 
-Byte string has an odd number of hexadecimal digits.
-
-Use two hexadecimal digits per byte.
+  × Byte string has an odd number of hexadecimal digits.
+   ╭─[src/Main.nash:1:12]
+ 1 │ value = #"a"
+   ·            ─
+   ╰────
+  help: Use two hexadecimal digits per byte.

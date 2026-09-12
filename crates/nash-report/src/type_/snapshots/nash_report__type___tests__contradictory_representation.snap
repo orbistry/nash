@@ -1,13 +1,15 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::ContradictoryRepresentation\n{\n    region: region(), name: \"f\", typ: &ErrorType::RigidVar(\"a\"), requirements:\n    &[nash_ast::primitives::ReprTrait::Big,\n    nash_ast::primitives::ReprTrait::Little]\n})"
+description: "module Main exposing (..)\nf : (Big 'a, Little 'a) => 'a -> 'a\nf x = x\n"
 ---
 nash::type::contradictory_representation
 
   × `f` requires incompatible representations for `'a`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:2:28]
+ 1 │ module Main exposing (..)
+ 2 │ f : (Big 'a, Little 'a) => 'a -> 'a
+   ·                            ────────
+ 3 │ f x = x
    ╰────
   help: Required: Big, Little.
 

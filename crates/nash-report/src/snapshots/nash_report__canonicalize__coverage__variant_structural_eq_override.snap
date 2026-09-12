@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "impl (Big 'a) => Eq 'a where\n    eq x y = True"
 ---
 nash::names::structural_eq_override
 
   × This impl would replace structural equality:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:21]
+ 1 │ impl (Big 'a) => Eq 'a where
+   ·                     ──
+ 2 │     eq x y = True
    ╰────
   help: Equality for this type is supplied by the compiler. Remove the explicit `Eq`
         impl.

@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "type Point = Point { x : Int, y : Int }\nvalue = Point { x = 1 }"
 ---
 nash::names::labeled_ctor_missing_field
 
-  × The `a` constructor needs a `a` field:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × The `Point` constructor needs a `y` field:
+   ╭─[Main.nash:2:9]
+ 1 │ type Point = Point { x : Int, y : Int }
+ 2 │ value = Point { x = 1 }
+   ·         ───────────────
    ╰────
   help: Add the missing field to this constructor application.

@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "infix "
 ---
 nash::syntax
 
   × Invalid infix declaration.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:7]
+ 1 │ infix 
+   ·       ─
    ╰────
   help: Write `infix left 5 (++) = append`, with precedence from 0 to 9.

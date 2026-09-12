@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: +
+description: module Main exposing (+)
 ---
 nash::syntax
 
   × Exposed operators need parentheses.
-   ╭─[src/Main.nash:1:1]
- 1 │ +
-   · ─
+   ╭─[src/Main.nash:1:23]
+ 1 │ module Main exposing (+)
+   ·                       ─
    ╰────
   help: Write `(+)`.

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/src/compile.rs
-expression: "diagnostics.join(\"\\n\")"
+description: "module Bad exposing (..)\nimport Methods exposing (Keep)\nimport Types exposing (Token)\nimpl Keep Token where\n    keep x = x\n\nmodule Types exposing (Token(..))\ntype Token = Token\n\nmodule Methods exposing (Keep)\ntrait Keep 'a where\n    keep : 'a -> 'a\n\nmodule Bad exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep () where\n    keep x = x\n\nmodule Types exposing (Token(..))\ntype Token = Token\n\nmodule Methods exposing (Keep)\ntrait Keep 'a where\n    keep : 'a -> 'a\n"
 ---
 orphan: nash::names::orphan_impl
 

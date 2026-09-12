@@ -1,14 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: impl Storable Int where
 ---
 nash::names::impl_of_builtin_trait
 
-  × The `First.Equal` trait is owned by the compiler:
+  × The `Builtin.Storable` trait is owned by the compiler:
    ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+ 1 │ impl Storable Int where
+   · ───────────────────────
    ╰────
   help: Its representation rules cannot be replaced by an impl. Remove this impl and use
         a type with an admitted representation.

@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Record(&Record::Field(1, 9), 1, 9), \"value = }\")"
+description: "value = { x = 1, }"
 ---
-EXTRA COMMA
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Trailing comma in record.
-
-Remove the comma before `}`.
+  × Trailing comma in record.
+   ╭─[src/Main.nash:1:18]
+ 1 │ value = { x = 1, }
+   ·                  ─
+   ╰────
+  help: Remove the comma before `}`.

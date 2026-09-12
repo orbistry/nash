@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::Alignment(4, 1, 9), 1, 9), 1, 9),\n\"value = \")"
+description: "value = let\n    x = 1\n  y = 2\n    in x"
 ---
-INDENTATION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Definition and annotation must align.
-
-Indent the definition with 4 spaces.
+  × Definition and annotation must align.
+   ╭─[src/Main.nash:3:3]
+ 2 │     x = 1
+ 3 │   y = 2
+   ·   ─
+ 4 │     in x
+   ╰────
+  help: Indent the definition with 4 spaces.

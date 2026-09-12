@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadExpr(region(), Category::String, &string(),\nExpected::FromContext(region(), Context::IfCondition, &boolean)))"
+description: "module Main exposing (..)\nvalue = if \"hello\" then 1 else 2\n"
 ---
 nash::type::mismatch
 
   × Type mismatch: expected `bool`, found `string`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── if condition
+   ╭─[Main.nash:2:12]
+ 1 │ module Main exposing (..)
+ 2 │ value = if "hello" then 1 else 2
+   ·            ───┬───
+   ·               ╰── if condition
    ╰────
   help: Use an explicit comparison to produce a `bool`.

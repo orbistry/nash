@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: if
+description: type box if = Box
 ---
 nash::syntax
 
   × Expected `=` before the variants.
-   ╭─[src/Main.nash:1:1]
- 1 │ if
-   · ─
+   ╭─[src/Main.nash:1:10]
+ 1 │ type box if = Box
+   ·          ─
    ╰────
   help: Separate the datatype name and variants with `=`.

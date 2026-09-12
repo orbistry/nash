@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(&trait_.kinds, variables)"
+description: "module Main exposing (..)\n\ntrait Carry 'a where\n    ordinary : 'a -> List 'b -> 'a\n    higher : 'a -> 'b 'c -> 'a\n"
 ---
 (
     [

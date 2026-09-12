@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "prop \"name\" = let x via fuzz\nin do"
 ---
 nash::syntax
 
   × Expected `in` after the generated inputs.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:2:1]
+ 1 │ prop "name" = let x via fuzz
+ 2 │ in do
+   · ─
    ╰────
   help: Add `in` before the property body.

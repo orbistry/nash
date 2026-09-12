@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Case(&Case::IndentBranch(1, 9), 1, 9), \"value = \")"
+description: "value = case x of\n    Some x ->\nx"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a case branch body.
-
-Indent an expression beneath the pattern.
+  × Expected a case branch body.
+   ╭─[src/Main.nash:3:1]
+ 1 │ value = case x of
+ 2 │     Some x ->
+ 3 │ x
+   · ─
+   ╰────
+  help: Indent an expression beneath the pattern.

@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "Module discovery: source path /project/src is a directory rather than a Nash source file."
+---
+  × invalid module path: /project/src

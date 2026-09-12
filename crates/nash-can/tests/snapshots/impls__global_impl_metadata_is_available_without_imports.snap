@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "(traits, result.tables.impls)"
+description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidden : 'a -> 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Hidden 'a => Keep (List 'a) where\n    keep x = x\n\n\nmodule Main exposing (..)\n"
 ---
 (
     [

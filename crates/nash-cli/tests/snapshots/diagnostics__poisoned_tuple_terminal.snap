@@ -1,6 +1,6 @@
 ---
 source: crates/nash-cli/tests/diagnostics.rs
-expression: "normalized(&human.stderr, &project.0)"
+description: "src/Main.nash:\n\nmodule Main exposing (..)\nbad : ((), ())\nbad = (().field, \\x -> x)\n"
 ---
 nash::type::mismatch
 

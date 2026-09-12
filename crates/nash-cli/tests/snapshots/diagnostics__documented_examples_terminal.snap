@@ -1,6 +1,6 @@
 ---
 source: crates/nash-cli/tests/diagnostics.rs
-expression: text
+description: "app/src/Ledger.nash:\n\nmodule Ledger exposing (settle)\nimport Functor exposing (Functor)\n\ntype alias Account = { owner : Bytes, balance : Int }\n\nbalanceOf : Account -> Int\nbalanceOf account = account.balance\n\nsettle : list Account -> list int\nsettle accounts =\n    map balanceOf accounts\n\n\napp/src/Steps.nash:\n\nmodule Steps exposing (isDone)\nimport Prelude exposing ((==))\nimport Eq exposing (Eq)\n\ntype step = Done | Next int\n\nisDone : step -> bool\nisDone s = s == Done\n\n\napp/src/Tag.nash:\n\nmodule Tag exposing (tag)\nimport Builtin exposing (Data(..))\nimport Literal exposing (FromInt)\n\ntag : Data -> int\ntag d =\n    case d of\n        Constr n _ -> n\n        List _ -> 0\n"
 ---
 nash::type::mismatch
 

@@ -1,0 +1,14 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type a)\ntype a 'f = A ('f 'f)\n\nmodule Main exposing (..)\nimport Types exposing (type a)\ntype local 'f = Local ('f 'f)\ntype b = B (local a)\n"
+---
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `A` in `a` would require an
+  │ infinite kind:
+   ╭─[/Types.nash:2:19]
+ 1 │ module Types exposing (type a)
+ 2 │ type a 'f = A ('f 'f)
+   ·                   ──
+   ╰────
+  help: Check the type application and the kinds of its arguments.

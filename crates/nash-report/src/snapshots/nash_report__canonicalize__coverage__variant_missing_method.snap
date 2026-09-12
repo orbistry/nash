@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "trait Equal 'a where\n    name : 'a -> Bool\nimpl Equal () where\n    equal x = True"
 ---
 nash::names::missing_method
 
   × This `Equal` impl does not define `name`:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:3:1]
+ 2 │     name : 'a -> Bool
+ 3 │ impl Equal () where
+   · ───────────────────
+ 4 │     equal x = True
    ╰────
   help: Add a `name` definition to this impl.

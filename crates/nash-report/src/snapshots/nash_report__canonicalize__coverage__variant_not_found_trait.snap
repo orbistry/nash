@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\nvalue : (Name 'a) => 'a -> 'a\nvalue x = x\n"
 ---
 nash::names::not_found_trait
 
-  × Unknown trait `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Unknown trait `Name`.
+   ╭─[Main.nash:2:10]
+ 1 │ module Main exposing (..)
+ 2 │ value : (Name 'a) => 'a -> 'a
+   ·          ────
+ 3 │ value x = x
    ╰────
   help: Define or import this name.

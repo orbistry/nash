@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: "42"
+description: type box = Box 42
 ---
 nash::syntax
 
   × Expected a type in the datatype declaration.
-   ╭─[src/Main.nash:1:1]
- 1 │ 42
-   · ─
+   ╭─[src/Main.nash:1:16]
+ 1 │ type box = Box 42
+   ·                ─
    ╰────
   help: Write a type name or a quoted type variable, such as `'a`.

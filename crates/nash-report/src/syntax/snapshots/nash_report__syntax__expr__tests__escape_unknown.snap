@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::String(StringError::Escape(Escape::Unknown), 1, 9), \"value = \")"
+description: "value = \"\\q\""
 ---
-UNKNOWN ESCAPE
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+nash::syntax
 
-Unknown escape sequence.
-
-Use \n, \r, \t, \", \', \\, or \u{0041}.
+  × Unknown escape sequence.
+   ╭─[src/Main.nash:1:10]
+ 1 │ value = "\q"
+   ·          ──
+   ╰────
+  help: Use \n, \r, \t, \", \', \\, or \u{0041}.

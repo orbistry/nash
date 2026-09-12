@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: result
+description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\nimport Builtin exposing (List)\nimpl Lift (List 'a) (List 'b) where\n    lift x = x\n    lower x = x\n"
 ---
 [
     OrphanImpl {

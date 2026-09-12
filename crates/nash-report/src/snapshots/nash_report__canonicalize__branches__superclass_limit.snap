@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "impl Core.Equal 'a where\n    equal x y = True"
 ---
 nash::names::missing_superclass
 
   × The `Core.Equal` impl for 'a0 does not establish superclass 1:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:6]
+ 1 │ impl Core.Equal 'a where
+   ·      ─────────────
+ 2 │     equal x y = True
    ╰────
   help: It must also satisfy `Core.Equal 'a`. Resolving it exceeded the search limit
         because the requirements keep expanding. Add the required impl or include the

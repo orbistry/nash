@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(nash_can::canonicalize(&bump, context, trait_source).unwrap_err(),\nnash_can::canonicalize(&bump, context, method_source).unwrap_err(),)"
+description: "module A exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule B exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf : Keep 'a => 'a -> 'a\nf x = x\n\n\nmodule Main exposing (..)\nimport A exposing (Keep)\nimport B exposing (Keep)\n\nf x = keep x\n"
 ---
 (
     [

@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Record(&Record::IndentExpr(1, 9), 1, 9), \"value = \")"
+description: "value = { x =\n1 }"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a field value after `=`.
-
-Add an indented expression.
+  × Expected a field value after `=`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = { x =
+ 2 │ 1 }
+   · ─
+   ╰────
+  help: Add an indented expression.

@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::List(&List::IndentOpen(1, 9), 1, 9), \"value = \")"
+description: "value = [\n1]"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a list element or `]`.
-
-Add an indented expression, or close an empty list.
+  × Expected a list element or `]`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = [
+ 2 │ 1]
+   · ─
+   ╰────
+  help: Add an indented expression, or close an empty list.

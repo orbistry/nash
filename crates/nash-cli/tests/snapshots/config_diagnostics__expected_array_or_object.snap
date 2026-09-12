@@ -1,0 +1,6 @@
+---
+source: crates/nash-cli/tests/config_diagnostics.rs
+description: "nash.jsonc (complete input):\n{\"type\":\"package\",\"name\":\"author/name\",\"version\":\"1.0.0\",\"summary\":\"test\",\"license\":\"MIT\",\"exposedModules\":false}"
+---
+Error:   × failed to parse config: '<project>/nash.jsonc' at 1:108: expected an array or object
+  ╰─▶ '<project>/nash.jsonc' at 1:108: expected an array or object

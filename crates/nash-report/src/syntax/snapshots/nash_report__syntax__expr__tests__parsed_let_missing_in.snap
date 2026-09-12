@@ -1,11 +1,11 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+description: value = let x = 1
 ---
 nash::syntax
 
   × Expected `in` after the let definitions.
-   ╭─[Main.nash:1:18]
+   ╭─[src/Main.nash:1:18]
  1 │ value = let x = 1
    ·                  ─
    ╰────

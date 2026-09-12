@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: map x x = x
 ---
 nash::names::duplicate_pattern
 
   × The `map` function has multiple `x` arguments.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ──┬─┬
-   ·   │ ╰── first definition
-   ·   ╰── and another first definition
+   ╭─[Main.nash:1:7]
+ 1 │ map x x = x
+   ·     ┬ ┬
+   ·     │ ╰── and another first definition
+   ·     ╰── first definition
    ╰────
   help: Rename one of the definitions.

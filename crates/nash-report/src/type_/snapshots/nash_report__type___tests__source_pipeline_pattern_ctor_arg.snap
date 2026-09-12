@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "type_error_reports(\"module Main exposing (..)\\ntype A = A\\ntype B = B\\ntype Box = Box A\\nf (Box B) = A\\n\")"
+description: "module Main exposing (..)\ntype A = A\ntype B = B\ntype Box = Box A\nf (Box B) = A\n"
 ---
 nash::type::pattern_mismatch
 

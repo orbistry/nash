@@ -1,10 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Do(&Do::IndentArrow(1, 9), 1, 9), \"value = \")"
+description: "value = do\n    x\n<- action"
 ---
-MISSING BIND ARROW
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `<-` after the binding pattern.
-
-Separate the pattern and computation with `<-`.
+  × Expected `<-` after the binding pattern.
+   ╭─[src/Main.nash:3:1]
+ 1 │ value = do
+ 2 │     x
+ 3 │ <- action
+   · ─
+   ╰────
+  help: Separate the pattern and computation with `<-`.

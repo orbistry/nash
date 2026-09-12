@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "module Main exposing ((<+>))\ninfix left 5 (+) = add\ninfix right 5 (++) = append"
 ---
 nash::names::export_not_found
 
   × Unknown exported operator (<+>).
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:24]
+ 1 │ module Main exposing ((<+>))
+   ·                        ───
+ 2 │ infix left 5 (+) = add
    ╰────
   help: Similar names:
 

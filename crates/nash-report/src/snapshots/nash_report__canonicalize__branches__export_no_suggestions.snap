@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "module Main exposing (Box)\nvalue = 1"
 ---
 nash::names::export_not_found
 
   × Unknown exported type `Box`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:1:23]
+ 1 │ module Main exposing (Box)
+   ·                       ───
+ 2 │ value = 1
    ╰────
   help: Define the name or remove it from the exposing list.

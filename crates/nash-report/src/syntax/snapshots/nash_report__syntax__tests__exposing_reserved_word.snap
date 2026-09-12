@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: if
+description: module Main exposing (if)
 ---
 nash::diagnostic
 
   × Cannot expose reserved word `if`.
-   ╭─[src/Main.nash:1:1]
- 1 │ if
-   · ──
+   ╭─[src/Main.nash:1:23]
+ 1 │ module Main exposing (if)
+   ·                       ──
    ╰────
   help: Expose a declared value, type, or operator.

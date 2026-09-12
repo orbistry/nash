@@ -1,11 +1,12 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(), Context::CallArity(MaybeName::FuncName(\"value\"), 2), &\nint())))"
+description: "module Main exposing (..)\nvalue = \"hello\"\nresult = value 1 2\n"
 ---
 nash::type::mismatch
 
   × `value` is not a function; received 2 arguments.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:3:10]
+ 2 │ value = "hello"
+ 3 │ result = value 1 2
+   ·          ─────────
    ╰────

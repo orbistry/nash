@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "A.nash:\n\nmodule A exposing (..)\nimport B\n\nB.nash:\n\nmodule B exposing (..)\nimport A\n"
+---
+  × import cycle detected: A -> B -> A

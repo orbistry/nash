@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+description: "type alias state = { x : List }"
+---
+nash::names::kind_mismatch
+
+  × Kind mismatch in field `x` of little record alias `state`.
+   ╭─[Main.nash:1:26]
+ 1 │ type alias state = { x : List }
+   ·                          ────
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

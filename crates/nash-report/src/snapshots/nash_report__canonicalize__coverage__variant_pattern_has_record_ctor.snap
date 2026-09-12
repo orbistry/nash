@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "type alias Name = { x : Int }\nvalue (Name x) = x"
 ---
 nash::names::pattern_has_record_ctor
 
-  × Record constructor `name` cannot be used in a pattern.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Record constructor `Name` cannot be used in a pattern.
+   ╭─[Main.nash:2:8]
+ 1 │ type alias Name = { x : Int }
+ 2 │ value (Name x) = x
+   ·        ────
    ╰────
   help: Bind the record to a variable and access its fields.

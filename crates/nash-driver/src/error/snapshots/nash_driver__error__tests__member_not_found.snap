@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/src/error/tests.rs
+description: "nash.jsonc:\n\n{\"type\":\"workspace\",\"members\":[\"packages/missing\"]}"
+---
+  × workspace member not found: packages/missing

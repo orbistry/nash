@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::IndentBody(1, 9), 1, 9), 1, 9),\n\"value = \")"
+description: "value = let x =\n1"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a body after `=`.
-
-Add an indented expression.
+  × Expected a body after `=`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = let x =
+ 2 │ 1
+   · ─
+   ╰────
+  help: Add an indented expression.

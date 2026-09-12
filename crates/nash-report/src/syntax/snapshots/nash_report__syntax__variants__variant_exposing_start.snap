@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: module Main exposing x
 ---
 nash::syntax
 
   × Expected `(` after `exposing`.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:22]
+ 1 │ module Main exposing x
+   ·                      ─
    ╰────
   help: Enclose the exposed names in parentheses.

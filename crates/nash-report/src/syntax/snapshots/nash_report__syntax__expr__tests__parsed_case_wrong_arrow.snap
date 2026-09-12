@@ -1,11 +1,11 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+description: "value = case x of\n    Some width = width"
 ---
 nash::syntax
 
   × Expected `->` after the pattern.
-   ╭─[Main.nash:2:16]
+   ╭─[src/Main.nash:2:16]
  1 │ value = case x of
  2 │     Some width = width
    ·                ─

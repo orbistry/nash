@@ -1,15 +1,17 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::MainParameterIsTerm { region: region(), index: 1, typ: &typ })"
+description: "module Main exposing (..)\nmain : Builtin.Data -> ((), ()) -> Builtin.bool\nmain datum pair = True\n"
 ---
 nash::validator::main_parameter_is_term
 
   × Parameter 2 of main has a Term type:
   │
   │ ( unit, unit )
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:2:24]
+ 1 │ module Main exposing (..)
+ 2 │ main : Builtin.Data -> ((), ()) -> Builtin.bool
+   ·                        ────────
+ 3 │ main datum pair = True
    ╰────
   help: A script can only receive constants. Use Data, a Big type, or a Const type for
         this parameter, and convert it inside main.

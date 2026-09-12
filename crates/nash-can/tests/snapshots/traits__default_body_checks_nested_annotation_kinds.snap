@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "nash_can::canonicalize(&bump, nash_can::Context\n{ package: None, interfaces: Some(&interfaces) }, source).unwrap_err()"
+description: "module Main exposing (..)\nimport Builtin exposing (..)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep x =\n        let\n            bad : list ('b -> 'b)\n            bad = []\n        in\n        x\n"
 ---
 [
     RepresentationMismatch {

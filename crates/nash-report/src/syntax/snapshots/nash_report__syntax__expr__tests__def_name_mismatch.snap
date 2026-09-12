@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::NameMatch(\"y\", 1, 9), 1, 9), 1, 9),\n\"value = y\")"
+description: "value = let\n    x : int\n    y = 1"
 ---
-NAME MISMATCH
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected definition `x`, found `y`.
-
-Use the same name for an annotation and its definition.
+  × Expected definition `x`, found `y`.
+   ╭─[src/Main.nash:3:5]
+ 2 │     x : int
+ 3 │     y = 1
+   ·     ─
+   ╰────
+  help: Use the same name for an annotation and its definition.

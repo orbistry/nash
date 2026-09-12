@@ -1,12 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "tests\n    test \"a\" = 1\n  test \"b\" = 2"
 ---
 nash::syntax
 
   × Test declarations must align.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
+   ╭─[src/Main.nash:3:3]
+ 1 │ tests
+ 2 │     test "a" = 1
+ 3 │   test "b" = 2
    ·   ─
    ╰────
-  help: Start each declaration in column 3.
+  help: Start each declaration in column 5.

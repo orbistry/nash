@@ -1,14 +1,15 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::MissingConstraint\n{\n    region: region(), name: \"==\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::RigidVar(\"a\")], binder:\n    &nash_region::Located::at(region(), \"f\")\n})"
+description: "module Main exposing (..)\nf : 'a -> Builtin.bool\nf x = x == x\n"
 ---
 nash::type::missing_constraint
 
   × `==` requires undeclared constraint `Eq 'a`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──┬
-   ·   │  ╰── annotation for `f`
-   ·   ╰── constraint required here
+   ╭─[Main.nash:3:7]
+ 2 │ f : 'a -> Builtin.bool
+ 3 │ f x = x == x
+   · ┬     ───┬──
+   · │        ╰── constraint required here
+   · ╰── annotation for `f`
    ╰────
   help: Add `Eq 'a` to the annotation for `f`.

@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::Destruct(&Destruct::IndentBody(1, 9), 1, 9), 1, 9),\n\"value = \")"
+description: "value = let (x, y) =\npair"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a value after `=`.
-
-Add an indented expression.
+  × Expected a value after `=`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = let (x, y) =
+ 2 │ pair
+   · ─
+   ╰────
+  help: Add an indented expression.

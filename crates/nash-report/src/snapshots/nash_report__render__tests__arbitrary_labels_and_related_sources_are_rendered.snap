@@ -1,0 +1,22 @@
+---
+source: crates/nash-report/src/render.rs
+description: "Code:\n\nMain.nash:\n\nf = x + 1\n\nOther.nash:\n\nx = y"
+---
+nash::diagnostic
+
+  × Before:
+   ╭─[member/src/Main.nash:1:5]
+ 1 │ f = x + 1
+   · ┬   ─   ┬
+   · │   │   ╰── second requirement
+   · ╰── first requirement
+   ╰────
+  help: After.
+
+Error: nash::diagnostic
+
+  × Declared here.
+   ╭─[member/src/Other.nash:1:5]
+ 1 │ x = y
+   ·     ─
+   ╰────

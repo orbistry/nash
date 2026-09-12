@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: "]"
+description: "f (x] = 1"
 ---
 nash::syntax::unclosed_delimiter
 
   × Expected `)`, found `]`.
-   ╭─[src/Main.nash:1:1]
- 1 │ ]
-   · ┬
-   · ╰── expected `)`
+   ╭─[src/Main.nash:1:5]
+ 1 │ f (x] = 1
+   ·   ┬ ┬
+   ·   │ ╰── expected `)`
+   ·   ╰── opened here
    ╰────
   help: Replace `]` with `)`.

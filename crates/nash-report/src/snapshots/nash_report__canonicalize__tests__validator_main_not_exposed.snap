@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "validator module Main exposing (value)\nvalue = 1\nmain context = True"
 ---
 nash::validator::main_not_exposed
 
   × This validator module does not expose main.
    ╭─[Main.nash:1:1]
- 1 │ name = other
+ 1 │ validator module Main exposing (value)
    · ─
+ 2 │ value = 1
    ╰────
   help: Add main to the exposing list.

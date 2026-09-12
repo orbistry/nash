@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::If(&If::IndentCondition(1, 9), 1, 9), \"value = \")"
+description: "value = if\nTrue then 1 else 0"
 ---
-MISSING CONDITION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected an indented condition after `if`.
-
-Add a boolean expression.
+  × Expected an indented condition after `if`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = if
+ 2 │ True then 1 else 0
+   · ─
+   ╰────
+  help: Add a boolean expression.

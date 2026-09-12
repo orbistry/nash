@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "result.module.impls[0].value.methods"
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep x = x\n    other : 'a -> 'a\nimpl Keep (List 'a) where\n    other x = keep x\n"
 ---
 [
     TypedDef {

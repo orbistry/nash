@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\nname = name\n"
 ---
 nash::names::recursive_decl
 
   × Value `name` depends on itself.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
+   ╭─[Main.nash:2:1]
+ 1 │ module Main exposing (..)
+ 2 │ name = name
    · ────
- 2 │ other = name
    ╰────
   help:
 

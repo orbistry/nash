@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Case(&Case::Branch(&Expr::OperatorReserved(BadOperator::Arrow,\n1, 9), 1, 9), 1, 9), \"value = ->\")"
+description: "value = case x of\n    Some y -> y -> x"
 ---
-UNEXPECTED SYMBOL
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 11 } }
+nash::syntax
 
-Unexpected `->` in expression.
-
-Align this pattern with the other case branches.
+  × Unexpected `->` in expression.
+   ╭─[src/Main.nash:2:17]
+ 1 │ value = case x of
+ 2 │     Some y -> y -> x
+   ·                 ──
+   ╰────
+  help: Align this pattern with the other case branches.

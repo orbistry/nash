@@ -1,15 +1,17 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "module Main exposing (..)\nname = 1\nother = 2\nresult = naem\n"
 ---
 nash::names::not_found_var
 
   × Unknown variable `naem`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:4:10]
+ 3 │ other = 2
+ 4 │ result = naem
+   ·          ────
    ╰────
   help: Similar names:
 
             name
             other
+            result

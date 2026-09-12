@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "trait (Equal (List 'a)) => Ordered 'a where\n    compare : 'a -> 'a -> Int"
 ---
 nash::names::superclass_bad_arg
 
   × The `Equal` superclass has an invalid argument:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:14]
+ 1 │ trait (Equal (List 'a)) => Ordered 'a where
+   ·              ─────────
+ 2 │     compare : 'a -> 'a -> Int
    ╰────
   help: Superclass arguments must be parameters declared by this trait. Replace this
         argument with the intended trait parameter.

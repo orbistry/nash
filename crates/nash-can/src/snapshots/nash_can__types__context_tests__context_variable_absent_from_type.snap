@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/types.rs
-expression: "to_annotation(&bump, &env, annotation).unwrap_err()"
+description: "Eq 'b => 'a -> 'a"
 ---
 [
     ContextVarNotInType {

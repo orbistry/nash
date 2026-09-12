@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Casts exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castLift\nlower : Int -> int\nlower = Builtin.castLower\nerase : Int -> Data\nerase = Builtin.castToData\nshallow : Data -> Int\nshallow = Builtin.castFromDataShallow\nvalidate : Data -> Int\nvalidate = Builtin.castValidateData\n"
 ---
 erase : Int -> Data
 lift : int -> Int

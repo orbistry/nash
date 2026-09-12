@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::OperatorReserved(BadOperator::Equals, 1, 9), \"value = \")"
+description: value = 1 = 2
 ---
-UNEXPECTED SYMBOL
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 10 } }
+nash::syntax
 
-Unexpected `=` in expression.
-
-Use `==` for a comparison, or align a new definition with `value`.
+  × Unexpected `=` in expression.
+   ╭─[src/Main.nash:1:11]
+ 1 │ value = 1 = 2
+   ·           ─
+   ╰────
+  help: Use `==` for a comparison, or align a new definition with `value`.

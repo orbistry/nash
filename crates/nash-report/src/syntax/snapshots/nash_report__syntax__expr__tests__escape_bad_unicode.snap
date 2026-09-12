@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::String(StringError::Escape(Escape::BadUnicodeFormat(3)), 1, 9),\n\"value = \")"
+description: "value = \"\\uZZ\""
 ---
-BAD UNICODE ESCAPE
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 12 } }
+nash::syntax
 
-Malformed Unicode escape.
-
-Use \u{0041}: four to six hexadecimal digits inside braces.
+  × Malformed Unicode escape.
+   ╭─[src/Main.nash:1:10]
+ 1 │ value = "\uZZ"
+   ·          ───
+   ╰────
+  help: Use \u{0041}: four to six hexadecimal digits inside braces.

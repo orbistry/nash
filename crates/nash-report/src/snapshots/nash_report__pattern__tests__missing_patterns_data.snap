@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/pattern.rs
-expression: "render(indoc::indoc!\n{r#\"\n            module Main exposing (..)\n            import Builtin exposing (Data(..))\n            tag d =\n                case d of\n                    Constr _ _ -> ()\n                    List _ -> ()\n        \"#})"
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (Data(..))\ntag d =\n    case d of\n        Constr _ _ -> ()\n        List _ -> ()\n"
 ---
 nash::pattern::incomplete
 

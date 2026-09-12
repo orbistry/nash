@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: +
+description: f + 1
 ---
 nash::syntax
 
   × Expected `=` in the definition of `f`.
-   ╭─[src/Main.nash:1:1]
- 1 │ +
-   · ─
+   ╭─[src/Main.nash:1:3]
+ 1 │ f + 1
+   ·   ─
    ╰────
   help: Separate the arguments and body with `=`.

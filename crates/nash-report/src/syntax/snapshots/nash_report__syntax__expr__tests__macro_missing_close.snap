@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Macro(&Macro::End(1, 15), 1, 9), \"value = foo!(1\")"
+description: value = foo!(1
 ---
-UNCLOSED DELIMITER
-Region { start: Position { line: 1, column: 15 }, end: Position { line: 1, column: 15 } }
+nash::syntax::unclosed_delimiter
 
-Expected `)` to close `(`.
-
-Add `)` here.
+  × Expected `)` to close `(`.
+   ╭─[src/Main.nash:1:15]
+ 1 │ value = foo!(1
+   ·               ┬
+   ·               ╰── expected `)`
+   ╰────
+  help: Add `)` here.

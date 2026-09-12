@@ -1,0 +1,76 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type holder(..), get)\ntype holder 'f 'a = Holder { value : 'f 'a }\nget : holder 'f 'a -> 'f 'a\nget h = h.value\n\nmodule Main exposing (..)\nimport Types\nmake x = Types.Holder [x]\nbad = Types.get (make (\\x -> x))\n"
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+   ╭─[/Main.nash:4:7]
+ 3 │ make x = Types.Holder [x]
+ 4 │ bad = Types.get (make (\x -> x))
+   ·       ────┬────
+   ·           ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming list ('a -> 'a)
+            list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+   ╭─[/Main.nash:4:7]
+ 3 │ make x = Types.Holder [x]
+ 4 │ bad = Types.get (make (\x -> x))
+   ·       ────┬────
+   ·           ╰── required by `get`
+   ╰────
+  help: Requirement chain:
+
+            list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+   ╭─[/Main.nash:4:7]
+ 3 │ make x = Types.Holder [x]
+ 4 │ bad = Types.get (make (\x -> x))
+   ·       ────────────┬───────────
+   ·                   ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+   ╭─[/Main.nash:4:18]
+ 3 │ make x = Types.Holder [x]
+ 4 │ bad = Types.get (make (\x -> x))
+   ·                  ──┬─
+   ·                    ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming Types.holder list ('a -> 'a)
+            list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+   ╭─[/Main.nash:4:18]
+ 3 │ make x = Types.Holder [x]
+ 4 │ bad = Types.get (make (\x -> x))
+   ·                  ──┬─
+   ·                    ╰── required by `make`
+   ╰────
+  help: Use a type with Big or Const representation; an impl cannot change representation.

@@ -1,4 +1,7 @@
 //! Replacement semantics for Haskell 98 kinds and representation predicates.
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use nash_ast::{Kind, Pred, primitives::ReprTrait};
 use nash_can::{Context, Error};
@@ -24,11 +27,16 @@ fn check<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, Vec<
 
 #[test]
 fn declaration_kinds_and_contexts_are_separate() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
-    let result = check(
-        &bump,
-        "type Box 'a = Box 'a\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)",
-    )
+    let result = check(&bump, {
+        let body =
+            "type Box 'a = Box 'a\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)";
+        snapshot_inputs.record(&format!(
+            "module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{body}\n"
+        ));
+        body
+    })
     .unwrap();
     let unions = result.module.unions;
     assert_eq!(unions[0].value.kind, unions[1].value.kind);
@@ -46,12 +54,14 @@ fn declaration_kinds_and_contexts_are_separate() {
         )
     );
     assert!(matches!(unions[2].value.context, [Pred::Apply { .. }]));
-    insta::assert_debug_snapshot!(
-        unions
-            .iter()
-            .map(|u| (u.value.name.value, u.value.kind, u.value.context))
-            .collect::<Vec<_>>()
-    );
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(
+            unions
+                .iter()
+                .map(|u| (u.value.name.value, u.value.kind, u.value.context))
+                .collect::<Vec<_>>()
+        );
+    });
 }
 
 #[test]
@@ -82,13 +92,23 @@ fn record_body_bounds_use_the_alias_representation() {
 
 #[test]
 fn bad_big_field_is_a_representation_error() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
-    let errors = check(&bump, "type Bad 'a = Bad (list 'a)").unwrap_err();
+    let errors = check(&bump, {
+        let body = "type Bad 'a = Bad (list 'a)";
+        snapshot_inputs.record(&format!(
+            "module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{body}\n"
+        ));
+        body
+    })
+    .unwrap_err();
     assert!(matches!(
         errors.as_slice(),
         [Error::RepresentationMismatch { .. }]
     ));
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]

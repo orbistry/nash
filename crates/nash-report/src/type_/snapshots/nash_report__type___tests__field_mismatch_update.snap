@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::FieldMismatch\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Update\n    { record: \"person\" }, field: \"age\", actual: &string(), expected: &int()\n})"
+description: "module Main exposing (..)\nperson = { age = 1 }\nvalue = { person | age = \"hello\" }\n"
 ---
 nash::type::field_mismatch
 
   × Type mismatch: expected `string`, found `int`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── field `age` update of `person`
+   ╭─[Main.nash:3:26]
+ 2 │ person = { age = 1 }
+ 3 │ value = { person | age = "hello" }
+   ·                          ───┬───
+   ·                             ╰── field `age` update of `person`
    ╰────
   help: Rebuild the record to change a field's type.

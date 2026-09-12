@@ -1,16 +1,15 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value pair =\n    case pair of\n        (x, x) -> x"
 ---
 nash::names::duplicate_pattern
 
   × This `case` pattern has multiple `x` variables.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+   ╭─[Main.nash:3:13]
+ 2 │     case pair of
+ 3 │         (x, x) -> x
+   ·          ┬  ┬
+   ·          │  ╰── and another first definition
+   ·          ╰── first definition
    ╰────
   help: Rename one of the definitions.

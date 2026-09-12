@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "name : Int -> Int\nname x y z = x"
 ---
 nash::names::annotation_too_short
 
   × Annotation for `name` expects 1 argument; definition has 3 arguments.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:2:1]
+ 1 │ name : Int -> Int
+ 2 │ name x y z = x
+   · ──────────
    ╰────
   help: Match the annotation to the definition's arguments.

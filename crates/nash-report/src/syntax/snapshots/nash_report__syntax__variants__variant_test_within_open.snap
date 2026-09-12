@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: "test \"name\" within 1"
 ---
 nash::syntax
 
   × Expected `(` after `within`.
-   ╭─[src/Main.nash:1:3]
- 1 │ f = value
-   ·   ─
+   ╭─[src/Main.nash:1:20]
+ 1 │ test "name" within 1
+   ·                    ─
    ╰────
   help: Put budget limits inside parentheses.

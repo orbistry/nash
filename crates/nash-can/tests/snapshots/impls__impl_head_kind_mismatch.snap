@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: result.unwrap_err()
+description: "module Main exposing (..)\n\ntype Color = Red\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n\nimpl Functor Color where\n    map f xs = xs\n"
 ---
 [
     KindMismatch {

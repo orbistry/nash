@@ -1,0 +1,16 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type point)\ntype alias point = { x : unit }\n\nmodule Main exposing (..)\nimport Types\ntype alias local = { x : unit }\nf : Types.point -> local\nf r = r\n"
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `local`, found `Types.point`.
+   ╭─[/Main.nash:5:7]
+ 3 │ type alias local = { x : unit }
+ 4 │ f : Types.point -> local
+   ·     ──────────┬─────────
+   ·               ╰── declared type
+ 5 │ f r = r
+   ·       ┬
+   ·       ╰── body of `f`
+   ╰────

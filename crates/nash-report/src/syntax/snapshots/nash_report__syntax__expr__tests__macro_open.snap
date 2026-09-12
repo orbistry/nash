@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Macro(&Macro::Open(1, 9), 1, 9), \"value = \")"
+description: value = foo!1
 ---
-MISSING PARENTHESIS
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `(` after the macro marker `!`.
-
-Write `name!(arguments)`.
+  × Expected `(` after the macro marker `!`.
+   ╭─[src/Main.nash:1:13]
+ 1 │ value = foo!1
+   ·             ─
+   ╰────
+  help: Write `name!(arguments)`.

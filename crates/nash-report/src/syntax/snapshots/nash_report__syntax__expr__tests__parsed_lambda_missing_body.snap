@@ -1,11 +1,11 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "crate :: render_plain(& report, & source, \"Main.nash\")"
+description: "value = \\x ->"
 ---
 nash::syntax
 
   × Expected an expression in an anonymous function.
-   ╭─[Main.nash:1:14]
+   ╭─[src/Main.nash:1:14]
  1 │ value = \x ->
    ·              ─
    ╰────

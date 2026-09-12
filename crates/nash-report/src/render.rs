@@ -191,6 +191,15 @@ pub fn render_plain(report: &Report, source: &Source<'_>, path: &str) -> String 
 }
 
 #[cfg(test)]
+macro_rules! assert_source_snapshot {
+    ($input:expr, $value:expr) => {{
+        insta::with_settings!({ description => format!("Code:\n\n{}", $input), omit_expression => true }, {
+            insta::assert_snapshot!($value);
+        });
+    }};
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::{Doc, Label};
@@ -254,15 +263,16 @@ mod tests {
         assert!(output.contains("[member/src/Main.nash:1:5]"), "{output}");
         assert!(output.contains("[member/src/Other.nash:1:5]"), "{output}");
         assert_eq!(report.related[0].path, "Other.nash");
+        assert_source_snapshot!("Main.nash:\n\nf = x + 1\n\nOther.nash:\n\nx = y", output);
     }
 
     #[test]
     fn render_snippet_report() {
-        insta::assert_snapshot!(plain(&snippet()));
+        assert_source_snapshot!("f = x + 1", plain(&snippet()));
     }
     #[test]
     fn render_warning_header() {
-        insta::assert_snapshot!(plain(&snippet().warning()));
+        assert_source_snapshot!("f = x + 1", plain(&snippet().warning()));
     }
     #[test]
     fn terminal_keeps_miette_codes_and_markers_without_uppercase_titles() {
@@ -296,13 +306,13 @@ mod tests {
         );
         let output = plain(&pair);
         assert!(output.contains("[Main.nash:1:5]"));
-        insta::assert_snapshot!(output);
+        assert_source_snapshot!("f = x + 1", output);
     }
     #[test]
     fn render_no_snippet_report() {
         let mut none = snippet();
         none = none.without_source();
-        insta::assert_snapshot!(plain(&none));
+        assert_source_snapshot!("f = x + 1", plain(&none));
     }
     #[test]
     fn render_zero_width_region_gets_caret() {
@@ -313,7 +323,7 @@ mod tests {
             Doc::text("Before:"),
             Doc::text("After."),
         );
-        insta::assert_snapshot!(plain(&zero));
+        assert_source_snapshot!("f = x + 1", plain(&zero));
     }
     #[test]
     fn render_eof_insertion() {
@@ -324,7 +334,7 @@ mod tests {
             Doc::text("I need an expression here:"),
             Doc::text("Add an expression after the equals sign."),
         );
-        insta::assert_snapshot!(render_plain(&eof, &Source::new("f ="), "Main.nash"));
+        assert_source_snapshot!("f =", render_plain(&eof, &Source::new("f ="), "Main.nash"));
     }
     #[test]
     fn surrounding_region_keeps_primary_highlight() {
@@ -376,6 +386,6 @@ mod source_edge_tests {
         for expected in ["Unicode origin", "tabbed origin", "Main.nash:3:1"] {
             assert!(output.contains(expected), "{output}");
         }
-        insta::assert_snapshot!(output);
+        assert_source_snapshot!(source.text(), output);
     }
 }

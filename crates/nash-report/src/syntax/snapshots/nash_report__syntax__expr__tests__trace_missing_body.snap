@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Trace(&Keyword::Body(&Expr::Start(1, 9), 1, 9), 1, 9),\n\"value = \")"
+description: "value = trace \"message\" "
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected an expression in a `trace` expression.
-
-Add an expression or `todo` for an unfinished body.
+  × Expected an expression in a `trace` expression.
+   ╭─[src/Main.nash:1:25]
+ 1 │ value = trace "message" 
+   ·                         ─
+   ╰────
+  help: Add an expression or `todo` for an unfinished body.

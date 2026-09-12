@@ -938,29 +938,25 @@ mod tests {
             1,
             9,
         );
-        format!(
-            "{}\n{:?}\n\n{}\n\n{}",
-            report.title,
-            report.region,
-            report.before.render(80, false),
-            report.after.render(80, false)
-        )
+        crate::render_plain(&report, &Source::new(text), "src/Main.nash")
     }
     macro_rules! report_test {
         ($name:ident, $error:expr, $text:expr) => {
             #[test]
             fn $name() {
-                insta::assert_snapshot!(snapshot($error, $text));
+                insta::with_settings!({ description => $text, omit_expression => true }, {
+                    insta::assert_snapshot!(snapshot($error, $text));
+                });
             }
         };
     }
     report_test!(expr_start_bad, Expr::Start(1, 9), "value = ");
-    report_test!(expr_dot_without_name, Expr::Dot(1, 9), "value = ");
-    report_test!(expr_access_upper, Expr::Access(1, 9), "value = ");
+    report_test!(expr_dot_without_name, Expr::Dot(1, 11), "value = x.");
+    report_test!(expr_access_upper, Expr::Access(1, 11), "value = x.Name");
     report_test!(
         operator_reserved_arrow,
-        Expr::OperatorReserved(BadOperator::Arrow, 1, 9),
-        "value = "
+        Expr::OperatorReserved(BadOperator::Arrow, 1, 11),
+        "value = 1 -> 2"
     );
     report_test!(
         string_endless_single,
@@ -969,7 +965,7 @@ mod tests {
             1,
             9
         ),
-        "value = "
+        "value = \"unfinished"
     );
     report_test!(
         string_endless_multi,
@@ -978,17 +974,17 @@ mod tests {
             1,
             9
         ),
-        "value = "
+        "value = \"\"\"unfinished"
     );
     report_test!(
         escape_unknown,
-        Expr::String(StringError::Escape(Escape::Unknown), 1, 9),
-        "value = "
+        Expr::String(StringError::Escape(Escape::Unknown), 1, 10),
+        "value = \"\\q\""
     );
     report_test!(
         escape_bad_unicode,
-        Expr::String(StringError::Escape(Escape::BadUnicodeFormat(3)), 1, 9),
-        "value = "
+        Expr::String(StringError::Escape(Escape::BadUnicodeFormat(3)), 1, 10),
+        "value = \"\\uZZ\""
     );
     report_test!(
         escape_short_unicode,
@@ -999,476 +995,479 @@ mod tests {
                 actual: 1
             }),
             1,
-            9
+            10
         ),
-        "value = "
+        "value = \"\\u{5}\""
     );
     report_test!(
         number_hex_digit,
         Expr::Number(Number::HexDigit, 1, 9),
-        "value = "
+        "value = 0xg"
     );
     report_test!(
         number_no_leading_zero,
         Expr::Number(Number::NoLeadingZero, 1, 9),
-        "value = "
+        "value = 01"
     );
-    report_test!(number_bad_end, Expr::Number(Number::End, 1, 9), "value = ");
-    report_test!(let_missing_in, Expr::Let(&Let::In(1, 9), 1, 9), "value = ");
+    report_test!(
+        number_bad_end,
+        Expr::Number(Number::End, 1, 9),
+        "value = 12x"
+    );
+    report_test!(
+        let_missing_in,
+        Expr::Let(&Let::In(1, 19), 1, 9),
+        "value = let x = 1 "
+    );
     report_test!(
         let_def_alignment,
-        Expr::Let(&Let::DefAlignment(4, 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::DefAlignment(4, 3, 3), 1, 9),
+        "value = let\n    x = 1\n  y = 2\n    in x"
     );
     report_test!(
         let_def_indent_body,
-        Expr::Let(&Let::Def("x", &Def::IndentBody(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Def("x", &Def::IndentBody(2, 1), 2, 1), 1, 9),
+        "value = let x =\n1"
     );
     report_test!(
         let_destruct_missing_equals,
-        Expr::Let(&Let::Destruct(&Destruct::Equals(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Destruct(&Destruct::Equals(1, 20), 1, 20), 1, 9),
+        "value = let (x, y) "
     );
     report_test!(
         case_missing_of,
-        Expr::Case(&Case::Of(1, 9), 1, 9),
-        "value = "
+        Expr::Case(&Case::Of(1, 16), 1, 9),
+        "value = case x "
     );
     report_test!(
         case_missing_arrow,
-        Expr::Case(&Case::Arrow(1, 9), 1, 9),
-        "value = "
+        Expr::Case(&Case::Arrow(2, 12), 1, 9),
+        "value = case x of\n    Some x "
     );
     report_test!(
         case_pattern_alignment,
-        Expr::Case(&Case::PatternAlignment(4, 1, 9), 1, 9),
-        "value = "
+        Expr::Case(&Case::PatternAlignment(4, 3, 3), 1, 9),
+        "value = case x of\n    Some x -> x\n  None -> 0"
     );
     report_test!(
         case_indent_branch,
-        Expr::Case(&Case::IndentBranch(1, 9), 1, 9),
-        "value = "
+        Expr::Case(&Case::IndentBranch(3, 1), 1, 9),
+        "value = case x of\n    Some x ->\nx"
     );
-    report_test!(if_missing_then, Expr::If(&If::Then(1, 9), 1, 9), "value = ");
+    report_test!(
+        if_missing_then,
+        Expr::If(&If::Then(1, 17), 1, 9),
+        "value = if True "
+    );
     report_test!(
         if_else_branch_start,
-        Expr::If(&If::ElseBranchStart(1, 9), 1, 9),
-        "value = "
+        Expr::If(&If::ElseBranchStart(1, 29), 1, 9),
+        "value = if True then 1 else "
     );
     report_test!(
         record_missing_end,
-        Expr::Record(&Record::End(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::End(1, 17), 1, 9),
+        "value = { x = 1 "
     );
     report_test!(
         record_field_bad,
-        Expr::Record(&Record::Field(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::Field(1, 11), 1, 9),
+        "value = { 1 = 2 }"
     );
     report_test!(
         record_indent_end,
-        Expr::Record(&Record::IndentEnd(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::IndentEnd(2, 1), 1, 9),
+        "value = { x = 1\n}"
     );
     report_test!(
         tuple_missing_end,
-        Expr::Tuple(&Tuple::End(1, 9), 1, 9),
-        "value = "
+        Expr::Tuple(&Tuple::End(1, 15), 1, 9),
+        "value = (1, 2 "
     );
     report_test!(
         tuple_operator_close,
-        Expr::Tuple(&Tuple::OperatorClose(1, 9), 1, 9),
-        "value = "
+        Expr::Tuple(&Tuple::OperatorClose(1, 12), 1, 9),
+        "value = (+ 1)"
     );
     report_test!(
         list_missing_end,
-        Expr::List(&List::End(1, 9), 1, 9),
-        "value = "
+        Expr::List(&List::End(1, 15), 1, 9),
+        "value = [1, 2 "
     );
     report_test!(
         list_indent_expr,
-        Expr::List(&List::IndentExpr(1, 9), 1, 9),
-        "value = "
+        Expr::List(&List::IndentExpr(2, 1), 1, 9),
+        "value = [1,\n2]"
     );
     report_test!(
         func_missing_arrow,
-        Expr::Func(&Func::Arrow(1, 9), 1, 9),
-        "value = "
+        Expr::Func(&Func::Arrow(1, 12), 1, 9),
+        "value = \\x "
     );
     report_test!(
         func_indent_body,
-        Expr::Func(&Func::IndentBody(1, 9), 1, 9),
-        "value = "
+        Expr::Func(&Func::IndentBody(2, 1), 1, 9),
+        "value = \\x ->\nx"
     );
     report_test!(
         weird_end_in_def_context,
-        Expr::OperatorReserved(BadOperator::Equals, 1, 9),
-        "value = "
+        Expr::OperatorReserved(BadOperator::Equals, 1, 11),
+        "value = 1 = 2"
     );
     report_test!(
         case_colon_instead_of_cons,
-        Expr::Case(&Case::Arrow(1, 9), 1, 9),
-        "value = :"
+        Expr::Case(&Case::Arrow(2, 7), 1, 9),
+        "value = case xs of\n    x : rest -> x"
     );
     report_test!(
         case_equals_instead_of_arrow,
-        Expr::Case(&Case::Arrow(1, 9), 1, 9),
-        "value = ="
+        Expr::Case(&Case::Arrow(2, 12), 1, 9),
+        "value = case x of\n    Some y = y"
     );
-    #[test]
-    fn missing_operand() {
-        insta::assert_snapshot!(snapshot(Expr::OperatorRight("+", 1, 13), "value = 1 + "));
-    }
-    #[test]
-    fn missing_else() {
-        insta::assert_snapshot!(snapshot(
-            Expr::If(&If::Else(1, 24), 1, 9),
-            "value = if True then 42"
-        ));
-    }
-    #[test]
-    fn case_wrong_arrow() {
-        insta::assert_snapshot!(snapshot(
-            Expr::Case(&Case::Arrow(1, 30), 1, 9),
-            "value = case x of Some width ="
-        ));
-    }
-    #[test]
-    fn record_reserved_field() {
-        insta::assert_snapshot!(snapshot(
-            Expr::Record(&Record::Open(1, 11), 1, 9),
-            "value = { if = 1 }"
-        ));
-    }
-    #[test]
-    fn list_trailing_comma() {
-        insta::assert_snapshot!(snapshot(
-            Expr::List(&List::Expr(&Expr::Start(1, 13), 1, 13), 1, 9),
-            "value = [1, ]"
-        ));
-    }
-    #[test]
-    fn do_requires_result() {
-        insta::assert_snapshot!(snapshot(
-            Expr::Do(&Do::LastNotExpr(2, 5), 1, 9),
-            "value = do\n    let x = 1"
-        ));
-    }
-    #[test]
-    fn macro_missing_close() {
-        insta::assert_snapshot!(snapshot(
-            Expr::Macro(&Macro::End(1, 15), 1, 9),
-            "value = foo!(1"
-        ));
-    }
-    #[test]
-    fn integer_dot() {
-        insta::assert_snapshot!(snapshot(
-            Expr::Number(Number::Dot(42), 1, 11),
-            "value = 42."
-        ));
-    }
-    #[test]
-    fn unicode_escape() {
-        insta::assert_snapshot!(snapshot(
-            Expr::String(StringError::Escape(Escape::BadUnicodeCode(8)), 1, 10),
-            "value = \"\\u{D800}\""
-        ));
-    }
-    #[test]
-    fn bytes_odd() {
-        insta::assert_snapshot!(snapshot(
-            Expr::Bytes(Bytes::OddLength, 1, 12),
-            "value = #\"a\""
-        ));
-    }
+    report_test!(
+        missing_operand,
+        Expr::OperatorRight("+", 1, 13),
+        "value = 1 + "
+    );
+    report_test!(
+        missing_else,
+        Expr::If(&If::Else(1, 24), 1, 9),
+        "value = if True then 42"
+    );
+    report_test!(
+        case_wrong_arrow,
+        Expr::Case(&Case::Arrow(1, 30), 1, 9),
+        "value = case x of Some width ="
+    );
+    report_test!(
+        record_reserved_field,
+        Expr::Record(&Record::Open(1, 11), 1, 9),
+        "value = { if = 1 }"
+    );
+    report_test!(
+        list_trailing_comma,
+        Expr::List(&List::Expr(&Expr::Start(1, 13), 1, 13), 1, 9),
+        "value = [1, ]"
+    );
+    report_test!(
+        do_requires_result,
+        Expr::Do(&Do::LastNotExpr(2, 5), 1, 9),
+        "value = do\n    let x = 1"
+    );
+    report_test!(
+        macro_missing_close,
+        Expr::Macro(&Macro::End(1, 15), 1, 9),
+        "value = foo!(1"
+    );
+    report_test!(
+        integer_dot,
+        Expr::Number(Number::Dot(42), 1, 11),
+        "value = 42."
+    );
+    report_test!(
+        unicode_escape,
+        Expr::String(StringError::Escape(Escape::BadUnicodeCode(8)), 1, 10),
+        "value = \"\\u{D800}\""
+    );
+    report_test!(
+        bytes_odd,
+        Expr::Bytes(Bytes::OddLength, 1, 12),
+        "value = #\"a\""
+    );
     report_test!(
         if_indent_condition,
-        Expr::If(&If::IndentCondition(1, 9), 1, 9),
-        "value = "
+        Expr::If(&If::IndentCondition(2, 1), 1, 9),
+        "value = if\nTrue then 1 else 0"
     );
     report_test!(
         if_indent_then,
-        Expr::If(&If::IndentThen(1, 9), 1, 9),
-        "value = "
+        Expr::If(&If::IndentThen(2, 1), 1, 9),
+        "value = if True\nthen 1 else 0"
     );
     report_test!(
         if_indent_then_branch,
-        Expr::If(&If::IndentThenBranch(1, 9), 1, 9),
-        "value = "
+        Expr::If(&If::IndentThenBranch(2, 1), 1, 9),
+        "value = if True then\n1 else 0"
     );
     report_test!(
         if_indent_else_branch,
-        Expr::If(&If::IndentElseBranch(1, 9), 1, 9),
-        "value = "
+        Expr::If(&If::IndentElseBranch(2, 1), 1, 9),
+        "value = if True then 1 else\n0"
     );
     report_test!(
         if_indent_else,
-        Expr::If(&If::IndentElse(1, 9), 1, 9),
-        "value = "
+        Expr::If(&If::IndentElse(2, 1), 1, 9),
+        "value = if True then 1\nelse 0"
     );
     report_test!(
         case_indent_expr,
-        Expr::Case(&Case::IndentExpr(1, 9), 1, 9),
-        "value = "
+        Expr::Case(&Case::IndentExpr(2, 1), 1, 9),
+        "value = case\nx of"
     );
     report_test!(
         case_indent_pattern,
-        Expr::Case(&Case::IndentPattern(1, 9), 1, 9),
-        "value = "
+        Expr::Case(&Case::IndentPattern(2, 1), 1, 9),
+        "value = case x of\nSome x -> x"
     );
     report_test!(
         case_indent_arrow,
-        Expr::Case(&Case::IndentArrow(1, 9), 1, 9),
-        "value = "
+        Expr::Case(&Case::IndentArrow(3, 1), 1, 9),
+        "value = case x of\n    Some x\n-> x"
     );
     report_test!(
         record_indent_open,
-        Expr::Record(&Record::IndentOpen(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::IndentOpen(2, 1), 1, 9),
+        "value = {\nx = 1 }"
     );
     report_test!(
         record_indent_field,
-        Expr::Record(&Record::IndentField(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::IndentField(2, 1), 1, 9),
+        "value = { x = 1,\ny = 2 }"
     );
     report_test!(
         record_equals,
-        Expr::Record(&Record::Equals(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::Equals(1, 13), 1, 9),
+        "value = { x 1 }"
     );
     report_test!(
         record_indent_equals,
-        Expr::Record(&Record::IndentEquals(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::IndentEquals(2, 1), 1, 9),
+        "value = { x\n= 1 }"
     );
     report_test!(
         record_indent_expr,
-        Expr::Record(&Record::IndentExpr(1, 9), 1, 9),
-        "value = "
+        Expr::Record(&Record::IndentExpr(2, 1), 1, 9),
+        "value = { x =\n1 }"
     );
     report_test!(
         tuple_indent_expr1,
-        Expr::Tuple(&Tuple::IndentExpr1(1, 9), 1, 9),
-        "value = "
+        Expr::Tuple(&Tuple::IndentExpr1(2, 1), 1, 9),
+        "value = (\n1, 2)"
     );
     report_test!(
         tuple_indent_expr_n,
-        Expr::Tuple(&Tuple::IndentExprN(1, 9), 1, 9),
-        "value = "
+        Expr::Tuple(&Tuple::IndentExprN(2, 1), 1, 9),
+        "value = (1,\n2)"
     );
     report_test!(
         tuple_indent_end,
-        Expr::Tuple(&Tuple::IndentEnd(1, 9), 1, 9),
-        "value = "
+        Expr::Tuple(&Tuple::IndentEnd(2, 1), 1, 9),
+        "value = (1, 2\n)"
     );
-    report_test!(list_open, Expr::List(&List::Open(1, 9), 1, 9), "value = ");
+    report_test!(
+        list_open,
+        Expr::List(&List::Open(1, 10), 1, 9),
+        "value = [="
+    );
     report_test!(
         list_indent_open,
-        Expr::List(&List::IndentOpen(1, 9), 1, 9),
-        "value = "
+        Expr::List(&List::IndentOpen(2, 1), 1, 9),
+        "value = [\n1]"
     );
     report_test!(
         list_indent_end,
-        Expr::List(&List::IndentEnd(1, 9), 1, 9),
-        "value = "
+        Expr::List(&List::IndentEnd(2, 1), 1, 9),
+        "value = [1\n]"
     );
     report_test!(
         func_indent_arg,
-        Expr::Func(&Func::IndentArg(1, 9), 1, 9),
-        "value = "
+        Expr::Func(&Func::IndentArg(2, 1), 1, 9),
+        "value = \\\nx -> x"
     );
     report_test!(
         func_indent_arrow,
-        Expr::Func(&Func::IndentArrow(1, 9), 1, 9),
-        "value = "
+        Expr::Func(&Func::IndentArrow(2, 1), 1, 9),
+        "value = \\x\n-> x"
     );
     report_test!(
         let_def_name,
-        Expr::Let(&Let::DefName(1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::DefName(1, 13), 1, 9),
+        "value = let 1 = 2"
     );
     report_test!(
         let_indent_def,
-        Expr::Let(&Let::IndentDef(1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::IndentDef(2, 1), 1, 9),
+        "value = let\nx = 1"
     );
     report_test!(
         let_indent_body,
-        Expr::Let(&Let::IndentBody(1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::IndentBody(2, 1), 1, 9),
+        "value = let x = 1 in\nx"
     );
     report_test!(
         macro_open,
-        Expr::Macro(&Macro::Open(1, 9), 1, 9),
-        "value = "
+        Expr::Macro(&Macro::Open(1, 13), 1, 9),
+        "value = foo!1"
     );
     report_test!(
         macro_indent_arg,
-        Expr::Macro(&Macro::IndentArg(1, 9), 1, 9),
-        "value = "
+        Expr::Macro(&Macro::IndentArg(2, 1), 1, 9),
+        "value = foo!(\n1)"
     );
     report_test!(
         macro_indent_end,
-        Expr::Macro(&Macro::IndentEnd(1, 9), 1, 9),
-        "value = "
+        Expr::Macro(&Macro::IndentEnd(2, 1), 1, 9),
+        "value = foo!(1\n)"
     );
-    report_test!(do_arrow, Expr::Do(&Do::Arrow(1, 9), 1, 9), "value = ");
+    report_test!(
+        do_arrow,
+        Expr::Do(&Do::Arrow(2, 7), 1, 9),
+        "value = do\n    x action"
+    );
     report_test!(
         do_indent_stmt,
-        Expr::Do(&Do::IndentStmt(1, 9), 1, 9),
-        "value = "
+        Expr::Do(&Do::IndentStmt(2, 1), 1, 9),
+        "value = do\naction"
     );
     report_test!(
         do_indent_arrow,
-        Expr::Do(&Do::IndentArrow(1, 9), 1, 9),
-        "value = "
+        Expr::Do(&Do::IndentArrow(3, 1), 1, 9),
+        "value = do\n    x\n<- action"
     );
     report_test!(
         do_indent_expr,
-        Expr::Do(&Do::IndentExpr(1, 9), 1, 9),
-        "value = "
+        Expr::Do(&Do::IndentExpr(3, 1), 1, 9),
+        "value = do\n    x <-\naction"
     );
     report_test!(
         def_name_repeat,
-        Expr::Let(&Let::Def("x", &Def::NameRepeat(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Def("x", &Def::NameRepeat(3, 5), 3, 5), 1, 9),
+        "value = let\n    x : int\n    "
     );
     report_test!(
         def_equals,
-        Expr::Let(&Let::Def("x", &Def::Equals(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Def("x", &Def::Equals(1, 15), 1, 15), 1, 9),
+        "value = let x "
     );
     report_test!(
         def_indent_equals,
-        Expr::Let(&Let::Def("x", &Def::IndentEquals(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Def("x", &Def::IndentEquals(2, 1), 2, 1), 1, 9),
+        "value = let x\n= 1"
     );
     report_test!(
         def_indent_type,
-        Expr::Let(&Let::Def("x", &Def::IndentType(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Def("x", &Def::IndentType(2, 1), 2, 1), 1, 9),
+        "value = let x :\nint"
     );
     report_test!(
         operator_dot,
-        Expr::OperatorReserved(BadOperator::Dot, 1, 9),
-        "value = "
+        Expr::OperatorReserved(BadOperator::Dot, 1, 11),
+        "value = 1 . 2"
     );
     report_test!(
         operator_pipe,
-        Expr::OperatorReserved(BadOperator::Pipe, 1, 9),
-        "value = "
+        Expr::OperatorReserved(BadOperator::Pipe, 1, 11),
+        "value = 1 | 2"
     );
     report_test!(
         operator_has_type,
-        Expr::OperatorReserved(BadOperator::HasType, 1, 9),
-        "value = "
+        Expr::OperatorReserved(BadOperator::HasType, 1, 11),
+        "value = 1 : 2"
     );
     report_test!(
         operator_fat_arrow,
-        Expr::OperatorReserved(BadOperator::FatArrow, 1, 9),
-        "value = "
+        Expr::OperatorReserved(BadOperator::FatArrow, 1, 11),
+        "value = 1 => 2"
     );
     report_test!(
         operator_left_arrow,
-        Expr::OperatorReserved(BadOperator::LeftArrow, 1, 9),
-        "value = "
+        Expr::OperatorReserved(BadOperator::LeftArrow, 1, 11),
+        "value = 1 <- 2"
     );
     report_test!(
         assert_indentbody,
-        Expr::Assert(&Keyword::IndentBody(1, 9), 1, 9),
-        "value = "
+        Expr::Assert(&Keyword::IndentBody(2, 1), 1, 9),
+        "value = assert\nTrue"
     );
     report_test!(
         assert_indentmessage,
-        Expr::Assert(&Keyword::IndentMessage(1, 9), 1, 9),
-        "value = "
+        Expr::Assert(&Keyword::IndentMessage(2, 1), 1, 9),
+        "value = assert\n\"message\""
     );
     report_test!(
         fail_indentbody,
-        Expr::Fail(&Keyword::IndentBody(1, 9), 1, 9),
-        "value = "
+        Expr::Fail(&Keyword::IndentBody(2, 1), 1, 9),
+        "value = fail\nTrue"
     );
     report_test!(
         fail_indentmessage,
-        Expr::Fail(&Keyword::IndentMessage(1, 9), 1, 9),
-        "value = "
+        Expr::Fail(&Keyword::IndentMessage(2, 1), 1, 9),
+        "value = fail\n\"message\""
     );
     report_test!(
         todo_indentbody,
-        Expr::Todo(&Keyword::IndentBody(1, 9), 1, 9),
-        "value = "
+        Expr::Todo(&Keyword::IndentBody(2, 1), 1, 9),
+        "value = todo\nTrue"
     );
     report_test!(
         todo_indentmessage,
-        Expr::Todo(&Keyword::IndentMessage(1, 9), 1, 9),
-        "value = "
+        Expr::Todo(&Keyword::IndentMessage(2, 1), 1, 9),
+        "value = todo\n\"message\""
     );
     report_test!(
         trace_indentbody,
-        Expr::Trace(&Keyword::IndentBody(1, 9), 1, 9),
-        "value = "
+        Expr::Trace(&Keyword::IndentBody(2, 1), 1, 9),
+        "value = trace\nTrue"
     );
     report_test!(
         trace_indentmessage,
-        Expr::Trace(&Keyword::IndentMessage(1, 9), 1, 9),
-        "value = "
+        Expr::Trace(&Keyword::IndentMessage(2, 1), 1, 9),
+        "value = trace\n\"message\""
     );
     report_test!(
         comptime_indentbody,
-        Expr::Comptime(&Keyword::IndentBody(1, 9), 1, 9),
-        "value = "
+        Expr::Comptime(&Keyword::IndentBody(2, 1), 1, 9),
+        "value = comptime\nTrue"
     );
     report_test!(
         comptime_indentmessage,
-        Expr::Comptime(&Keyword::IndentMessage(1, 9), 1, 9),
-        "value = "
+        Expr::Comptime(&Keyword::IndentMessage(2, 1), 1, 9),
+        "value = comptime\n\"message\""
     );
     report_test!(
         record_double_comma,
-        Expr::Record(&Record::Field(1, 9), 1, 9),
-        "value = ,"
+        Expr::Record(&Record::Field(1, 18), 1, 9),
+        "value = { x = 1, , y = 2 }"
     );
     report_test!(
         record_trailing_comma,
-        Expr::Record(&Record::Field(1, 9), 1, 9),
-        "value = }"
+        Expr::Record(&Record::Field(1, 18), 1, 9),
+        "value = { x = 1, }"
     );
     report_test!(
         record_close_indentation,
-        Expr::Record(&Record::IndentEnd(1, 9), 1, 9),
-        "value = }"
+        Expr::Record(&Record::IndentEnd(2, 1), 1, 9),
+        "value = { x = 1\n}"
     );
     report_test!(
         let_reserved_name,
-        Expr::Let(&Let::DefName(1, 9), 1, 9),
-        "value = if"
+        Expr::Let(&Let::DefName(1, 13), 1, 9),
+        "value = let if = 1"
     );
     report_test!(
         func_reserved_arg,
-        Expr::Func(&Func::Arrow(1, 9), 1, 9),
-        "value = if"
+        Expr::Func(&Func::Arrow(1, 10), 1, 9),
+        "value = \\if -> 1"
     );
     report_test!(
         case_reserved_pattern,
-        Expr::Case(&Case::Arrow(1, 9), 1, 9),
-        "value = if"
+        Expr::Case(&Case::Arrow(2, 5), 1, 9),
+        "value = case x of\n    if -> 1"
     );
     report_test!(
         def_reserved_arg,
-        Expr::Let(&Let::Def("x", &Def::Equals(1, 9), 1, 9), 1, 9),
-        "value = if"
+        Expr::Let(&Let::Def("x", &Def::Equals(1, 15), 1, 15), 1, 9),
+        "value = let x if = 1"
     );
     report_test!(
         def_missing_colon,
-        Expr::Let(&Let::Def("x", &Def::Equals(1, 9), 1, 9), 1, 9),
-        "value = ->"
+        Expr::Let(&Let::Def("x", &Def::Equals(1, 15), 1, 15), 1, 9),
+        "value = let x -> int"
     );
     report_test!(
         def_name_mismatch,
-        Expr::Let(&Let::Def("x", &Def::NameMatch("y", 1, 9), 1, 9), 1, 9),
-        "value = y"
+        Expr::Let(&Let::Def("x", &Def::NameMatch("y", 3, 5), 3, 5), 1, 9),
+        "value = let\n    x : int\n    y = 1"
     );
     report_test!(
         bytes_bad_hex,
@@ -1482,13 +1481,13 @@ mod tests {
     );
     report_test!(
         do_alignment,
-        Expr::Do(&Do::Alignment(4, 1, 9), 1, 9),
-        "value = "
+        Expr::Do(&Do::Alignment(4, 3, 3), 1, 9),
+        "value = do\n    x <- action\n  next"
     );
     report_test!(
         def_alignment,
-        Expr::Let(&Let::Def("x", &Def::Alignment(4, 1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Def("x", &Def::Alignment(4, 3, 3), 3, 3), 1, 9),
+        "value = let\n    x = 1\n  y = 2\n    in x"
     );
     macro_rules! parsed_test {
         ($name:ident, $input:expr) => {
@@ -1501,7 +1500,9 @@ mod tests {
                     .expect_err("expected syntax error");
                 let source = Source::new(input);
                 let report = super::super::to_report(&source, &Error::ParseError(&error));
-                insta::assert_snapshot!(crate::render_plain(&report, &source, "Main.nash"));
+                insta::with_settings!({ description => input, omit_expression => true }, {
+                    insta::assert_snapshot!(crate::render_plain(&report, &source, "src/Main.nash"));
+                });
             }
         };
     }
@@ -1518,50 +1519,58 @@ mod tests {
     parsed_test!(parsed_unicode_short, "value = \"\\u{1}\"");
     parsed_test!(parsed_let_missing_in, "value = let x = 1");
     parsed_test!(parsed_lambda_missing_body, "value = \\x ->");
-    report_test!(operand_boolean, Expr::OperatorRight("&&", 1, 9), "value = ");
-    report_test!(operand_pipe, Expr::OperatorRight("|>", 1, 9), "value = ");
+    report_test!(
+        operand_boolean,
+        Expr::OperatorRight("&&", 1, 14),
+        "value = x && "
+    );
+    report_test!(
+        operand_pipe,
+        Expr::OperatorRight("|>", 1, 14),
+        "value = x |> "
+    );
     report_test!(
         operand_reverse_pipe,
-        Expr::OperatorRight("<|", 1, 9),
-        "value = "
+        Expr::OperatorRight("<|", 1, 14),
+        "value = x <| "
     );
     report_test!(
         operand_custom_operator,
-        Expr::OperatorRight("++", 1, 9),
-        "value = "
+        Expr::OperatorRight("++", 1, 14),
+        "value = x ++ "
     );
     report_test!(
         destruct_type_annotation,
-        Expr::Let(&Let::Destruct(&Destruct::Equals(1, 9), 1, 9), 1, 9),
-        "value = :"
+        Expr::Let(&Let::Destruct(&Destruct::Equals(1, 20), 1, 20), 1, 9),
+        "value = let (x, y) : pair"
     );
     report_test!(
         destruct_indent_equals,
-        Expr::Let(&Let::Destruct(&Destruct::IndentEquals(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Destruct(&Destruct::IndentEquals(2, 1), 2, 1), 1, 9),
+        "value = let (x, y)\n= pair"
     );
     report_test!(
         destruct_indent_body,
-        Expr::Let(&Let::Destruct(&Destruct::IndentBody(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Let(&Let::Destruct(&Destruct::IndentBody(2, 1), 2, 1), 1, 9),
+        "value = let (x, y) =\npair"
     );
     report_test!(
         case_subject_arrow,
         Expr::Case(
-            &Case::Expr(&Expr::OperatorReserved(BadOperator::Arrow, 1, 9), 1, 9),
+            &Case::Expr(&Expr::OperatorReserved(BadOperator::Arrow, 1, 16), 1, 16),
             1,
             9
         ),
-        "value = ->"
+        "value = case x -> y of"
     );
     report_test!(
         case_branch_arrow,
         Expr::Case(
-            &Case::Branch(&Expr::OperatorReserved(BadOperator::Arrow, 1, 9), 1, 9),
+            &Case::Branch(&Expr::OperatorReserved(BadOperator::Arrow, 2, 17), 2, 17),
             1,
             9
         ),
-        "value = ->"
+        "value = case x of\n    Some y -> y -> x"
     );
     report_test!(
         if_misindented_else,
@@ -1570,18 +1579,18 @@ mod tests {
     );
     report_test!(
         macro_missing_arg,
-        Expr::Macro(&Macro::Arg(&Expr::Start(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Macro(&Macro::Arg(&Expr::Start(1, 14), 1, 14), 1, 9),
+        "value = foo!("
     );
     report_test!(
         trace_missing_body,
-        Expr::Trace(&Keyword::Body(&Expr::Start(1, 9), 1, 9), 1, 9),
-        "value = "
+        Expr::Trace(&Keyword::Body(&Expr::Start(1, 25), 1, 25), 1, 9),
+        "value = trace \"message\" "
     );
     report_test!(
         operator_indent_right,
-        Expr::IndentOperatorRight("+", 1, 9),
-        "value = "
+        Expr::IndentOperatorRight("+", 2, 1),
+        "value = 1 +\n2"
     );
     report_test!(
         record_close_next_line,
@@ -1591,10 +1600,10 @@ mod tests {
     report_test!(
         record_unexpected_equals,
         Expr::Record(
-            &Record::Expr(&Expr::OperatorReserved(BadOperator::Equals, 1, 9), 1, 9),
+            &Record::Expr(&Expr::OperatorReserved(BadOperator::Equals, 1, 17), 1, 17),
             1,
             9
         ),
-        "value = ="
+        "value = { x = 1 = 2 }"
     );
 }

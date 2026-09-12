@@ -1,14 +1,15 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::MissingField\n{\n    region: region(), context: FieldContext::Access\n    { record_region: region(), maybe_name: Some(\"person\") }, field: \"aeg\",\n    record: &actual, available: &[\"age\"]\n})"
+description: "module Main exposing (..)\ntype alias Person = { age : Builtin.int }\nvalue : Person -> Builtin.int\nvalue person = person.aeg\n"
 ---
 nash::type::missing_field
 
   × Record has no field `aeg`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── field `aeg` of `person`
+   ╭─[Main.nash:4:23]
+ 3 │ value : Person -> Builtin.int
+ 4 │ value person = person.aeg
+   ·                       ─┬─
+   ·                        ╰── field `aeg` of `person`
    ╰────
   help: Did you mean `age`?
 

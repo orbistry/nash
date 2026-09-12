@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/tests.rs
-description: "42"
+description: "type box = Box\nint"
 ---
 nash::syntax
 
   × Expected an indented type in the datatype declaration.
-   ╭─[src/Main.nash:1:1]
- 1 │ 42
+   ╭─[src/Main.nash:2:1]
+ 1 │ type box = Box
+ 2 │ int
    · ─
    ╰────
   help: Indent the type to continue the declaration.

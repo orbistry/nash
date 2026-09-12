@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: result.unwrap_err()
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list (pair 'a 'a)) where\n    keep x = x\nimpl Keep (list (pair 'b 'b)) where\n    keep x = x\n"
 ---
 [
     OverlappingImpls {

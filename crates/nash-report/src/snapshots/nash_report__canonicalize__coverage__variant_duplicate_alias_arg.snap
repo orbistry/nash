@@ -1,16 +1,15 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\ntype alias Box 'a 'a = List 'a\n"
 ---
 nash::names::duplicate_alias_arg
 
-  × The `a` type alias has multiple `a` type variables.
-   ╭─[Main.nash:2:1]
- 1 │ name = other
-   · ──┬─
-   ·   ╰── first definition
- 2 │ other = name
-   · ──┬──
-   ·   ╰── and another first definition
+  × The `Box` type alias has multiple `a` type variables.
+   ╭─[Main.nash:2:16]
+ 1 │ module Main exposing (..)
+ 2 │ type alias Box 'a 'a = List 'a
+   ·                ─┬ ─┬
+   ·                 │  ╰── first definition
+   ·                 ╰── and another first definition
    ╰────
   help: Rename one of the definitions.

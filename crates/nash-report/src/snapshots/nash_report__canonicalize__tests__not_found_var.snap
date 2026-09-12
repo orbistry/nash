@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "module Main exposing (..)\nresult = name\n"
 ---
 nash::names::not_found_var
 
   × Unknown variable `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:2:10]
+ 1 │ module Main exposing (..)
+ 2 │ result = name
+   ·          ────
    ╰────
-  help: Define or import this name.
+  help: Try result instead.

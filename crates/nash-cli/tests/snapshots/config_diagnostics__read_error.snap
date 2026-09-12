@@ -1,0 +1,7 @@
+---
+source: crates/nash-cli/tests/config_diagnostics.rs
+description: "nash.jsonc bytes (hex): ff"
+---
+Error:   × failed to parse config: could not read '<project>/nash.jsonc': stream did not contain valid UTF-8
+  ├─▶ could not read '<project>/nash.jsonc': stream did not contain valid UTF-8
+  ╰─▶ stream did not contain valid UTF-8

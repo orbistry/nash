@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&\nError::PolymorphicRecursion\n{\n    region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::FlexVar(\"a\")]\n})"
+description: "module Main exposing (..)\nf x = if x == x then f [x] else f x\n"
 ---
 nash::type::polymorphic_recursion
 
   × Recursive call to `f` grows its trait requirement.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:2:22]
+ 1 │ module Main exposing (..)
+ 2 │ f x = if x == x then f [x] else f x
+   ·                      ─────
    ╰────
   help: Eq 'a
 

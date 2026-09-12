@@ -1,10 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Fail(&Keyword::IndentBody(1, 9), 1, 9), \"value = \")"
+description: "value = fail\nTrue"
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected a body after `fail`.
-
-Add an indented expression.
+  × Expected a body after `fail`.
+   ╭─[src/Main.nash:2:1]
+ 1 │ value = fail
+ 2 │ True
+   · ─
+   ╰────
+  help: Add an indented expression.

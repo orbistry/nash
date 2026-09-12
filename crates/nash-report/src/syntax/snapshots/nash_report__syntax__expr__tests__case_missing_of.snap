@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Case(&Case::Of(1, 9), 1, 9), \"value = \")"
+description: "value = case x "
 ---
-MISSING OF
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `of` after the case value.
-
-Add `of` before the case branches.
+  × Expected `of` after the case value.
+   ╭─[src/Main.nash:1:16]
+ 1 │ value = case x 
+   ·                ─
+   ╰────
+  help: Add `of` before the case branches.

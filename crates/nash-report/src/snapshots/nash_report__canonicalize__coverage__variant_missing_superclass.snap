@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "impl First.Equal 'a where\n    equal x y = True"
 ---
 nash::names::missing_superclass
 
   × The `First.Equal` impl for 'a0 does not establish superclass 1:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:6]
+ 1 │ impl First.Equal 'a where
+   ·      ──────────────
+ 2 │     equal x y = True
    ╰────
   help: It must also satisfy `First.Equal`. I cannot find an impl or context constraint
         that provides it. Add the required impl or include the necessary constraint in

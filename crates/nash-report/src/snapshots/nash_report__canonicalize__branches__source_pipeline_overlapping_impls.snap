@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: rendered
+description: "module Bad exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep () where\n    keep x = x\n"
 ---
 nash::names::overlapping_impls
 

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Main exposing (..)\ntype option 'a = None | Some 'a\ntype Box 'a = Box 'a\ntype Color = Red | Blue\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\nimpl Functor option where\n    map f xs =\n        case xs of\n            None -> None\n            Some x -> Some (f x)\nimpl Functor Box where\n    map f (Box x) = Box (f x)\ntwice f xs = map f (map f xs)\nlittle = map (\\x -> x) (Some ())\nchangedRepresentation = map (\\x -> (x, x)) (Some ())\nbig = map (\\x -> x) (Box Red)\n"
 ---
 big : Box Color
 changedRepresentation : option ( unit, unit )

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "(annotation, free_vars, context)"
+description: "module Main exposing (..)\n\ntrait Keep 'a where\n    keep : 'a -> 'b -> 'b\n\nimpl Keep (List 'b) where\n    keep xs value = value\n"
 ---
 (
     Located {

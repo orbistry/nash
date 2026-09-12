@@ -40,7 +40,7 @@ fn incomplete_case_fails_module() {
         message.contains("nash::pattern::incomplete") && message.contains("False"),
         "{message}"
     );
-    insta::assert_snapshot!(message);
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(message); });
 }
 
 #[test]
@@ -60,22 +60,23 @@ fn redundant_case_fails_module() {
         message.contains("nash::pattern::redundant") && message.contains("2nd pattern"),
         "{message}"
     );
-    insta::assert_snapshot!(message);
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(message); });
 }
 
 #[test]
 fn unsafe_argument_fails_module() {
-    let message = rejected("module Main exposing (..)\nf (x :: _) = x\n");
+    let source = "module Main exposing (..)\nf (x :: _) = x\n";
+    let message = rejected(source);
     assert!(
         message.contains("Argument pattern is not exhaustive"),
         "{message}"
     );
-    insta::assert_snapshot!(message);
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(message); });
 }
 
 #[test]
 fn unsafe_destructure_fails_module() {
-    let message = rejected(indoc::indoc!(
+    let source = indoc::indoc!(
         r#"
         module Main exposing (..)
         f xs =
@@ -84,17 +85,18 @@ fn unsafe_destructure_fails_module() {
             in
             x
     "#
-    ));
+    );
+    let message = rejected(source);
     assert!(
         message.contains("Binding pattern is not exhaustive"),
         "{message}"
     );
-    insta::assert_snapshot!(message);
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(message); });
 }
 
 #[test]
 fn trait_default_without_top_level_definitions_fails_module() {
-    let message = rejected(indoc::indoc!(
+    let source = indoc::indoc!(
         r#"
         module Main exposing (..)
         import Builtin exposing (type bool(..))
@@ -104,17 +106,18 @@ fn trait_default_without_top_level_definitions_fails_module() {
                 case flag of
                     True -> ()
     "#
-    ));
+    );
+    let message = rejected(source);
     assert!(
         message.contains("nash::pattern::incomplete") && message.contains("False"),
         "{message}"
     );
-    insta::assert_snapshot!(message);
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(message); });
 }
 
 #[test]
 fn impl_method_fails_module() {
-    let message = rejected(indoc::indoc!(
+    let source = indoc::indoc!(
         r#"
         module Main exposing (..)
         import Builtin exposing (type bool(..))
@@ -123,27 +126,30 @@ fn impl_method_fails_module() {
         impl Choose bool where
             choose True = ()
     "#
-    ));
+    );
+    let message = rejected(source);
     assert!(
         message.contains("nash::pattern::incomplete")
             && message.contains("Argument pattern is not exhaustive"),
         "{message}"
     );
-    insta::assert_snapshot!(message);
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(message); });
 }
 
 #[test]
 fn type_errors_precede_nitpick() {
-    let message = rejected(indoc::indoc!(
+    let source = indoc::indoc!(
         r#"
         module Main exposing (..)
         import Builtin exposing (type bool(..))
         f : bool -> unit
         f True = True
     "#
-    ));
+    );
+    let message = rejected(source);
     assert!(message.contains("nash::type::mismatch"), "{message}");
     assert!(!message.contains("nash::pattern::incomplete"), "{message}");
+    insta::with_settings!({ description => source, omit_expression => true }, { insta::assert_snapshot!(message); });
 }
 
 #[test]

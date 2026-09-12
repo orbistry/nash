@@ -1,13 +1,16 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadExpr(region(), Category::String, &string(),\nExpected::FromAnnotation(\"f\", Region::zero(), 0, context, &int())))"
+description: "module Main exposing (..)\nf : Builtin.bool -> Builtin.int\nf flag = if flag then 1 else \"hello\"\n"
 ---
 nash::type::mismatch
 
   × Type mismatch: expected `int`, found `string`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──┬
-   ·   │  ╰── declared type
-   ·   ╰── if branch 2
+   ╭─[Main.nash:3:30]
+ 1 │ module Main exposing (..)
+ 2 │ f : Builtin.bool -> Builtin.int
+   ·     ─────────────┬─────────────
+   ·                  ╰── declared type
+ 3 │ f flag = if flag then 1 else "hello"
+   ·                              ───┬───
+   ·                                 ╰── if branch 2
    ╰────

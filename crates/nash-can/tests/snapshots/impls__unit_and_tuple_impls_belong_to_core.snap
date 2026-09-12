@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/impls.rs
-expression: "(ordinary, heads)"
+description: "module Keep exposing (Keep)\ntrait Keep 'a where\n    keep : 'a -> 'a\n\n\nmodule Instances exposing (..)\nimport Keep exposing (Keep)\nimpl Keep () where\n    keep x = x\nimpl Keep ('a, 'b) where\n    keep x = x\n"
 ---
 (
     [

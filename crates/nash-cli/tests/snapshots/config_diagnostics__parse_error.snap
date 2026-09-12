@@ -1,0 +1,6 @@
+---
+source: crates/nash-cli/tests/config_diagnostics.rs
+description: "nash.jsonc (complete input):\n{"
+---
+Error:   × failed to parse config: invalid JSONC in '<project>/nash.jsonc': Unterminated object on line 1 column 1
+  ╰─▶ invalid JSONC in '<project>/nash.jsonc': Unterminated object on line 1 column 1

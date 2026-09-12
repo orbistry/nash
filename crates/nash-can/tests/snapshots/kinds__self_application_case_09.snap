@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-expression: errors
+description: "module Main exposing (..)\ntype tag 'a = Tag\ntype s 'f 'g 'a = S ('g ('f ('f) ('a)) ('f ('g) ('g)))\ntype w = W (s s s)"
 ---
 [
     KindInfinite {

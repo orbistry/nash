@@ -1,13 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (..)\nname : 'a 'a\nname = 1\n"
 ---
 nash::names::kind_infinite
 
   × This application in the annotation for `name` would require an infinite kind:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:2:11]
+ 1 │ module Main exposing (..)
+ 2 │ name : 'a 'a
+   ·           ──
+ 3 │ name = 1
    ╰────
   help: Check the type application and the kinds of its arguments.

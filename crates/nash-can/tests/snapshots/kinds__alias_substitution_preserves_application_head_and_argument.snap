@@ -1,6 +1,5 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-expression: substituted
 ---
 Located {
     region: Region {

@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::Let(&Let::Def(\"x\", &Def::Equals(1, 9), 1, 9), 1, 9),\n\"value = ->\")"
+description: value = let x -> int
 ---
-MISSING EQUALS
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected `=` in the definition of `x`.
-
-Separate the arguments and body with `=`.
+  × Expected `=` in the definition of `x`.
+   ╭─[src/Main.nash:1:15]
+ 1 │ value = let x -> int
+   ·               ─
+   ╰────
+  help: Separate the arguments and body with `=`.

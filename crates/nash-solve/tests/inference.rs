@@ -2,6 +2,9 @@
 //! solve, snapshotting the inferred annotation per top-level value (or the
 //! type errors).
 
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use indoc::indoc;
 use nash_ast::{Annotation, Type as CanType};
@@ -10,11 +13,8 @@ use nash_constrain::UnionFind;
 use nash_constrain::error::Error;
 use nash_region::Located;
 
-fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can::Interface<'_>> {
-    let mut interfaces =
-        std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
-    let source = bump.alloc_str(indoc!(
-        "
+const LITERAL_SOURCE: &str = indoc!(
+    "
         module Literal exposing (..)
         import Builtin exposing (..)
         trait FromInt 'a where
@@ -30,7 +30,12 @@ fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can:
         impl FromBytes bytes where
             fromBytes x = x
     "
-    ));
+);
+
+fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can::Interface<'_>> {
+    let mut interfaces =
+        std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
+    let source = bump.alloc_str(LITERAL_SOURCE);
     let module = nash_parse::Parser::new(bump, source).module().unwrap();
     let can = nash_can::canonicalize(
         bump,
@@ -73,6 +78,8 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
 
 #[test]
 fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let header = "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\n";
     let definitions = [
         "mismatch : ()\nmismatch = \\x -> x\n",
@@ -88,8 +95,8 @@ fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
             definitions.reverse();
         }
         let source = format!("{header}{}", definitions.concat());
-        let errors =
-            infer(&bump, &source).expect_err("failed solve must not publish solved output");
+        let errors = infer(&bump, snapshot_inputs.record(&source))
+            .expect_err("failed solve must not publish solved output");
         assert_eq!(
             errors
                 .iter()
@@ -131,16 +138,15 @@ fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
             "{errors:#?}"
         );
         assert_eq!(errors.len(), 5, "{errors:#?}");
-        let mut settings = insta::Settings::clone_current();
-        settings.set_description(source);
-        let _guard = settings.bind_to_scope();
-        insta::assert_debug_snapshot!(
-            format!(
-                "recovery_mixed_errors_{}",
-                if reverse { "reversed" } else { "forward" }
-            ),
-            errors
-        );
+        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+            insta::assert_debug_snapshot!(
+                    format!(
+                        "recovery_mixed_errors_{}",
+                        if reverse { "reversed" } else { "forward" }
+                    ),
+                    errors
+                );
+        });
     }
 }
 
@@ -572,6 +578,8 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
 
 #[test]
 fn builtin_list_annotations_match_literals_and_patterns() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let source = bump.alloc_str(indoc!(
         r#"
@@ -588,7 +596,9 @@ fn builtin_list_annotations_match_literals_and_patterns() {
                 head :: tail -> head
     "#
     ));
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
     let canonical = nash_can::canonicalize(
@@ -604,7 +614,9 @@ fn builtin_list_annotations_match_literals_and_patterns() {
     let module = &canonical.module;
     let (annotations, _) = nash_solve::run(&bump, &mut uf, module, &canonical.tables)
         .expect("annotations, list literals, and patterns use the same builtin type");
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 // RENDER INFERRED TYPES (Elm-style, for readable snapshots)
@@ -778,6 +790,7 @@ macro_rules! assert_inference_error_snapshot {
 
 #[test]
 fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
+    let snapshot_inputs = SnapshotInputs::default();
     for (primitive, trait_name, method) in [
         ("int", "FromInt", "fromInt"),
         ("string", "FromString", "fromString"),
@@ -810,7 +823,9 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             .replace("FromInt", trait_name)
             .replace("fromInt", method)
             .replace("int", primitive);
-            let parsed = nash_parse::Parser::new(&bump, &literal).module().unwrap();
+            let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(&literal))
+                .module()
+                .unwrap();
             let canonical = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -862,7 +877,9 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             .replace("FromInt", trait_name)
             .replace("fromInt", method)
             .replace("int", primitive);
-            let parsed = nash_parse::Parser::new(&bump, &main).module().unwrap();
+            let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(&main))
+                .module()
+                .unwrap();
             let canonical = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -908,20 +925,24 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             if impl_.home.package == Some(nash_ast::primitives::CORE) && impl_.key.trait_.name == trait_name)
     }));
             assert!(annotations["chain"].context.is_empty());
-            insta::assert_snapshot!(
-                format!("literal_method_defaulting_{primitive}"),
-                render_annotations(&annotations)
-            );
+            insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+                insta::assert_snapshot!(
+                            format!("literal_method_defaulting_{primitive}"),
+                            render_annotations(&annotations)
+                        );
+            });
         }
     }
 }
 
 #[test]
 fn ambiguous_predicates_keep_distinct_variable_names() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let errors = infer(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             r#"
         module Main exposing (..)
         trait Source 'a where
@@ -930,7 +951,7 @@ fn ambiguous_predicates_keep_distinct_variable_names() {
             consume : 'a -> ()
         value = (consume (create ()), consume (create ()))
         "#
-        ),
+        )),
     )
     .expect_err("both hidden variables are ambiguous");
     let names: Vec<_> = errors
@@ -947,7 +968,9 @@ fn ambiguous_predicates_keep_distinct_variable_names() {
         .collect();
     assert_eq!(names.len(), 2);
     assert_ne!(names[0], names[1]);
-    insta::assert_debug_snapshot!(errors);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(errors);
+    });
 }
 
 #[test]
@@ -1142,6 +1165,8 @@ fn local_helper_reports_missing_constraint_on_its_annotated_owner() {
 
 #[test]
 fn declared_contexts_are_available_at_local_and_recursive_uses() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let source = indoc!(
         r#"
@@ -1169,17 +1194,21 @@ fn declared_contexts_are_available_at_local_and_recursive_uses() {
         helper x = recursive x
     "#
     );
-    let annotations = infer(&bump, source).unwrap();
+    let annotations = infer(&bump, snapshot_inputs.record(source)).unwrap();
     for name in ["boxed", "forward", "monomorphic", "recursive", "helper"] {
         assert_eq!(ordinary_context_len(annotations[name]), 1, "{name}");
     }
     assert!(annotations["use"].context.is_empty());
     assert!(annotations["useBox"].context.is_empty());
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
 fn inferred_context_is_instantiated_independently_at_each_local_use() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let source = indoc!(
         r#"
@@ -1195,10 +1224,12 @@ fn inferred_context_is_instantiated_independently_at_each_local_use() {
         pair = (forward (), forward Red)
     "#
     );
-    let annotations = infer(&bump, source).unwrap();
+    let annotations = infer(&bump, snapshot_inputs.record(source)).unwrap();
     assert_eq!(annotations["forward"].context.len(), 1);
     assert!(annotations["pair"].context.is_empty());
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
@@ -1226,10 +1257,12 @@ fn nested_contexts_defer_outer_variables_and_keep_mixed_scheme_sharing() {
 
 #[test]
 fn inferred_context_removes_duplicates_and_superclass_requirements() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let annotations = infer(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             r#"
         module Main exposing (..)
         trait Base 'a where
@@ -1245,14 +1278,16 @@ fn inferred_context_removes_duplicates_and_superclass_requirements() {
         distinct x y = (base x, top y, base x)
         permuted x y = (base x, select x y, base y)
     "#
-        ),
+        )),
     )
     .unwrap();
     assert_eq!(annotations["reduced"].context.len(), 1);
     assert_eq!(annotations["distinct"].context.len(), 2);
     assert_eq!(annotations["reversed"].context.len(), 1);
     assert_eq!(annotations["permuted"].context.len(), 2);
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
@@ -1422,7 +1457,9 @@ fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
     let annotation = nash_solve::to_annotation_with_context(&bump, &mut uf, result, &context);
     assert_eq!(annotation.free_vars, ["a", "b"]);
     assert!(matches!(annotation.typ.value, CanType::Var("b")));
-    insta::assert_snapshot!(render_annotation(annotation));
+    insta::with_settings!({omit_expression => true}, {
+        insta::assert_snapshot!(render_annotation(annotation));
+    });
 }
 
 #[test]
@@ -1654,11 +1691,14 @@ fn type_variable_names_do_not_imply_constraints() {
 
 #[test]
 fn negation_retains_num_evidence() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let num = nash_parse::Parser::new(
         &bump,
-        "module Num exposing (Num)\ntrait Num 'a where\n    negate : 'a -> 'a\n",
+        snapshot_inputs
+            .record("module Num exposing (Num)\ntrait Num 'a where\n    negate : 'a -> 'a\n"),
     )
     .module()
     .unwrap();
@@ -1676,7 +1716,9 @@ fn negation_retains_num_evidence() {
         nash_can::from_module(&bump, &num.module, &Default::default()),
     );
     let source = bump.alloc_str("module Main exposing (..)\nimport Num as N\nimport Literal exposing (..)\nnegate x = x\nflip x = -x\nnegative = -7\n");
-    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let can = nash_can::canonicalize(
         &bump,
         Context {
@@ -1733,7 +1775,9 @@ fn negation_retains_num_evidence() {
         assert_eq!(instance.type_args.len(), 1);
         decls = next;
     }
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
@@ -1749,10 +1793,14 @@ fn string_literal() {
 
 #[test]
 fn literal_syntax_records_impls_and_pattern_givens() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where eq : 'a -> 'a -> bool\n");
-    let eq_module = nash_parse::Parser::new(&bump, eq_source).module().unwrap();
+    let eq_module = nash_parse::Parser::new(&bump, snapshot_inputs.record(eq_source))
+        .module()
+        .unwrap();
     let eq = nash_can::canonicalize(
         &bump,
         Context {
@@ -1772,7 +1820,9 @@ fn literal_syntax_records_impls_and_pattern_givens() {
         ("bytes", "#\"00ff\"", "FromBytes"),
     ] {
         let input = bump.alloc_str(&format!("module Main exposing (..)\nimport Builtin exposing (..)\nfixed : {primitive}\nfixed = {literal}\nmatch value =\n    case value of\n        {literal} -> ()\n        _ -> ()\n"));
-        let parsed = nash_parse::Parser::new(&bump, input).module().unwrap();
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(input))
+            .module()
+            .unwrap();
         let can = nash_can::canonicalize(
             &bump,
             Context {
@@ -1821,10 +1871,12 @@ fn literal_syntax_records_impls_and_pattern_givens() {
             }
             decls = next;
         }
-        insta::assert_snapshot!(
-            format!("literal_syntax_{primitive}"),
-            render_annotations(&annotations)
-        );
+        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+            insta::assert_snapshot!(
+                    format!("literal_syntax_{primitive}"),
+                    render_annotations(&annotations)
+                );
+        });
     }
 }
 
@@ -1852,6 +1904,7 @@ fn tuple_value() {
 
 #[test]
 fn user_twins_preserve_local_imported_and_pattern_identity() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut interfaces = std::collections::BTreeMap::new();
     for source in [
@@ -1859,7 +1912,9 @@ fn user_twins_preserve_local_imported_and_pattern_identity() {
         "module Main exposing (..)\nimport Status as S exposing (..)\nsmallPayload x y = Payload x y\nbigPayload x y = S.Payload x y\nreadSmall (Payload x y) = (x, y)\nreadBig (S.Payload x y) = (x, y)\nlittleUse = Ready\nbigUse = S.Ready\nlittlePattern x = case x of\n    Ready -> ()\n    Waiting -> ()\nbigPattern x = case x of\n    S.Ready -> ()\n    S.Waiting -> ()\n",
     ] {
         let source = bump.alloc_str(source);
-        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -1872,10 +1927,12 @@ fn user_twins_preserve_local_imported_and_pattern_identity() {
         let mut uf = UnionFind::new();
         let module = &canonical.module;
         let (annotations, _) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
-        insta::assert_snapshot!(
-            format!("user_twins_{}", canonical.module.name.name),
-            render_annotations(&annotations)
-        );
+        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+            insta::assert_snapshot!(
+                    format!("user_twins_{}", canonical.module.name.name),
+                    render_annotations(&annotations)
+                );
+        });
         interfaces.insert(
             canonical.module.name.name,
             nash_can::from_module(&bump, &canonical.module, &annotations),
@@ -2477,6 +2534,7 @@ fn string_literal_requires_an_impl_for_the_result_type() {
 
 #[test]
 fn operator_methods_preserve_provider_and_backing_method() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut interfaces = std::collections::BTreeMap::new();
     let sources = [
@@ -2499,7 +2557,9 @@ fn operator_methods_preserve_provider_and_backing_method() {
     ];
     let mut output = Vec::new();
     for (name, source) in sources {
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -2583,7 +2643,9 @@ fn operator_methods_preserve_provider_and_backing_method() {
         }
         interfaces.insert(name, interface);
     }
-    insta::assert_snapshot!(output.join("\n"));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(output.join("\n"));
+    });
 }
 
 #[test]
@@ -2780,11 +2842,16 @@ fn source_basics_bool_is_an_ordinary_union() {
 
 #[test]
 fn nested_operator_sections_apply() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let operators = "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n";
-    let annotations = infer(&bump, operators).expect("operator module infers");
+    let annotations =
+        infer(&bump, snapshot_inputs.record(operators)).expect("operator module infers");
     let source = bump.alloc_str(operators);
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
     let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
     let mut interfaces = literal_interfaces(&bump);
@@ -2800,7 +2867,9 @@ fn nested_operator_sections_apply() {
     "#
     );
     let source = bump.alloc_str(input);
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -2817,15 +2886,19 @@ fn nested_operator_sections_apply() {
     let rendered = render_annotations(&annotations);
     assert!(rendered.contains("FromString a => a"), "{rendered}");
     assert!(rendered.contains("left : unit"), "{rendered}");
-    insta::assert_snapshot!(rendered);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(rendered);
+    });
 }
 
 #[test]
 fn solved_alias_retains_its_closed_parameterized_body() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let annotations = infer(
         &bump,
-        indoc!(
+        snapshot_inputs.record(indoc!(
             r#"
         module Main exposing (..)
         type Color = Red | Blue
@@ -2833,7 +2906,7 @@ fn solved_alias_retains_its_closed_parameterized_body() {
         pair : Pair Color Color
         pair = Pair Red Blue
     "#
-        ),
+        )),
     )
     .unwrap();
     let pair = annotations.get("pair").unwrap();
@@ -2855,11 +2928,14 @@ fn solved_alias_retains_its_closed_parameterized_body() {
         panic!("instantiated record body")
     };
     assert!(fields.iter().all(|field| matches!(&field.typ.value, CanType::Named { reference, .. } if reference.name == "Color")));
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
 fn higher_kinded_partial_alias_retains_its_nominal_impl() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut interfaces = std::collections::BTreeMap::new();
     let mut output = Vec::new();
@@ -2909,7 +2985,9 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
         ),
     ] {
         let source = bump.alloc_str(source);
-        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -2928,7 +3006,9 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
             assert!(
                 matches!(&errors[..], [Error::MissingImpl { trait_, .. }] if trait_.name == "Keep")
             );
-            insta::assert_debug_snapshot!("partial_alias_nominal_mismatch", errors);
+            insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+                insta::assert_debug_snapshot!("partial_alias_nominal_mismatch", errors);
+            });
             continue;
         }
         let (annotations, solved) = result.unwrap();
@@ -2991,7 +3071,9 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
             nash_can::from_module(&bump, &canonical.module, &annotations),
         );
     }
-    insta::assert_snapshot!(output.join("\n"));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(output.join("\n"));
+    });
 }
 
 #[test]
@@ -3025,6 +3107,8 @@ fn inferred_wrapper_preserves_the_callees_representation_requirement() {
 
 #[test]
 fn imported_values_retain_declared_and_inferred_representation_contexts() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let source = bump.alloc_str(indoc!(
@@ -3036,7 +3120,9 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
         wrapper x xs = first x xs
     "
     ));
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3085,7 +3171,9 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
             ),
             name = name
         ));
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3104,14 +3192,17 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
         );
         results.push((name, errors));
     }
-    insta::assert_snapshot!(format!(
-        "{}\n{results:#?}",
-        render_annotations(&annotations)
-    ));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(format!(
+            "{}\n{results:#?}",
+            render_annotations(&annotations)
+        ));
+    });
 }
 
 #[test]
 fn do_infers_monad() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = indoc!(
         r#"
@@ -3125,7 +3216,9 @@ fn do_infers_monad() {
             bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3150,7 +3243,9 @@ fn do_infers_monad() {
         expanded m = bind m (\x -> bind m (\y -> pure (x, y)))
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3190,7 +3285,9 @@ fn do_infers_monad() {
             .count(),
         2
     );
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
@@ -3228,8 +3325,10 @@ fn nested_use_requires_owners_storable_constraint() {
     );
 }
 
+const LIFT_SOURCE: &str = "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n";
+
 fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
-    let module = nash_parse::Parser::new(bump, "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n").module().unwrap();
+    let module = nash_parse::Parser::new(bump, LIFT_SOURCE).module().unwrap();
     let canonical = nash_can::canonicalize(
         bump,
         Context {
@@ -3247,6 +3346,8 @@ fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
 
 #[test]
 fn reflexive_lift_retains_big_evidence() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
     let interfaces = std::collections::BTreeMap::from([("Lift", lift_interface(&bump, true))]);
     let source = indoc!(
@@ -3272,7 +3373,9 @@ fn reflexive_lift_retains_big_evidence() {
         nested = keep (Box Red)
     "#
     );
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3330,11 +3433,15 @@ fn reflexive_lift_retains_big_evidence() {
     );
     assert!(proofs.iter().any(|proof| matches!(proof, nash_ast::Evidence::Impl { args, .. } if args.iter().any(|arg| matches!(arg, nash_ast::Evidence::ReflexiveLift { .. })))));
     proofs.sort_by_key(|proof| format!("{proof:?}"));
-    insta::assert_debug_snapshot!(proofs);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(proofs);
+    });
 }
 
 #[test]
 fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
     let mut results = Vec::new();
     for (core, annotation) in [
@@ -3344,7 +3451,9 @@ fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
     ] {
         let interfaces = std::collections::BTreeMap::from([("Lift", lift_interface(&bump, core))]);
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : {annotation}\nbad x = lift x\n"));
-        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3363,7 +3472,9 @@ fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
         ));
         results.push((core, annotation, errors));
     }
-    insta::assert_debug_snapshot!(results);
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_debug_snapshot!(results);
+    });
 }
 
 #[test]
@@ -3428,6 +3539,7 @@ fn higher_kinded_rigid_heads_cannot_specialize() {
 
 #[test]
 fn higher_kinded_traits_resolve_distinct_constructors() {
+    let snapshot_inputs = SnapshotInputs::default();
     let source = indoc!(
         r#"
         module Main exposing (..)
@@ -3451,7 +3563,9 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
     );
     let bump = Bump::new();
     let source = bump.alloc_str(source);
-    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3499,15 +3613,19 @@ fn higher_kinded_traits_resolve_distinct_constructors() {
         decls = next;
     }
     assert_eq!(checked, 3);
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
 fn imported_higher_kinded_value_preserves_application() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let module = nash_parse::Parser::new(
         &bump,
-        "module Higher exposing (value)\nvalue : 'f 'a -> 'f 'a\nvalue x = x\n",
+        snapshot_inputs
+            .record("module Higher exposing (value)\nvalue : 'f 'a -> 'f 'a\nvalue x = x\n"),
     )
     .module()
     .unwrap();
@@ -3543,7 +3661,9 @@ fn imported_higher_kinded_value_preserves_application() {
     let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
     let source =
         bump.alloc_str("module Main exposing (..)\n\nimport Higher\n\nvalue = Higher.value\n");
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
@@ -3579,11 +3699,15 @@ fn imported_higher_kinded_value_preserves_application() {
             .map(|p| p.key())
             .collect::<Vec<_>>()
     );
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
 fn core_cast_schemes_preserve_nominal_source_and_target_types() {
+    let snapshot_inputs = SnapshotInputs::default();
+    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let source = indoc!(
         "
@@ -3601,7 +3725,9 @@ fn core_cast_schemes_preserve_nominal_source_and_target_types() {
         validate = Builtin.castValidateData
     "
     );
-    let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+        .module()
+        .unwrap();
     let interfaces = literal_interfaces(&bump);
     let canonical = nash_can::canonicalize(
         &bump,
@@ -3616,11 +3742,14 @@ fn core_cast_schemes_preserve_nominal_source_and_target_types() {
     let module = &canonical.module;
     let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     assert_eq!(solved.instances.len(), 5);
-    insta::assert_snapshot!(render_annotations(&annotations));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(render_annotations(&annotations));
+    });
 }
 
 #[test]
 fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
@@ -3676,7 +3805,9 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
             None,
         ),
     ] {
-        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3703,7 +3834,9 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
                             if head.home == nash_ast::primitives::builtin_home() && head.name == primitive))
                 }), "discarded literal must default to {primitive}");
             }
-            insta::assert_snapshot!(render_annotations(&annotations));
+            insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+                insta::assert_snapshot!(render_annotations(&annotations));
+            });
         }
         interfaces.insert(
             name,
@@ -3714,6 +3847,7 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
 
 #[test]
 fn big_equality_is_automatic_and_retains_structural_evidence() {
+    let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let mut interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
@@ -3752,7 +3886,9 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
             None,
         ),
     ] {
-        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             Context {
@@ -3794,11 +3930,13 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
                     Some(nash_ast::Evidence::StructuralEq { .. })
                 ));
             }
-            insta::assert_snapshot!(format!(
-                "{}\nStructural evidence: {}",
-                render_annotations(&annotations),
-                evidence.join(", ")
-            ));
+            insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+                insta::assert_snapshot!(format!(
+                            "{}\nStructural evidence: {}",
+                            render_annotations(&annotations),
+                            evidence.join(", ")
+                        ));
+            });
         }
         interfaces.insert(
             name,

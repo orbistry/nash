@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/src/solve.rs
-expression: lines
+description: "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep Color where\n    keep x = x\nimpl Keep 'a => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [[Red]]\n"
 ---
 keep@9:9 : [nash/core/Builtin.list[nash/core/Builtin.list[Main.Color[]]]] [Impl Main.Keep [Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "list" }, args: [Var(0)] }] [nash/core/Builtin.list[Main.Color[]]] [Impl Main.Keep [Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "core" }), name: "Builtin" }, name: "list" }, args: [Var(0)] }] [Main.Color[]] [Impl Main.Keep [Main.Color] [] [], Repr Storable Main.Color[]], Repr Storable nash/core/Builtin.list[Main.Color[]]]]
 Red@9:16 : [] []

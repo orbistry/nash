@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "import First exposing (name)\nimport Second exposing (name)\nvalue = name"
 ---
 nash::names::ambiguous_var
 
   × Ambiguous variable `name`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:3:9]
+ 2 │ import Second exposing (name)
+ 3 │ value = name
+   ·         ────
    ╰────
   help:     First.name
             Second.name

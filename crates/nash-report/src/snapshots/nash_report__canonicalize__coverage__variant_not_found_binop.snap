@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: value = 1 <+> 2
 ---
 nash::names::not_found_binop
 
-  × Unknown operator `(name)`.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Unknown operator `(<+>)`.
+   ╭─[Main.nash:1:11]
+ 1 │ value = 1 <+> 2
+   ·           ───
    ╰────
-  help: Try other instead.
+  help: Try + instead.

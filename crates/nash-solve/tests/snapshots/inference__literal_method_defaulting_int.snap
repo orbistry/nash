@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-expression: render_annotations(&annotations)
+description: "module Literal exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\nimpl FromInt int where\n    fromInt x = x\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (FromInt, fromInt)\ntype Box 'a = Box 'a\ntrait Permit 'a where\n    permit : 'a -> 'a\ntrait Gate 'a 'b where\n    gate : 'a -> 'b -> ()\nimpl Permit 'a => Gate int (Box 'a) where\n    gate x box = ()\nsame : 'a -> 'a -> 'a\nsame x y = x\nrun : Permit 'a => int -> Box 'a -> ()\nrun n box = gate (same (fromInt n) (fromInt n)) box\ntype option 'a = None | Some 'a\ntrait Seed 'a where\n    seed : int -> 'a\nimpl Seed int where\n    seed n = n\ntrait Step 'a 'b where\n    step : 'a -> 'b -> ()\nimpl FromInt 'a => Step int (option 'a) where\n    step x box = ()\nchain n = step (fromInt n) (Some (seed n))\n"
 ---
 chain : int -> unit
 run : forall a. (Permit a, Big a) => int -> Box a -> unit

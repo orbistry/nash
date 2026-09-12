@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/warning.rs
-expression: "render_plain(&only_warning(input), &Source::new(input), \"src/Main.nash\")"
+description: "Code:\n\nmodule Main exposing (..)\nf unused = 1\n"
 ---
 nash::warning::unused_variable
 

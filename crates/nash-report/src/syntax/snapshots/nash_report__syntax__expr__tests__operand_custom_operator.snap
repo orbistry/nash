@@ -1,10 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/expr.rs
-expression: "snapshot(Expr::OperatorRight(\"++\", 1, 9), \"value = \")"
+description: "value = x ++ "
 ---
-MISSING EXPRESSION
-Region { start: Position { line: 1, column: 9 }, end: Position { line: 1, column: 9 } }
+nash::syntax
 
-Expected an operand after `(++)`.
-
-Add an expression on the same line or indent it on the next line.
+  × Expected an operand after `(++)`.
+   ╭─[src/Main.nash:1:14]
+ 1 │ value = x ++ 
+   ·              ─
+   ╰────
+  help: Add an expression on the same line or indent it on the next line.

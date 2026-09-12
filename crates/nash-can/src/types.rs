@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "../tests/snapshot_support/mod.rs"]
+mod snapshot_support;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use bumpalo::Bump;
@@ -766,7 +770,9 @@ mod tests {
         assert!(
             matches!(&replaced.value, CanType::Lambda { from, to } if (from.value == CanType::unit()) && (to.value == CanType::unit()))
         );
-        insta::assert_debug_snapshot!((partial, applied, expanded));
+        insta::with_settings!({omit_expression => true}, {
+            insta::assert_debug_snapshot!((partial, applied, expanded));
+        });
     }
 
     fn empty_env<'a>(bump: &'a Bump) -> Env<'a> {
@@ -1020,6 +1026,7 @@ mod tests {
 
 #[cfg(test)]
 mod context_tests {
+    use super::snapshot_support::SnapshotInputs;
     use super::*;
     use crate::environment::TraitInfo;
     use nash_ast::{Kind, ModuleName};
@@ -1064,26 +1071,36 @@ mod context_tests {
 
     #[test]
     fn qualified_annotation_context() {
+        let snapshot_inputs = SnapshotInputs::default();
         let bump = Bump::new();
         let env = trait_env(&bump);
-        let annotation = source_annotation(&bump, "Equality.Eq 'a => 'a -> 'a");
+        let annotation =
+            source_annotation(&bump, snapshot_inputs.record("Equality.Eq 'a => 'a -> 'a"));
         let result = to_annotation(&bump, &env, annotation).unwrap();
-        insta::assert_debug_snapshot!(result);
+        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+            insta::assert_debug_snapshot!(result);
+        });
     }
 
     #[test]
     fn context_variable_absent_from_type() {
+        let snapshot_inputs = SnapshotInputs::default();
         let bump = Bump::new();
         let env = trait_env(&bump);
-        let annotation = source_annotation(&bump, "Eq 'b => 'a -> 'a");
-        insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
+        let annotation = source_annotation(&bump, snapshot_inputs.record("Eq 'b => 'a -> 'a"));
+        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+            insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
+        });
     }
 
     #[test]
     fn context_trait_arity() {
+        let snapshot_inputs = SnapshotInputs::default();
         let bump = Bump::new();
         let env = trait_env(&bump);
-        let annotation = source_annotation(&bump, "Eq 'a 'b => 'a -> 'b");
-        insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
+        let annotation = source_annotation(&bump, snapshot_inputs.record("Eq 'a 'b => 'a -> 'b"));
+        insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+            insta::assert_debug_snapshot!(to_annotation(&bump, &env, annotation).unwrap_err());
+        });
     }
 }

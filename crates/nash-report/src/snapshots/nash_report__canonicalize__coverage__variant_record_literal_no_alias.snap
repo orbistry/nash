@@ -1,13 +1,12 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "value = { x = 1, y = 2 }"
 ---
 nash::names::record_literal_no_alias
 
   × No visible record alias has exactly these fields: x, y.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:1:9]
+ 1 │ value = { x = 1, y = 2 }
+   ·         ────────────────
    ╰────
   help: Declare or import an alias for this record.

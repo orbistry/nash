@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-expression: "render_plain(&report, &source, \"src/Main.nash\")"
+description: f 12x = 1
 ---
 nash::syntax
 
   × Invalid integer literal.
    ╭─[src/Main.nash:1:3]
- 1 │ f = value
+ 1 │ f 12x = 1
    ·   ─
    ╰────
   help: Use decimal or hexadecimal integers; floating point numbers are not supported.

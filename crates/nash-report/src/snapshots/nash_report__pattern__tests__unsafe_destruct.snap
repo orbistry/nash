@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/pattern.rs
-expression: "render(indoc::indoc!\n{r#\"\n            module Main exposing (..)\n            f xs =\n                let\n                    [x] = xs\n                in\n                x\n        \"#})"
+description: "Code:\n\nmodule Main exposing (..)\nf xs =\n    let\n        [x] = xs\n    in\n    x\n"
 ---
 nash::pattern::incomplete
 

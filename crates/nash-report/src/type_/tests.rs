@@ -5,6 +5,29 @@ use nash_region::Position;
 fn region() -> Region {
     Region::new(Position::new(1, 1), Position::new(1, 6))
 }
+fn source_region(source: &str, text: &str) -> Region {
+    let start = source.rfind(text).expect("highlight must occur in fixture");
+    let position = |offset: usize| {
+        let prefix = &source[..offset];
+        Position::new(
+            prefix.bytes().filter(|b| *b == b'\n').count() + 1,
+            prefix.rsplit('\n').next().unwrap().len() + 1,
+        )
+    };
+    Region::new(position(start), position(start + text.len()))
+}
+
+fn source_settings(source: &str) -> insta::Settings {
+    let bump = bumpalo::Bump::new();
+    nash_parse::Parser::new(&bump, source)
+        .module()
+        .expect("renderer fixture must be valid Nash syntax");
+    let mut settings = insta::Settings::clone_current();
+    settings.set_description(source);
+    settings.set_omit_expression(true);
+    settings
+}
+
 fn int() -> ErrorType<'static> {
     ErrorType::Type {
         home: nash_ast::primitives::builtin_home(),
@@ -19,167 +42,517 @@ fn string() -> ErrorType<'static> {
         args: &[],
     }
 }
-fn show(error: &Error<'_>) -> String {
+// Synthetic fixtures below exercise renderer branches; source_pipeline tests also verify producers.
+fn show(source: &str, error: &Error<'_>) -> String {
     crate::render_plain(
         &to_report(
             &Localizer::from_names(["Builtin", "Main", "Eq", "Num"]),
             error,
         ),
-        &crate::Source::new("value\n"),
+        &crate::Source::new(source),
         "Main.nash",
     )
 }
 
 #[test]
 fn mismatch_annotation_body() {
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::String,
-        &string(),
-        Expected::FromAnnotation("value", Region::zero(), 0, SubContext::TypedBody, &int())
-    )));
+    let source = "module Main exposing (..)\nvalue : Builtin.int\nvalue = \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromAnnotation(
+                "value",
+                source_region(source, "Builtin.int"),
+                0,
+                SubContext::TypedBody,
+                &int()
+            )
+        )
+    ));
 }
 
-macro_rules! context_snapshot {
-    ($test:ident, $context:expr) => {
-        #[test]
-        fn $test() {
-            insta::assert_snapshot!(show(&Error::BadExpr(
-                region(),
-                Category::String,
-                &string(),
-                Expected::FromContext(region(), $context, &int())
-            )));
-        }
-    };
+#[test]
+fn mismatch_if_branches() {
+    let source = "module Main exposing (..)\nvalue flag = if flag then 1 else \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::IfBranch(1, None), &int())
+        )
+    ));
 }
-context_snapshot!(mismatch_if_branches, Context::IfBranch(1, None));
-context_snapshot!(mismatch_case_branches, Context::CaseBranch(1, None));
-context_snapshot!(mismatch_list_entries, Context::ListEntry(1, None));
+#[test]
+fn mismatch_case_branches() {
+    let source = "module Main exposing (..)\nvalue flag =\n    case flag of\n        True -> 1\n        False -> \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::CaseBranch(1, None), &int())
+        )
+    ));
+}
+#[test]
+fn mismatch_list_entries() {
+    let source = "module Main exposing (..)\nvalue = [1, \"hello\"]\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::ListEntry(1, None), &int())
+        )
+    ));
+}
 #[test]
 fn mismatch_if_condition_not_bool() {
+    let source = "module Main exposing (..)\nvalue = if \"hello\" then 1 else 2\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let boolean = ErrorType::Type {
         home: nash_ast::primitives::builtin_home(),
         name: "bool",
         args: &[],
     };
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::String,
-        &string(),
-        Expected::FromContext(region(), Context::IfCondition, &boolean)
-    )));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::IfCondition, &boolean)
+        )
+    ));
 }
-context_snapshot!(
-    mismatch_call_arg_first,
-    Context::CallArg(MaybeName::FuncName("f"), 0)
-);
-context_snapshot!(
-    mismatch_call_arg_second_has_hint,
-    Context::CallArg(MaybeName::FuncName("f"), 1)
-);
-context_snapshot!(
-    too_many_args_on_value,
-    Context::CallArity(MaybeName::FuncName("value"), 2)
-);
-context_snapshot!(
-    record_access_on_non_record,
-    Context::RecordAccess {
-        record_region: region(),
-        maybe_name: Some("value"),
-        field_region: region(),
-        field: "name"
-    }
-);
-context_snapshot!(
-    record_update_change_type,
-    Context::RecordUpdateValue("name")
-);
-context_snapshot!(op_plus_left_string, Context::OpLeft("+"));
-context_snapshot!(op_cons_right_not_list, Context::OpRight("::"));
-context_snapshot!(op_compare_mismatch, Context::OpRight("<"));
-context_snapshot!(op_equality_mismatch, Context::OpRight("=="));
-context_snapshot!(op_pipe_right_not_function, Context::OpRight("|>"));
-context_snapshot!(destructure_mismatch, Context::Destructure);
-context_snapshot!(record_field_mismatch, Context::RecordField("value", "name"));
-
-macro_rules! pattern_snapshot {
-    ($test:ident, $context:expr) => {
-        #[test]
-        fn $test() {
-            insta::assert_snapshot!(show(&Error::BadPattern(
+#[test]
+fn mismatch_call_arg_first() {
+    let source =
+        "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf x = x\nvalue = f \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(
                 region(),
-                PCategory::Str,
-                &string(),
-                PExpected::FromContext(region(), $context, &int())
-            )));
-        }
-    };
+                Context::CallArg(MaybeName::FuncName("f"), 0),
+                &int()
+            )
+        )
+    ));
 }
-pattern_snapshot!(pattern_case_first_mismatch, PContext::CaseMatch(0));
-pattern_snapshot!(pattern_case_later_mismatch, PContext::CaseMatch(1));
-pattern_snapshot!(pattern_ctor_arg_mismatch, PContext::CtorArg("Some", 0));
-pattern_snapshot!(
-    pattern_typed_arg_mismatch,
-    PContext::TypedArg("f", 0, Region::zero())
-);
-pattern_snapshot!(pattern_list_entry, PContext::ListEntry(1));
+#[test]
+fn mismatch_call_arg_second_has_hint() {
+    let source = "module Main exposing (..)\nf : Builtin.int -> Builtin.int -> Builtin.int\nf x y = x\nvalue = f 1 \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(
+                region(),
+                Context::CallArg(MaybeName::FuncName("f"), 1),
+                &int()
+            )
+        )
+    ));
+}
+#[test]
+fn too_many_args_on_value() {
+    let source = "module Main exposing (..)\nvalue = \"hello\"\nresult = value 1 2\n";
+    let region = || source_region(source, "value 1 2");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(
+                region(),
+                Context::CallArity(MaybeName::FuncName("value"), 2),
+                &int()
+            )
+        )
+    ));
+}
+#[test]
+fn record_access_on_non_record() {
+    let source = "module Main exposing (..)\nvalue = \"hello\"\nresult = value.name\n";
+    let region = || source_region(source, "value");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(
+                region(),
+                Context::RecordAccess {
+                    record_region: source_region(source, "value"),
+                    maybe_name: Some("value"),
+                    field_region: source_region(source, "name"),
+                    field: "name"
+                },
+                &int()
+            )
+        )
+    ));
+}
+#[test]
+fn record_update_change_type() {
+    let source =
+        "module Main exposing (..)\nperson = { name = 1 }\nvalue = { person | name = \"hello\" }\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::RecordUpdateValue("name"), &int())
+        )
+    ));
+}
+#[test]
+fn op_plus_left_string() {
+    let source = "module Main exposing (..)\nvalue = \"hello\" + 1\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::OpLeft("+"), &int())
+        )
+    ));
+}
+#[test]
+fn op_cons_right_not_list() {
+    let source = "module Main exposing (..)\nvalue = 1 :: \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(
+                region(),
+                Context::OpRight("::"),
+                &ErrorType::Type {
+                    home: nash_ast::primitives::builtin_home(),
+                    name: "list",
+                    args: &[&int()]
+                }
+            )
+        )
+    ));
+}
+#[test]
+fn op_compare_mismatch() {
+    let source = "module Main exposing (..)\nvalue = 1 < \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::OpRight("<"), &int())
+        )
+    ));
+}
+#[test]
+fn op_equality_mismatch() {
+    let source = "module Main exposing (..)\nvalue = 1 == \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::OpRight("=="), &int())
+        )
+    ));
+}
+#[test]
+fn op_pipe_right_not_function() {
+    let source = "module Main exposing (..)\nvalue = 1 |> \"hello\"\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(
+                region(),
+                Context::OpRight("|>"),
+                &ErrorType::Lambda(&int(), &int(), &[])
+            )
+        )
+    ));
+}
+#[test]
+fn destructure_mismatch() {
+    let source = "module Main exposing (..)\nvalue =\n    let\n        (first, second) = \"hello\"\n    in\n    first\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(
+                region(),
+                Context::Destructure,
+                &ErrorType::Tuple(&int(), &int(), &[])
+            )
+        )
+    ));
+}
+#[test]
+fn record_field_mismatch() {
+    let source = "module Main exposing (..)\ntype alias Person = { name : Builtin.int }\nvalue : Person\nvalue = { name = \"hello\" }\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::String,
+            &string(),
+            Expected::FromContext(region(), Context::RecordField("value", "name"), &int())
+        )
+    ));
+}
+
+#[test]
+fn pattern_case_first_mismatch() {
+    let source = "module Main exposing (..)\nvalue number =\n    case number of\n        \"hello\" -> 1\n        0 -> 2\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadPattern(
+            region(),
+            PCategory::Str,
+            &string(),
+            PExpected::FromContext(region(), PContext::CaseMatch(0), &int())
+        )
+    ));
+}
+#[test]
+fn pattern_case_later_mismatch() {
+    let source = "module Main exposing (..)\nvalue number =\n    case number of\n        0 -> 1\n        \"hello\" -> 2\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadPattern(
+            region(),
+            PCategory::Str,
+            &string(),
+            PExpected::FromContext(region(), PContext::CaseMatch(1), &int())
+        )
+    ));
+}
+#[test]
+fn pattern_ctor_arg_mismatch() {
+    let source =
+        "module Main exposing (..)\ntype Option = Some Builtin.int\nvalue (Some \"hello\") = 1\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadPattern(
+            region(),
+            PCategory::Str,
+            &string(),
+            PExpected::FromContext(region(), PContext::CtorArg("Some", 0), &int())
+        )
+    ));
+}
+#[test]
+fn pattern_typed_arg_mismatch() {
+    let source = "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf \"hello\" = 1\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadPattern(
+            region(),
+            PCategory::Str,
+            &string(),
+            PExpected::FromContext(
+                region(),
+                PContext::TypedArg("f", 0, source_region(source, "Builtin.int -> Builtin.int")),
+                &int()
+            )
+        )
+    ));
+}
+#[test]
+fn pattern_list_entry() {
+    let source = "module Main exposing (..)\nvalue [0, \"hello\"] = 1\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadPattern(
+            region(),
+            PCategory::Str,
+            &string(),
+            PExpected::FromContext(region(), PContext::ListEntry(1), &int())
+        )
+    ));
+}
 #[test]
 fn pattern_list_tail() {
+    let source = "module Main exposing (..)\nvalue (first :: \"hello\") = first\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let list = ErrorType::Type {
         home: nash_ast::primitives::builtin_home(),
         name: "list",
         args: &[&int()],
     };
-    insta::assert_snapshot!(show(&Error::BadPattern(
-        region(),
-        PCategory::Str,
-        &string(),
-        PExpected::FromContext(region(), PContext::Tail, &list)
-    )));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadPattern(
+            region(),
+            PCategory::Str,
+            &string(),
+            PExpected::FromContext(region(), PContext::Tail, &list)
+        )
+    ));
 }
 
 #[test]
 fn too_many_args_on_function() {
+    let source =
+        "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf x = x\nvalue = f 1 2 3\n";
+    let region = || source_region(source, "f 1 2 3");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let i = int();
     let function = ErrorType::Lambda(&i, &i, &[]);
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::Lambda,
-        &function,
-        Expected::FromContext(
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
             region(),
-            Context::CallArity(MaybeName::FuncName("f"), 3),
-            &i
+            Category::Lambda,
+            &function,
+            Expected::FromContext(
+                region(),
+                Context::CallArity(MaybeName::FuncName("f"), 3),
+                &i
+            )
         )
-    )));
+    ));
 }
 #[test]
 fn infinite_type() {
+    let source = "module Main exposing (..)\nf x = x x\n";
+    let region = || source_region(source, "x x");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let t = ErrorType::Lambda(&ErrorType::Infinite, &ErrorType::FlexVar("a"), &[]);
-    insta::assert_snapshot!(show(&Error::InfiniteType {
-        region: region(),
-        name: "f",
-        overall_type: &t
-    }));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::InfiniteType {
+            region: region(),
+            name: "f",
+            overall_type: &t
+        }
+    ));
 }
 #[test]
 fn rigid_var_mismatch() {
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::CallResult(MaybeName::NoName),
-        &int(),
-        Expected::FromAnnotation(
-            "f",
-            Region::zero(),
-            0,
-            SubContext::TypedBody,
-            &ErrorType::RigidVar("a")
+    let source = "module Main exposing (..)\nf : 'a\nf = 1\n";
+    let region = || source_region(source, "1");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::CallResult(MaybeName::NoName),
+            &int(),
+            Expected::FromAnnotation(
+                "f",
+                source_region(source, "'a"),
+                0,
+                SubContext::TypedBody,
+                &ErrorType::RigidVar("a")
+            )
         )
-    )));
+    ));
 }
 #[test]
 fn record_access_missing_field_typo() {
+    let source =
+        "module Main exposing (..)\nperson = { name = \"hello\", age = 1 }\nvalue = person.naem\n";
+    let region = || source_region(source, "naem");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let record = ErrorType::Record {
         fields: &[("name", &string()), ("age", &int())],
     };
@@ -190,7 +563,7 @@ fn record_access_missing_field_typo() {
         Expected::FromContext(
             region(),
             Context::RecordAccess {
-                record_region: region(),
+                record_region: source_region(source, "person"),
                 maybe_name: Some("person"),
                 field_region: region(),
                 field: "naem",
@@ -200,10 +573,14 @@ fn record_access_missing_field_typo() {
     );
     let report = to_report(&Localizer::from_names(["Builtin"]), &error);
     assert_eq!(report.suggestions, ["name", "age"]);
-    insta::assert_snapshot!(show(&error));
+    insta::assert_snapshot!(show(source, &error));
 }
 #[test]
 fn record_update_unknown_field() {
+    let source = "module Main exposing (..)\nperson = { name = \"hello\" }\nvalue = { person | naem = () }\n";
+    let region = || source_region(source, "naem");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let record = ErrorType::Record {
         fields: &[("name", &string())],
     };
@@ -213,19 +590,26 @@ fn record_update_unknown_field() {
         field: &field,
         value: &value,
     }];
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::Record,
-        &record,
-        Expected::FromContext(
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
             region(),
-            Context::RecordUpdateKeys("person", &updates),
-            &int()
+            Category::Record,
+            &record,
+            Expected::FromContext(
+                region(),
+                Context::RecordUpdateKeys("person", &updates),
+                &int()
+            )
         )
-    )));
+    ));
 }
 #[test]
 fn missing_field_alias() {
+    let source = "module Main exposing (..)\ntype alias Person = { age : Builtin.int }\nvalue : Person -> Builtin.int\nvalue person = person.aeg\n";
+    let region = || source_region(source, "aeg");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     use nash_constrain::type_::FieldContext;
     let i = int();
     let actual = ErrorType::Alias {
@@ -239,33 +623,47 @@ fn missing_field_alias() {
             fields: &[("age", &i)],
         },
     };
-    insta::assert_snapshot!(show(&Error::MissingField {
-        region: region(),
-        context: FieldContext::Access {
-            record_region: region(),
-            maybe_name: Some("person")
-        },
-        field: "aeg",
-        record: &actual,
-        available: &["age"]
-    }));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::MissingField {
+            region: region(),
+            context: FieldContext::Access {
+                record_region: source_region(source, "person"),
+                maybe_name: Some("person")
+            },
+            field: "aeg",
+            record: &actual,
+            available: &["age"]
+        }
+    ));
 }
 #[test]
 fn op_append_string_list() {
+    let source = "module Main exposing (..)\nvalue = \"hello\" ++ [1]\n";
+    let region = || source_region(source, "[1]");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let list = ErrorType::Type {
         home: nash_ast::primitives::builtin_home(),
         name: "list",
         args: &[&int()],
     };
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::List,
-        &list,
-        Expected::FromContext(region(), Context::OpRight("++"), &string())
-    )));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::List,
+            &list,
+            Expected::FromContext(region(), Context::OpRight("++"), &string())
+        )
+    ));
 }
 #[test]
 fn op_cons_element_mismatch() {
+    let source = "module Main exposing (..)\nvalue = 1 :: [\"hello\"]\n";
+    let region = || source_region(source, "[\"hello\"]");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let actual = ErrorType::Type {
         home: nash_ast::primitives::builtin_home(),
         name: "list",
@@ -276,210 +674,330 @@ fn op_cons_element_mismatch() {
         name: "list",
         args: &[&int()],
     };
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::List,
-        &actual,
-        Expected::FromContext(region(), Context::OpRight("::"), &expected)
-    )));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::List,
+            &actual,
+            Expected::FromContext(region(), Context::OpRight("::"), &expected)
+        )
+    ));
 }
 #[test]
 fn op_pipe_argument_mismatch() {
+    let source = "module Main exposing (..)\nf : Builtin.string -> Builtin.string\nf x = x\nvalue = 1 |> f\n";
+    let region = || source_region(source, "f");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let actual = ErrorType::Lambda(&string(), &string(), &[]);
     let expected = ErrorType::Lambda(&int(), &string(), &[]);
-    insta::assert_snapshot!(show(&Error::BadExpr(
-        region(),
-        Category::Lambda,
-        &actual,
-        Expected::FromContext(region(), Context::OpRight("|>"), &expected)
-    )));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadExpr(
+            region(),
+            Category::Lambda,
+            &actual,
+            Expected::FromContext(region(), Context::OpRight("|>"), &expected)
+        )
+    ));
 }
 
-macro_rules! error_snapshot {
-    ($name:ident, $error:expr) => {
-        #[test]
-        fn $name() {
-            insta::assert_snapshot!(show(&$error));
+#[test]
+fn ambiguous_record_access() {
+    let source = "module Main exposing (..)\nvalue = .name\n";
+    let region = || source_region(source, ".name");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::AmbiguousRecordAccess {
+            region: region(),
+            context: nash_constrain::type_::FieldContext::Accessor,
+            field: Some("name"),
+            record: &ErrorType::FlexVar("a")
         }
-    };
+    ));
 }
-error_snapshot!(
-    ambiguous_record_access,
-    Error::AmbiguousRecordAccess {
-        region: region(),
-        context: nash_constrain::type_::FieldContext::Accessor,
-        field: Some("name"),
-        record: &ErrorType::FlexVar("a")
-    }
-);
-error_snapshot!(
-    not_a_record_pattern,
-    Error::NotARecord {
-        region: region(),
-        context: nash_constrain::type_::FieldContext::Pattern,
-        field: Some("name"),
-        record: &int()
-    }
-);
-error_snapshot!(
-    update_not_record,
-    Error::UpdateNotRecord {
-        region: region(),
-        record: &int()
-    }
-);
-error_snapshot!(
-    field_mismatch_update,
-    Error::FieldMismatch {
-        region: region(),
-        context: nash_constrain::type_::FieldContext::Update { record: "person" },
-        field: "age",
-        actual: &string(),
-        expected: &int()
-    }
-);
-error_snapshot!(
-    kind_mismatch,
-    Error::BadKind {
-        region: region(),
-        name: "f",
-        args: &[&int()],
-        reason: nash_constrain::error::KindProblem::Mismatch {
-            expected: &nash_ast::Kind::Arrow(&nash_ast::Kind::Type, &nash_ast::Kind::Type),
-            actual: &nash_ast::Kind::Type
+#[test]
+fn not_a_record_pattern() {
+    let source =
+        "module Main exposing (..)\nvalue : Builtin.int -> Builtin.int\nvalue { name } = name\n";
+    let region = || source_region(source, "{ name }");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::NotARecord {
+            region: region(),
+            context: nash_constrain::type_::FieldContext::Pattern,
+            field: Some("name"),
+            record: &int()
         }
-    }
-);
-error_snapshot!(
-    infinite_kind,
-    Error::BadKind {
-        region: region(),
-        name: "f",
-        args: &[&ErrorType::FlexVar("a")],
-        reason: nash_constrain::error::KindProblem::Infinite
-    }
-);
-error_snapshot!(
-    ambiguous_type,
-    Error::AmbiguousType {
-        region: region(),
-        name: "value",
-        variable: &ErrorType::FlexVar("a"),
-        predicates: &[nash_constrain::error::AmbiguousPredicate {
-            trait_: nash_ast::primitives::num_trait(),
-            args: &[&ErrorType::FlexVar("a")]
-        }]
-    }
-);
-error_snapshot!(
-    contradictory_representation,
-    Error::ContradictoryRepresentation {
-        region: region(),
-        name: "f",
-        typ: &ErrorType::RigidVar("a"),
-        requirements: &[
-            nash_ast::primitives::ReprTrait::Big,
-            nash_ast::primitives::ReprTrait::Little
-        ]
-    }
-);
-error_snapshot!(
-    polymorphic_recursion,
-    Error::PolymorphicRecursion {
-        region: region(),
-        name: "f",
-        trait_: nash_ast::primitives::eq_trait(),
-        args: &[&ErrorType::FlexVar("a")]
-    }
-);
-error_snapshot!(
-    unresolved_constraint,
-    Error::UnresolvedConstraint {
-        region: region(),
-        name: "f",
-        trait_: nash_ast::primitives::eq_trait(),
-        args: &[&ErrorType::FlexVar("a")]
-    }
-);
-error_snapshot!(
-    unresolved_application,
-    Error::UnresolvedApplication {
-        region: region(),
-        name: "f",
-        head: &ErrorType::FlexVar("f"),
-        args: &[&int()]
-    }
-);
-error_snapshot!(
-    impl_resolution_limit,
-    Error::ImplResolutionLimit {
-        region: region(),
-        name: "f",
-        trait_: nash_ast::primitives::eq_trait()
-    }
-);
-error_snapshot!(
-    missing_constraint,
-    Error::MissingConstraint {
-        region: region(),
-        name: "==",
-        trait_: nash_ast::primitives::eq_trait(),
-        args: &[&ErrorType::RigidVar("a")],
-        binder: &nash_region::Located::at(region(), "f")
-    }
-);
-error_snapshot!(
-    annotation_variable_escapes,
-    Error::AnnotationVariableEscapes {
-        region: region(),
-        name: Some("f"),
-        variable: &ErrorType::RigidVar("a")
-    }
-);
-error_snapshot!(
-    missing_impl,
-    Error::MissingImpl {
-        region: region(),
-        name: "==",
-        trait_: nash_ast::primitives::eq_trait(),
-        args: &[&ErrorType::Type {
-            home: nash_ast::ModuleName {
-                package: None,
-                name: "Main"
-            },
-            name: "step",
-            args: &[]
-        }],
-        available: &[&[nash_ast::Head::Named {
-            reference: nash_ast::QualifiedName {
-                home: nash_ast::primitives::builtin_home(),
-                name: "int"
-            },
-            args: &[]
-        }]],
-        because: &[]
-    }
-);
-error_snapshot!(
-    missing_storable_constraint_for_list_element,
-    Error::MissingImpl {
-        region: region(),
-        name: "values",
-        trait_: nash_ast::primitives::ReprTrait::Storable.qualified(),
-        args: &[&ErrorType::Lambda(&int(), &int(), &[])],
-        available: &[],
-        because: &[nash_constrain::error::Requirement::Formation(
-            &ErrorType::Type {
-                home: nash_ast::primitives::builtin_home(),
-                name: "list",
-                args: &[&ErrorType::Lambda(&int(), &int(), &[])]
+    ));
+}
+#[test]
+fn update_not_record() {
+    let source = "module Main exposing (..)\nperson = 1\nvalue = { person | age = 2 }\n";
+    let region = || source_region(source, "person | age = 2");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::UpdateNotRecord {
+            region: region(),
+            record: &int()
+        }
+    ));
+}
+#[test]
+fn field_mismatch_update() {
+    let source =
+        "module Main exposing (..)\nperson = { age = 1 }\nvalue = { person | age = \"hello\" }\n";
+    let region = || source_region(source, "\"hello\"");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::FieldMismatch {
+            region: region(),
+            context: nash_constrain::type_::FieldContext::Update { record: "person" },
+            field: "age",
+            actual: &string(),
+            expected: &int()
+        }
+    ));
+}
+#[test]
+fn kind_mismatch() {
+    let source = "module Main exposing (..)\nf : 'f Builtin.int -> 'f\nf x = x\n";
+    let region = || source_region(source, "'f Builtin.int");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadKind {
+            region: region(),
+            name: "f",
+            args: &[&int()],
+            reason: nash_constrain::error::KindProblem::Mismatch {
+                expected: &nash_ast::Kind::Arrow(&nash_ast::Kind::Type, &nash_ast::Kind::Type),
+                actual: &nash_ast::Kind::Type
             }
-        )]
-    }
-);
+        }
+    ));
+}
+#[test]
+fn infinite_kind() {
+    let source = "module Main exposing (..)\nf : 'a 'a\nf = f\n";
+    let region = || source_region(source, "'a 'a");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::BadKind {
+            region: region(),
+            name: "f",
+            args: &[&ErrorType::FlexVar("a")],
+            reason: nash_constrain::error::KindProblem::Infinite
+        }
+    ));
+}
+#[test]
+fn ambiguous_type() {
+    let source = "module Main exposing (..)\nvalue = let unused = 1 in ()\n";
+    let region = || source_region(source, "value");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::AmbiguousType {
+            region: region(),
+            name: "value",
+            variable: &ErrorType::FlexVar("a"),
+            predicates: &[nash_constrain::error::AmbiguousPredicate {
+                trait_: nash_ast::primitives::num_trait(),
+                args: &[&ErrorType::FlexVar("a")]
+            }]
+        }
+    ));
+}
+#[test]
+fn contradictory_representation() {
+    let source = "module Main exposing (..)\nf : (Big 'a, Little 'a) => 'a -> 'a\nf x = x\n";
+    let region = || source_region(source, "'a -> 'a");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::ContradictoryRepresentation {
+            region: region(),
+            name: "f",
+            typ: &ErrorType::RigidVar("a"),
+            requirements: &[
+                nash_ast::primitives::ReprTrait::Big,
+                nash_ast::primitives::ReprTrait::Little
+            ]
+        }
+    ));
+}
+#[test]
+fn polymorphic_recursion() {
+    let source = "module Main exposing (..)\nf x = if x == x then f [x] else f x\n";
+    let region = || source_region(source, "f [x]");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::PolymorphicRecursion {
+            region: region(),
+            name: "f",
+            trait_: nash_ast::primitives::eq_trait(),
+            args: &[&ErrorType::FlexVar("a")]
+        }
+    ));
+}
+#[test]
+fn unresolved_constraint() {
+    let source = "module Main exposing (..)\nf x = x == x\n";
+    let region = || source_region(source, "x == x");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::UnresolvedConstraint {
+            region: region(),
+            name: "f",
+            trait_: nash_ast::primitives::eq_trait(),
+            args: &[&ErrorType::FlexVar("a")]
+        }
+    ));
+}
+#[test]
+fn unresolved_application() {
+    let source = "module Main exposing (..)\nf : 'f Builtin.int -> Builtin.int\nf x = 1\n";
+    let region = || source_region(source, "'f Builtin.int");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::UnresolvedApplication {
+            region: region(),
+            name: "f",
+            head: &ErrorType::FlexVar("f"),
+            args: &[&int()]
+        }
+    ));
+}
+#[test]
+fn impl_resolution_limit() {
+    let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nimpl Eq (Builtin.list 'a) => Eq 'a where\n    eq xs ys = True\nf xs = eq xs xs\n";
+    let region = || source_region(source, "eq xs xs");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::ImplResolutionLimit {
+            region: region(),
+            name: "f",
+            trait_: nash_ast::primitives::eq_trait()
+        }
+    ));
+}
+#[test]
+fn missing_constraint() {
+    let source = "module Main exposing (..)\nf : 'a -> Builtin.bool\nf x = x == x\n";
+    let region = || source_region(source, "x == x");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::MissingConstraint {
+            region: region(),
+            name: "==",
+            trait_: nash_ast::primitives::eq_trait(),
+            args: &[&ErrorType::RigidVar("a")],
+            binder: &nash_region::Located::at(source_region(source, "f"), "f")
+        }
+    ));
+}
+#[test]
+fn annotation_variable_escapes() {
+    let source = "module Main exposing (..)\nf x =\n    let\n        inner : 'a\n        inner = x\n    in\n    inner\n";
+    let region = || source_region(source, "inner = x");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::AnnotationVariableEscapes {
+            region: region(),
+            name: Some("f"),
+            variable: &ErrorType::RigidVar("a")
+        }
+    ));
+}
+#[test]
+fn missing_impl() {
+    let source =
+        "module Main exposing (..)\ntype step = Done | Next Builtin.int\nf = Done == Done\n";
+    let region = || source_region(source, "Done == Done");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::MissingImpl {
+            region: region(),
+            name: "==",
+            trait_: nash_ast::primitives::eq_trait(),
+            args: &[&ErrorType::Type {
+                home: nash_ast::ModuleName {
+                    package: None,
+                    name: "Main"
+                },
+                name: "step",
+                args: &[]
+            }],
+            available: &[&[nash_ast::Head::Named {
+                reference: nash_ast::QualifiedName {
+                    home: nash_ast::primitives::builtin_home(),
+                    name: "int"
+                },
+                args: &[]
+            }]],
+            because: &[]
+        }
+    ));
+}
+#[test]
+fn missing_storable_constraint_for_list_element() {
+    let source = "module Main exposing (..)\nvalues = [\\x -> x + 1]\n";
+    let region = || source_region(source, "[\\x -> x + 1]");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(show(
+        source,
+        &Error::MissingImpl {
+            region: region(),
+            name: "values",
+            trait_: nash_ast::primitives::ReprTrait::Storable.qualified(),
+            args: &[&ErrorType::Lambda(&int(), &int(), &[])],
+            available: &[],
+            because: &[nash_constrain::error::Requirement::Formation(
+                &ErrorType::Type {
+                    home: nash_ast::primitives::builtin_home(),
+                    name: "list",
+                    args: &[&ErrorType::Lambda(&int(), &int(), &[])]
+                }
+            )]
+        }
+    ));
+}
 
 #[test]
 fn every_category() {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_omit_expression(true);
+    let _guard = settings.bind_to_scope();
     let categories = [
         Category::List,
         Category::String,
@@ -508,6 +1026,9 @@ fn every_category() {
 }
 #[test]
 fn every_pattern_category() {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_omit_expression(true);
+    let _guard = settings.bind_to_scope();
     let categories = [
         PCategory::Record,
         PCategory::Unit,
@@ -529,40 +1050,72 @@ fn every_pattern_category() {
 }
 #[test]
 fn every_subcontext() {
-    for (name, context) in [
-        ("typed_if", SubContext::TypedIfBranch(1)),
-        ("typed_case", SubContext::TypedCaseBranch(1)),
+    for (name, context, source) in [
+        (
+            "typed_if",
+            SubContext::TypedIfBranch(1),
+            "module Main exposing (..)\nf : Builtin.bool -> Builtin.int\nf flag = if flag then 1 else \"hello\"\n",
+        ),
+        (
+            "typed_case",
+            SubContext::TypedCaseBranch(1),
+            "module Main exposing (..)\nf : Builtin.bool -> Builtin.int\nf flag =\n    case flag of\n        True -> 1\n        False -> \"hello\"\n",
+        ),
     ] {
+        let settings = source_settings(source);
+        let _guard = settings.bind_to_scope();
         insta::assert_snapshot!(
             name,
-            show(&Error::BadExpr(
-                region(),
-                Category::String,
-                &string(),
-                Expected::FromAnnotation("f", Region::zero(), 0, context, &int())
-            ))
+            show(
+                source,
+                &Error::BadExpr(
+                    source_region(source, "\"hello\""),
+                    Category::String,
+                    &string(),
+                    Expected::FromAnnotation(
+                        "f",
+                        source_region(source, "Builtin.bool -> Builtin.int"),
+                        1,
+                        context,
+                        &int()
+                    )
+                )
+            )
         );
     }
 }
+
 #[test]
 fn expression_and_pattern_without_expectation() {
+    let source = "module Main exposing (..)\nvalue = [1, \"hello\"]\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(
         "expression_without_expectation",
-        show(&Error::BadExpr(
-            region(),
-            Category::String,
-            &string(),
-            Expected::NoExpectation(&int())
-        ))
+        show(
+            source,
+            &Error::BadExpr(
+                source_region(source, "\"hello\""),
+                Category::String,
+                &string(),
+                Expected::NoExpectation(&int())
+            )
+        )
     );
+    let source = "module Main exposing (..)\nvalue [0, \"hello\"] = 1\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(
         "pattern_without_expectation",
-        show(&Error::BadPattern(
-            region(),
-            PCategory::Str,
-            &string(),
-            PExpected::NoExpectation(&int())
-        ))
+        show(
+            source,
+            &Error::BadPattern(
+                source_region(source, "\"hello\""),
+                PCategory::Str,
+                &string(),
+                PExpected::NoExpectation(&int())
+            )
+        )
     );
 }
 
@@ -594,91 +1147,111 @@ fn type_error_reports(input: &str) -> String {
 }
 #[test]
 fn source_pipeline_annotation_body() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\nf : A\nf = B\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype B = B\nf : A\nf = B\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_call_argument() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\nf : A -> A\nf x = x\ng = f B\n"
-    ));
+    let source =
+        "module Main exposing (..)\ntype A = A\ntype B = B\nf : A -> A\nf x = x\ng = f B\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_if_branches() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\nf condition = if condition then A else B\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype B = B\nf condition = if condition then A else B\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_case_branches() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\nf a =\n    case a of\n        A -> A\n        _ -> B\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype B = B\nf a =\n    case a of\n        A -> A\n        _ -> B\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_list_entries() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\nf = [A, B]\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype B = B\nf = [A, B]\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 
 #[test]
 fn source_pipeline_if_condition() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\nf = if A then A else A\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\nf = if A then A else A\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_call_second_argument() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\nf : A -> A -> A\nf x y = x\ng = f A B\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype B = B\nf : A -> A -> A\nf x y = x\ng = f A B\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_pattern_typed_arg() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\nf : B -> B\nf A = B\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype B = B\nf : B -> B\nf A = B\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_pattern_ctor_arg() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\ntype Box = Box A\nf (Box B) = A\n"
-    ));
+    let source =
+        "module Main exposing (..)\ntype A = A\ntype B = B\ntype Box = Box A\nf (Box B) = A\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_record_update_type() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype B = B\ntype alias Person = { age : A }\nf : Person -> Person\nf p = { p | age = B }\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype B = B\ntype alias Person = { age : A }\nf : Person -> Person\nf p = { p | age = B }\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_record_access() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntype alias Person = { age : A }\nf : Person -> A\nf p = p.aeg\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntype alias Person = { age : A }\nf : Person -> A\nf p = p.aeg\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_infinite_type() {
-    insta::assert_snapshot!(type_error_reports("module Main exposing (..)\nf x = x x\n"));
+    let source = "module Main exposing (..)\nf x = x x\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_missing_impl() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntype A = A\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nf : A -> Builtin.bool\nf a = eq a a\n"
-    ));
+    let source = "module Main exposing (..)\ntype A = A\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nf : A -> Builtin.bool\nf a = eq a a\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_missing_constraint() {
-    insta::assert_snapshot!(type_error_reports(
-        "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nf : 'a -> Builtin.bool\nf a = eq a a\n"
-    ));
+    let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nf : 'a -> Builtin.bool\nf a = eq a a\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
 }
 
 #[test]
 fn example_one_big_little_annotation() {
     let source = "module Ledger exposing (settle)\n\ntype alias Account = { owner : Bytes, balance : Int }\n\nbalanceOf : Account -> Int\nbalanceOf account = account.balance\n\nsettle : list Account -> list int\nsettle accounts =\n    List.map balanceOf accounts\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let home = nash_ast::primitives::builtin_home();
     let big = ErrorType::Type {
         home,
@@ -702,7 +1275,7 @@ fn example_one_big_little_annotation() {
         &actual,
         Expected::FromAnnotation(
             "settle",
-            Region::zero(),
+            source_region(source, "list Account -> list int"),
             1,
             SubContext::TypedBody,
             &expected,
@@ -738,8 +1311,39 @@ fn operator_branches() {
         ("pipe_left_argument", "<|", false),
         ("custom_right", "<?>", false),
     ] {
+        let operand = match op {
+            "&&" | "||" => "True",
+            "++" => "[1]",
+            "<|" if !left => "(\\x -> x + 1)",
+            _ => "1",
+        };
+        let source = if left {
+            format!("module Main exposing (..)\nvalue = \"hello\" {op} {operand}\n")
+        } else {
+            format!("module Main exposing (..)\nvalue = {operand} {op} \"hello\"\n")
+        };
+        let region = || source_region(&source, "\"hello\"");
+        let settings = source_settings(&source);
+        let _guard = settings.bind_to_scope();
         let actual = string();
-        let expected = int();
+        let expected_element = int();
+        let expected = if matches!(op, "&&" | "||") {
+            ErrorType::Type {
+                home: nash_ast::primitives::builtin_home(),
+                name: "bool",
+                args: &[],
+            }
+        } else if op == "++" {
+            ErrorType::Type {
+                home: nash_ast::primitives::builtin_home(),
+                name: "list",
+                args: &[&expected_element],
+            }
+        } else if op == "<|" && left {
+            ErrorType::Lambda(&expected_element, &expected_element, &[])
+        } else {
+            int()
+        };
         let context = if left {
             Context::OpLeft(op)
         } else {
@@ -756,13 +1360,16 @@ fn operator_branches() {
         );
         insta::assert_snapshot!(
             name,
-            Doc::stack([report.before, report.after]).render(80, false)
+            crate::render_plain(&report, &crate::Source::new(&source), "Main.nash")
         );
     }
 }
 
 #[test]
 fn problem_hints() {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_omit_expression(true);
+    let _guard = settings.bind_to_scope();
     for (name, problem) in [
         ("hint_arity_fewer", Problem::ArityMismatch(1, 3)),
         ("hint_arity_more", Problem::ArityMismatch(3, 1)),
@@ -797,7 +1404,11 @@ fn problem_hints() {
 
 #[test]
 fn missing_impl_local_union_suggests_a_supported_impl() {
-    let source = "module Main exposing (..)\ntype step = Done | Next Builtin.int\n";
+    let source =
+        "module Main exposing (..)\ntype step = Done | Next Builtin.int\nf = Done == Done\n";
+    let region = || source_region(source, "Done == Done");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let bump = bumpalo::Bump::new();
     let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let l = Localizer::from_module(&module, &[]);
@@ -822,7 +1433,11 @@ fn missing_impl_local_union_suggests_a_supported_impl() {
     assert!(text.contains("Import or define an impl for"), "{text}");
     assert!(text.contains("step"), "{text}");
     assert!(!text.contains("@derive"));
-    insta::assert_snapshot!(text);
+    insta::assert_snapshot!(crate::render_plain(
+        &report,
+        &crate::Source::new(source),
+        "Main.nash"
+    ));
 }
 
 #[test]
@@ -881,13 +1496,21 @@ fn append_number_hints_wrap() {
         ("append_int_left", Context::OpLeft("++"), string()),
         ("append_int_to_string", Context::OpRight("++"), string()),
     ] {
+        let source = if name == "append_int_left" {
+            "module Main exposing (..)\nvalue = 1 ++ \"hello\"\n"
+        } else {
+            "module Main exposing (..)\nvalue = \"hello\" ++ 1\n"
+        };
+        let region = || source_region(source, "1");
+        let settings = source_settings(source);
+        let _guard = settings.bind_to_scope();
         let error = Error::BadExpr(
             region(),
             Category::CallResult(MaybeName::NoName),
             &int(),
             Expected::FromContext(region(), context, &expected),
         );
-        insta::assert_snapshot!(name, show(&error));
+        insta::assert_snapshot!(name, show(source, &error));
     }
 }
 
@@ -915,6 +1538,10 @@ fn pipe_argument_mismatch_does_not_blame_the_function_operand() {
 
 #[test]
 fn validator_term_parameter() {
+    let source = "module Main exposing (..)\nmain : Builtin.Data -> ((), ()) -> Builtin.bool\nmain datum pair = True\n";
+    let region = || source_region(source, "((), ())");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let unit = nash_region::Located::at_zero(nash_ast::Type::unit());
     let typ = nash_region::Located::at(
         region(),
@@ -924,9 +1551,12 @@ fn validator_term_parameter() {
             rest: &[],
         },
     );
-    insta::assert_snapshot!(show(&Error::MainParameterIsTerm {
-        region: region(),
-        index: 1,
-        typ: &typ
-    }));
+    insta::assert_snapshot!(show(
+        source,
+        &Error::MainParameterIsTerm {
+            region: region(),
+            index: 1,
+            typ: &typ
+        }
+    ));
 }

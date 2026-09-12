@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "trait Equal 'a where\n    a : Int -> Bool"
 ---
 nash::names::method_missing_parameter
 
   × The `a` method does not mention trait parameter 'a:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:2:5]
+ 1 │ trait Equal 'a where
+ 2 │     a : Int -> Bool
+   ·     ───────────────
    ╰────
   help: Every trait parameter must occur in the method's type so a call can determine
         which impl to use.

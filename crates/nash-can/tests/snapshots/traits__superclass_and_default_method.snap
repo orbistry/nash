@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "(&result.module.traits, &result.module.exports)"
+description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\ntrait Eq 'a => Same 'a where\n    same : 'a -> 'a -> bool\n    same x y = eq x y\n"
 ---
 (
     [

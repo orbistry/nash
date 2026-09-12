@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (Name(..))\ntype alias Name = Int"
 ---
 nash::names::export_open_alias
 
-  × Type alias `name` has no variants to expose.
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × Type alias `Name` has no variants to expose.
+   ╭─[Main.nash:1:23]
+ 1 │ module Main exposing (Name(..))
+   ·                       ────────
+ 2 │ type alias Name = Int
    ╰────
   help: Remove `(..)`.

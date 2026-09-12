@@ -1,0 +1,14 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type s)\ntype s 'f 'g 'a = S ('g ('f 'f 'a))\n\nmodule Main exposing (..)\nimport Types exposing (type s)\ntype tag 'a = Tag\ntype w = W (s s tag tag)\n"
+---
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `S` in `s` would require an
+  │ infinite kind:
+   ╭─[/Types.nash:2:29]
+ 1 │ module Types exposing (type s)
+ 2 │ type s 'f 'g 'a = S ('g ('f 'f 'a))
+   ·                             ──
+   ╰────
+  help: Check the type application and the kinds of its arguments.

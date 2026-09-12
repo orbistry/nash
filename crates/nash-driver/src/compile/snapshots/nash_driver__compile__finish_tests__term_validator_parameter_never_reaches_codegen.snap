@@ -1,0 +1,17 @@
+---
+source: crates/nash-driver/src/compile/finish_tests.rs
+description: "validator module VestingBad exposing (main)\n\nimport Builtin exposing (..)\n\nmain : (Data -> bool) -> Data -> unit\nmain predicate ctx = assert (predicate ctx)\n"
+---
+nash::validator::main_parameter_is_term
+
+  × Parameter 1 of main has a Term type:
+  │
+  │ Data -> bool
+   ╭─[/project/src/VestingBad.nash:5:9]
+ 4 │ 
+ 5 │ main : (Data -> bool) -> Data -> unit
+   ·         ────────────
+ 6 │ main predicate ctx = assert (predicate ctx)
+   ╰────
+  help: A script can only receive constants. Use Data, a Big type, or a Const type for
+        this parameter, and convert it inside main.

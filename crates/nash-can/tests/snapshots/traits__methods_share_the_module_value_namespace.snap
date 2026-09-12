@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-expression: "nash_can::canonicalize(&bump, nash_can::Context::default(),\nsource).unwrap_err()"
+description: "module Main exposing (..)\n\ntrait First 'a where\n    duplicate : 'a -> 'a\n\ntrait Second 'a where\n    duplicate : 'a -> 'a\n"
 ---
 [
     DuplicateMethod {

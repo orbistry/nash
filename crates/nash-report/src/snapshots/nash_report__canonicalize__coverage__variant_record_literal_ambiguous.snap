@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "import First exposing (Equal)\nimport Second exposing (Other)\nvalue = { x = 1, y = 2 }"
 ---
 nash::names::record_literal_ambiguous
 
   × Several visible record aliases have exactly these fields:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+   ╭─[Main.nash:3:9]
+ 2 │ import Second exposing (Other)
+ 3 │ value = { x = 1, y = 2 }
+   ·         ────────────────
    ╰────
   help: The candidates are First.Equal, Second.Other. Use the intended alias constructor
         to make the record type clear.

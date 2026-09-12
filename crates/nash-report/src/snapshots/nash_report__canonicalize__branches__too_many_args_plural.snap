@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&to_report(&source, &error), &source, \"Main.nash\")"
+description: "type One 'a = One 'a\nvalue (One x y z) = x"
 ---
 nash::names::bad_arity
 
   × The `One` variant needs 1 argument, but I see 3 instead:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
+   ╭─[Main.nash:2:8]
+ 1 │ type One 'a = One 'a
+ 2 │ value (One x y z) = x
+   ·        ─────────
    ╰────
   help: Remove the extra arguments or check the grouping.

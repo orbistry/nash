@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/canonicalize.rs
-expression: "crate::render_plain(&report, &source, \"Main.nash\")"
+description: "module Main exposing (Name(..))\ntrait Name 'a where\n    name : 'a -> 'a"
 ---
 nash::names::export_open_trait
 
-  × The `name` trait cannot be followed by (..) like this:
-   ╭─[Main.nash:1:1]
- 1 │ name = other
-   · ────
- 2 │ other = name
+  × The `Name` trait cannot be followed by (..) like this:
+   ╭─[Main.nash:1:23]
+ 1 │ module Main exposing (Name(..))
+   ·                       ────────
+ 2 │ trait Name 'a where
    ╰────
   help: The (..) syntax exposes variants of a custom type. Remove the dots and name the
         trait methods explicitly when you need them.

@@ -1,5 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "Doc::stack([report.before, report.after]).render(80, false)"
+description: "module Main exposing (..)\nvalue = 1 + \"hello\"\n"
 ---
-Type mismatch: expected `int`, found `string`.
+nash::type::mismatch
+
+  × Type mismatch: expected `int`, found `string`.
+   ╭─[Main.nash:2:13]
+ 1 │ module Main exposing (..)
+ 2 │ value = 1 + "hello"
+   ·             ───┬───
+   ·                ╰── right operand of (+)
+   ╰────

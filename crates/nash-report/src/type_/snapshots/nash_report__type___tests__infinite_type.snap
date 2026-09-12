@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::InfiniteType { region: region(), name: \"f\", overall_type: &t })"
+description: "module Main exposing (..)\nf x = x x\n"
 ---
 nash::type::infinite_type
 
   × `f` has a self-referential type: ∞ -> 'a
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ─────
+   ╭─[Main.nash:2:7]
+ 1 │ module Main exposing (..)
+ 2 │ f x = x x
+   ·       ───
    ╰────
   help: Break the type cycle; ∞ marks a repeated part of the type.

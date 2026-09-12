@@ -1,0 +1,12 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+description: type alias box = List
+---
+nash::names::kind_mismatch
+
+  × Kind mismatch in the lowercase name of alias `box`.
+   ╭─[Main.nash:1:18]
+ 1 │ type alias box = List
+   ·                  ────
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

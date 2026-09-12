@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kind_predicates.rs
-expression: "unions.iter().map(|u|\n(u.value.name.value, u.value.kind, u.value.context)).collect::<Vec<_>>()"
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Box 'a = Box 'a\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)\n"
 ---
 [
     (

@@ -1,12 +1,13 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-expression: "show(&Error::BadExpr(region(), Category::List, &list,\nExpected::FromContext(region(), Context::OpRight(\"++\"), &string())))"
+description: "module Main exposing (..)\nvalue = \"hello\" ++ [1]\n"
 ---
 nash::type::mismatch
 
   × Type mismatch: expected `string`, found `list int`.
-   ╭─[Main.nash:1:1]
- 1 │ value
-   · ──┬──
-   ·   ╰── right operand of (++)
+   ╭─[Main.nash:2:20]
+ 1 │ module Main exposing (..)
+ 2 │ value = "hello" ++ [1]
+   ·                    ─┬─
+   ·                     ╰── right operand of (++)
    ╰────

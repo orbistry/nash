@@ -1,8 +1,12 @@
+mod snapshot_support;
+use snapshot_support::SnapshotInputs;
+
 use bumpalo::Bump;
 use nash_can::Context;
 
 #[test]
 fn twin_imports_preserve_privacy_and_explicit_exposure() {
+    let snapshot_inputs = SnapshotInputs::default();
     let mut diagnostics = Vec::new();
     for (exports, imports, bare, qualified) in [
         ("type status(..), Status", "..", true, false),
@@ -11,13 +15,17 @@ fn twin_imports_preserve_privacy_and_explicit_exposure() {
     ] {
         let bump = Bump::new();
         let source = bump.alloc_str(&format!("module Status exposing ({exports})\ntype status = Ready | Waiting\ntype Status = Ready | Waiting\n"));
-        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
         let interface = nash_can::from_module(&bump, &canonical.module, &Default::default());
         let interfaces = std::collections::BTreeMap::from([("Status", interface)]);
         for (constructor, expected) in [("Ready", bare), ("S.Ready", qualified)] {
             let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Status as S exposing ({imports})\nvalue = {constructor}\n"));
-            let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+            let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+                .module()
+                .unwrap();
             let result = nash_can::canonicalize(
                 &bump,
                 Context {
@@ -42,11 +50,14 @@ fn twin_imports_preserve_privacy_and_explicit_exposure() {
             }
         }
     }
-    insta::assert_snapshot!(diagnostics.join("\n"));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(diagnostics.join("\n"));
+    });
 }
 
 #[test]
 fn twin_exception_rejects_unrelated_and_malformed_duplicates() {
+    let snapshot_inputs = SnapshotInputs::default();
     let mut diagnostics = Vec::new();
     for declarations in [
         "type status = Ready\ntype Other = Ready\n",
@@ -59,7 +70,9 @@ fn twin_exception_rejects_unrelated_and_malformed_duplicates() {
     ] {
         let bump = Bump::new();
         let source = bump.alloc_str(&format!("module Status exposing (..)\n{declarations}"));
-        let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
         let errors = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap_err();
         assert!(
             errors
@@ -69,5 +82,7 @@ fn twin_exception_rejects_unrelated_and_malformed_duplicates() {
         );
         diagnostics.push(format!("{declarations}{errors:?}"));
     }
-    insta::assert_snapshot!(diagnostics.join("\n"));
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(diagnostics.join("\n"));
+    });
 }
