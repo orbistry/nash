@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::ContradictoryRepresentation\n{\n    region: region(), name: \"f\", typ: &ErrorType::RigidVar(\"a\"), requirements:\n    &[nash_ast::primitives::ReprTrait::Big,\n    nash_ast::primitives::ReprTrait::Little]\n})"
 ---
-nash::type::contradictory_representation
-
   × `f` requires incompatible representations for `'a`.
    ╭─[Main.nash:1:1]
  1 │ value

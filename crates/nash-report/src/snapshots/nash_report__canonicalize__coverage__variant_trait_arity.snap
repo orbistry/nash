@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::trait_arity
-
   × The `name` trait needs 1 argument, but I see 2 instead:
    ╭─[Main.nash:1:1]
  1 │ name = other

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::kind_infinite
-
   × This application in the annotation for `name` would require an infinite kind:
    ╭─[Main.nash:1:1]
  1 │ name = other

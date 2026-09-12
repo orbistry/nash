@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::reflexive_lift_overlap
-
   × This impl overlaps the reflexive `Lift` rule:
    ╭─[Main.nash:1:1]
  1 │ name = other

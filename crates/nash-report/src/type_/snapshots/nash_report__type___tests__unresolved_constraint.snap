@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::UnresolvedConstraint\n{\n    region: region(), name: \"f\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::FlexVar(\"a\")]\n})"
 ---
-nash::type::unresolved_constraint
-
   × Cannot establish `Eq 'a` for `f`.
    ╭─[Main.nash:1:1]
  1 │ value

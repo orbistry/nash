@@ -528,7 +528,14 @@ fn report_text(reports: &nash_report::ModuleReports) -> String {
     reports
         .reports
         .iter()
-        .map(|report| nash_report::render_plain(report, &source, &reports.path))
+        // Semantic driver assertions include stable codes independently of the terminal layout.
+        .map(|report| {
+            format!(
+                "{}\n\n{}",
+                report.code,
+                nash_report::render_plain(report, &source, &reports.path)
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }

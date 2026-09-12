@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::MissingConstraint\n{\n    region: region(), name: \"==\", trait_: nash_ast::primitives::eq_trait(),\n    args: &[&ErrorType::RigidVar(\"a\")], binder:\n    &nash_region::Located::at(region(), \"f\")\n})"
 ---
-nash::type::missing_constraint
-
   × `==` requires undeclared constraint `Eq 'a`.
    ╭─[Main.nash:1:1]
  1 │ value

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: Thing
 ---
-nash::syntax
-
   × Definition name `Thing` must start lowercase.
    ╭─[src/Main.nash:1:1]
  1 │ Thing

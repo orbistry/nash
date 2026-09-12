@@ -2,8 +2,6 @@
 source: crates/nash-report/src/pattern.rs
 expression: "render(indoc::indoc!\n{r#\"\n            module Main exposing (..)\n            import Builtin exposing (Data(..))\n            tag d =\n                case d of\n                    Constr _ _ -> ()\n                    List _ -> ()\n        \"#})"
 ---
-nash::pattern::incomplete
-
   × Case expression is not exhaustive.
    ╭─[src/Main.nash:4:5]
  3 │     tag d =

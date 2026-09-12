@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nmodule"
 ---
-nash::syntax
-
   × Expected an uppercase module name.
    ╭─[src/Main.nash:1:7]
  1 │ module

@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nimport Cardano.Tx exposing x"
 ---
-nash::syntax
-
   × Expected `(` after `exposing`.
    ╭─[src/Main.nash:1:28]
  1 │ import Cardano.Tx exposing x

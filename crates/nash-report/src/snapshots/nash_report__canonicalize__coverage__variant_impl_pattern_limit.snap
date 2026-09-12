@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::impl_pattern_limit
-
   × This impl pattern is too large or deeply nested:
    ╭─[Main.nash:1:1]
  1 │ name = other

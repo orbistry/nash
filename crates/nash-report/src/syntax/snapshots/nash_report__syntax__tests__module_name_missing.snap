@@ -2,7 +2,5 @@
 source: crates/nash-report/src/syntax/tests.rs
 expression: "render_plain(&to_report(&Source::new(\"\"),\n&Error::ModuleNameUnspecified(\"Main\")), &Source::new(\"\"), \"src/Main.nash\")"
 ---
-nash::syntax::missing_module_name
-
   × Missing module declaration.
   help: Add `module Main exposing (..)` at the start of the file.

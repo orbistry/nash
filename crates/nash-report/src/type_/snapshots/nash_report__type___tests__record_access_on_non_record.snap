@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(& Error ::\nBadExpr(region(), Category :: String, & string(), Expected ::\nFromContext(region(),\nContext::RecordAccess\n{\n    record_region: region(), maybe_name: Some(\"value\"), field_region:\n    region(), field: \"name\"\n}, & int())))"
 ---
-nash::type::mismatch
-
   × Type mismatch: expected `int`, found `string`.
    ╭─[Main.nash:1:1]
  1 │ value

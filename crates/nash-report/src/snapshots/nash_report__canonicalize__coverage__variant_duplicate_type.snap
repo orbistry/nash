@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::duplicate_type
-
   × This file defines multiple `name` types.
    ╭─[Main.nash:2:1]
  1 │ name = other

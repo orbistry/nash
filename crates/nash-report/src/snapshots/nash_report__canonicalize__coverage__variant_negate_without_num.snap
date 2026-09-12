@@ -2,8 +2,6 @@
 source: crates/nash-report/src/canonicalize.rs
 expression: "crate::render_plain(&report, &source, \"Main.nash\")"
 ---
-nash::names::negate_without_num
-
   × Numeric negation requires `Num`.
    ╭─[Main.nash:1:1]
  1 │ name = other

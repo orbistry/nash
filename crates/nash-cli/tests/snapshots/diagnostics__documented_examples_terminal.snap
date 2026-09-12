@@ -2,8 +2,6 @@
 source: crates/nash-cli/tests/diagnostics.rs
 expression: text
 ---
-nash::type::mismatch
-
   × Type mismatch: expected `list int`, found `list Int`.
     ╭─[<project>/app/src/Ledger.nash:11:5]
   8 │ 
@@ -16,8 +14,6 @@ nash::type::mismatch
     ·                ╰── body of `settle`
     ╰────
   help: Use `lower` to convert `Int` to `int` where a `Lift` impl is available.
-
-nash::type::missing_impl
 
   × No impl for `Eq step`.
    ╭─[<project>/app/src/Steps.nash:8:12]
@@ -36,8 +32,6 @@ nash::type::missing_impl
         …
 
         Import or define an impl for `Eq step`.
-
-nash::pattern::incomplete
 
   × Case expression is not exhaustive.
    ╭─[<project>/app/src/Tag.nash:7:5]

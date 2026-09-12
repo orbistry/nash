@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "f : { x : int\n}"
 ---
-nash::syntax::indentation
-
   × Closing `}` is underindented.
    ╭─[src/Main.nash:2:1]
  1 │ f : { x : int

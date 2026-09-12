@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&Error::InfiniteType { region: region(), name: \"f\", overall_type: &t })"
 ---
-nash::type::infinite_type
-
   × `f` has a self-referential type: ∞ -> 'a
    ╭─[Main.nash:1:1]
  1 │ value

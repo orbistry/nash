@@ -2,8 +2,6 @@
 source: crates/nash-report/src/pattern.rs
 expression: "render_plain(report, &Source::new(input), \"src/Main.nash\")"
 ---
-nash::pattern::redundant
-
   × The 2nd pattern is unreachable.
    ╭─[src/Main.nash:5:9]
  2 │ f xs =

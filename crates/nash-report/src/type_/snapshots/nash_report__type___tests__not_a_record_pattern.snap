@@ -2,8 +2,6 @@
 source: crates/nash-report/src/type_/tests.rs
 expression: "show(&\nError::NotARecord\n{\n    region: region(), context: nash_constrain::type_::FieldContext::Pattern,\n    field: Some(\"name\"), record: &int()\n})"
 ---
-nash::type::not_a_record
-
   × Expected a record, found `int`.
    ╭─[Main.nash:1:1]
  1 │ value

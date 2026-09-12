@@ -2,8 +2,6 @@
 source: crates/nash-report/src/syntax/tests.rs
 description: "Code:\n\nf : (int, int\nf = 1"
 ---
-nash::syntax::unclosed_delimiter
-
   × Expected `)` to close `(`.
    ╭─[src/Main.nash:1:14]
  1 │ f : (int, int

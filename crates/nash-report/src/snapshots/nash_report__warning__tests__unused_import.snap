@@ -2,8 +2,6 @@
 source: crates/nash-report/src/warning.rs
 expression: "render_plain(&report, &Source::new(input), \"src/Main.nash\")"
 ---
-nash::warning::unused_import
-
   ⚠ Unused import `Tools`.
    ╭─[src/Main.nash:2:8]
  1 │ module Main exposing (..)
