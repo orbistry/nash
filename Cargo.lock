@@ -387,9 +387,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.4.5"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80"
+checksum = "a3eb0f42d6c360dc3f8a821f6bf2fdea7f72bfd36b3076eb0e6d1e9e0752fff4"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -607,9 +607,9 @@ checksum = "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853"
 
 [[package]]
 name = "crc32fast"
-version = "1.5.1"
+version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8498c871161e1742aaa9d52551b2d6ebdd4c3d45a3be423e3728f33b955be550"
+checksum = "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78"
 dependencies = [
  "cfg-if",
 ]
@@ -1721,9 +1721,9 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "libredox"
-version = "0.1.23"
+version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d8f1ea3f21fd3405dcaf6c9b5c1630af9afc422d9073ea39c5f6d6c772e08ed"
+checksum = "6480ccc157a1389bb2e4891b24751b0f798ba640d22386f23143fbcc89da195a"
 dependencies = [
  "libc",
 ]
@@ -1883,7 +1883,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ast"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "bumpalo",
  "nash-region",
@@ -1892,7 +1892,7 @@ dependencies = [
 
 [[package]]
 name = "nash-can"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1907,7 +1907,7 @@ dependencies = [
 
 [[package]]
 name = "nash-cli"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "clap",
  "color-print",
@@ -1934,7 +1934,7 @@ dependencies = [
 
 [[package]]
 name = "nash-codegen"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1965,7 +1965,7 @@ dependencies = [
 
 [[package]]
 name = "nash-constrain"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "bumpalo",
  "insta",
@@ -1976,7 +1976,7 @@ dependencies = [
 
 [[package]]
 name = "nash-driver"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "async-trait",
  "bumpalo",
@@ -2003,7 +2003,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ir"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "insta",
  "nash-ast",
@@ -2012,7 +2012,7 @@ dependencies = [
 
 [[package]]
 name = "nash-language-server"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "nash-driver",
  "nash-region",
@@ -2026,7 +2026,7 @@ dependencies = [
 
 [[package]]
 name = "nash-nitpick"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bumpalo",
  "hex",
@@ -2037,7 +2037,7 @@ dependencies = [
 
 [[package]]
 name = "nash-parse"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2050,7 +2050,7 @@ dependencies = [
 
 [[package]]
 name = "nash-plutus"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "append-only-vec",
  "blst",
@@ -2080,7 +2080,7 @@ version = "0.3.0"
 
 [[package]]
 name = "nash-report"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2101,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "nash-solve"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -3151,9 +3151,9 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "smallvec"
-version = "1.16.0"
+version = "1.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9be42f50aa861c555654aa3a37f52f4b1074bacf4e48fe0ef7fa584e80f1f0f"
+checksum = "ba467056f1b547ed52077911161fc86985becbc60e8e1857c8a144dab0def891"
 dependencies = [
  "serde",
 ]
@@ -3338,9 +3338,9 @@ dependencies = [
 
 [[package]]
 name = "textwrap"
-version = "0.16.3"
+version = "0.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b81c0cb5fce14f53e49c1d4da0c508334ff12040221bb8ab01b2dabd91d04b6e"
+checksum = "6ecfad6c3abc80a577f2b91c1e412ee57e7a060d430b553c1b0c940974ebcd49"
 dependencies = [
  "icu_segmenter",
  "unicode-width 0.2.2",

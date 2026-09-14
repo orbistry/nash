@@ -1,5 +1,14 @@
 # nash-parse
 
+## 0.6.1 — 2026-09-14
+
+### Patch changes
+
+- [3cb7a0f](https://github.com/orbistry/nash/commit/3cb7a0f1ec352bf13522e1eb71f0100ff873d3df) Preserve miette diagnostic codes and error/warning markers in terminal output. Show source paths relative to the project root while keeping file hyperlinks absolute.
+  
+  Expand colorless rendered diagnostic snapshot coverage across parser, canonicalizer, solver, driver, and CLI tests. Record Nash source instead of Rust assertion expressions in source-driven snapshots, move codegen snapshots to source-compilation tests, and check snapshot metadata for regressions. Keep direct assertions for internal error values and hand-built Core behavior. — Thanks @MicroProofs!
+- Updated dependencies: nash-parse@0.6.1, nash-report@0.4.0
+
 ## 0.6.0 — 2026-09-10
 
 ### Minor changes
