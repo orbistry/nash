@@ -160,9 +160,7 @@ impl Args {
             .discover_modules(&*db.lock().await)
             .await
             .into_diagnostic()?;
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
-            .await
-            .into_diagnostic()?;
+        let graph = build_graph(db.clone(), &modules).await.into_diagnostic()?;
         Ok((project.root, build(db, &graph, &modules).await))
     }
 }

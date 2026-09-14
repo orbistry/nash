@@ -37,6 +37,13 @@ impl<'a> Engine<'a, '_, '_> {
         let node = NodeId::expr(expr);
         Ok(match &expr.value {
             Expr::Unit => self.ir.lit(Constant::unit(self.ir.arena)),
+            Expr::Constant(constant) => match *constant {
+                can::Constant::Int(n) => self.ir.int(n),
+                can::Constant::Bytes(bytes) => {
+                    self.ir.lit(Constant::byte_string(self.ir.arena, bytes))
+                }
+                can::Constant::Str(s) => self.ir.lit(Constant::string(self.ir.arena, s)),
+            },
             Expr::Int(n) => {
                 let value = self.ir.int(*n);
                 self.literal("FromInt", "fromInt", node, value, ctx, 0)?

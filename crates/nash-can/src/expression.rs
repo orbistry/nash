@@ -95,6 +95,7 @@ pub fn canonicalize_expr<'a>(
 ) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
     let region = expr.region;
     let can_expr = match &expr.value {
+        SourceExpr::Constant(value) => CanExpr::Constant(*value),
         SourceExpr::Str(s) => CanExpr::Str(s),
         SourceExpr::Bytes(bytes) => CanExpr::Bytes(bytes),
         SourceExpr::Int(n) => CanExpr::Int(*n),
@@ -1343,6 +1344,7 @@ fn collect_pattern_names<'a>(
         }
         nash_source::Pattern::Anything
         | nash_source::Pattern::Unit
+        | nash_source::Pattern::Constant(_)
         | nash_source::Pattern::Str(_)
         | nash_source::Pattern::Bytes(_)
         | nash_source::Pattern::Int(_) => {}
@@ -1392,6 +1394,7 @@ fn get_pattern_names<'a>(
         }
         nash_source::Pattern::Anything
         | nash_source::Pattern::Unit
+        | nash_source::Pattern::Constant(_)
         | nash_source::Pattern::Str(_)
         | nash_source::Pattern::Bytes(_)
         | nash_source::Pattern::Int(_) => names,

@@ -1,0 +1,17 @@
+[package]
+name = "nash-frontend-nash"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bumpalo.workspace = true
+nash-frontend = { path = "../nash-frontend" }
+nash-parse = { path = "../nash-parse" }
+nash-report = { path = "../nash-report" }
+nash-source = { path = "../nash-source" }
+
+[dev-dependencies]
+nash-region = { path = "../nash-region" }
+url.workspace = true

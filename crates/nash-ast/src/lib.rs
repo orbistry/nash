@@ -4,7 +4,7 @@ pub mod primitives;
 
 use nash_region::{Located, Region};
 
-pub use nash_source::{Associativity, Docs, ModuleKind, Precedence};
+pub use nash_source::{Associativity, Constant, Docs, ModuleKind, Precedence};
 
 /// A closed Haskell 98 kind. Inference variables never escape the kind checker.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -201,6 +201,7 @@ pub enum Expr<'a> {
         body: &'a Located<Expr<'a>>,
     },
     Comptime(&'a Located<Expr<'a>>),
+    Constant(Constant<'a>),
     VarMethod {
         trait_: QualifiedName<'a>,
         method: &'a str,
@@ -320,6 +321,7 @@ pub struct FieldValue<'a> {
 
 #[derive(Debug)]
 pub enum Pattern<'a> {
+    Constant(Constant<'a>),
     Anything,
     Var(&'a str),
     Record(&'a [&'a str]),

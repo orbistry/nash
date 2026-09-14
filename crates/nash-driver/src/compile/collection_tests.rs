@@ -26,9 +26,9 @@ async fn independent_failures_block_only_their_dependents() {
     }
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let uris: Vec<_> = files.iter().map(|(name, _)| url(name)).collect();
-    let graph = build_graph(db.clone(), &uris).await.unwrap();
-    let origins = uris.iter().cloned().map(|uri| (uri, None)).collect();
-    let result = build(db, &graph, &origins).await;
+    let graph = build_graph(db.clone(), &test_catalog(&uris)).await.unwrap();
+    let catalog = test_catalog(&uris);
+    let result = build(db, &graph, &catalog).await;
     assert_eq!(result.success, 1);
     assert_eq!(result.failed, 4);
     assert_eq!(result.interfaces.len(), 1);
@@ -53,13 +53,8 @@ async fn unreadable_source_does_not_hide_independent_errors() {
     );
     let uris = [url("Missing"), url("Main"), url("Dependent")];
     let db = Arc::new(Mutex::new(Database::new(memory)));
-    let graph = build_graph(db.clone(), &uris).await.unwrap();
-    let result = build(
-        db,
-        &graph,
-        &uris.iter().cloned().map(|uri| (uri, None)).collect(),
-    )
-    .await;
+    let graph = build_graph(db.clone(), &test_catalog(&uris)).await.unwrap();
+    let result = build(db, &graph, &test_catalog(&uris)).await;
     assert!(matches!(
         result.modules[&url("Missing")],
         ModuleResult::SourceUnavailable { .. }

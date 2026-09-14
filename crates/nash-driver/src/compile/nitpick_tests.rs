@@ -9,10 +9,11 @@ fn rejected(source: &str) -> String {
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
     let (output, compiled) = compile_module(
         &url("Main"),
-        None,
+        &SourceSpec::standalone(&url("Main")).unwrap(),
         &Ok(source.to_owned()),
         &bump,
         &interfaces,
+        &[],
     );
     assert!(
         compiled.is_none(),

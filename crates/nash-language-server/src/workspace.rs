@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use nash_driver::{
-    Database, DriverError, FileSystemSource, InMemorySource, ModuleOrigins, ModuleResult,
-    OverlaySource, Project, build, build_graph,
+    Database, DriverError, FileSystemSource, InMemorySource, ModuleCatalog, ModuleResult,
+    OverlaySource, Project, SourceSpec, build, build_graph,
 };
 use nash_report::Source;
 use tokio::sync::Mutex;
@@ -128,21 +128,21 @@ impl Workspace {
         let modules = match project {
             Ok(project) => project.discover_modules(&*db.lock().await).await,
             // Standalone files still get parser, name, and type diagnostics.
-            Err(DriverError::ProjectNotFound { .. }) => Ok(self
+            Err(DriverError::ProjectNotFound { .. }) => self
                 .buffers
                 .keys()
                 .filter_map(|uri| {
                     let uri = file_url(uri)?;
                     let candidate = uri.to_file_path().ok()?;
-                    (candidate.parent() == Some(parent.as_path())).then_some((uri, None))
+                    (candidate.parent() == Some(parent.as_path())).then_some(uri)
                 })
-                .collect::<ModuleOrigins>()),
+                .map(|uri| SourceSpec::standalone(&uri).map(|spec| (uri, spec)))
+                .collect::<Result<ModuleCatalog, DriverError>>(),
             Err(error) => Err(error),
         };
         let result = async {
             let modules = modules?;
-            let graph =
-                build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>()).await?;
+            let graph = build_graph(db.clone(), &modules).await?;
             Ok::<_, DriverError>(build(db, &graph, &modules).await)
         }
         .await;
@@ -311,9 +311,7 @@ mod tests {
         ))));
         let project = Project::load(dir.path()).await.unwrap();
         let modules = project.discover_modules(&*db.lock().await).await.unwrap();
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
-            .await
-            .unwrap();
+        let graph = build_graph(db.clone(), &modules).await.unwrap();
         let result = build(db, &graph, &modules).await;
         let modules = result.ordered_reports();
         let problems: Vec<_> = modules
@@ -495,5 +493,59 @@ mod tests {
                 .diagnostics
                 .is_empty()
         );
+    }
+
+    #[tokio::test]
+    async fn aiken_unsaved_project_and_standalone_buffers_share_selection_and_diagnostics() {
+        const AIKEN: &str =
+            include_str!("../../nash-driver/tests/fixtures/aiken/supported/src/add_one.ak");
+        const UNSUPPORTED: &str =
+            include_str!("../../nash-driver/tests/fixtures/aiken/unsupported/src/unsupported.ak");
+        for project in [true, false] {
+            let dir = tempfile::tempdir().unwrap();
+            let source_dir = if project {
+                std::fs::write(
+                    dir.path().join("nash.jsonc"),
+                    r#"{"type":"application","sourceDirectories":["src"]}"#,
+                )
+                .unwrap();
+                let source_dir = dir.path().join("src");
+                std::fs::create_dir(&source_dir).unwrap();
+                source_dir
+            } else {
+                dir.path().to_path_buf()
+            };
+            let uri: Uri = Url::from_file_path(source_dir.join("add_one.ak"))
+                .unwrap()
+                .as_str()
+                .parse()
+                .unwrap();
+            let mut workspace = Workspace::default();
+            workspace.open(uri.clone(), UNSUPPORTED.into(), 1);
+            let (notifications, error) = workspace.rebuild(&uri).await;
+            assert!(error.is_none(), "{error:?}");
+            let notification = for_uri(&notifications, &uri);
+            let diagnostic = notification
+                .diagnostics
+                .iter()
+                .find(|diagnostic| {
+                    diagnostic.code == Some(NumberOrString::String("NAF2201".into()))
+                })
+                .unwrap();
+            assert_eq!(notification.version, Some(1));
+            assert_eq!(diagnostic.range.start.line, 0);
+            assert_ne!(diagnostic.range.start, diagnostic.range.end);
+
+            workspace.change(&uri, AIKEN.into(), 2);
+            let (notifications, error) = workspace.rebuild(&uri).await;
+            assert!(error.is_none(), "{error:?}");
+            let notification = for_uri(&notifications, &uri);
+            assert_eq!(notification.version, Some(2));
+            assert!(
+                notification.diagnostics.is_empty(),
+                "{:?}",
+                notification.diagnostics
+            );
+        }
     }
 }

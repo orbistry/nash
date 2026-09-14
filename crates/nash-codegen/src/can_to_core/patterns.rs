@@ -156,7 +156,11 @@ impl<'a> Engine<'a, '_, '_> {
                 Pattern::Int(_) | Pattern::Str(_) | Pattern::Bytes(_) => {
                     literals.insert(node, self.literal_pattern(pattern, ctx)?);
                 }
-                _ => {}
+                Pattern::Constant(_)
+                | Pattern::Anything
+                | Pattern::Var(_)
+                | Pattern::Unit
+                | Pattern::Bool { .. } => {}
             }
         }
         Ok((records, literals))

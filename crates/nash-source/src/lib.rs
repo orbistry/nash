@@ -182,8 +182,27 @@ pub enum Associativity {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Precedence(pub u16);
 
+/// A fixed primitive value, unlike native literals resolved through literal traits.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Constant<'a> {
+    Int(i128),
+    Bytes(&'a [u8]),
+    Str(&'a str),
+}
+
+impl Constant<'_> {
+    pub const fn builtin_name(self) -> &'static str {
+        match self {
+            Self::Int(_) => "int",
+            Self::Bytes(_) => "bytes",
+            Self::Str(_) => "string",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Expr<'a> {
+    Constant(Constant<'a>),
     Str(&'a str),
     Bytes(&'a [u8]),
     Int(i128),
@@ -327,6 +346,7 @@ pub struct FieldAssign<'a> {
 
 #[derive(Debug)]
 pub enum Pattern<'a> {
+    Constant(Constant<'a>),
     Anything,
     Var(&'a str),
     Record(&'a [&'a Located<&'a str>]),

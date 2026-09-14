@@ -524,10 +524,12 @@ No boundary conversion is inserted for either representation: a Big value *is* i
 `\datum redeemer ctx -> body`. Pattern matches inside `body` are what check
 the shape; a `validateData` call is the user's choice.
 
-The result type is free. Success is "evaluation did not error", so a `bool`
-result is **not** checked; `assert` is the idiom for a condition. (Aiken
-wraps the body in `wrap_validator_condition`, `builder.rs:1214`; Nash does
-not.)
+For native Nash source, the result type is free. Success is "evaluation did not
+error", so a `bool` result is **not** checked; `assert` is the idiom for a condition.
+The [Aiken adapter](aiken-frontend.md) instead lowers its supported validator
+handlers to a Nash `main` containing purpose dispatch, primitive boundary decoding
+and an explicit `if result then () else error ()`. This preserves Aiken's
+False-to-failure rule without adding a frontend-specific branch to codegen.
 
 The program is `Program { version: 1.1.0, term }` for Plutus V3.
 

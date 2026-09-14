@@ -1197,6 +1197,7 @@ fn collect_from_expr<'a>(
             collect_from_expr(&body.value, home, used);
         }
         VarLocal(_) | Accessor(_) | Unit => {}
+        Constant(_) => add_if_foreign(home, nash_ast::primitives::builtin_home(), used),
         Str(_) | Bytes(_) | Int(_) => {
             add_if_foreign(home, nash_ast::primitives::literal_home(), used);
         }
@@ -1325,6 +1326,7 @@ fn collect_from_pattern<'a>(
     use nash_ast::Pattern::*;
     match pat {
         Anything | Var(_) | Unit | Record(_) => {}
+        Constant(_) => add_if_foreign(home, nash_ast::primitives::builtin_home(), used),
         Str(_) | Bytes(_) | Int(_) => {
             add_if_foreign(home, nash_ast::primitives::literal_home(), used);
             add_if_foreign(

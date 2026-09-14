@@ -83,6 +83,7 @@ impl<'a> Checker<'a> {
     fn expr(&mut self, expr: &Located<Expr<'a>>) {
         match &expr.value {
             Expr::VarMethod { .. }
+            | Expr::Constant(_)
             | Expr::Bytes(_)
             | Expr::VarLocal(_)
             | Expr::VarTopLevel(_)

@@ -4,6 +4,12 @@ The `nash` binary is `crates/nash-cli`. Every command loads the project from
 `PATH` (default `.`) by walking up to the nearest `nash.jsonc`, exactly like
 `Project::load` in `crates/nash-driver/src/project.rs` does today.
 
+Source directories may contain native `.nash` and supported Aiken `.ak` modules.
+Both use the shared frontend registry for import inspection and compilation.
+`check` and `build` accept the [bounded Aiken frontend profile](aiken-frontend.md),
+including mint/fallback validators; no `aiken.toml` or automatic Aiken package
+resolution is implied.
+
 ## Commands
 
 | Command | Status | Purpose |
@@ -88,6 +94,7 @@ Warnings never change the exit code.
 <project>/
   nash.jsonc
   src/**/*.nash
+  src/**/*.ak
   build/                      nash build
     Module.Name.uplc
     Module.Name.flat

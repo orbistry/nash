@@ -208,6 +208,11 @@ pub fn simplify<'a>(bump: &'a Bump, pattern: &Located<CanPattern<'a>>) -> Patter
             .fold(NIL, |tail, head| cons(bump, head, tail)),
         CanPattern::Cons { head, tail } => cons(bump, head, simplify(bump, tail)),
         CanPattern::Alias { pattern, .. } => simplify(bump, pattern),
+        CanPattern::Constant(value) => Pattern::Literal(match value {
+            nash_ast::Constant::Int(n) => Literal::Int(*n),
+            nash_ast::Constant::Bytes(bytes) => Literal::Bytes(bytes),
+            nash_ast::Constant::Str(text) => Literal::Str(text),
+        }),
         CanPattern::Bytes(bytes) => Pattern::Literal(Literal::Bytes(bytes)),
         CanPattern::Int(n) => Pattern::Literal(Literal::Int(*n)),
         CanPattern::Str(s) => Pattern::Literal(Literal::Str(s)),

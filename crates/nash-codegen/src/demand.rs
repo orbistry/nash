@@ -588,7 +588,7 @@ impl<'a> Analysis<'a> {
                     self.expr(e, owner, env, solved);
                 }
             }
-            Expr::Accessor(_) | Expr::VarConstructor { .. } | Expr::Unit => {}
+            Expr::Accessor(_) | Expr::VarConstructor { .. } | Expr::Unit | Expr::Constant(_) => {}
         }
     }
 }

@@ -8,13 +8,99 @@ use std::path::{Path, PathBuf};
 use url::Url;
 
 use nash_config::{Config, Workspace};
+use nash_frontend::{ModuleName, ModuleRole, SourceInput};
 
 use crate::database::Database;
 use crate::error::DriverError;
 use crate::source::path_to_uri;
 
-/// Source URIs and their owning packages; applications have no package name.
-pub type ModuleOrigins = BTreeMap<Url, Option<nash_config::PackageName>>;
+/// Discovered sources with the identity and ownership used by every compiler phase.
+pub type ModuleCatalog = BTreeMap<Url, SourceSpec>;
+
+#[derive(Clone, Debug)]
+pub struct SourceSpec {
+    pub source_root: PathBuf,
+    pub module: ModuleName,
+    pub role: Option<ModuleRole>,
+    pub package: Option<nash_config::PackageName>,
+    pub frontend: Option<String>,
+}
+
+impl SourceSpec {
+    /// Derive an extension-neutral identity relative to the configured source root.
+    pub fn new(
+        uri: &Url,
+        source_root: &Path,
+        package: Option<nash_config::PackageName>,
+    ) -> Result<Self, DriverError> {
+        let path = uri
+            .to_file_path()
+            .map_err(|()| DriverError::InvalidFileUri { uri: uri.clone() })?;
+        let source_root = normalize_path(source_root);
+        let path = normalize_path(&path);
+        let relative = path
+            .strip_prefix(&source_root)
+            .map_err(|_| DriverError::InvalidModulePath { path: path.clone() })?;
+        let module_path = relative.with_extension("");
+        let parts = module_path
+            .components()
+            .map(|component| component.as_os_str().to_str())
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(|| DriverError::InvalidModulePath { path: path.clone() })?;
+        if parts.is_empty()
+            || parts
+                .iter()
+                .any(|part| part.is_empty() || part.contains('.'))
+        {
+            return Err(DriverError::InvalidModulePath { path });
+        }
+        Ok(Self {
+            source_root,
+            module: ModuleName::new(parts.join(".")),
+            role: None,
+            package,
+            frontend: None,
+        })
+    }
+
+    /// An editor buffer outside a project uses its containing directory as its root.
+    pub fn standalone(uri: &Url) -> Result<Self, DriverError> {
+        let path = uri
+            .to_file_path()
+            .map_err(|()| DriverError::InvalidFileUri { uri: uri.clone() })?;
+        let root = path
+            .parent()
+            .ok_or_else(|| DriverError::InvalidModulePath { path: path.clone() })?;
+        Self::new(uri, root, None)
+    }
+
+    pub(crate) fn input<'source, 'context>(
+        &'context self,
+        uri: &'context Url,
+        source: &'source str,
+    ) -> SourceInput<'source, 'context> {
+        SourceInput {
+            source,
+            uri,
+            expected_module: &self.module,
+            role: self.role,
+        }
+    }
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                normalized.pop();
+            }
+            component => normalized.push(component.as_os_str()),
+        }
+    }
+    normalized
+}
 
 /// A loaded Nash project.
 #[derive(Debug)]
@@ -76,9 +162,9 @@ impl Project {
         })
     }
 
-    /// Discover all Nash source files in the project.
-    pub async fn discover_modules(&self, db: &Database) -> Result<ModuleOrigins, DriverError> {
-        let mut modules = ModuleOrigins::new();
+    /// Discover all registered source languages while retaining package ownership.
+    pub async fn discover_modules(&self, db: &Database) -> Result<ModuleCatalog, DriverError> {
+        let mut modules = ModuleCatalog::new();
 
         for member in &self.members {
             let package = match &member.config {
@@ -86,20 +172,32 @@ impl Project {
                 _ => None,
             };
             for source_dir in &member.source_dirs {
-                let base_uri = path_to_uri(source_dir)?;
-                for uri in db.glob(&base_uri, "**/*.nash").await? {
-                    if let Some(owner) = modules.get(&uri) {
-                        if owner != &package {
-                            return Err(DriverError::ConflictingModuleOwners {
-                                uri: Box::new(uri),
-                                first: owner
-                                    .as_ref()
-                                    .map_or_else(|| "application".to_owned(), ToString::to_string),
-                                second: member.name(),
-                            });
+                let source_dir = normalize_path(source_dir);
+                let base_uri = path_to_uri(&source_dir)?;
+                for extension in crate::FRONTENDS.extensions() {
+                    for uri in db.glob(&base_uri, &format!("**/*.{extension}")).await? {
+                        let spec = SourceSpec::new(&uri, &source_dir, package.clone())?;
+                        if let Some(previous) = modules.get(&uri) {
+                            if previous.package != package {
+                                return Err(DriverError::ConflictingModuleOwners {
+                                    uri: Box::new(uri),
+                                    first: previous.package.as_ref().map_or_else(
+                                        || "application".to_owned(),
+                                        ToString::to_string,
+                                    ),
+                                    second: member.name(),
+                                });
+                            }
+                            if previous.module != spec.module {
+                                return Err(DriverError::ConflictingModuleRoots {
+                                    uri: Box::new(uri),
+                                    first: previous.source_root.clone(),
+                                    second: source_dir.clone(),
+                                });
+                            }
+                        } else {
+                            modules.insert(uri, spec);
                         }
-                    } else {
-                        modules.insert(uri, package.clone());
                     }
                 }
             }
@@ -290,15 +388,16 @@ mod tests {
             .push(make_member(Path::new("/work/core"), core));
         let mut modules = project.discover_modules(&*db.lock().await).await.unwrap();
         assert_eq!(modules.len(), 2);
-        assert_eq!(modules[&literal].as_ref().unwrap().to_string(), "nash/core");
-        assert_eq!(modules[&main], None);
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
-            .await
-            .unwrap();
+        assert_eq!(
+            modules[&literal].package.as_ref().unwrap().to_string(),
+            "nash/core"
+        );
+        assert_eq!(modules[&main].package, None);
+        let graph = build_graph(db.clone(), &modules).await.unwrap();
         assert_eq!(graph.order, [literal.clone(), main.clone()]);
         let result = build(db.clone(), &graph, &modules).await;
         assert!(result.is_success(), "{result:?}");
-        modules.insert(literal.clone(), Some("example/literals".parse().unwrap()));
+        modules.get_mut(&literal).unwrap().package = Some("example/literals".parse().unwrap());
         let result = build(db.clone(), &graph, &modules).await;
         assert!(
             matches!(&result.modules[&main], ModuleResult::Failed(reports) if reports.reports.iter().any(|report| report.title == "AMBIGUOUS TYPE"))

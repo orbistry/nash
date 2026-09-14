@@ -139,6 +139,13 @@ pub fn source(module: &str) -> Option<&'static str> {
 
 Driver (`crates/nash-driver/src/project.rs`):
 
+Plan 14 integration note: discovery now returns `ModuleCatalog`, not `Vec<Url>`.
+The sketch below predates that cutover. Embedded modules must provide explicit
+`SourceSpec` metadata (canonical name, native frontend and core package owner),
+then merge with the project's catalog. Resolve imports by exact catalog identity;
+the old suffix-based `resolve_import` helper no longer exists.
+
+
 ```rust
 impl Project {
     /// Core modules first, then the project's own modules.

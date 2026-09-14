@@ -14,6 +14,12 @@ pub enum DriverError {
         first: String,
         second: String,
     },
+    #[error("module {uri} has conflicting source roots {first} and {second}")]
+    ConflictingModuleRoots {
+        uri: Box<Url>,
+        first: PathBuf,
+        second: PathBuf,
+    },
     #[error("file not found: {uri}")]
     FileNotFound { uri: Url },
 

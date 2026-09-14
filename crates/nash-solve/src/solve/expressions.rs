@@ -63,6 +63,23 @@ impl<'a> Solver<'a, '_> {
         let region = expr.region;
         let node = NodeId::expr(expr);
         match &expr.value {
+            CanExpr::Constant(value) => {
+                let name = value.builtin_name();
+                let actual = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(nash_ast::primitives::builtin_home(), name, Vec::new()),
+                );
+                self.equal(
+                    uf,
+                    rank,
+                    state,
+                    region,
+                    Category::Foreign(name),
+                    actual,
+                    expected,
+                )
+            }
             CanExpr::VarLocal(name) => {
                 self.local(uf, env, rank, state, region, node, name, expected)
             }

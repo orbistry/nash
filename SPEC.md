@@ -22,21 +22,24 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-region` | spans | done |
 | `nash-source` | surface AST | extend ([plans/01](plans/01-syntax.md)) |
 | `nash-parse` | parser + Elm error hierarchy | extend ([plans/01](plans/01-syntax.md)) |
+| `nash-frontend` | parser-neutral contract and registry | done ([plans/14](plans/14-aiken-frontend.md)) |
+| `nash-frontend-nash` | native syntax adapter | done |
+| `nash-frontend-aiken` | official Aiken parser + NashV1 lowering | common syntax done; validators deferred |
 | `nash-ast` | canonical AST | extend |
 | `nash-can` | canonicalization, interfaces | extend |
 | `nash-constrain` | union-find types, canonical instantiation, type errors | done |
 | `nash-solve` | direct AST inference, traits, defaulting | extend |
 | `nash-nitpick` | exhaustiveness and redundancy | done ([plans/05](plans/05-nitpick.md)) |
 | `nash-report` | concise diagnostics (terminal, JSON, LSP) | done ([plans/06](plans/06-diagnostics.md)) |
-| `nash-ir` | Core IR + passes | new ([plans/07](plans/07-codegen.md), [08](plans/08-optimizer.md)) |
-| `nash-codegen` | Can -> Core -> UPLC | new ([plans/07](plans/07-codegen.md)) |
+| `nash-ir` | Core IR + passes | Core done ([plans/07](plans/07-codegen.md)); optimization pending ([08](plans/08-optimizer.md)) |
+| `nash-codegen` | Can -> Core -> UPLC | done ([plans/07](plans/07-codegen.md)) |
 | `nash-test` | test runner, fuzzing, shrinking | new ([plans/10](plans/10-testing.md)) |
 | `nash-macro` | macro expansion, comptime | new ([plans/11](plans/11-macros-comptime.md)) |
 | `nash-fmt` / `nash-docs` | formatter, docs | new ([plans/13](plans/13-fmt-docs.md)) |
 | `nash-plutus` | UPLC terms, flat, CEK, cost models | done |
 | `nash-config` | `nash.jsonc` | done, extend |
 | `nash-driver` | build graph, caching | done, extend |
-| `nash-cli` | `nash` binary | `check`, `lsp`; add `build test fmt docs` |
+| `nash-cli` | `nash` binary | `check`, `build`, `lsp`; add `test fmt docs` |
 | `nash-language-server` | LSP | live compiler diagnostics with UTF-16 ranges |
 | `core/` | `nash/core` stdlib package (Nash source) | new ([plans/12](plans/12-stdlib.md)) |
 
@@ -51,6 +54,7 @@ Done:
 - [x] Project config, driver, dependency-ordered builds, interface cache
 - [x] `nash check`
 - [x] UPLC runtime (`nash-plutus`): conformance suite passes
+- [x] Native/Aiken frontend boundary, common Aiken syntax through solved interfaces and native-validator codegen/CEK, mixed-source catalogs and CLI/LSP integration
 
 Planned, in execution order (each links to its plan):
 
@@ -69,6 +73,8 @@ Planned, in execution order (each links to its plan):
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)
 - [ ] 12 Stdlib `nash/core` — [plans/12-stdlib.md](plans/12-stdlib.md)
 - [ ] 13 `nash fmt`, `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md)
+- [x] 14 Frontend seam, Aiken common syntax and bounded mint/fallback validators (Phases 0–2) — [plans/14-aiken-frontend.md](plans/14-aiken-frontend.md)
+- [ ] 14 follow-on: additional Aiken validator purposes/custom layouts; upstream parser-only extraction when available
 
 Later: LSP features, web playground, package registry (pubgrub), TypeScript codegen.
 

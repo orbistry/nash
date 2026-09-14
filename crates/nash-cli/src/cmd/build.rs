@@ -35,9 +35,7 @@ impl Args {
             .discover_modules(&*db.lock().await)
             .await
             .into_diagnostic()?;
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
-            .await
-            .into_diagnostic()?;
+        let graph = build_graph(db.clone(), &modules).await.into_diagnostic()?;
         let trace = TraceConfig {
             user: match self.trace_level {
                 TraceLevelArg::Silent => TraceLevel::Silent,

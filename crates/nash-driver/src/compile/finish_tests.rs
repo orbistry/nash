@@ -6,12 +6,13 @@ fn finish_receives_original_solved_nodes_and_tables() {
     let (report, output) = build_sync_with_edges_and(
         vec![(
             uri.clone(),
-            None,
+            SourceSpec::standalone(&uri).unwrap(),
             Ok(
                 "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nid x = x\n"
                     .into(),
             ),
         )],
+        &HashMap::new(),
         &HashMap::new(),
         |solved| {
             assert_eq!(solved.modules.len(), 1);
@@ -31,7 +32,12 @@ fn failed_frontend_never_calls_finish() {
     let uri = Url::parse("file:///project/src/Main.nash").unwrap();
     let source = "module Main exposing (..)\nmain = unknown\n";
     let (report, output) = build_sync_with_edges_and(
-        vec![(uri.clone(), None, Ok(source.into()))],
+        vec![(
+            uri.clone(),
+            SourceSpec::standalone(&uri).unwrap(),
+            Ok(source.into()),
+        )],
+        &HashMap::new(),
         &HashMap::new(),
         |_| panic!("failed build must not generate code"),
     );
@@ -48,7 +54,12 @@ fn term_validator_parameter_never_reaches_codegen() {
     let uri = Url::parse("file:///project/src/VestingBad.nash").unwrap();
     let source = include_str!("../../../nash-codegen/tests/fixtures/VestingBad.nash");
     let (report, output) = build_sync_with_edges_and(
-        vec![(uri.clone(), None, Ok(source.into()))],
+        vec![(
+            uri.clone(),
+            SourceSpec::standalone(&uri).unwrap(),
+            Ok(source.into()),
+        )],
+        &HashMap::new(),
         &HashMap::new(),
         |_| panic!("invalid validator must not reach codegen"),
     );

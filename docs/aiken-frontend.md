@@ -1,355 +1,371 @@
-# Architecture decision record
+# Aiken-syntax frontend
 
-## Decision
+## Decision and current finish line
 
-Add a frontend-neutral boundary at `nash_source::Module` and an owned inspection
-boundary for dependency discovery.
-
-```text
-                             dependency graph
-source + project metadata -> Frontend::inspect -> ModuleDependency[] -> ModuleCatalog
-              │
-              └-----------> Frontend::parse -------------------------------┐
-                                                                           ▼
-                                                              nash_source::Module
-                                                                           │
-                                                canonicalize -> solve -> nitpick
-                                                                           │
-                                                                      interface
-```
-
-## Why `nash_source::Module`
-
-This boundary is early enough for Nash to own name resolution, kinds, runtime
-representations, traits, type inference, exhaustiveness, and code generation. It is
-late enough to hide parser-specific trees from the driver and the compiler middle
-end.
-
-Do not lower Aiken directly to Nash's canonical AST. That would duplicate name
-resolution and representation checks. Do not lower Aiken directly to Core. That
-would duplicate most of the Nash semantic frontend.
-
-## Why inspection is separate
-
-The current driver creates the graph before it runs the compiler pipeline. It also
-parses source once for imports and again for compilation. A separate owned inspection
-result makes this existing split frontend-neutral.
-
-`Frontend::inspect` returns only canonical module dependencies and diagnostics. It
-must not return arena references. `Frontend::parse` returns the full arena-backed
-source AST.
-
-The Aiken adapter can inspect imports without lowering every expression. If
-inspection fails, the driver keeps that module with no discovered dependencies and
-retains the diagnostics. Independent modules can still enter the graph.
-
-## Crate responsibilities
-
-### `nash-frontend`
-
-- Defines `Frontend`.
-- Defines `SourceInput`, `InspectOutput`, and `ParseOutput`.
-- Defines canonical `ModuleName` and `ModuleDependency`.
-- Defines owned frontend diagnostics.
-- Selects adapters by explicit ID or file extension.
-- Has no parser-specific behavior.
-
-### `nash-frontend-nash`
-
-- Wraps `nash_parse::Parser`.
-- Validates the required module header, path-derived module name, and module role.
-- Copies imports into owned dependency records during inspection.
-- Converts parser failures into frontend diagnostics.
-
-### `nash-frontend-aiken`
-
-- Calls the official Aiken parser.
-- Converts Aiken byte spans into Nash one-based byte-column regions.
-- Applies a named compatibility profile.
-- Normalizes Aiken module paths.
-- Lowers the untyped Aiken AST into `nash_source::Module`.
-- Rejects unsupported encoding decorators before partial lowering.
-- Synthesizes validator dispatch only after that behavior has conformance tests.
-
-### `nash-driver`
-
-- Reads files and project configuration.
-- Derives `ModuleName`, `ModuleRole`, package identity, and frontend choice.
-- Uses `Frontend::inspect` when it builds the dependency graph.
-- Resolves canonical imports through `ModuleCatalog`.
-- Uses `Frontend::parse` inside the existing build-wide arena.
-- Converts frontend diagnostics to `nash-report` values.
-
-### `nash-report`
-
-- Remains unchanged.
-- Receives owned `Report` values from the driver adapter.
-
-## Module identity and resolution
-
-A frontend normalizes syntax. It does not resolve packages or files.
+Both source languages enter Nash at `nash_source::Module`. The official Aiken
+parser supplies syntax only; Nash owns name resolution, representation checking,
+type inference, exhaustiveness and interfaces. No Aiken AST, type checker or code
+generator is used by Nash semantic stages.
 
 ```text
-Aiken `aiken/list` -> canonical `aiken.list`
-Nash  `Aiken.List` -> canonical spelling selected by Nash project rules
-canonical name     -> ModuleCatalog -> source URI
+Project / editor buffers
+  -> ModuleCatalog<URI, SourceSpec>
+  -> shared FRONTENDS registry
+       inspect -> owned dependencies + diagnostics -> dependency graph
+       parse   -> arena-backed nash_source::Module
+                    -> canonicalize -> solve -> nitpick -> interface
+                    -> build_with -> specialize -> Core -> UPLC / Flat / CBOR
 ```
 
-The source specification also retains Nash's existing optional package owner so the
-driver can pass it to canonicalization. The production catalog key should include
-package identity when two packages can provide the same module name. That concern
-stays in the driver or project layer, not in either parser adapter.
+The branch is based on `release/main`. It includes the source-to-UPLC code
+generation and native validator builds from `plan-7`. `nash check` ends at solved
+interfaces. `nash build` uses the same frontend path and calls the backend while
+the solved arena is alive. Supported Aiken libraries can run in native validators.
+The bounded Aiken validator profile below also builds to UPLC, Flat and CBOR.
+Nash codegen is available and used for both source languages.
 
-## Lifetime model
+The concrete finish-line project is
+`crates/nash-driver/tests/fixtures/aiken/supported`, containing:
 
-Dependency inspection returns owned values and uses no persistent arena.
-
-Compilation uses Nash's current build-wide arena:
-
-```text
-build arena
-├── source text copied for parsers that borrow it
-├── nash_source::Module produced by the selected frontend
-├── canonical nodes
-├── solved annotations and evidence
-└── interfaces
+```aiken
+pub fn add_one(value: Int) -> Int {
+  value + 1
+}
 ```
 
-This matches the current requirement that canonical node addresses remain stable for
-solved evidence. It also avoids a self-referential object that owns a `Bump` and
-references data in that `Bump`.
+Run it with:
 
-## Compatibility profile
-
-A profile keeps compatibility policy out of lowering code. It controls:
-
-1. Whether a source feature can lower.
-2. How imported modules map into Nash module space.
-3. How built-in type names map.
-4. How built-in value names map.
-
-The first profile is `NashV1Profile`. It maps Aiken primitive representations to the
-correct Nash constant types. It rejects custom constructor tags, list data encodings,
-tests, benchmarks, environment modules, configuration modules, and multiple validator
-declarations.
-
-A later profile can map Aiken standard-library modules to Nash compatibility modules
-without changing the frontend trait.
-
-## Diagnostics
-
-Frontend diagnostics are owned and module-local. The driver retains the URI, module
-name, path, and source text, then wraps diagnostics in `nash_report::ModuleReports`.
-
-Each diagnostic has:
-
-- A stable code.
-- Error or warning severity.
-- A title and message.
-- An optional primary region.
-- Secondary labels.
-- Help messages.
-
-Examples:
-
-```text
-NAF1001  no frontend registered for .ak
-NAF2001  Aiken syntax error
-NAF2101  integer does not fit the temporary i128 source AST
-NAF2201  custom @tag encoding is not supported
-NAF2301  Aiken validator lowering is not implemented
-NNF2001  Nash syntax error
+```sh
+cargo run -p nash-cli -- check crates/nash-driver/tests/fixtures/aiken/supported
+cargo run -p nash-cli -- check crates/nash-driver/tests/fixtures/aiken/unsupported --report=json
 ```
 
-## Rejected designs
+The first succeeds; the second deliberately contains an Aiken test declaration
+and exits unsuccessfully with located diagnostic `NAF2201`.
 
-### Full Aiken source tree in Nash
+The executable integration regression imports this Aiken function into a native
+validator, matches its result against a fixed integer pattern, serializes UPLC and
+runs it in CEK: input `41` succeeds and input `40` fails.
 
-Rejected because it couples Nash to Aiken's complete compiler, build graph, release
-process, and toolchain.
+```sh
+cargo test -p nash-driver --test build aiken_library_add_one_and_fixed_match_execute_in_native_validator
+cargo run -p nash-cli -- build examples/vesting
+```
 
-### Independent Aiken parser first
+A project containing only ordinary `.ak` library modules has no validator entry
+point, so `nash build` does not emit a script for that library alone.
 
-Rejected because grammar drift and error-recovery differences would become Nash's
-maintenance burden before the lowering semantics are proven.
+The validator project `crates/nash-driver/tests/fixtures/aiken/validator` contains
+an Aiken mint handler with an `Int` redeemer, a user trace and a rejecting fallback:
 
-### Aiken AST in the driver
+```sh
+cargo run -p nash-cli -- check crates/nash-driver/tests/fixtures/aiken/validator
+cargo run -p nash-cli -- build crates/nash-driver/tests/fixtures/aiken/validator --trace-level verbose
+cargo test -p nash-frontend-aiken --test validators
+```
 
-Rejected because it would leak parser-specific types into project resolution,
-diagnostics, and compilation.
+The last command compiles the same sources using exact-pinned Aiken 1.1.23 and
+Nash, then compares CEK success, failure, unit results and user traces. Production
+compilation never calls the official Aiken type checker or code generator.
 
-### Direct canonical AST or Core lowering
+## Crates and dependency direction
 
-Rejected because it would bypass or duplicate Nash semantic stages.
+- **`nash-frontend`** owns `Frontend`, `FrontendRegistry`, `SourceInput`,
+  `ModuleName`, `ModuleRole`, owned inspection/diagnostic types, and `ParseOutput`.
+  It depends only on `nash-source`, `nash-region`, `bumpalo` and `url`.
+- **`nash-frontend-nash`** exports `NashFrontend`. It wraps `nash-parse`, validates
+  native headers/identity/explicit roles, and copies imports for inspection.
+  It uses existing `nash-report` syntax conversion inside the adapter, projecting
+  reports to owned frontend fields; parser errors never cross the boundary.
+- **`nash-frontend-aiken`** exports `AikenFrontend`. It alone depends on
+  `aiken-lang`. Private `spans`, `profile`, `validate`, and `lower` modules separate
+  coordinates, compatibility policy, preflight and AST conversion. Declaration,
+  type, pattern, expression and validator lowerers are separate files.
+- **`nash-driver`** composes the static `FRONTENDS` registry, discovers files,
+  derives source metadata, builds the graph, projects frontend diagnostics back
+  to reports, and runs the existing compiler pipeline in dependency order.
+- **`nash-codegen` / `nash-ir`** consume only Nash canonical nodes and solved
+  metadata. Fixed constants lower directly to primitive Core/UPLC literals, and
+  fixed patterns use primitive equality rather than native literal/`Eq` evidence.
+- **CLI and LSP** use the same project/catalog/graph/build entry points.
+- **`nash-report`** is unchanged. Nash canonicalization, solving and nitpick have
+  no Aiken dependency or parser-specific branches.
 
-### Extension-based import resolution
+The native adapter's report dependency reuses the existing error hierarchy rather
+than duplicating it. This does not introduce a report dependency into the common
+contract or an adapter dependency into semantic stages.
 
-Rejected because one graph can contain `.nash` and `.ak` sources, and package
-resolution must not depend on a source file suffix.
+Adapter-only differential tests additionally depend on pinned `uplc = "=1.1.23"`
+and use `nash-driver`/`nash-codegen`/`nash-plutus` as dev-dependencies. This test-only
+backedge exercises the real compiler without exposing Aiken types or adding a
+second production semantic pipeline.
 
-## First-version non-goals
-
-- Exact Aiken package compatibility.
-- Exact blueprint generation.
-- Custom Aiken data encodings.
-- Aiken tests and benchmarks.
-- Aiken type inference.
-- Calling the Aiken CLI during normal compilation.
-- Keeping Aiken AST nodes after the adapter returns.
-
-# Interface guide
-
-## `Frontend`
+## Contract and ownership
 
 ```rust
 pub trait Frontend: Send + Sync {
     fn descriptor(&self) -> &'static FrontendDescriptor;
-
-    fn inspect(
-        &self,
-        input: SourceInput<'_, '_>,
-    ) -> Result<InspectOutput, FrontendFailure>;
-
-    fn parse<'arena>(
-        &self,
-        arena: &'arena Bump,
-        input: SourceInput<'arena, '_>,
-    ) -> Result<ParseOutput<'arena>, FrontendFailure>;
+    fn inspect(&self, input: SourceInput<'_, '_>)
+        -> Result<InspectOutput, FrontendFailure>;
+    fn parse<'arena>(&self, arena: &'arena Bump, input: SourceInput<'arena, '_>)
+        -> Result<ParseOutput<'arena>, FrontendFailure>;
 }
 ```
 
-### Invariants
+`SourceInput` contains source text, URI, expected canonical module name and an
+optional role. `None` lets syntax determine the role; `Some(Library|Validator)`
+enforces explicit metadata. Current project configuration does not specify roles,
+so discovery uses `None`, preserving native `validator module` headers.
 
-- `inspect` returns owned data.
-- `parse` returns only `nash_source` nodes allocated in `arena`.
-- A parser-specific AST never crosses the trait boundary.
-- A frontend does not read files, resolve packages, or choose module identity.
-- A failure contains at least one diagnostic.
-- A successful parse can still return warnings.
+`inspect` returns owned `ModuleDependency { module, region }` records and owned
+diagnostics. It retains no arena or parser references. Both adapters use the same
+parser and module-level validation for inspection and compilation. Aiken inspection
+does not lower expression bodies, so a later lowering error can still retain its
+valid dependency edges.
 
-## `SourceInput`
+`parse` returns `ParseOutput { module: &nash_source::Module, diagnostics }`.
+Compilation copies source into the existing **build-wide arena**; native parsing
+borrows that copy, and Aiken lowering copies its owned AST strings/bytes/nodes into
+the arena. The temporary Aiken AST is dropped before returning. Source, canonical
+nodes, solved evidence and interfaces share the real build lifetime; canonical
+addresses remain stable. No self-referential arena owner is introduced, and no
+Drop-owning containers are placed in the arena.
 
-```rust
-pub struct SourceInput<'source, 'context> {
-    pub source: &'source str,
-    pub uri: &'context Url,
-    pub expected_module: &'context ModuleName,
-    pub role: ModuleRole,
-}
-```
+`build_with(db, graph, catalog, finish)` retains that arena and the solved module
+maps through the backend callback. The callback receives the original canonical
+nodes, expression/pattern types and evidence, and returns owned artifacts. Frontend
+or dependency-inspection failures prevent backend invocation.
 
-The project layer owns module identity. Aiken source does not declare a module header,
-so the adapter assigns `expected_module` to the temporary Aiken AST before lowering.
-Native Nash source validates its required module header against this value. The frontend reports a missing header before canonicalization.
+`FrontendFailure` owns a boxed first diagnostic plus optional additional
+diagnostics, making failure nonempty by construction. Adapters can also return
+warnings with successful output. Registry selection accepts an explicit adapter
+ID or the `.nash`/`.ak` extension; registration is composed by the driver, not the
+contract crate.
 
-## `InspectOutput`
+## Project identity, imports and editor integration
 
-```rust
-pub struct InspectOutput {
-    pub dependencies: Vec<ModuleDependency>,
-    pub diagnostics: Vec<FrontendDiagnostic>,
-}
-
-pub struct ModuleDependency {
-    pub module: ModuleName,
-    pub region: Region,
-}
-```
-
-Dependencies are canonical and owned. Their source regions let the driver report an
-unknown or ambiguous import at the correct location.
-
-## `ParseOutput`
-
-```rust
-pub struct ParseOutput<'arena> {
-    pub module: &'arena nash_source::Module<'arena>,
-    pub diagnostics: Vec<FrontendDiagnostic>,
-}
-```
-
-The existing compiler pipeline should consume `module` without knowing which parser
-created it.
-
-## `ModuleName`
-
-`ModuleName` uses `.` as its internal separator. Adapters normalize source spelling:
+The driver-owned `ModuleCatalog` maps URI to `SourceSpec`: source root, canonical
+module name, optional role, optional package owner and optional explicit frontend
+ID. Identity is derived relative to a configured source directory, with the
+extension removed and path components joined by `.`:
 
 ```text
-aiken/list -> aiken.list
-Aiken.List  -> Aiken.List
+src/Json/Decode.nash -> Json.Decode
+src/folder/math.ak  -> folder.math
+Aiken use folder/math -> folder.math
 ```
 
-The driver resolves that identity through `ModuleCatalog`. It must not append a fixed
-file extension. `SourceSpec` retains the existing optional package owner for the
-canonicalization context; that package value does not cross the frontend trait.
+Native headers must match that identity. Aiken has no header; its module identity
+comes from metadata. No import resolution appends a source suffix or picks a
+matching path tail. `aiken/builtin` maps to the compiler-owned `Builtin` interface.
+Other imports resolve exactly through the catalog, without automatic stdlib,
+package-download or case-folding behavior.
 
-## `CompatibilityProfile`
+Names remain case-sensitive. Native code can import an Aiken file with a
+Nash-compatible canonical path, such as `Math.ak`. The official Aiken import
+grammar cannot spell uppercase native module paths, so arbitrary native imports
+from Aiken are not claimed. Mixed native-to-Aiken graphs and Aiken-to-Aiken nested
+imports are supported and tested. Mixed type APIs use the profile's lowercase
+Nash type spelling described below.
 
-```rust
-pub trait CompatibilityProfile: Send + Sync + 'static {
-    fn feature(&self, feature: AikenFeature) -> FeatureDecision;
-    fn map_module_name(&self, module: &str) -> ModuleMapping;
-    fn map_type_name(&self, module: Option<&str>, name: &str) -> NameMapping;
-    fn map_value_name(&self, module: Option<&str>, name: &str) -> NameMapping;
+Canonical interfaces are currently keyed by module name, not package. Duplicate
+providers across roots/packages are therefore diagnosed instead of silently
+choosing one; package-aware duplicate-name resolution is deferred. Package owners
+still reach canonicalization for normal ownership/trait rules. Overlapping roots
+that assign conflicting identities to one source are rejected.
+
+Inspection failures are retained on their graph nodes. Failed sources publish no
+interface, their dependents are blocked, and independent modules continue. Unknown
+and ambiguous imports retain the import region. Existing cycle handling remains
+unchanged.
+
+Project LSP buffers, including unsaved `.ak` files, use the same discovery and
+registry. Standalone buffers use their containing directory as the source root
+and include open sibling buffers. Existing UTF-16 diagnostic conversion consumes
+the same owned reports; there is no separate editor parser path. Formatting,
+completion and other unrelated editor features remain outside this milestone.
+
+## NashV1 compatibility profile
+
+Policy is a private concrete `profile` module, not an unused extensibility trait.
+It deliberately targets Nash semantics and representations, not every program
+accepted by Aiken's separate type checker.
+
+### Supported common syntax
+
+- Public/private functions and constants; named/anonymous functions and calls.
+- Complete polymorphic annotations and partial monomorphic function annotations;
+  function, tuple, named type, alias and primitive annotations.
+- Fixed integer, byte-array and string literals, including decoded hex integers.
+- Integer arithmetic/comparisons, Boolean short-circuiting/negation, conditionals.
+- Lists and list tails, tuples, ordinary field access, fully labeled constructor
+  calls, sequential `let`, `when` and alternative patterns.
+- Variables/discards, alias patterns, positional constructors, tuple/list/tail
+  patterns and fixed primitive literal patterns.
+- Undecorated algebraic data declarations, aliases, opaque constructor visibility
+  and explicit public exports. Documentation comments are not projected into Docs.
+- Module aliases and unqualified import renames.
+- `fail` and simple traces. Trace continuations are thunked so tracing precedes
+  evaluation of the continuation.
+
+Nullary functions and calls lower through an explicit unit argument; a function
+is never silently collapsed to a constant. Other function types use Nash's curried
+function representation. Sequential bindings lower through strict, hygienic lambda
+applications, not recursive Nash `let`; initializer references and shadowing keep
+their lexical meaning.
+
+### Primitive representations
+
+| Aiken | Nash compiler-owned type |
+|---|---|
+| `Int` | `Builtin.int` |
+| `ByteArray` | `Builtin.bytes` |
+| `Bool` | `Builtin.bool` |
+| `String` | `Builtin.string` |
+| `Data` | `Builtin.Data` |
+| `Void` | `Builtin.unit` |
+| `List<a>` | `Builtin.list a` |
+| `Pair<a, b>` | `Builtin.pair a b` |
+| `G1Element` | `Builtin.bls_g1` |
+| `G2Element` | `Builtin.bls_g2` |
+| `MillerLoopResult` | `Builtin.bls_mlr` |
+
+Native literal nodes are overloaded through `Literal` traits. Reusing them would
+add constraints and require a Nash stdlib module even for `add_one`. Instead,
+frontend-neutral `nash_source::Constant::{Int, Bytes, Str}` is carried by source
+and canonical `Expr::Constant`/`Pattern::Constant`. Nash's existing solver assigns
+the primitive type directly; fixed patterns use primitive equality rather than
+user `Eq` instances. Native literal nodes and evidence behavior are unchanged.
+Integers currently must fit signed `i128`; overflow returns `NAF2101`.
+
+Aiken user type names lowercase their first ASCII character (`Choice` -> `choice`)
+in declarations, references, imports and exports. Constructors retain their
+spelling. This is deliberate: uppercase Nash data declarations require Big fields,
+while Aiken primitive fields map to constant types. Little Nash data declarations
+admit those fields without implicit Data casts. They do **not** promise Aiken wire
+encoding. Nash `Storable` excludes Term, so `List`/`Pair` containing little user
+ADTs can fail Nash representation checking. Full Aiken container/data-layout
+compatibility needs future boundary conversions, not unchecked coercions here.
+
+### Builtins
+
+Integer operators call real `Builtin` operations directly, without importing
+native operator traits. Division/modulo use `divideInteger`/`modInteger` as the
+official compiler does. Greater comparisons negate the corresponding less
+comparison, retaining left-to-right operand evaluation.
+
+`aiken/builtin` has an explicit 33-name whitelist in
+`crates/nash-frontend-aiken/src/profile.rs`: integer arithmetic/comparison;
+byte-array operations; supported hashes/signature verification; string operations,
+UTF-8 conversion, Data equality and serialization. Names are mapped explicitly,
+not guessed by snake-to-camel conversion. Imported aliases and qualified accesses
+share that mapping. Other builtin names return `NAF2201`. For example:
+
+```aiken
+use aiken/builtin.{equals_integer}
+pub fn equal(left: Int, right: Int) -> Bool {
+  equals_integer(left, right)
 }
 ```
 
-This interface separates syntax conversion from compatibility policy. For example,
-`NashV1Profile` maps Aiken `Int` to Nash `int` and can later map `aiken.list` to a Nash
-compatibility module.
+### Bounded validator profile
 
-## Composition functions
+One validator declaration per `.ak` module lowers to an ordinary Nash validator
+module with an exported `main`. Helpers, constants and imports use the existing
+library lowering. The generated `main` takes zero or more raw `Data` parameters,
+then one raw `Data` script context, and returns `unit` on success.
 
-These functions contain orchestration only:
+Accepted handler sets:
 
-- `inspect_with_registry`: select adapter, then inspect.
-- `parse_with_registry`: select adapter, then parse.
-- `inspect_native_module`: parse native Nash, then copy dependencies.
-- `parse_native_module`: run parser, validate role, validate module name.
-- `inspect_source`: parse Aiken, then inspect imports.
-- `normalize_module_path`: normalize Aiken segments, then apply the profile mapping.
-- `parse_and_lower`: parse Aiken, then lower.
-- `Lowerer::lower`: run preflight, then compose all declaration lowerers.
-- `inspect_sources`: apply `inspect_loaded_source` to all loaded files and retain per-module failures.
-- `frontend_module_reports`: map diagnostics, then wrap and sort reports.
+- One `mint(redeemer: Int, policy: ByteArray, transaction: Data)` handler and an
+  optional `else(context: Data)` handler.
+- An `else`-only validator, which receives the context unchanged, without
+  destructuring its purpose.
+- Redeemers may be explicitly annotated `Int`, `ByteArray` or `Data`. Named
+  `Int`/`ByteArray` redeemers are decoded even if the body does not use the value;
+  `_ : Data` discards a redeemer without decoding.
+- Validator parameters, transactions and fallback contexts are raw `Data`;
+  omitting their annotations selects this profile's raw boundary. Mint policy
+  arguments must explicitly use `ByteArray` and are decoded even when discarded.
+- Handlers return `Bool`: `True` becomes `unit`, `False` becomes an explicit
+  error. An omitted fallback fails. User traces preserve evaluation order.
 
-Keeping these functions free of leaf logic makes control flow easy to test.
+For mint dispatch, the official V3 context layout is constructor fields
+`[transaction, redeemer, purpose]`, with mint at purpose tag `0`. Other purpose
+tags invoke the fallback. `unConstrData`/list projections validate the parts
+needed for dispatch; `unIData` and `unBData` validate decoded boundary values.
+Discarded raw `Data` fields remain unforced; mint policies are always decoded
+before redeemers, as in the official compiler. This is **not**
+an independent, exhaustive ledger-context schema validator: raw `Data` stays raw,
+and the profile does not promise to reject extra fields or every malformed
+ignored component.
 
-## Unimplemented leaf functions
+The official compiler's `TypedPattern::mint_purpose` decodes the policy to bytes
+even though its internal prelude constructor advertises `Data`. Differential
+execution caught the mismatch; requiring `ByteArray` avoids accepting a source
+annotation whose runtime representation would silently differ.
 
-Every `todo!` has a purpose comment and one example. The main stubs are:
+Located `NAF2301` rejects multiple validator declarations, multiple/non-mint
+handlers, wrong arities, non-Boolean return annotations, non-Data parameters,
+unsupported boundary annotations and primitive-shadowing boundary imports.
+Explicit library metadata cannot contain a validator; explicit validator metadata
+requires a declaration. `main` is reserved for the generated entry point.
+Handler calls such as `example.mint(...)`, argument patterns/renamed labels and
+references to generated `main` are unsupported rather than silently reinterpreted.
 
-```text
-lower_use
-lower_annotation / lower_type
-lower_pattern
-lower_integer
-lower_expr
-lower_function / lower_constant
-lower_data_type / lower_type_alias
-lower_validator
-lower_exports / lower_docs
-build_graph_from_inspection
-compile_parsed_module
-```
+The compact differential tests cover mint/fallback dispatch, raw parameters and
+contexts, named policies/transactions, integer/byte-array redeemer checks,
+unused-but-named redeemer decoding, discarded-policy validation, explicit/default
+fallback failure and traces.
+They use the official parser, inference and codegen **only as a test oracle** and
+compare execution outcomes rather than script bytes or costs.
 
-Implement leaf lowerers before changing orchestration. This keeps each pull request
-small and lets fixture tests target one semantic mapping at a time.
+### Intentional exclusions
 
-## Dependency constraints
+Located `NAF2201` diagnostics reject tests, benchmarks, environment/configuration
+modules, custom encoding decorators, type holes, partial polymorphic annotations,
+polymorphic local ascriptions, polymorphic `==`/`!=`, pipelines requiring inferred
+arity, `expect`/Data casts, backpassing/multi-pattern assignments, Pair
+construction/patterns, unknown-arity tuple indexing, curve literals, record updates,
+trace formatting/trace-if-false, labeled function calls/renamed parameter labels,
+and labeled/spread/type-qualified constructor patterns. Invalid duplicate bindings,
+qualifiers and primitive-shadowing type declarations are also rejected.
 
-`nash-frontend` depends only on stable Nash surface types and small utility crates.
-It must not depend on:
+Spend, withdraw, publish, vote and propose handlers, optional datum conversion,
+custom user-data boundary layouts and complete validator ABI compatibility remain
+outside this profile. They require their own checked lowering and official runtime
+comparisons. Exact package/stdlib compatibility, blueprints and formatter support
+are not claimed.
 
-```text
-nash-parse
-aiken-lang
-nash-can
-nash-solve
-nash-report
-nash-driver
-```
+## Diagnostics and dependency maintenance
 
-`nash-frontend-aiken` is the only crate allowed to depend on `aiken-lang`. This rule
-makes a later switch to `aiken-syntax` local to one manifest and one adapter.
+Frontend diagnostics carry a stable code, severity, title/message, optional primary
+region, primary/secondary labels, context, help and suggestions. Regions are
+one-based UTF-8 byte columns, converted from Aiken byte spans using a precomputed
+line-start table; CRLF and non-ASCII text preserve byte coordinates. Native syntax
+reports retain their existing codes/spans/labels and owned plain diagnostic text.
+Nash semantic errors remain ordinary Nash reports for terminal, JSON and LSP.
+
+- `NAF1001`: unknown frontend.
+- `NAF1002`: unknown canonical import.
+- `NAF1003`: ambiguous/reserved module identity or import.
+- `NAF2001`: official Aiken parser failure.
+- `NAF2101`: integer outside the temporary source literal range.
+- `NAF2201`: unsupported NashV1 feature.
+- `NAF2301`: unsupported validator profile or role/boundary mismatch.
+
+The production Aiken dependency is exact-pinned `aiken-lang = "=1.1.23"`; its MSRV requires
+Rust 1.94.1, now selected by `rust-toolchain.toml`. The lockfile is checked in.
+An update must review upstream untyped AST/parser changes, builtin naming/signatures
+and diagnostics, then run the focused adapter/driver tests plus workspace checks.
+The compact compatibility coverage is native regression, `add_one` plus typed
+imports, unsupported declarations/regions, fixed primitives, scope/nullary behavior,
+exports and CLI/LSP paths. Backend regressions cover Aiken-backed validator execution
+and fixed integer/byte/string pattern equality, aliases and native-literal
+fallthrough. The bounded validator profile has pinned official runtime differential
+tests; extending handler/data-layout support requires extending those checks.
+
+An upstream parser-only `aiken-syntax` extraction remains desirable but is not
+available or required at runtime. Proposing that upstream split and replacing the
+dependency are Phase 3 follow-on work; one private AST version keeps that change
+local to this adapter.

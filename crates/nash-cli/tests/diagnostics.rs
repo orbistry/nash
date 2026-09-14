@@ -374,9 +374,7 @@ async fn mixed_errors_match_across_terminal_json_and_lsp() {
         let db = Arc::new(Mutex::new(Database::new(FileSystemSource::new())));
         let loaded = DriverProject::load(&project.0).await.unwrap();
         let modules = loaded.discover_modules(&*db.lock().await).await.unwrap();
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
-            .await
-            .unwrap();
+        let graph = build_graph(db.clone(), &modules).await.unwrap();
         let result = build(db, &graph, &modules).await;
         assert!(result.interfaces.is_empty());
         let reports = result.ordered_reports();
@@ -536,4 +534,33 @@ fn imported_function_alias_labels_the_local_annotation() {
         origin["region"]["start"],
         serde_json::json!({"line": 3, "column": 5})
     );
+}
+
+#[test]
+fn aiken_projects_use_the_real_check_command_and_json_diagnostics() {
+    let fixtures =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../nash-driver/tests/fixtures/aiken");
+    let supported = check(&fixtures.join("supported"), &["--report=json"]);
+    assert!(
+        supported.status.success(),
+        "{}",
+        String::from_utf8_lossy(&supported.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&supported.stdout).unwrap();
+    assert_eq!(report["errors"], serde_json::json!([]));
+
+    let unsupported = check(&fixtures.join("unsupported"), &["--report=json"]);
+    assert_eq!(unsupported.status.code(), Some(1));
+    let report: serde_json::Value = serde_json::from_slice(&unsupported.stdout).unwrap();
+    let module = &report["errors"][0];
+    assert!(
+        module["path"]
+            .as_str()
+            .unwrap()
+            .ends_with("/unsupported.ak")
+    );
+    let diagnostic = &module["problems"][0];
+    assert_eq!(diagnostic["code"], "NAF2201");
+    assert_eq!(diagnostic["region"]["start"]["line"], 1);
+    assert_ne!(diagnostic["region"]["start"], diagnostic["region"]["end"]);
 }

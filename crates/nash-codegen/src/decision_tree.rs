@@ -6,7 +6,7 @@ use nash_ir::{
     core::{Binder, Branch, CaseKind, Core, Test},
     ty::{BigTy, ConstTy, TermTy, Ty},
 };
-use nash_plutus::builtin::DefaultFunction;
+use nash_plutus::{builtin::DefaultFunction, constant::Constant};
 use nash_region::Located;
 use std::collections::{BTreeMap, HashMap};
 
@@ -114,6 +114,7 @@ fn collect_bindings<'a>(
             Pattern::Anything
             | Pattern::Unit
             | Pattern::Bool { .. }
+            | Pattern::Constant(_)
             | Pattern::Int(_)
             | Pattern::Bytes(_)
             | Pattern::Str(_) => return Ok(()),
@@ -256,19 +257,35 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 }));
         };
         if let Pat::Node(pattern) = rows[0].patterns[column]
-            && matches!(
-                &pattern.value,
-                Pattern::Int(_) | Pattern::Str(_) | Pattern::Bytes(_)
-            )
+            && is_literal(rows[0].patterns[column])
         {
-            let matcher = *self
-                .inputs
-                .literal_tests
-                .get(&NodeId::pattern(pattern))
-                .ok_or(Error::LiteralMatcher)?;
-            let condition = self
-                .build
-                .app(matcher, &[self.build.var(subjects[column].binder.name)]);
+            let subject = subjects[column].binder;
+            let value = self.build.var(subject.name);
+            let condition = if let Pattern::Constant(constant) = pattern.value {
+                let (eq, literal) = match (constant, subject.ty) {
+                    (nash_ast::Constant::Int(n), Ty::Const(ConstTy::Int)) => {
+                        (DefaultFunction::EqualsInteger, self.build.int(n))
+                    }
+                    (nash_ast::Constant::Bytes(bytes), Ty::Const(ConstTy::Bytes)) => (
+                        DefaultFunction::EqualsByteString,
+                        self.build
+                            .lit(Constant::byte_string(self.build.arena, bytes)),
+                    ),
+                    (nash_ast::Constant::Str(s), Ty::Const(ConstTy::String)) => (
+                        DefaultFunction::EqualsString,
+                        self.build.lit(Constant::string(self.build.arena, s)),
+                    ),
+                    _ => return Err(Error::PatternType),
+                };
+                self.build.builtin(eq, &[value, literal])
+            } else {
+                let matcher = *self
+                    .inputs
+                    .literal_tests
+                    .get(&NodeId::pattern(pattern))
+                    .ok_or(Error::LiteralMatcher)?;
+                self.build.app(matcher, &[value])
+            };
             let mut yes = rows.clone();
             yes[0].patterns[column] = Pat::Any;
             let yes = self.compile(subjects.clone(), yes)?;
@@ -474,7 +491,8 @@ fn data_list<'a>(build: &Builder<'a>) -> Ty<'a> {
     Ty::Const(build.arena.alloc(ConstTy::List(Ty::Big(&BigTy::Data))))
 }
 fn is_literal(pattern: Pat<'_>) -> bool {
-    matches!(pattern,Pat::Node(p) if matches!(&p.value,Pattern::Int(_)|Pattern::Str(_)|Pattern::Bytes(_)))
+    matches!(pattern, Pat::Node(p) if matches!(&p.value,
+        Pattern::Constant(_) | Pattern::Int(_) | Pattern::Str(_) | Pattern::Bytes(_)))
 }
 fn shape(pattern: Pat<'_>) -> Option<Shape> {
     match pattern {

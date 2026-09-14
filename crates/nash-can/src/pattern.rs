@@ -70,6 +70,7 @@ pub fn canonicalize<'a>(
     bindings: &mut Vec<(&'a str, Region)>,
 ) -> Result<&'a Located<CanPattern<'a>>, Vec<Error<'a>>> {
     let can = match &pattern.value {
+        SourcePattern::Constant(value) => CanPattern::Constant(*value),
         SourcePattern::Anything => CanPattern::Anything,
 
         SourcePattern::Var(name) => {

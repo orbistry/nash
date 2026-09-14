@@ -7,6 +7,7 @@ pub(super) fn pattern_owns_vars(pattern: &Located<nash_ast::Pattern<'_>>) -> boo
     use nash_ast::Pattern;
     match &pattern.value {
         Pattern::Anything | Pattern::Var(_) | Pattern::Unit | Pattern::Bool { .. } => false,
+        Pattern::Constant(_) => false,
         Pattern::Alias { pattern, .. } => pattern_owns_vars(pattern),
         Pattern::Constructor(ctor) => {
             !ctor.union.parameters.is_empty()
@@ -47,6 +48,23 @@ impl<'a> Solver<'a, '_> {
             owner: self.owners.last().copied(),
         });
         match &pattern.value {
+            Pattern::Constant(value) => {
+                let category = match value {
+                    nash_ast::Constant::Int(_) => PCategory::Int,
+                    nash_ast::Constant::Bytes(_) => PCategory::Bytes,
+                    nash_ast::Constant::Str(_) => PCategory::Str,
+                };
+                let actual = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(
+                        nash_ast::primitives::builtin_home(),
+                        value.builtin_name(),
+                        Vec::new(),
+                    ),
+                );
+                self.pattern_equal(uf, rank, state, region, category, actual, expected)
+            }
             Pattern::Anything => state,
             Pattern::Var(name) => {
                 headers.insert(name, Located::at(region, expected_var));

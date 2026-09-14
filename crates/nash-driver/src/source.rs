@@ -7,9 +7,9 @@
 //! - HTTP fetch (for WASM playground)
 
 use async_trait::async_trait;
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::RwLock;
 use url::Url;
 
 use crate::error::DriverError;
@@ -144,12 +144,12 @@ impl InMemorySource {
 
     /// Insert a file into memory.
     pub fn insert(&self, uri: Url, content: String) {
-        self.files.write().unwrap().insert(uri, content);
+        self.files.write().insert(uri, content);
     }
 
     /// Remove a file from memory.
     pub fn remove(&self, uri: &Url) -> Option<String> {
-        self.files.write().unwrap().remove(uri)
+        self.files.write().remove(uri)
     }
 }
 
@@ -162,54 +162,53 @@ impl Default for InMemorySource {
 #[async_trait]
 impl FileSource for InMemorySource {
     async fn exists(&self, uri: &Url) -> Result<bool, DriverError> {
-        Ok(self.files.read().unwrap().contains_key(uri))
+        Ok(self.files.read().contains_key(uri))
     }
 
     async fn read(&self, uri: &Url) -> Result<String, DriverError> {
         self.files
             .read()
-            .unwrap()
             .get(uri)
             .cloned()
             .ok_or_else(|| DriverError::FileNotFound { uri: uri.clone() })
     }
 
     async fn write(&self, uri: &Url, content: &str) -> Result<(), DriverError> {
-        self.files
-            .write()
-            .unwrap()
-            .insert(uri.clone(), content.to_string());
+        self.files.write().insert(uri.clone(), content.to_string());
         Ok(())
     }
 
     async fn glob(&self, base: &Url, pattern: &str) -> Result<Vec<Url>, DriverError> {
-        let base_str = base.as_str();
-        let files = self.files.read().unwrap();
-
-        // Simple glob matching - convert pattern to a prefix check
-        // For full glob support, we'd need a proper glob matcher
-        let urls: Vec<Url> = files
+        let matcher =
+            glob::Pattern::new(pattern).map_err(|error| DriverError::InvalidModulePath {
+                path: error.msg.into(),
+            })?;
+        let base_path = base.path().trim_end_matches('/');
+        let files = self.files.read();
+        let mut urls: Vec<Url> = files
             .keys()
             .filter(|uri| {
-                let uri_str = uri.as_str();
-                if !uri_str.starts_with(base_str) {
+                if uri.scheme() != base.scheme() || uri.authority() != base.authority() {
                     return false;
                 }
-
-                // Simple pattern matching: *.nash matches any .nash file
-                if pattern == "*.nash" {
-                    return uri_str.ends_with(".nash");
-                }
-                if pattern == "**/*.nash" {
-                    return uri_str.ends_with(".nash");
-                }
-
-                // Default: check if pattern is contained
-                true
+                let Some(relative) = uri
+                    .path()
+                    .strip_prefix(base_path)
+                    .and_then(|path| path.strip_prefix('/'))
+                else {
+                    return false;
+                };
+                matcher.matches_with(
+                    relative,
+                    glob::MatchOptions {
+                        require_literal_separator: true,
+                        ..glob::MatchOptions::new()
+                    },
+                )
             })
             .cloned()
             .collect();
-
+        urls.sort();
         Ok(urls)
     }
 }
@@ -290,6 +289,36 @@ pub fn path_to_uri(path: &Path) -> Result<Url, DriverError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn memory_globs_match_registered_extensions_with_directory_boundaries() {
+        let source = InMemorySource::with_files(
+            [
+                ("file:///project/src/main.ak", ""),
+                ("file:///project/src/folder/math.ak", ""),
+                ("file:///project/src/Main.nash", ""),
+                ("file:///project/src/notes.txt", ""),
+                ("file:///project/src-other/hidden.ak", ""),
+            ]
+            .map(|(uri, source)| (Url::parse(uri).unwrap(), source.to_owned())),
+        );
+        let root = Url::parse("file:///project/src").unwrap();
+        assert_eq!(
+            source.glob(&root, "**/*.ak").await.unwrap(),
+            [
+                Url::parse("file:///project/src/folder/math.ak").unwrap(),
+                Url::parse("file:///project/src/main.ak").unwrap(),
+            ],
+        );
+        assert_eq!(
+            source.glob(&root, "*.ak").await.unwrap(),
+            [Url::parse("file:///project/src/main.ak").unwrap()],
+        );
+        assert_eq!(
+            source.glob(&root, "**/*.nash").await.unwrap(),
+            [Url::parse("file:///project/src/Main.nash").unwrap()],
+        );
+    }
 
     #[tokio::test]
     async fn test_in_memory_source() {
