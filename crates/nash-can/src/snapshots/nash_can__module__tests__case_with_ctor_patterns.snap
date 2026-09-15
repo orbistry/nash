@@ -172,6 +172,7 @@ Module {
                                             ],
                                             alternatives: 2,
                                             options: Normal,
+                                            data_layout: None,
                                         },
                                         index: 0,
                                         arguments: [
@@ -308,6 +309,7 @@ Module {
                                             ],
                                             alternatives: 2,
                                             options: Normal,
+                                            data_layout: None,
                                         },
                                         index: 1,
                                         arguments: [],

@@ -71,6 +71,20 @@ pub fn canonicalize<'a>(
 ) -> Result<&'a Located<CanPattern<'a>>, Vec<Error<'a>>> {
     let can = match &pattern.value {
         SourcePattern::Constant(value) => CanPattern::Constant(*value),
+        SourcePattern::Pair { first, second } => {
+            let (first, second) = crate::accumulate::accumulate2(
+                canonicalize(bump, env, first, bindings),
+                canonicalize(bump, env, second, bindings),
+            )?;
+            CanPattern::Pair { first, second }
+        }
+        SourcePattern::DataList { elements, tail } => {
+            let elements = canonicalize_list(bump, env, elements, bindings)?;
+            let tail = tail
+                .map(|tail| canonicalize(bump, env, tail, bindings))
+                .transpose()?;
+            CanPattern::DataList { elements, tail }
+        }
         SourcePattern::Anything => CanPattern::Anything,
 
         SourcePattern::Var(name) => {
@@ -100,7 +114,12 @@ pub fn canonicalize<'a>(
 
         SourcePattern::Unit => CanPattern::Unit,
 
-        SourcePattern::Tuple {
+        SourcePattern::DataTuple {
+            first,
+            second,
+            rest,
+        }
+        | SourcePattern::Tuple {
             first,
             second,
             rest,
@@ -110,10 +129,53 @@ pub fn canonicalize<'a>(
                 canonicalize(bump, env, second, bindings),
                 canonicalize_list(bump, env, rest, bindings),
             )?;
-            CanPattern::Tuple {
-                first,
-                second,
-                rest,
+            if matches!(&pattern.value, SourcePattern::DataTuple { .. }) {
+                CanPattern::DataTuple {
+                    first,
+                    second,
+                    rest,
+                }
+            } else {
+                CanPattern::Tuple {
+                    first,
+                    second,
+                    rest,
+                }
+            }
+        }
+
+        SourcePattern::Constructor {
+            region,
+            module,
+            type_name,
+            name,
+            args,
+            spread,
+        } => {
+            if let Some(primitive) =
+                primitive_constructor(bump, env, *region, *module, *type_name, name)?
+            {
+                let arity = match primitive {
+                    PrimitiveConstructor::Pair => 2,
+                    PrimitiveConstructor::Unit => 0,
+                };
+                let args =
+                    arrange_pattern_arguments(bump, *region, name, args, *spread, arity, None)?;
+                match primitive {
+                    PrimitiveConstructor::Unit => CanPattern::Unit,
+                    PrimitiveConstructor::Pair => {
+                        let (first, second) = crate::accumulate::accumulate2(
+                            canonicalize(bump, env, args[0], bindings),
+                            canonicalize(bump, env, args[1], bindings),
+                        )?;
+                        CanPattern::Pair { first, second }
+                    }
+                }
+            } else {
+                let ctor = resolve_constructor(bump, env, *region, *module, *type_name, name)?;
+                let args =
+                    arrange_constructor_arguments(bump, *region, name, args, *spread, &ctor)?;
+                canonicalize_ctor_pattern(bump, env, pattern.region, name, args, &ctor, bindings)?
             }
         }
 
@@ -155,6 +217,223 @@ pub fn canonicalize<'a>(
     };
 
     Ok(bump.alloc(Located::at(pattern.region, can)))
+}
+
+pub(crate) use nash_ast::primitives::StructuralConstructor as PrimitiveConstructor;
+
+/// Structural runtime constructors are identified only after resolving their
+/// declaring type. User types and imported aliases cannot impersonate them.
+pub(crate) fn primitive_constructor<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    region: Region,
+    module: Option<&'a str>,
+    type_name: Option<&'a str>,
+    name: &'a str,
+) -> Result<Option<PrimitiveConstructor>, Vec<Error<'a>>> {
+    let Some(type_name) = type_name else {
+        return Ok(None);
+    };
+    let typ = match module {
+        Some(module) => crate::types::find_type_qual(bump, env, region, module, type_name)?,
+        None => crate::types::find_type(bump, env, region, type_name)?,
+    };
+    let environment::Type::Union { home, .. } = typ else {
+        return Ok(None);
+    };
+    Ok(if home == nash_ast::primitives::builtin_home() {
+        nash_ast::primitives::structural_constructor(type_name, name)
+    } else {
+        None
+    })
+}
+
+/// Resolve an optional type namespace before selecting a constructor. The
+/// owning module and declared union, not the spelling of the syntax, determine
+/// membership; qualified imports can expose constructors without open imports.
+pub(crate) fn resolve_constructor<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    region: Region,
+    module: Option<&'a str>,
+    type_name: Option<&'a str>,
+    name: &'a str,
+) -> Result<environment::Ctor<'a>, Vec<Error<'a>>> {
+    let Some(type_name) = type_name else {
+        return match module {
+            Some(module) => env.find_ctor_qual(bump, region, module, name),
+            None => env.find_ctor(bump, region, name),
+        };
+    };
+    let typ = match module {
+        Some(module) => crate::types::find_type_qual(bump, env, region, module, type_name)?,
+        None => crate::types::find_type(bump, env, region, type_name)?,
+    };
+    let home = match typ {
+        environment::Type::Union { home, .. } | environment::Type::Alias { home, .. } => home,
+    };
+    let matches_owner = |ctor: &environment::Ctor<'a>| match ctor {
+        environment::Ctor::Union {
+            home: owner,
+            type_name: declared,
+            ..
+        } => *owner == home && *declared == type_name,
+        environment::Ctor::Bool {
+            home: owner, union, ..
+        } => *owner == home && union.name.value == type_name,
+        environment::Ctor::RecordCtor { .. } => false,
+    };
+    for info in env.ctors.get(name).into_iter().chain(
+        env.q_ctors
+            .values()
+            .filter_map(|constructors| constructors.get(name)),
+    ) {
+        if let environment::Info::Specific(_, ctor) = info
+            && matches_owner(ctor)
+        {
+            return Ok(*ctor);
+        }
+    }
+    Err(vec![Error::NotFoundCtor {
+        region,
+        prefix: Some(type_name),
+        name,
+        suggestions: env.possible_ctor_names(bump),
+    }])
+}
+
+fn arrange_constructor_arguments<'a>(
+    bump: &'a Bump,
+    region: Region,
+    name: &'a str,
+    args: &'a [nash_source::PatternArgument<'a>],
+    spread: Option<Region>,
+    ctor: &environment::Ctor<'a>,
+) -> Result<&'a [&'a Located<SourcePattern<'a>>], Vec<Error<'a>>> {
+    let (arity, labels) = match ctor {
+        environment::Ctor::Union {
+            arity,
+            union,
+            index,
+            ..
+        } => (
+            usize::from(*arity),
+            union
+                .ctors
+                .iter()
+                .find(|ctor| ctor.index == *index)
+                .and_then(|ctor| ctor.labels),
+        ),
+        environment::Ctor::Bool { .. } => (0, None),
+        environment::Ctor::RecordCtor { .. } => {
+            return Err(vec![Error::PatternHasRecordCtor { region, name }]);
+        }
+    };
+    arrange_pattern_arguments(bump, region, name, args, spread, arity, labels)
+}
+
+fn arrange_pattern_arguments<'a>(
+    bump: &'a Bump,
+    region: Region,
+    name: &'a str,
+    args: &'a [nash_source::PatternArgument<'a>],
+    spread: Option<Region>,
+    arity: usize,
+    labels: Option<&'a [&'a str]>,
+) -> Result<&'a [&'a Located<SourcePattern<'a>>], Vec<Error<'a>>> {
+    // A nullary constructor has no function field map. A redundant spread on
+    // it is accepted by the reference; on constructors with fields it is not.
+    if let Some(region) = spread
+        && arity != 0
+        && args.len() == arity
+    {
+        return Err(vec![Error::InvalidConstructorPattern {
+            region,
+            name,
+            reason: "The spread is unnecessary: every constructor field is already supplied.",
+        }]);
+    }
+    if args.len() > arity || (spread.is_none() && args.len() != arity) {
+        return Err(vec![Error::BadArity {
+            region,
+            context: BadArityContext::PatternArity,
+            name,
+            expected: arity,
+            actual: args.len(),
+        }]);
+    }
+    let mut ordered = Vec::with_capacity(arity);
+    let first_labeled = args
+        .iter()
+        .position(|arg| arg.label.is_some())
+        .unwrap_or(args.len());
+    ordered.extend_from_slice(&args[..first_labeled]);
+    if let Some(region) = spread {
+        let discard = &*bump.alloc(Located::at(region, SourcePattern::Anything));
+        ordered.extend((args.len()..arity).map(|_| nash_source::PatternArgument {
+            label: None,
+            pattern: discard,
+        }));
+    }
+    ordered.extend_from_slice(&args[first_labeled..]);
+    if let Some(labels) = labels {
+        let mut last_label = None;
+        let mut positional_after = 0;
+        for arg in &ordered {
+            if let Some(label) = arg.label {
+                last_label = Some(label);
+            } else if last_label.is_some() {
+                positional_after += 1;
+                if positional_after > 1 {
+                    return Err(vec![Error::InvalidConstructorPattern {
+                        region: arg.pattern.region,
+                        name,
+                        reason: "More than one positional argument follows a labeled argument.",
+                    }]);
+                }
+            }
+        }
+        // Swapping is significant: a label may displace a positional argument.
+        // Filling fixed slots instead would reject valid mixed patterns.
+        let mut seen = BTreeMap::new();
+        let mut index = 0;
+        while index < ordered.len() {
+            let Some(label) = ordered[index].label else {
+                index += 1;
+                continue;
+            };
+            let Some(position) = labels
+                .iter()
+                .position(|candidate| *candidate == label.value)
+            else {
+                return Err(vec![Error::LabeledCtorUnknownField {
+                    region: label.region,
+                    ctor: name,
+                    field: label.value,
+                }]);
+            };
+            if position == index {
+                seen.insert(label.value, label.region);
+                index += 1;
+            } else {
+                if let Some(first) = seen.insert(label.value, label.region) {
+                    return Err(vec![Error::DuplicateField {
+                        name: label.value,
+                        first,
+                        second: label.region,
+                    }]);
+                }
+                ordered.swap(position, index);
+            }
+        }
+    } else if let Some(label) = ordered.iter().find_map(|arg| arg.label) {
+        return Err(vec![Error::LabeledCtorUnknownField {
+            region: label.region,
+            ctor: name,
+            field: label.value,
+        }]);
+    }
+    Ok(bump.alloc_slice_fill_iter(ordered.into_iter().map(|arg| arg.pattern)))
 }
 
 fn canonicalize_ctor_pattern<'a>(
@@ -264,7 +543,7 @@ fn canonicalize_ctor_pattern<'a>(
 
         // `True`/`False` are nullary; like Elm, the arity check runs before
         // the Bool decision, so `True x` is a `BadArity` error.
-        environment::Ctor::Bool { union, .. } => {
+        environment::Ctor::Bool { union, index, .. } => {
             if !args.is_empty() {
                 return Err(vec![Error::BadArity {
                     region,
@@ -276,7 +555,7 @@ fn canonicalize_ctor_pattern<'a>(
             }
             Ok(CanPattern::Bool {
                 union,
-                value: name == "True",
+                value: *index == 1,
             })
         }
 
@@ -327,12 +606,14 @@ mod tests {
                 name: "Main",
             },
             vars: Default::default(),
+            callables: Default::default(),
             types: Default::default(),
             ctors: Default::default(),
             binops: Default::default(),
             q_vars: Default::default(),
             q_types: Default::default(),
             q_ctors: Default::default(),
+            generated_names: Default::default(),
         }
     }
 
@@ -359,6 +640,7 @@ mod tests {
             arguments: bump.alloc_slice_fill_iter([&*just_arg_typ]),
         });
         let maybe_union: &Union = bump.alloc(Union {
+            data_layout: None,
             kind: bump.alloc(nash_ast::Kind::Arrow(
                 &nash_ast::Kind::Type,
                 &nash_ast::Kind::Type,

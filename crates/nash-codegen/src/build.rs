@@ -1,5 +1,5 @@
 //! Reachable, lexical specialization of canonical definitions.
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use nash_ast::{self as can, *};
 use nash_can::environment::Tables;
@@ -20,6 +20,7 @@ use crate::{
 
 mod accessors;
 mod emission;
+pub(crate) mod source_lets;
 use emission::hoist_strings;
 
 const MAX_SPECIALIZATIONS: usize = 1024;
@@ -87,7 +88,7 @@ pub enum Error<'a> {
     RuntimeLayout(Ty<'a>),
     #[error("missing method body {method} of {trait_:?}")]
     MissingMethod {
-        trait_: QualifiedName<'a>,
+        trait_: &'a QualifiedName<'a>,
         method: &'a str,
     },
     #[error("method type does not match its selected implementation")]
@@ -175,6 +176,7 @@ impl<'a, 's> Build<'a, 's> {
             tables.traits.extend(input.tables.traits.clone());
             tables.impls.extend(input.tables.impls.clone());
             tables.kinds.types.extend(input.tables.kinds.types.clone());
+            tables.kinds.declared.merge(&input.tables.kinds.declared);
             tables
                 .kinds
                 .traits
@@ -185,7 +187,10 @@ impl<'a, 's> Build<'a, 's> {
                 .extend(input.tables.kinds.superclasses.clone());
             tables.fields.extend(input.tables.fields.clone());
         }
-        let pairs: Vec<_> = inputs.iter().map(|i| (i.module, i.types)).collect();
+        let pairs: Vec<_> = inputs
+            .iter()
+            .map(|i| (i.module, i.types, i.tables))
+            .collect();
         let demands = crate::demand::analyze(&pairs);
         Self {
             inputs,
@@ -230,6 +235,7 @@ impl<'a, 's> Build<'a, 's> {
         let core = engine.emit_group(0, engine.ir.var(binder.name), false)?;
         let core =
             crate::casts::expand_with_traces(&engine.ir, &mut engine.types, core, trace.compiler)?;
+        let core = source_lets::optimize(&engine.ir, core, &engine.source_lets, &engine.no_inline);
         let core = accessors::share(&engine.ir, core);
         let core = hoist_strings(&engine.ir, core);
         let specializations = engine
@@ -326,11 +332,14 @@ pub(crate) struct Engine<'a, 'b, 's> {
     top: HashMap<QualifiedName<'a>, usize>,
     pub methods: HashMap<(ImplRef<'a>, &'a str), usize>,
     pub defaults: HashMap<(QualifiedName<'a>, &'a str), usize>,
+    pub source_lets: HashSet<u32>,
+    pub no_inline: HashSet<u32>,
 }
 
 impl<'a, 'b, 's> Engine<'a, 'b, 's> {
     fn new(build: &'b Build<'a, 's>, arena: &'a Arena, trace: TraceConfig) -> Self {
         let mut types = TypeEnv::new(arena, &build.unions);
+        types.set_declared_store(build.tables.kinds.declared.clone());
         for (name, alias) in &build.aliases {
             types.insert_alias(*name, alias);
         }
@@ -345,6 +354,8 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
             top: HashMap::new(),
             methods: HashMap::new(),
             defaults: HashMap::new(),
+            source_lets: HashSet::new(),
+            no_inline: HashSet::new(),
         };
         for (input, unit) in build.inputs.iter().enumerate() {
             let ctx = Context {
@@ -471,7 +482,15 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
     }
     pub fn eager_template(&self, template: usize) -> Result<bool, Error<'a>> {
         let annotation = self.scheme(template)?.annotation;
-        Ok(annotation.free_vars.is_empty()
+        let strict = match self.templates[template].source {
+            Source::Definition(
+                Def::Def { args: [], body, .. } | Def::TypedDef { args: [], body, .. },
+            ) => has_strict_conversion(body),
+            Source::Destruct { value, .. } => has_strict_conversion(value),
+            _ => false,
+        };
+        Ok(strict
+            || annotation.free_vars.is_empty()
             || (annotation.context.iter().all(|p| p.trait_ref().is_none())
                 && self
                     .build
@@ -493,7 +512,12 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
     }
     pub fn ty(&mut self, id: NodeId, ctx: &Context<'a>) -> Result<Ty<'a>, Error<'a>> {
         let typ = self.can_type(id, ctx)?;
-        check_type(typ, &ctx.runtime_subst)?;
+        check_type(
+            self.ir.arena,
+            &self.build.tables.kinds.declared,
+            typ,
+            &ctx.runtime_subst,
+        )?;
         Ok(self.types.ty(typ, &ctx.runtime_subst)?)
     }
     pub fn substitute(
@@ -501,7 +525,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         typ: &'a Located<Type<'a>>,
         subst: &Substitution<'a>,
     ) -> Result<&'a Located<Type<'a>>, Error<'a>> {
-        check_type(typ, subst)?;
+        check_type(self.ir.arena, &self.build.tables.kinds.declared, typ, subst)?;
         Ok(nash_can::types::substitute_type(
             self.ir.arena.as_bump(),
             subst,
@@ -588,13 +612,22 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         let mut layouts = Vec::new();
         if let Some(demands) = self.build.demands.get(&t.id()) {
             for (name, demand) in demands {
-                let Some(typ) = subst.get(name) else {
+                let ty = if let Some(typ) = subst.get(name) {
+                    check_type(
+                        self.ir.arena,
+                        &self.build.tables.kinds.declared,
+                        typ,
+                        &Substitution::new(),
+                    )?;
+                    self.types.ty(typ, &Substitution::new())?
+                } else if *demand == DemandKind::DataListElement {
+                    Ty::Erased
+                } else {
                     return Err(Error::RuntimeLayout(Ty::Erased));
                 };
-                check_type(typ, &Substitution::new())?;
-                let ty = self.types.ty(typ, &Substitution::new())?;
                 layouts.push(match demand {
-                    DemandKind::Deep => ty,
+                    DemandKind::DataListElement => data_list_element(ty),
+                    DemandKind::Encoding | DemandKind::Deep => ty,
                     DemandKind::Native => native(self.ir.arena, ty)?,
                 });
             }
@@ -624,17 +657,35 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         }
         if let Some(demands) = self.build.demands.get(&t.id()) {
             for (name, kind) in demands {
-                let typ = *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?;
                 let typ = match kind {
-                    DemandKind::Deep => typ,
+                    DemandKind::DataListElement => {
+                        runtime_subst.remove(name);
+                        if let Some(typ) = subst.get(name) {
+                            let shape =
+                                data_list_element(self.types.ty(typ, &Substitution::new())?);
+                            if shape != Ty::Erased {
+                                runtime_subst.insert(name, native_type(self.ir.arena, shape)?);
+                            }
+                        }
+                        continue;
+                    }
+                    DemandKind::Encoding | DemandKind::Deep => {
+                        *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?
+                    }
                     DemandKind::Native => {
+                        let typ = *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?;
                         native_type(self.ir.arena, self.types.ty(typ, &Substitution::new())?)?
                     }
                 };
                 runtime_subst.insert(name, typ);
             }
         }
-        check_type(scheme.annotation.typ, &runtime_subst)?;
+        check_type(
+            self.ir.arena,
+            &self.build.tables.kinds.declared,
+            scheme.annotation.typ,
+            &runtime_subst,
+        )?;
         let ty = self.types.ty(scheme.annotation.typ, &runtime_subst)?;
         let name = self.ir.fresh(self.ir.arena.as_bump().alloc_str(t.name()));
         let binder = Binder { name, ty };
@@ -724,6 +775,200 @@ fn declarations<'a>(mut decls: &'a Decls<'a>) -> Vec<&'a Def<'a>> {
         }
     }
 }
+
+/// Explicit boundaries must not disappear with unused polymorphic values.
+/// Lambda and source function bodies remain delayed until an application evaluates them.
+fn has_strict_conversion(expr: &Located<Expr<'_>>) -> bool {
+    let mut pending = vec![expr];
+    while let Some(expr) = pending.pop() {
+        match &expr.value {
+            Expr::Convert { .. }
+            | Expr::Match {
+                conversion: Some(_),
+                ..
+            } => return true,
+            Expr::Pair { first, second } => pending.extend([*first, *second]),
+            Expr::DataList { elements, tail } => {
+                pending.extend_from_slice(elements);
+                pending.extend(tail.iter().copied());
+            }
+            Expr::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Expr::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                pending.extend([*first, *second]);
+                pending.extend_from_slice(rest);
+            }
+            Expr::List(elements) => pending.extend_from_slice(elements),
+            Expr::Call {
+                function,
+                arguments,
+            } => {
+                pending.push(function);
+                if let Expr::Lambda { body, .. } | Expr::Function { body, .. } = &function.value {
+                    pending.push(body);
+                }
+                pending.extend_from_slice(arguments);
+            }
+            Expr::SurfaceCall {
+                function,
+                arguments,
+                ..
+            } => {
+                pending.push(function);
+                let mut function = *function;
+                while let Expr::Callable { value, .. } = &function.value {
+                    function = value;
+                }
+                if let Expr::Lambda { body, .. } | Expr::Function { body, .. } = &function.value {
+                    pending.push(body);
+                }
+                pending.extend(arguments.iter().map(|argument| argument.value));
+            }
+            Expr::Pipe {
+                input,
+                function,
+                arguments,
+                ..
+            } => {
+                pending.extend([*input, *function]);
+                let mut function = *function;
+                while let Expr::Callable { value, .. } = &function.value {
+                    function = value;
+                }
+                if let Expr::Lambda { body, .. } | Expr::Function { body, .. } = &function.value {
+                    pending.push(body);
+                }
+                if let Some(arguments) = arguments {
+                    pending.extend(arguments.iter().map(|argument| argument.value));
+                }
+            }
+            Expr::Binop { left, right, .. } | Expr::Equal { left, right, .. } => {
+                pending.extend([*left, *right]);
+            }
+            Expr::If {
+                branches,
+                final_else,
+            } => {
+                pending.push(final_else);
+                for branch in *branches {
+                    pending.extend([branch.condition, branch.then_branch]);
+                }
+            }
+            Expr::Case {
+                scrutinee,
+                branches,
+            } => {
+                pending.push(scrutinee);
+                pending.extend(branches.iter().map(|branch| branch.body));
+            }
+            Expr::Match {
+                value,
+                body,
+                fallback,
+                conversion: None,
+                ..
+            } => {
+                pending.extend([*value, *body, *fallback]);
+            }
+            Expr::Let { definition, body } => {
+                pending.push(body);
+                match definition {
+                    Def::Def { args: [], body, .. } | Def::TypedDef { args: [], body, .. } => {
+                        pending.push(body)
+                    }
+                    _ => {}
+                }
+            }
+            Expr::LetRec { definitions, body } => {
+                pending.push(body);
+                for definition in *definitions {
+                    match definition {
+                        Def::Def { args: [], body, .. } | Def::TypedDef { args: [], body, .. } => {
+                            pending.push(body)
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            Expr::LetDestruct { value, body, .. } => pending.extend([*value, *body]),
+            Expr::LetValue {
+                value, body, uses, ..
+            } => {
+                if *uses != 0 {
+                    pending.push(value);
+                }
+                pending.push(body);
+            }
+            Expr::Trace { message, body } => pending.extend([*message, *body]),
+            Expr::TraceLabel {
+                label,
+                arguments,
+                body,
+                ..
+            } => {
+                pending.push(label);
+                pending.extend_from_slice(arguments);
+                pending.push(body);
+            }
+            Expr::Fail(message) | Expr::Todo(message) => pending.extend(message.iter().copied()),
+            Expr::Assert(value)
+            | Expr::Comptime(value)
+            | Expr::Access { record: value, .. }
+            | Expr::Format { value }
+            | Expr::Callable { value, .. }
+            | Expr::ModuleConstantCheck { value }
+            | Expr::TypeScope { value }
+            | Expr::TupleIndex { tuple: value, .. }
+            | Expr::RunnableCheck {
+                function: value, ..
+            } => pending.push(value),
+            Expr::FieldOrModule { record, module, .. } => {
+                pending.push(record);
+                pending.extend(module.iter().copied());
+            }
+            Expr::Record { fields, .. } => pending.extend(fields.iter().map(|field| field.value)),
+            Expr::Update { base, fields, .. } | Expr::RecordUpdate { base, fields, .. } => {
+                pending.push(base);
+                pending.extend(fields.iter().map(|field| field.value));
+            }
+            Expr::Lambda { .. }
+            | Expr::Function { .. }
+            | Expr::VarMethod { .. }
+            | Expr::Constant(_)
+            | Expr::Bytes(_)
+            | Expr::VarLocal(_)
+            | Expr::VarTopLevel(_)
+            | Expr::VarForeign { .. }
+            | Expr::VarConstructor { .. }
+            | Expr::VarOperator { .. }
+            | Expr::Str(_)
+            | Expr::Int(_)
+            | Expr::Accessor(_)
+            | Expr::Unit => {}
+        }
+    }
+    false
+}
+/// Only pair-shaped elements change encoded-list storage to a Plutus map.
+/// Other payload types, including unresolved ones, are not inspected.
+fn data_list_element(ty: Ty<'_>) -> Ty<'static> {
+    if matches!(ty, Ty::Const(ConstTy::DataPair(_, _))) {
+        Ty::Const(&ConstTy::DataPair(
+            Ty::Big(&BigTy::Data),
+            Ty::Big(&BigTy::Data),
+        ))
+    } else {
+        Ty::Erased
+    }
+}
+
 fn native<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<Ty<'a>, Error<'a>> {
     Ok(match ty {
         Ty::Big(_) => Ty::Big(&BigTy::Data),
@@ -732,6 +977,23 @@ fn native<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<Ty<'a>, Error<'a>> {
         Ty::Const(ConstTy::Pair(a, b)) => {
             Ty::Const(arena.alloc(ConstTy::Pair(native(arena, *a)?, native(arena, *b)?)))
         }
+        Ty::Const(ConstTy::DataPair(_, _)) => Ty::Const(&ConstTy::DataPair(
+            Ty::Big(&BigTy::Data),
+            Ty::Big(&BigTy::Data),
+        )),
+        Ty::Const(ConstTy::DataTuple(fields)) => Ty::Const(arena.alloc(ConstTy::DataTuple(
+            arena.alloc_slice_fill_iter(fields.iter().map(|_| Ty::Big(&BigTy::Data))),
+        ))),
+        Ty::Const(ConstTy::DataList(element)) => Ty::Const(arena.alloc(ConstTy::DataList(
+            if matches!(element, Ty::Const(ConstTy::DataPair(_, _))) {
+                Ty::Const(&ConstTy::DataPair(
+                    Ty::Big(&BigTy::Data),
+                    Ty::Big(&BigTy::Data),
+                ))
+            } else {
+                Ty::Big(&BigTy::Data)
+            },
+        ))),
         Ty::Const(_) => ty,
         _ => return Err(Error::RuntimeLayout(ty)),
     })
@@ -756,6 +1018,41 @@ fn native_type<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<&'a Located<Type<'a>>
                 "pair",
                 vec![native_type(arena, *a)?, native_type(arena, *b)?],
             ),
+            ConstTy::DataPair(_, _) => (
+                "data_pair",
+                vec![
+                    native_type(arena, Ty::Big(&BigTy::Data))?,
+                    native_type(arena, Ty::Big(&BigTy::Data))?,
+                ],
+            ),
+            ConstTy::DataTuple(fields) => {
+                let data = native_type(arena, Ty::Big(&BigTy::Data))?;
+                if fields.len() < 2 {
+                    return Err(Error::RuntimeLayout(ty));
+                }
+                (
+                    "data_tuple",
+                    vec![&*arena.alloc(Located::at_zero(Type::Tuple {
+                        first: data,
+                        second: data,
+                        rest: arena.alloc_slice_fill_iter(fields[2..].iter().map(|_| data)),
+                    }))],
+                )
+            }
+            ConstTy::DataList(element) => (
+                "data_list",
+                vec![native_type(
+                    arena,
+                    if matches!(element, Ty::Const(ConstTy::DataPair(_, _))) {
+                        Ty::Const(&ConstTy::DataPair(
+                            Ty::Big(&BigTy::Data),
+                            Ty::Big(&BigTy::Data),
+                        ))
+                    } else {
+                        Ty::Big(&BigTy::Data)
+                    },
+                )?],
+            ),
         },
         _ => return Err(Error::RuntimeLayout(ty)),
     };
@@ -767,7 +1064,12 @@ fn native_type<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<&'a Located<Type<'a>>
         args: arena.alloc_slice_copy(&children),
     })))
 }
-fn check_type<'a>(typ: &'a Located<Type<'a>>, subst: &Substitution<'a>) -> Result<(), Error<'a>> {
+fn check_type<'a>(
+    arena: &'a Arena,
+    declared: &nash_ast::declared::DeclaredStore,
+    typ: &'a Located<Type<'a>>,
+    subst: &Substitution<'a>,
+) -> Result<(), Error<'a>> {
     let mut pending = vec![(typ, 0, true)];
     while let Some((t, depth, replace)) = pending.pop() {
         if depth > MAX_TYPE_DEPTH {
@@ -775,6 +1077,12 @@ fn check_type<'a>(typ: &'a Located<Type<'a>>, subst: &Substitution<'a>) -> Resul
         }
         let mut push = |t| pending.push((t, depth + 1, replace));
         match &t.value {
+            Type::Hole => return Err(crate::ty_of::TypeError::UnresolvedHole.into()),
+            Type::DeclaredHole(hole) => {
+                if let Some(solution) = declared.resolve(arena.as_bump(), hole) {
+                    push(solution);
+                }
+            }
             Type::Var(n) => {
                 if replace && let Some(t) = subst.get(n) {
                     pending.push((*t, depth + 1, false));
@@ -794,6 +1102,12 @@ fn check_type<'a>(typ: &'a Located<Type<'a>>, subst: &Substitution<'a>) -> Resul
             Type::Lambda { from, to } => {
                 push(*from);
                 push(*to);
+            }
+            Type::Function { arguments, result } => {
+                for argument in *arguments {
+                    push(*argument);
+                }
+                push(*result);
             }
             Type::Tuple {
                 first,

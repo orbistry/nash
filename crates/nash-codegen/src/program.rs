@@ -178,7 +178,7 @@ fn free<'a>(
             free(body, scope, seen, out);
         }
         Core::Delay(body) | Core::Force(body) => free(body, scope, seen, out),
-        Core::Lit(_) | Core::Error => {}
+        Core::Lit(_) | Core::Evaluated { .. } | Core::Error => {}
     }
     scope.truncate(depth);
 }

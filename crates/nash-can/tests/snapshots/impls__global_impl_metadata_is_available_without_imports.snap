@@ -36,6 +36,9 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",
@@ -108,6 +111,9 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",
@@ -152,6 +158,9 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                                     PackageName {
                                         author: "nash",
                                         project: "core",
+                                        version: "",
+                                        source: Compiler,
+                                        compilation: None,
                                     },
                                 ),
                                 name: "Builtin",

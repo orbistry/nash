@@ -22,6 +22,12 @@ pub struct Binder<'a> {
 pub enum Core<'a> {
     Var(Name<'a>),
     Lit(&'a Constant<'a>),
+    /// A closed CEK result, retaining its solved source representation type.
+    /// De Bruijn variables are local to this term, never names in the Core tree.
+    Evaluated {
+        term: &'a nash_plutus::term::Term<'a, nash_plutus::binder::DeBruijn>,
+        ty: Ty<'a>,
+    },
     Lam {
         params: &'a [Binder<'a>],
         body: &'a Core<'a>,
@@ -143,7 +149,7 @@ impl<'a> Core<'a> {
     pub fn walk<'tree>(&'tree self, f: &mut impl FnMut(&'tree Core<'a>)) {
         f(self);
         match self {
-            Core::Var(_) | Core::Lit(_) | Core::Error => {}
+            Core::Var(_) | Core::Lit(_) | Core::Evaluated { .. } | Core::Error => {}
             Core::Lam { body, .. } | Core::Delay(body) | Core::Force(body) => body.walk(f),
             Core::App { func, args } => {
                 func.walk(f);

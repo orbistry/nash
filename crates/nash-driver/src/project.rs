@@ -1,89 +1,396 @@
-//! Project loading and discovery.
-//!
-//! Handles loading `nash.jsonc` configuration files and discovering
-//! source files within projects.
+//! Manifest selection and frontend-neutral project loading.
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use url::Url;
+use std::sync::Arc;
 
 use nash_config::{Config, Workspace};
-use nash_frontend::{ModuleName, ModuleRole, SourceInput};
+use nash_frontend::{LoadedPackage, ProjectDiagnostic, ProjectLoadRequest, ProjectMetadata};
+pub use nash_frontend::{
+    LoadedProject, ModuleCatalog, PackageId, PackageSourceId, ProjectFormat, ProjectMode,
+    SourceSpec,
+};
 
 use crate::database::Database;
 use crate::error::DriverError;
 use crate::source::path_to_uri;
 
-/// Discovered sources with the identity and ownership used by every compiler phase.
-pub type ModuleCatalog = BTreeMap<Url, SourceSpec>;
-
-#[derive(Clone, Debug)]
-pub struct SourceSpec {
-    pub source_root: PathBuf,
-    pub module: ModuleName,
-    pub role: Option<ModuleRole>,
-    pub package: Option<nash_config::PackageName>,
-    pub frontend: Option<String>,
+#[derive(Debug)]
+pub struct Project {
+    pub root: PathBuf,
+    pub format: ProjectFormat,
+    pub loaded: LoadedProject,
+    /// Native source roots are retained for editor overlay discovery.
+    pub members: Vec<ProjectMember>,
+    environment: Option<String>,
+    mode: ProjectMode,
 }
 
-impl SourceSpec {
-    /// Derive an extension-neutral identity relative to the configured source root.
-    pub fn new(
-        uri: &Url,
-        source_root: &Path,
-        package: Option<nash_config::PackageName>,
+#[derive(Debug)]
+pub struct ProjectMember {
+    pub root: PathBuf,
+    pub config: Config,
+    pub source_dirs: Vec<PathBuf>,
+}
+
+impl Project {
+    pub async fn load(path: impl AsRef<Path>) -> Result<Self, DriverError> {
+        Self::load_with_options(path, None, ProjectMode::Check).await
+    }
+
+    pub async fn load_with_options(
+        path: impl AsRef<Path>,
+        environment: Option<&str>,
+        mode: ProjectMode,
     ) -> Result<Self, DriverError> {
-        let path = uri
-            .to_file_path()
-            .map_err(|()| DriverError::InvalidFileUri { uri: uri.clone() })?;
-        let source_root = normalize_path(source_root);
-        let path = normalize_path(&path);
-        let relative = path
-            .strip_prefix(&source_root)
-            .map_err(|_| DriverError::InvalidModulePath { path: path.clone() })?;
-        let module_path = relative.with_extension("");
-        let parts = module_path
-            .components()
-            .map(|component| component.as_os_str().to_str())
-            .collect::<Option<Vec<_>>>()
-            .ok_or_else(|| DriverError::InvalidModulePath { path: path.clone() })?;
-        if parts.is_empty()
-            || parts
-                .iter()
-                .any(|part| part.is_empty() || part.contains('.'))
-        {
-            return Err(DriverError::InvalidModulePath { path });
-        }
-        Ok(Self {
-            source_root,
-            module: ModuleName::new(parts.join(".")),
-            role: None,
-            package,
-            frontend: None,
-        })
+        Self::load_with_sources(path, environment, mode, &[]).await
     }
 
-    /// An editor buffer outside a project uses its containing directory as its root.
-    pub fn standalone(uri: &Url) -> Result<Self, DriverError> {
-        let path = uri
-            .to_file_path()
-            .map_err(|()| DriverError::InvalidFileUri { uri: uri.clone() })?;
-        let root = path
+    /// Include editor buffers before applying project discovery rules.
+    pub async fn load_with_sources(
+        path: impl AsRef<Path>,
+        environment: Option<&str>,
+        mode: ProjectMode,
+        additional_sources: &[url::Url],
+    ) -> Result<Self, DriverError> {
+        let (manifest, format) = select_manifest(path.as_ref())?;
+        let manifest = manifest
+            .canonicalize()
+            .map_err(|source| DriverError::ReadError {
+                path: manifest.clone(),
+                source,
+            })?;
+        let root = manifest
             .parent()
-            .ok_or_else(|| DriverError::InvalidModulePath { path: path.clone() })?;
-        Self::new(uri, root, None)
+            .expect("manifest has parent")
+            .to_path_buf();
+        if format == ProjectFormat::Aiken {
+            let loaded =
+                load_aiken(&manifest, environment, mode, additional_sources.to_vec()).await?;
+            return Ok(Self {
+                root: loaded.root.clone(),
+                format,
+                loaded,
+                members: vec![],
+                environment: environment.map(str::to_owned),
+                mode,
+            });
+        }
+        let config = nash_config::parse_file(&manifest)?;
+        let members = match config {
+            Config::Workspace(workspace) => load_workspace_members(&root, &workspace)?,
+            config => vec![make_member(&root, config)],
+        };
+        let mut project = Self {
+            root: root.clone(),
+            format,
+            loaded: LoadedProject {
+                root,
+                packages: vec![],
+                catalog: ModuleCatalog::new(),
+                warnings: vec![],
+            },
+            members,
+            environment: environment.map(str::to_owned),
+            mode,
+        };
+        project.loaded.packages = project.native_packages();
+        let db = Database::new(crate::FileSystemSource::new());
+        project.loaded.catalog = project.discover_native(&db).await?;
+        Ok(project)
     }
 
-    pub(crate) fn input<'source, 'context>(
-        &'context self,
-        uri: &'context Url,
-        source: &'source str,
-    ) -> SourceInput<'source, 'context> {
-        SourceInput {
-            source,
-            uri,
-            expected_module: &self.module,
-            role: self.role,
+    /// Native discovery includes unsaved overlay files; Aiken discovery is owned by its loader.
+    pub async fn discover_modules(&self, db: &Database) -> Result<ModuleCatalog, DriverError> {
+        match self.format {
+            ProjectFormat::Nash => self.discover_native(db).await,
+            ProjectFormat::Aiken => {
+                let mut additional = std::collections::BTreeSet::new();
+                for root in self.source_directories() {
+                    for uri in db.glob(&path_to_uri(&root)?, "**/*.ak").await? {
+                        additional.insert(uri);
+                    }
+                }
+                if additional
+                    .iter()
+                    .all(|uri| self.loaded.catalog.contains_key(uri))
+                {
+                    return Ok(self.loaded.catalog.clone());
+                }
+                let loaded = load_aiken(
+                    &self.root.join("aiken.toml"),
+                    self.environment.as_deref(),
+                    self.mode,
+                    additional.into_iter().collect(),
+                )
+                .await?;
+                Ok(loaded.catalog)
+            }
+        }
+    }
+
+    async fn discover_native(&self, db: &Database) -> Result<ModuleCatalog, DriverError> {
+        let mut modules = ModuleCatalog::new();
+        for member in &self.members {
+            let package = member.package();
+            let metadata = Arc::new(member.metadata());
+            for source_dir in &member.source_dirs {
+                let source_dir = normalize_path(source_dir);
+                let base_uri = path_to_uri(&source_dir)?;
+                for extension in crate::FRONTENDS.extensions() {
+                    for uri in db.glob(&base_uri, &format!("**/*.{extension}")).await? {
+                        let mut spec = SourceSpec::new(&uri, &source_dir, None)?;
+                        spec.key.package = package.clone();
+                        spec.project = Some(metadata.clone());
+                        if let Some(previous) = modules.get(&uri) {
+                            if previous.key.package != package {
+                                return Err(DriverError::ConflictingModuleOwners {
+                                    uri: Box::new(uri),
+                                    first: previous
+                                        .key
+                                        .package
+                                        .name
+                                        .clone()
+                                        .unwrap_or_else(|| "application".into()),
+                                    second: member.name(),
+                                });
+                            }
+                            if previous.key.module != spec.key.module {
+                                return Err(DriverError::ConflictingModuleRoots {
+                                    uri: Box::new(uri),
+                                    first: previous.source_root.clone(),
+                                    second: source_dir.clone(),
+                                });
+                            }
+                        } else {
+                            modules.insert(uri, spec);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(modules)
+    }
+
+    fn native_packages(&self) -> Vec<LoadedPackage> {
+        let mut packages = std::collections::BTreeMap::new();
+        for member in &self.members {
+            let id = member.package();
+            packages.entry(id.clone()).or_insert_with(|| LoadedPackage {
+                id,
+                root: member.root.clone(),
+                metadata: member.metadata(),
+                dependencies: vec![],
+            });
+        }
+        for member in &self.members {
+            let declared = match &member.config {
+                Config::Package(package) => &package.dependencies,
+                Config::Application(application) => &application.dependencies,
+                Config::Workspace(workspace) => &workspace.dependencies,
+            };
+            let dependencies = packages
+                .keys()
+                .filter(|id| {
+                    id.name.as_deref().is_some_and(|name| {
+                        declared.keys().any(|declared| declared.to_string() == name)
+                    })
+                })
+                .cloned()
+                .collect();
+            packages
+                .get_mut(&member.package())
+                .expect("member package was collected")
+                .dependencies = dependencies;
+        }
+        packages.into_values().collect()
+    }
+
+    pub fn source_directories(&self) -> Vec<PathBuf> {
+        if self.format == ProjectFormat::Nash {
+            self.members
+                .iter()
+                .flat_map(|member| member.source_dirs.clone())
+                .collect()
+        } else {
+            let mut roots = std::collections::BTreeSet::new();
+            for package in &self.loaded.packages {
+                roots.insert(package.root.join("lib"));
+                if matches!(&package.id.source, PackageSourceId::Local(root) if root == &package.root)
+                {
+                    roots.insert(package.root.join("validators"));
+                    roots.insert(package.root.join("env"));
+                }
+            }
+            roots.into_iter().collect()
+        }
+    }
+}
+
+async fn load_aiken(
+    manifest: &Path,
+    environment: Option<&str>,
+    mode: ProjectMode,
+    additional_sources: Vec<url::Url>,
+) -> Result<LoadedProject, DriverError> {
+    let location = manifest.to_path_buf();
+    let environment = environment.map(str::to_owned);
+    tokio::task::spawn_blocking(move || {
+        let request = ProjectLoadRequest {
+            location: &location,
+            environment: environment.as_deref(),
+            mode,
+        };
+        if additional_sources.is_empty() {
+            nash_project_aiken::load(request)
+        } else {
+            nash_project_aiken::load_with_sources(request, &additional_sources)
+        }
+    })
+    .await
+    .map_err(|error| DriverError::ProjectLoad {
+        diagnostics: vec![ProjectDiagnostic::new(
+            "NAP4000",
+            manifest,
+            format!("project loader failed: {error}"),
+        )],
+    })?
+    .map_err(|diagnostics| DriverError::ProjectLoad { diagnostics })
+}
+
+/// The closest manifest wins; an explicit manifest resolves same-directory ambiguity.
+fn select_manifest(start: &Path) -> Result<(PathBuf, ProjectFormat), DriverError> {
+    let absolute = if start.is_absolute() {
+        start.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|source| DriverError::ReadError {
+                path: start.to_path_buf(),
+                source,
+            })?
+            .join(start)
+    };
+    match absolute.file_name().and_then(|name| name.to_str()) {
+        Some("nash.jsonc") => return Ok((absolute, ProjectFormat::Nash)),
+        Some("aiken.toml") => return Ok((absolute, ProjectFormat::Aiken)),
+        _ => {}
+    }
+    let directory = if absolute.is_file() {
+        absolute.parent().unwrap_or(&absolute)
+    } else {
+        &absolute
+    };
+    for current in directory.ancestors() {
+        let nash = current.join("nash.jsonc");
+        let aiken = current.join("aiken.toml");
+        match (nash.is_file(), aiken.is_file()) {
+            (true, true) => {
+                return Err(DriverError::AmbiguousProject {
+                    path: current.to_path_buf(),
+                });
+            }
+            (true, false) => return Ok((nash, ProjectFormat::Nash)),
+            (false, true) => return Ok((aiken, ProjectFormat::Aiken)),
+            (false, false) => {}
+        }
+    }
+    Err(DriverError::ProjectNotFound {
+        path: start.to_path_buf(),
+    })
+}
+
+fn load_workspace_members(
+    root: &Path,
+    workspace: &Workspace,
+) -> Result<Vec<ProjectMember>, DriverError> {
+    let mut members = Vec::new();
+    for pattern in &workspace.members {
+        let full_pattern = root.join(pattern);
+        let matches = glob::glob(&full_pattern.to_string_lossy())
+            .map_err(|error| DriverError::InvalidModulePath {
+                path: error.msg.into(),
+            })?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| DriverError::ReadError {
+                path: error.path().into(),
+                source: std::io::Error::new(error.error().kind(), error.error().to_string()),
+            })?;
+        if matches.is_empty() {
+            return Err(DriverError::MemberNotFound {
+                pattern: pattern.clone(),
+            });
+        }
+        for member in matches {
+            let member = if member.is_file() {
+                member.parent().unwrap().to_path_buf()
+            } else {
+                member
+            };
+            let manifest = member.join("nash.jsonc");
+            if manifest.is_file() {
+                members.push(make_member(&member, nash_config::parse_file(&manifest)?));
+            }
+        }
+    }
+    Ok(members)
+}
+
+fn make_member(root: &Path, config: Config) -> ProjectMember {
+    let source_dirs = match &config {
+        Config::Application(app) => app
+            .source_directories
+            .iter()
+            .map(|directory| root.join(directory))
+            .collect(),
+        Config::Package(_) => vec![root.join("src")],
+        Config::Workspace(_) => vec![],
+    };
+    ProjectMember {
+        root: root.to_path_buf(),
+        config,
+        source_dirs,
+    }
+}
+
+impl ProjectMember {
+    pub fn name(&self) -> String {
+        match &self.config {
+            Config::Package(package) => package.name.to_string(),
+            Config::Application(_) => "application".into(),
+            Config::Workspace(_) => "workspace".into(),
+        }
+    }
+
+    fn package(&self) -> PackageId {
+        let (name, version) = match &self.config {
+            Config::Package(package) => (Some(package.name.to_string()), package.version.clone()),
+            _ => (None, String::new()),
+        };
+        PackageId {
+            name,
+            version,
+            source: PackageSourceId::Local(normalize_path(&self.root)),
+        }
+    }
+
+    fn metadata(&self) -> ProjectMetadata {
+        let id = self.package();
+        let (license, description, compiler) = match &self.config {
+            Config::Package(package) => (
+                Some(package.license.clone()),
+                package.summary.clone(),
+                package.compiler.clone(),
+            ),
+            Config::Application(app) => (None, String::new(), app.compiler.clone()),
+            Config::Workspace(workspace) => (None, String::new(), workspace.compiler.clone()),
+        };
+        ProjectMetadata {
+            name: id.name,
+            version: id.version,
+            license,
+            description,
+            repository: None,
+            compiler: compiler.unwrap_or_default(),
+            plutus: "v3".into(),
         }
     }
 }
@@ -102,251 +409,56 @@ fn normalize_path(path: &Path) -> PathBuf {
     normalized
 }
 
-/// A loaded Nash project.
-#[derive(Debug)]
-pub struct Project {
-    /// Root directory of the project.
-    pub root: PathBuf,
-
-    /// Parsed configuration.
-    pub config: Config,
-
-    /// Workspace members (for workspace configs).
-    pub members: Vec<ProjectMember>,
-}
-
-/// A member of a workspace, or a standalone project.
-#[derive(Debug)]
-pub struct ProjectMember {
-    /// Root directory of the member.
-    pub root: PathBuf,
-
-    /// Parsed configuration.
-    pub config: Config,
-
-    /// Resolved source directories.
-    pub source_dirs: Vec<PathBuf>,
-}
-
-impl Project {
-    /// Load a project from a directory.
-    ///
-    /// Searches for `nash.jsonc` in the given directory and parent directories.
-    pub async fn load(path: impl AsRef<Path>) -> Result<Self, DriverError> {
-        let path = path.as_ref();
-
-        // Find project root (directory containing nash.jsonc)
-        let root = find_project_root(path)?;
-        let root = root
-            .canonicalize()
-            .map_err(|source| DriverError::ReadError {
-                path: root.clone(),
-                source,
-            })?;
-        let config_path = root.join("nash.jsonc");
-
-        // Parse the config
-        let config = nash_config::parse_file(&config_path)?;
-
-        // Load members if this is a workspace
-        let members = match &config {
-            Config::Workspace(ws) => load_workspace_members(&root, ws).await?,
-            Config::Application(app) => vec![make_member(&root, Config::Application(app.clone()))],
-            Config::Package(pkg) => vec![make_member(&root, Config::Package(pkg.clone()))],
-        };
-
-        Ok(Project {
-            root,
-            config,
-            members,
-        })
-    }
-
-    /// Discover all registered source languages while retaining package ownership.
-    pub async fn discover_modules(&self, db: &Database) -> Result<ModuleCatalog, DriverError> {
-        let mut modules = ModuleCatalog::new();
-
-        for member in &self.members {
-            let package = match &member.config {
-                Config::Package(package) => Some(package.name.clone()),
-                _ => None,
-            };
-            for source_dir in &member.source_dirs {
-                let source_dir = normalize_path(source_dir);
-                let base_uri = path_to_uri(&source_dir)?;
-                for extension in crate::FRONTENDS.extensions() {
-                    for uri in db.glob(&base_uri, &format!("**/*.{extension}")).await? {
-                        let spec = SourceSpec::new(&uri, &source_dir, package.clone())?;
-                        if let Some(previous) = modules.get(&uri) {
-                            if previous.package != package {
-                                return Err(DriverError::ConflictingModuleOwners {
-                                    uri: Box::new(uri),
-                                    first: previous.package.as_ref().map_or_else(
-                                        || "application".to_owned(),
-                                        ToString::to_string,
-                                    ),
-                                    second: member.name(),
-                                });
-                            }
-                            if previous.module != spec.module {
-                                return Err(DriverError::ConflictingModuleRoots {
-                                    uri: Box::new(uri),
-                                    first: previous.source_root.clone(),
-                                    second: source_dir.clone(),
-                                });
-                            }
-                        } else {
-                            modules.insert(uri, spec);
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(modules)
-    }
-
-    /// Get source directories from config.
-    pub fn source_directories(&self) -> Vec<PathBuf> {
-        self.members
-            .iter()
-            .flat_map(|m| m.source_dirs.clone())
-            .collect()
-    }
-}
-
-/// Find the project root by searching for nash.jsonc.
-fn find_project_root(start: &Path) -> Result<PathBuf, DriverError> {
-    let start = if start.is_file() {
-        start.parent().unwrap_or(start)
-    } else {
-        start
-    };
-
-    let mut current = start.to_path_buf();
-
-    loop {
-        let config_path = current.join("nash.jsonc");
-        if config_path.exists() {
-            return Ok(current);
-        }
-
-        match current.parent() {
-            Some(parent) => current = parent.to_path_buf(),
-            None => {
-                return Err(DriverError::ProjectNotFound {
-                    path: start.to_path_buf(),
-                });
-            }
-        }
-    }
-}
-
-/// Load all workspace members.
-async fn load_workspace_members(
-    workspace_root: &Path,
-    workspace: &Workspace,
-) -> Result<Vec<ProjectMember>, DriverError> {
-    let mut members = Vec::new();
-
-    for pattern in &workspace.members {
-        let full_pattern = workspace_root.join(pattern);
-        let pattern_str = full_pattern.to_string_lossy();
-
-        let matches: Vec<_> = glob::glob(&pattern_str)
-            .map_err(|e| DriverError::InvalidModulePath {
-                path: PathBuf::from(e.msg),
-            })?
-            .filter_map(|r| r.ok())
-            .collect();
-
-        if matches.is_empty() {
-            return Err(DriverError::MemberNotFound {
-                pattern: pattern.clone(),
-            });
-        }
-
-        for member_path in matches {
-            // member_path is the glob match - we need to find nash.jsonc
-            let member_root = if member_path.is_file() {
-                member_path.parent().unwrap().to_path_buf()
-            } else {
-                member_path
-            };
-
-            let config_path = member_root.join("nash.jsonc");
-            if !config_path.exists() {
-                continue;
-            }
-
-            let config = nash_config::parse_file(&config_path)?;
-            members.push(make_member(&member_root, config));
-        }
-    }
-
-    Ok(members)
-}
-
-/// Create a ProjectMember from config.
-fn make_member(root: &Path, config: Config) -> ProjectMember {
-    let source_dirs = match &config {
-        Config::Application(app) => resolve_source_dirs(root, &app.source_directories),
-        Config::Package(_) => vec![root.join("src")],
-        Config::Workspace(_) => vec![], // Workspaces don't have source dirs directly
-    };
-
-    ProjectMember {
-        root: root.to_path_buf(),
-        config,
-        source_dirs,
-    }
-}
-
-/// Resolve source directory paths relative to project root.
-fn resolve_source_dirs(root: &Path, dirs: &[String]) -> Vec<PathBuf> {
-    dirs.iter().map(|d| root.join(d)).collect()
-}
-
-impl ProjectMember {
-    /// Get the project name (for packages) or a generated name (for applications).
-    pub fn name(&self) -> String {
-        match &self.config {
-            Config::Package(pkg) => pkg.name.to_string(),
-            Config::Application(_) => "application".to_string(),
-            Config::Workspace(_) => "workspace".to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{InMemorySource, ModuleResult, build, build_graph};
-    use std::sync::Arc;
     use tokio::sync::Mutex;
+    use url::Url;
+
+    struct Directory(PathBuf);
+    impl Directory {
+        fn new(name: &str) -> Self {
+            let root = std::env::temp_dir().join(format!(
+                "nash-project-{name}-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir_all(&root).unwrap();
+            Self(root)
+        }
+    }
+    impl Drop for Directory {
+        fn drop(&mut self) {
+            std::fs::remove_dir_all(&self.0).unwrap();
+        }
+    }
 
     #[tokio::test]
     async fn workspace_literal_defaults_use_discovered_package_ownership() {
         let core = nash_config::parse(
-            r#"{
-            "type": "package", "name": "nash/core", "version": "1.0.0",
-            "summary": "Core", "license": "MIT", "exposedModules": ["Literal"]
-        }"#,
+            r#"{"type":"package","name":"nash/core","version":"1.0.0","summary":"Core","license":"MIT","exposedModules":["Literal"]}"#,
             "/work/core/nash.jsonc",
-        )
-        .unwrap();
+        ).unwrap();
         let app = nash_config::parse(r#"{"type":"application"}"#, "/work/app/nash.jsonc").unwrap();
         let mut project = Project {
-            root: PathBuf::from("/work"),
-            config: nash_config::parse(
-                r#"{"type":"workspace","members":["core","app"]}"#,
-                "/work/nash.jsonc",
-            )
-            .unwrap(),
+            root: "/work".into(),
+            format: ProjectFormat::Nash,
+            loaded: LoadedProject {
+                root: "/work".into(),
+                packages: vec![],
+                catalog: ModuleCatalog::new(),
+                warnings: vec![],
+            },
             members: vec![
                 make_member(Path::new("/work/core"), core.clone()),
                 make_member(Path::new("/work/app"), app),
             ],
+            environment: None,
+            mode: ProjectMode::Check,
         };
         let literal = Url::parse("file:///work/core/src/Literal.nash").unwrap();
         let main = Url::parse("file:///work/app/src/Main.nash").unwrap();
@@ -363,7 +475,7 @@ mod tests {
                 fromInt x = x
         "#
             )
-            .to_owned(),
+            .into(),
         );
         mem.insert(
             main.clone(),
@@ -379,30 +491,31 @@ mod tests {
             value n = drop (fromInt n)
         "#
             )
-            .to_owned(),
+            .into(),
         );
         let db = Arc::new(Mutex::new(Database::new(mem)));
-        // Repeated workspace membership must not duplicate modules.
         project
             .members
             .push(make_member(Path::new("/work/core"), core));
         let mut modules = project.discover_modules(&*db.lock().await).await.unwrap();
         assert_eq!(modules.len(), 2);
         assert_eq!(
-            modules[&literal].package.as_ref().unwrap().to_string(),
-            "nash/core"
+            modules[&literal].key.package.name.as_deref(),
+            Some("nash/core")
         );
-        assert_eq!(modules[&main].package, None);
+        assert_eq!(modules[&literal].key.package.version, "1.0.0");
+        assert_eq!(modules[&main].key.package.name, None);
         let graph = build_graph(db.clone(), &modules).await.unwrap();
         assert_eq!(graph.order, [literal.clone(), main.clone()]);
         let result = build(db.clone(), &graph, &modules).await;
         assert!(result.is_success(), "{result:?}");
-        modules.get_mut(&literal).unwrap().package = Some("example/literals".parse().unwrap());
+        modules.get_mut(&literal).unwrap().key.package.name = Some("example/literals".into());
+        let graph = build_graph(db.clone(), &modules).await.unwrap();
         let result = build(db.clone(), &graph, &modules).await;
         assert!(
-            matches!(&result.modules[&main], ModuleResult::Failed(reports) if reports.reports.iter().any(|report| report.title == "AMBIGUOUS TYPE"))
+            matches!(&result.modules[&main], ModuleResult::Failed(reports)
+            if reports.reports.iter().any(|report| report.title == "AMBIGUOUS TYPE"))
         );
-        // An application can name a source directory outside its own root.
         let overlap = nash_config::parse(
             r#"{"type":"application","sourceDirectories":["/work/core/src"]}"#,
             "/work/app/nash.jsonc",
@@ -413,5 +526,61 @@ mod tests {
             .push(make_member(Path::new("/work/app"), overlap));
         assert!(matches!(project.discover_modules(&*db.lock().await).await,
             Err(DriverError::ConflictingModuleOwners { uri, .. }) if *uri == literal));
+    }
+
+    #[test]
+    fn closest_manifest_and_explicit_selection_are_unambiguous() {
+        let directory = Directory::new("manifest-selection");
+        let root = &directory.0;
+        std::fs::create_dir_all(root.join("child/src")).unwrap();
+        std::fs::write(root.join("nash.jsonc"), "{}").unwrap();
+        std::fs::write(root.join("child/aiken.toml"), "").unwrap();
+        assert_eq!(
+            select_manifest(&root.join("child/src")).unwrap(),
+            (root.join("child/aiken.toml"), ProjectFormat::Aiken)
+        );
+        std::fs::write(root.join("child/nash.jsonc"), "{}").unwrap();
+        assert!(
+            matches!(select_manifest(&root.join("child/src")), Err(DriverError::AmbiguousProject { path }) if path == root.join("child"))
+        );
+        assert_eq!(
+            select_manifest(&root.join("child/nash.jsonc")).unwrap(),
+            (root.join("child/nash.jsonc"), ProjectFormat::Nash)
+        );
+        assert_eq!(
+            select_manifest(&root.join("child/aiken.toml")).unwrap(),
+            (root.join("child/aiken.toml"), ProjectFormat::Aiken)
+        );
+    }
+
+    #[tokio::test]
+    async fn empty_aiken_project_discovers_new_unsaved_library_and_environment() {
+        let directory = Directory::new("editor-overlays");
+        std::fs::write(directory.0.join("aiken.toml"),
+            "name = \"example/empty\"\nversion = \"1.0.0\"\ncompiler = \"v1.1.23\"\nplutus = \"v3\"\n").unwrap();
+        let project = Project::load_with_options(&directory.0, None, ProjectMode::Editor)
+            .await
+            .unwrap();
+        let main = Url::from_file_path(project.root.join("lib/main.ak")).unwrap();
+        let env = Url::from_file_path(project.root.join("env/default.ak")).unwrap();
+        let db = Arc::new(Mutex::new(Database::new(InMemorySource::with_files([
+            (
+                main.clone(),
+                "use env\npub fn value() { env.value }\n".into(),
+            ),
+            (env.clone(), "pub const value = 1\n".into()),
+        ]))));
+        let catalog = project.discover_modules(&*db.lock().await).await.unwrap();
+        let graph = build_graph(db.clone(), &catalog).await.unwrap();
+        let result = build(db, &graph, &catalog).await;
+        assert!(
+            matches!(result.modules[&main], ModuleResult::Success { .. }),
+            "{result:?}"
+        );
+        assert!(
+            matches!(result.modules[&env], ModuleResult::Success { .. }),
+            "{result:?}"
+        );
+        assert!(result.is_success(), "{result:?}");
     }
 }

@@ -3,6 +3,10 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (type option(..))\n\ntype option 'a = Some 'a | None\n"
 ---
 Interface {
+    declared: DeclaredStore {
+        refinements: 0,
+        ..
+    },
     impls: [],
     traits: [],
     home: ModuleName {
@@ -57,6 +61,7 @@ Interface {
             alternatives: 2,
             options: Normal,
             visibility: Open,
+            data_layout: None,
         },
     ],
     binops: [],

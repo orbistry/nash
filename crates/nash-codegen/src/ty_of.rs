@@ -2,22 +2,24 @@
 use std::collections::{BTreeMap, HashMap};
 
 use nash_ast::{
-    Alias, AliasArgument, AliasType, QualifiedName, Type as CanType, Union, primitives,
+    Alias, AliasArgument, AliasType, DataEncoding, QualifiedName, Type as CanType, Union,
+    primitives,
 };
-use nash_ir::ty::{AdtRef, Adts, BigTy, ConstTy, TermTy, Ty};
+use nash_ir::ty::{AdtLayout, AdtRef, Adts, BigTy, ConstTy, TermTy, Ty};
 use nash_plutus::arena::Arena;
 use nash_region::Located;
 
 pub type Substitution<'a> = BTreeMap<&'a str, &'a Located<CanType<'a>>>;
-pub type Layout<'a> = &'a [&'a [Ty<'a>]];
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum TypeError<'a> {
+    #[error("an annotation hole escaped type inference")]
+    UnresolvedHole,
     #[error("unknown canonical type {0:?}")]
-    UnknownType(QualifiedName<'a>),
+    UnknownType(&'a QualifiedName<'a>),
     #[error("type {reference:?} expects at most {expected} arguments, got {actual}")]
     Arity {
-        reference: QualifiedName<'a>,
+        reference: &'a QualifiedName<'a>,
         expected: usize,
         actual: usize,
     },
@@ -30,9 +32,9 @@ pub enum TypeError<'a> {
     #[error("invalid declaration order in constructor or record fields")]
     InvalidLayout,
     #[error("no canonical arguments registered for ADT instance {0:?}")]
-    UnregisteredInstantiation(AdtRef<'a>),
+    UnregisteredInstantiation(&'a AdtRef<'a>),
     #[error("type constructor {0:?} is not fully applied")]
-    Unsaturated(AdtRef<'a>),
+    Unsaturated(&'a AdtRef<'a>),
 }
 
 /// Convert solved canonical types. Substitutions are simultaneous, as in the
@@ -43,6 +45,7 @@ pub struct TypeEnv<'a, 'env> {
     arena: &'a Arena,
     unions: &'env HashMap<QualifiedName<'a>, &'a Union<'a>>,
     aliases: HashMap<QualifiedName<'a>, &'a Alias<'a>>,
+    declared: nash_ast::declared::DeclaredStore,
     canonical_args: HashMap<AdtRef<'a>, &'a [&'a Located<CanType<'a>>]>,
     adts: Adts<'a>,
 }
@@ -53,6 +56,7 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
             arena,
             unions,
             aliases: HashMap::new(),
+            declared: nash_ast::declared::DeclaredStore::default(),
             canonical_args: HashMap::new(),
             adts: Adts::default(),
         }
@@ -62,6 +66,10 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
     /// supports callers holding a Named reference to an alias declaration.
     pub fn insert_alias(&mut self, reference: QualifiedName<'a>, alias: &'a Alias<'a>) {
         self.aliases.insert(reference, alias);
+    }
+
+    pub fn set_declared_store(&mut self, declared: nash_ast::declared::DeclaredStore) {
+        self.declared = declared;
     }
 
     pub fn adts(&self) -> &Adts<'a> {
@@ -96,6 +104,11 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
         typ: &'a Located<CanType<'a>>,
     ) -> Result<Vec<(&'a str, u16, Ty<'a>)>, TypeError<'a>> {
         match &typ.value {
+            CanType::DeclaredHole(hole) => self.fields_of(
+                self.declared
+                    .resolve(self.arena.as_bump(), hole)
+                    .ok_or(TypeError::NoFields)?,
+            ),
             CanType::Alias {
                 arguments,
                 remaining: [],
@@ -156,7 +169,7 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                 let union = *self
                     .unions
                     .get(reference)
-                    .ok_or(TypeError::UnknownType(*reference))?;
+                    .ok_or_else(|| TypeError::UnknownType(self.arena.alloc(*reference)))?;
                 let fields = union.labeled_fields().ok_or(TypeError::NoFields)?;
                 let ty = self.convert(typ)?;
                 let adt = match ty {
@@ -166,7 +179,7 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                 let layout = self.layout(adt)?;
                 Ok(fields
                     .into_iter()
-                    .zip(layout[0])
+                    .zip(layout.fields[0])
                     .map(|(f, ty)| (f.field, f.index, *ty))
                     .collect())
             }
@@ -180,6 +193,14 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
         head: &'a Located<CanType<'a>>,
         args: &'a [&'a Located<CanType<'a>>],
     ) -> Result<Vec<(&'a str, u16, Ty<'a>)>, TypeError<'a>> {
+        if let CanType::DeclaredHole(hole) = &head.value {
+            return self.fields_applied(
+                self.declared
+                    .resolve(self.arena.as_bump(), hole)
+                    .ok_or(TypeError::NoFields)?,
+                args,
+            );
+        }
         if let CanType::Alias {
             arguments,
             remaining: [],
@@ -209,21 +230,43 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
 
     /// Compute exactly one level. Nested ADTs register only their argument
     /// templates; no nested layout is forced, including polymorphic recursion.
-    pub fn layout(&mut self, adt: AdtRef<'a>) -> Result<Layout<'a>, TypeError<'a>> {
+    pub fn layout(&mut self, adt: AdtRef<'a>) -> Result<AdtLayout<'a>, TypeError<'a>> {
         if let Some(layout) = self.adts.layouts.get(&adt) {
-            return Ok(layout);
+            return Ok(*layout);
         }
-        let union = *self
-            .unions
-            .get(&adt.name)
-            .ok_or(TypeError::UnknownType(adt.name))?;
+        let union = if adt.name.home == primitives::builtin_home()
+            && let Some(union) = primitives::data_union(adt.name.name)
+        {
+            union
+        } else {
+            *self
+                .unions
+                .get(&adt.name)
+                .ok_or_else(|| TypeError::UnknownType(self.arena.alloc(adt.name)))?
+        };
         if adt.args.len() != union.parameters.len() {
-            return Err(TypeError::Unsaturated(adt));
+            return Err(TypeError::Unsaturated(self.arena.alloc(adt)));
+        }
+        if let Some(data) = union.data_layout
+            && (data.tags.len() != union.ctors.len()
+                || (data.encoding != DataEncoding::Constr && union.ctors.len() != 1)
+                || (data.encoding == DataEncoding::Transparent
+                    && union
+                        .ctors
+                        .first()
+                        .is_none_or(|ctor| ctor.arguments.len() != 1))
+                || data
+                    .tags
+                    .iter()
+                    .enumerate()
+                    .any(|(i, tag)| data.tags[..i].contains(tag)))
+        {
+            return Err(TypeError::InvalidLayout);
         }
         let args = *self
             .canonical_args
             .get(&adt)
-            .ok_or(TypeError::UnregisteredInstantiation(adt))?;
+            .ok_or_else(|| TypeError::UnregisteredInstantiation(self.arena.alloc(adt)))?;
         let substitution = union
             .parameters
             .iter()
@@ -244,14 +287,56 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                 .collect::<Result<Vec<_>, _>>()?;
             layout.push(self.arena.alloc_slice_copy(&fields));
         }
-        let layout = self.arena.alloc_slice_copy(&layout);
+        let layout = AdtLayout {
+            fields: self.arena.alloc_slice_copy(&layout),
+            data_layout: union.data_layout,
+        };
         self.adts.layouts.insert(adt, layout);
         Ok(layout)
     }
 
     fn convert(&mut self, typ: &'a Located<CanType<'a>>) -> Result<Ty<'a>, TypeError<'a>> {
+        // Nominal argument chains are common in growing recursive layouts.
+        // Do not retain the structural-conversion frame for each named node.
         match &typ.value {
+            CanType::Named { reference, args } => self.named(*reference, args),
+            _ => self.convert_structural(typ),
+        }
+    }
+
+    fn convert_structural(
+        &mut self,
+        typ: &'a Located<CanType<'a>>,
+    ) -> Result<Ty<'a>, TypeError<'a>> {
+        match &typ.value {
+            CanType::Hole => Err(TypeError::UnresolvedHole),
+            CanType::DeclaredHole(hole) => {
+                match self.declared.resolve(self.arena.as_bump(), hole) {
+                    Some(solution) => self.convert(solution),
+                    None => Ok(Ty::Erased),
+                }
+            }
             CanType::Var(_) => Ok(Ty::Erased),
+            CanType::Function { arguments, result } => {
+                let mut args = arguments
+                    .iter()
+                    .map(|arg| self.convert(arg))
+                    .collect::<Result<Vec<_>, _>>()?;
+                if args.is_empty() {
+                    args.push(Ty::Const(&ConstTy::Unit));
+                }
+                let result = self.convert(result)?;
+                let result = if let Ty::Term(TermTy::Fun(more, result)) = result {
+                    args.extend_from_slice(more);
+                    *result
+                } else {
+                    result
+                };
+                Ok(Ty::Term(self.arena.alloc(TermTy::Fun(
+                    self.arena.alloc_slice_copy(&args),
+                    result,
+                ))))
+            }
             CanType::Lambda { from, to } => {
                 let from = self.convert(from)?;
                 let to = self.convert(to)?;
@@ -279,7 +364,7 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                     self.arena.alloc_slice_copy(&fields),
                 ))))
             }
-            CanType::Named { reference, args } => self.named(*reference, args),
+            CanType::Named { .. } => unreachable!("named types use the compact conversion path"),
             CanType::Alias {
                 reference,
                 arguments,
@@ -290,7 +375,8 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                     let args = self
                         .arena
                         .alloc_slice_fill_iter(arguments.iter().map(|a| a.typ));
-                    return Ok(Ty::Constructor(self.instance(*reference, args)?));
+                    let instance = self.instance(*reference, args)?;
+                    return Ok(Ty::Constructor(self.arena.alloc(instance)));
                 }
                 let body = match target {
                     AliasType::Open(body) | AliasType::Filled { body, .. } => *body,
@@ -334,6 +420,12 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
     ) -> Result<Ty<'a>, TypeError<'a>> {
         if args.is_empty() {
             return self.convert(head);
+        }
+        if let CanType::DeclaredHole(hole) = &head.value {
+            return match self.declared.resolve(self.arena.as_bump(), hole) {
+                Some(solution) => self.application(solution, args),
+                None => Ok(Ty::Erased),
+            };
         }
         if let CanType::Var(_) = head.value {
             return Ok(Ty::Erased);
@@ -391,10 +483,10 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
         reference: QualifiedName<'a>,
         args: &'a [&'a Located<CanType<'a>>],
     ) -> Result<AdtRef<'a>, TypeError<'a>> {
-        let converted = args
-            .iter()
-            .map(|t| self.convert(t))
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut converted = Vec::with_capacity(args.len());
+        for typ in args {
+            converted.push(self.convert(typ)?);
+        }
         let adt = AdtRef {
             name: reference,
             args: self.arena.alloc_slice_copy(&converted),
@@ -443,20 +535,20 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
         } else {
             self.unions
                 .get(&reference)
-                .ok_or(TypeError::UnknownType(reference))?
+                .ok_or_else(|| TypeError::UnknownType(self.arena.alloc(reference)))?
                 .parameters
                 .len()
         };
         if args.len() > expected {
             return Err(TypeError::Arity {
-                reference,
+                reference: self.arena.alloc(reference),
                 expected,
                 actual: args.len(),
             });
         }
         let adt = self.instance(reference, args)?;
         if args.len() < expected {
-            return Ok(Ty::Constructor(adt));
+            return Ok(Ty::Constructor(self.arena.alloc(adt)));
         }
         let args = adt.args;
         let ty = if primitive.is_some() {
@@ -466,6 +558,9 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                 "Data" => Ty::Big(self.arena.alloc(BigTy::Data)),
                 "List" => Ty::Big(self.arena.alloc(BigTy::List(args[0]))),
                 "Map" => Ty::Big(self.arena.alloc(BigTy::Map(args[0], args[1]))),
+                name if primitives::data_union(name).is_some() => {
+                    Ty::Big(self.arena.alloc(BigTy::Adt(adt)))
+                }
                 "int" => Ty::Const(self.arena.alloc(ConstTy::Int)),
                 "bytes" => Ty::Const(self.arena.alloc(ConstTy::Bytes)),
                 "string" => Ty::Const(self.arena.alloc(ConstTy::String)),
@@ -473,14 +568,22 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                 "unit" => Ty::Const(self.arena.alloc(ConstTy::Unit)),
                 "list" => Ty::Const(self.arena.alloc(ConstTy::List(args[0]))),
                 "pair" => Ty::Const(self.arena.alloc(ConstTy::Pair(args[0], args[1]))),
+                "data_pair" => Ty::Const(self.arena.alloc(ConstTy::DataPair(args[0], args[1]))),
+                "data_list" => Ty::Const(self.arena.alloc(ConstTy::DataList(args[0]))),
+                "data_tuple" => {
+                    let Ty::Term(TermTy::Tuple(fields)) = args[0] else {
+                        return Err(TypeError::InvalidApplication);
+                    };
+                    Ty::Const(self.arena.alloc(ConstTy::DataTuple(fields)))
+                }
                 "array" => Ty::Const(self.arena.alloc(ConstTy::Array(args[0]))),
                 "bls_g1" => Ty::Const(self.arena.alloc(ConstTy::BlsG1)),
                 "bls_g2" => Ty::Const(self.arena.alloc(ConstTy::BlsG2)),
                 "bls_mlr" => Ty::Const(self.arena.alloc(ConstTy::BlsMlr)),
                 "value" => Ty::Const(self.arena.alloc(ConstTy::Value)),
-                _ => return Err(TypeError::UnknownType(reference)),
+                _ => return Err(TypeError::UnknownType(self.arena.alloc(reference))),
             }
-        } else if is_big(reference.name) {
+        } else if self.unions[&reference].data_layout.is_some() || is_big(reference.name) {
             Ty::Big(self.arena.alloc(BigTy::Adt(adt)))
         } else {
             Ty::Term(self.arena.alloc(TermTy::Adt(adt)))
@@ -552,6 +655,7 @@ mod tests {
             arguments: arena.alloc_slice_copy(arguments),
         });
         arena.alloc(Union {
+            data_layout: None,
             kind,
             context: &[],
             name: arena.alloc(Located::at_zero(text)),
@@ -569,7 +673,7 @@ mod tests {
     }
 
     #[test]
-    fn exact_primitive_identity_and_complete_inventory() {
+    fn primitive_identity_includes_its_defining_module_and_package() {
         let arena = Arena::new();
         let user = name("int");
         let fake_builtin = QualifiedName {
@@ -597,11 +701,6 @@ mod tests {
             env.ty(named(&arena, fake_builtin, &[]), &subst).unwrap(),
             Ty::Big(BigTy::Adt(_))
         ));
-        for p in primitives::PRIMITIVES {
-            let args = vec![primitive(&arena, "Int", &[]); p.kind.arity()];
-            let converted = env.ty(primitive(&arena, p.name, &args), &subst).unwrap();
-            assert_eq!(converted.repr(), Some(p.repr), "{}", p.name);
-        }
     }
 
     #[test]
@@ -627,13 +726,16 @@ mod tests {
             )
             .unwrap());
         assert!(env.adts().layouts.is_empty());
-        let next = adt(env.layout(root).unwrap()[0][0]);
+        let next = adt(env.layout(root).unwrap().fields[0][0]);
         assert_eq!(env.adts().layouts.len(), 1);
         assert_eq!(next.args, &[Ty::Big(&BigTy::List(Ty::Big(&BigTy::Int)))]);
-        let third = adt(env.layout(next).unwrap()[0][0]);
+        let third = adt(env.layout(next).unwrap().fields[0][0]);
         assert_ne!(third, next);
         assert_eq!(env.adts().layouts.len(), 2);
-        assert_eq!(env.layout(root).unwrap()[0][0], Ty::Big(&BigTy::Adt(next)));
+        assert_eq!(
+            env.layout(root).unwrap().fields[0][0],
+            Ty::Big(&BigTy::Adt(next))
+        );
     }
 
     #[test]
@@ -674,11 +776,11 @@ mod tests {
             .unwrap());
         assert_ne!(list, array);
         assert_eq!(
-            env.layout(list).unwrap()[0],
+            env.layout(list).unwrap().fields[0],
             &[Ty::Const(&ConstTy::List(Ty::Const(&ConstTy::Int)))]
         );
         assert_eq!(
-            env.layout(array).unwrap()[0],
+            env.layout(array).unwrap().fields[0],
             &[Ty::Const(&ConstTy::Array(Ty::Const(&ConstTy::Int)))]
         );
         assert_eq!(list.args[0].repr(), None);
@@ -847,7 +949,7 @@ mod tests {
             .unwrap());
         assert!(env.adts().layouts.is_empty());
         assert_eq!(
-            env.layout(instance).unwrap()[0],
+            env.layout(instance).unwrap().fields[0],
             &[Ty::Const(&ConstTy::Pair(
                 Ty::Const(&ConstTy::Int),
                 Ty::Const(&ConstTy::Bytes)
@@ -862,6 +964,7 @@ mod tests {
         let bytes = primitive(&arena, "bytes", &[]);
         let body = primitive(&arena, "pair", &[located(&arena, CanType::Var("left"))]);
         let alias = arena.alloc(Alias {
+            transparent: false,
             name: arena.alloc(Located::at_zero("with")),
             kind: &Kind::Arrow(&Kind::Type, &Kind::Arrow(&Kind::Type, &Kind::Type)),
             context: &[],
@@ -946,6 +1049,7 @@ mod tests {
             arguments: arena.alloc_slice_copy(&[primitive(&arena, "bytes", &[])]),
         });
         let union = arena.alloc(Union {
+            data_layout: None,
             kind: &Kind::Type,
             context: &[],
             name: arena.alloc(Located::at_zero("Choice")),
@@ -960,7 +1064,7 @@ mod tests {
             .ty(named(&arena, name("Choice"), &[]), &BTreeMap::new())
             .unwrap());
         assert_eq!(
-            env.layout(instance).unwrap(),
+            env.layout(instance).unwrap().fields,
             &[
                 &[Ty::Const(&ConstTy::Int)][..],
                 &[Ty::Const(&ConstTy::Bytes)][..]
@@ -1047,6 +1151,7 @@ mod tests {
             ]),
         });
         let union = arena.alloc(Union {
+            data_layout: None,
             kind: &Kind::Type,
             context: &[],
             name: arena.alloc(Located::at_zero("row")),

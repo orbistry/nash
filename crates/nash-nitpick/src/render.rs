@@ -71,8 +71,11 @@ fn join(patterns: &[Pattern<'_>], context: RenderContext, sep: &str) -> String {
 fn literal_to_string(literal: Literal<'_>) -> String {
     match literal {
         Literal::Int(n) => n.to_string(),
+        Literal::BigInt(n) => n.to_string(),
         Literal::Str(s) => string_literal(s),
         Literal::Bytes(bytes) => format!("#\"{}\"", hex::encode(bytes)),
+        Literal::BlsG1(bytes) => format!("#<Bls12_381, G1>\"{}\"", hex::encode(bytes)),
+        Literal::BlsG2(bytes) => format!("#<Bls12_381, G2>\"{}\"", hex::encode(bytes)),
     }
 }
 

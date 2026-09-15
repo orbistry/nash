@@ -37,6 +37,7 @@ impl<'a> Parser<'a> {
             arguments: args,
             ctors,
             attributes,
+            data_layout: None,
         };
         let located_union = self.add_end(start, union);
 

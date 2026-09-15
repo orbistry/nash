@@ -57,6 +57,7 @@ Alias(
                 },
             },
             attributes: [],
+            transparent: false,
         },
     },
 )

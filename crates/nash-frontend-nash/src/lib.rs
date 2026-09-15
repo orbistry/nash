@@ -71,9 +71,15 @@ impl Frontend for NashFrontend {
         if let Some(role) = input.role
             && role != actual_role
         {
-            let (expected, actual) = match role {
-                ModuleRole::Library => ("library", "validator"),
-                ModuleRole::Validator => ("validator", "library"),
+            let expected = match role {
+                ModuleRole::Library => "library",
+                ModuleRole::Validator => "validator",
+                ModuleRole::Environment => "environment",
+                ModuleRole::Configuration => "configuration",
+            };
+            let actual = match actual_role {
+                ModuleRole::Validator => "validator",
+                _ => "library",
             };
             let region = match module.kind {
                 ModuleKind::Validator(region) => region,
@@ -93,6 +99,8 @@ impl Frontend for NashFrontend {
         Ok(ParseOutput {
             module: arena.alloc(module),
             diagnostics: Vec::new(),
+            entry_points: &[],
+            reject_private_types_in_exports: false,
         })
     }
 }

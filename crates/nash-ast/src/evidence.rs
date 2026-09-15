@@ -11,11 +11,23 @@ fn same_types(a: &[&Located<Type<'_>>], b: &[&Located<Type<'_>>]) -> bool {
 
 fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
     match (a, b) {
+        (Type::Hole, Type::Hole) => true,
+        (Type::DeclaredHole(a), Type::DeclaredHole(b)) => a.id == b.id && a.kind == b.kind,
         (Type::Var(a), Type::Var(b)) => a == b,
 
         (Type::Lambda { from: af, to: at }, Type::Lambda { from: bf, to: bt }) => {
             same_type(&af.value, &bf.value) && same_type(&at.value, &bt.value)
         }
+        (
+            Type::Function {
+                arguments: aa,
+                result: ar,
+            },
+            Type::Function {
+                arguments: ba,
+                result: br,
+            },
+        ) => same_types(aa, ba) && same_type(&ar.value, &br.value),
         (Type::App { head: ah, args: aa }, Type::App { head: bh, args: ba }) => {
             same_type(&ah.value, &bh.value) && same_types(aa, ba)
         }
@@ -89,11 +101,17 @@ fn hash_types<H: Hasher>(types: &[&Located<Type<'_>>], state: &mut H) {
 fn hash_type<H: Hasher>(typ: &Type<'_>, state: &mut H) {
     std::mem::discriminant(typ).hash(state);
     match typ {
+        Type::Hole => {}
+        Type::DeclaredHole(hole) => (hole.id, hole.kind).hash(state),
         Type::Var(name) => name.hash(state),
 
         Type::Lambda { from, to } => {
             hash_type(&from.value, state);
             hash_type(&to.value, state);
+        }
+        Type::Function { arguments, result } => {
+            hash_types(arguments, state);
+            hash_type(&result.value, state);
         }
         Type::App { head, args } => {
             hash_type(&head.value, state);
@@ -143,10 +161,14 @@ impl PartialEq for Evidence<'_> {
             (Self::Repr { trait_: a, typ: at }, Self::Repr { trait_: b, typ: bt }) => {
                 a == b && same_type(&at.value, &bt.value)
             }
-            (Self::ReflexiveLift { typ: a }, Self::ReflexiveLift { typ: b })
-            | (Self::StructuralEq { typ: a }, Self::StructuralEq { typ: b }) => {
-                same_type(&a.value, &b.value)
-            }
+            (
+                Self::ReflexiveLift { trait_: at, typ: a },
+                Self::ReflexiveLift { trait_: bt, typ: b },
+            )
+            | (
+                Self::StructuralEq { trait_: at, typ: a },
+                Self::StructuralEq { trait_: bt, typ: b },
+            ) => at == bt && same_type(&a.value, &b.value),
             (
                 Self::Impl {
                     impl_: ai,
@@ -187,7 +209,8 @@ impl Hash for Evidence<'_> {
                 trait_.hash(state);
                 hash_type(&typ.value, state);
             }
-            Self::ReflexiveLift { typ } | Self::StructuralEq { typ } => {
+            Self::ReflexiveLift { trait_, typ } | Self::StructuralEq { trait_, typ } => {
+                trait_.hash(state);
                 hash_type(&typ.value, state)
             }
             Self::Impl {

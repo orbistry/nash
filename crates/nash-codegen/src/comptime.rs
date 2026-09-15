@@ -1,8 +1,9 @@
-//! Bounded compile-time evaluation of closed Core to a UPLC constant.
+//! Closed Core evaluation for native comptime constants and source module values.
 use crate::program;
 use nash_ir::core::{Binder, Core, Module, Name};
 use nash_plutus::{
     arena::Arena,
+    binder::DeBruijn,
     constant::Constant,
     machine::{ExBudget, PlutusVersion},
     term::Term,
@@ -27,6 +28,21 @@ pub fn eval_closed<'a>(
     bindings: &[(Binder<'a>, &'a Core<'a>)],
     core: &'a Core<'a>,
 ) -> Result<&'a Constant<'a>, ComptimeError<'a>> {
+    match eval_closed_term(arena, bindings, core, ExBudget::default())? {
+        Term::Constant(constant) => Ok(constant),
+        _ => Err(ComptimeError::NotAConstant),
+    }
+}
+
+/// Evaluate a closed value without restricting its result to a primitive
+/// constant. CEK discharges captured environments into the returned closed term;
+/// evaluation traces are consumed here rather than retained in runtime code.
+pub(crate) fn eval_closed_term<'a>(
+    arena: &'a Arena,
+    bindings: &[(Binder<'a>, &'a Core<'a>)],
+    core: &'a Core<'a>,
+    budget: ExBudget,
+) -> Result<&'a Term<'a, DeBruijn>, ComptimeError<'a>> {
     let module = Module {
         bindings: arena.alloc_slice_copy(bindings),
         root: core,
@@ -35,13 +51,11 @@ pub fn eval_closed<'a>(
         program::Error::NotClosed(name) => ComptimeError::NotClosed(name),
         other => ComptimeError::Assembly(other),
     })?;
-    let evaluation =
-        compiled
-            .program
-            .eval_version_budget(arena, PlutusVersion::V3, ExBudget::default());
+    let evaluation = compiled
+        .program
+        .eval_version_budget(arena, PlutusVersion::V3, budget);
     match evaluation.term {
-        Ok(Term::Constant(constant)) => Ok(constant),
-        Ok(_) => Err(ComptimeError::NotAConstant),
+        Ok(term) => Ok(term),
         Err(error) => {
             let mut reason = format!("{error:?}");
             if !evaluation.info.logs.is_empty() {

@@ -8,6 +8,16 @@ use url::Url;
 /// Main error type for driver operations.
 #[derive(Debug, Error, Diagnostic)]
 pub enum DriverError {
+    #[error("project loading failed: {}", diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n"))]
+    ProjectLoad {
+        diagnostics: Vec<nash_frontend::ProjectDiagnostic>,
+    },
+
+    #[error("both nash.jsonc and aiken.toml exist in {path}; pass the manifest path explicitly")]
+    AmbiguousProject { path: PathBuf },
+
+    #[error(transparent)]
+    ProjectDiagnostic(#[from] nash_frontend::ProjectDiagnostic),
     #[error("module {uri} belongs to both {first} and {second}")]
     ConflictingModuleOwners {
         uri: Box<Url>,
@@ -43,7 +53,7 @@ pub enum DriverError {
     #[error("failed to parse config: {0}")]
     ConfigError(#[from] nash_config::ConfigError),
 
-    #[error("project root not found: no nash.jsonc in {path} or parent directories")]
+    #[error("project root not found: no nash.jsonc or aiken.toml in {path} or parent directories")]
     ProjectNotFound { path: PathBuf },
 
     #[error("workspace member not found: {pattern}")]

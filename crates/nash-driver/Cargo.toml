@@ -27,6 +27,7 @@ nash-constrain = { path = "../nash-constrain", version = "0.6.0" }
 nash-frontend = { path = "../nash-frontend" }
 nash-frontend-nash = { path = "../nash-frontend-nash" }
 nash-frontend-aiken = { path = "../nash-frontend-aiken" }
+nash-project-aiken = { path = "../nash-project-aiken" }
 nash-report = { path = "../nash-report", version = "0.4.0" }
 nash-region = { path = "../nash-region", version = "0.3.0" }
 nash-solve = { path = "../nash-solve", version = "0.6.0" }
@@ -36,4 +37,5 @@ nash-source = { path = "../nash-source", version = "0.7.0" }
 indoc.workspace = true
 insta.workspace = true
 nash-parse = { path = "../nash-parse", version = "0.6.1" }
+tempfile = "3"
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

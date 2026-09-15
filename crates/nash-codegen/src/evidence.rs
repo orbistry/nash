@@ -23,11 +23,11 @@ pub enum Error<'a> {
     GivenIndex { binder: NodeId, index: u16 },
     #[error("trait {trait_:?} has no superclass {index}")]
     SuperIndex {
-        trait_: QualifiedName<'a>,
+        trait_: &'a QualifiedName<'a>,
         index: u16,
     },
     #[error("unknown trait {0:?}")]
-    UnknownTrait(QualifiedName<'a>),
+    UnknownTrait(&'a QualifiedName<'a>),
     #[error("unknown implementation {0:?}")]
     UnknownImpl(Box<ImplRef<'a>>),
     #[error("implementation evidence has invalid arguments")]
@@ -50,7 +50,7 @@ pub enum Error<'a> {
 /// separate key. Representation proofs are omitted from implementation children.
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ExecutableEvidence<'a> {
-    Impl(ImplRef<'a>, Vec<Self>),
+    Impl(Box<ImplRef<'a>>, Vec<Self>),
     Identity,
     StructuralEq,
     Erased,
@@ -112,7 +112,7 @@ pub fn executable_identity<'a>(
                         children.push(child);
                     }
                 }
-                ExecutableEvidence::Impl(*impl_, children)
+                ExecutableEvidence::Impl(Box::new(*impl_), children)
             }
             Evidence::Given { .. } | Evidence::Super { .. } => {
                 return Err(Error::UnresolvedEvidence);
@@ -197,14 +197,12 @@ impl<'a> Grounder<'a, '_> {
                 // A known representation proof entails its builtin parents
                 // even when the carried type is erased and remains open.
                 if let Evidence::Repr { trait_, typ } = of {
-                    let superclass =
-                        trait_
-                            .supers()
-                            .get(usize::from(*index))
-                            .ok_or(Error::SuperIndex {
-                                trait_: trait_.qualified(),
-                                index: *index,
-                            })?;
+                    let superclass = trait_.supers().get(usize::from(*index)).ok_or_else(|| {
+                        Error::SuperIndex {
+                            trait_: self.arena.alloc(trait_.qualified()),
+                            index: *index,
+                        }
+                    })?;
                     return Ok(Evidence::Repr {
                         trait_: *superclass,
                         typ,
@@ -228,10 +226,12 @@ impl<'a> Grounder<'a, '_> {
                 trait_: *trait_,
                 typ: self.typ(typ, subst)?,
             },
-            Evidence::ReflexiveLift { typ } => Evidence::ReflexiveLift {
+            Evidence::ReflexiveLift { trait_, typ } => Evidence::ReflexiveLift {
+                trait_: *trait_,
                 typ: self.typ(typ, subst)?,
             },
-            Evidence::StructuralEq { typ } => Evidence::StructuralEq {
+            Evidence::StructuralEq { trait_, typ } => Evidence::StructuralEq {
+                trait_: *trait_,
                 typ: self.typ(typ, subst)?,
             },
             Evidence::Impl {
@@ -312,6 +312,19 @@ impl<'a> Grounder<'a, '_> {
             step(&mut self.remaining, depth)?;
             let mut push = |child| pending.push((child, depth + 1, replace));
             match &typ.value {
+                Type::Hole => return Err(Error::NonGround("_")),
+                Type::DeclaredHole(hole) => {
+                    if let Some(solution) = self
+                        .tables
+                        .kinds
+                        .declared
+                        .resolve(self.arena.as_bump(), hole)
+                    {
+                        push(solution);
+                    } else if require_ground {
+                        return Err(Error::NonGround("_"));
+                    }
+                }
                 Type::Var(name) => {
                     if let Some(value) = subst.filter(|_| replace).and_then(|subst| subst.get(name))
                     {
@@ -334,6 +347,12 @@ impl<'a> Grounder<'a, '_> {
                 Type::Lambda { from, to } => {
                     push(*from);
                     push(*to);
+                }
+                Type::Function { arguments, result } => {
+                    for argument in *arguments {
+                        push(*argument);
+                    }
+                    push(*result);
                 }
                 Type::Tuple {
                     first,
@@ -374,49 +393,52 @@ impl<'a> Grounder<'a, '_> {
         index: u16,
         depth: usize,
     ) -> Result<Pred<'a>, Error<'a>> {
-        let (trait_, args) = match evidence {
-            Evidence::Repr { trait_, typ } => {
-                let super_ = trait_
-                    .supers()
-                    .get(usize::from(index))
-                    .ok_or(Error::SuperIndex {
-                        trait_: trait_.qualified(),
-                        index,
+        let (trait_, args) =
+            match evidence {
+                Evidence::Repr { trait_, typ } => {
+                    let super_ = trait_.supers().get(usize::from(index)).ok_or_else(|| {
+                        Error::SuperIndex {
+                            trait_: self.arena.alloc(trait_.qualified()),
+                            index,
+                        }
                     })?;
-                return Ok(Pred::Implied {
-                    trait_: super_.qualified(),
-                    args: self.arena.alloc_slice_copy(&[*typ]),
-                });
-            }
-            Evidence::StructuralEq { typ } => (primitives::eq_trait(), vec![*typ]),
-            Evidence::ReflexiveLift { typ } => (primitives::lift_trait(), vec![*typ, *typ]),
-            Evidence::Impl {
-                impl_, type_args, ..
-            } => {
-                let args = impl_
-                    .key
-                    .heads
-                    .iter()
-                    .map(|head| self.head_type(head, type_args, depth))
-                    .collect::<Result<Vec<_>, _>>()?;
-                (impl_.key.trait_, args)
-            }
-            Evidence::Given { .. } | Evidence::Super { .. } => {
-                return Err(Error::UnresolvedEvidence);
-            }
-        };
+                    return Ok(Pred::Implied {
+                        trait_: super_.qualified(),
+                        args: self.arena.alloc_slice_copy(&[*typ]),
+                    });
+                }
+                Evidence::StructuralEq { trait_, typ } => (*trait_, vec![*typ]),
+                Evidence::ReflexiveLift { trait_, typ } => (*trait_, vec![*typ, *typ]),
+                Evidence::Impl {
+                    impl_, type_args, ..
+                } => {
+                    let args = impl_
+                        .key
+                        .heads
+                        .iter()
+                        .map(|head| self.head_type(head, type_args, depth))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    (impl_.key.trait_, args)
+                }
+                Evidence::Given { .. } | Evidence::Super { .. } => {
+                    return Err(Error::UnresolvedEvidence);
+                }
+            };
         let info = self
             .tables
             .traits
             .get(&trait_)
-            .ok_or(Error::UnknownTrait(trait_))?;
+            .ok_or_else(|| Error::UnknownTrait(self.arena.alloc(trait_)))?;
         if args.len() != info.parameters.len() {
             return Err(Error::MalformedPredicate);
         }
         let super_ = *info
             .supers
             .get(usize::from(index))
-            .ok_or(Error::SuperIndex { trait_, index })?;
+            .ok_or_else(|| Error::SuperIndex {
+                trait_: self.arena.alloc(trait_),
+                index,
+            })?;
         let subst = info.parameters.iter().copied().zip(args).collect();
         let args = super_
             .args()
@@ -488,7 +510,7 @@ impl<'a> Grounder<'a, '_> {
                 self.tables
                     .traits
                     .get(&trait_)
-                    .ok_or(Error::UnknownTrait(trait_))?
+                    .ok_or_else(|| Error::UnknownTrait(self.arena.alloc(trait_)))?
                     .parameters
                     .len()
             };

@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub struct Localizer {
     imports: BTreeMap<String, ImportInfo>,
     local_module: Option<String>,
-    local_package: Option<(String, String)>,
+    local_package: Option<LocalPackage>,
     local_unions: BTreeSet<String>,
     bare_primitives: BTreeSet<String>,
 }
@@ -16,6 +16,53 @@ pub struct Localizer {
 struct ImportInfo {
     alias: Option<String>,
     exposing: Option<BTreeSet<String>>,
+}
+
+#[derive(Clone, Debug)]
+struct LocalPackage {
+    author: String,
+    project: String,
+    version: String,
+    source: nash_ast::PackageSource<'static>,
+    local_source: Vec<u8>,
+    compilation: Option<u64>,
+}
+
+impl LocalPackage {
+    fn new(package: nash_ast::PackageName<'_>) -> Self {
+        let (source, local_source) = match package.source {
+            nash_ast::PackageSource::Local(path) => {
+                (nash_ast::PackageSource::Local(&[]), path.to_vec())
+            }
+            nash_ast::PackageSource::Github => (nash_ast::PackageSource::Github, vec![]),
+            nash_ast::PackageSource::Gitlab => (nash_ast::PackageSource::Gitlab, vec![]),
+            nash_ast::PackageSource::Bitbucket => (nash_ast::PackageSource::Bitbucket, vec![]),
+            nash_ast::PackageSource::Compiler => (nash_ast::PackageSource::Compiler, vec![]),
+        };
+        Self {
+            author: package.author.into(),
+            project: package.project.into(),
+            version: package.version.into(),
+            source,
+            local_source,
+            compilation: package.compilation,
+        }
+    }
+
+    fn borrowed(&self) -> nash_ast::PackageName<'_> {
+        nash_ast::PackageName {
+            author: &self.author,
+            project: &self.project,
+            version: &self.version,
+            source: match self.source {
+                nash_ast::PackageSource::Local(_) => {
+                    nash_ast::PackageSource::Local(&self.local_source)
+                }
+                source => source,
+            },
+            compilation: self.compilation,
+        }
+    }
 }
 impl Localizer {
     pub fn from_module(module: &Module<'_>, defaults: &[&Import<'_>]) -> Self {
@@ -71,20 +118,13 @@ impl Localizer {
     }
 
     pub fn with_package(mut self, package: Option<nash_ast::PackageName<'_>>) -> Self {
-        self.local_package =
-            package.map(|package| (package.author.to_owned(), package.project.to_owned()));
+        self.local_package = package.map(LocalPackage::new);
         self
     }
 
     pub fn is_local_union(&self, home: ModuleName<'_>, name: &str) -> bool {
         self.local_module.as_deref() == Some(home.name)
-            && self
-                .local_package
-                .as_ref()
-                .map(|(author, project)| (author.as_str(), project.as_str()))
-                == home
-                    .package
-                    .map(|package| (package.author, package.project))
+            && self.local_package.as_ref().map(LocalPackage::borrowed) == home.package
             && self.local_unions.contains(name)
     }
 

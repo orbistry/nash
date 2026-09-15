@@ -19,6 +19,7 @@ fn q(text: &str) -> QualifiedName<'_> {
 }
 fn bool_union(arena: &Arena) -> &Union<'_> {
     arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero("bool")),
@@ -309,6 +310,7 @@ fn nominal<'a>(
         arguments: &[],
     });
     let union = arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero(text)),
@@ -541,6 +543,7 @@ fn big_constructor_fields_and_data_builtin_shapes_decode() {
         "(con integer 17)"
     );
     let data_union = arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero("Data")),
@@ -603,6 +606,7 @@ fn constructor_argument_indices_restore_named_field_order() {
         arguments: arena.alloc_slice_copy(&[&*int_type, &*int_type]),
     });
     let union = arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero("row")),

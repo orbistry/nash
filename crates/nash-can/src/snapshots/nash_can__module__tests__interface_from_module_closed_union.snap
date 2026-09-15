@@ -3,6 +3,10 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (Bool)\n\ntype Bool\n    = True\n    | False\n"
 ---
 Interface {
+    declared: DeclaredStore {
+        refinements: 0,
+        ..
+    },
     impls: [],
     traits: [],
     home: ModuleName {
@@ -36,6 +40,7 @@ Interface {
             alternatives: 2,
             options: Enum,
             visibility: Closed,
+            data_layout: None,
         },
     ],
     binops: [],

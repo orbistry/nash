@@ -156,25 +156,16 @@ async fn real_aiken_project_publishes_an_interface_and_consumers_check_its_type(
 }
 
 #[tokio::test]
-async fn unsupported_aiken_project_keeps_a_located_diagnostic() {
-    let project = Project::load(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/aiken/unsupported"),
-    )
-    .await
-    .unwrap();
-    let db = Arc::new(Mutex::new(Database::new(FileSystemSource::new())));
-    let catalog = project.discover_modules(&*db.lock().await).await.unwrap();
-    let graph = build_graph(db.clone(), &catalog).await.unwrap();
-    let result = build(db, &graph, &catalog).await;
-    let source = catalog.keys().next().unwrap();
-    let ModuleResult::Failed(reports) = &result.modules[source] else {
-        panic!("unsupported syntax must not publish an interface: {result:?}")
+async fn invalid_aiken_tool_declaration_keeps_a_located_diagnostic() {
+    let result = compile(&[("invalid.ak", "test rejected() { 42 }\n")]).await;
+    let ModuleResult::Failed(reports) = &result.modules[&uri("invalid.ak")] else {
+        panic!("invalid tool declarations must not publish an interface: {result:?}")
     };
     assert!(result.interfaces.is_empty());
     let diagnostic = reports
         .reports
         .iter()
-        .find(|report| report.code == "NAF2201")
+        .find(|report| report.code.starts_with("nash::type::"))
         .unwrap();
     assert_eq!(diagnostic.region.start.line, 1);
     assert!(!diagnostic.region.is_empty());
@@ -288,4 +279,129 @@ async fn duplicate_names_across_packages_never_overwrite_semantic_interfaces() {
             "{reports:?}"
         );
     }
+}
+
+#[tokio::test]
+async fn resolved_package_releases_preserve_nominal_types_through_facades() {
+    use nash_driver::{PackageId, PackageSourceId};
+    let model = "module Model exposing (Box(..))\ntype Box = Box\n";
+    let (db, mut catalog) = memory_sources(&[
+        ("first/Model.nash", model),
+        ("second/Model.nash", model),
+        (
+            "Left.nash",
+            "module Left exposing (make)\nimport Model exposing (Box(..))\nmake = Box\n",
+        ),
+        (
+            "Right.nash",
+            "module Right exposing (accept)\nimport Model exposing (Box(..))\naccept box = case box of\n    Box -> ()\n",
+        ),
+        (
+            "Main.nash",
+            "module Main exposing (..)\nimport Left\nimport Right\nresult = Right.accept Left.make\n",
+        ),
+    ]);
+    let first = PackageId {
+        name: Some("example/model".into()),
+        version: "1.0.0".into(),
+        source: PackageSourceId::Github,
+    };
+    let application = catalog[&uri("Main.nash")].key.package.clone();
+    for second in [
+        PackageId {
+            version: "2.0.0".into(),
+            ..first.clone()
+        },
+        PackageId {
+            source: PackageSourceId::Gitlab,
+            ..first.clone()
+        },
+    ] {
+        for (path, package, root) in [
+            ("first/Model.nash", first.clone(), "/project/src/first"),
+            ("second/Model.nash", second.clone(), "/project/src/second"),
+        ] {
+            let mut spec = SourceSpec::new(&uri(path), Path::new(root), None).unwrap();
+            spec.key.package = package.clone();
+            spec.visible_packages = Some(vec![package]);
+            catalog.insert(uri(path), spec);
+        }
+        catalog.get_mut(&uri("Left.nash")).unwrap().visible_packages =
+            Some(vec![application.clone(), first.clone()]);
+        catalog
+            .get_mut(&uri("Right.nash"))
+            .unwrap()
+            .visible_packages = Some(vec![application.clone(), second.clone()]);
+        catalog.get_mut(&uri("Main.nash")).unwrap().visible_packages =
+            Some(vec![application.clone(), first.clone(), second.clone()]);
+        let graph = build_graph(db.clone(), &catalog).await.unwrap();
+        let result = build(db.clone(), &graph, &catalog).await;
+        for path in [
+            "first/Model.nash",
+            "second/Model.nash",
+            "Left.nash",
+            "Right.nash",
+        ] {
+            assert!(
+                matches!(result.modules[&uri(path)], ModuleResult::Success { .. }),
+                "{result:?}"
+            );
+        }
+        assert!(
+            matches!(&result.modules[&uri("Main.nash")], ModuleResult::Failed(reports)
+            if reports.reports.iter().any(|report| report.code == "nash::type::mismatch")),
+            "{result:?}"
+        );
+        catalog
+            .get_mut(&uri("Right.nash"))
+            .unwrap()
+            .visible_packages = Some(vec![application.clone(), first.clone()]);
+        let graph = build_graph(db.clone(), &catalog).await.unwrap();
+        let result = build(db.clone(), &graph, &catalog).await;
+        assert!(result.is_success(), "{result:?}");
+    }
+}
+
+#[tokio::test]
+async fn visible_aiken_provider_ambiguity_is_located_at_the_import() {
+    use nash_driver::{PackageId, PackageSourceId};
+    let (db, mut catalog) = memory_sources(&[
+        ("left/math.ak", "pub fn value() { 1 }"),
+        ("right/math.ak", "pub fn value() { 2 }"),
+        ("main.ak", "use math\npub fn value() { math.value() }"),
+    ]);
+    let packages: Vec<_> = ["left", "right"]
+        .map(|name| PackageId {
+            name: Some(format!("example/{name}")),
+            version: "1.0.0".into(),
+            source: PackageSourceId::Github,
+        })
+        .into_iter()
+        .collect();
+    for (name, package) in ["left", "right"].into_iter().zip(&packages) {
+        let source = uri(&format!("{name}/math.ak"));
+        let mut spec =
+            SourceSpec::new(&source, Path::new(&format!("/project/src/{name}")), None).unwrap();
+        spec.key.package = package.clone();
+        spec.visible_packages = Some(vec![package.clone()]);
+        catalog.insert(source, spec);
+    }
+    catalog.get_mut(&uri("main.ak")).unwrap().visible_packages = Some(packages);
+    let graph = build_graph(db.clone(), &catalog).await.unwrap();
+    let diagnostic = graph.diagnostics[&uri("main.ak")]
+        .iter()
+        .find(|diagnostic| diagnostic.code == "NAF1003")
+        .unwrap();
+    assert_eq!(diagnostic.region.unwrap().start.line, 1);
+    let result = build(db, &graph, &catalog).await;
+    for path in ["left/math.ak", "right/math.ak"] {
+        assert!(
+            matches!(result.modules[&uri(path)], ModuleResult::Success { .. }),
+            "{result:?}"
+        );
+    }
+    assert!(matches!(
+        result.modules[&uri("main.ak")],
+        ModuleResult::Failed(_)
+    ));
 }

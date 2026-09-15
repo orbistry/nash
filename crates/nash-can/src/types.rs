@@ -117,6 +117,10 @@ fn collect_repr_predicates<'a>(
                 });
                 pending.push((typ, alias_body));
             }
+            SourceType::Function { arguments, result } => {
+                pending.push((*result, false));
+                pending.extend(arguments.iter().rev().map(|typ| (*typ, false)));
+            }
             SourceType::Lambda { from, to } => pending.extend([(*to, false), (*from, false)]),
             SourceType::VarApp { args, .. }
             | SourceType::Type { args, .. }
@@ -134,7 +138,7 @@ fn collect_repr_predicates<'a>(
                 pending.extend(rest.iter().rev().map(|typ| (*typ, false)));
                 pending.extend([(*second, false), (*first, false)]);
             }
-            SourceType::Var(_) | SourceType::Unit => {}
+            SourceType::Hole | SourceType::Var(_) | SourceType::Unit => {}
         }
     }
     Ok(result)
@@ -206,7 +210,12 @@ fn canonicalize_type_value<'a>(
     typ: &SourceType<'a>,
 ) -> Result<CanType<'a>, Vec<Error<'a>>> {
     Ok(match typ {
+        SourceType::Hole => CanType::Hole,
         SourceType::Repr { typ, .. } => canonicalize_type_value(bump, env, region, &typ.value)?,
+        SourceType::Function { arguments, result } => CanType::Function {
+            arguments: canonicalize_type_arguments(bump, env, arguments)?,
+            result: canonicalize_type(bump, env, result)?,
+        },
         SourceType::Lambda { from, to } => {
             let (from, to) = accumulate::accumulate2(
                 canonicalize_type(bump, env, from),
@@ -302,7 +311,7 @@ fn check_fields<'a, 'f>(
 
 /// Mirrors Elm's `Env.findType`. Lookup errors point at the type name
 /// itself, not the whole application.
-fn find_type<'a>(
+pub(crate) fn find_type<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
     name_region: Region,
@@ -327,7 +336,7 @@ fn find_type<'a>(
 }
 
 /// Mirrors Elm's `Env.findTypeQual`.
-fn find_type_qual<'a>(
+pub(crate) fn find_type_qual<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
     name_region: Region,
@@ -441,6 +450,8 @@ fn canonicalize_field_type<'a>(
 
 pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
     match typ {
+        CanType::Hole => {}
+        CanType::DeclaredHole(_) => {}
         CanType::App { head, args } => {
             collect_free_vars(&head.value, vars);
             for arg in *args {
@@ -449,6 +460,12 @@ pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
         }
         CanType::Var(name) => {
             vars.insert(name);
+        }
+        CanType::Function { arguments, result } => {
+            for argument in *arguments {
+                collect_free_vars(&argument.value, vars);
+            }
+            collect_free_vars(&result.value, vars);
         }
         CanType::Lambda { from, to } => {
             collect_free_vars(&from.value, vars);
@@ -482,6 +499,117 @@ pub fn collect_free_vars<'a>(typ: &CanType<'a>, vars: &mut BTreeSet<&'a str>) {
             }
         }
     }
+}
+
+/// Whether a source annotation still has positions owned by type inference.
+pub fn has_hole(typ: &CanType<'_>) -> bool {
+    match typ {
+        CanType::Hole => true,
+        CanType::DeclaredHole(_) => true,
+        CanType::Var(_) => false,
+        CanType::Function { arguments, result } => {
+            arguments.iter().any(|argument| has_hole(&argument.value)) || has_hole(&result.value)
+        }
+        CanType::Lambda { from, to } => has_hole(&from.value) || has_hole(&to.value),
+        CanType::App { head, args } => {
+            has_hole(&head.value) || args.iter().any(|argument| has_hole(&argument.value))
+        }
+        CanType::Named { args, .. } => args.iter().any(|argument| has_hole(&argument.value)),
+        CanType::Record { fields } => fields.iter().any(|field| has_hole(&field.typ.value)),
+        CanType::Tuple {
+            first,
+            second,
+            rest,
+        } => {
+            has_hole(&first.value)
+                || has_hole(&second.value)
+                || rest.iter().any(|item| has_hole(&item.value))
+        }
+        CanType::Alias {
+            arguments, target, ..
+        } => {
+            arguments
+                .iter()
+                .any(|argument| has_hole(&argument.typ.value))
+                || match target {
+                    CanAliasType::Open(typ) | CanAliasType::Filled { typ, .. } => {
+                        has_hole(&typ.value)
+                    }
+                }
+        }
+    }
+}
+
+/// Hydrate holes once at an alias or constructor declaration, before its type
+/// becomes a reusable template. Existing declaration cells retain their identity.
+pub(crate) fn declare_holes<'a>(
+    bump: &'a Bump,
+    owner: QualifiedName<'a>,
+    typ: &'a Located<CanType<'a>>,
+) -> &'a Located<CanType<'a>> {
+    if !has_hole(&typ.value) {
+        return typ;
+    }
+    let value = match &typ.value {
+        CanType::Hole => {
+            CanType::DeclaredHole(bump.alloc(nash_ast::DeclaredHole::new(owner, typ.region)))
+        }
+        CanType::DeclaredHole(_) | CanType::Var(_) => return typ,
+        CanType::Function { arguments, result } => CanType::Function {
+            arguments: bump
+                .alloc_slice_fill_iter(arguments.iter().map(|arg| declare_holes(bump, owner, arg))),
+            result: declare_holes(bump, owner, result),
+        },
+        CanType::Lambda { from, to } => CanType::Lambda {
+            from: declare_holes(bump, owner, from),
+            to: declare_holes(bump, owner, to),
+        },
+        CanType::App { head, args } => CanType::App {
+            head: declare_holes(bump, owner, head),
+            args: bump
+                .alloc_slice_fill_iter(args.iter().map(|arg| declare_holes(bump, owner, arg))),
+        },
+        CanType::Named { reference, args } => CanType::Named {
+            reference: *reference,
+            args: bump
+                .alloc_slice_fill_iter(args.iter().map(|arg| declare_holes(bump, owner, arg))),
+        },
+        CanType::Record { fields } => CanType::Record {
+            fields: bump.alloc_slice_fill_iter(fields.iter().map(|field| CanFieldType {
+                index: field.index,
+                field: field.field,
+                typ: declare_holes(bump, owner, field.typ),
+            })),
+        },
+        CanType::Tuple {
+            first,
+            second,
+            rest,
+        } => CanType::Tuple {
+            first: declare_holes(bump, owner, first),
+            second: declare_holes(bump, owner, second),
+            rest: bump
+                .alloc_slice_fill_iter(rest.iter().map(|typ| declare_holes(bump, owner, typ))),
+        },
+        CanType::Alias {
+            reference,
+            arguments,
+            remaining,
+            target,
+        } => CanType::Alias {
+            reference: *reference,
+            arguments: bump.alloc_slice_fill_iter(arguments.iter().map(|arg| CanAliasArgument {
+                name: arg.name,
+                typ: declare_holes(bump, owner, arg.typ),
+            })),
+            remaining,
+            target: match target {
+                CanAliasType::Open(typ) => CanAliasType::Open(typ),
+                CanAliasType::Filled { body, typ } => CanAliasType::Filled { body, typ },
+            },
+        },
+    };
+    bump.alloc(Located::at(typ.region, value))
 }
 
 /// Mirrors Elm's `Type.dealias`: fill a `Holey` alias body by substituting
@@ -581,7 +709,9 @@ pub fn substitute_type<'a>(
     typ: &'a Located<CanType<'a>>,
 ) -> &'a Located<CanType<'a>> {
     let substituted = match &typ.value {
+        CanType::Hole => return typ,
         CanType::Var(name) => return table.get(name).copied().unwrap_or(typ),
+        CanType::DeclaredHole(_) => return typ,
         CanType::App { head, args } => {
             let head = substitute_type(bump, table, head);
             let args = bump
@@ -589,6 +719,14 @@ pub fn substitute_type<'a>(
             return apply_type(bump, typ.region, head, args);
         }
 
+        CanType::Function { arguments, result } => CanType::Function {
+            arguments: bump.alloc_slice_fill_iter(
+                arguments
+                    .iter()
+                    .map(|arg| substitute_type(bump, table, arg)),
+            ),
+            result: substitute_type(bump, table, result),
+        },
         CanType::Lambda { from, to } => CanType::Lambda {
             from: substitute_type(bump, table, from),
             to: substitute_type(bump, table, to),
@@ -697,6 +835,7 @@ mod tests {
                     context: &[],
                     typ: partial,
                 }),
+                callable: None,
             }]);
             interface
         };
@@ -783,12 +922,14 @@ mod tests {
                 name: "Main",
             },
             vars: Default::default(),
+            callables: Default::default(),
             types: Default::default(),
             ctors: Default::default(),
             binops: Default::default(),
             q_vars: Default::default(),
             q_types: Default::default(),
             q_ctors: Default::default(),
+            generated_names: Default::default(),
         }
     }
 

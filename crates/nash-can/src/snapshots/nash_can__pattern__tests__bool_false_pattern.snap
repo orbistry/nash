@@ -50,6 +50,7 @@ description: "False"
                 ],
                 alternatives: 2,
                 options: Enum,
+                data_layout: None,
             },
             value: false,
         },

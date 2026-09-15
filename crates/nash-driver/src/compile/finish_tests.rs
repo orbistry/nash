@@ -14,6 +14,7 @@ fn finish_receives_original_solved_nodes_and_tables() {
         )],
         &HashMap::new(),
         &HashMap::new(),
+        &HashMap::new(),
         |solved| {
             assert_eq!(solved.modules.len(), 1);
             let module = &solved.modules[0];
@@ -39,6 +40,7 @@ fn failed_frontend_never_calls_finish() {
         )],
         &HashMap::new(),
         &HashMap::new(),
+        &HashMap::new(),
         |_| panic!("failed build must not generate code"),
     );
     assert!(!report.is_success());
@@ -59,6 +61,7 @@ fn term_validator_parameter_never_reaches_codegen() {
             SourceSpec::standalone(&uri).unwrap(),
             Ok(source.into()),
         )],
+        &HashMap::new(),
         &HashMap::new(),
         &HashMap::new(),
         |_| panic!("invalid validator must not reach codegen"),

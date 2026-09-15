@@ -1,0 +1,14 @@
+name = "acceptance/stdlib"
+version = "0.0.0"
+compiler = "v1.1.23"
+plutus = "v3"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "v3.1.0"
+source = "github"
+
+[[dependencies]]
+name = "aiken-lang/fuzz"
+version = "v2.2.0"
+source = "github"

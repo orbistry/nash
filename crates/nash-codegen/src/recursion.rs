@@ -93,7 +93,7 @@ impl<'a> Rewriter<'_, 'a> {
         let b = self.build;
         Ok(match core {
             Core::Var(n) => env.get(n).map_or(core, |r| r.value),
-            Core::Lit(_) | Core::Error => core,
+            Core::Lit(_) | Core::Evaluated { .. } | Core::Error => core,
             Core::Lam { params, body } => b.lam(
                 params,
                 self.term(body, &without(env, params.iter().map(|p| p.name)))?,
@@ -401,7 +401,7 @@ fn visit<'a>(
             visit(body, scope, f);
         }
         Core::Delay(body) | Core::Force(body) => visit(body, scope, f),
-        Core::Var(_) | Core::Lit(_) | Core::Error => {}
+        Core::Var(_) | Core::Lit(_) | Core::Evaluated { .. } | Core::Error => {}
     }
 }
 

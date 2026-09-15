@@ -127,6 +127,9 @@ Declare {
                                         PackageName {
                                             author: "nash",
                                             project: "core",
+                                            version: "",
+                                            source: Compiler,
+                                            compilation: None,
                                         },
                                     ),
                                     name: "Monad",
@@ -143,6 +146,9 @@ Declare {
                                                     PackageName {
                                                         author: "nash",
                                                         project: "core",
+                                                        version: "",
+                                                        source: Compiler,
+                                                        compilation: None,
                                                     },
                                                 ),
                                                 name: "Monad",
@@ -617,6 +623,9 @@ Declare {
                                                                     PackageName {
                                                                         author: "nash",
                                                                         project: "core",
+                                                                        version: "",
+                                                                        source: Compiler,
+                                                                        compilation: None,
                                                                     },
                                                                 ),
                                                                 name: "Monad",
@@ -633,6 +642,9 @@ Declare {
                                                                                 PackageName {
                                                                                     author: "nash",
                                                                                     project: "core",
+                                                                                    version: "",
+                                                                                    source: Compiler,
+                                                                                    compilation: None,
                                                                                 },
                                                                             ),
                                                                             name: "Monad",

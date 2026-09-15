@@ -176,7 +176,7 @@ pub fn is_list(h: ModuleName<'_>, n: &str) -> bool {
 }
 /// `option` is a library type, not a compiler primitive.
 pub fn is_option(h: ModuleName<'_>, n: &str) -> bool {
-    h.package == Some(primitives::CORE) && h.name == "Option" && n == "option"
+    h.package.is_some_and(nash_ast::PackageName::is_core) && h.name == "Option" && n == "option"
 }
 fn named<'a>(t: &'a ErrorType<'a>) -> Option<(ModuleName<'a>, &'a str, Vec<&'a ErrorType<'a>>)> {
     match t {

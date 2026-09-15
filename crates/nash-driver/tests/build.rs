@@ -22,7 +22,13 @@ async fn outputs(files: &[(&str, &str)]) -> Vec<nash_driver::build::ValidatorOut
     let db = Arc::new(Mutex::new(Database::new(source)));
     let graph = build_graph(db.clone(), &modules).await.unwrap();
     let (report, result) = build_with(db, &graph, &modules, |solved| {
-        build_validators(solved, TraceConfig::default())
+        build_validators(
+            solved,
+            TraceConfig {
+                compiler: false,
+                ..TraceConfig::default()
+            },
+        )
     })
     .await;
     assert!(report.is_success(), "{report:?}");
@@ -173,4 +179,107 @@ async fn aiken_mint_dispatch_checks_redeemers_and_fails_on_false() {
         .eval(&arena);
     assert!(malformed.term.is_err());
     assert!(malformed.info.logs.is_empty());
+}
+
+#[tokio::test]
+async fn imported_external_layout_is_constructed_and_matched_by_native_nash() {
+    let artifacts = outputs(&[
+        ("External.ak", "pub type Packet { @tag(19) Packet(Int) }\npub fn encoded(packet: Packet) -> Data { let encoded: Data = packet\n encoded }"),
+        ("Main.nash", "validator module Main exposing (main)\nimport Builtin exposing (..)\nimport External\nmain : Data -> unit\nmain input = assert (Builtin.equalsInteger (Builtin.fstPair (Builtin.unConstrData (External.encoded (External.Packet (Builtin.unIData input))))) (Builtin.unIData input))\n"),
+    ]).await;
+    let arena = Arena::new();
+    let program = syn::parse_program(&arena, &artifacts[0].uplc)
+        .into_result()
+        .unwrap();
+    for (input, succeeds) in [(19, true), (0, false)] {
+        let result = program
+            .apply(
+                &arena,
+                Term::data(&arena, PlutusData::integer_from(&arena, input)),
+            )
+            .eval(&arena);
+        assert_eq!(result.term.is_ok(), succeeds);
+    }
+}
+
+#[tokio::test]
+async fn shared_dependency_is_specialized_in_each_workspace_environment() {
+    use nash_driver::{PackageId, PackageSourceId};
+    let mut catalog = ModuleCatalog::new();
+    let remote = PackageId {
+        name: Some("example/shared".into()),
+        version: "1.0.0".into(),
+        source: PackageSourceId::Github,
+    };
+    for (member, env, entry) in [
+        (
+            "A",
+            "module Env exposing (value)\nvalue = ()\n",
+            "validator module EntryA exposing (main)\nimport Shared\nmain _ = Shared.get ()\n",
+        ),
+        (
+            "B",
+            "module Env exposing (value)\nimport Builtin exposing (type bool(..))\nvalue = True\n",
+            "validator module EntryB exposing (main)\nimport Builtin exposing (type bool(..))\nimport Shared\nmain _ = case Shared.get () of\n    True -> ()\n    False -> ()\n",
+        ),
+    ] {
+        let root = std::path::PathBuf::from(format!("/workspace/{member}"));
+        let package = PackageId {
+            name: Some(format!("example/{member}")),
+            version: "1.0.0".into(),
+            source: PackageSourceId::Local(root.clone()),
+        };
+        for (module, source, owner) in [
+            ("Env".to_owned(), env, package.clone()),
+            (format!("Entry{member}"), entry, package.clone()),
+            (
+                "Shared".to_owned(),
+                "module Shared exposing (get)\nimport Env\nget () = Env.value\n",
+                remote.clone(),
+            ),
+        ] {
+            let uri = Url::from_file_path(root.join(format!("{module}.nash"))).unwrap();
+            let mut spec = SourceSpec::new(&uri, &root, None).unwrap();
+            spec.key.package = owner;
+            spec.visible_packages = Some(vec![package.clone(), remote.clone()]);
+            spec.resolution_root = Some(root.clone());
+            spec.origin = nash_frontend::SourceOrigin::Synthetic;
+            spec.synthetic_source = Some(source.into());
+            catalog.insert(uri, spec);
+        }
+    }
+    // No backing files exist: inspection and compilation must both consume synthetic text.
+    let db = Arc::new(Mutex::new(Database::new(InMemorySource::new())));
+    let graph = build_graph(db.clone(), &catalog).await.unwrap();
+    let (report, artifacts) = build_with(db, &graph, &catalog, |solved| {
+        build_validators(solved, TraceConfig::default())
+    })
+    .await;
+    assert!(report.is_success(), "{report:?}");
+    let artifacts = artifacts.unwrap().unwrap();
+    assert_eq!(
+        artifacts
+            .iter()
+            .map(|artifact| artifact.module.as_str())
+            .collect::<Vec<_>>(),
+        ["EntryA", "EntryB"]
+    );
+    for artifact in artifacts {
+        let arena = Arena::new();
+        let program = syn::parse_program(&arena, &artifact.uplc)
+            .into_result()
+            .unwrap();
+        let result = program
+            .apply(
+                &arena,
+                Term::data(&arena, PlutusData::integer_from(&arena, 0)),
+            )
+            .eval(&arena);
+        assert_eq!(
+            result.term.unwrap(),
+            Term::unit(&arena),
+            "{}",
+            artifact.module
+        );
+    }
 }

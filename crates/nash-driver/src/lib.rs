@@ -58,7 +58,11 @@ pub use database::Database;
 pub use error::DriverError;
 pub use graph::DepGraph;
 pub use interface::{Export, Interface};
-pub use project::{ModuleCatalog, Project, ProjectMember, SourceSpec};
+pub use nash_frontend::{
+    LoadedProject, ModuleCatalog, ModuleKey, PackageId, PackageSourceId, ProjectDiagnostic,
+    ProjectFormat, ProjectMetadata, ProjectMode, ResolvedDependency, SourceSpec,
+};
+pub use project::{Project, ProjectMember};
 pub use source::{FileSource, FileSystemSource, InMemorySource, OverlaySource};
 
 /// The same source selection policy is used by discovery, graph inspection and builds.

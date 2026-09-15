@@ -1,5 +1,14 @@
 //! Parser-neutral source boundary. Adapters own syntax; Nash owns semantics.
 
+mod entries;
+mod project;
+pub use entries::{SourceBoundaryBinding, SourceEntryPoint, SourceHandler};
+pub use project::{
+    LoadedPackage, LoadedProject, ModuleCatalog, ModuleKey, PackageId, PackageSourceId,
+    ProjectDiagnostic, ProjectFormat, ProjectLoadRequest, ProjectMetadata, ProjectMode,
+    RepositoryMetadata, ResolvedDependency, SourceOrigin, SourceSpec,
+};
+
 use bumpalo::Bump;
 use nash_region::Region;
 use url::Url;
@@ -21,6 +30,8 @@ impl ModuleName {
 pub enum ModuleRole {
     Library,
     Validator,
+    Environment,
+    Configuration,
 }
 
 #[derive(Clone, Copy)]
@@ -30,6 +41,7 @@ pub struct SourceInput<'source, 'context> {
     pub expected_module: &'context ModuleName,
     /// None lets syntax determine the role; Some enforces project metadata.
     pub role: Option<ModuleRole>,
+    pub origin: SourceOrigin,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -117,6 +129,9 @@ pub struct InspectOutput {
 pub struct ParseOutput<'arena> {
     pub module: &'arena nash_source::Module<'arena>,
     pub diagnostics: Vec<FrontendDiagnostic>,
+    pub entry_points: &'arena [SourceEntryPoint<'arena>],
+    /// Require public value and constructor signatures to expose no private nominal type.
+    pub reject_private_types_in_exports: bool,
 }
 
 pub struct FrontendDescriptor {

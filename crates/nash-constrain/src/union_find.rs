@@ -18,6 +18,9 @@ impl Variable {
 }
 
 #[derive(Debug)]
+// Keep descriptors inline in the dense point vector; boxing adds an allocation
+// and an indirection to every fresh inference variable.
+#[allow(clippy::large_enum_variant)]
 enum PointInfo<'a> {
     Info { weight: u32, desc: Descriptor<'a> },
     Link(Variable),
@@ -26,11 +29,140 @@ enum PointInfo<'a> {
 #[derive(Debug, Default)]
 pub struct UnionFind<'a> {
     points: Vec<PointInfo<'a>>,
+    declared_holes: std::collections::HashMap<
+        nash_ast::DeclaredHoleId,
+        (&'a nash_ast::DeclaredHole<'a>, Variable),
+    >,
+    declared_roots: std::collections::HashMap<Variable, &'a nash_ast::DeclaredHole<'a>>,
+    captured_rigid_ranks: std::collections::HashMap<Variable, usize>,
+    declared_store: nash_ast::declared::DeclaredStore,
+    declared_arena: Option<&'a bumpalo::Bump>,
+    declared_resolutions: std::collections::HashMap<
+        nash_ast::DeclaredHoleId,
+        Option<&'a nash_region::Located<nash_ast::Type<'a>>>,
+    >,
+    instantiations: Vec<std::collections::HashMap<nash_ast::DeclaredHoleId, Variable>>,
 }
 
 impl<'a> UnionFind<'a> {
     pub fn new() -> Self {
-        UnionFind { points: Vec::new() }
+        Self::default()
+    }
+
+    /// Each module observes committed owned refinements but keeps inference local.
+    pub fn set_declared_context(
+        &mut self,
+        bump: &'a bumpalo::Bump,
+        store: nash_ast::declared::DeclaredStore,
+    ) {
+        self.declared_arena = Some(bump);
+        self.declared_store = store;
+        self.declared_resolutions.clear();
+        self.declared_holes.clear();
+        self.declared_roots.clear();
+        self.captured_rigid_ranks.clear();
+        self.instantiations.clear();
+    }
+
+    pub fn declared_store(&self) -> &nash_ast::declared::DeclaredStore {
+        &self.declared_store
+    }
+
+    pub(crate) fn resolve_declared(
+        &mut self,
+        hole: &nash_ast::DeclaredHole<'_>,
+    ) -> Option<&'a nash_region::Located<nash_ast::Type<'a>>> {
+        if let Some(solution) = self.declared_resolutions.get(&hole.id) {
+            return *solution;
+        }
+        let solution = self
+            .declared_arena
+            .and_then(|bump| self.declared_store.resolve(bump, hole));
+        self.declared_resolutions.insert(hole.id, solution);
+        solution
+    }
+
+    /// Share generic identities across all pieces of one annotation.
+    pub fn begin_instantiation(&mut self) -> bool {
+        if self.instantiations.is_empty() {
+            self.push_instantiation_scope();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn end_instantiation(&mut self, owned: bool) {
+        if owned {
+            self.pop_instantiation_scope();
+        }
+    }
+
+    pub(crate) fn push_instantiation_scope(&mut self) {
+        self.instantiations.push(std::collections::HashMap::new());
+    }
+
+    pub(crate) fn pop_instantiation_scope(&mut self) {
+        self.instantiations
+            .pop()
+            .expect("balanced annotation instantiation scope");
+    }
+
+    pub(crate) fn generic_variable(&self, id: nash_ast::DeclaredHoleId) -> Option<Variable> {
+        self.instantiations
+            .last()
+            .and_then(|scope| scope.get(&id))
+            .copied()
+    }
+
+    pub(crate) fn bind_generic_variable(
+        &mut self,
+        id: nash_ast::DeclaredHoleId,
+        variable: Variable,
+    ) {
+        self.instantiations
+            .last_mut()
+            .expect("generic inside an annotation instantiation")
+            .insert(id, variable);
+    }
+
+    pub fn declared_variable(&self, hole: &'a nash_ast::DeclaredHole<'a>) -> Option<Variable> {
+        self.declared_holes
+            .get(&hole.id)
+            .map(|(_, variable)| *variable)
+    }
+
+    pub fn bind_declared_hole(&mut self, hole: &'a nash_ast::DeclaredHole<'a>, variable: Variable) {
+        debug_assert_eq!(hole.kind, nash_ast::DeclaredHoleKind::Inference);
+        let root = self.find(variable);
+        let descriptor = self.get(root);
+        let rigid_rank = matches!(descriptor.content, crate::type_::Content::RigidVar(_))
+            .then_some(descriptor.rank);
+        self.declared_holes.insert(hole.id, (hole, root));
+        self.declared_roots.entry(root).or_insert(hole);
+        if let Some(rank) = rigid_rank {
+            self.captured_rigid_ranks.entry(root).or_insert(rank);
+        } else {
+            self.modify(root, |descriptor| {
+                descriptor.rank = crate::type_::OUTERMOST_RANK
+            });
+        }
+    }
+
+    pub fn declared_hole(&mut self, variable: Variable) -> Option<&'a nash_ast::DeclaredHole<'a>> {
+        let root = self.find(variable);
+        self.declared_roots.get(&root).copied()
+    }
+
+    pub fn is_declared_capture(&mut self, variable: Variable) -> bool {
+        let root = self.find(variable);
+        self.captured_rigid_ranks.contains_key(&root)
+    }
+
+    pub fn declared_holes(
+        &self,
+    ) -> impl Iterator<Item = (&'a nash_ast::DeclaredHole<'a>, Variable)> + '_ {
+        self.declared_holes.values().copied()
     }
 
     pub fn fresh(&mut self, desc: Descriptor<'a>) -> Variable {
@@ -64,8 +196,9 @@ impl<'a> UnionFind<'a> {
         }
     }
 
-    pub fn set(&mut self, point: Variable, new_desc: Descriptor<'a>) {
+    pub fn set(&mut self, point: Variable, mut new_desc: Descriptor<'a>) {
         let root = self.repr(point);
+        self.retain_declared_rank(root, &mut new_desc);
         match &mut self.points[root.index()] {
             PointInfo::Info { desc, .. } => *desc = new_desc,
             PointInfo::Link(_) => unreachable!("repr returns a root"),
@@ -74,20 +207,55 @@ impl<'a> UnionFind<'a> {
 
     pub fn modify(&mut self, point: Variable, func: impl FnOnce(&mut Descriptor<'a>)) {
         let root = self.repr(point);
+        let declared = self.declared_roots.contains_key(&root);
+        let captured_rank = self.captured_rigid_ranks.get(&root).copied();
         match &mut self.points[root.index()] {
-            PointInfo::Info { desc, .. } => func(desc),
+            PointInfo::Info { desc, .. } => {
+                func(desc);
+                Self::retain_rank(declared, captured_rank, desc);
+            }
             PointInfo::Link(_) => unreachable!("repr returns a root"),
         }
     }
 
-    pub fn union(&mut self, p1: Variable, p2: Variable, new_desc: Descriptor<'a>) {
+    pub fn union(&mut self, p1: Variable, p2: Variable, mut new_desc: Descriptor<'a>) {
         let point1 = self.repr(p1);
         let point2 = self.repr(p2);
+        let declared =
+            self.declared_roots.contains_key(&point1) || self.declared_roots.contains_key(&point2);
+        let capture_rank =
+            if declared && matches!(new_desc.content, crate::type_::Content::RigidVar(_)) {
+                [point1, point2]
+                    .into_iter()
+                    .find_map(|root| {
+                        let descriptor = self.get(root);
+                        matches!(descriptor.content, crate::type_::Content::RigidVar(_))
+                            .then_some((root, descriptor.rank))
+                    })
+                    .map(|(root, rank)| {
+                        self.captured_rigid_ranks
+                            .get(&root)
+                            .copied()
+                            .unwrap_or(rank)
+                    })
+            } else {
+                self.captured_rigid_ranks
+                    .get(&point1)
+                    .or_else(|| self.captured_rigid_ranks.get(&point2))
+                    .copied()
+            };
+        Self::retain_rank(declared, capture_rank, &mut new_desc);
 
         if point1 == point2 {
+            if let Some(rank) = capture_rank {
+                self.captured_rigid_ranks.insert(point1, rank);
+            }
             match &mut self.points[point1.index()] {
                 PointInfo::Info { desc, .. } => *desc = new_desc,
                 PointInfo::Link(_) => unreachable!("repr returns a root"),
+            }
+            if declared {
+                self.capture_declared_rigids(point1);
             }
             return;
         }
@@ -107,6 +275,21 @@ impl<'a> UnionFind<'a> {
         } else {
             (point2, point1)
         };
+        let first_hole = self.declared_roots.remove(&point1);
+        let second_hole = self.declared_roots.remove(&point2);
+        let hole = match (first_hole, second_hole) {
+            (Some(first), Some(second)) if second.id < first.id => Some(second),
+            (Some(first), _) => Some(first),
+            (None, second) => second,
+        };
+        if let Some(hole) = hole {
+            self.declared_roots.insert(winner, hole);
+        }
+        self.captured_rigid_ranks.remove(&point1);
+        self.captured_rigid_ranks.remove(&point2);
+        if let Some(rank) = capture_rank {
+            self.captured_rigid_ranks.insert(winner, rank);
+        }
 
         self.points[loser.index()] = PointInfo::Link(winner);
         match &mut self.points[winner.index()] {
@@ -115,6 +298,77 @@ impl<'a> UnionFind<'a> {
                 *desc = new_desc;
             }
             PointInfo::Link(_) => unreachable!("repr returns a root"),
+        }
+        if declared {
+            self.capture_declared_rigids(winner);
+        }
+    }
+
+    /// A declaration can capture a rigid below a constructor, not only at its
+    /// root. Preserve that binder's rank before rank adjustment visits the graph.
+    fn capture_declared_rigids(&mut self, root: Variable) {
+        use crate::type_::{Content, FlatType};
+        let mut pending = vec![root];
+        let mut seen = std::collections::HashSet::new();
+        while let Some(variable) = pending.pop() {
+            let variable = self.find(variable);
+            if !seen.insert(variable) {
+                continue;
+            }
+            let descriptor = self.get(variable);
+            let rank = descriptor.rank;
+            match descriptor.content.clone() {
+                Content::RigidVar(_) => {
+                    self.captured_rigid_ranks.entry(variable).or_insert(rank);
+                }
+                Content::Structure(FlatType::App1(_, _, args)) => pending.extend(args),
+                Content::Structure(FlatType::AppV1(head, args)) => {
+                    pending.push(head);
+                    pending.extend(args);
+                }
+                Content::Structure(FlatType::Fun1(argument, result)) => {
+                    pending.extend([argument, result])
+                }
+                Content::Structure(FlatType::Function1(arguments, result)) => {
+                    pending.extend(arguments);
+                    pending.push(result);
+                }
+                Content::Structure(FlatType::Tuple1(first, second, rest)) => {
+                    pending.extend([first, second]);
+                    pending.extend(rest);
+                }
+                Content::Structure(FlatType::Record1(fields)) => {
+                    pending.extend(fields.into_values())
+                }
+                Content::Alias { args, real, .. } => {
+                    pending.extend(args.into_iter().map(|(_, argument)| argument));
+                    pending.push(real);
+                }
+                Content::PartialAlias { args, .. } => {
+                    pending.extend(args.into_iter().map(|(_, argument)| argument))
+                }
+                Content::FlexVar(_) | Content::Error => {}
+            }
+        }
+    }
+
+    fn retain_declared_rank(&self, root: Variable, descriptor: &mut Descriptor<'a>) {
+        Self::retain_rank(
+            self.declared_roots.contains_key(&root),
+            self.captured_rigid_ranks.get(&root).copied(),
+            descriptor,
+        );
+    }
+
+    fn retain_rank(declared: bool, captured_rank: Option<usize>, descriptor: &mut Descriptor<'a>) {
+        if matches!(descriptor.content, crate::type_::Content::RigidVar(_)) {
+            if let Some(rank) = captured_rank
+                && descriptor.rank != crate::type_::NO_RANK
+            {
+                descriptor.rank = rank;
+            }
+        } else if declared {
+            descriptor.rank = crate::type_::OUTERMOST_RANK;
         }
     }
 

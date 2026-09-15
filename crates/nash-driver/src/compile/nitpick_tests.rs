@@ -14,6 +14,7 @@ fn rejected(source: &str) -> String {
         &bump,
         &interfaces,
         &[],
+        None,
     );
     assert!(
         compiled.is_none(),

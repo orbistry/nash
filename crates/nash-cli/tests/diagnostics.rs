@@ -170,6 +170,8 @@ fn terminal_and_json_type_mismatch() {
     );
     let value: serde_json::Value = serde_json::from_slice(&json.stdout).unwrap();
     assert_eq!(value["errors"][0]["problems"][0]["title"], "TYPE MISMATCH");
+    let mut value = value;
+    value.sort_all_objects();
     insta::assert_snapshot!(
         "type_mismatch_json",
         normalized(
@@ -313,6 +315,8 @@ fn documented_examples_run_through_the_real_core_package() {
             ("Tag", "MISSING PATTERNS")
         ]
     );
+    let mut json = json;
+    json.sort_all_objects();
     insta::assert_snapshot!(
         "documented_examples_json",
         normalized(
@@ -443,6 +447,8 @@ fn poisoned_tuple_child_keeps_independent_type_mismatch() {
         "poisoned_tuple_terminal",
         normalized(&human.stderr, &project.0)
     );
+    let mut value = value;
+    value.sort_all_objects();
     insta::assert_snapshot!(
         "poisoned_tuple_json",
         normalized(
@@ -549,18 +555,148 @@ fn aiken_projects_use_the_real_check_command_and_json_diagnostics() {
     let report: serde_json::Value = serde_json::from_slice(&supported.stdout).unwrap();
     assert_eq!(report["errors"], serde_json::json!([]));
 
-    let unsupported = check(&fixtures.join("unsupported"), &["--report=json"]);
-    assert_eq!(unsupported.status.code(), Some(1));
-    let report: serde_json::Value = serde_json::from_slice(&unsupported.stdout).unwrap();
-    let module = &report["errors"][0];
+    let tools = check(&fixtures.join("unsupported"), &["--report=json"]);
     assert!(
-        module["path"]
+        tools.status.success(),
+        "{}",
+        String::from_utf8_lossy(&tools.stderr)
+    );
+
+    let invalid = Project::new(&[]);
+    std::fs::write(invalid.0.join("src/invalid.ak"), "test rejected() { 42 }\n").unwrap();
+    let output = check(&invalid.0, &["--report=json", "--no-warnings"]);
+    assert_eq!(output.status.code(), Some(1));
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let module = &report["errors"][0];
+    assert!(module["path"].as_str().unwrap().ends_with("/invalid.ak"));
+    let diagnostic = &module["problems"][0];
+    assert!(
+        diagnostic["code"]
             .as_str()
             .unwrap()
-            .ends_with("/unsupported.ak")
+            .starts_with("nash::type::")
     );
-    let diagnostic = &module["problems"][0];
-    assert_eq!(diagnostic["code"], "NAF2201");
     assert_eq!(diagnostic["region"]["start"]["line"], 1);
     assert_ne!(diagnostic["region"]["start"], diagnostic["region"]["end"]);
+}
+
+#[test]
+fn aiken_workspace_json_preserves_each_manifest_error_location() {
+    let project = Project::new(&[]);
+    std::fs::remove_file(project.0.join("nash.jsonc")).unwrap();
+    std::fs::write(
+        project.0.join("aiken.toml"),
+        "members = [\"alpha\", \"beta\"]\n",
+    )
+    .unwrap();
+    for member in ["alpha", "beta"] {
+        std::fs::create_dir(project.0.join(member)).unwrap();
+        std::fs::write(project.0.join(member).join("aiken.toml"), format!("name = \"test/{member}\"\nversion = \"1.0.0\"\ncompiler = \"v1.1.23\"\nplutus = \"v2\"\n")).unwrap();
+    }
+    let output = check(&project.0, &["--report=json", "--no-warnings"]);
+    assert_eq!(output.status.code(), Some(1));
+    let errors: Vec<_> = serde_json::Deserializer::from_slice(&output.stdout)
+        .into_iter::<serde_json::Value>()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(errors.len(), 2, "{errors:?}");
+    for (error, member) in errors.iter().zip(["alpha", "beta"]) {
+        assert_eq!(error["code"], "NAP4103");
+        assert!(
+            error["path"]
+                .as_str()
+                .unwrap()
+                .ends_with(&format!("/{member}/aiken.toml"))
+        );
+        assert_eq!(error["region"]["start"]["line"], 4);
+        assert_ne!(error["region"]["start"], error["region"]["end"]);
+    }
+}
+
+#[test]
+fn aiken_check_and_build_use_prepared_packages_without_network() {
+    let project = Project::new(&[]);
+    std::fs::remove_file(project.0.join("nash.jsonc")).unwrap();
+    let put = |path: &str, text: &str| {
+        let path = project.0.join(path);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    };
+    let dependency = "name = \"test/library\"\nversion = \"v1.0.0\"\nsource = \"github\"\n";
+    put(
+        "aiken.toml",
+        &format!(
+            "name = \"test/cli\"\nversion = \"1.0.0\"\ncompiler = \"v1.1.23\"\nplutus = \"v3\"\n[[dependencies]]\n{dependency}"
+        ),
+    );
+    put(
+        "aiken.lock",
+        &format!("[[requirements]]\n{dependency}\n[[packages]]\n{dependency}requirements = []\n"),
+    );
+    put(
+        "build/packages/packages.toml",
+        &format!("[[packages]]\n{dependency}"),
+    );
+    put(
+        "build/packages/test-library/aiken.toml",
+        "name = \"test/library\"\nversion = \"1.0.0\"\ncompiler = \"v1.1.23\"\nplutus = \"v3\"\n",
+    );
+    put(
+        "build/packages/test-library/lib/library.ak",
+        "pub const answer = 42\n",
+    );
+    put(
+        "build/packages/test-library/validators/ignored.ak",
+        "dependency validators must not be compiled",
+    );
+    put(
+        "validators/gates.ak",
+        "use library\nvalidator first { else(_) { library.answer == 42 } }\nvalidator second { else(_) { library.answer == 42 } }\n",
+    );
+    for command in ["check", "build"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_nash"))
+            .env("NASH_PROXY_VERSION", env!("CARGO_PKG_VERSION"))
+            .env("NO_COLOR", "1")
+            .env("HTTP_PROXY", "http://127.0.0.1:1")
+            .env("HTTPS_PROXY", "http://127.0.0.1:1")
+            .env("ALL_PROXY", "http://127.0.0.1:1")
+            .env("NO_PROXY", "")
+            .arg(command)
+            .arg(&project.0)
+            .args(if command == "build" {
+                &["--out", "artifacts"][..]
+            } else {
+                &[]
+            })
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{command}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let mut artifacts = std::collections::BTreeMap::<_, std::collections::BTreeSet<_>>::new();
+    for entry in std::fs::read_dir(project.0.join("artifacts")).unwrap() {
+        let path = entry.unwrap().path();
+        artifacts
+            .entry(path.file_stem().unwrap().to_string_lossy().into_owned())
+            .or_default()
+            .insert(path.extension().unwrap().to_string_lossy().into_owned());
+    }
+    assert_eq!(artifacts.len(), 2, "{artifacts:?}");
+    for validator in ["first", "second"] {
+        let (_, formats) = artifacts
+            .iter()
+            .find(|(name, _)| name.ends_with(&format!(".gates.{validator}")))
+            .unwrap();
+        assert_eq!(
+            formats,
+            &std::collections::BTreeSet::from([
+                "cbor".to_string(),
+                "flat".to_string(),
+                "uplc".to_string()
+            ])
+        );
+    }
 }

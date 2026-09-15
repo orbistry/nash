@@ -25,24 +25,47 @@ pub trait Types<'a> {
     ) -> Result<Match<()>, Limit>;
 }
 
-pub struct Canonical;
+pub struct Canonical<'a, 's> {
+    bump: &'a bumpalo::Bump,
+    declared: &'s crate::declared::DeclaredStore,
+}
+
+impl<'a, 's> Canonical<'a, 's> {
+    pub fn new(bump: &'a bumpalo::Bump, declared: &'s crate::declared::DeclaredStore) -> Self {
+        Self { bump, declared }
+    }
+}
 
 #[derive(PartialEq, Eq)]
 enum CanonicalCon<'a> {
     Known(HeadCon<'a>),
     Var(&'a str),
     Record(Vec<&'a str>),
+    Function(usize),
+    Hole,
 }
 
 fn canonical_view<'a>(
+    bump: &'a bumpalo::Bump,
+    declared: &crate::declared::DeclaredStore,
     mut typ: &'a Located<Type<'a>>,
 ) -> (CanonicalCon<'a>, Vec<&'a Located<Type<'a>>>) {
     let mut suffixes = Vec::new();
-    while let Type::App { head, args } = &typ.value {
-        suffixes.push(*args);
-        typ = head;
+    loop {
+        match &typ.value {
+            Type::App { head, args } => {
+                suffixes.push(*args);
+                typ = head;
+            }
+            Type::DeclaredHole(hole) => match declared.resolve(bump, hole) {
+                Some(solution) => typ = solution,
+                None => break,
+            },
+            _ => break,
+        }
     }
     let (con, mut args) = match &typ.value {
+        Type::Hole | Type::DeclaredHole(_) => (CanonicalCon::Hole, Vec::new()),
         Type::Named { reference, args } => (
             CanonicalCon::Known(HeadCon::Named(*reference)),
             args.to_vec(),
@@ -69,6 +92,14 @@ fn canonical_view<'a>(
                 .collect(),
         ),
         Type::Lambda { from, to } => (CanonicalCon::Known(HeadCon::Fun), vec![*from, *to]),
+        Type::Function { arguments, result } => (
+            CanonicalCon::Function(arguments.len()),
+            arguments
+                .iter()
+                .copied()
+                .chain(std::iter::once(*result))
+                .collect(),
+        ),
         Type::Record { fields } => (
             CanonicalCon::Record(fields.iter().map(|field| field.field).collect()),
             fields.iter().map(|field| field.typ).collect(),
@@ -81,10 +112,13 @@ fn canonical_view<'a>(
     (con, args)
 }
 
-impl<'a> Types<'a> for Canonical {
+impl<'a> Types<'a> for Canonical<'a, '_> {
     type Node = &'a Located<Type<'a>>;
     fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>> {
-        let (con, args) = canonical_view(node);
+        let (con, args) = canonical_view(self.bump, self.declared, node);
+        if con == CanonicalCon::Hole {
+            return Match::Deferred;
+        }
         if con == CanonicalCon::Known(expected) {
             Match::Yes(args)
         } else {
@@ -100,8 +134,11 @@ impl<'a> Types<'a> for Canonical {
         let mut pending = vec![(first, second)];
         while let Some((first, second)) = pending.pop() {
             step(remaining)?;
-            let (a, aa) = canonical_view(first);
-            let (b, ba) = canonical_view(second);
+            let (a, aa) = canonical_view(self.bump, self.declared, first);
+            let (b, ba) = canonical_view(self.bump, self.declared, second);
+            if a == CanonicalCon::Hole || b == CanonicalCon::Hole {
+                return Ok(Match::Deferred);
+            }
             if a != b || aa.len() != ba.len() {
                 return Ok(Match::No);
             }

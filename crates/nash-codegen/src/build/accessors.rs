@@ -72,7 +72,10 @@ impl<'a> Scope<'a> {
             Core::Lit(Constant::Boolean(_)) => Ty::Const(&ConstTy::Bool),
             Core::Lit(Constant::Unit) => Ty::Const(&ConstTy::Unit),
             Core::Lit(Constant::Data(_)) => DATA,
+            Core::Lit(Constant::Bls12_381G1Element(_)) => Ty::Const(&ConstTy::BlsG1),
+            Core::Lit(Constant::Bls12_381G2Element(_)) => Ty::Const(&ConstTy::BlsG2),
             Core::Cast { to, .. } => *to,
+            Core::Evaluated { ty, .. } => *ty,
             _ => Ty::Erased,
         }
     }
@@ -221,6 +224,19 @@ impl<'a> Share<'a, '_> {
             (Projection::Builtin(F::UnConstrData), _) => CONSTR_PAIR,
             (Projection::Builtin(F::FstPair), Ty::Const(ConstTy::Pair(a, _))) => *a,
             (Projection::Builtin(F::SndPair), Ty::Const(ConstTy::Pair(_, b))) => *b,
+            (Projection::Builtin(F::FstPair | F::SndPair), Ty::Const(ConstTy::DataPair(_, _))) => {
+                DATA
+            }
+            (Projection::Builtin(F::HeadList), Ty::Const(ConstTy::DataTuple(_))) => DATA,
+            (Projection::Builtin(F::TailList), Ty::Const(ConstTy::DataTuple(_))) => input,
+            (Projection::Builtin(F::HeadList), Ty::Const(ConstTy::DataList(element))) => {
+                if matches!(element, Ty::Const(ConstTy::DataPair(_, _))) {
+                    *element
+                } else {
+                    DATA
+                }
+            }
+            (Projection::Builtin(F::TailList), Ty::Const(ConstTy::DataList(_))) => input,
             (Projection::Builtin(F::HeadList), Ty::Const(ConstTy::List(element))) => *element,
             (Projection::Builtin(F::TailList), Ty::Const(ConstTy::List(_))) => input,
             (
@@ -254,7 +270,9 @@ impl<'a> Share<'a, '_> {
             return Parts::value(self.build.var(binder.name));
         }
         match core {
-            Core::Var(_) | Core::Lit(_) | Core::Error => Parts::value(core),
+            Core::Var(_) | Core::Lit(_) | Core::Evaluated { .. } | Core::Error => {
+                Parts::value(core)
+            }
             Core::Lam { params, body } => {
                 let mut inner = scope.clone();
                 for param in *params {
@@ -420,6 +438,7 @@ fn simple(core: &Core<'_>) -> bool {
         core,
         Core::Var(_)
             | Core::Lit(_)
+            | Core::Evaluated { .. }
             | Core::Lam { .. }
             | Core::Delay(_)
             | Core::Builtin { args: [], .. }

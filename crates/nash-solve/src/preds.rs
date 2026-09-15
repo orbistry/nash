@@ -167,9 +167,11 @@ pub enum Solution<'a> {
         subs: Vec<PredId>,
     },
     StructuralEq {
+        trait_: nash_ast::QualifiedName<'a>,
         typ: Variable,
     },
     ReflexiveLift {
+        trait_: nash_ast::QualifiedName<'a>,
         typ: Variable,
     },
     Impl {
@@ -347,6 +349,13 @@ pub(crate) fn same_args(uf: &mut UnionFind<'_>, left: &[Variable], right: &[Vari
                 Content::Structure(FlatType::App1(hb, nb, ab)),
             ) if ha == hb && na == nb && aa.len() == ab.len() => {
                 pending.extend(aa.into_iter().zip(ab))
+            }
+            (
+                Content::Structure(FlatType::Function1(aa, ar)),
+                Content::Structure(FlatType::Function1(ba, br)),
+            ) if aa.len() == ba.len() => {
+                pending.push((ar, br));
+                pending.extend(aa.into_iter().zip(ba));
             }
             (
                 Content::Structure(FlatType::Fun1(a, b)),

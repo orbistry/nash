@@ -25,6 +25,7 @@ enum Constructor<'a> {
     Named(QualifiedName<'a>),
     Tuple(usize),
     Function,
+    GroupedFunction(usize),
     Record { fields: &'a [&'a str] },
 }
 
@@ -76,6 +77,10 @@ impl<'a> Resolver<'_, 'a> {
                 from: args[0],
                 to: args[1],
             },
+            Constructor::GroupedFunction(arity) => Type::Function {
+                arguments: &args[..arity],
+                result: args[arity],
+            },
             Constructor::Record { fields } => Type::Record {
                 fields: self.bump.alloc_slice_fill_iter(
                     fields
@@ -108,6 +113,18 @@ impl<'a> Resolver<'_, 'a> {
     ) -> Result<&'a Term<'a>, Failure> {
         self.step(depth)?;
         let (con, args): (_, Vec<_>) = match &typ.value {
+            Type::Hole => return Err(Failure::Missing),
+            Type::DeclaredHole(hole) => {
+                return self.term(
+                    self.tables
+                        .kinds
+                        .declared
+                        .resolve(self.bump, hole)
+                        .ok_or(Failure::Missing)?,
+                    subst,
+                    depth + 1,
+                );
+            }
             Type::Var(name) => {
                 if let Some(term) = subst.get(name) {
                     return Ok(term);
@@ -137,6 +154,14 @@ impl<'a> Resolver<'_, 'a> {
                     .collect(),
             ),
             Type::Lambda { from, to } => (Constructor::Function, vec![*from, *to]),
+            Type::Function { arguments, result } => (
+                Constructor::GroupedFunction(arguments.len()),
+                arguments
+                    .iter()
+                    .copied()
+                    .chain(std::iter::once(*result))
+                    .collect(),
+            ),
             Type::Record { fields } => (
                 Constructor::Record {
                     fields: self
@@ -299,8 +324,9 @@ impl<'a> Resolver<'_, 'a> {
             }
             return Ok(());
         }
-        if self.tables.has_structural_eq()
-            && wanted.trait_ == Some(nash_ast::primitives::eq_trait())
+        if wanted
+            .trait_
+            .is_some_and(|trait_| self.tables.has_structural_eq(trait_))
             && wanted.args.len() == 1
         {
             let big = Predicate {
@@ -313,8 +339,9 @@ impl<'a> Resolver<'_, 'a> {
                 Err(reason) => return Err(reason),
             }
         }
-        if self.tables.has_reflexive_lift()
-            && wanted.trait_ == Some(nash_ast::primitives::lift_trait())
+        if wanted
+            .trait_
+            .is_some_and(|trait_| self.tables.has_reflexive_lift(trait_))
             && wanted.args.len() == 2
             && self.equal(
                 Predicate {
@@ -353,7 +380,7 @@ impl<'a> Resolver<'_, 'a> {
             .impls_for(wanted.trait_.ok_or(Failure::Missing)?)
         {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
-                &mut nash_ast::head::Canonical,
+                &mut nash_ast::head::Canonical::new(self.bump, &self.tables.kinds.declared),
                 key.heads,
                 &canonical_args,
                 info.variables.len(),

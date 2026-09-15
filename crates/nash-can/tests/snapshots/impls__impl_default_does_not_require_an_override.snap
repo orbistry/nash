@@ -12,6 +12,9 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                             PackageName {
                                 author: "nash",
                                 project: "core",
+                                version: "",
+                                source: Compiler,
+                                compilation: None,
                             },
                         ),
                         name: "Builtin",
@@ -67,6 +70,9 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                                     PackageName {
                                         author: "nash",
                                         project: "core",
+                                        version: "",
+                                        source: Compiler,
+                                        compilation: None,
                                     },
                                 ),
                                 name: "Builtin",
@@ -110,6 +116,9 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                                     PackageName {
                                         author: "nash",
                                         project: "core",
+                                        version: "",
+                                        source: Compiler,
+                                        compilation: None,
                                     },
                                 ),
                                 name: "Builtin",
@@ -188,6 +197,9 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                                     PackageName {
                                         author: "nash",
                                         project: "core",
+                                        version: "",
+                                        source: Compiler,
+                                        compilation: None,
                                     },
                                 ),
                                 name: "Builtin",
@@ -363,6 +375,9 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                             PackageName {
                                 author: "nash",
                                 project: "core",
+                                version: "",
+                                source: Compiler,
+                                compilation: None,
                             },
                         ),
                         name: "Builtin",

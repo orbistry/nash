@@ -21,6 +21,127 @@ use crate::{Doc, Report};
 /// Elm's `toReport`, including Nash's trait, representation and record errors.
 pub fn to_report(localizer: &Localizer, error: &Error<'_>) -> Report {
     let report = match error {
+        Error::InvalidCall { region, reason } => Report::snippet(
+            "INVALID CALL",
+            *region,
+            None,
+            Doc::reflow(reason),
+            Doc::reflow("Use the callable's declared argument labels and arity."),
+        ),
+        Error::PrivateTypeLeak {
+            region,
+            declaration,
+            name,
+        } => {
+            let mut report = Report::snippet(
+                "PRIVATE TYPE IN PUBLIC SIGNATURE",
+                *region,
+                None,
+                Doc::reflow(&format!(
+                    "This public signature exposes the private type `{name}`."
+                )),
+                Doc::reflow("Make the type public or keep the declaration private."),
+            );
+            if let Some(region) = declaration {
+                report.labels.push(crate::Label {
+                    region: *region,
+                    text: "private type declared here".into(),
+                });
+            }
+            report
+        }
+        Error::PolymorphicModuleConstant { region, typ } => Report::snippet(
+            "POLYMORPHIC MODULE CONSTANT",
+            *region,
+            None,
+            Doc::stack([
+                Doc::reflow(
+                    "A function stored in a module constant must have a fully concrete type:",
+                ),
+                type_diff::to_doc(localizer, Ctx::None, typ),
+            ]),
+            Doc::reflow("Annotate its parameters and result, or declare a named function instead."),
+        ),
+        Error::InvalidTupleIndex { region, index, typ } => Report::snippet(
+            "INVALID TUPLE INDEX",
+            *region,
+            None,
+            Doc::stack([
+                Doc::reflow(&format!(
+                    "Element {} is not available on this type:",
+                    index + 1
+                )),
+                type_diff::to_doc(localizer, Ctx::None, typ),
+            ]),
+            Doc::reflow(
+                "The operand must have a known tuple or pair type and the index must be in range.",
+            ),
+        ),
+        Error::InvalidDataCast {
+            region,
+            reason,
+            typ,
+        } => Report::snippet(
+            "INVALID DATA CONVERSION",
+            *region,
+            None,
+            Doc::stack([
+                Doc::reflow(reason),
+                type_diff::to_doc(localizer, Ctx::None, typ),
+            ]),
+            Doc::reflow("Use a concrete serializable type at this conversion boundary."),
+        ),
+        Error::InvalidRunnable {
+            region,
+            message,
+            typ,
+        } => Report::snippet(
+            "INVALID RUNNABLE",
+            *region,
+            None,
+            Doc::stack([
+                Doc::reflow(message),
+                type_diff::to_doc(localizer, Ctx::None, typ),
+            ]),
+            Doc::reflow(
+                "Tests and benchmarks are checked without executing their generators or bodies.",
+            ),
+        ),
+        Error::IllegalDataType { region, typ } => Report::snippet(
+            "ILLEGAL DATA TYPE",
+            *region,
+            None,
+            Doc::stack([
+                Doc::reflow("This value contains a type that cannot be stored in Data:"),
+                type_diff::to_doc(localizer, Ctx::None, typ),
+            ]),
+            Doc::reflow(
+                "Functions and Miller-loop results cannot occur inside lists, pairs, tuples, or other Data values.",
+            ),
+        ),
+        Error::IllegalComparison { region, typ } | Error::IllegalTraceArgument { region, typ } => {
+            let comparison = matches!(error, Error::IllegalComparison { .. });
+            Report::snippet(
+                if comparison {
+                    "ILLEGAL COMPARISON"
+                } else {
+                    "ILLEGAL TRACE ARGUMENT"
+                },
+                *region,
+                None,
+                Doc::stack([
+                    Doc::reflow(if comparison {
+                        "Equality is not defined for this type:"
+                    } else {
+                        "This type cannot be rendered in a trace:"
+                    }),
+                    type_diff::to_doc(localizer, Ctx::None, typ),
+                ]),
+                Doc::reflow(
+                    "Functions and Miller-loop results cannot be compared or rendered as Data, including when nested in another type.",
+                ),
+            )
+        }
         Error::MainParameterIsTerm { region, index, typ } => Report::snippet(
             "BAD MAIN PARAMETER",
             *region,
@@ -171,6 +292,15 @@ pub fn to_report(localizer: &Localizer, error: &Error<'_>) -> Report {
         });
     }
     report.with_code(match error {
+        Error::InvalidCall { .. } => "nash::type::invalid_call",
+        Error::PrivateTypeLeak { .. } => "nash::type::private_type_leak",
+        Error::PolymorphicModuleConstant { .. } => "nash::type::polymorphic_module_constant",
+        Error::InvalidTupleIndex { .. } => "nash::type::invalid_tuple_index",
+        Error::InvalidDataCast { .. } => "nash::type::invalid_data_cast",
+        Error::InvalidRunnable { .. } => "nash::type::invalid_runnable",
+        Error::IllegalComparison { .. } => "nash::type::illegal_comparison",
+        Error::IllegalTraceArgument { .. } => "nash::type::illegal_trace_argument",
+        Error::IllegalDataType { .. } => "nash::type::illegal_data_type",
         Error::MainParameterIsTerm { .. } => "nash::validator::main_parameter_is_term",
         Error::FieldMismatch { .. } => "nash::type::field_mismatch",
         Error::MissingField { .. } => "nash::type::missing_field",

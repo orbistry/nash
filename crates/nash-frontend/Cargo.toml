@@ -10,3 +10,5 @@ bumpalo.workspace = true
 url.workspace = true
 nash-source = { path = "../nash-source" }
 nash-region = { path = "../nash-region" }
+nash-config = { path = "../nash-config" }
+thiserror.workspace = true

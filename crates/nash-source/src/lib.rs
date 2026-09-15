@@ -131,6 +131,23 @@ pub struct Constraint<'a> {
     pub args: &'a [&'a Located<Type<'a>>],
 }
 
+/// The wire container used by an externally defined algebraic data type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DataEncoding {
+    Constr,
+    List,
+    Transparent,
+}
+
+/// Constructor tags in declaration order; field types remain on constructors.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DataLayout<'a> {
+    pub encoding: DataEncoding,
+    pub tags: &'a [u64],
+    /// The type contains an opaque value and cannot be the target of a Data cast.
+    pub opaque: bool,
+}
+
 // type Maybe a
 //   = Just a
 //   | Nothing
@@ -141,6 +158,7 @@ pub struct Union<'a> {
     pub arguments: &'a [&'a TypeParam<'a>],
     pub ctors: &'a [&'a Ctor<'a>],
     pub attributes: &'a [&'a Attribute<'a>],
+    pub data_layout: Option<DataLayout<'a>>,
 }
 
 #[derive(Debug)]
@@ -162,6 +180,8 @@ pub struct Alias<'a> {
     pub arguments: &'a [&'a TypeParam<'a>],
     pub typ: &'a Located<Type<'a>>,
     pub attributes: &'a [&'a Attribute<'a>],
+    /// Infer representation from the body instead of native name casing.
+    pub transparent: bool,
 }
 
 #[derive(Debug)]
@@ -186,23 +206,140 @@ pub struct Precedence(pub u16);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Constant<'a> {
     Int(i128),
+    /// Normalized decimal digits for fixed integers outside the inline range.
+    BigInt(&'a str),
     Bytes(&'a [u8]),
     Str(&'a str),
+    /// A parser-verified compressed BLS12-381 group element.
+    BlsG1(&'a [u8]),
+    BlsG2(&'a [u8]),
 }
 
 impl Constant<'_> {
     pub const fn builtin_name(self) -> &'static str {
         match self {
-            Self::Int(_) => "int",
+            Self::Int(_) | Self::BigInt(_) => "int",
             Self::Bytes(_) => "bytes",
             Self::Str(_) => "string",
+            Self::BlsG1(_) => "bls_g1",
+            Self::BlsG2(_) => "bls_g2",
         }
     }
+}
+
+/// Source context retained until inference selects an implicit conversion.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConversionSite {
+    AnnotatedBinding,
+    ModuleConstant,
+    FunctionResult,
+    LambdaResult,
+    CallArgument,
+    RecordUpdateField,
+    ExpectBinding,
+    ExpectPattern,
+    CastTest,
+    CastPattern,
+    ValidatorParameter,
+    ValidatorRedeemer,
+    ValidatorDatum,
+    ValidatorPurpose,
+    ValidatorMintPolicy,
+    ValidatorContext,
+    /// The argument count includes the unit argument of a nullary lambda.
+    LambdaSignature(usize),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConversionKind {
+    /// An annotation whose legality and runtime operation are decided by inference.
+    Ascription(ConversionSite),
+    Identity,
+    ToData,
+    FromDataShallow,
+    /// Mint-purpose field extraction has a physical bytes representation
+    /// regardless of the source-level handler annotation.
+    FromDataBytesView,
+    /// Reinterpret Data as a Data-backed nominal type without inspecting it.
+    ViewData,
+    ValidateData,
 }
 
 #[derive(Debug)]
 pub enum Expr<'a> {
     Constant(Constant<'a>),
+    Equal {
+        left: &'a Located<Expr<'a>>,
+        right: &'a Located<Expr<'a>>,
+        negate: bool,
+    },
+    Format {
+        value: &'a Located<Expr<'a>>,
+    },
+    /// User trace with distinct compact and verbose messages.
+    TraceLabel {
+        label: &'a Located<Expr<'a>>,
+        arguments: &'a [&'a Located<Expr<'a>>],
+        body: &'a Located<Expr<'a>>,
+        verbose_only: bool,
+    },
+    /// `typ` is the requested annotation. Inference records an ascription's
+    /// actual output type and operation; lambda annotations can retain the input.
+    Convert {
+        kind: ConversionKind,
+        typ: &'a Located<Type<'a>>,
+        value: &'a Located<Expr<'a>>,
+    },
+    TupleIndex {
+        tuple: &'a Located<Expr<'a>>,
+        index: usize,
+    },
+    RecordUpdate {
+        constructor: &'a Located<Expr<'a>>,
+        base: &'a Located<Expr<'a>>,
+        fields: &'a [&'a FieldAssign<'a>],
+    },
+    /// A monomorphic, non-recursive binding whose unused initializer is erased.
+    LetValue {
+        pattern: &'a Located<Pattern<'a>>,
+        value: &'a Located<Expr<'a>>,
+        body: &'a Located<Expr<'a>>,
+    },
+    Match {
+        value: &'a Located<Expr<'a>>,
+        pattern: &'a Located<Pattern<'a>>,
+        body: &'a Located<Expr<'a>>,
+        fallback: &'a Located<Expr<'a>>,
+        annotation: Option<&'a Located<Type<'a>>>,
+        conversion: Option<ConversionSite>,
+    },
+    RunnableCheck {
+        generator: Option<&'a Located<Expr<'a>>>,
+        argument_type: Option<&'a Located<Type<'a>>>,
+        return_type: Option<&'a Located<Type<'a>>>,
+        function: &'a Located<Expr<'a>>,
+        benchmark: bool,
+    },
+    ModuleConstantCheck {
+        value: &'a Located<Expr<'a>>,
+    },
+    /// Lexical scope for implicitly introduced annotation variables.
+    TypeScope {
+        value: &'a Located<Expr<'a>>,
+    },
+    Pair {
+        first: &'a Located<Expr<'a>>,
+        second: &'a Located<Expr<'a>>,
+    },
+    DataTuple {
+        first: &'a Located<Expr<'a>>,
+        second: &'a Located<Expr<'a>>,
+        rest: &'a [&'a Located<Expr<'a>>],
+    },
+    DataList {
+        elements: &'a [&'a Located<Expr<'a>>],
+        tail: Option<&'a Located<Expr<'a>>>,
+    },
     Str(&'a str),
     Bytes(&'a [u8]),
     Int(i128),
@@ -240,12 +377,38 @@ pub enum Expr<'a> {
         module: &'a str,
         name: &'a str,
     },
+    ConstructorRef {
+        module: Option<&'a str>,
+        type_name: Option<&'a str>,
+        name: &'a str,
+    },
     List(&'a [&'a Located<Expr<'a>>]),
     Op(&'a str),
     Negate(&'a Located<Expr<'a>>),
     BinOps {
         operands: &'a [&'a BinOpOperand<'a>],
         last: &'a Located<Expr<'a>>,
+    },
+    /// Declaration metadata; its value is the named function's body.
+    Callable {
+        arity: usize,
+        labels: &'a [&'a str],
+        value: &'a Located<Expr<'a>>,
+    },
+    Function {
+        parameters: &'a [&'a Located<Pattern<'a>>],
+        body: &'a Located<Expr<'a>>,
+    },
+    SurfaceCall {
+        function: &'a Located<Expr<'a>>,
+        arguments: &'a [CallArgument<'a>],
+        direct_builtin: Option<DirectBuiltin>,
+    },
+    Pipe {
+        input: &'a Located<Expr<'a>>,
+        function: &'a Located<Expr<'a>>,
+        arguments: Option<&'a [CallArgument<'a>]>,
+        direct_builtin: Option<DirectBuiltin>,
     },
     Lambda {
         parameters: &'a [&'a Located<Pattern<'a>>],
@@ -271,6 +434,11 @@ pub enum Expr<'a> {
     Access {
         record: &'a Located<Expr<'a>>,
         field: &'a Located<&'a str>,
+    },
+    FieldOrModule {
+        record: &'a Located<Expr<'a>>,
+        field: &'a Located<&'a str>,
+        module: Option<&'a Located<Expr<'a>>>,
     },
     Update {
         record: &'a Located<&'a str>,
@@ -344,9 +512,28 @@ pub struct FieldAssign<'a> {
     pub value: &'a Located<Expr<'a>>,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct PatternArgument<'a> {
+    pub label: Option<&'a Located<&'a str>>,
+    pub pattern: &'a Located<Pattern<'a>>,
+}
+
 #[derive(Debug)]
 pub enum Pattern<'a> {
     Constant(Constant<'a>),
+    Pair {
+        first: &'a Located<Pattern<'a>>,
+        second: &'a Located<Pattern<'a>>,
+    },
+    DataTuple {
+        first: &'a Located<Pattern<'a>>,
+        second: &'a Located<Pattern<'a>>,
+        rest: &'a [&'a Located<Pattern<'a>>],
+    },
+    DataList {
+        elements: &'a [&'a Located<Pattern<'a>>],
+        tail: Option<&'a Located<Pattern<'a>>>,
+    },
     Anything,
     Var(&'a str),
     Record(&'a [&'a Located<&'a str>]),
@@ -359,6 +546,15 @@ pub enum Pattern<'a> {
         first: &'a Located<Pattern<'a>>,
         second: &'a Located<Pattern<'a>>,
         rest: &'a [&'a Located<Pattern<'a>>],
+    },
+    /// Constructor syntax whose labels, spread and namespace require declaration lookup.
+    Constructor {
+        region: Region,
+        module: Option<&'a str>,
+        type_name: Option<&'a str>,
+        name: &'a str,
+        args: &'a [PatternArgument<'a>],
+        spread: Option<Region>,
     },
     Ctor {
         region: Region,
@@ -381,11 +577,33 @@ pub enum Pattern<'a> {
     Int(i128),
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct CallArgument<'a> {
+    pub label: Option<&'a Located<&'a str>>,
+    pub value: &'a Located<Expr<'a>>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DirectBuiltin {
+    IfThenElse,
+    ChooseList,
+    ChooseData,
+    ChooseUnit,
+    Trace,
+}
+
 #[derive(Debug)]
 pub enum Type<'a> {
+    /// An independently inferred annotation position, never a rigid type variable.
+    Hole,
     Repr {
         typ: &'a Located<Type<'a>>,
         repr: &'a Located<Repr>,
+    },
+    /// A source function argument group, distinct from a curried native arrow.
+    Function {
+        arguments: &'a [&'a Located<Type<'a>>],
+        result: &'a Located<Type<'a>>,
     },
     Lambda {
         from: &'a Located<Type<'a>>,

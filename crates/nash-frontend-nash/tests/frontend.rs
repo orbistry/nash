@@ -18,6 +18,7 @@ fn native_module_and_owned_dependencies_share_module_identity() {
             uri: &uri,
             expected_module: &name,
             role: None,
+            origin: nash_frontend::SourceOrigin::Root,
         };
         let arena = Bump::new();
         let parsed = NashFrontend.parse(&arena, input).unwrap();
@@ -40,6 +41,7 @@ fn missing_header_reports_required_project_module_name() {
             uri: &uri,
             expected_module: &name,
             role: None,
+            origin: nash_frontend::SourceOrigin::Root,
         })
         .unwrap_err();
     let diagnostic = failure.diagnostics().next().unwrap();
@@ -63,6 +65,7 @@ fn header_mismatch_uses_full_name_and_suggests_project_identity() {
             uri: &uri,
             expected_module: &name,
             role: None,
+            origin: nash_frontend::SourceOrigin::Root,
         })
         .unwrap_err();
     let diagnostic = failure.diagnostics().next().unwrap();
@@ -85,6 +88,7 @@ fn syntax_failure_retains_opening_and_boundary_after_source_is_dropped() {
                 uri: &uri,
                 expected_module: &name,
                 role: None,
+                origin: nash_frontend::SourceOrigin::Root,
             })
             .unwrap_err()
     };
@@ -107,6 +111,7 @@ fn native_validator_header_is_authoritative_without_explicit_role() {
         uri: &uri,
         expected_module: &name,
         role: None,
+        origin: nash_frontend::SourceOrigin::Root,
     };
     let arena = Bump::new();
     let parsed = NashFrontend.parse(&arena, input).unwrap();
@@ -132,4 +137,24 @@ fn native_validator_header_is_authoritative_without_explicit_role() {
         failure.diagnostics().next().unwrap().code,
         "nash::syntax::module_role_mismatch"
     );
+}
+
+#[test]
+fn project_only_roles_are_rejected_with_a_located_native_diagnostic() {
+    let uri = Url::parse("file:///src/Main.nash").unwrap();
+    let name = ModuleName::new("Main");
+    for role in [ModuleRole::Environment, ModuleRole::Configuration] {
+        let failure = NashFrontend
+            .inspect(SourceInput {
+                source: "module Main exposing (..)\nvalue = ()\n",
+                uri: &uri,
+                expected_module: &name,
+                role: Some(role),
+                origin: nash_frontend::SourceOrigin::Root,
+            })
+            .unwrap_err();
+        let diagnostic = failure.diagnostics().next().unwrap();
+        assert_eq!(diagnostic.code, "nash::syntax::module_role_mismatch");
+        assert_eq!(diagnostic.region.unwrap().start.line, 1);
+    }
 }

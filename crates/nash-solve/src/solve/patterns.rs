@@ -17,6 +17,9 @@ pub(super) fn pattern_owns_vars(pattern: &Located<nash_ast::Pattern<'_>>) -> boo
                     .any(|arg| pattern_owns_vars(arg.pattern))
         }
         Pattern::Tuple { .. }
+        | Pattern::DataTuple { .. }
+        | Pattern::Pair { .. }
+        | Pattern::DataList { .. }
         | Pattern::List(_)
         | Pattern::Cons { .. }
         | Pattern::Record(_)
@@ -50,9 +53,12 @@ impl<'a> Solver<'a, '_> {
         match &pattern.value {
             Pattern::Constant(value) => {
                 let category = match value {
-                    nash_ast::Constant::Int(_) => PCategory::Int,
+                    nash_ast::Constant::Int(_) | nash_ast::Constant::BigInt(_) => PCategory::Int,
                     nash_ast::Constant::Bytes(_) => PCategory::Bytes,
                     nash_ast::Constant::Str(_) => PCategory::Str,
+                    nash_ast::Constant::BlsG1(_) | nash_ast::Constant::BlsG2(_) => {
+                        PCategory::Ctor(value.builtin_name())
+                    }
                 };
                 let actual = self.structure(
                     uf,
@@ -94,7 +100,94 @@ impl<'a> Solver<'a, '_> {
                 );
                 self.pattern_equal(uf, rank, state, region, category, actual, expected)
             }
-            Pattern::Tuple {
+            Pattern::Pair { first, second } => {
+                let first_var = self.fresh(uf, rank);
+                let second_var = self.fresh(uf, rank);
+                let pair = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(
+                        nash_ast::primitives::builtin_home(),
+                        "data_pair",
+                        vec![first_var, second_var],
+                    ),
+                );
+                state = self.pattern_equal(
+                    uf,
+                    rank,
+                    state,
+                    region,
+                    PCategory::Ctor("Pair"),
+                    pair,
+                    expected,
+                );
+                state = self.infer_pattern(
+                    uf,
+                    rank,
+                    state,
+                    second,
+                    PExpected::NoExpectation(second_var),
+                    headers,
+                );
+                self.infer_pattern(
+                    uf,
+                    rank,
+                    state,
+                    first,
+                    PExpected::NoExpectation(first_var),
+                    headers,
+                )
+            }
+            Pattern::DataList { elements, tail } => {
+                let entry = self.fresh(uf, rank);
+                let list = self.structure(
+                    uf,
+                    rank,
+                    FlatType::App1(
+                        nash_ast::primitives::builtin_home(),
+                        "data_list",
+                        vec![entry],
+                    ),
+                );
+                state =
+                    self.pattern_equal(uf, rank, state, region, PCategory::List, list, expected);
+                if let Some(tail) = tail {
+                    let list = self.structure(
+                        uf,
+                        rank,
+                        FlatType::App1(
+                            nash_ast::primitives::builtin_home(),
+                            "data_list",
+                            vec![entry],
+                        ),
+                    );
+                    state = self.infer_pattern(
+                        uf,
+                        rank,
+                        state,
+                        tail,
+                        PExpected::FromContext(region, PContext::Tail, list),
+                        headers,
+                    );
+                }
+                for (index, item) in elements.iter().enumerate().rev() {
+                    state = self.infer_pattern(
+                        uf,
+                        rank,
+                        state,
+                        item,
+                        PExpected::FromContext(region, PContext::ListEntry(index), entry),
+                        headers,
+                    );
+                }
+                state
+            }
+            Pattern::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Pattern::Tuple {
                 first,
                 second,
                 rest,
@@ -110,6 +203,19 @@ impl<'a> Solver<'a, '_> {
                     rank,
                     Content::Structure(FlatType::Tuple1(first_var, second_var, rest_vars.clone())),
                 );
+                let actual = if matches!(&pattern.value, Pattern::DataTuple { .. }) {
+                    self.structure(
+                        uf,
+                        rank,
+                        FlatType::App1(
+                            nash_ast::primitives::builtin_home(),
+                            "data_tuple",
+                            vec![actual],
+                        ),
+                    )
+                } else {
+                    actual
+                };
                 state =
                     self.pattern_equal(uf, rank, state, region, PCategory::Tuple, actual, expected);
                 for (item, var) in rest.iter().zip(rest_vars).rev() {
@@ -268,6 +374,7 @@ impl<'a> Solver<'a, '_> {
                             context: type_::FieldContext::Pattern,
                             record,
                             field: None,
+                            allow_union_update: false,
                         },
                     );
                 }
@@ -281,6 +388,7 @@ impl<'a> Solver<'a, '_> {
                             context: type_::FieldContext::Pattern,
                             record,
                             field: Some(field),
+                            allow_union_update: false,
                         },
                     );
                 }
@@ -295,7 +403,10 @@ impl<'a> Solver<'a, '_> {
                 let actual = self.register(uf, rank, Content::FlexVar(None));
                 let annotation = type_::literal_annotation(
                     self.bump,
-                    &[type_::literal_trait(trait_name), type_::eq_trait()],
+                    &[
+                        self.tables.core_trait(type_::literal_trait(trait_name)),
+                        self.tables.core_trait(type_::eq_trait()),
+                    ],
                 );
                 state = self.foreign(
                     uf,

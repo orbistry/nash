@@ -19,6 +19,9 @@ description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a\nt
                             PackageName {
                                 author: "nash",
                                 project: "core",
+                                version: "",
+                                source: Compiler,
+                                compilation: None,
                             },
                         ),
                         name: "Builtin",
@@ -49,6 +52,9 @@ description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a\nt
                             PackageName {
                                 author: "nash",
                                 project: "core",
+                                version: "",
+                                source: Compiler,
+                                compilation: None,
                             },
                         ),
                         name: "Builtin",

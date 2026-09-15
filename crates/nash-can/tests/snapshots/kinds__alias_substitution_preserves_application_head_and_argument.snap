@@ -19,6 +19,9 @@ Located {
                     PackageName {
                         author: "nash",
                         project: "core",
+                        version: "",
+                        source: Compiler,
+                        compilation: None,
                     },
                 ),
                 name: "Builtin",
@@ -44,6 +47,9 @@ Located {
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",

@@ -134,6 +134,7 @@ Module {
                         ],
                     },
                 },
+                transparent: false,
             },
         },
     ],

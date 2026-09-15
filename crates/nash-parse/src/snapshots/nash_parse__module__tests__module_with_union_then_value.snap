@@ -190,6 +190,7 @@ Module {
                     },
                 ],
                 attributes: [],
+                data_layout: None,
             },
         },
     ],

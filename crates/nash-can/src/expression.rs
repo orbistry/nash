@@ -21,6 +21,10 @@ use crate::scc;
 use crate::types;
 use crate::warning::{Warning, WarningContext};
 
+mod calls;
+mod forms;
+pub use calls::reorder_arguments;
+
 pub type FreeLocals<'a> = BTreeMap<&'a str, Uses>;
 
 #[derive(Clone, Copy, Debug)]
@@ -95,7 +99,57 @@ pub fn canonicalize_expr<'a>(
 ) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
     let region = expr.region;
     let can_expr = match &expr.value {
+        SourceExpr::TypeScope { value } => CanExpr::TypeScope {
+            value: canonicalize_expr(bump, env, value, free_locals, warnings)?,
+        },
+        SourceExpr::ModuleConstantCheck { value } => CanExpr::ModuleConstantCheck {
+            value: canonicalize_expr(bump, env, value, free_locals, warnings)?,
+        },
+        SourceExpr::RunnableCheck { .. } => {
+            return forms::runnable(bump, env, expr, free_locals, warnings);
+        }
         SourceExpr::Constant(value) => CanExpr::Constant(*value),
+        SourceExpr::Equal {
+            left,
+            right,
+            negate,
+        } => CanExpr::Equal {
+            left: canonicalize_expr(bump, env, left, free_locals, warnings)?,
+            right: canonicalize_expr(bump, env, right, free_locals, warnings)?,
+            negate: *negate,
+        },
+        SourceExpr::Format { value } => CanExpr::Format {
+            value: canonicalize_expr(bump, env, value, free_locals, warnings)?,
+        },
+        SourceExpr::TraceLabel { .. } => {
+            return forms::trace_label(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::Convert { .. } => {
+            return forms::convert(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::TupleIndex { tuple, index } => CanExpr::TupleIndex {
+            tuple: canonicalize_expr(bump, env, tuple, free_locals, warnings)?,
+            index: *index,
+        },
+        SourceExpr::ConstructorRef { .. } => {
+            return forms::constructor_reference(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::LetValue { .. } => {
+            return forms::let_value(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::Match { .. } => {
+            return forms::refutable_match(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::RecordUpdate { .. } => {
+            return forms::record_update(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::Pair { first, second } => CanExpr::Pair {
+            first: canonicalize_expr(bump, env, first, free_locals, warnings)?,
+            second: canonicalize_expr(bump, env, second, free_locals, warnings)?,
+        },
+        SourceExpr::DataList { .. } => {
+            return forms::data_list(bump, env, expr, free_locals, warnings);
+        }
         SourceExpr::Str(s) => CanExpr::Str(s),
         SourceExpr::Bytes(bytes) => CanExpr::Bytes(bytes),
         SourceExpr::Int(n) => CanExpr::Int(*n),
@@ -197,121 +251,28 @@ pub fn canonicalize_expr<'a>(
             }
         }
 
-        SourceExpr::Negate(inner) => {
-            let trait_ = nash_ast::primitives::num_trait();
-            let annotation = env
-                .module
-                .method_annotation(trait_, "negate")
-                .ok_or_else(|| vec![Error::NegateWithoutNum { region }])?;
-            let function = bump.alloc(Located::at(
-                region,
-                CanExpr::VarMethod {
-                    trait_,
-                    method: "negate",
-                    annotation,
-                },
-            ));
-            let argument = canonicalize_expr(bump, env, inner, free_locals, warnings)?;
-            CanExpr::Call {
-                function,
-                arguments: bump.alloc_slice_copy(&[argument]),
-            }
+        SourceExpr::Negate(_) => {
+            return forms::negate(bump, env, expr, free_locals, warnings);
         }
 
         SourceExpr::BinOps { operands, last } => {
             return canonicalize_binops(bump, env, operands, last, region, free_locals, warnings);
         }
 
+        SourceExpr::Callable { .. } => {
+            return forms::callable(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::Function { .. } => {
+            return forms::function(bump, env, expr, free_locals, warnings);
+        }
+        SourceExpr::SurfaceCall { .. } => calls::call(bump, env, expr, free_locals, warnings)?,
+        SourceExpr::Pipe { .. } => calls::pipe(bump, env, expr, free_locals, warnings)?,
         SourceExpr::Lambda { parameters, body } => {
             return canonicalize_lambda(bump, env, parameters, body, region, free_locals, warnings);
         }
 
-        SourceExpr::Call {
-            function,
-            arguments,
-        } => {
-            let can_func = canonicalize_expr(bump, env, function, free_locals, warnings)?;
-            let labeled = if let (
-                [argument],
-                CanExpr::VarConstructor {
-                    reference, index, ..
-                },
-            ) = (*arguments, &can_func.value)
-                && let SourceExpr::Record {
-                    fields,
-                    grouped: false,
-                } = &argument.value
-            {
-                env.module
-                    .ctors
-                    .values()
-                    .chain(env.module.q_ctors.values().flat_map(|ctors| ctors.values()))
-                    .find_map(|info| {
-                        let Info::Specific(
-                            _,
-                            EnvCtor::Union {
-                                home,
-                                type_name,
-                                union,
-                                ..
-                            },
-                        ) = info
-                        else {
-                            return None;
-                        };
-                        if *home != reference.home || *type_name != reference.union {
-                            return None;
-                        }
-                        union
-                            .ctors
-                            .iter()
-                            .find(|ctor| ctor.index == *index)
-                            .and_then(|ctor| ctor.labels)
-                            .map(|labels| (labels, *fields))
-                    })
-            } else {
-                None
-            };
-            let can_args = if let Some((labels, fields)) = labeled {
-                let CanExpr::VarConstructor { reference, .. } = &can_func.value else {
-                    unreachable!()
-                };
-                let given = check_field_assigns(fields)?;
-                let mut errors = Vec::new();
-                for label in labels {
-                    if !given.contains_key(label) {
-                        errors.push(Error::LabeledCtorMissingField {
-                            region,
-                            ctor: reference.name,
-                            field: label,
-                        });
-                    }
-                }
-                for (name, assign) in &given {
-                    if !labels.contains(name) {
-                        errors.push(Error::LabeledCtorExtraField {
-                            region: assign.field.region,
-                            ctor: reference.name,
-                            field: name,
-                        });
-                    }
-                }
-                if !errors.is_empty() {
-                    return Err(errors);
-                }
-                crate::accumulate::try_all_alloc_ref(
-                    bump,
-                    labels.iter().map(|label| {
-                        canonicalize_expr(bump, env, given[label].value, free_locals, warnings)
-                    }),
-                )?
-            } else {
-                canonicalize_exprs(bump, env, arguments, free_locals, warnings)?
-            };
-            CanExpr::Call {
-                function: can_func,
-                arguments: can_args,
-            }
+        SourceExpr::Call { .. } => {
+            return forms::call(bump, env, expr, free_locals, warnings);
         }
 
         SourceExpr::If {
@@ -323,13 +284,8 @@ pub fn canonicalize_expr<'a>(
             return canonicalize_let(bump, env, defs, body, region, free_locals, warnings);
         }
 
-        SourceExpr::Case { scrutinee, arms } => {
-            let can_scrutinee = canonicalize_expr(bump, env, scrutinee, free_locals, warnings)?;
-            let can_branches = canonicalize_case_branches(bump, env, arms, free_locals, warnings)?;
-            CanExpr::Case {
-                scrutinee: can_scrutinee,
-                branches: can_branches,
-            }
+        SourceExpr::Case { .. } => {
+            return forms::case(bump, env, expr, free_locals, warnings);
         }
 
         SourceExpr::Accessor(field) => CanExpr::Accessor(field),
@@ -338,6 +294,27 @@ pub fn canonicalize_expr<'a>(
             record: canonicalize_expr(bump, env, record, free_locals, warnings)?,
             field,
         },
+        SourceExpr::FieldOrModule {
+            record,
+            field,
+            module,
+        } => {
+            let record = canonicalize_expr(bump, env, record, free_locals, warnings)?;
+            // An unavailable module member is not a failure while a record
+            // candidate remains; inference then reports the record error.
+            let module = module.and_then(|module| {
+                canonicalize_expr(bump, env, module, free_locals, warnings).ok()
+            });
+            let module_labels = module
+                .and_then(|module| calls::callable(env, &module.value))
+                .and_then(|(_, labels)| labels);
+            CanExpr::FieldOrModule {
+                record,
+                field,
+                module,
+                module_labels,
+            }
+        }
 
         SourceExpr::Update { record, fields } => {
             canonicalize_update(bump, env, record, fields, free_locals, warnings)?
@@ -349,6 +326,15 @@ pub fn canonicalize_expr<'a>(
 
         SourceExpr::Unit => CanExpr::Unit,
 
+        SourceExpr::DataTuple {
+            first,
+            second,
+            rest,
+        } => CanExpr::DataTuple {
+            first: canonicalize_expr(bump, env, first, free_locals, warnings)?,
+            second: canonicalize_expr(bump, env, second, free_locals, warnings)?,
+            rest: canonicalize_exprs(bump, env, rest, free_locals, warnings)?,
+        },
         SourceExpr::Tuple {
             first,
             second,
@@ -446,7 +432,7 @@ fn canonicalize_do<'a>(
             *expr,
         ),
     };
-    let trait_ = nash_ast::primitives::monad_trait();
+    let trait_ = env.module.core_trait(nash_ast::primitives::monad_trait());
     let annotation = env
         .module
         .method_annotation(trait_, "bind")
@@ -491,7 +477,19 @@ fn irrefutable(pattern: &SourcePattern<'_>) -> bool {
         | SourcePattern::Record(_)
         | SourcePattern::Unit => true,
         SourcePattern::Alias { pattern, .. } => irrefutable(&pattern.value),
-        SourcePattern::Tuple {
+        SourcePattern::Pair { first, second } => {
+            irrefutable(&first.value) && irrefutable(&second.value)
+        }
+        SourcePattern::DataList {
+            elements: [],
+            tail: Some(tail),
+        } => irrefutable(&tail.value),
+        SourcePattern::DataTuple {
+            first,
+            second,
+            rest,
+        }
+        | SourcePattern::Tuple {
             first,
             second,
             rest,
@@ -500,7 +498,16 @@ fn irrefutable(pattern: &SourcePattern<'_>) -> bool {
                 && irrefutable(&second.value)
                 && rest.iter().all(|pattern| irrefutable(&pattern.value))
         }
-        _ => false,
+        SourcePattern::Constructor { .. }
+        | SourcePattern::Ctor { .. }
+        | SourcePattern::CtorQual { .. }
+        | SourcePattern::Constant(_)
+        | SourcePattern::Str(_)
+        | SourcePattern::Bytes(_)
+        | SourcePattern::Int(_)
+        | SourcePattern::DataList { .. }
+        | SourcePattern::List(_)
+        | SourcePattern::Cons { .. } => false,
     }
 }
 
@@ -624,6 +631,7 @@ fn to_var_ctor<'a>(
             index,
             arguments,
             options,
+            union,
             ..
         } => {
             // Build: a -> b -> ... -> TypeName a b
@@ -646,14 +654,19 @@ fn to_var_ctor<'a>(
                     ),
                 },
             ));
-            // foldr TLambda result args
-            let mut typ: &Located<CanType> = result_type;
-            for arg in arguments.iter().rev() {
-                typ = bump.alloc(Located::at(
+            let typ = if union.data_layout.is_some() && !arguments.is_empty() {
+                &*bump.alloc(Located::at(
                     Region::zero(),
-                    CanType::Lambda { from: arg, to: typ },
-                ));
-            }
+                    CanType::Function {
+                        arguments,
+                        result: result_type,
+                    },
+                ))
+            } else {
+                arguments.iter().rev().fold(result_type, |to, from| {
+                    &*bump.alloc(Located::at(Region::zero(), CanType::Lambda { from, to }))
+                })
+            };
             let annotation = bump.alloc(Annotation {
                 context: &[],
                 free_vars,
@@ -1317,7 +1330,21 @@ fn collect_pattern_names<'a>(
             collect_pattern_names(&pattern.value, pattern.region, out);
             out.push((name.value, name.region));
         }
-        nash_source::Pattern::Tuple {
+        nash_source::Pattern::Pair { first, second } => {
+            collect_pattern_names(&first.value, first.region, out);
+            collect_pattern_names(&second.value, second.region, out);
+        }
+        nash_source::Pattern::DataList { elements, tail } => {
+            for pattern in elements.iter().copied().chain(tail.iter().copied()) {
+                collect_pattern_names(&pattern.value, pattern.region, out);
+            }
+        }
+        nash_source::Pattern::DataTuple {
+            first,
+            second,
+            rest,
+        }
+        | nash_source::Pattern::Tuple {
             first,
             second,
             rest,
@@ -1331,6 +1358,11 @@ fn collect_pattern_names<'a>(
         nash_source::Pattern::Ctor { args, .. } | nash_source::Pattern::CtorQual { args, .. } => {
             for arg in *args {
                 collect_pattern_names(&arg.value, arg.region, out);
+            }
+        }
+        nash_source::Pattern::Constructor { args, .. } => {
+            for arg in *args {
+                collect_pattern_names(&arg.pattern.value, arg.pattern.region, out);
             }
         }
         nash_source::Pattern::List(patterns) => {
@@ -1373,7 +1405,21 @@ fn get_pattern_names<'a>(
             names.insert(0, (name.value, name.region));
             get_pattern_names(names, pattern)
         }
-        nash_source::Pattern::Tuple {
+        nash_source::Pattern::Pair { first, second } => {
+            let names = get_pattern_names(names, first);
+            get_pattern_names(names, second)
+        }
+        nash_source::Pattern::DataList { elements, tail } => elements
+            .iter()
+            .copied()
+            .chain(tail.iter().copied())
+            .fold(names, get_pattern_names),
+        nash_source::Pattern::DataTuple {
+            first,
+            second,
+            rest,
+        }
+        | nash_source::Pattern::Tuple {
             first,
             second,
             rest,
@@ -1385,6 +1431,9 @@ fn get_pattern_names<'a>(
         nash_source::Pattern::Ctor { args, .. } | nash_source::Pattern::CtorQual { args, .. } => {
             args.iter().fold(names, |acc, p| get_pattern_names(acc, p))
         }
+        nash_source::Pattern::Constructor { args, .. } => args
+            .iter()
+            .fold(names, |acc, arg| get_pattern_names(acc, arg.pattern)),
         nash_source::Pattern::List(patterns) => patterns
             .iter()
             .fold(names, |acc, p| get_pattern_names(acc, p)),
@@ -1645,6 +1694,34 @@ pub fn gather_typed_args<'a>(
     annotation_typ: &'a Located<CanType<'a>>,
     bound: &mut Vec<(&'a str, Region)>,
 ) -> Result<(Vec<CanTypedPattern<'a>>, &'a Located<CanType<'a>>), Vec<Error<'a>>> {
+    if src_args.is_empty() {
+        return Ok((Vec::new(), annotation_typ));
+    }
+    let grouped = types::iterated_dealias(bump, annotation_typ);
+    if let CanType::Function { arguments, result } = &grouped.value {
+        let nullary = arguments.is_empty()
+            && src_args.len() == 1
+            && matches!(src_args[0].value, nash_source::Pattern::Unit);
+        if arguments.len() != src_args.len() && !nullary {
+            return Err(vec![Error::InvalidCall {
+                region: annotation_typ.region,
+                reason: "The declared function argument group does not match its parameters.",
+            }]);
+        }
+        let mut typed_args = Vec::with_capacity(src_args.len());
+        for (index, source) in src_args.iter().enumerate() {
+            let typ = if nullary {
+                &*bump.alloc(Located::at(source.region, CanType::unit()))
+            } else {
+                arguments[index]
+            };
+            typed_args.push(CanTypedPattern {
+                pattern: pattern::canonicalize(bump, env, source, bound)?,
+                typ,
+            });
+        }
+        return Ok((typed_args, result));
+    }
     let mut typed_args = Vec::with_capacity(src_args.len());
     let mut current_type = annotation_typ;
     for (index, src_arg) in src_args.iter().enumerate() {

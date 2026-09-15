@@ -23,7 +23,7 @@ fn newline(out: &mut String, indent: usize) {
 }
 fn write_core(out: &mut String, core: &Core<'_>, indent: usize, context: u8) {
     let precedence = match core {
-        Core::Var(_) | Core::Lit(_) | Core::Error => 2,
+        Core::Var(_) | Core::Lit(_) | Core::Evaluated { .. } | Core::Error => 2,
         Core::App { args, .. } | Core::Builtin { args, .. } if args.is_empty() => 2,
         Core::App { .. }
         | Core::Builtin { .. }
@@ -47,6 +47,9 @@ fn write_core(out: &mut String, core: &Core<'_>, indent: usize, context: u8) {
             nash_plutus::constant::Constant::Unit => out.push_str("()"),
             _ => out.push_str(&nash_plutus::pretty::constant(c)),
         },
+        Core::Evaluated { term, ty } => {
+            write!(out, "evaluated<{ty}>({})", nash_plutus::pretty::term(term)).unwrap();
+        }
         Core::Lam { params, body } => {
             out.push('\\');
             for (index, p) in params.iter().enumerate() {

@@ -12,7 +12,10 @@ use std::sync::Arc;
 
 use bumpalo::Bump;
 use nash_can::Interface;
-use nash_frontend::{FrontendDiagnostic, ModuleName, Severity};
+use nash_frontend::{
+    FrontendDiagnostic, ModuleKey, ModuleName, PackageId, PackageSourceId, ResolvedDependency,
+    Severity,
+};
 use tokio::sync::Mutex;
 use url::Url;
 
@@ -100,6 +103,9 @@ pub struct SolvedModule<'a> {
     pub module: &'a nash_ast::Module<'a>,
     pub annotations: nash_can::Annotations<'a>,
     pub types: nash_solve::SolvedTypes<'a>,
+    pub key: ModuleKey,
+    pub project: Option<Arc<nash_frontend::ProjectMetadata>>,
+    pub source_entries: &'a [nash_frontend::SourceEntryPoint<'a>],
 }
 
 /// Borrowed canonical build state. A finish callback must produce an owned
@@ -143,7 +149,7 @@ where
     F: for<'a> FnOnce(Solved<'a>) -> R + Send + 'static,
 {
     let modules: Vec<&Url> = graph.levels().into_iter().flatten().collect();
-    let sources = fetch_sources(&db, &modules)
+    let sources = fetch_sources(&db, &modules, catalog)
         .await
         .into_iter()
         .map(|(uri, source)| {
@@ -154,8 +160,9 @@ where
 
     let edges = graph.edges.clone();
     let diagnostics = graph.diagnostics.clone();
+    let resolved = graph.resolved.clone();
     tokio::task::spawn_blocking(move || {
-        build_sync_with_edges_and(sources, &edges, &diagnostics, finish)
+        build_sync_with_edges_and(sources, &edges, &diagnostics, &resolved, finish)
     })
     .await
     .expect("compile task panicked")
@@ -172,17 +179,36 @@ fn build_sync_with_edges(
     edges: &HashMap<Url, Vec<Url>>,
     diagnostics: &HashMap<Url, Vec<FrontendDiagnostic>>,
 ) -> BuildResult {
-    build_sync_with_edges_and(sources, edges, diagnostics, |_| ()).0
+    let catalog = sources
+        .iter()
+        .map(|(uri, spec, _)| (uri.clone(), spec.clone()))
+        .collect();
+    let index = module_index(&catalog);
+    let resolved = sources
+        .iter()
+        .map(|(uri, spec, source)| {
+            let dependencies = source
+                .as_ref()
+                .map(|source| inspect_source(uri, spec, source, &index).0)
+                .unwrap_or_default();
+            (uri.clone(), dependencies)
+        })
+        .collect();
+    build_sync_with_edges_and(sources, edges, diagnostics, &resolved, |_| ()).0
 }
 
 fn build_sync_with_edges_and<R>(
     sources: Vec<(Url, SourceSpec, Result<String, String>)>,
     edges: &HashMap<Url, Vec<Url>>,
     diagnostics: &HashMap<Url, Vec<FrontendDiagnostic>>,
+    resolved: &HashMap<Url, Vec<ResolvedDependency>>,
     finish: impl for<'a> FnOnce(Solved<'a>) -> R,
 ) -> (BuildResult, Option<R>) {
     let store = Bump::new();
-    let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
+    let builtin = nash_can::kinds::builtin_interface(&store);
+    let mut interfaces: BTreeMap<(Option<std::path::PathBuf>, ModuleKey), Interface<'_>> =
+        BTreeMap::new();
+    let scopes = compilation_scopes(&sources);
     let mut public_interfaces = HashMap::new();
     let mut solved = BTreeMap::new();
 
@@ -230,14 +256,52 @@ fn build_sync_with_edges_and<R>(
             );
             continue;
         }
-        let (output, compiled) = compile_module(uri, spec, source, &store, &interfaces, inspected);
+        let dependencies = resolved.get(uri).map_or(&[][..], Vec::as_slice);
+        let reachable = resolved_closure(uri, resolved);
+        let mut local_interfaces = BTreeMap::from([("Builtin", builtin.clone())]);
+        for ((scope, key), interface) in &interfaces {
+            if scope != &spec.resolution_root
+                || (!visible(spec, &key.package) && !reachable.contains(key))
+            {
+                continue;
+            }
+            let mut names = dependencies
+                .iter()
+                .filter(|dependency| dependency.provider == *key)
+                .peekable();
+            if names.peek().is_none() {
+                // Retain transitive type and instance contracts without exposing another
+                // provider under an import spelling chosen in this module.
+                let hidden: &str = store.alloc_str(&format!("#{:?}", key));
+                local_interfaces.insert(hidden, interface.clone());
+            } else {
+                for dependency in names {
+                    let name: &str = store.alloc_str(dependency.requested.as_str());
+                    local_interfaces.insert(name, interface.clone());
+                }
+            }
+        }
+        let compilation = spec
+            .resolution_root
+            .as_ref()
+            .and_then(|root| scopes.get(root))
+            .copied();
+        let (output, compiled) = compile_module(
+            uri,
+            spec,
+            source,
+            &store,
+            &local_interfaces,
+            inspected,
+            compilation,
+        );
         if let Some((interface, module)) = compiled {
             public_interfaces.insert(
                 uri.clone(),
                 crate::interface::Interface::from_canonical(&interface),
             );
-            solved.insert(interface.home.name, module);
-            interfaces.insert(interface.home.name, interface);
+            solved.insert((spec.resolution_root.clone(), spec.key.clone()), module);
+            interfaces.insert((spec.resolution_root.clone(), spec.key.clone()), interface);
         }
         all_warnings.extend(output.warnings);
         results.insert(output.uri, output.result);
@@ -282,7 +346,7 @@ fn build_sync(
         .iter()
         .map(|(uri, package, _)| {
             let mut spec = SourceSpec::standalone(uri).unwrap();
-            spec.package = package.clone();
+            spec.key.package.name = package.as_ref().map(ToString::to_string);
             (uri.clone(), spec)
         })
         .collect();
@@ -296,7 +360,8 @@ fn build_sync(
                 |source| inspect_source(&uri, &catalog[&uri], source, &index),
             );
             graph.diagnostics.insert(uri.clone(), diagnostics);
-            graph.add_module(uri.clone(), imports);
+            graph.add_module(uri.clone(), dependency_uris(&imports));
+            graph.resolved.insert(uri.clone(), imports);
             (uri, source)
         })
         .collect();
@@ -319,16 +384,89 @@ fn build_sync(
 async fn fetch_sources(
     db: &Arc<Mutex<Database>>,
     uris: &[&Url],
+    catalog: &ModuleCatalog,
 ) -> Vec<(Url, Result<String, String>)> {
     // Database::source needs exclusive access across the read, so spawning
     // tasks cannot parallelize these reads and would lose dependency order.
     let mut db = db.lock().await;
     let mut results = Vec::with_capacity(uris.len());
     for &uri in uris {
-        let source = db.source(uri).await.map(str::to_owned);
+        let source = match &catalog[uri].synthetic_source {
+            Some(source) => Ok(source.clone()),
+            None => db
+                .source_for(uri, &catalog[uri].key)
+                .await
+                .map(str::to_owned),
+        };
         results.push((uri.clone(), source.map_err(|e| e.to_string())));
     }
     results
+}
+
+fn canonical_package<'a>(
+    store: &'a Bump,
+    package: &PackageId,
+    compilation: Option<u64>,
+) -> Option<nash_ast::PackageName<'a>> {
+    let name = package.name.as_deref()?;
+    let (author, project) = name.split_once('/').unwrap_or(("", name));
+    let source = match &package.source {
+        PackageSourceId::Local(path) => nash_ast::PackageSource::Local(
+            store.alloc_slice_copy(path.as_os_str().as_encoded_bytes()),
+        ),
+        PackageSourceId::Github => nash_ast::PackageSource::Github,
+        PackageSourceId::Gitlab => nash_ast::PackageSource::Gitlab,
+        PackageSourceId::Bitbucket => nash_ast::PackageSource::Bitbucket,
+        PackageSourceId::Compiler => nash_ast::PackageSource::Compiler,
+    };
+    Some(nash_ast::PackageName {
+        author: store.alloc_str(author),
+        project: store.alloc_str(project),
+        version: store.alloc_str(&package.version),
+        source,
+        compilation,
+    })
+}
+
+fn compilation_scopes(
+    sources: &[(Url, SourceSpec, Result<String, String>)],
+) -> BTreeMap<std::path::PathBuf, u64> {
+    use std::hash::{Hash, Hasher};
+    let mut roots = BTreeMap::<
+        _,
+        (
+            std::collections::BTreeSet<_>,
+            BTreeMap<_, _>,
+            std::collections::BTreeSet<_>,
+        ),
+    >::new();
+    for (_, spec, source) in sources {
+        let Some(root) = &spec.resolution_root else {
+            continue;
+        };
+        let (packages, configuration, aliases) = roots.entry(root.clone()).or_default();
+        aliases.insert(&spec.import_aliases);
+        if matches!(&spec.key.package.source, PackageSourceId::Local(path) if path == root) {
+            packages.insert(&spec.key.package);
+        }
+        if matches!(
+            spec.role,
+            Some(nash_frontend::ModuleRole::Environment | nash_frontend::ModuleRole::Configuration)
+        ) {
+            configuration.insert(
+                &spec.key,
+                source.as_ref().map(String::as_str).map_err(String::as_str),
+            );
+        }
+    }
+    roots
+        .into_iter()
+        .map(|(root, identity)| {
+            let mut hash = std::collections::hash_map::DefaultHasher::new();
+            identity.hash(&mut hash);
+            (root, hash.finish())
+        })
+        .collect()
 }
 
 /// Compile into the build arena, preserving the original canonical addresses.
@@ -340,6 +478,7 @@ fn compile_module<'s>(
     store: &'s Bump,
     interfaces: &BTreeMap<&'s str, Interface<'s>>,
     inspected: &[FrontendDiagnostic],
+    compilation: Option<u64>,
 ) -> (CompileOutput, Option<(Interface<'s>, SolvedModule<'s>)>) {
     let source = match source {
         Ok(source) => source,
@@ -360,8 +499,8 @@ fn compile_module<'s>(
         |_| uri.path().to_owned(),
         |path| path.to_string_lossy().into_owned(),
     );
-    let expected_name = spec.module.as_str();
-    let package = spec.package.as_ref();
+    let expected_name = spec.key.module.as_str();
+    let package = canonical_package(store, &spec.key.package, compilation);
     let source_view = nash_report::Source::new(source);
     let owned = |name: &str, reports: Vec<nash_report::Report>| {
         let mut reports = nash_report::ModuleReports {
@@ -437,18 +576,9 @@ fn compile_module<'s>(
     let module = parsed.module;
     let name = expected_name;
     // Default imports belong to Plan 12; localize exactly the imports in use.
-    let localizer =
-        nash_report::Localizer::from_module(module, &[]).with_package(package.map(|package| {
-            nash_ast::PackageName {
-                author: bump.alloc_str(package.author()),
-                project: bump.alloc_str(package.project()),
-            }
-        }));
+    let localizer = nash_report::Localizer::from_module(module, &[]).with_package(package);
     let context = nash_can::Context {
-        package: package.map(|package| nash_ast::PackageName {
-            author: bump.alloc_str(package.author()),
-            project: bump.alloc_str(package.project()),
-        }),
+        package,
         interfaces: Some(interfaces),
     };
     let can_result = match nash_can::canonicalize(bump, context, module) {
@@ -474,7 +604,8 @@ fn compile_module<'s>(
     };
     let mut uf = nash_constrain::UnionFind::new();
     let module = &can_result.module;
-    let (annotations, types) = match nash_solve::run(bump, &mut uf, module, &can_result.tables) {
+    let (annotations, mut types) = match nash_solve::run(bump, &mut uf, module, &can_result.tables)
+    {
         Ok(solved) => solved,
         Err(errors) => {
             return failed(
@@ -499,14 +630,33 @@ fn compile_module<'s>(
     if let Err(errors) = nash_nitpick::check(bump, &can_result.module) {
         return failed(name, nash_report::ModuleError::Patterns(errors), warnings);
     }
+    let interface = nash_can::from_module(
+        bump,
+        module,
+        &annotations,
+        &can_result.tables.kinds.declared,
+    );
+    if parsed.reject_private_types_in_exports {
+        let errors = check_export_types(bump, module, &interface, interfaces, &types);
+        if !errors.is_empty() {
+            return failed(
+                name,
+                nash_report::ModuleError::Types(localizer, errors),
+                warnings,
+            );
+        }
+    }
+    types.commit_declared_holes(&can_result.tables.kinds.declared);
     let module = bump.alloc(can_result.module);
-    let interface = nash_can::from_module(bump, module, &annotations);
     let solved = SolvedModule {
         uri: uri.clone(),
         tables: can_result.tables,
         module,
         annotations,
         types,
+        key: spec.key.clone(),
+        project: spec.project.clone(),
+        source_entries: parsed.entry_points,
     };
     let output = CompileOutput {
         uri: uri.clone(),
@@ -516,6 +666,147 @@ fn compile_module<'s>(
         warnings,
     };
     (output, Some((interface, solved)))
+}
+
+fn check_export_types<'a>(
+    bump: &'a Bump,
+    module: &nash_ast::Module<'a>,
+    interface: &Interface<'a>,
+    imports: &BTreeMap<&str, Interface<'a>>,
+    solved: &nash_solve::SolvedTypes<'a>,
+) -> Vec<nash_constrain::error::Error<'a>> {
+    use nash_ast::{Decls, Def};
+    let mut regions = BTreeMap::new();
+    let mut declarations = module.decls;
+    loop {
+        let (definitions, next) = match declarations {
+            Decls::Declare { definition, next } => (std::slice::from_ref(definition), *next),
+            Decls::DeclareRec {
+                definition,
+                following,
+                next,
+            } => {
+                let (Def::Def { name, .. } | Def::TypedDef { name, .. }) = definition;
+                regions.insert(name.value, name.region);
+                (*following, *next)
+            }
+            Decls::Empty => break,
+        };
+        for definition in definitions {
+            let (Def::Def { name, .. } | Def::TypedDef { name, .. }) = definition;
+            regions.insert(name.value, name.region);
+        }
+        declarations = next;
+    }
+    let owners: HashMap<_, _> = imports
+        .values()
+        .chain(std::iter::once(interface))
+        .map(|owner| (owner.home, owner))
+        .collect();
+    let mut signatures: Vec<_> = interface
+        .values
+        .iter()
+        .map(|value| (regions[value.name], value.annotation.typ))
+        .collect();
+    for union in interface.unions {
+        if union.visibility == nash_can::UnionVisibility::Open {
+            let region = module
+                .unions
+                .iter()
+                .find(|item| item.value.name.value == union.name)
+                .expect("interface union belongs to its canonical module")
+                .region;
+            for constructor in union.ctors {
+                signatures.extend(constructor.arguments.iter().map(|typ| (region, *typ)));
+            }
+        }
+    }
+    signatures
+        .into_iter()
+        .filter_map(|(region, typ)| {
+            let leaked = private_signature_type(bump, typ, &owners, solved, &interface.declared)?;
+            let declaration = (leaked.home == module.name)
+                .then(|| {
+                    module
+                        .unions
+                        .iter()
+                        .find(|union| union.value.name.value == leaked.name)
+                        .map(|union| union.value.name.region)
+                })
+                .flatten();
+            Some(nash_constrain::error::Error::PrivateTypeLeak {
+                region,
+                declaration,
+                name: leaked.name,
+            })
+        })
+        .collect()
+}
+
+fn private_signature_type<'a>(
+    bump: &'a Bump,
+    typ: &'a nash_region::Located<nash_ast::Type<'a>>,
+    owners: &HashMap<nash_ast::ModuleName<'a>, &Interface<'a>>,
+    solved: &nash_solve::SolvedTypes<'a>,
+    declared: &nash_ast::declared::DeclaredStore,
+) -> Option<nash_ast::QualifiedName<'a>> {
+    use nash_ast::Type;
+    let mut pending = vec![typ];
+    let mut holes = std::collections::HashSet::new();
+    while let Some(typ) = pending.pop() {
+        match &typ.value {
+            Type::Named { reference, args } => {
+                if reference.home != nash_ast::primitives::builtin_home()
+                    && owners.get(&reference.home).is_some_and(|owner| {
+                        owner.unions.iter().any(|union| {
+                            union.name == reference.name
+                                && union.visibility == nash_can::UnionVisibility::Private
+                        })
+                    })
+                {
+                    return Some(*reference);
+                }
+                pending.extend_from_slice(args);
+            }
+            Type::Alias {
+                arguments, target, ..
+            } => {
+                pending.push(nash_can::types::dealias(bump, arguments, target));
+            }
+            Type::DeclaredHole(hole) if holes.insert(hole.id) => {
+                let solution = match solved
+                    .declared_refinements
+                    .iter()
+                    .find(|(id, _)| *id == hole.id)
+                {
+                    Some((_, Some(typ))) => Some(typ.materialize(bump)),
+                    Some((_, None)) => None,
+                    None => declared.resolve(bump, hole),
+                };
+                pending.extend(solution);
+            }
+            Type::Function { arguments, result } => {
+                pending.extend_from_slice(arguments);
+                pending.push(result);
+            }
+            Type::Lambda { from, to } => pending.extend([*from, *to]),
+            Type::App { head, args } => {
+                pending.push(head);
+                pending.extend_from_slice(args);
+            }
+            Type::Record { fields } => pending.extend(fields.iter().map(|field| field.typ)),
+            Type::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                pending.extend([*first, *second]);
+                pending.extend_from_slice(rest);
+            }
+            Type::Hole | Type::DeclaredHole(_) | Type::Var(_) => {}
+        }
+    }
+    None
 }
 
 fn count_decls(decls: &nash_ast::Decls<'_>) -> usize {
@@ -536,9 +827,11 @@ pub async fn build_graph(
     let mut graph = DepGraph::new();
     let index = module_index(catalog);
     for (uri, spec) in catalog {
-        let source = {
+        let source = if let Some(source) = &spec.synthetic_source {
+            Ok(source.clone())
+        } else {
             let mut db = db.lock().await;
-            db.source(uri).await.map(str::to_owned)
+            db.source_for(uri, &spec.key).await.map(str::to_owned)
         };
         // Unreadable nodes stay in the graph; build reports the I/O failure.
         let (imports, diagnostics) = source.as_ref().map_or_else(
@@ -546,34 +839,74 @@ pub async fn build_graph(
             |source| inspect_source(uri, spec, source, &index),
         );
         graph.diagnostics.insert(uri.clone(), diagnostics);
-        graph.add_module(uri.clone(), imports);
+        graph.add_module(uri.clone(), dependency_uris(&imports));
+        graph.resolved.insert(uri.clone(), imports);
     }
     graph.compute_order()?;
     Ok(graph)
 }
 
-fn module_index(catalog: &ModuleCatalog) -> BTreeMap<&ModuleName, Vec<&Url>> {
+fn module_index(catalog: &ModuleCatalog) -> BTreeMap<&ModuleName, Vec<(&Url, &SourceSpec)>> {
     let mut index = BTreeMap::<_, Vec<_>>::new();
     for (uri, spec) in catalog {
-        index.entry(&spec.module).or_default().push(uri);
+        index.entry(&spec.key.module).or_default().push((uri, spec));
     }
     index
+}
+
+fn resolved_closure<'a>(
+    uri: &Url,
+    resolved: &'a HashMap<Url, Vec<ResolvedDependency>>,
+) -> std::collections::BTreeSet<&'a ModuleKey> {
+    let mut packages = std::collections::BTreeSet::new();
+    let mut pending = vec![uri];
+    while let Some(uri) = pending.pop() {
+        for dependency in resolved.get(uri).into_iter().flatten() {
+            if packages.insert(&dependency.provider) {
+                pending.push(&dependency.uri);
+            }
+        }
+    }
+    packages
+}
+
+fn visible(spec: &SourceSpec, package: &PackageId) -> bool {
+    spec.visible_packages
+        .as_ref()
+        .is_none_or(|packages| packages.contains(package))
+}
+
+fn dependency_uris(dependencies: &[ResolvedDependency]) -> Vec<Url> {
+    dependencies
+        .iter()
+        .map(|dependency| dependency.uri.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 fn inspect_source(
     uri: &Url,
     spec: &SourceSpec,
     source: &str,
-    index: &BTreeMap<&ModuleName, Vec<&Url>>,
-) -> (Vec<Url>, Vec<FrontendDiagnostic>) {
+    index: &BTreeMap<&ModuleName, Vec<(&Url, &SourceSpec)>>,
+) -> (Vec<ResolvedDependency>, Vec<FrontendDiagnostic>) {
     let mut diagnostics = Vec::new();
-    // Semantic interfaces are currently keyed by name, not package. Reject all
-    // colliding sources rather than allowing build order to pick a winner.
-    if spec.module.as_str() == "Builtin" || index[&spec.module].len() > 1 {
+    let same_identity = index[&spec.key.module]
+        .iter()
+        .filter(|(_, provider)| {
+            provider.resolution_root == spec.resolution_root
+                && (provider.key == spec.key || spec.visible_packages.is_none())
+        })
+        .count();
+    if spec.key.module.as_str() == "Builtin" || same_identity > 1 {
         diagnostics.push(FrontendDiagnostic::error(
             "NAF1003",
             "AMBIGUOUS MODULE",
-            format!("Module {} has more than one provider or conflicts with Builtin. Module names must be unique across source roots and packages.", spec.module.as_str()),
+            format!(
+                "Module {} has multiple providers in the same package or conflicts with Builtin.",
+                spec.key.module.as_str()
+            ),
             None,
         ));
     }
@@ -593,21 +926,57 @@ fn inspect_source(
         if dependency.module.as_str() == "Builtin" {
             continue;
         }
-        match index.get(&dependency.module).map(Vec::as_slice) {
-            Some([target]) => {
-                if !imports.contains(*target) {
-                    imports.push((*target).clone());
-                }
-            }
+        let requested = &dependency.module;
+        let selected = spec.import_aliases.get(requested).unwrap_or(requested);
+        let targets: Vec<_> = index
+            .get(selected)
+            .into_iter()
+            .flatten()
+            .filter(|(_, provider)| {
+                provider.resolution_root == spec.resolution_root
+                    && visible(spec, &provider.key.package)
+            })
+            .collect();
+        match targets.as_slice() {
+            [(target, provider)] => imports.push(ResolvedDependency {
+                requested: dependency.module,
+                provider: provider.key.clone(),
+                uri: (*target).clone(),
+                region: dependency.region,
+            }),
             targets => {
-                let ambiguous = targets.is_some();
+                let ambiguous = !targets.is_empty();
                 diagnostics.push(FrontendDiagnostic::error(
                     if ambiguous { "NAF1003" } else { "NAF1002" },
-                    if ambiguous { "AMBIGUOUS IMPORT" } else { "UNKNOWN IMPORT" },
                     if ambiguous {
-                        format!("Import {} matches multiple sources; module names must be unique across packages.", dependency.module.as_str())
+                        "AMBIGUOUS IMPORT"
                     } else {
-                        format!("No source provides module {}.", dependency.module.as_str())
+                        "UNKNOWN IMPORT"
+                    },
+                    if ambiguous {
+                        let providers = targets
+                            .iter()
+                            .map(|(_, provider)| {
+                                format!(
+                                    "{}@{} ({:?})",
+                                    provider
+                                        .key
+                                        .package
+                                        .name
+                                        .as_deref()
+                                        .unwrap_or("application"),
+                                    provider.key.package.version,
+                                    provider.key.package.source
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        format!(
+                            "Import {} matches multiple visible source providers: {providers}.",
+                            requested.as_str()
+                        )
+                    } else {
+                        format!("No visible source provides module {}.", requested.as_str())
                     },
                     Some(dependency.region),
                 ));
@@ -624,7 +993,7 @@ fn frontend_reports(
     diagnostics: &[FrontendDiagnostic],
 ) -> nash_report::ModuleReports {
     let mut reports = nash_report::ModuleReports {
-        name: spec.module.as_str().to_owned(),
+        name: spec.key.module.as_str().to_owned(),
         path: uri.to_file_path().map_or_else(
             |_| uri.path().to_owned(),
             |path| path.to_string_lossy().into_owned(),
@@ -695,7 +1064,7 @@ mod tests {
         let (output, compiled) = compile_module(
             &url("Base.nash"), &SourceSpec::standalone(&url("Base.nash")).unwrap(),
             &Ok("module Base exposing (..)\ntrait Keep 'a where keep : 'a -> 'a\nidentity x = keep x\n".to_owned()),
-            &store, &interfaces, &[],
+            &store, &interfaces, &[], None,
         );
         assert!(matches!(output.result, ModuleResult::Success { .. }));
         let (interface, base) = compiled.unwrap();
@@ -707,6 +1076,7 @@ mod tests {
             &store,
             &interfaces,
             &[],
+            None,
         );
         assert!(
             matches!(output.result, ModuleResult::Success { .. }),
@@ -753,7 +1123,7 @@ mod tests {
         }
         let db = Arc::new(Mutex::new(Database::new(mem)));
         let ordered: Vec<_> = uris.iter().collect();
-        let sources = fetch_sources(&db, &ordered).await;
+        let sources = fetch_sources(&db, &ordered, &test_catalog(&uris)).await;
         assert_eq!(sources.len(), uris.len());
         for (index, (uri, source)) in sources.iter().enumerate() {
             assert_eq!(uri, &uris[index], "source moved out of dependency order");

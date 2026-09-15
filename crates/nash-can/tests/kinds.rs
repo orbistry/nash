@@ -73,6 +73,7 @@ fn ground_representation_does_not_bypass_formation_contexts() {
             context: &[],
             repr: None,
             alias: Some(big),
+            opaque: false,
         },
     );
     let alias = bump.alloc(Located::at_zero(Type::Alias {
@@ -427,7 +428,12 @@ fn imported_interfaces_retain_higher_kinded_types() {
             .module()
             .unwrap();
         let canonical = canonicalize(source_arena, Context::default(), &module).unwrap();
-        nash_can::from_module(source_arena, &canonical.module, &BTreeMap::new())
+        nash_can::from_module(
+            source_arena,
+            &canonical.module,
+            &BTreeMap::new(),
+            &canonical.tables.kinds.declared,
+        )
     };
     let kind = interface.unions[0].kind;
     assert_eq!(
@@ -462,7 +468,7 @@ fn imported_interfaces_retain_higher_kinded_types() {
     ));
     insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_debug_snapshot!((
-            interface,
+            &interfaces["Shapes"],
             canonical.module.unions[0].value.kind,
             canonical.module.unions[0].value.context
         ));
@@ -563,6 +569,7 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
     let a = bump.alloc(Located::at_zero(Type::Var("a")));
     let body = bump.alloc(Located::at_zero(Type::Lambda { from: a, to: a }));
     let interface = nash_can::Interface {
+        declared: Default::default(),
         impls: &[],
         traits: &[],
         home: nash_ast::ModuleName {
@@ -577,6 +584,7 @@ fn annotation_checks_alias_contract_before_argument_splitting() {
             parameters: &["a"],
             typ: body,
             visibility: nash_can::AliasVisibility::Public,
+            transparent: false,
             kind: &Kind::Arrow(&Kind::Type, &Kind::Type),
             context: bump.alloc_slice_copy(&[nash_ast::Pred::Implied {
                 trait_: nash_ast::primitives::ReprTrait::Big.qualified(),

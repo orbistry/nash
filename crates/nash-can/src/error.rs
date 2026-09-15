@@ -198,6 +198,15 @@ pub enum Error<'a> {
         parameter: &'a str,
     },
 
+    InvalidCall {
+        region: Region,
+        reason: &'a str,
+    },
+    InvalidConstructorPattern {
+        region: Region,
+        name: &'a str,
+        reason: &'a str,
+    },
     Unsupported {
         feature: &'static str,
         region: Region,

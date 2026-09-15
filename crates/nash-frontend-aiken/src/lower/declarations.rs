@@ -1,11 +1,11 @@
 use super::{Expr, Lower, Pattern, Result, n, profile};
 use aiken_lang::{
-    ast::{Annotation, ArgBy, ArgName, Definition, Span, UntypedArg, UntypedModule},
+    ast::{Annotation, ArgBy, ArgName, Definition, Span, UntypedArg, UntypedModule, UntypedTest},
     expr::UntypedExpr,
 };
 use nash_frontend::SourceInput;
 
-type Function<'a> = (&'a [Pattern<'a>], Expr<'a>, Option<&'a n::Annotation<'a>>);
+type Function<'a> = (&'a [Pattern<'a>], Expr<'a>, &'a n::Annotation<'a>);
 
 impl<'a> Lower<'a, '_> {
     pub(crate) fn module(
@@ -26,7 +26,7 @@ impl<'a> Lower<'a, '_> {
         let mut unions = Vec::new();
         let mut aliases = Vec::new();
         let mut exports = Vec::new();
-        let mut kind = n::ModuleKind::Normal;
+        let kind = n::ModuleKind::Normal;
         for def in &ast.definitions {
             match def {
                 Definition::Use(import) => {
@@ -45,7 +45,6 @@ impl<'a> Lower<'a, '_> {
                 }
                 Definition::Validator(validator) => {
                     let value = self.validator(validator)?;
-                    kind = n::ModuleKind::Validator(self.spans.region(validator.location));
                     exports.push(self.alloc(n::Exposed::Lower(value.value.name)));
                     values.push(value);
                 }
@@ -60,6 +59,7 @@ impl<'a> Lower<'a, '_> {
                         fun.return_annotation.as_ref(),
                         &fun.body,
                     )?;
+                    let body = self.callable(span, &fun.arguments, body);
                     let name = self.at(fun.location, self.text(&fun.name));
                     values.push(self.at(
                         span,
@@ -67,7 +67,7 @@ impl<'a> Lower<'a, '_> {
                             name,
                             arguments,
                             body,
-                            annotation,
+                            annotation: Some(annotation),
                             attributes: &[],
                         },
                     ));
@@ -90,6 +90,19 @@ impl<'a> Lower<'a, '_> {
                             })
                         })
                         .transpose()?;
+                    let body = match annotation {
+                        Some(annotation) => self.conversion_ascribe(
+                            constant.value.location(),
+                            body,
+                            annotation.typ,
+                            n::ConversionSite::ModuleConstant,
+                        ),
+                        None => body,
+                    };
+                    let body = self.at(
+                        constant.location,
+                        n::Expr::ModuleConstantCheck { value: body },
+                    );
                     values.push(self.at(
                         constant.location,
                         n::Value {
@@ -105,27 +118,28 @@ impl<'a> Lower<'a, '_> {
                     }
                 }
                 Definition::TypeAlias(alias) => {
-                    let name =
-                        self.at(alias.location, self.text(&profile::user_type(&alias.alias)));
+                    let name = self.at(alias.location, self.text(&alias.alias));
                     let arguments = self.type_parameters(alias.location, &alias.parameters);
                     aliases.push(self.at(
                         alias.location,
                         n::Alias {
                             name,
+                            transparent: true,
                             arguments,
                             typ: self.typ(&alias.annotation)?,
                             attributes: &[],
                         },
                     ));
                     if alias.public {
-                        exports.push(self.alloc(n::Exposed::LowerType {
+                        exports.push(self.alloc(n::Exposed::Upper {
                             name,
                             privacy: n::Privacy::Private,
                         }));
                     }
                 }
                 Definition::DataType(data) => {
-                    let name = self.at(data.location, self.text(&profile::user_type(&data.name)));
+                    let name = self.at(data.location, self.text(&data.name));
+                    let (encoding, tags) = crate::validate::data_layout(self.spans, data)?;
                     let mut ctors = Vec::new();
                     for ctor in &data.constructors {
                         let arguments = if ctor
@@ -136,8 +150,10 @@ impl<'a> Lower<'a, '_> {
                             let mut fields = Vec::new();
                             for arg in &ctor.arguments {
                                 let Some(label) = arg.label.as_deref() else {
-                                    return self
-                                        .unsupported(arg.location, "mixed constructor labels");
+                                    return self.invalid_declaration(
+                                        arg.location,
+                                        "A constructor cannot mix labeled and positional fields.",
+                                    );
                                 };
                                 fields.push((
                                     self.at(arg.location, self.text(label)),
@@ -162,13 +178,18 @@ impl<'a> Lower<'a, '_> {
                         data.location,
                         n::Union {
                             name,
+                            data_layout: Some(n::DataLayout {
+                                encoding,
+                                tags: self.slice(&tags),
+                                opaque: data.opaque,
+                            }),
                             arguments: self.type_parameters(data.location, &data.parameters),
                             ctors: self.slice(&ctors),
                             attributes: &[],
                         },
                     ));
                     if data.public {
-                        exports.push(self.alloc(n::Exposed::LowerType {
+                        exports.push(self.alloc(n::Exposed::Upper {
                             name,
                             privacy: if data.opaque {
                                 n::Privacy::Private
@@ -178,14 +199,27 @@ impl<'a> Lower<'a, '_> {
                         }));
                     }
                 }
-                _ => return self.unsupported(def.location(), "this declaration"),
+                Definition::Test(test) => {
+                    if input.origin != nash_frontend::SourceOrigin::Dependency {
+                        values.push(self.runnable(test, false)?);
+                    }
+                }
+                Definition::Benchmark(benchmark) => {
+                    if input.origin != nash_frontend::SourceOrigin::Dependency {
+                        values.push(self.runnable(benchmark, true)?);
+                    }
+                }
             }
         }
+        for value in &self.extra_values {
+            exports.push(self.alloc(n::Exposed::Lower(value.value.name)));
+        }
+        values.extend_from_slice(&self.extra_values);
         Ok(self.alloc(n::Module {
             kind,
             name: Some(self.at(span, self.text(input.expected_module.as_str()))),
             exports: self.at(span, n::Exposing::Explicit(self.slice(&exports))),
-            docs: self.alloc(n::Docs::NoDocs(self.spans.region(span))),
+            docs: self.module_docs(ast, span),
             imports: self.slice(&imports),
             values: self.slice(&values),
             unions: self.slice(&unions),
@@ -210,6 +244,105 @@ impl<'a> Lower<'a, '_> {
         self.slice(&params)
     }
 
+    pub(super) fn callable(
+        &self,
+        span: Span,
+        arguments: &[UntypedArg],
+        value: Expr<'a>,
+    ) -> Expr<'a> {
+        let labels = arguments
+            .iter()
+            .enumerate()
+            .map(|(index, arg)| self.text(&arg.arg_name(index).get_label()))
+            .collect::<Vec<_>>();
+        self.at(
+            span,
+            n::Expr::Callable {
+                arity: arguments.len(),
+                labels: self.slice(&labels),
+                value,
+            },
+        )
+    }
+
+    fn runnable(
+        &mut self,
+        runnable: &UntypedTest,
+        benchmark: bool,
+    ) -> Result<&'a nash_region::Located<n::Value<'a>>> {
+        let span = Span {
+            start: runnable.location.start,
+            end: runnable.end_position.saturating_add(1),
+        };
+        if (benchmark && runnable.arguments.len() != 1) || runnable.arguments.len() > 1 {
+            return self.invalid_declaration(
+                span,
+                if benchmark {
+                    "A benchmark requires exactly one parameter with a sampler."
+                } else {
+                    "A test accepts at most one parameter with a fuzzer."
+                },
+            );
+        }
+        // Generator expressions are outside the parameter's lexical scope.
+        let generator = runnable
+            .arguments
+            .first()
+            .map(|argument| self.expr(&argument.via))
+            .transpose()?;
+        let arguments = runnable
+            .arguments
+            .iter()
+            .map(|argument| argument.arg.clone())
+            .collect::<Vec<_>>();
+        let (parameters, body, annotation) = self.function(
+            span,
+            &arguments,
+            runnable.return_annotation.as_ref(),
+            &runnable.body,
+        )?;
+        let parameters = if arguments.is_empty() {
+            &[][..]
+        } else {
+            parameters
+        };
+        let function = self.at(span, n::Expr::Function { parameters, body });
+        let function = self.callable(span, &arguments, function);
+        let n::Type::Function {
+            arguments: types,
+            result,
+        } = &annotation.typ.value
+        else {
+            unreachable!("function signature retains grouped arguments");
+        };
+        let argument_type = runnable
+            .arguments
+            .first()
+            .and_then(|argument| argument.arg.annotation.as_ref())
+            .map(|_| types[0]);
+        let return_type = runnable.return_annotation.as_ref().map(|_| *result);
+        let body = self.at(
+            span,
+            n::Expr::RunnableCheck {
+                generator,
+                argument_type,
+                return_type,
+                function,
+                benchmark,
+            },
+        );
+        Ok(self.at(
+            span,
+            n::Value {
+                name: self.at(runnable.location, self.text(&runnable.name)),
+                arguments: &[],
+                body,
+                annotation: None,
+                attributes: &[],
+            },
+        ))
+    }
+
     pub(super) fn function(
         &mut self,
         span: Span,
@@ -217,94 +350,73 @@ impl<'a> Lower<'a, '_> {
         ret: Option<&Annotation>,
         body: &UntypedExpr,
     ) -> Result<Function<'a>> {
-        let complete = ret.is_some() && arguments.iter().all(|arg| arg.annotation.is_some());
-        if !complete
-            && (ret.is_some_and(Self::has_type_variable)
-                || arguments
-                    .iter()
-                    .filter_map(|arg| arg.annotation.as_ref())
-                    .any(Self::has_type_variable))
-        {
-            return self.unsupported(span, "partial polymorphic function annotations (annotate every argument and the return type)");
-        }
         let scope = self.locals.len();
-        let mut parameters = Vec::new();
-        let mut checks = Vec::new();
+        let mut parameters = Vec::with_capacity(arguments.len().max(1));
+        let mut names = std::collections::HashSet::new();
+        let mut destructures = Vec::new();
         for argument in arguments {
             let pattern = match &argument.by {
-                ArgBy::ByName(ArgName::Named {
-                    name,
-                    label,
-                    location,
-                }) => {
-                    if name != label {
-                        return self.unsupported(*location, "renamed function parameter labels");
+                ArgBy::ByName(ArgName::Named { name, location, .. }) => {
+                    if !names.insert(name) {
+                        return self
+                            .invalid_declaration(*location, "Duplicate function parameter name.");
                     }
                     let name = self.bind(name);
                     self.at(*location, n::Pattern::Var(name))
                 }
-                ArgBy::ByName(ArgName::Discarded {
-                    name,
-                    label,
-                    location,
-                }) => {
-                    if name != label {
-                        return self.unsupported(*location, "renamed function parameter labels");
-                    }
+                ArgBy::ByName(ArgName::Discarded { location, .. }) => {
                     self.at(*location, n::Pattern::Anything)
                 }
-                ArgBy::ByPattern(pattern) => self.pattern(pattern)?,
-            };
-            if !complete && argument.annotation.is_some() {
-                let fresh = self.fresh();
-                parameters.push(self.at(argument.location, n::Pattern::Var(fresh)));
-                let mut value = self.var(argument.location, fresh);
-                if let Some(annotation) = &argument.annotation {
-                    let typ = self.typ(annotation)?;
-                    value = self.ascribe(argument.location, value, typ);
+                ArgBy::ByPattern(pattern) => {
+                    let name = self.fresh();
+                    destructures.push((argument.location, pattern, name));
+                    self.at(argument.location, n::Pattern::Var(name))
                 }
-                checks.push((argument.location, pattern, value));
-            } else {
-                parameters.push(pattern);
-            }
-        }
-        let mut names = std::collections::HashSet::new();
-        if self.locals[scope..]
-            .iter()
-            .any(|(name, _)| !names.insert(name))
-        {
-            return self.unsupported(span, "duplicate function parameter names");
+            };
+            parameters.push(pattern);
         }
         if parameters.is_empty() {
             parameters.push(self.at(span, n::Pattern::Unit));
         }
-        let mut body = self.expr(body)?;
-        if !complete {
-            if let Some(ret) = ret {
-                let typ = self.typ(ret)?;
-                body = self.ascribe(span, body, typ);
-            }
-            for (location, pattern, value) in checks.into_iter().rev() {
-                body = self.apply_pattern(location, pattern, value, body);
-            }
+        // Pattern parameters are sequential let-bindings after all ordinary
+        // parameters enter scope, matching ArgBy::into_extra_assignment.
+        let mut checks = Vec::with_capacity(destructures.len());
+        for (location, pattern, name) in destructures {
+            checks.push((location, self.pattern(pattern)?, self.var(location, name)));
         }
+        let mut body = self.expr(body)?;
+        for (location, pattern, value) in checks.into_iter().rev() {
+            body = self.apply_pattern(location, pattern, value, body);
+        }
+        let body = self.at(span, n::Expr::TypeScope { value: body });
         self.locals.truncate(scope);
-        let annotation = if complete {
-            let args = arguments
-                .iter()
-                .filter_map(|arg| arg.annotation.as_ref())
-                .map(|arg| self.typ(arg))
-                .collect::<Result<Vec<_>>>()?;
-            match ret {
-                Some(ret) => Some(self.alloc(n::Annotation {
-                    constraints: &[],
-                    typ: self.function_type(span, &args, self.typ(ret)?),
-                })),
-                None => None,
-            }
-        } else {
-            None
+        // One signature hydrates all written variables together. Omitted positions
+        // and explicit holes are independently flexible, not rigid quantified names.
+        let args = arguments
+            .iter()
+            .map(|arg| match &arg.annotation {
+                Some(annotation) => self.typ(annotation),
+                None => Ok(self.at(arg.location, n::Type::Hole)),
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let ret = match ret {
+            Some(annotation) => self.typ(annotation)?,
+            None => self.at(span, n::Type::Hole),
         };
+        let annotation = self.alloc(n::Annotation {
+            constraints: &[],
+            typ: self.function_type(span, &args, ret),
+        });
         Ok((self.slice(&parameters), body, annotation))
+    }
+
+    pub(super) fn invalid_declaration<T>(&self, span: Span, message: &str) -> Result<T> {
+        Err(nash_frontend::FrontendDiagnostic::error(
+            "NAF2202",
+            "Invalid Aiken declaration",
+            message,
+            Some(self.spans.region(span)),
+        )
+        .into())
     }
 }

@@ -23,8 +23,13 @@ pub(crate) struct Lower<'a, 's> {
     imported: HashMap<&'s str, (&'a str, &'a str)>,
     qualifiers: HashSet<&'s str>,
     builtin_qualifiers: HashSet<&'s str>,
+    prelude_qualifiers: HashSet<&'s str>,
+    imported_builtin_arities: HashMap<&'s str, usize>,
     globals: HashSet<&'s str>,
-    validator_name: Option<&'s str>,
+    local_types: HashSet<&'s str>,
+    validator_handlers: HashMap<&'s str, HashMap<&'s str, &'a str>>,
+    pub(crate) entry_points: Vec<nash_frontend::SourceEntryPoint<'a>>,
+    extra_values: Vec<&'a Located<n::Value<'a>>>,
     locals: Vec<(String, &'a str)>,
     serial: usize,
 }
@@ -34,8 +39,11 @@ impl<'a, 's> Lower<'a, 's> {
         let mut imported = HashMap::new();
         let mut qualifiers = HashSet::new();
         let mut builtin_qualifiers = HashSet::new();
+        let mut prelude_qualifiers = HashSet::new();
+        let mut imported_builtin_arities = HashMap::new();
         let mut globals = HashSet::new();
-        let mut validator_name = None;
+        let mut local_types = HashSet::new();
+        let mut validator_handlers = HashMap::new();
         for def in &ast.definitions {
             match def {
                 Definition::Use(import) => {
@@ -48,11 +56,17 @@ impl<'a, 's> Lower<'a, 's> {
                     if profile::is_builtin(&import.module) {
                         builtin_qualifiers.insert(qualifier);
                     }
+                    if profile::is_prelude(&import.module) {
+                        prelude_qualifiers.insert(qualifier);
+                    }
                     let qualifier: &str = arena.alloc_str(qualifier);
                     for item in &import.unqualified.1 {
                         if profile::is_builtin(&import.module) {
                             if let Some(name) = profile::builtin_value(&item.name) {
                                 imported.insert(item.variable_name(), (qualifier, name));
+                                if let Some(arity) = profile::builtin_arity(&item.name) {
+                                    imported_builtin_arities.insert(item.variable_name(), arity);
+                                }
                             }
                         } else {
                             imported.insert(
@@ -69,12 +83,32 @@ impl<'a, 's> Lower<'a, 's> {
                     globals.insert(value.name.as_str());
                 }
                 Definition::DataType(data) => {
+                    local_types.insert(data.name.as_str());
                     globals.extend(data.constructors.iter().map(|ctor| ctor.name.as_str()));
                 }
-                Definition::Validator(validator) => {
-                    validator_name = Some(validator.name.as_str());
+                Definition::TypeAlias(alias) => {
+                    local_types.insert(alias.alias.as_str());
                 }
-                _ => {}
+                Definition::Validator(validator) => {
+                    validator_handlers.insert(
+                        validator.name.as_str(),
+                        validator
+                            .handlers
+                            .iter()
+                            .chain(std::iter::once(&validator.fallback))
+                            .map(|handler| {
+                                (
+                                    handler.name.as_str(),
+                                    &*arena.alloc_str(&format!(
+                                        "$validator.{}.{}",
+                                        validator.name, handler.name
+                                    )),
+                                )
+                            })
+                            .collect(),
+                    );
+                }
+                Definition::Test(_) | Definition::Benchmark(_) => {}
             }
         }
         Self {
@@ -83,8 +117,13 @@ impl<'a, 's> Lower<'a, 's> {
             imported,
             qualifiers,
             builtin_qualifiers,
+            prelude_qualifiers,
+            imported_builtin_arities,
             globals,
-            validator_name,
+            local_types,
+            validator_handlers,
+            entry_points: Vec::new(),
+            extra_values: Vec::new(),
             locals: vec![],
             serial: 0,
         }
@@ -120,6 +159,18 @@ impl<'a, 's> Lower<'a, 's> {
             .iter()
             .rev()
             .find_map(|(original, local)| (original == name).then_some(*local))
+    }
+    fn validator_handler(&self, span: Span, qualifier: &str, name: &str) -> Option<Expr<'a>> {
+        if self.local(qualifier).is_some()
+            || self.globals.contains(qualifier)
+            || self.qualifiers.contains(qualifier)
+        {
+            return None;
+        }
+        self.validator_handlers
+            .get(qualifier)?
+            .get(name)
+            .map(|name| self.var(span, name))
     }
     fn var(&self, span: Span, name: &'a str) -> Expr<'a> {
         self.at(
@@ -193,6 +244,22 @@ impl<'a, 's> Lower<'a, 's> {
             &[value],
         )
     }
+    fn conversion_ascribe(
+        &self,
+        span: Span,
+        body: Expr<'a>,
+        typ: Type<'a>,
+        site: n::ConversionSite,
+    ) -> Expr<'a> {
+        self.at(
+            span,
+            n::Expr::Convert {
+                kind: n::ConversionKind::Ascription(site),
+                typ,
+                value: body,
+            },
+        )
+    }
     fn ascribe(&mut self, span: Span, body: Expr<'a>, typ: Type<'a>) -> Expr<'a> {
         let name = self.fresh();
         let def = self.at(
@@ -228,7 +295,12 @@ impl<'a, 's> Lower<'a, 's> {
         }
         if !self.globals.contains(name) {
             if let Some((module, original)) = self.imported.get(name) {
-                return self.at(
+                if self.prelude_qualifiers.contains(*module)
+                    && let Some(value) = self.prelude_reference(span, module, original)
+                {
+                    return value;
+                }
+                let value = self.at(
                     span,
                     n::Expr::VarQual {
                         kind: Self::kind(original),
@@ -236,12 +308,14 @@ impl<'a, 's> Lower<'a, 's> {
                         name: original,
                     },
                 );
+                return if let Some(arity) = self.imported_builtin_arities.get(name) {
+                    self.grouped_builtin(span, value, *arity)
+                } else {
+                    value
+                };
             }
-            match name {
-                "True" => return self.bool(span, true),
-                "False" => return self.bool(span, false),
-                "Void" => return self.at(span, n::Expr::Unit),
-                _ => {}
+            if let Some(value) = self.prelude_reference(span, "Builtin", name) {
+                return value;
             }
         }
         self.at(
@@ -252,15 +326,81 @@ impl<'a, 's> Lower<'a, 's> {
             },
         )
     }
-    fn integer(&self, span: Span, value: &str) -> Result<i128> {
-        value.parse::<i128>().map_err(|_| {
-            nash_frontend::FrontendDiagnostic::error(
+    fn prelude_reference(&self, span: Span, module: &'a str, name: &str) -> Option<Expr<'a>> {
+        if name == "Void" {
+            return Some(self.at(span, n::Expr::Unit));
+        }
+        if let Some((_, constructor)) = profile::prelude_constructor(name) {
+            return Some(self.at(
+                span,
+                n::Expr::VarQual {
+                    kind: n::VarType::CapVar,
+                    module,
+                    name: constructor,
+                },
+            ));
+        }
+        let value = profile::prelude_value(name)?;
+        let arity = profile::prelude_arity(name)?;
+        let reference = self.at(
+            span,
+            n::Expr::VarQual {
+                kind: n::VarType::LowVar,
+                module,
+                name: value,
+            },
+        );
+        Some(self.grouped_builtin(span, reference, arity))
+    }
+    fn integer(&self, span: Span, value: &str) -> Result<n::Constant<'a>> {
+        if let Ok(value) = value.parse::<i128>() {
+            return Ok(n::Constant::Int(value));
+        }
+        let value = value.parse::<num_bigint::BigInt>().map_err(|_| {
+            nash_frontend::FrontendFailure::from(nash_frontend::FrontendDiagnostic::error(
                 "NAF2101",
-                "Aiken integer out of range",
-                "Integer literals must fit Nash's temporary signed 128-bit source representation.",
+                "Invalid Aiken integer",
+                "The integer could not be represented as decimal digits.",
                 Some(self.spans.region(span)),
-            )
-            .into()
+            ))
+        })?;
+        Ok(n::Constant::BigInt(self.text(&value.to_string())))
+    }
+}
+
+impl<'a> Lower<'a, '_> {
+    fn module_docs(&self, ast: &UntypedModule, span: Span) -> &'a n::Docs<'a> {
+        let comment = |text: &str, location: Span| {
+            let position = self.spans.region(location).start;
+            self.alloc(n::Comment(self.alloc(n::Snippet {
+                data: self.text(text).as_bytes(),
+                off_row: position.line,
+                off_col: position.column,
+            })))
+        };
+        let mut comments = Vec::new();
+        for definition in &ast.definitions {
+            let (name, doc) = match definition {
+                Definition::Fn(value) => (&value.name, value.doc.as_deref()),
+                Definition::Test(value) | Definition::Benchmark(value) => {
+                    (&value.name, value.doc.as_deref())
+                }
+                Definition::ModuleConstant(value) => (&value.name, value.doc.as_deref()),
+                Definition::DataType(value) => (&value.name, value.doc.as_deref()),
+                Definition::TypeAlias(value) => (&value.alias, value.doc.as_deref()),
+                Definition::Validator(value) => (&value.name, value.doc.as_deref()),
+                Definition::Use(_) => continue,
+            };
+            if let Some(doc) = doc {
+                comments.push(self.alloc((self.text(name), comment(doc, definition.location()))));
+            }
+        }
+        if ast.docs.is_empty() && comments.is_empty() {
+            return self.alloc(n::Docs::NoDocs(self.spans.region(span)));
+        }
+        self.alloc(n::Docs::YesDocs {
+            overview: comment(&ast.docs.join("\n"), span),
+            comments: self.slice(&comments),
         })
     }
 }

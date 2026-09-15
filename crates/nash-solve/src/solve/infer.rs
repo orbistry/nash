@@ -75,13 +75,21 @@ impl<'a> Solver<'a, '_> {
         if let Expected::FromContext(_, Context::CallArity(_, arity), _) = expectation {
             let mut result = expected;
             let mut inputs = vec![actual];
-            for _ in 0..arity {
-                let Content::Structure(FlatType::Fun1(argument, output)) = uf.get(result).content
-                else {
-                    break;
-                };
-                inputs.push(argument);
+            if let Content::Structure(FlatType::Function1(arguments, output)) =
+                uf.get(result).content.clone()
+            {
+                inputs.extend(arguments);
                 result = output;
+            } else {
+                for _ in 0..arity {
+                    let Content::Structure(FlatType::Fun1(argument, output)) =
+                        uf.get(result).content
+                    else {
+                        break;
+                    };
+                    inputs.push(argument);
+                    result = output;
+                }
             }
             self.dependencies.computation(result, inputs);
         }
@@ -199,6 +207,7 @@ impl<'a> Solver<'a, '_> {
         rank: usize,
         mut state: State<'a>,
     ) -> State<'a> {
+        self.finish_conversions(uf, rank, &mut state.errors);
         self.retry_fields(uf, rank, &mut state.errors);
         self.finish_fields(uf, rank, &mut state.errors);
         self.generalize(uf, state.mark, state.mark.next(), rank);
@@ -275,7 +284,13 @@ impl<'a> Solver<'a, '_> {
         rtv: &Rtv<'a>,
         def: &'a Def<'a>,
     ) -> PreparedDefinition<'a> {
+        let instantiation = uf.begin_instantiation();
         let mut rtv = rtv.clone();
+        for scope in self.annotation_scopes.iter().rev() {
+            for (&name, &variable) in scope {
+                rtv.entry(name).or_insert(variable);
+            }
+        }
         let mut rigids = Vec::new();
         let (name, arguments, result, context, annotation_region) = match def {
             Def::Def { name, args, .. } => {
@@ -334,15 +349,25 @@ impl<'a> Solver<'a, '_> {
                 )
             }
         };
-        let typ = arguments
-            .iter()
-            .rev()
-            .fold(result, |result, (_, expected)| {
-                let arg = match expected {
-                    PExpected::NoExpectation(t) | PExpected::FromContext(_, _, t) => *t,
-                };
+        let body = match def {
+            Def::Def { body, .. } | Def::TypedDef { body, .. } => *body,
+        };
+        let argument_vars = || {
+            arguments.iter().map(|(_, expected)| match expected {
+                PExpected::NoExpectation(t) | PExpected::FromContext(_, _, t) => *t,
+            })
+        };
+        let typ = if let Expr::Callable { arity, .. } = &body.value {
+            self.structure(
+                uf,
+                rank,
+                FlatType::Function1(argument_vars().take(*arity).collect(), result),
+            )
+        } else {
+            argument_vars().rev().fold(result, |result, arg| {
                 self.structure(uf, rank, FlatType::Fun1(arg, result))
-            });
+            })
+        };
         let expected = if let Some(annotation_region) = annotation_region {
             Expected::FromAnnotation(
                 name.value,
@@ -354,6 +379,7 @@ impl<'a> Solver<'a, '_> {
         } else {
             Expected::NoExpectation(result)
         };
+        uf.end_instantiation(instantiation);
         PreparedDefinition {
             definition: Definition {
                 site: Binder::Named(name),
@@ -376,7 +402,11 @@ impl<'a> Solver<'a, '_> {
         state: State<'a>,
         prepared: &PreparedDefinition<'a>,
     ) -> State<'a> {
-        match prepared.source {
+        let root_scope = self.owners.len() == 1;
+        if root_scope {
+            self.push_annotation_scope();
+        }
+        let state = match prepared.source {
             Def::Def { body, .. } => {
                 let scope = self.infer_patterns(uf, env, rank, state, &prepared.arguments);
                 let state = self.infer_expr(
@@ -397,7 +427,7 @@ impl<'a> Solver<'a, '_> {
                 typ,
                 annotation,
                 ..
-            } => {
+            } if !Self::shared_signature_variables(&annotation.value) => {
                 let scope = self.infer_typed_patterns(
                     uf,
                     env,
@@ -418,6 +448,72 @@ impl<'a> Solver<'a, '_> {
                     prepared.expected.type_replace(*typ),
                 );
                 self.close_locals(uf, state, scope.locals)
+            }
+            Def::TypedDef { body, .. } => {
+                // Instantiate a signature once: annotation holes in the public
+                // function type and in its body must denote the same variables.
+                let scope = self.infer_patterns(uf, env, rank, state, &prepared.arguments);
+                let state = self.infer_expr(
+                    uf,
+                    &scope.env,
+                    rank,
+                    scope.state,
+                    &prepared.rtv,
+                    body,
+                    prepared.expected,
+                );
+                self.close_locals(uf, state, scope.locals)
+            }
+        };
+        if root_scope {
+            self.pop_annotation_scope();
+        }
+        state
+    }
+
+    fn shared_signature_variables(typ: &CanType<'a>) -> bool {
+        match typ {
+            CanType::Hole | CanType::DeclaredHole(_) | CanType::Function { .. } => true,
+            CanType::Var(_) => false,
+            CanType::Lambda { from, to } => {
+                Self::shared_signature_variables(&from.value)
+                    || Self::shared_signature_variables(&to.value)
+            }
+            CanType::App { head, args } => {
+                Self::shared_signature_variables(&head.value)
+                    || args
+                        .iter()
+                        .any(|arg| Self::shared_signature_variables(&arg.value))
+            }
+            CanType::Named { args, .. } => args
+                .iter()
+                .any(|arg| Self::shared_signature_variables(&arg.value)),
+            CanType::Record { fields } => fields
+                .iter()
+                .any(|field| Self::shared_signature_variables(&field.typ.value)),
+            CanType::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                Self::shared_signature_variables(&first.value)
+                    || Self::shared_signature_variables(&second.value)
+                    || rest
+                        .iter()
+                        .any(|item| Self::shared_signature_variables(&item.value))
+            }
+            CanType::Alias {
+                arguments, target, ..
+            } => {
+                arguments
+                    .iter()
+                    .any(|argument| Self::shared_signature_variables(&argument.typ.value))
+                    || match target {
+                        nash_ast::AliasType::Open(typ)
+                        | nash_ast::AliasType::Filled { typ, .. } => {
+                            Self::shared_signature_variables(&typ.value)
+                        }
+                    }
             }
         }
     }
@@ -478,6 +574,14 @@ impl<'a> Solver<'a, '_> {
         let young = rank + 1;
         state = self.generalize_scope(uf, young, state);
         for rigid in rigids {
+            if uf.is_declared_capture(*rigid)
+                && matches!(uf.get(*rigid).content, Content::RigidVar(_))
+            {
+                // A declared hole may retain this signature's generic identity.
+                // The value still quantifies it; publication records an ID,
+                // never a free name that a consuming module could rebind.
+                uf.modify(*rigid, |descriptor| descriptor.rank = NO_RANK);
+            }
             if uf.get(*rigid).rank != NO_RANK && !crate::recovery::is_poisoned(uf, [*rigid]) {
                 let owner = binder
                     .map(|b| (b.name().region, b.name().value))
@@ -591,6 +695,7 @@ impl<'a> Solver<'a, '_> {
         let owners = self.owners.len();
         self.owners.push(definition.site.node());
         let mut state = self.infer_prepared_body(uf, env, young, state, &prepared);
+        self.finish_conversions(uf, young, &mut state.errors);
         self.retry_fields(uf, young, &mut state.errors);
         state = self.resolve_wanted(
             uf,
@@ -796,6 +901,7 @@ impl<'a> Solver<'a, '_> {
                     .map(|(name, loc)| (*name, *loc))
                     .collect(),
             );
+            self.finish_conversions(uf, young, &mut state.errors);
             self.retry_fields(uf, young, &mut state.errors);
             state = self.resolve_wanted(uf, young, state, start, binder, false);
             self.owners.truncate(owners);
@@ -873,6 +979,7 @@ impl<'a> Solver<'a, '_> {
             expr,
             Expected::FromContext(region, Context::Destructure, typ),
         );
+        self.finish_conversions(uf, young, &mut state.errors);
         self.retry_fields(uf, young, &mut state.errors);
         state = self.resolve_wanted(uf, young, state, start, Some(binder), false);
         self.owners.truncate(owners);

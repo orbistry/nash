@@ -199,7 +199,12 @@ fn core_lift<'a>(bump: &'a Bump) -> nash_can::Interface<'a> {
         &module,
     )
     .unwrap();
-    nash_can::from_module(bump, &result.module, &Default::default())
+    nash_can::from_module(
+        bump,
+        &result.module,
+        &Default::default(),
+        &result.tables.kinds.declared,
+    )
 }
 
 #[test]
@@ -282,6 +287,9 @@ fn reflexive_lift_requires_the_exact_core_trait_identity() {
             Some(nash_ast::PackageName {
                 author: "someone",
                 project: "core",
+                version: "",
+                source: nash_ast::PackageSource::Compiler,
+                compilation: None,
             }),
         ),
     ] {
@@ -296,7 +304,11 @@ fn reflexive_lift_requires_the_exact_core_trait_identity() {
             &module,
         )
         .unwrap();
-        enabled.push(result.tables.has_reflexive_lift());
+        enabled.push(
+            result
+                .tables
+                .has_reflexive_lift(nash_ast::primitives::lift_trait()),
+        );
         assert!(
             result.tables.impls.is_empty(),
             "compiler rule is not a constructor impl"
@@ -406,7 +418,12 @@ fn superclass_impl_is_available_from_an_interface() {
     .unwrap();
     let interfaces = std::collections::BTreeMap::from([(
         "Base",
-        nash_can::from_module(&bump, &base.module, &Default::default()),
+        nash_can::from_module(
+            &bump,
+            &base.module,
+            &Default::default(),
+            &base.tables.kinds.declared,
+        ),
     )]);
     let source = indoc!(
         "
@@ -581,7 +598,12 @@ fn global_overlap_between_core_modules() {
     .unwrap();
     let interfaces = std::collections::BTreeMap::from([(
         "Keep",
-        nash_can::from_module(&bump, &trait_module.module, &Default::default()),
+        nash_can::from_module(
+            &bump,
+            &trait_module.module,
+            &Default::default(),
+            &trait_module.tables.kinds.declared,
+        ),
     )]);
     // Compile independently, then combine the interfaces as a build would.
     let mut compiled = Vec::new();
@@ -604,7 +626,12 @@ fn global_overlap_between_core_modules() {
         .unwrap();
         compiled.push((
             name,
-            nash_can::from_module(&bump, &result.module, &Default::default()),
+            nash_can::from_module(
+                &bump,
+                &result.module,
+                &Default::default(),
+                &result.tables.kinds.declared,
+            ),
         ));
     }
     let mut all_interfaces = interfaces.clone();
@@ -647,7 +674,12 @@ fn global_impl_metadata_is_available_without_imports() {
             )),
         )
         .unwrap();
-        nash_can::from_module(source_arena, &result.module, &Default::default())
+        nash_can::from_module(
+            source_arena,
+            &result.module,
+            &Default::default(),
+            &result.tables.kinds.declared,
+        )
     };
     let interfaces = std::collections::BTreeMap::from([("Instances", interface)]);
     let source = "module Main exposing (..)\n";
@@ -686,7 +718,12 @@ fn unit_and_tuple_impls_belong_to_core() {
     .unwrap();
     let interfaces = std::collections::BTreeMap::from([(
         "Keep",
-        nash_can::from_module(&bump, &trait_module.module, &Default::default()),
+        nash_can::from_module(
+            &bump,
+            &trait_module.module,
+            &Default::default(),
+            &trait_module.tables.kinds.declared,
+        ),
     )]);
     let source = indoc!(
         "

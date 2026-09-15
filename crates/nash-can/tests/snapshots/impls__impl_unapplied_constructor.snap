@@ -21,6 +21,9 @@ description: "module Main exposing (..)\n\ntrait Functor 'f where\n    map : ('a
                         PackageName {
                             author: "nash",
                             project: "core",
+                            version: "",
+                            source: Compiler,
+                            compilation: None,
                         },
                     ),
                     name: "Builtin",

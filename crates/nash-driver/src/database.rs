@@ -21,6 +21,8 @@ pub struct Database {
 
     /// Cached source text keyed by URI.
     files: HashMap<Url, String>,
+    /// Package revision associated with cached compiler reads of each physical source.
+    file_keys: HashMap<Url, nash_frontend::ModuleKey>,
 
     /// Import relationships: module -> modules it imports.
     imports: HashMap<Url, Vec<Url>>,
@@ -36,6 +38,7 @@ impl Database {
             source: Box::new(source),
             files: HashMap::new(),
             imports: HashMap::new(),
+            file_keys: HashMap::new(),
             reverse_deps: HashMap::new(),
         }
     }
@@ -49,6 +52,19 @@ impl Database {
         }
 
         Ok(self.files.get(uri).unwrap())
+    }
+
+    /// A package revision change invalidates URI-cached text even when its cache path is reused.
+    pub async fn source_for(
+        &mut self,
+        uri: &Url,
+        key: &nash_frontend::ModuleKey,
+    ) -> Result<&str, DriverError> {
+        if self.file_keys.get(uri) != Some(key) {
+            self.files.remove(uri);
+            self.file_keys.insert(uri.clone(), key.clone());
+        }
+        self.source(uri).await
     }
 
     /// Check if a file exists.
@@ -101,6 +117,7 @@ impl Database {
     /// It does NOT cascade to reverse dependencies - use `invalidate_cascade` for that.
     pub fn invalidate(&mut self, uri: &Url) {
         self.files.remove(uri);
+        self.file_keys.remove(uri);
         self.imports.remove(uri);
     }
 
@@ -172,5 +189,39 @@ mod tests {
 
         db.invalidate(&uri);
         assert_eq!(db.source(&uri).await.unwrap(), "updated");
+    }
+
+    #[tokio::test]
+    async fn reused_package_cache_path_reads_the_selected_revision() {
+        use nash_frontend::{ModuleKey, ModuleName, PackageId, PackageSourceId};
+        let uri = Url::parse("file:///project/build/packages/example-model/lib/model.ak").unwrap();
+        let mut db = Database::new(InMemorySource::with_files([(
+            uri.clone(),
+            "pub const value = 1".into(),
+        )]));
+        let mut key = ModuleKey {
+            package: PackageId {
+                name: Some("example/model".into()),
+                version: "1.0.0".into(),
+                source: PackageSourceId::Github,
+            },
+            module: ModuleName::new("model"),
+        };
+        assert_eq!(
+            db.source_for(&uri, &key).await.unwrap(),
+            "pub const value = 1"
+        );
+        db.write(&uri, "pub const value = 2").await.unwrap();
+        key.package.version = "2.0.0".into();
+        assert_eq!(
+            db.source_for(&uri, &key).await.unwrap(),
+            "pub const value = 2"
+        );
+        db.write(&uri, "pub const value = 3").await.unwrap();
+        key.package.source = PackageSourceId::Gitlab;
+        assert_eq!(
+            db.source_for(&uri, &key).await.unwrap(),
+            "pub const value = 3"
+        );
     }
 }

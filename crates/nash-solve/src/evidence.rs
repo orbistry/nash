@@ -13,7 +13,7 @@ pub enum Failure {
 
 #[derive(Debug)]
 pub struct Error<'a> {
-    pub predicate: Pred<'a>,
+    pub predicate: &'a Pred<'a>,
     pub reason: Failure,
 }
 
@@ -39,6 +39,7 @@ enum Constructor<'a> {
     Named(QualifiedName<'a>),
     Tuple(usize),
     Function,
+    GroupedFunction(usize),
     Record(Vec<&'a str>),
 }
 
@@ -80,6 +81,11 @@ impl<'a> Resolver<'_, 'a> {
     fn substitution_work(&mut self, typ: &Type<'a>, depth: usize) -> Result<(), Failure> {
         self.step(depth)?;
         match typ {
+            Type::DeclaredHole(hole) => {
+                if let Some(solution) = self.tables.kinds.declared.resolve(self.bump, hole) {
+                    self.substitution_work(&solution.value, depth + 1)?;
+                }
+            }
             Type::App { head, args } => {
                 self.substitution_work(&head.value, depth + 1)?;
                 for arg in *args {
@@ -105,6 +111,12 @@ impl<'a> Resolver<'_, 'a> {
                 self.substitution_work(&from.value, depth + 1)?;
                 self.substitution_work(&to.value, depth + 1)?;
             }
+            Type::Function { arguments, result } => {
+                for argument in *arguments {
+                    self.substitution_work(&argument.value, depth + 1)?;
+                }
+                self.substitution_work(&result.value, depth + 1)?;
+            }
             Type::Tuple {
                 first,
                 second,
@@ -121,7 +133,7 @@ impl<'a> Resolver<'_, 'a> {
                     self.substitution_work(&field.typ.value, depth + 1)?;
                 }
             }
-            Type::Var(_) => {}
+            Type::Hole | Type::Var(_) => {}
         }
         Ok(())
     }
@@ -137,7 +149,19 @@ impl<'a> Resolver<'_, 'a> {
     fn term(&mut self, typ: &Type<'a>, depth: usize) -> Result<Term<'a>, Failure> {
         self.step(depth)?;
         let (con, args) = match typ {
-            Type::Var(_) => return Err(Failure::NonGround),
+            Type::Hole | Type::Var(_) => return Err(Failure::NonGround),
+            Type::DeclaredHole(hole) => {
+                return self.term(
+                    &self
+                        .tables
+                        .kinds
+                        .declared
+                        .resolve(self.bump, hole)
+                        .ok_or(Failure::NonGround)?
+                        .value,
+                    depth + 1,
+                );
+            }
             Type::App { head, args } => {
                 let mut head = self.term(&head.value, depth + 1)?;
                 if !matches!(head.con, Constructor::Named(_)) {
@@ -170,6 +194,14 @@ impl<'a> Resolver<'_, 'a> {
                     .collect(),
             ),
             Type::Lambda { from, to } => (Constructor::Function, vec![*from, *to]),
+            Type::Function { arguments, result } => (
+                Constructor::GroupedFunction(arguments.len()),
+                arguments
+                    .iter()
+                    .copied()
+                    .chain(std::iter::once(*result))
+                    .collect(),
+            ),
             Type::Record { fields } => (
                 Constructor::Record(fields.iter().map(|field| field.field).collect()),
                 fields.iter().map(|field| field.typ).collect(),
@@ -236,8 +268,9 @@ impl<'a> Resolver<'_, 'a> {
     }
 
     fn resolve_step(&mut self, pred: &Pred<'a>, depth: usize) -> Result<Resolution<'a>, Error<'a>> {
+        let bump = self.bump;
         let error = |reason| Error {
-            predicate: *pred,
+            predicate: bump.alloc(*pred),
             reason,
         };
         self.step(depth).map_err(error)?;
@@ -283,28 +316,25 @@ impl<'a> Resolver<'_, 'a> {
             nash_can::kinds::repr_of(self.bump, &self.tables.kinds, typ)
                 == Some(nash_ast::primitives::Repr::Big)
         });
-        if trait_ == nash_ast::primitives::eq_trait()
-            && self.tables.has_structural_eq()
-            && args.len() == 1
-            && big
-        {
+        if self.tables.has_structural_eq(trait_) && args.len() == 1 && big {
             return Ok(Resolution::Complete(Evidence::StructuralEq {
+                trait_,
                 typ: args[0],
             }));
         }
-        if trait_ == nash_ast::primitives::lift_trait()
-            && self.tables.has_reflexive_lift()
+        if self.tables.has_reflexive_lift(trait_)
             && matches!(terms.as_slice(), [first, second] if first == second)
             && big
         {
             return Ok(Resolution::Complete(Evidence::ReflexiveLift {
+                trait_,
                 typ: args[0],
             }));
         }
         let mut selected = None;
         for (key, info) in self.tables.impls_for(trait_) {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
-                &mut nash_ast::head::Canonical,
+                &mut nash_ast::head::Canonical::new(self.bump, &self.tables.kinds.declared),
                 key.heads,
                 args,
                 info.variables.len(),

@@ -11,6 +11,7 @@ license.workspace = true
 aiken-lang = "=1.1.23"
 bumpalo.workspace = true
 miette.workspace = true
+num-bigint.workspace = true
 nash-frontend = { path = "../nash-frontend" }
 nash-region = { path = "../nash-region" }
 nash-source = { path = "../nash-source" }
@@ -18,6 +19,7 @@ nash-source = { path = "../nash-source" }
 [dev-dependencies]
 url.workspace = true
 nash-parse = { path = "../nash-parse" }
+nash-ast = { path = "../nash-ast" }
 uplc = "=1.1.23"
 nash-driver = { path = "../nash-driver" }
 nash-codegen = { path = "../nash-codegen" }

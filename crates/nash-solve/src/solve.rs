@@ -16,6 +16,7 @@ use nash_region::{Located, Region};
 mod expressions;
 mod infer;
 mod patterns;
+mod runnable;
 use infer::Definition;
 
 use crate::annotation::to_error_type;
@@ -31,6 +32,7 @@ pub fn run<'a>(
     module: &nash_ast::Module<'a>,
     tables: &nash_can::environment::Tables<'a>,
 ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
+    uf.set_declared_context(bump, tables.kinds.declared.clone());
     let mut solver = Solver::new(bump, tables);
 
     let state = solver.infer_module(
@@ -112,6 +114,7 @@ struct DeferredField<'a> {
     context: type_::FieldContext<'a>,
     record: Variable,
     field: Option<(&'a str, Variable)>,
+    allow_union_update: bool,
 }
 
 struct Solver<'a, 'tables> {
@@ -127,6 +130,13 @@ struct Solver<'a, 'tables> {
     uses: Vec<UseRecord<'a>>,
     expr_types: Vec<NodeTypeRecord>,
     pattern_types: Vec<NodeTypeRecord>,
+    conversions: std::collections::HashMap<nash_ast::NodeId, nash_ast::ConversionKind>,
+    pipe_insertions: std::collections::HashMap<nash_ast::NodeId, bool>,
+    field_selections: std::collections::HashMap<nash_ast::NodeId, bool>,
+    call_orders: std::collections::HashMap<nash_ast::NodeId, &'a [usize]>,
+    pending_conversions: Vec<expressions::PendingConversion>,
+    pending_serialisable: Vec<expressions::PendingSerialisable>,
+    annotation_scopes: Vec<BTreeMap<&'a str, Variable>>,
     owners: Vec<nash_ast::NodeId>,
     resolution_work: std::collections::HashMap<type_::PredId, usize>,
     has_poison: bool,
@@ -167,6 +177,13 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             uses: Vec::new(),
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
+            conversions: std::collections::HashMap::new(),
+            pipe_insertions: std::collections::HashMap::new(),
+            field_selections: std::collections::HashMap::new(),
+            call_orders: std::collections::HashMap::new(),
+            pending_conversions: Vec::new(),
+            pending_serialisable: Vec::new(),
+            annotation_scopes: Vec::new(),
             owners: Vec::new(),
             resolution_work: std::collections::HashMap::new(),
             has_poison: false,
@@ -186,11 +203,15 @@ impl<'a, 'tables> Solver<'a, 'tables> {
         uf: &mut UnionFind<'a>,
         mut state: State<'a>,
     ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
+        self.finish_conversions(uf, OUTERMOST_RANK, &mut state.errors);
         self.retry_fields(uf, OUTERMOST_RANK, &mut state.errors);
         self.finish_fields(uf, OUTERMOST_RANK, &mut state.errors);
         state.errors.append(&mut self.kind_errors);
         if state.errors.is_empty() {
-            self.finish(uf, &state.env)
+            crate::annotation::prepare_declared_holes(self.bump, uf);
+            let mut result = self.finish(uf, &state.env)?;
+            result.1.declared_refinements = crate::annotation::stage_declared_holes(self.bump, uf);
+            Ok(result)
         } else {
             // Elm accumulates errors by prepending; match its final order.
             let mut errors = state.errors;
@@ -417,7 +438,9 @@ impl<'a> Solver<'a, '_> {
                     else {
                         break;
                     };
-                    if matches!(field.context, type_::FieldContext::Update { .. }) {
+                    if matches!(field.context, type_::FieldContext::Update { .. })
+                        && !field.allow_union_update
+                    {
                         errors.push(Error::UpdateNotRecord {
                             region: field.region,
                             record: to_error_type(self.bump, uf, field.record),
@@ -723,7 +746,13 @@ impl<'a> Solver<'a, '_> {
         if !errors.is_empty() {
             return Err(errors);
         }
-        let mut solved = SolvedTypes::default();
+        let mut solved = SolvedTypes {
+            conversions: std::mem::take(&mut self.conversions),
+            pipe_insertions: std::mem::take(&mut self.pipe_insertions),
+            field_selections: std::mem::take(&mut self.field_selections),
+            call_orders: std::mem::take(&mut self.call_orders),
+            ..SolvedTypes::default()
+        };
         let mut orders = HashMap::new();
         let mut rendered_uses = HashMap::new();
         let mut scopes = Vec::new();
@@ -778,8 +807,8 @@ impl<'a> Solver<'a, '_> {
                             pending.extend(subs);
                         }
                         Some(
-                            crate::preds::Solution::ReflexiveLift { typ }
-                            | crate::preds::Solution::StructuralEq { typ }
+                            crate::preds::Solution::ReflexiveLift { typ, .. }
+                            | crate::preds::Solution::StructuralEq { typ, .. }
                             | crate::preds::Solution::Repr { typ, .. },
                         ) => roots.push(*typ),
                         Some(crate::preds::Solution::Apply { subs }) => pending.extend(subs),
@@ -945,10 +974,12 @@ impl<'a> Solver<'a, '_> {
                 typ: crate::annotation::to_solved_type(self.bump, uf, *typ),
             },
             Solution::Apply { .. } => unreachable!("Apply has no evidence slot"),
-            Solution::StructuralEq { typ } => Evidence::StructuralEq {
+            Solution::StructuralEq { trait_, typ } => Evidence::StructuralEq {
+                trait_: *trait_,
                 typ: crate::annotation::to_solved_type(self.bump, uf, *typ),
             },
-            Solution::ReflexiveLift { typ } => Evidence::ReflexiveLift {
+            Solution::ReflexiveLift { trait_, typ } => Evidence::ReflexiveLift {
+                trait_: *trait_,
                 typ: crate::annotation::to_solved_type(self.bump, uf, *typ),
             },
             Solution::Given { binder, index } => Evidence::Given {
@@ -1317,11 +1348,8 @@ impl<'a> Solver<'a, '_> {
                 }
                 continue;
             }
-            let structural_eq = trait_ == nash_ast::primitives::eq_trait()
-                && self.tables.has_structural_eq()
-                && args.len() == 1;
-            let reflexive_lift = trait_ == nash_ast::primitives::lift_trait()
-                && self.tables.has_reflexive_lift()
+            let structural_eq = self.tables.has_structural_eq(trait_) && args.len() == 1;
+            let reflexive_lift = self.tables.has_reflexive_lift(trait_)
                 && args.len() == 2
                 && crate::preds::same_args(uf, &args[..1], &args[1..]);
             if (structural_eq || reflexive_lift)
@@ -1329,9 +1357,15 @@ impl<'a> Solver<'a, '_> {
                     || self.representation(uf, rank, args[0]) == Some(Repr::Big))
             {
                 let solution = if structural_eq {
-                    Solution::StructuralEq { typ: args[0] }
+                    Solution::StructuralEq {
+                        trait_,
+                        typ: args[0],
+                    }
                 } else {
-                    Solution::ReflexiveLift { typ: args[0] }
+                    Solution::ReflexiveLift {
+                        trait_,
+                        typ: args[0],
+                    }
                 };
                 self.predicates.solve(uf, id, solution);
                 continue;
@@ -1502,6 +1536,11 @@ impl<'a> Solver<'a, '_> {
                             }]
                         })
                 }
+                Content::Structure(FlatType::Function1(arguments, result)) => {
+                    pending.extend(arguments);
+                    pending.push(*result);
+                    Vec::new()
+                }
                 Content::Structure(FlatType::Fun1(from, to)) => {
                     pending.extend([*from, *to]);
                     Vec::new()
@@ -1644,6 +1683,7 @@ impl<'a> Solver<'a, '_> {
         site: UseSite<'a>,
         annotation: &nash_ast::Annotation<'a>,
     ) -> Variable {
+        let instantiation = uf.begin_instantiation();
         // Elm's freeVars is a `Map Name ()`, so creation is name-sorted.
         let mut sorted_names: Vec<&'a str> = annotation.free_vars.to_vec();
         sorted_names.sort_unstable();
@@ -1719,6 +1759,7 @@ impl<'a> Solver<'a, '_> {
             },
             predicates,
         });
+        uf.end_instantiation(instantiation);
         typ
     }
 
@@ -2157,6 +2198,10 @@ impl<'a> Solver<'a, '_> {
                     pending.push(*head);
                     pending.extend(args);
                 }
+                Content::Structure(FlatType::Function1(arguments, result)) => {
+                    pending.extend(arguments);
+                    pending.push(*result);
+                }
                 Content::Structure(FlatType::Fun1(a, b)) => pending.extend([a, b]),
                 Content::Structure(FlatType::Tuple1(a, b, c)) => {
                     pending.extend([a, b]);
@@ -2230,11 +2275,8 @@ impl<'a> Solver<'a, '_> {
             let Body::Trait { trait_, args, .. } = &self.predicates.get(*id).body else {
                 continue;
             };
-            let equality = *trait_ == nash_ast::primitives::eq_trait()
-                && self.tables.has_structural_eq()
-                && args.len() == 1;
-            let lift = *trait_ == nash_ast::primitives::lift_trait()
-                && self.tables.has_reflexive_lift()
+            let equality = self.tables.has_structural_eq(*trait_) && args.len() == 1;
+            let lift = self.tables.has_reflexive_lift(*trait_)
                 && args.len() == 2
                 && crate::preds::same_args(uf, &args[..1], &args[1..]);
             if (equality || lift)
@@ -2255,9 +2297,15 @@ impl<'a> Solver<'a, '_> {
                 derived.insert(
                     *id,
                     if equality {
-                        crate::preds::Solution::StructuralEq { typ: args[0] }
+                        crate::preds::Solution::StructuralEq {
+                            trait_: *trait_,
+                            typ: args[0],
+                        }
                     } else {
-                        crate::preds::Solution::ReflexiveLift { typ: args[0] }
+                        crate::preds::Solution::ReflexiveLift {
+                            trait_: *trait_,
+                            typ: args[0],
+                        }
                     },
                 );
             }
@@ -2496,6 +2544,13 @@ impl<'a> Solver<'a, '_> {
                     .collect(),
             ),
 
+            FlatType::Function1(arguments, result) => FlatType::Function1(
+                arguments
+                    .into_iter()
+                    .map(|arg| self.make_copy_help(uf, max_rank, arg, quantified))
+                    .collect(),
+                self.make_copy_help(uf, max_rank, result, quantified),
+            ),
             FlatType::Fun1(a, b) => {
                 let a_copy = self.make_copy_help(uf, max_rank, a, quantified);
                 let b_copy = self.make_copy_help(uf, max_rank, b, quantified);
@@ -2602,6 +2657,12 @@ fn adjust_rank_content<'a>(
                 rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *arg))
             }),
 
+            FlatType::Function1(arguments, result) => {
+                let result_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *result);
+                arguments.iter().fold(result_rank, |rank, arg| {
+                    rank.max(adjust_rank(uf, young_mark, visit_mark, group_rank, *arg))
+                })
+            }
             FlatType::Fun1(arg, result) => {
                 let arg_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *arg);
                 let result_rank = adjust_rank(uf, young_mark, visit_mark, group_rank, *result);
@@ -2867,8 +2928,8 @@ mod copy_tests {
             Evidence::Super { of, index } => {
                 format!("Super {index} ({})", render_evidence(solver, of))
             }
-            Evidence::StructuralEq { typ } => format!("StructuralEq {}", evidence_type(typ)),
-            Evidence::ReflexiveLift { typ } => format!("ReflexiveLift {}", evidence_type(typ)),
+            Evidence::StructuralEq { typ, .. } => format!("StructuralEq {}", evidence_type(typ)),
+            Evidence::ReflexiveLift { typ, .. } => format!("ReflexiveLift {}", evidence_type(typ)),
             Evidence::Impl {
                 impl_,
                 type_args,
@@ -2949,31 +3010,7 @@ mod copy_tests {
     fn recovery_work_limit_does_not_drop_the_next_independent_predicate() {
         let bump = Bump::new();
         let tables = nash_can::environment::Tables::default();
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &tables,
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let mut solver = Solver::new(&bump, &tables);
         let mut uf = UnionFind::new();
         let name = bump.alloc(Located::at_zero("value"));
         let binder = type_::Binder::Named(name);
@@ -3041,31 +3078,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &canonical.tables,
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let mut solver = Solver::new(&bump, &canonical.tables);
         let result = solver.infer_module(
             &mut uf,
             &canonical.module,
@@ -3112,31 +3125,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &canonical.tables,
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let mut solver = Solver::new(&bump, &canonical.tables);
         let result = solver.infer_module(
             &mut uf,
             &canonical.module,
@@ -3176,31 +3165,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &canonical.tables,
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let mut solver = Solver::new(&bump, &canonical.tables);
         let result = solver.infer_module(
             &mut uf,
             &canonical.module,
@@ -3262,31 +3227,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &canonical.tables,
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let mut solver = Solver::new(&bump, &canonical.tables);
         let result = solver.infer_module(
             &mut uf,
             &canonical.module,
@@ -3398,31 +3339,7 @@ mod copy_tests {
         let group_binder = group_binder.unwrap();
         let h_binder = h_binder.unwrap();
         let mut uf = UnionFind::new();
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &canonical.tables,
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let mut solver = Solver::new(&bump, &canonical.tables);
         let result = solver.infer_module(
             &mut uf,
             &canonical.module,
@@ -3572,31 +3489,7 @@ mod copy_tests {
             },
             &[&nash_ast::Kind::Type, &nash_ast::Kind::Type],
         );
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &tables,
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let mut solver = Solver::new(&bump, &tables);
         let mut uf = UnionFind::new();
         let a = bump.alloc(Located::at_zero(CanType::Var("a")));
         let trait_ = QualifiedName {
@@ -3658,31 +3551,8 @@ mod copy_tests {
     #[test]
     fn scheme_roots_share_copies_but_separate_uses_do_not() {
         let bump = Bump::new();
-        let mut solver = Solver {
-            bump: &bump,
-            tables: &nash_can::environment::Tables::default(),
-            pools: vec![Vec::new(); 8],
-            copied: Vec::new(),
-            predicates: Store::default(),
-            wanted: Vec::new(),
-            givens: Vec::new(),
-            schemes: Vec::new(),
-            recursive_uses: Vec::new(),
-            uses: Vec::new(),
-            expr_types: Vec::new(),
-            pattern_types: Vec::new(),
-            owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
-            has_poison: false,
-            dependencies: crate::recovery::Dependencies::default(),
-            failed_lineages: BTreeSet::new(),
-            failed_predicates: BTreeSet::new(),
-            failed_definitions: std::collections::HashSet::new(),
-            value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
-            kind_errors: Vec::new(),
-            fields: Vec::new(),
-        };
+        let tables = nash_can::environment::Tables::default();
+        let mut solver = Solver::new(&bump, &tables);
         let mut uf = UnionFind::new();
         let result = uf.fresh(make_descriptor(Content::RigidVar("a")));
         let context_only = uf.fresh(make_descriptor(Content::FlexVar(Some("b"))));

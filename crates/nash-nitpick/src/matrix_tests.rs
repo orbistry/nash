@@ -8,6 +8,7 @@ use crate::render::{RenderContext, pattern_to_string};
 use crate::{Literal, Pattern};
 
 static BOOL: Union<'static> = Union {
+    data_layout: None,
     kind: &Kind::Type,
     context: &[],
     name: &Located::at_zero("bool"),

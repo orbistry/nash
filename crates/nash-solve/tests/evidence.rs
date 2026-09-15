@@ -53,8 +53,14 @@ fn dictionaries<'a>(
                     type_args,
                     args: dictionaries(bump, tables, args),
                 }),
-                Evidence::StructuralEq { typ } => Some(Evidence::StructuralEq { typ }),
-                Evidence::ReflexiveLift { typ } => Some(Evidence::ReflexiveLift { typ }),
+                Evidence::StructuralEq { trait_, typ } => Some(Evidence::StructuralEq {
+                    trait_: *trait_,
+                    typ,
+                }),
+                Evidence::ReflexiveLift { trait_, typ } => Some(Evidence::ReflexiveLift {
+                    trait_: *trait_,
+                    typ,
+                }),
                 Evidence::Given { .. } | Evidence::Super { .. } => {
                     panic!("ground evidence must be closed")
                 }

@@ -4,6 +4,10 @@ description: "module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 
 ---
 (
     Interface {
+        declared: DeclaredStore {
+            refinements: 0,
+            ..
+        },
         impls: [],
         traits: [],
         home: ModuleName {
@@ -65,6 +69,9 @@ description: "module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 
                                     PackageName {
                                         author: "nash",
                                         project: "core",
+                                        version: "",
+                                        source: Compiler,
+                                        compilation: None,
                                     },
                                 ),
                                 name: "Builtin",
@@ -173,6 +180,7 @@ description: "module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 
                     },
                 },
                 visibility: Public,
+                transparent: false,
             },
         ],
         unions: [
@@ -287,6 +295,7 @@ description: "module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 
                 alternatives: 1,
                 options: Unbox,
                 visibility: Open,
+                data_layout: None,
             },
         ],
         binops: [],

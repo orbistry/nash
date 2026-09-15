@@ -23,10 +23,7 @@ async fn real_core_vesting_artifacts_execute_all_ledger_cases() {
         assert!(
             origins.iter().any(|(uri, spec)| {
                 uri.path().ends_with(&format!("/core/src/{module}.nash"))
-                    && spec
-                        .package
-                        .as_ref()
-                        .is_some_and(|owner| owner.to_string() == "nash/core")
+                    && spec.key.package.name.as_deref() == Some("nash/core")
             }),
             "{module} must come from the actual nash/core package"
         );

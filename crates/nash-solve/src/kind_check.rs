@@ -125,6 +125,10 @@ impl<'a, 'env> Check<'a, 'env> {
                         .collect::<Result<Vec<_>, _>>()?;
                     self.infer.apply(head, &args)?
                 }
+                FlatType::Function1(arguments, result) => {
+                    self.values(uf, arguments.into_iter().chain([result]))?;
+                    &K::Type
+                }
                 FlatType::Fun1(a, b) => {
                     self.values(uf, [a, b])?;
                     &K::Type

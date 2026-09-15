@@ -72,13 +72,6 @@ driver_error_snapshot!(
     })
 );
 driver_error_snapshot!(
-    project_not_found,
-    "Project discovery: /project and its parents contain no nash.jsonc.",
-    DriverError::ProjectNotFound {
-        path: "/project".into()
-    }
-);
-driver_error_snapshot!(
     member_not_found,
     "nash.jsonc:\n\n{\"type\":\"workspace\",\"members\":[\"packages/missing\"]}",
     DriverError::MemberNotFound {

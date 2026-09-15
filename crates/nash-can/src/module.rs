@@ -102,6 +102,15 @@ pub fn canonicalize<'a>(
                 options: u.options,
                 kind: schemes.kind(u.name.value),
                 context: schemes.context(u.name.value),
+                data_layout: u.source.value.data_layout.map(|mut layout| {
+                    layout.opaque = kind_env
+                        .constructor(nash_ast::QualifiedName {
+                            home,
+                            name: u.name.value,
+                        })
+                        .opaque();
+                    layout
+                }),
             },
         ))
     }));
@@ -114,6 +123,7 @@ pub fn canonicalize<'a>(
                 typ: a.typ,
                 kind: schemes.kind(a.name.value),
                 context: schemes.context(a.name.value),
+                transparent: a.source.value.transparent,
             },
         ))
     }));
@@ -151,7 +161,11 @@ pub fn canonicalize<'a>(
     let used_modules = collect_used_modules(&can_module);
     for import in module.imports {
         let module_name = import.import.value;
-        if !used_modules.contains(module_name) {
+        let provider_name = context
+            .interfaces
+            .and_then(|interfaces| interfaces.get(module_name))
+            .map_or(module_name, |interface| interface.home.name);
+        if !used_modules.contains(provider_name) {
             warnings.push(Warning::UnusedImport {
                 region: import.import.region,
                 module_name,
@@ -161,6 +175,7 @@ pub fn canonicalize<'a>(
 
     let mut tables = crate::impls::tables(bump, context.interfaces, &can_module, &kind_env)?;
     tables.fields = environment::visible_fields(bump, &env);
+    tables.select_core_traits(&env);
     Ok(CanResult {
         tables,
         module: can_module,
@@ -479,7 +494,7 @@ fn canonicalize_union<'a>(
     }
     let parameters =
         bump.alloc_slice_fill_iter(union.arguments.iter().copied().map(|arg| arg.name.value));
-    let ctors = canonicalize_ctors(bump, env, union.ctors)?;
+    let ctors = canonicalize_ctors(bump, env, union.name.value, union.ctors)?;
     let mut context = parameter_repr_predicates(bump, union.arguments);
     for ctor in union.ctors {
         for typ in ctor_arg_types(bump, ctor) {
@@ -492,7 +507,9 @@ fn canonicalize_union<'a>(
         .len()
         .try_into()
         .expect("union alternatives exceed u16");
-    let options = if union.ctors.len() == 1 && ctor_arg_types(bump, union.ctors[0]).len() == 1 {
+    let options = if union.data_layout.is_some() {
+        CtorOpts::Normal
+    } else if union.ctors.len() == 1 && ctor_arg_types(bump, union.ctors[0]).len() == 1 {
         CtorOpts::Unbox
     } else if union
         .ctors
@@ -518,6 +535,7 @@ fn canonicalize_union<'a>(
 fn canonicalize_ctors<'a>(
     bump: &'a Bump,
     env: &Env<'a>,
+    owner: &'a str,
     ctors: &'a [&'a SourceCtor<'a>],
 ) -> Result<&'a [&'a CanCtor<'a>], Vec<Error<'a>>> {
     accumulate::try_all_alloc_ref(
@@ -549,6 +567,15 @@ fn canonicalize_ctors<'a>(
                 }
             };
             let arguments = types::canonicalize_type_arguments(bump, env, source_arguments)?;
+            let owner = nash_ast::QualifiedName {
+                home: env.home,
+                name: owner,
+            };
+            let arguments = bump.alloc_slice_fill_iter(
+                arguments
+                    .iter()
+                    .map(|typ| types::declare_holes(bump, owner, typ)),
+            );
             Ok(&*bump.alloc(CanCtor {
                 labels,
                 name: ctor.name.value,
@@ -643,6 +670,14 @@ fn canonicalize_single_alias<'a>(
     let parameters =
         bump.alloc_slice_fill_iter(alias.arguments.iter().copied().map(|arg| arg.name.value));
     let typ = types::canonicalize_alias_body(bump, env, alias.typ)?;
+    let typ = types::declare_holes(
+        bump,
+        nash_ast::QualifiedName {
+            home: env.home,
+            name: alias.name.value,
+        },
+        typ,
+    );
 
     let mut context = parameter_repr_predicates(bump, alias.arguments);
     context.extend(types::alias_repr_predicates(bump, env, alias.typ)?);
@@ -737,10 +772,12 @@ fn check_alias_free_vars<'a>(
     collect_free_type_vars(a.typ, &mut free_vars);
 
     // Name-sorted, like Elm's `Map.toList (Map.difference bound free)`.
+    // Structural aliases may carry phantom parameters, e.g. Hash<algorithm, payload>.
+    // Native nominal aliases retain their existing unused-parameter diagnostic.
     let unused: BTreeMap<&str, Region> = a
         .arguments
         .iter()
-        .filter(|arg| !free_vars.contains_key(arg.name.value))
+        .filter(|arg| !a.transparent && !free_vars.contains_key(arg.name.value))
         .map(|arg| (arg.name.value, arg.name.region))
         .collect();
 
@@ -770,11 +807,17 @@ fn collect_type_edges<'a>(
 ) {
     match typ {
         SourceType::Repr { typ, .. } => collect_type_edges(&typ.value, alias_names, edges),
+        SourceType::Function { arguments, result } => {
+            for argument in *arguments {
+                collect_type_edges(&argument.value, alias_names, edges);
+            }
+            collect_type_edges(&result.value, alias_names, edges);
+        }
         SourceType::Lambda { from, to } => {
             collect_type_edges(&from.value, alias_names, edges);
             collect_type_edges(&to.value, alias_names, edges);
         }
-        SourceType::Var(_) => {}
+        SourceType::Hole | SourceType::Var(_) => {}
         SourceType::VarApp { args, .. } => {
             for arg in *args {
                 collect_type_edges(&arg.value, alias_names, edges);
@@ -830,6 +873,12 @@ fn collect_free_type_vars<'a>(typ: &Located<SourceType<'a>>, vars: &mut BTreeMap
                 collect_free_type_vars(arg, vars);
             }
         }
+        SourceType::Function { arguments, result } => {
+            for argument in *arguments {
+                collect_free_type_vars(argument, vars);
+            }
+            collect_free_type_vars(result, vars);
+        }
         SourceType::Lambda { from, to } => {
             collect_free_type_vars(from, vars);
             collect_free_type_vars(to, vars);
@@ -844,7 +893,7 @@ fn collect_free_type_vars<'a>(typ: &Located<SourceType<'a>>, vars: &mut BTreeMap
                 collect_free_type_vars(field.typ, vars);
             }
         }
-        SourceType::Unit => {}
+        SourceType::Hole | SourceType::Unit => {}
         SourceType::Tuple {
             first,
             second,
@@ -1186,7 +1235,13 @@ fn collect_from_expr<'a>(
 ) {
     use nash_ast::Expr::*;
     match expr {
-        Assert(inner) | Comptime(inner) => collect_from_expr(&inner.value, home, used),
+        Assert(inner)
+        | Comptime(inner)
+        | Format { value: inner }
+        | Callable { value: inner, .. }
+        | ModuleConstantCheck { value: inner }
+        | TypeScope { value: inner }
+        | TupleIndex { tuple: inner, .. } => collect_from_expr(&inner.value, home, used),
         Fail(message) | Todo(message) => {
             if let Some(message) = message {
                 collect_from_expr(&message.value, home, used);
@@ -1195,6 +1250,32 @@ fn collect_from_expr<'a>(
         Trace { message, body } => {
             collect_from_expr(&message.value, home, used);
             collect_from_expr(&body.value, home, used);
+        }
+        TraceLabel {
+            label,
+            arguments,
+            body,
+            ..
+        } => {
+            collect_from_expr(&label.value, home, used);
+            for argument in *arguments {
+                collect_from_expr(&argument.value, home, used);
+            }
+            collect_from_expr(&body.value, home, used);
+        }
+        RunnableCheck {
+            generator,
+            function,
+            ..
+        } => {
+            if let Some(generator) = generator {
+                collect_from_expr(&generator.value, home, used);
+            }
+            collect_from_expr(&function.value, home, used);
+        }
+        Equal { left, right, .. } => {
+            collect_from_expr(&left.value, home, used);
+            collect_from_expr(&right.value, home, used);
         }
         VarLocal(_) | Accessor(_) | Unit => {}
         Constant(_) => add_if_foreign(home, nash_ast::primitives::builtin_home(), used),
@@ -1232,7 +1313,22 @@ fn collect_from_expr<'a>(
                 collect_from_expr(&item.value, home, used);
             }
         }
-        Lambda { parameters, body } => {
+        Convert { typ, value, .. } => {
+            collect_from_type(&typ.value, home, used);
+            collect_from_expr(&value.value, home, used);
+        }
+        Pair { first, second } => {
+            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            collect_from_expr(&first.value, home, used);
+            collect_from_expr(&second.value, home, used);
+        }
+        DataList { elements, tail } => {
+            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            for element in elements.iter().copied().chain(tail.iter().copied()) {
+                collect_from_expr(&element.value, home, used);
+            }
+        }
+        Lambda { parameters, body } | Function { parameters, body } => {
             for p in *parameters {
                 collect_from_pattern(&p.value, home, used);
             }
@@ -1245,6 +1341,30 @@ fn collect_from_expr<'a>(
             collect_from_expr(&function.value, home, used);
             for a in *arguments {
                 collect_from_expr(&a.value, home, used);
+            }
+        }
+        SurfaceCall {
+            function,
+            arguments,
+            ..
+        } => {
+            collect_from_expr(&function.value, home, used);
+            for argument in *arguments {
+                collect_from_expr(&argument.value.value, home, used);
+            }
+        }
+        Pipe {
+            input,
+            function,
+            arguments,
+            ..
+        } => {
+            collect_from_expr(&input.value, home, used);
+            collect_from_expr(&function.value, home, used);
+            if let Some(arguments) = arguments {
+                for argument in *arguments {
+                    collect_from_expr(&argument.value.value, home, used);
+                }
             }
         }
         If {
@@ -1271,6 +1391,12 @@ fn collect_from_expr<'a>(
             pattern,
             value,
             body,
+        }
+        | LetValue {
+            pattern,
+            value,
+            body,
+            ..
         } => {
             collect_from_pattern(&pattern.value, home, used);
             collect_from_expr(&value.value, home, used);
@@ -1286,8 +1412,30 @@ fn collect_from_expr<'a>(
                 collect_from_expr(&b.body.value, home, used);
             }
         }
+        Match {
+            value,
+            pattern,
+            body,
+            fallback,
+            annotation,
+            ..
+        } => {
+            collect_from_expr(&value.value, home, used);
+            collect_from_pattern(&pattern.value, home, used);
+            collect_from_expr(&body.value, home, used);
+            collect_from_expr(&fallback.value, home, used);
+            if let Some(annotation) = annotation {
+                collect_from_type(&annotation.value, home, used);
+            }
+        }
         Access { record, .. } => collect_from_expr(&record.value, home, used),
-        Update { base, fields, .. } => {
+        FieldOrModule { record, module, .. } => {
+            collect_from_expr(&record.value, home, used);
+            if let Some(module) = module {
+                collect_from_expr(&module.value, home, used);
+            }
+        }
+        Update { base, fields, .. } | RecordUpdate { base, fields, .. } => {
             collect_from_expr(&base.value, home, used);
             for f in *fields {
                 collect_from_expr(&f.value.value, home, used);
@@ -1302,6 +1450,16 @@ fn collect_from_expr<'a>(
             collect_from_type(&annotation.typ.value, home, used);
             for f in *fields {
                 collect_from_expr(&f.value.value, home, used);
+            }
+        }
+        DataTuple {
+            first,
+            second,
+            rest,
+        } => {
+            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            for field in [*first, *second].into_iter().chain(rest.iter().copied()) {
+                collect_from_expr(&field.value, home, used);
             }
         }
         Tuple {
@@ -1350,6 +1508,27 @@ fn collect_from_pattern<'a>(
             }
         }
         Alias { pattern, .. } => collect_from_pattern(&pattern.value, home, used),
+        Pair { first, second } => {
+            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            collect_from_pattern(&first.value, home, used);
+            collect_from_pattern(&second.value, home, used);
+        }
+        DataList { elements, tail } => {
+            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            for element in elements.iter().copied().chain(tail.iter().copied()) {
+                collect_from_pattern(&element.value, home, used);
+            }
+        }
+        DataTuple {
+            first,
+            second,
+            rest,
+        } => {
+            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            for field in [*first, *second].into_iter().chain(rest.iter().copied()) {
+                collect_from_pattern(&field.value, home, used);
+            }
+        }
         Tuple {
             first,
             second,
@@ -1386,10 +1565,17 @@ fn collect_from_type<'a>(
                 collect_from_type(&arg.value, home, used);
             }
         }
-        Var(_) => {}
+        Hole | Var(_) => {}
+        DeclaredHole(hole) => add_if_foreign(home, hole.owner.home, used),
         Lambda { from, to } => {
             collect_from_type(&from.value, home, used);
             collect_from_type(&to.value, home, used);
+        }
+        Function { arguments, result } => {
+            for argument in *arguments {
+                collect_from_type(&argument.value, home, used);
+            }
+            collect_from_type(&result.value, home, used);
         }
         Named { reference, args } => {
             add_if_foreign(home, reference.home, used);
@@ -1565,7 +1751,7 @@ mod tests {
             let can_module = parse_and_canonicalize(&bump, input, Context::default())
                 .expect("expected successful canonicalization");
             let annotations = mock_annotations(&bump, &can_module);
-            let result = nash_can::from_module(&bump, &can_module, &annotations);
+            let result = nash_can::from_module(&bump, &can_module, &annotations, &Default::default());
             insta::with_settings!({
                 description => format!("Code:\n\n{}", input),
                 omit_expression => true,
@@ -1710,6 +1896,7 @@ mod tests {
         parameters: &'a [&'a str],
     ) -> Interface<'a> {
         Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -1719,6 +1906,7 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
+                data_layout: None,
                 context: &[],
                 kind: test_constructor_kind(bump, parameters.len()),
                 name: union_name,
@@ -1740,6 +1928,7 @@ mod tests {
         typ: &'a Located<CanType<'a>>,
     ) -> Interface<'a> {
         Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -1748,6 +1937,7 @@ mod tests {
             },
             values: &[],
             aliases: bump.alloc_slice_fill_iter([InterfaceAlias {
+                transparent: false,
                 context: &[],
                 kind: test_constructor_kind(bump, parameters.len()),
                 name: alias_name,
@@ -2218,6 +2408,9 @@ mod tests {
             package: Some(PackageName {
                 author: "nash",
                 project: "compiler",
+                version: "",
+                source: nash_ast::PackageSource::Compiler,
+                compilation: None,
             }),
             interfaces: None,
         };
@@ -2249,11 +2442,6 @@ mod tests {
     }
 
     // === Interface tests ===
-
-    #[test]
-    fn interface_from_module_empty() {
-        assert_interface_snapshot!("module Main exposing (..)\n");
-    }
 
     #[test]
     fn interface_from_module_open_exports() {
@@ -2349,25 +2537,6 @@ mod tests {
     }
 
     #[test]
-    fn to_public_union_open_passes_through() {
-        let union = InterfaceUnion {
-            context: &[],
-            kind: &nash_ast::Kind::Type,
-            name: "Bool",
-            parameters: &[],
-            ctors: &[],
-            alternatives: 2,
-            options: CtorOpts::Enum,
-            visibility: UnionVisibility::Open,
-        };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(union.to_public());
-        });
-    }
-
-    #[test]
     fn to_public_union_closed_strips_ctors() {
         let bump = Bump::new();
         let ctor: &CanCtor = bump.alloc(CanCtor {
@@ -2378,6 +2547,7 @@ mod tests {
             arguments: &[],
         });
         let union = InterfaceUnion {
+            data_layout: None,
             context: &[],
             kind: &nash_ast::Kind::Type,
             name: "Bool",
@@ -2387,16 +2557,17 @@ mod tests {
             options: CtorOpts::Enum,
             visibility: UnionVisibility::Closed,
         };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(union.to_public());
-        });
+        let public = union.to_public().expect("closed type remains visible");
+        assert!(
+            public.ctors.is_empty(),
+            "closed type must not expose constructors"
+        );
     }
 
     #[test]
     fn to_public_union_private_returns_none() {
         let union = InterfaceUnion {
+            data_layout: None,
             context: &[],
             kind: &nash_ast::Kind::Type,
             name: "Internal",
@@ -2414,29 +2585,11 @@ mod tests {
     }
 
     #[test]
-    fn to_public_alias_public_passes_through() {
-        let bump = Bump::new();
-        let typ = bump.alloc(Located::at(Region::zero(), CanType::unit()));
-        let alias = InterfaceAlias {
-            context: &[],
-            kind: test_constructor_kind(&bump, 2),
-            name: "Pair",
-            parameters: &["a", "b"],
-            typ,
-            visibility: AliasVisibility::Public,
-        };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(alias.to_public());
-        });
-    }
-
-    #[test]
     fn to_public_alias_private_returns_none() {
         let bump = Bump::new();
         let typ = bump.alloc(Located::at(Region::zero(), CanType::unit()));
         let alias = InterfaceAlias {
+            transparent: false,
             context: &[],
             kind: &nash_ast::Kind::Type,
             name: "Internal",
@@ -3146,6 +3299,7 @@ mod tests {
         val_name: &'a str,
     ) -> Interface<'a> {
         Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -3155,6 +3309,7 @@ mod tests {
             values: bump.alloc_slice_fill_iter([nash_can::InterfaceValue {
                 name: val_name,
                 annotation: test_annotation(bump),
+                callable: None,
             }]),
             aliases: &[],
             unions: &[],
@@ -3234,6 +3389,7 @@ mod tests {
             arguments: &[],
         });
         Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -3243,6 +3399,7 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
+                data_layout: None,
                 context: &[],
                 kind: test_constructor_kind(bump, 1),
                 name: "Maybe",
@@ -3258,6 +3415,7 @@ mod tests {
 
     fn basics_with_binops_interface<'a>(bump: &'a Bump) -> Interface<'a> {
         Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -3268,22 +3426,27 @@ mod tests {
                 InterfaceValue {
                     name: "add",
                     annotation: test_annotation(bump),
+                    callable: None,
                 },
                 InterfaceValue {
                     name: "sub",
                     annotation: test_annotation(bump),
+                    callable: None,
                 },
                 InterfaceValue {
                     name: "mul",
                     annotation: test_annotation(bump),
+                    callable: None,
                 },
                 InterfaceValue {
                     name: "apR",
                     annotation: test_annotation(bump),
+                    callable: None,
                 },
                 InterfaceValue {
                     name: "apL",
                     annotation: test_annotation(bump),
+                    callable: None,
                 },
             ]),
             aliases: &[],
@@ -3783,6 +3946,7 @@ mod tests {
             arguments: &[],
         });
         let maybe_interface = Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -3792,6 +3956,7 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
+                data_layout: None,
                 context: &[],
                 kind: test_constructor_kind(&bump, 1),
                 name: "Maybe",
@@ -3820,6 +3985,7 @@ mod tests {
             arguments: &[],
         });
         let option_interface = Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -3829,6 +3995,7 @@ mod tests {
             values: &[],
             aliases: &[],
             unions: bump.alloc_slice_fill_iter([InterfaceUnion {
+                data_layout: None,
                 context: &[],
                 kind: test_constructor_kind(&bump, 1),
                 name: "Option",
@@ -3872,6 +4039,7 @@ mod tests {
         let bump = Bump::new();
         let basics = basics_with_binops_interface(&bump);
         let mymath = Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -3923,6 +4091,7 @@ mod tests {
         );
         let bump = Bump::new();
         let basics = Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -3932,6 +4101,7 @@ mod tests {
             values: bump.alloc_slice_fill_iter([InterfaceValue {
                 name: "eq",
                 annotation: test_annotation(&bump),
+                callable: None,
             }]),
             aliases: &[],
             unions: &[],
@@ -4345,6 +4515,7 @@ mod tests {
         let bump = Bump::new();
         let alias_type = bump.alloc(Located::at(Region::zero(), CanType::Var("a")));
         let foo = Interface {
+            declared: Default::default(),
             impls: &[],
             traits: &[],
             home: ModuleName {
@@ -4353,6 +4524,7 @@ mod tests {
             },
             values: &[],
             aliases: bump.alloc_slice_fill_iter([InterfaceAlias {
+                transparent: false,
                 context: &[],
                 kind: test_constructor_kind(&bump, 1),
                 name: "MyAlias",

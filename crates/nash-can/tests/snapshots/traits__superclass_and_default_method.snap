@@ -155,6 +155,9 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                                 PackageName {
                                                                     author: "nash",
                                                                     project: "core",
+                                                                    version: "",
+                                                                    source: Compiler,
+                                                                    compilation: None,
                                                                 },
                                                             ),
                                                             name: "Builtin",
@@ -352,6 +355,9 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                                 PackageName {
                                                                     author: "nash",
                                                                     project: "core",
+                                                                    version: "",
+                                                                    source: Compiler,
+                                                                    compilation: None,
                                                                 },
                                                             ),
                                                             name: "Builtin",
@@ -468,6 +474,9 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                                     PackageName {
                                                                         author: "nash",
                                                                         project: "core",
+                                                                        version: "",
+                                                                        source: Compiler,
+                                                                        compilation: None,
                                                                     },
                                                                 ),
                                                                 name: "Builtin",
@@ -699,6 +708,9 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                                                         PackageName {
                                                                                             author: "nash",
                                                                                             project: "core",
+                                                                                            version: "",
+                                                                                            source: Compiler,
+                                                                                            compilation: None,
                                                                                         },
                                                                                     ),
                                                                                     name: "Builtin",
@@ -767,6 +779,9 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                     PackageName {
                                                         author: "nash",
                                                         project: "core",
+                                                        version: "",
+                                                        source: Compiler,
+                                                        compilation: None,
                                                     },
                                                 ),
                                                 name: "Builtin",

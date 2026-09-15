@@ -130,14 +130,16 @@ mod tests {
                 .iter()
                 .filter(|b| by_name(b.name) == Some(*func))
                 .collect::<Vec<_>>();
-            assert_eq!(declarations.len(), 1, "{func:?}");
-            let mut typ = &declarations[0].typ.value;
-            let mut arity = 0;
-            while let nash_ast::Type::Lambda { to, .. } = typ {
-                arity += 1;
-                typ = &to.value;
+            assert!(!declarations.is_empty(), "{func:?}");
+            for declaration in declarations {
+                let mut typ = &declaration.typ.value;
+                let mut arity = 0;
+                while let nash_ast::Type::Lambda { to, .. } = typ {
+                    arity += 1;
+                    typ = &to.value;
+                }
+                assert_eq!(arity, func.arity(), "{} ({func:?})", declaration.name);
             }
-            assert_eq!(arity, func.arity(), "{func:?}");
         }
         for builtin in BUILTINS {
             if let BuiltinLowering::Plutus(variant) = builtin.lowering {

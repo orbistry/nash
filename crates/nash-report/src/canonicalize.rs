@@ -928,6 +928,22 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             "This impl overlaps the reflexive `Lift` rule:",
             "Every Big type can lift to itself. Remove this impl or choose heads that do not overlap that built-in rule.",
         ),
+        Error::InvalidCall { region, reason } => simple(
+            "INVALID CALL",
+            *region,
+            reason,
+            "Use the declared argument labels and supply exactly one argument per parameter.",
+        ),
+        Error::InvalidConstructorPattern {
+            region,
+            name,
+            reason,
+        } => simple(
+            "INVALID CONSTRUCTOR PATTERN",
+            *region,
+            &format!("Constructor `{name}`: {reason}"),
+            "Match the constructor's declared fields and use a spread only for omitted fields.",
+        ),
         Error::Unsupported { feature, region } => simple(
             "NOT SUPPORTED",
             *region,
@@ -972,6 +988,8 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         Error::ContradictoryRepresentation { .. } => "nash::names::contradictory_representation",
         Error::ImplOfBuiltinTrait { .. } => "nash::names::impl_of_builtin_trait",
         Error::IrregularRecursion { .. } => "nash::names::irregular_recursion",
+        Error::InvalidCall { .. } => "nash::names::invalid_call",
+        Error::InvalidConstructorPattern { .. } => "nash::names::invalid_constructor_pattern",
         Error::Unsupported { .. } => "nash::names::unsupported",
         Error::MissingModuleHeader => "nash::names::missing_module_header",
         Error::NotFoundType { .. } => "nash::names::not_found_type",
