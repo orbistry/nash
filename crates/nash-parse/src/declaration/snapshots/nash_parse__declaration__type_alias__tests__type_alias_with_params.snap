@@ -109,6 +109,7 @@ Alias(
                 },
             },
             attributes: [],
+            transparent: false,
         },
     },
 )

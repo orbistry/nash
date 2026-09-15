@@ -64,6 +64,7 @@ mod tests {
         let interfaces = std::collections::BTreeMap::from([(
             "Tools",
             nash_can::Interface {
+                declared: Default::default(),
                 home: nash_ast::ModuleName {
                     package: None,
                     name: "Tools",

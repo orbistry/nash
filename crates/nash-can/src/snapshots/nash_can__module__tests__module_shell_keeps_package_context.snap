@@ -11,6 +11,9 @@ Module {
             PackageName {
                 author: "nash",
                 project: "compiler",
+                version: "",
+                source: Compiler,
+                compilation: None,
             },
         ),
         name: "Json.Decode",

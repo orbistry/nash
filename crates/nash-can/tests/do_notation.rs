@@ -19,7 +19,12 @@ fn monad(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
         &module,
     )
     .unwrap();
-    nash_can::from_module(bump, &canonical.module, &Default::default())
+    nash_can::from_module(
+        bump,
+        &canonical.module,
+        &Default::default(),
+        &canonical.tables.kinds.declared,
+    )
 }
 
 #[test]

@@ -11,7 +11,10 @@ use nash_region::{Located, Region};
 
 use crate::build::{Binding, Context, Engine, Error, Source, TraceLevel};
 
+mod calls;
+mod forms;
 mod methods;
+mod operations;
 mod patterns;
 
 const DATA: Ty<'static> = Ty::Big(&BigTy::Data);
@@ -26,7 +29,8 @@ impl<'a> Engine<'a, '_, '_> {
             Def::Def { args, body, .. } => (args.to_vec(), *body),
             Def::TypedDef { args, body, .. } => (args.iter().map(|a| a.pattern).collect(), *body),
         };
-        self.lambda(&parameters, body, ctx)
+        let function = self.lambda(&parameters, body, ctx)?;
+        Ok(self.no_inline_function(function))
     }
 
     pub(crate) fn expr(
@@ -34,221 +38,147 @@ impl<'a> Engine<'a, '_, '_> {
         expr: &'a Located<Expr<'a>>,
         ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
-        let node = NodeId::expr(expr);
-        Ok(match &expr.value {
-            Expr::Unit => self.ir.lit(Constant::unit(self.ir.arena)),
-            Expr::Int(n) => {
-                let value = self.ir.int(*n);
-                self.literal("FromInt", "fromInt", node, value, ctx, 0)?
+        match &expr.value {
+            Expr::RunnableCheck { function, .. } => self.expr(function, ctx),
+            Expr::TypeScope { value } => self.expr(value, ctx),
+            Expr::Unit | Expr::Constant(_) | Expr::ModuleConstantCheck { .. } => {
+                self.constants_expr(expr, ctx)
             }
-            Expr::Str(s) => {
-                let value = self.ir.lit(Constant::string(self.ir.arena, s));
-                self.literal("FromString", "fromString", node, value, ctx, 0)?
-            }
-            Expr::Bytes(bytes) => {
-                let value = self.ir.lit(Constant::byte_string(self.ir.arena, bytes));
-                self.literal("FromBytes", "fromBytes", node, value, ctx, 0)?
-            }
-            Expr::VarLocal(name) => match ctx
-                .env
-                .get(name)
-                .copied()
-                .ok_or(Error::UnknownLocal(name))?
-            {
-                Binding::Value(binder) => self.ir.var(binder.name),
-                Binding::Template { id, projection } => {
-                    let binder = self.use_template(id, node, ctx)?;
-                    if let Some(name) = projection {
-                        self.destruct_projection(id, name, binder, node, ctx)?
-                    } else {
-                        self.ir.var(binder.name)
-                    }
-                }
-            },
-            Expr::VarTopLevel(reference)
-            | Expr::VarForeign { reference, .. }
-            | Expr::VarOperator { reference, .. } => self.reference(*reference, node, ctx)?,
-            Expr::VarMethod {
-                trait_,
-                method,
-                annotation,
-            } => self.method(*trait_, method, annotation, node, ctx)?,
-            Expr::VarConstructor {
-                reference, index, ..
-            } => self.constructor(*reference, *index, node, ctx)?,
-            Expr::Binop {
-                reference,
-                left,
-                right,
-                ..
-            } => {
-                let func = self.reference(*reference, node, ctx)?;
-                let left = self.expr(left, ctx)?;
-                let right = self.expr(right, ctx)?;
-                self.ir.app(func, &[left, right])
-            }
-            Expr::Call {
-                function,
-                arguments,
-            } => {
-                let func = self.expr(function, ctx)?;
-                let args = arguments
-                    .iter()
-                    .map(|e| self.expr(e, ctx))
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.ir.app(func, &args)
-            }
-            Expr::Lambda { parameters, body } => self.lambda(parameters, body, ctx)?,
-            Expr::If {
-                branches,
-                final_else,
-            } => {
-                let mut body = self.expr(final_else, ctx)?;
-                for branch in branches.iter().rev() {
-                    let condition = self.expr(branch.condition, ctx)?;
-                    let yes = self.expr(branch.then_branch, ctx)?;
-                    body = self.ir.if_(condition, yes, body);
-                }
-                body
-            }
-            Expr::Let { definition, body } => self.let_definitions(&[*definition], body, ctx)?,
-            Expr::LetRec { definitions, body } => self.let_definitions(definitions, body, ctx)?,
-            Expr::LetDestruct {
-                pattern,
-                value,
-                body,
-            } => self.let_destruct(pattern, value, body, ctx)?,
-            Expr::Case {
-                scrutinee,
-                branches,
-            } => self.case(scrutinee, branches, ctx)?,
-            Expr::Tuple {
-                first,
-                second,
-                rest,
-            } => {
-                let items = [*first, *second]
-                    .into_iter()
-                    .chain(rest.iter().copied())
-                    .map(|e| self.expr(e, ctx))
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.ir.constr(0, &items)
-            }
-            Expr::List(items) => {
-                let ty = self.ty(node, ctx)?;
-                let Ty::Const(ConstTy::List(element)) = ty else {
-                    return Err(Error::RuntimeLayout(ty));
-                };
-                let values = items
-                    .iter()
-                    .map(|e| self.expr(e, ctx))
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.list(*element, &values)?
-            }
-            Expr::Record { fields, .. } => {
-                let values = fields
-                    .iter()
-                    .map(|f| self.expr(f.value, ctx))
-                    .collect::<Result<Vec<_>, _>>()?;
-                let ty = self.ty(node, ctx)?;
-                self.product(ty, &values)?
-            }
-            Expr::Access { record, field } => {
-                let typ = self.can_type(NodeId::expr(record), ctx)?;
-                let fields = self.types.fields(typ, &ctx.runtime_subst)?;
-                let index = fields
-                    .iter()
-                    .find(|(name, ..)| *name == field.value)
-                    .ok_or(Error::InvalidConstructor)?
-                    .1;
-                let ty = self.ty(NodeId::expr(record), ctx)?;
-                let value = self.expr(record, ctx)?;
-                self.field(ty, value, index, fields.len())?
-            }
-            Expr::Accessor(field) => {
-                let typ = self.substitute(self.can_type(node, ctx)?, &ctx.runtime_subst)?;
-                let Type::Lambda { from, .. } = &typ.value else {
-                    return Err(Error::InvalidConstructor);
-                };
-                let fields = self.types.fields(from, &BTreeMap::new())?;
-                let index = fields
-                    .iter()
-                    .find(|(name, ..)| *name == *field)
-                    .ok_or(Error::InvalidConstructor)?
-                    .1;
-                let ty = self.types.ty(from, &BTreeMap::new())?;
-                let binder = Binder {
-                    name: self.ir.fresh("record"),
-                    ty,
-                };
-                let body = self.field(ty, self.ir.var(binder.name), index, fields.len())?;
-                self.ir.lam(&[binder], body)
-            }
-            Expr::Update { base, fields, .. } => {
-                let typ = self.can_type(NodeId::expr(base), ctx)?;
-                let labels = self.types.fields(typ, &ctx.runtime_subst)?;
-                let ty = self.ty(NodeId::expr(base), ctx)?;
-                let value = self.expr(base, ctx)?;
-                let binder = Binder {
-                    name: self.ir.fresh("base"),
-                    ty,
-                };
-                let mut values = Vec::new();
-                for (name, index, _) in &labels {
-                    values.push(
-                        if let Some(update) = fields.iter().find(|f| f.field.value == *name) {
-                            self.expr(update.value, ctx)?
-                        } else {
-                            self.field(ty, self.ir.var(binder.name), *index, labels.len())?
-                        },
-                    );
-                }
-                let result = match ty {
-                    Ty::Big(BigTy::Adt(_)) => self.big_constructor(0, &values)?,
-                    _ => self.product(ty, &values)?,
-                };
-                self.ir.let_(binder, value, result)
-            }
-            Expr::Trace { message, body } => {
-                let body = self.expr(body, ctx)?;
-                self.user_trace(Some(message), None, expr.region, body, ctx)?
-            }
-            Expr::Fail(message) | Expr::Todo(message) => {
-                let todo = matches!(expr.value, Expr::Todo(_));
-                self.user_trace(
-                    *message,
-                    todo.then_some("TODO: "),
-                    expr.region,
-                    self.ir.error(),
-                    ctx,
-                )?
-            }
-            Expr::Assert(condition) => {
-                let value = self.expr(condition, ctx)?;
-                let failed = self.user_trace(
-                    None,
-                    Some("assertion failed"),
-                    expr.region,
-                    self.ir.error(),
-                    ctx,
-                )?;
+            Expr::TupleIndex { .. }
+            | Expr::Match { .. }
+            | Expr::RecordUpdate { .. }
+            | Expr::Equal { .. }
+            | Expr::Format { .. }
+            | Expr::TraceLabel { .. } => self.operations_expr(expr, ctx),
+            Expr::Convert { .. } => self.conversion_expr(expr, ctx),
+            Expr::Pair { .. }
+            | Expr::DataList { .. }
+            | Expr::DataTuple { .. }
+            | Expr::Tuple { .. }
+            | Expr::List(_) => self.collections_expr(expr, ctx),
+            Expr::Int(_)
+            | Expr::Str(_)
+            | Expr::Bytes(_)
+            | Expr::VarLocal(_)
+            | Expr::VarTopLevel(_)
+            | Expr::VarForeign { .. }
+            | Expr::VarOperator { .. }
+            | Expr::VarMethod { .. }
+            | Expr::VarConstructor { .. }
+            | Expr::Binop { .. } => self.values_expr(expr, ctx),
+            Expr::Callable { .. }
+            | Expr::Function { .. }
+            | Expr::SurfaceCall { .. }
+            | Expr::Pipe { .. }
+            | Expr::Call { .. }
+            | Expr::Lambda { .. } => self.calls_expr(expr, ctx),
+            Expr::If { .. }
+            | Expr::LetValue { .. }
+            | Expr::Let { .. }
+            | Expr::LetRec { .. }
+            | Expr::LetDestruct { .. }
+            | Expr::Case { .. } => self.control_expr(expr, ctx),
+            Expr::Record { .. }
+            | Expr::Access { .. }
+            | Expr::FieldOrModule { .. }
+            | Expr::Accessor(_)
+            | Expr::Update { .. } => self.records_expr(expr, ctx),
+            Expr::Trace { .. }
+            | Expr::Fail(_)
+            | Expr::Todo(_)
+            | Expr::Assert(_)
+            | Expr::Comptime(_) => self.effects_expr(expr, ctx),
+        }
+    }
+
+    fn encoded_record_update(
+        &mut self,
+        base: &'a Located<Expr<'a>>,
+        fields: &'a [FieldUpdate<'a>],
+        ctx: &Context<'a>,
+    ) -> Result<&'a Core<'a>, Error<'a>> {
+        let typ = self.can_type(NodeId::expr(base), ctx)?;
+        let labels = self.types.fields(typ, &ctx.runtime_subst)?;
+        let ty = self.ty(NodeId::expr(base), ctx)?;
+        let Ty::Big(BigTy::Adt(adt)) = ty else {
+            return Err(Error::RuntimeLayout(ty));
+        };
+        let layout = self.types.layout(*adt)?;
+        let encoding = layout.data_layout.ok_or(Error::RuntimeLayout(ty))?.encoding;
+        let value = self.expr(base, ctx)?;
+        let input = Binder {
+            name: self.ir.fresh("updated"),
+            ty,
+        };
+        if encoding == DataEncoding::Transparent {
+            let body = if let Some(field) = fields.first() {
+                let field_ty = self.ty(NodeId::expr(field.value), ctx)?;
+                let value = self.expr(field.value, ctx)?;
+                self.ir.cast(CastKind::ToData, field_ty, DATA, value)
+            } else {
+                self.ir.var(input.name)
+            };
+            return Ok(self.ir.let_(input, value, body));
+        }
+        let mut updates = BTreeMap::new();
+        for field in fields {
+            let index = labels
+                .iter()
+                .find(|(name, ..)| *name == field.field.value)
+                .ok_or(Error::InvalidConstructor)?
+                .1;
+            let field_ty = self.ty(NodeId::expr(field.value), ctx)?;
+            let value = self.expr(field.value, ctx)?;
+            updates.insert(
+                usize::from(index),
+                self.ir.cast(CastKind::ToData, field_ty, DATA, value),
+            );
+        }
+        let highest = updates.keys().next_back().copied().unwrap_or(0);
+        let list_ty = Ty::Const(self.ir.arena.alloc(ConstTy::List(DATA)));
+        let mut tails = Vec::with_capacity(highest + 2);
+        for _ in 0..highest + 2 {
+            tails.push(Binder {
+                name: self.ir.fresh("fields"),
+                ty: list_ty,
+            });
+        }
+        let mut body = self.ir.var(tails[highest + 1].name);
+        for index in (0..=highest).rev() {
+            let field = updates.get(&index).copied().unwrap_or_else(|| {
                 self.ir
-                    .if_(value, self.ir.lit(Constant::unit(self.ir.arena)), failed)
-            }
-            Expr::Comptime(value) => {
-                let body = self.expr(value, ctx)?;
-                let body = self.closed_dependencies(body)?;
-                let body = crate::casts::expand_with_traces(
-                    &self.ir,
-                    &mut self.types,
-                    body,
-                    self.trace.compiler,
-                )?;
-                let constant = crate::comptime::eval_closed(self.ir.arena, &[], body)
-                    .map_err(|error| Error::ComptimeAssembly(error.to_string()))?;
-                self.ir.lit(constant)
-            }
-        })
+                    .builtin(F::HeadList, &[self.ir.var(tails[index].name)])
+            });
+            body = self.ir.builtin(F::MkCons, &[field, body]);
+        }
+        body = self.ir.builtin(
+            if encoding == DataEncoding::List {
+                F::ListData
+            } else {
+                F::ConstrData
+            },
+            if encoding == DataEncoding::List {
+                self.ir.arena.alloc_slice_copy(&[body])
+            } else {
+                self.ir.arena.alloc_slice_copy(&[self.ir.int(0), body])
+            },
+        );
+        for index in (1..tails.len()).rev() {
+            let tail = self
+                .ir
+                .builtin(F::TailList, &[self.ir.var(tails[index - 1].name)]);
+            body = self.ir.let_(tails[index], tail, body);
+        }
+        let data_fields = if encoding == DataEncoding::List {
+            self.ir.builtin(F::UnListData, &[self.ir.var(input.name)])
+        } else {
+            self.ir.builtin(
+                F::SndPair,
+                &[self.ir.builtin(F::UnConstrData, &[self.ir.var(input.name)])],
+            )
+        };
+        body = self.ir.let_(tails[0], data_fields, body);
+        Ok(self.ir.let_(input, value, body))
     }
 
     fn let_definitions(
@@ -327,7 +257,7 @@ impl<'a> Engine<'a, '_, '_> {
             self.ir.builtin(func, &fields)
         } else {
             match result {
-                Ty::Big(BigTy::Adt(_)) => self.big_constructor(tag, &fields)?,
+                Ty::Big(BigTy::Adt(_)) => self.big_constructor(result, tag, &fields)?,
                 Ty::Term(TermTy::Adt(_)) => self.ir.constr(tag, &fields),
                 Ty::Big(BigTy::Record(_)) | Ty::Term(TermTy::Record(_)) => {
                     self.product(result, &fields)?
@@ -357,14 +287,52 @@ impl<'a> Engine<'a, '_, '_> {
         Ok(tail)
     }
     fn big_constructor(
-        &self,
-        tag: u16,
+        &mut self,
+        ty: Ty<'a>,
+        index: u16,
         fields: &[&'a Core<'a>],
     ) -> Result<&'a Core<'a>, Error<'a>> {
-        Ok(self.ir.builtin(
-            F::ConstrData,
-            &[self.ir.int(i128::from(tag)), self.list(DATA, fields)?],
-        ))
+        let Ty::Big(BigTy::Adt(adt)) = ty else {
+            return Err(Error::RuntimeLayout(ty));
+        };
+        let layout = self.types.layout(*adt)?;
+        let types = layout
+            .fields
+            .get(usize::from(index))
+            .ok_or(Error::InvalidConstructor)?;
+        if fields.len() != types.len() {
+            return Err(Error::InvalidConstructor);
+        }
+        if layout
+            .data_layout
+            .is_some_and(|data| data.encoding == DataEncoding::Transparent)
+        {
+            return Ok(self.ir.cast(CastKind::ToData, types[0], DATA, fields[0]));
+        }
+        let encoded = if layout.data_layout.is_some() {
+            fields
+                .iter()
+                .zip(*types)
+                .map(|(value, typ)| self.ir.cast(CastKind::ToData, *typ, DATA, value))
+                .collect::<Vec<_>>()
+        } else {
+            fields.to_vec()
+        };
+        let fields = self.list(DATA, &encoded)?;
+        Ok(match layout.data_layout {
+            Some(data) if data.encoding == DataEncoding::List => {
+                self.ir.builtin(F::ListData, &[fields])
+            }
+            data => self.ir.builtin(
+                F::ConstrData,
+                &[
+                    self.ir.int(data.map_or(i128::from(index), |data| {
+                        i128::from(data.tags[usize::from(index)])
+                    })),
+                    fields,
+                ],
+            ),
+        })
     }
     fn product(&self, ty: Ty<'a>, fields: &[&'a Core<'a>]) -> Result<&'a Core<'a>, Error<'a>> {
         Ok(match ty {
@@ -376,17 +344,42 @@ impl<'a> Engine<'a, '_, '_> {
         })
     }
     fn field(
-        &self,
+        &mut self,
         ty: Ty<'a>,
         value: &'a Core<'a>,
         index: u16,
         arity: usize,
     ) -> Result<&'a Core<'a>, Error<'a>> {
+        let mut decoded = None;
         let mut list = match ty {
             Ty::Big(BigTy::Record(_)) => self.ir.builtin(F::UnListData, &[value]),
-            Ty::Big(BigTy::Adt(_)) => self
-                .ir
-                .builtin(F::SndPair, &[self.ir.builtin(F::UnConstrData, &[value])]),
+            Ty::Big(BigTy::Adt(adt)) => {
+                let layout = self.types.layout(*adt)?;
+                if let Some(data) = layout.data_layout {
+                    if data.encoding == DataEncoding::Transparent {
+                        let field = *layout.fields[0]
+                            .get(usize::from(index))
+                            .ok_or(Error::InvalidConstructor)?;
+                        return Ok(self.ir.cast(CastKind::FromDataShallow, DATA, field, value));
+                    }
+                    decoded = Some(
+                        *layout
+                            .fields
+                            .first()
+                            .and_then(|fields| fields.get(usize::from(index)))
+                            .ok_or(Error::InvalidConstructor)?,
+                    );
+                    if data.encoding == DataEncoding::List {
+                        self.ir.builtin(F::UnListData, &[value])
+                    } else {
+                        self.ir
+                            .builtin(F::SndPair, &[self.ir.builtin(F::UnConstrData, &[value])])
+                    }
+                } else {
+                    self.ir
+                        .builtin(F::SndPair, &[self.ir.builtin(F::UnConstrData, &[value])])
+                }
+            }
             Ty::Term(TermTy::Record(_) | TermTy::Tuple(_) | TermTy::Adt(_)) => {
                 return Ok(self.ir.field(
                     value,
@@ -399,7 +392,13 @@ impl<'a> Engine<'a, '_, '_> {
         for _ in 0..index {
             list = self.ir.builtin(F::TailList, &[list]);
         }
-        Ok(self.ir.builtin(F::HeadList, &[list]))
+        let value = self.ir.builtin(F::HeadList, &[list]);
+        Ok(match decoded {
+            Some(ty) if !matches!(ty, Ty::Big(_)) => {
+                self.ir.cast(CastKind::FromDataShallow, DATA, ty, value)
+            }
+            _ => value,
+        })
     }
 
     fn user_trace(

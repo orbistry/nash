@@ -6,7 +6,11 @@ fn solve_source<'a>(
     source: &str,
     interfaces: &std::collections::BTreeMap<&'a str, nash_can::Interface<'a>>,
     package: Option<nash_ast::PackageName<'a>>,
-) -> (&'a nash_ast::Module<'a>, nash_can::Annotations<'a>) {
+) -> (
+    &'a nash_ast::Module<'a>,
+    nash_can::Annotations<'a>,
+    nash_ast::declared::DeclaredStore,
+) {
     let source = bump.alloc_str(source);
     let parsed = nash_parse::Parser::new(bump, source)
         .module()
@@ -24,7 +28,11 @@ fn solve_source<'a>(
     let module = &can.module;
     let (annotations, _) = nash_solve::run(bump, &mut uf, module, &can.tables)
         .expect("source must type check before nitpick");
-    (bump.alloc(can.module), annotations)
+    (
+        bump.alloc(can.module),
+        annotations,
+        can.tables.kinds.declared,
+    )
 }
 
 fn run(source: &str) -> Result<(), Diagnostics> {
@@ -35,11 +43,14 @@ fn run_modules(providers: &[(&str, &str)], source: &str) -> Result<(), Diagnosti
     let bump = Bump::new();
     let mut interfaces = core_interfaces(&bump);
     for (name, provider) in providers {
-        let (module, annotations) = solve_source(&bump, provider, &interfaces, None);
+        let (module, annotations, declared) = solve_source(&bump, provider, &interfaces, None);
         check(&bump, module).expect("provider patterns must pass");
-        interfaces.insert(name, nash_can::from_module(&bump, module, &annotations));
+        interfaces.insert(
+            name,
+            nash_can::from_module(&bump, module, &annotations, &declared),
+        );
     }
-    let (module, _) = solve_source(&bump, source, &interfaces, None);
+    let (module, _, _) = solve_source(&bump, source, &interfaces, None);
     check(&bump, module).map_err(|errors| {
         let source_view = nash_report::Source::new(source);
         let summaries: Vec<_> = errors.iter().map(describe).collect();
@@ -862,17 +873,23 @@ fn core_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can::In
         ("Literal", include_str!("fixtures/Literal.nash")),
         ("Monad", include_str!("fixtures/Monad.nash")),
     ] {
-        let (module, annotations) = solve_source(
+        let (module, annotations, declared) = solve_source(
             bump,
             source,
             &interfaces,
             Some(nash_ast::PackageName {
                 author: "nash",
                 project: "core",
+                version: "",
+                source: nash_ast::PackageSource::Compiler,
+                compilation: None,
             }),
         );
         check(bump, module).expect("core provider must pass nitpick");
-        interfaces.insert(name, nash_can::from_module(bump, module, &annotations));
+        interfaces.insert(
+            name,
+            nash_can::from_module(bump, module, &annotations, &declared),
+        );
     }
     interfaces
 }

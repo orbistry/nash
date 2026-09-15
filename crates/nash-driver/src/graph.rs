@@ -19,6 +19,12 @@ pub struct DepGraph {
 
     /// Depth of each module in the graph (for parallel compilation).
     pub depths: HashMap<Url, usize>,
+
+    /// Owned inspection and resolution diagnostics, retained on their source node.
+    pub diagnostics: HashMap<Url, Vec<nash_frontend::FrontendDiagnostic>>,
+
+    /// Import spellings resolved in the importing package's visibility scope.
+    pub resolved: HashMap<Url, Vec<nash_frontend::ResolvedDependency>>,
 }
 
 impl DepGraph {

@@ -17,6 +17,24 @@ pub enum BuiltinLowering {
     CastValidateData,
     CastLift,
     CastLower,
+    DataListHead,
+    DataListCons,
+    DataPairFirst,
+    DataPairSecond,
+    DataUnConstr,
+    DataWriteBits,
+    ConstrIndex,
+    ConstrFields,
+    ChooseValue,
+    Not,
+    Always,
+    Flip,
+    Tautology,
+    Enumerate,
+    EncodeBase16,
+    FromInt,
+    DoFromInt,
+    Diagnostic,
 }
 
 impl BuiltinLowering {
@@ -29,6 +47,18 @@ impl BuiltinLowering {
                 | Self::CastLift
                 | Self::CastLower
         )
+    }
+
+    pub fn requires_layout(self) -> bool {
+        self.is_core_only()
+            || matches!(
+                self,
+                Self::DataListHead
+                    | Self::DataListCons
+                    | Self::DataPairFirst
+                    | Self::DataPairSecond
+                    | Self::Enumerate
+            )
     }
 }
 
@@ -60,6 +90,12 @@ macro_rules! function {
     };
 }
 
+macro_rules! grouped {
+    ([$($arg:expr),*], $result:expr) => {
+        &Located::at_zero(Type::Function { arguments: &[$($arg),*], result: $result })
+    };
+}
+
 macro_rules! builtin {
     ($name:literal, $lowering:ident $(($variant:literal))?, [$($var:literal),*], $typ:expr) => {
         Builtin { context: &[], name: $name, free_vars: &[$($var),*], typ: $typ, lowering: BuiltinLowering::$lowering $(($variant))? }
@@ -68,6 +104,7 @@ macro_rules! builtin {
 
 const A: &Located<Type<'static>> = &Located::at_zero(Type::Var("a"));
 const B: &Located<Type<'static>> = &Located::at_zero(Type::Var("b"));
+const C: &Located<Type<'static>> = &Located::at_zero(Type::Var("c"));
 const UNIT: &Located<Type<'static>> = &named("unit", &[]);
 const INT: &Located<Type<'static>> = &named("int", &[]);
 const BOOL: &Located<Type<'static>> = &named("bool", &[]);
@@ -78,6 +115,9 @@ const BLS_G1: &Located<Type<'static>> = &named("bls_g1", &[]);
 const BLS_G2: &Located<Type<'static>> = &named("bls_g2", &[]);
 const BLS_MLR: &Located<Type<'static>> = &named("bls_mlr", &[]);
 const VALUE: &Located<Type<'static>> = &named("value", &[]);
+const DATA_LIST: &Located<Type<'static>> = &named("data_list", &[DATA]);
+const DATA_PAIR: &Located<Type<'static>> = &named("data_pair", &[DATA, DATA]);
+const DATA_MAP: &Located<Type<'static>> = &named("data_list", &[DATA_PAIR]);
 
 pub const BUILTINS: &[Builtin] = &[
     builtin!(
@@ -667,4 +707,141 @@ pub const BUILTINS: &[Builtin] = &[
     ),
     builtin!("castLift", CastLift, ["a", "b"], function!(A, B)),
     builtin!("castLower", CastLower, ["a", "b"], function!(A, B)),
+    // Aiken uses encoded list elements and pair fields. Native builtin schemes
+    // above deliberately retain their original constant-container contracts.
+    builtin!(
+        "dataListHead",
+        DataListHead,
+        ["a"],
+        function!(&named("data_list", &[A]), A)
+    ),
+    builtin!(
+        "dataListCons",
+        DataListCons,
+        ["a"],
+        function!(A, &named("data_list", &[A]), &named("data_list", &[A]))
+    ),
+    builtin!(
+        "dataListTail",
+        Plutus("TailList"),
+        ["a"],
+        function!(&named("data_list", &[A]), &named("data_list", &[A]))
+    ),
+    builtin!(
+        "dataListNull",
+        Plutus("NullList"),
+        ["a"],
+        function!(&named("data_list", &[A]), BOOL)
+    ),
+    builtin!(
+        "dataListChoose",
+        Plutus("ChooseList"),
+        ["a", "b"],
+        function!(&named("data_list", &[A]), B, B, B)
+    ),
+    builtin!(
+        "dataPairFirst",
+        DataPairFirst,
+        ["a", "b"],
+        function!(&named("data_pair", &[A, B]), A)
+    ),
+    builtin!(
+        "dataPairSecond",
+        DataPairSecond,
+        ["a", "b"],
+        function!(&named("data_pair", &[A, B]), B)
+    ),
+    builtin!(
+        "dataConstr",
+        Plutus("ConstrData"),
+        [],
+        function!(INT, DATA_LIST, DATA)
+    ),
+    builtin!("dataMap", Plutus("MapData"), [], function!(DATA_MAP, DATA)),
+    builtin!(
+        "dataList",
+        Plutus("ListData"),
+        [],
+        function!(DATA_LIST, DATA)
+    ),
+    builtin!(
+        "dataUnConstr",
+        DataUnConstr,
+        [],
+        function!(DATA, &named("data_pair", &[INT, DATA_LIST]))
+    ),
+    builtin!(
+        "dataUnMap",
+        Plutus("UnMapData"),
+        [],
+        function!(DATA, DATA_MAP)
+    ),
+    builtin!(
+        "dataUnList",
+        Plutus("UnListData"),
+        [],
+        function!(DATA, DATA_LIST)
+    ),
+    builtin!(
+        "dataPair",
+        Plutus("MkPairData"),
+        [],
+        function!(DATA, DATA, DATA_PAIR)
+    ),
+    // The adapter's nullary-call ABI supplies unit; UPLC's nil builtins consume it.
+    builtin!(
+        "dataNil",
+        Plutus("MkNilData"),
+        [],
+        function!(UNIT, DATA_LIST)
+    ),
+    builtin!(
+        "dataNilPair",
+        Plutus("MkNilPairData"),
+        [],
+        function!(UNIT, DATA_MAP)
+    ),
+    builtin!(
+        "dataWriteBits",
+        DataWriteBits,
+        [],
+        function!(BYTES, &named("data_list", &[INT]), BOOL, BYTES)
+    ),
+    builtin!("constrIndex", ConstrIndex, [], function!(DATA, INT)),
+    builtin!("constrFields", ConstrFields, [], function!(DATA, DATA_LIST)),
+    // Pinned choose_unit accepts Data, not Void, and only sequences evaluation.
+    builtin!("chooseValue", ChooseValue, ["a"], function!(DATA, A, A)),
+    builtin!("boolNot", Not, [], function!(BOOL, BOOL)),
+    builtin!("asData", Identity, [], function!(DATA, DATA)),
+    builtin!("always", Always, ["a", "b"], function!(A, B, A)),
+    builtin!(
+        "flip",
+        Flip,
+        ["a", "b", "c"],
+        grouped!([grouped!([A, B], C)], grouped!([B, A], C))
+    ),
+    builtin!("tautology", Tautology, ["a"], function!(A, UNIT)),
+    builtin!(
+        "enumerate",
+        Enumerate,
+        ["a", "b"],
+        grouped!(
+            [
+                &named("data_list", &[A]),
+                B,
+                grouped!([A, B], B),
+                grouped!([A, B], B)
+            ],
+            B
+        )
+    ),
+    builtin!(
+        "encodeBase16",
+        EncodeBase16,
+        [],
+        function!(BYTES, INT, BYTES, BYTES)
+    ),
+    builtin!("integerDecimal", FromInt, [], function!(INT, BYTES, BYTES)),
+    builtin!("doFromInt", DoFromInt, [], function!(INT, BYTES, BYTES)),
+    builtin!("diagnostic", Diagnostic, [], function!(DATA, BYTES, BYTES)),
 ];

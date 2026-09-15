@@ -19,6 +19,7 @@ fn q(text: &str) -> QualifiedName<'_> {
 }
 fn bool_union(arena: &Arena) -> &Union<'_> {
     arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero("bool")),
@@ -209,6 +210,86 @@ fn distinct_overloaded_literals_can_overlap_and_fall_through() {
     assert_eq!(result.logs, ["scrutinee"]);
 }
 
+#[test]
+fn fixed_literals_preserve_aliases_and_ordered_native_fallthrough() {
+    let arena = Arena::new();
+    let b = Builder::new(&arena);
+    let unions = HashMap::new();
+    let mut types = TypeEnv::new(&arena, &unions);
+    let int = Ty::Const(&ConstTy::Int);
+    let ty = Ty::Term(arena.alloc(TermTy::Tuple(
+        arena.alloc_slice_copy(&[int, Ty::Const(&ConstTy::Bool)]),
+    )));
+    let fixed = pat(
+        &arena,
+        Pattern::Alias {
+            pattern: pat(&arena, Pattern::Constant(nash_ast::Constant::Int(7))),
+            name: "matched",
+        },
+    );
+    let native = pat(&arena, Pattern::Int(99));
+    let matcher = b.lam(
+        &[Binder {
+            name: b.fresh("value"),
+            ty: int,
+        }],
+        b.lit(Constant::bool(&arena, true)),
+    );
+    let literals = HashMap::from([(NodeId::pattern(native), matcher)]);
+    let records = RecordFields::new();
+    let rows = [
+        tuple(&arena, fixed, boolean(&arena, true)),
+        tuple(&arena, fixed, boolean(&arena, false)),
+        tuple(&arena, native, boolean(&arena, false)),
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(index, pattern)| {
+        let bindings = bindings(&b, &mut types, ty, pattern, &records).unwrap();
+        let body = match index {
+            0 => b.int(1),
+            1 => b.var(bindings["matched"].name),
+            _ => b.int(42),
+        };
+        MatchBranch {
+            pattern,
+            bindings,
+            body,
+        }
+    })
+    .collect::<Vec<_>>();
+    for (n, flag, expected) in [
+        (7, false, Some("(con integer 7)")),
+        (8, false, Some("(con integer 42)")),
+        (7, true, Some("(con integer 1)")),
+        (8, true, None),
+    ] {
+        let value = b.trace(
+            b.lit(Constant::string(&arena, "scrutinee")),
+            b.constr(0, &[b.int(n), b.lit(Constant::bool(&arena, flag))]),
+        );
+        let core = compile(
+            &b,
+            &mut types,
+            ty,
+            value,
+            &rows,
+            MatchInputs {
+                record_fields: &records,
+                literal_tests: &literals,
+            },
+            b.error(),
+        )
+        .unwrap();
+        let result = crate::harness::eval_core(&arena, core);
+        match expected {
+            Some(expected) => assert_eq!(result.result, expected),
+            None => assert!(result.result.starts_with("error:")),
+        }
+        assert_eq!(result.logs, ["scrutinee"]);
+    }
+}
+
 fn nominal<'a>(
     arena: &'a Arena,
     text: &'a str,
@@ -229,6 +310,7 @@ fn nominal<'a>(
         arguments: &[],
     });
     let union = arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero(text)),
@@ -461,6 +543,7 @@ fn big_constructor_fields_and_data_builtin_shapes_decode() {
         "(con integer 17)"
     );
     let data_union = arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero("Data")),
@@ -523,6 +606,7 @@ fn constructor_argument_indices_restore_named_field_order() {
         arguments: arena.alloc_slice_copy(&[&*int_type, &*int_type]),
     });
     let union = arena.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: arena.alloc(Located::at_zero("row")),
@@ -673,6 +757,42 @@ fn strings_and_bytes_use_supplied_literal_matchers() {
         let matcher = b.lam(&[arg], b.builtin(eq, &[b.var(arg.name), b.lit(literal)]));
         let literals = HashMap::from([(NodeId::pattern(pattern), matcher)]);
         let rows = [(pattern, 1), (pat(&arena, Pattern::Anything), 2)];
+        assert_eq!(
+            run(&b, &mut types, ty, b.lit(literal), &rows, &literals).result,
+            "(con integer 1)"
+        );
+        assert_eq!(
+            run(&b, &mut types, ty, b.lit(other), &rows, &literals).result,
+            "(con integer 2)"
+        );
+    }
+}
+
+#[test]
+fn fixed_strings_and_bytes_match_without_literal_evidence() {
+    let arena = Arena::new();
+    let b = Builder::new(&arena);
+    let unions = HashMap::new();
+    let mut types = TypeEnv::new(&arena, &unions);
+    let literals = HashMap::new();
+    for (fixed, ty, literal, other) in [
+        (
+            nash_ast::Constant::Str("é"),
+            Ty::Const(&ConstTy::String),
+            Constant::string(&arena, "é"),
+            Constant::string(&arena, "e"),
+        ),
+        (
+            nash_ast::Constant::Bytes(b"\0\xff"),
+            Ty::Const(&ConstTy::Bytes),
+            Constant::byte_string(&arena, b"\0\xff"),
+            Constant::byte_string(&arena, b"\0"),
+        ),
+    ] {
+        let rows = [
+            (pat(&arena, Pattern::Constant(fixed)), 1),
+            (pat(&arena, Pattern::Anything), 2),
+        ];
         assert_eq!(
             run(&b, &mut types, ty, b.lit(literal), &rows, &literals).result,
             "(con integer 1)"

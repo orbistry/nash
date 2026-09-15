@@ -3,6 +3,10 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (foo)\n\ninfix left 6 (|>) = apR\n\napR x f = f x\n\nfoo = 42\n"
 ---
 Interface {
+    declared: DeclaredStore {
+        refinements: 0,
+        ..
+    },
     impls: [],
     traits: [],
     home: ModuleName {
@@ -33,6 +37,7 @@ Interface {
                     ),
                 },
             },
+            callable: None,
         },
     ],
     aliases: [],

@@ -180,6 +180,19 @@ pub fn add_vars<'a>(
             value.value.name.value,
             Var::TopLevel(value.value.name.region),
         );
+        let body = match &value.value.body.value {
+            nash_source::Expr::RunnableCheck { function, .. } => *function,
+            _ => value.value.body,
+        };
+        if let nash_source::Expr::Callable { labels, .. } = &body.value {
+            env.callables.insert(
+                nash_ast::QualifiedName {
+                    home: env.home,
+                    name: value.value.name.value,
+                },
+                labels,
+            );
+        }
     }
     Ok(())
 }

@@ -230,10 +230,18 @@ pub enum TypeInfo<'a> {
         /// Transparent aliases use their substituted body instead of a fixed repr.
         repr: Option<Repr>,
         alias: Option<&'a Located<Type<'a>>>,
+        opaque: bool,
     },
 }
 
 impl<'a> TypeInfo<'a> {
+    pub fn opaque(self) -> bool {
+        match self {
+            Self::Builtin(_) => false,
+            Self::Defined { opaque, .. } => opaque,
+        }
+    }
+
     pub fn kind(self) -> &'a Kind<'a> {
         match self {
             Self::Builtin(p) => p.kind,
@@ -270,6 +278,7 @@ pub struct TraitContext<'a> {
 
 #[derive(Clone, Debug)]
 pub struct KindEnv<'a> {
+    pub declared: nash_ast::declared::DeclaredStore,
     pub types: BTreeMap<QualifiedName<'a>, TypeInfo<'a>>,
     pub traits: BTreeMap<QualifiedName<'a>, &'a [&'a Kind<'a>]>,
     pub superclasses: BTreeMap<QualifiedName<'a>, TraitContext<'a>>,
@@ -284,6 +293,7 @@ impl Default for KindEnv<'_> {
 impl<'a> KindEnv<'a> {
     pub fn from_interfaces(interfaces: Option<&BTreeMap<&'a str, crate::Interface<'a>>>) -> Self {
         let mut env = Self {
+            declared: nash_ast::declared::DeclaredStore::default(),
             types: primitives::PRIMITIVES
                 .iter()
                 .map(|p| {
@@ -318,6 +328,7 @@ impl<'a> KindEnv<'a> {
             .into_iter()
             .flat_map(|interfaces| interfaces.values())
         {
+            env.declared.merge(&interface.declared);
             for trait_ in interface.traits {
                 env.superclasses.insert(
                     QualifiedName {
@@ -347,12 +358,13 @@ impl<'a> KindEnv<'a> {
                     kind: union.kind,
                     parameters: union.parameters,
                     context: union.context,
-                    repr: Some(if is_big_name(union.name) {
+                    repr: Some(if union.data_layout.is_some() || is_big_name(union.name) {
                         Repr::Big
                     } else {
                         Repr::Term
                     }),
                     alias: None,
+                    opaque: union.data_layout.is_some_and(|layout| layout.opaque),
                 });
             }
             for alias in interface.aliases {
@@ -365,8 +377,13 @@ impl<'a> KindEnv<'a> {
                         kind: alias.kind,
                         parameters: alias.parameters,
                         context: alias.context,
-                        repr: record_repr(alias.name, &alias.typ.value),
+                        repr: if alias.transparent {
+                            None
+                        } else {
+                            record_repr(alias.name, &alias.typ.value)
+                        },
                         alias: Some(alias.typ),
+                        opaque: false,
                     },
                 );
             }
@@ -403,6 +420,10 @@ pub(crate) fn representation_subject<'a>(
 ) -> &'a Located<Type<'a>> {
     loop {
         let expanded = match &typ.value {
+            Type::DeclaredHole(hole) => match env.declared.resolve(bump, hole) {
+                Some(solution) => solution,
+                None => return typ,
+            },
             Type::Alias {
                 reference,
                 arguments,
@@ -414,7 +435,12 @@ pub(crate) fn representation_subject<'a>(
                         *body
                     }
                 };
-                if record_repr(reference.name, &body.value).is_some() {
+                if matches!(body.value, Type::Record { .. })
+                    && matches!(
+                        env.constructor(*reference),
+                        TypeInfo::Defined { repr: Some(_), .. }
+                    )
+                {
                     return typ;
                 }
                 let substitution = arguments.iter().map(|a| (a.name, a.typ)).collect();
@@ -453,13 +479,129 @@ pub(crate) fn representation_subject<'a>(
     }
 }
 
+/// Opaque nominal values remain opaque through type arguments and aliases.
+/// A function value is not inspected: its argument/result types are not stored
+/// data fields and the pinned casting rule does not walk them.
+pub fn contains_opaque<'a>(bump: &'a Bump, env: &KindEnv<'a>, typ: &'a Located<Type<'a>>) -> bool {
+    let typ = representation_subject(bump, env, typ);
+    match &typ.value {
+        Type::Named { reference, args } => {
+            env.constructor(*reference).opaque()
+                || args.iter().any(|arg| contains_opaque(bump, env, arg))
+        }
+        Type::Alias {
+            reference,
+            arguments,
+            ..
+        } => {
+            env.constructor(*reference).opaque()
+                || arguments
+                    .iter()
+                    .any(|arg| contains_opaque(bump, env, arg.typ))
+        }
+        Type::App { head, args } => {
+            contains_opaque(bump, env, head)
+                || args.iter().any(|arg| contains_opaque(bump, env, arg))
+        }
+        Type::Tuple {
+            first,
+            second,
+            rest,
+        } => {
+            contains_opaque(bump, env, first)
+                || contains_opaque(bump, env, second)
+                || rest.iter().any(|typ| contains_opaque(bump, env, typ))
+        }
+        Type::Record { fields } => fields
+            .iter()
+            .any(|field| contains_opaque(bump, env, field.typ)),
+        Type::Hole
+        | Type::DeclaredHole(_)
+        | Type::Var(_)
+        | Type::Lambda { .. }
+        | Type::Function { .. } => false,
+    }
+}
+
+/// Reject runtime shapes with no Data decoder while retaining polymorphic fields
+/// for the backend's qualified, ground-type specialization.
+pub(crate) fn check_data_type<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    typ: &'a Located<Type<'a>>,
+) -> Result<(), Vec<crate::Error<'a>>> {
+    let typ = representation_subject(bump, env, typ);
+    let unsupported = |feature| {
+        Err(vec![crate::Error::Unsupported {
+            feature,
+            region: typ.region,
+        }])
+    };
+    match &typ.value {
+        Type::Hole | Type::DeclaredHole(_) | Type::Var(_) => Ok(()),
+        Type::Tuple {
+            first,
+            second,
+            rest,
+        } => {
+            for item in [*first, *second].into_iter().chain(rest.iter().copied()) {
+                check_data_type(bump, env, item)?;
+            }
+            Ok(())
+        }
+        Type::Named { reference, args } if reference.home == primitives::builtin_home() => {
+            match reference.name {
+                "Data" | "Int" | "Bytes" | "List" | "Map" | "int" | "bytes" | "string" | "bool"
+                | "unit" => Ok(()),
+                "list" | "data_list" | "data_pair" | "data_tuple" | "data_option" => {
+                    for arg in *args {
+                        check_data_type(bump, env, arg)?;
+                    }
+                    Ok(())
+                }
+                name if primitives::data_union(name).is_some() => Ok(()),
+                "pair" => {
+                    for arg in *args {
+                        if repr_of(bump, env, arg).is_some_and(|repr| repr != Repr::Big) {
+                            return unsupported(
+                                "Data conversion for a native pair with non-Data fields",
+                            );
+                        }
+                    }
+                    Ok(())
+                }
+                _ => unsupported("Data conversion for this primitive type"),
+            }
+        }
+        Type::Named { .. } | Type::Alias { .. } => {
+            if repr_of(bump, env, typ) == Some(Repr::Big) {
+                Ok(())
+            } else {
+                unsupported("Data conversion for a type without a Data layout")
+            }
+        }
+        Type::App { args, .. } => {
+            for arg in *args {
+                check_data_type(bump, env, arg)?;
+            }
+            Ok(())
+        }
+        Type::Lambda { .. } | Type::Function { .. } => unsupported("Data conversion for functions"),
+        Type::Record { .. } => unsupported("Data conversion for anonymous records"),
+    }
+}
+
 /// The representation query does not bind types or inspect declaration contexts.
 /// In particular, a transparent alias must use all of its supplied arguments.
 pub fn repr_of<'a>(bump: &'a Bump, env: &KindEnv<'a>, typ: &'a Located<Type<'a>>) -> Option<Repr> {
     match &typ.value {
-        Type::Var(_) => None,
+        Type::Hole | Type::Var(_) => None,
+        Type::DeclaredHole(hole) => env
+            .declared
+            .resolve(bump, hole)
+            .and_then(|typ| repr_of(bump, env, typ)),
 
-        Type::Lambda { .. } | Type::Tuple { .. } => Some(Repr::Term),
+        Type::Lambda { .. } | Type::Function { .. } | Type::Tuple { .. } => Some(Repr::Term),
         Type::Record { .. } => None,
         Type::App { head, args } => {
             let applied = crate::types::apply_type(bump, typ.region, head, args);
@@ -481,7 +623,11 @@ pub fn repr_of<'a>(bump: &'a Bump, env: &KindEnv<'a>, typ: &'a Located<Type<'a>>
             let body = match target {
                 nash_ast::AliasType::Open(body) | nash_ast::AliasType::Filled { body, .. } => *body,
             };
-            if let Some(repr) = record_repr(reference.name, &body.value) {
+            if matches!(body.value, Type::Record { .. })
+                && let TypeInfo::Defined {
+                    repr: Some(repr), ..
+                } = env.constructor(*reference)
+            {
                 return Some(repr);
             }
             let substitution = arguments.iter().map(|a| (a.name, a.typ)).collect();
@@ -594,6 +740,11 @@ impl<'a, 'env> TypeChecker<'a, 'env> {
 
     pub fn typ(&mut self, typ: &'a Located<Type<'a>>) -> Result<&'a K<'a>, TypeMismatch<'a>> {
         match &typ.value {
+            Type::Hole => Ok(self.infer.fresh()),
+            Type::DeclaredHole(hole) => match self.env.declared.resolve(self.infer.bump, hole) {
+                Some(solution) => self.typ(solution),
+                None => Ok(self.infer.fresh()),
+            },
             Type::Var(name) => Ok(self.variable(name)),
             Type::Named { reference, args } => {
                 let head = self.constructor(*reference);
@@ -610,6 +761,13 @@ impl<'a, 'env> TypeChecker<'a, 'env> {
             Type::App { head, args } => {
                 let kind = self.typ(head)?;
                 self.application(kind, args.iter().copied())
+            }
+            Type::Function { arguments, result } => {
+                for argument in *arguments {
+                    self.value(argument)?;
+                }
+                self.value(result)?;
+                Ok(&K::Type)
             }
             Type::Lambda { from, to } => {
                 self.value(from)?;
@@ -762,6 +920,10 @@ impl<'a, 'env> Formation<'a, 'env> {
             Pred::Apply { head, args } => {
                 let applied = crate::types::apply_type(self.bump, head.region, head, args);
                 match &applied.value {
+                    Type::DeclaredHole(hole) => match self.env.declared.resolve(self.bump, hole) {
+                        Some(solution) => self.typ(solution)?,
+                        None => self.retain(Pred::Apply { head, args }),
+                    },
                     Type::Named { reference, args } => {
                         self.named(*reference, args, applied.region)?
                     }
@@ -814,7 +976,12 @@ impl<'a, 'env> Formation<'a, 'env> {
 
     pub fn typ(&mut self, typ: &'a Located<Type<'a>>) -> Result<(), RepresentationFailure<'a>> {
         match &typ.value {
-            Type::Var(_) => {}
+            Type::Hole | Type::Var(_) => {}
+            Type::DeclaredHole(hole) => {
+                if let Some(solution) = self.env.declared.resolve(self.bump, hole) {
+                    self.typ(solution)?;
+                }
+            }
             Type::Named { reference, args } => {
                 for arg in *args {
                     self.typ(arg)?;
@@ -840,6 +1007,12 @@ impl<'a, 'env> Formation<'a, 'env> {
                     self.typ(arg)?;
                 }
                 self.reduce(Pred::Apply { head, args })?;
+            }
+            Type::Function { arguments, result } => {
+                for argument in *arguments {
+                    self.typ(argument)?;
+                }
+                self.typ(result)?;
             }
             Type::Lambda { from, to } => {
                 self.typ(from)?;
@@ -891,6 +1064,8 @@ pub fn predicate_variables(pred: Pred<'_>) -> std::collections::BTreeSet<&str> {
     let mut pending: Vec<_> = pred.types().collect();
     while let Some(typ) = pending.pop() {
         match &typ.value {
+            Type::Hole => {}
+            Type::DeclaredHole(_) => {}
             Type::Var(name) => {
                 result.insert(*name);
             }
@@ -899,6 +1074,10 @@ pub fn predicate_variables(pred: Pred<'_>) -> std::collections::BTreeSet<&str> {
             Type::App { head, args } => {
                 pending.push(head);
                 pending.extend(args.iter().copied());
+            }
+            Type::Function { arguments, result } => {
+                pending.extend(arguments.iter().copied());
+                pending.push(*result);
             }
             Type::Lambda { from, to } => pending.extend([*from, *to]),
             Type::Tuple {
@@ -1056,9 +1235,14 @@ fn contains_variable_application(pred: Pred<'_>) -> bool {
     let mut pending: Vec<_> = pred.types().collect();
     while let Some(typ) = pending.pop() {
         match &typ.value {
+            Type::DeclaredHole(_) => {}
             Type::App { .. } => return true,
             Type::Named { args, .. } => pending.extend(args.iter().copied()),
             Type::Alias { arguments, .. } => pending.extend(arguments.iter().map(|a| a.typ)),
+            Type::Function { arguments, result } => {
+                pending.extend(arguments.iter().copied());
+                pending.push(*result);
+            }
             Type::Lambda { from, to } => pending.extend([*from, *to]),
             Type::Tuple {
                 first,
@@ -1069,7 +1253,7 @@ fn contains_variable_application(pred: Pred<'_>) -> bool {
                 pending.extend(rest.iter().copied());
             }
             Type::Record { fields, .. } => pending.extend(fields.iter().map(|f| f.typ)),
-            Type::Var(_) => {}
+            Type::Hole | Type::Var(_) => {}
         }
     }
     false
@@ -1121,6 +1305,7 @@ mod formation_tests {
                 }]),
                 repr: Some(Repr::Term),
                 alias: None,
+                opaque: false,
             },
         );
         let group = BTreeSet::new();
@@ -1347,7 +1532,7 @@ impl<'a> Declaration<'a> {
                 .flat_map(|ctor| {
                     ctor.arguments.iter().enumerate().map(move |(index, typ)| {
                         let index = u16::try_from(index).expect("constructor arity fits u16");
-                        if is_big_name(u.name.value) {
+                        if u.source.value.data_layout.is_none() && is_big_name(u.name.value) {
                             (
                                 *typ,
                                 KindContext::BigField {
@@ -1371,6 +1556,9 @@ impl<'a> Declaration<'a> {
                     })
                 })
                 .collect(),
+            Self::Alias(a) if a.source.value.transparent => {
+                vec![(a.typ, KindContext::TypeAnnotation, None)]
+            }
             Self::Alias(a) => match &a.typ.value {
                 Type::Record { fields, .. } => fields
                     .iter()
@@ -1460,6 +1648,7 @@ pub(crate) fn infer_declarations<'a>(
                 .collect();
             while let Some(typ) = pending.pop() {
                 match &typ.value {
+                    Type::DeclaredHole(hole) => pending.extend(env.declared.resolve(bump, hole)),
                     Type::Named { reference, args } => {
                         if reference.home == home {
                             deps.push(reference.name);
@@ -1480,6 +1669,10 @@ pub(crate) fn infer_declarations<'a>(
                         pending.push(head);
                         pending.extend(args.iter().copied());
                     }
+                    Type::Function { arguments, result } => {
+                        pending.extend(arguments.iter().copied());
+                        pending.push(*result);
+                    }
                     Type::Lambda { from, to } => pending.extend([*from, *to]),
                     Type::Tuple {
                         first,
@@ -1490,7 +1683,7 @@ pub(crate) fn infer_declarations<'a>(
                         pending.extend(rest.iter().copied());
                     }
                     Type::Record { fields, .. } => pending.extend(fields.iter().map(|f| f.typ)),
-                    Type::Var(_) => {}
+                    Type::Hole | Type::Var(_) => {}
                 }
             }
             crate::scc::Node {
@@ -1576,15 +1769,24 @@ pub(crate) fn infer_declarations<'a>(
                     name: declaration.name(),
                 };
                 let (repr, alias) = match declaration {
-                    Declaration::Union(_) => (
-                        Some(if is_big_name(name.name) {
-                            Repr::Big
-                        } else {
-                            Repr::Term
-                        }),
+                    Declaration::Union(u) => (
+                        Some(
+                            if u.source.value.data_layout.is_some() || is_big_name(name.name) {
+                                Repr::Big
+                            } else {
+                                Repr::Term
+                            },
+                        ),
                         None,
                     ),
-                    Declaration::Alias(a) => (record_repr(name.name, &a.typ.value), Some(a.typ)),
+                    Declaration::Alias(a) => (
+                        if a.source.value.transparent {
+                            None
+                        } else {
+                            record_repr(name.name, &a.typ.value)
+                        },
+                        Some(a.typ),
+                    ),
                 };
                 env.types.insert(
                     name,
@@ -1594,14 +1796,52 @@ pub(crate) fn infer_declarations<'a>(
                         context: &[],
                         repr,
                         alias,
+                        opaque: matches!(declaration, Declaration::Union(u)
+                            if u.source.value.data_layout.is_some_and(|layout| layout.opaque)),
                     },
                 );
+            }
+            // Opacity is transitive through constructor fields, including
+            // mutually recursive declarations. Function types do not contain
+            // opaque values for the source casting rule.
+            loop {
+                let mut changed = false;
+                for declaration in &group {
+                    let Declaration::Union(union) = declaration else {
+                        continue;
+                    };
+                    let name = QualifiedName {
+                        home,
+                        name: union.name.value,
+                    };
+                    if !env.constructor(name).opaque()
+                        && union
+                            .ctors
+                            .iter()
+                            .flat_map(|ctor| ctor.arguments.iter())
+                            .any(|typ| contains_opaque(bump, env, typ))
+                    {
+                        let Some(TypeInfo::Defined { opaque, .. }) = env.types.get_mut(&name)
+                        else {
+                            unreachable!("declaration metadata installed before opacity closure")
+                        };
+                        *opaque = true;
+                        changed = true;
+                    }
+                }
+                if !changed {
+                    break;
+                }
             }
             let group_names = closed_kinds.keys().copied().collect();
             let mut inputs = Vec::new();
             for declaration in &group {
                 let mut formation = Formation::new(bump, env, &group_names);
                 for (typ, context, required) in declaration.bodies() {
+                    if matches!(declaration, Declaration::Union(u) if u.source.value.data_layout.is_some())
+                    {
+                        check_data_type(bump, env, typ)?;
+                    }
                     let context = bump.alloc(context);
                     formation
                         .typ(typ)
@@ -1617,6 +1857,7 @@ pub(crate) fn infer_declarations<'a>(
                     // that alias's nominal representation, not an anonymous
                     // record constraint to export to its callers.
                     if let Declaration::Alias(alias) = declaration
+                        && !alias.source.value.transparent
                         && let Some(actual) = record_repr(alias.name.value, &alias.typ.value)
                         && let Some(required) = pred.trait_ref().and_then(ReprTrait::of)
                         && pred.key()
@@ -1787,9 +2028,18 @@ pub fn check_annotation<'a>(
         }
     }
     check_representation_consistency(&validation.predicates)?;
+    formation.predicates.retain(|predicate| {
+        !predicate.hidden()
+            || !predicate
+                .types()
+                .any(|typ| crate::types::has_hole(&typ.value))
+    });
     Ok(bump.alloc(nash_ast::Annotation {
         typ: annotation.typ,
         free_vars: annotation.free_vars,
+        // Hole-bearing formation obligations are recreated from the live
+        // signature by Solver::formed_at. Instantiating a copied context here
+        // would give the obligation a different fresh hole from its argument.
         context: bump.alloc_slice_fill_iter(formation.predicates),
     }))
 }
@@ -1985,6 +2235,7 @@ pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
     use crate::interface::{InterfaceTrait, InterfaceUnion, InterfaceValue, UnionVisibility};
     let env = KindEnv::default();
     crate::Interface {
+        declared: Default::default(),
         home: primitives::builtin_home(),
         impls: &[],
         aliases: &[],
@@ -2020,6 +2271,8 @@ pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
                     nash_ast::CtorOpts::Normal
                 },
                 visibility: UnionVisibility::Open,
+                data_layout: primitives::data_union(primitive.name)
+                    .and_then(|union| union.data_layout),
             }
         })),
         values: bump.alloc_slice_fill_iter(primitives::BUILTINS.iter().map(|builtin| {
@@ -2036,6 +2289,7 @@ pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
                     }),
                 )
                 .expect("compiler-owned builtin signatures are well formed"),
+                callable: None,
             }
         })),
     }

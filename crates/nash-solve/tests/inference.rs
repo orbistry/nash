@@ -51,7 +51,7 @@ fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can:
     let (annotations, _) = nash_solve::run(bump, &mut uf, module, &can.tables).unwrap();
     interfaces.insert(
         "Literal",
-        nash_can::from_module(bump, &can.module, &annotations),
+        nash_can::from_module(bump, &can.module, &annotations, &can.tables.kinds.declared),
     );
     interfaces
 }
@@ -691,7 +691,20 @@ fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
                 Ctx::Func | Ctx::App => format!("({rendered})"),
             }
         }
+        CanType::Function { arguments, result } => {
+            let arguments = arguments
+                .iter()
+                .map(|argument| render_type(argument, Ctx::None))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let rendered = format!("fn({arguments}) -> {}", render_type(result, Ctx::None));
+            match ctx {
+                Ctx::None => rendered,
+                Ctx::Func | Ctx::App => format!("({rendered})"),
+            }
+        }
 
+        CanType::Hole | CanType::DeclaredHole(_) => "_".to_string(),
         CanType::Var(name) => (*name).to_string(),
         CanType::App { head, args } => render_apply(&render_type(head, Ctx::App), args, ctx),
 
@@ -823,6 +836,9 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
                 nash_ast::PackageName {
                     author: "example",
                     project: "literal",
+                    version: "",
+                    source: nash_ast::PackageSource::Compiler,
+                    compilation: None,
                 }
             };
             let bump = Bump::new();
@@ -863,7 +879,12 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
                 ("Builtin", nash_can::kinds::builtin_interface(&bump)),
                 (
                     "Literal",
-                    nash_can::from_module(&bump, &canonical.module, &annotations),
+                    nash_can::from_module(
+                        &bump,
+                        &canonical.module,
+                        &annotations,
+                        &canonical.tables.kinds.declared,
+                    ),
                 ),
             ]);
             let main = indoc!(
@@ -1731,7 +1752,12 @@ fn negation_retains_num_evidence() {
     .unwrap();
     interfaces.insert(
         "Num",
-        nash_can::from_module(&bump, &num.module, &Default::default()),
+        nash_can::from_module(
+            &bump,
+            &num.module,
+            &Default::default(),
+            &num.tables.kinds.declared,
+        ),
     );
     let source = bump.alloc_str("module Main exposing (..)\nimport Num as N\nimport Literal exposing (..)\nnegate x = x\nflip x = -x\nnegative = -7\n");
     let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
@@ -1830,7 +1856,12 @@ fn literal_syntax_records_impls_and_pattern_givens() {
     .unwrap();
     interfaces.insert(
         "Eq",
-        nash_can::from_module(&bump, &eq.module, &Default::default()),
+        nash_can::from_module(
+            &bump,
+            &eq.module,
+            &Default::default(),
+            &eq.tables.kinds.declared,
+        ),
     );
     for (primitive, literal, trait_name) in [
         ("int", "7", "FromInt"),
@@ -1953,7 +1984,12 @@ fn user_twins_preserve_local_imported_and_pattern_identity() {
         });
         interfaces.insert(
             canonical.module.name.name,
-            nash_can::from_module(&bump, &canonical.module, &annotations),
+            nash_can::from_module(
+                &bump,
+                &canonical.module,
+                &annotations,
+                &canonical.tables.kinds.declared,
+            ),
         );
     }
 }
@@ -2596,7 +2632,12 @@ fn operator_methods_preserve_provider_and_backing_method() {
         let module = &canonical.module;
         let (annotations, solved) =
             nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
-        let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
+        let interface = nash_can::from_module(
+            &bump,
+            &canonical.module,
+            &annotations,
+            &canonical.tables.kinds.declared,
+        );
         for binop in interface.binops {
             assert_eq!(binop.function.home.name, "Methods");
             if binop.symbol == "<|>" {
@@ -2871,7 +2912,12 @@ fn nested_operator_sections_apply() {
         .module()
         .unwrap();
     let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
-    let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
+    let interface = nash_can::from_module(
+        &bump,
+        &canonical.module,
+        &annotations,
+        &canonical.tables.kinds.declared,
+    );
     let mut interfaces = literal_interfaces(&bump);
     interfaces.insert("Operators", interface);
     let input = indoc!(
@@ -3086,7 +3132,12 @@ fn higher_kinded_partial_alias_retains_its_nominal_impl() {
         ));
         interfaces.insert(
             module_name,
-            nash_can::from_module(&bump, &canonical.module, &annotations),
+            nash_can::from_module(
+                &bump,
+                &canonical.module,
+                &annotations,
+                &canonical.tables.kinds.declared,
+            ),
         );
     }
     insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
@@ -3174,7 +3225,12 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
     }));
     interfaces.insert(
         "Source",
-        nash_can::from_module(&bump, &canonical.module, &annotations),
+        nash_can::from_module(
+            &bump,
+            &canonical.module,
+            &annotations,
+            &canonical.tables.kinds.declared,
+        ),
     );
     let mut results = Vec::new();
     for name in ["first", "wrapper"] {
@@ -3249,7 +3305,12 @@ fn do_infers_monad() {
     .unwrap();
     let interfaces = std::collections::BTreeMap::from([(
         "Monad",
-        nash_can::from_module(&bump, &canonical.module, &Default::default()),
+        nash_can::from_module(
+            &bump,
+            &canonical.module,
+            &Default::default(),
+            &canonical.tables.kinds.declared,
+        ),
     )]);
     let source = indoc!(
         r#"
@@ -3360,7 +3421,12 @@ fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
     let mut uf = UnionFind::new();
     let module = &canonical.module;
     let (annotations, _) = nash_solve::run(bump, &mut uf, module, &canonical.tables).unwrap();
-    nash_can::from_module(bump, &canonical.module, &annotations)
+    nash_can::from_module(
+        bump,
+        &canonical.module,
+        &annotations,
+        &canonical.tables.kinds.declared,
+    )
 }
 
 #[test]
@@ -3679,7 +3745,12 @@ fn imported_higher_kinded_value_preserves_application() {
     };
     assert!(matches!(head.value, CanType::Var(name) if name == annotation.free_vars[f]));
     assert!(matches!(arg.value, CanType::Var(name) if name == annotation.free_vars[a]));
-    let interface = nash_can::from_module(&bump, &canonical.module, &producer);
+    let interface = nash_can::from_module(
+        &bump,
+        &canonical.module,
+        &producer,
+        &canonical.tables.kinds.declared,
+    );
     let interfaces = std::collections::BTreeMap::from([("Higher", interface)]);
     let source =
         bump.alloc_str("module Main exposing (..)\n\nimport Higher\n\nvalue = Higher.value\n");
@@ -3862,7 +3933,12 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
         }
         interfaces.insert(
             name,
-            nash_can::from_module(&bump, &canonical.module, &annotations),
+            nash_can::from_module(
+                &bump,
+                &canonical.module,
+                &annotations,
+                &canonical.tables.kinds.declared,
+            ),
         );
     }
 }
@@ -3930,7 +4006,7 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
                 .values()
                 .flat_map(|i| i.evidence)
                 .filter_map(|e| {
-                    if let nash_ast::Evidence::StructuralEq { typ } = e {
+                    if let nash_ast::Evidence::StructuralEq { typ, .. } = e {
                         Some(render_type(typ, Ctx::None))
                     } else {
                         None
@@ -3962,7 +4038,12 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
         }
         interfaces.insert(
             name,
-            nash_can::from_module(&bump, &canonical.module, &annotations),
+            nash_can::from_module(
+                &bump,
+                &canonical.module,
+                &annotations,
+                &canonical.tables.kinds.declared,
+            ),
         );
     }
 }
@@ -4518,7 +4599,21 @@ impl<'a> MetadataNodes<'a> {
         self.patterns.push(pattern);
         match &pattern.value {
             Pattern::Alias { pattern, .. } => self.pattern(pattern),
-            Pattern::Tuple {
+            Pattern::Pair { first, second } => {
+                self.pattern(first);
+                self.pattern(second);
+            }
+            Pattern::DataList { elements, tail } => {
+                for pattern in elements.iter().copied().chain(tail.iter().copied()) {
+                    self.pattern(pattern);
+                }
+            }
+            Pattern::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Pattern::Tuple {
                 first,
                 second,
                 rest,
@@ -4570,6 +4665,21 @@ impl<'a> MetadataNodes<'a> {
         self.exprs.push(expr);
         match &expr.value {
             Expr::Assert(inner) | Expr::Comptime(inner) => self.expr(inner),
+            Expr::Convert { value, .. }
+            | Expr::Format { value }
+            | Expr::Callable { value, .. }
+            | Expr::ModuleConstantCheck { value }
+            | Expr::TypeScope { value }
+            | Expr::TupleIndex { tuple: value, .. } => self.expr(value),
+            Expr::Pair { first, second } => {
+                self.expr(first);
+                self.expr(second);
+            }
+            Expr::DataList { elements, tail } => {
+                for element in elements.iter().copied().chain(tail.iter().copied()) {
+                    self.expr(element);
+                }
+            }
             Expr::Fail(message) | Expr::Todo(message) => {
                 if let Some(message) = message {
                     self.expr(message);
@@ -4579,16 +4689,38 @@ impl<'a> MetadataNodes<'a> {
                 self.expr(message);
                 self.expr(body);
             }
+            Expr::TraceLabel {
+                label,
+                arguments,
+                body,
+                ..
+            } => {
+                self.expr(label);
+                for argument in *arguments {
+                    self.expr(argument);
+                }
+                self.expr(body);
+            }
+            Expr::RunnableCheck {
+                generator,
+                function,
+                ..
+            } => {
+                if let Some(generator) = generator {
+                    self.expr(generator);
+                }
+                self.expr(function);
+            }
             Expr::List(items) => {
                 for item in *items {
                     self.expr(item);
                 }
             }
-            Expr::Binop { left, right, .. } => {
+            Expr::Binop { left, right, .. } | Expr::Equal { left, right, .. } => {
                 self.expr(left);
                 self.expr(right);
             }
-            Expr::Lambda { parameters, body } => {
+            Expr::Lambda { parameters, body } | Expr::Function { parameters, body } => {
                 for pattern in *parameters {
                     self.pattern(pattern);
                 }
@@ -4601,6 +4733,30 @@ impl<'a> MetadataNodes<'a> {
                 self.expr(function);
                 for arg in *arguments {
                     self.expr(arg);
+                }
+            }
+            Expr::SurfaceCall {
+                function,
+                arguments,
+                ..
+            } => {
+                self.expr(function);
+                for argument in *arguments {
+                    self.expr(argument.value);
+                }
+            }
+            Expr::Pipe {
+                input,
+                function,
+                arguments,
+                ..
+            } => {
+                self.expr(input);
+                self.expr(function);
+                if let Some(arguments) = arguments {
+                    for argument in *arguments {
+                        self.expr(argument.value);
+                    }
                 }
             }
             Expr::If {
@@ -4627,6 +4783,12 @@ impl<'a> MetadataNodes<'a> {
                 pattern,
                 value,
                 body,
+            }
+            | Expr::LetValue {
+                pattern,
+                value,
+                body,
+                ..
             } => {
                 self.pattern(pattern);
                 self.expr(value);
@@ -4642,8 +4804,26 @@ impl<'a> MetadataNodes<'a> {
                     self.expr(branch.body);
                 }
             }
+            Expr::Match {
+                value,
+                pattern,
+                body,
+                fallback,
+                ..
+            } => {
+                self.expr(value);
+                self.pattern(pattern);
+                self.expr(body);
+                self.expr(fallback);
+            }
             Expr::Access { record, .. } => self.expr(record),
-            Expr::Update { base, fields, .. } => {
+            Expr::FieldOrModule { record, module, .. } => {
+                self.expr(record);
+                if let Some(module) = module {
+                    self.expr(module);
+                }
+            }
+            Expr::Update { base, fields, .. } | Expr::RecordUpdate { base, fields, .. } => {
                 self.expr(base);
                 for field in *fields {
                     self.expr(field.value);
@@ -4654,7 +4834,12 @@ impl<'a> MetadataNodes<'a> {
                     self.expr(field.value);
                 }
             }
-            Expr::Tuple {
+            Expr::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Expr::Tuple {
                 first,
                 second,
                 rest,
@@ -4665,7 +4850,18 @@ impl<'a> MetadataNodes<'a> {
                     self.expr(item);
                 }
             }
-            _ => {}
+            Expr::VarMethod { .. }
+            | Expr::Constant(_)
+            | Expr::Bytes(_)
+            | Expr::VarLocal(_)
+            | Expr::VarTopLevel(_)
+            | Expr::VarForeign { .. }
+            | Expr::VarConstructor { .. }
+            | Expr::VarOperator { .. }
+            | Expr::Str(_)
+            | Expr::Int(_)
+            | Expr::Accessor(_)
+            | Expr::Unit => {}
         }
     }
 }
@@ -4696,7 +4892,12 @@ fn metadata_fixture<'a>(
         nash_solve::run(bump, &mut UnionFind::new(), &eq_can.module, &eq_can.tables).unwrap();
     interfaces.insert(
         "Eq",
-        nash_can::from_module(bump, &eq_can.module, &eq_annotations),
+        nash_can::from_module(
+            bump,
+            &eq_can.module,
+            &eq_annotations,
+            &eq_can.tables.kinds.declared,
+        ),
     );
     let canonical = nash_can::canonicalize(
         bump,

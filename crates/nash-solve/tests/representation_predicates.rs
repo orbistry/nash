@@ -147,7 +147,12 @@ fn imported_scheme_defaults_are_fixed_before_instantiation() {
             let (annotations, _) = result.unwrap();
             interfaces.insert(
                 name,
-                nash_can::from_module(&bump, &canonical.module, &annotations),
+                nash_can::from_module(
+                    &bump,
+                    &canonical.module,
+                    &annotations,
+                    &canonical.tables.kinds.declared,
+                ),
             );
         } else {
             assert!(
@@ -204,7 +209,12 @@ fn representation_givens_follow_transparent_alias_bodies() {
         }
         interfaces.insert(
             name,
-            nash_can::from_module(&bump, &canonical.module, &annotations),
+            nash_can::from_module(
+                &bump,
+                &canonical.module,
+                &annotations,
+                &canonical.tables.kinds.declared,
+            ),
         );
     }
 }

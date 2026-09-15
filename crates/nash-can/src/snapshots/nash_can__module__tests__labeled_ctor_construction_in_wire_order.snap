@@ -148,6 +148,9 @@ Module {
                                                             PackageName {
                                                                 author: "nash",
                                                                 project: "core",
+                                                                version: "",
+                                                                source: Compiler,
+                                                                compilation: None,
                                                             },
                                                         ),
                                                         name: "Builtin",
@@ -187,6 +190,9 @@ Module {
                                                                     PackageName {
                                                                         author: "nash",
                                                                         project: "core",
+                                                                        version: "",
+                                                                        source: Compiler,
+                                                                        compilation: None,
                                                                     },
                                                                 ),
                                                                 name: "Builtin",
@@ -321,6 +327,9 @@ Module {
                                                 PackageName {
                                                     author: "nash",
                                                     project: "core",
+                                                    version: "",
+                                                    source: Compiler,
+                                                    compilation: None,
                                                 },
                                             ),
                                             name: "Builtin",
@@ -348,6 +357,9 @@ Module {
                                                 PackageName {
                                                     author: "nash",
                                                     project: "core",
+                                                    version: "",
+                                                    source: Compiler,
+                                                    compilation: None,
                                                 },
                                             ),
                                             name: "Builtin",
@@ -362,6 +374,7 @@ Module {
                 ],
                 alternatives: 1,
                 options: Normal,
+                data_layout: None,
             },
         },
     ],

@@ -8,7 +8,7 @@ use nash_ast::{
 use nash_can::kinds::{KindEnv, TypeInfo};
 use nash_region::Located;
 
-/// Check the solved lambda spine of a validator's main before code generation.
+/// Check the solved function spine of a validator's main before code generation.
 /// An unconstrained variable remains polymorphic here; validator code generation
 /// chooses its boundary instantiation. Normal module roots are never defaulted.
 pub fn check_main_parameters<'a>(
@@ -29,22 +29,26 @@ pub fn check_main_parameters<'a>(
     let mut index = 0;
     loop {
         typ = transparent(bump, kinds, typ);
-        let Type::Lambda { from, to } = &typ.value else {
-            break;
+        let (arguments, result): (&[&Located<Type<'a>>], _) = match &typ.value {
+            Type::Lambda { from, to } => (std::slice::from_ref(from), *to),
+            Type::Function { arguments, result } => (arguments, *result),
+            _ => break,
         };
-        if is_term(bump, kinds, annotation.context, from) {
-            errors.push(Error::MainParameterIsTerm {
-                region: if from.region == nash_region::Region::zero() {
-                    parameter_regions.get(index).copied().unwrap_or(main_region)
-                } else {
-                    from.region
-                },
-                index,
-                typ: from,
-            });
+        for &from in arguments {
+            if is_term(bump, kinds, annotation.context, from) {
+                errors.push(Error::MainParameterIsTerm {
+                    region: if from.region == nash_region::Region::zero() {
+                        parameter_regions.get(index).copied().unwrap_or(main_region)
+                    } else {
+                        from.region
+                    },
+                    index,
+                    typ: from,
+                });
+            }
+            index += 1;
         }
-        index += 1;
-        typ = to;
+        typ = result;
     }
     if errors.is_empty() {
         Ok(())
@@ -145,6 +149,10 @@ fn transparent<'a>(
 ) -> &'a Located<Type<'a>> {
     loop {
         typ = match &typ.value {
+            Type::DeclaredHole(hole) => match kinds.declared.resolve(bump, hole) {
+                Some(solution) => solution,
+                None => return typ,
+            },
             Type::Alias {
                 arguments,
                 remaining: [],
@@ -249,6 +257,7 @@ mod tests {
                 context: &[],
                 repr: Some(Repr::Term),
                 alias: None,
+                opaque: false,
             },
         );
         let typ = b.alloc(Located::at_zero(Type::Named {
@@ -365,9 +374,23 @@ mod tests {
     #[test]
     fn nominal_records_preserve_their_representation() {
         let b = Bump::new();
-        let kinds = KindEnv::default();
+        let mut kinds = KindEnv::default();
         let record = b.alloc(Located::at_zero(Type::Record { fields: &[] }));
         for (name, rejected) in [("Small", false), ("small", true)] {
+            kinds.types.insert(
+                QualifiedName {
+                    home: module().name,
+                    name,
+                },
+                TypeInfo::Defined {
+                    kind: &nash_ast::Kind::Type,
+                    parameters: &[],
+                    context: &[],
+                    repr: Some(if rejected { Repr::Term } else { Repr::Big }),
+                    alias: Some(record),
+                    opaque: false,
+                },
+            );
             let typ = b.alloc(Located::at_zero(Type::Alias {
                 reference: QualifiedName {
                     home: module().name,

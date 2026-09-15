@@ -91,7 +91,8 @@ mod tests {
             source: "main =\n    missing".into(),
             reports: vec![report],
         };
-        let value = module_to_json(&module);
+        let mut value = module_to_json(&module);
+        value.sort_all_objects();
         assert_eq!(
             value["problems"][0]["region"],
             encode_region(region(2, 5, 2, 12))
@@ -134,7 +135,9 @@ mod tests {
             Doc::text("Both names occur here:"),
             Doc::text("Choose another name."),
         );
-        insta::assert_snapshot!(serde_json::to_string_pretty(&report_to_json(&report)).unwrap());
+        let mut value = report_to_json(&report);
+        value.sort_all_objects();
+        insta::assert_snapshot!(serde_json::to_string_pretty(&value).unwrap());
     }
 
     #[test]

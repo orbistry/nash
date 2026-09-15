@@ -32,6 +32,13 @@ fn occurs_help(
                     .iter()
                     .fold(found_cycle, |acc, arg| occurs_help(uf, seen, *arg, acc)),
 
+                FlatType::Function1(arguments, result) => {
+                    let acc = occurs_help(uf, seen, result, found_cycle);
+                    arguments
+                        .into_iter()
+                        .rev()
+                        .fold(acc, |acc, arg| occurs_help(uf, seen, arg, acc))
+                }
                 FlatType::Fun1(a, b) => {
                     let acc = occurs_help(uf, seen, b, found_cycle);
                     occurs_help(uf, seen, a, acc)

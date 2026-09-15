@@ -137,6 +137,7 @@ Alias(
                     ],
                 },
             ],
+            transparent: false,
         },
     },
 )

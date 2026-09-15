@@ -1,6 +1,13 @@
 //! Structural Core lowering. Trait evidence has already been specialized.
 use nash_ir::core::{Binder, Branch, CaseKind, Core, Name as CoreName, Test};
-use nash_plutus::{arena::Arena, binder::Name, builtin::DefaultFunction, term::Term};
+use nash_plutus::{
+    arena::Arena,
+    binder::{DeBruijn, Eval, Name},
+    bls::Compressable,
+    builtin::DefaultFunction,
+    constant::Constant,
+    term::Term,
+};
 
 type Uplc<'a> = &'a Term<'a, Name<'a>>;
 
@@ -16,6 +23,8 @@ pub enum Error {
     Unlowered(&'static str),
     #[error("program uses too many unique names")]
     NameOverflow,
+    #[error("evaluated Core term contains free De Bruijn index {0}")]
+    OpenEvaluated(usize),
 }
 
 pub fn lower<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Uplc<'a>, Error> {
@@ -67,10 +76,77 @@ impl<'a> Lower<'a> {
         body
     }
 
+    fn constant(&self, constant: &'a Constant<'a>) -> Uplc<'a> {
+        match constant {
+            Constant::Bls12_381G1Element(point) => self.builtin(
+                DefaultFunction::Bls12_381_G1_Uncompress,
+                &[Term::byte_string(self.arena, point.compress(self.arena))],
+            ),
+            Constant::Bls12_381G2Element(point) => self.builtin(
+                DefaultFunction::Bls12_381_G2_Uncompress,
+                &[Term::byte_string(self.arena, point.compress(self.arena))],
+            ),
+            _ => Term::constant(self.arena, constant),
+        }
+    }
+
+    /// Rebind a closed evaluated term into this program's fresh name space.
+    /// Preserve its explicit builtin forces and applications exactly.
+    fn evaluated(
+        &mut self,
+        term: &'a Term<'a, DeBruijn>,
+        scope: &mut Vec<&'a Name<'a>>,
+    ) -> Result<Uplc<'a>, Error> {
+        Ok(match term {
+            Term::Var(name) => {
+                let index = name.index();
+                let position = scope
+                    .len()
+                    .checked_sub(index)
+                    .filter(|_| index != 0)
+                    .ok_or(Error::OpenEvaluated(index))?;
+                Term::var(self.arena, scope[position])
+            }
+            Term::Lambda { body, .. } => {
+                let parameter = self.fresh()?;
+                scope.push(parameter);
+                let body = self.evaluated(body, scope);
+                scope.pop();
+                body?.lambda(self.arena, parameter)
+            }
+            Term::Apply { function, argument } => {
+                let function = self.evaluated(function, scope)?;
+                let argument = self.evaluated(argument, scope)?;
+                function.apply(self.arena, argument)
+            }
+            Term::Delay(body) => self.evaluated(body, scope)?.delay(self.arena),
+            Term::Force(body) => self.evaluated(body, scope)?.force(self.arena),
+            Term::Constant(constant) => self.constant(constant),
+            Term::Builtin(function) => Term::builtin(self.arena, function),
+            Term::Error => Term::error(self.arena),
+            Term::Constr { tag, fields } => {
+                let fields = fields
+                    .iter()
+                    .map(|field| self.evaluated(field, scope))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Term::constr(self.arena, *tag, self.arena.alloc_slice_copy(&fields))
+            }
+            Term::Case { constr, branches } => {
+                let constr = self.evaluated(constr, scope)?;
+                let branches = branches
+                    .iter()
+                    .map(|branch| self.evaluated(branch, scope))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Term::case(self.arena, constr, self.arena.alloc_slice_copy(&branches))
+            }
+        })
+    }
+
     fn term(&mut self, core: &'a Core<'a>) -> Result<Uplc<'a>, Error> {
         Ok(match core {
             Core::Var(n) => Term::var(self.arena, self.name(*n)),
-            Core::Lit(c) => Term::constant(self.arena, c),
+            Core::Lit(constant) => self.constant(constant),
+            Core::Evaluated { term, .. } => self.evaluated(term, &mut Vec::new())?,
             Core::Lam { params, body } => {
                 let body = self.term(body)?;
                 self.lambda(params, body)
@@ -375,7 +451,7 @@ fn largest_name(core: &Core<'_>) -> usize {
             Core::Field { record, .. } => pending.push(record),
             Core::Cast { arg, .. } | Core::Delay(arg) | Core::Force(arg) => pending.push(arg),
             Core::Trace { message, body } => pending.extend([*message, *body]),
-            Core::Lit(_) | Core::Error => {}
+            Core::Lit(_) | Core::Evaluated { .. } | Core::Error => {}
         }
     }
     largest

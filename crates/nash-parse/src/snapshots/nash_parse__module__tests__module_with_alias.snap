@@ -173,6 +173,7 @@ Module {
                     ),
                 },
                 attributes: [],
+                transparent: false,
             },
         },
     ],

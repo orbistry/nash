@@ -189,9 +189,9 @@ pub(crate) fn canonicalize<'a>(
                     reference.home == env.home
                         || (reference.home == nash_ast::primitives::builtin_home()
                             && reference.name == "unit"
-                            && env.home.package == Some(nash_ast::primitives::CORE))
+                            && (env.home.package).is_some_and(nash_ast::PackageName::is_core))
                 }
-                Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::CORE),
+                Head::Tuple(_) => (env.home.package).is_some_and(nash_ast::PackageName::is_core),
                 Head::Var(_) | Head::Function(..) => false,
             })
         {
@@ -251,13 +251,13 @@ pub(crate) fn canonicalize<'a>(
                         == wanted.key()
             })
         };
-        if trait_ == nash_ast::primitives::eq_trait()
+        if (trait_).is_core_trait(nash_ast::primitives::eq_trait())
             && let [head] = head_types.as_slice()
             && known_big(*head)
         {
             return Err(vec![Error::StructuralEqOverride { head }]);
         }
-        if trait_ == nash_ast::primitives::lift_trait()
+        if (trait_).is_core_trait(nash_ast::primitives::lift_trait())
             && let [left, right] = heads.as_slice()
             && head_types.iter().any(|typ| known_big(*typ))
             && nash_ast::head::can_equal(&[left.value], &[right.value], &mut 16_384).map_err(
@@ -359,16 +359,33 @@ fn canonicalize_head<'a>(
         }]);
     }
     let canonical = types::canonicalize_type(bump, env, typ)?;
-    let head = canonicalize_pattern(bump, canonical, variables)?;
+    let declared = &env.kinds.declared;
+    let head = canonicalize_pattern(bump, declared, canonical, variables)?;
     Ok((Located::at(typ.region, head), canonical))
 }
 
 fn canonicalize_pattern<'a>(
     bump: &'a Bump,
+    declared: &nash_ast::declared::DeclaredStore,
     typ: &'a Located<Type<'a>>,
     variables: &mut Vec<&'a str>,
 ) -> Result<Head<'a>, Vec<Error<'a>>> {
     let head = match &typ.value {
+        Type::DeclaredHole(hole) => {
+            return match declared.resolve(bump, hole) {
+                Some(solution) => canonicalize_pattern(bump, declared, solution, variables),
+                None => Err(vec![Error::BadInstanceHead {
+                    region: typ.region,
+                    reason: BadHead::BareVariable,
+                }]),
+            };
+        }
+        Type::Hole => {
+            return Err(vec![Error::BadInstanceHead {
+                region: typ.region,
+                reason: BadHead::BareVariable,
+            }]);
+        }
         Type::Var(name) => {
             let index = match variables.iter().position(|existing| existing == name) {
                 Some(index) => index,
@@ -382,7 +399,7 @@ fn canonicalize_pattern<'a>(
         Type::Named { reference, args } => {
             let args = args
                 .iter()
-                .map(|arg| canonicalize_pattern(bump, arg, variables))
+                .map(|arg| canonicalize_pattern(bump, declared, arg, variables))
                 .collect::<Result<Vec<_>, _>>()?;
             Head::Named {
                 reference: *reference,
@@ -396,7 +413,7 @@ fn canonicalize_pattern<'a>(
         } => {
             let args = arguments
                 .iter()
-                .map(|arg| canonicalize_pattern(bump, arg.typ, variables))
+                .map(|arg| canonicalize_pattern(bump, declared, arg.typ, variables))
                 .collect::<Result<Vec<_>, _>>()?;
             Head::Named {
                 reference: *reference,
@@ -412,13 +429,19 @@ fn canonicalize_pattern<'a>(
             let args = [*first, *second]
                 .into_iter()
                 .chain(rest.iter().copied())
-                .map(|arg| canonicalize_pattern(bump, arg, variables))
+                .map(|arg| canonicalize_pattern(bump, declared, arg, variables))
                 .collect::<Result<Vec<_>, _>>()?;
             Head::Tuple(bump.alloc_slice_fill_iter(args))
         }
+        Type::Function { .. } => {
+            return Err(vec![Error::BadInstanceHead {
+                region: typ.region,
+                reason: BadHead::Function,
+            }]);
+        }
         Type::Lambda { from, to } => Head::Function(
-            bump.alloc(canonicalize_pattern(bump, from, variables)?),
-            bump.alloc(canonicalize_pattern(bump, to, variables)?),
+            bump.alloc(canonicalize_pattern(bump, declared, from, variables)?),
+            bump.alloc(canonicalize_pattern(bump, declared, to, variables)?),
         ),
         Type::App { .. } | Type::Record { .. } => {
             return Err(vec![Error::BadInstanceHead {

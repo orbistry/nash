@@ -9,6 +9,7 @@ fn private_constructor_context_changes_invalidate_the_interface() {
     let bump = Bump::new();
     let a = &*bump.alloc(Located::at_zero(Type::Var("a")));
     let make = |context| Interface {
+        declared: Default::default(),
         home: nash_ast::ModuleName {
             package: None,
             name: "Types",
@@ -27,6 +28,7 @@ fn private_constructor_context_changes_invalidate_the_interface() {
             alternatives: 0,
             options: nash_ast::CtorOpts::Normal,
             visibility: UnionVisibility::Private,
+            data_layout: None,
         }]),
     };
     let unbounded = make(&[]);
@@ -49,6 +51,7 @@ fn application_argument_order_changes_the_interface_fingerprint() {
     let a = variable("a");
     let b = variable("b");
     let make = |args| Interface {
+        declared: Default::default(),
         home: nash_ast::ModuleName {
             package: None,
             name: "Types",
@@ -65,6 +68,7 @@ fn application_argument_order_changes_the_interface_fingerprint() {
                 context: bump.alloc_slice_fill_iter([Pred::Apply { head, args }]),
                 typ: head,
             }),
+            callable: None,
         }]),
     };
     let forward = make(bump.alloc_slice_copy(&[a, b]));

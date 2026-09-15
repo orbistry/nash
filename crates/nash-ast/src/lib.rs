@@ -1,10 +1,14 @@
+pub mod declared;
 mod evidence;
 pub mod head;
 pub mod primitives;
 
 use nash_region::{Located, Region};
 
-pub use nash_source::{Associativity, Docs, ModuleKind, Precedence};
+pub use nash_source::{
+    Associativity, Constant, ConversionKind, ConversionSite, DataEncoding, DataLayout, Docs,
+    ModuleKind, Precedence,
+};
 
 /// A closed Haskell 98 kind. Inference variables never escape the kind checker.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -28,9 +32,29 @@ impl Kind<'_> {
 pub type FreeVars<'a> = &'a [&'a str];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PackageSource<'a> {
+    Local(&'a [u8]),
+    Github,
+    Gitlab,
+    Bitbucket,
+    Compiler,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PackageName<'a> {
     pub author: &'a str,
     pub project: &'a str,
+    pub version: &'a str,
+    pub source: PackageSource<'a>,
+    /// Compilation-instance fingerprint; never part of the source package name.
+    pub compilation: Option<u64>,
+}
+
+impl PackageName<'_> {
+    /// Native core privileges are owned by the author/project, not a release.
+    pub fn is_core(self) -> bool {
+        self.author == "nash" && self.project == "core"
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -43,6 +67,16 @@ pub struct ModuleName<'a> {
 pub struct QualifiedName<'a> {
     pub home: ModuleName<'a>,
     pub name: &'a str,
+}
+
+impl QualifiedName<'_> {
+    /// Recognize a native core operation without erasing its nominal identity.
+    pub fn is_core_trait(self, reference: QualifiedName<'_>) -> bool {
+        self.home.package.is_some_and(PackageName::is_core)
+            && reference.home.package.is_some_and(PackageName::is_core)
+            && self.home.name == reference.home.name
+            && self.name == reference.name
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -114,6 +148,7 @@ pub struct Union<'a> {
     pub ctors: &'a [&'a Ctor<'a>],
     pub alternatives: u16,
     pub options: CtorOpts,
+    pub data_layout: Option<DataLayout<'a>>,
 }
 
 #[derive(Debug)]
@@ -159,6 +194,7 @@ pub struct Alias<'a> {
     pub name: &'a Located<&'a str>,
     pub parameters: &'a [&'a str],
     pub typ: &'a Located<Type<'a>>,
+    pub transparent: bool,
 }
 
 impl<'a> Alias<'a> {
@@ -201,6 +237,73 @@ pub enum Expr<'a> {
         body: &'a Located<Expr<'a>>,
     },
     Comptime(&'a Located<Expr<'a>>),
+    Constant(Constant<'a>),
+    Equal {
+        left: &'a Located<Expr<'a>>,
+        right: &'a Located<Expr<'a>>,
+        negate: bool,
+    },
+    Format {
+        value: &'a Located<Expr<'a>>,
+    },
+    TraceLabel {
+        label: &'a Located<Expr<'a>>,
+        arguments: &'a [&'a Located<Expr<'a>>],
+        body: &'a Located<Expr<'a>>,
+        verbose_only: bool,
+    },
+    /// An explicit conversion or pending ascription. Solved metadata records
+    /// the actual output and operation selected for source-site ascriptions.
+    Convert {
+        kind: ConversionKind,
+        typ: &'a Located<Type<'a>>,
+        value: &'a Located<Expr<'a>>,
+    },
+    TupleIndex {
+        tuple: &'a Located<Expr<'a>>,
+        index: usize,
+    },
+    /// Static checking always visits the initializer; execution may omit it.
+    LetValue {
+        pattern: &'a Located<Pattern<'a>>,
+        value: &'a Located<Expr<'a>>,
+        body: &'a Located<Expr<'a>>,
+        uses: u32,
+    },
+    Match {
+        value: &'a Located<Expr<'a>>,
+        pattern: &'a Located<Pattern<'a>>,
+        body: &'a Located<Expr<'a>>,
+        fallback: &'a Located<Expr<'a>>,
+        annotation: Option<&'a Located<Type<'a>>>,
+        conversion: Option<ConversionSite>,
+    },
+    RunnableCheck {
+        generator: Option<&'a Located<Expr<'a>>>,
+        argument_type: Option<&'a Located<Type<'a>>>,
+        return_type: Option<&'a Located<Type<'a>>>,
+        function: &'a Located<Expr<'a>>,
+        benchmark: bool,
+    },
+    ModuleConstantCheck {
+        value: &'a Located<Expr<'a>>,
+    },
+    TypeScope {
+        value: &'a Located<Expr<'a>>,
+    },
+    Pair {
+        first: &'a Located<Expr<'a>>,
+        second: &'a Located<Expr<'a>>,
+    },
+    DataTuple {
+        first: &'a Located<Expr<'a>>,
+        second: &'a Located<Expr<'a>>,
+        rest: &'a [&'a Located<Expr<'a>>],
+    },
+    DataList {
+        elements: &'a [&'a Located<Expr<'a>>],
+        tail: Option<&'a Located<Expr<'a>>>,
+    },
     VarMethod {
         trait_: QualifiedName<'a>,
         method: &'a str,
@@ -241,6 +344,26 @@ pub enum Expr<'a> {
         left: &'a Located<Expr<'a>>,
         right: &'a Located<Expr<'a>>,
     },
+    Callable {
+        arity: usize,
+        labels: &'a [&'a str],
+        value: &'a Located<Expr<'a>>,
+    },
+    Function {
+        parameters: &'a [&'a Located<Pattern<'a>>],
+        body: &'a Located<Expr<'a>>,
+    },
+    SurfaceCall {
+        function: &'a Located<Expr<'a>>,
+        arguments: &'a [CallArgument<'a>],
+        direct_builtin: Option<DirectBuiltin>,
+    },
+    Pipe {
+        input: &'a Located<Expr<'a>>,
+        function: &'a Located<Expr<'a>>,
+        arguments: Option<&'a [CallArgument<'a>]>,
+        direct_builtin: Option<DirectBuiltin>,
+    },
     Lambda {
         parameters: &'a [&'a Located<Pattern<'a>>],
         body: &'a Located<Expr<'a>>,
@@ -275,7 +398,18 @@ pub enum Expr<'a> {
         record: &'a Located<Expr<'a>>,
         field: &'a Located<&'a str>,
     },
+    FieldOrModule {
+        record: &'a Located<Expr<'a>>,
+        field: &'a Located<&'a str>,
+        module: Option<&'a Located<Expr<'a>>>,
+        module_labels: Option<&'a [&'a str]>,
+    },
     Update {
+        record: &'a str,
+        base: &'a Located<Expr<'a>>,
+        fields: &'a [FieldUpdate<'a>],
+    },
+    RecordUpdate {
         record: &'a str,
         base: &'a Located<Expr<'a>>,
         fields: &'a [FieldUpdate<'a>],
@@ -320,6 +454,20 @@ pub struct FieldValue<'a> {
 
 #[derive(Debug)]
 pub enum Pattern<'a> {
+    Constant(Constant<'a>),
+    Pair {
+        first: &'a Located<Pattern<'a>>,
+        second: &'a Located<Pattern<'a>>,
+    },
+    DataTuple {
+        first: &'a Located<Pattern<'a>>,
+        second: &'a Located<Pattern<'a>>,
+        rest: &'a [&'a Located<Pattern<'a>>],
+    },
+    DataList {
+        elements: &'a [&'a Located<Pattern<'a>>],
+        tail: Option<&'a Located<Pattern<'a>>>,
+    },
     Anything,
     Var(&'a str),
     Record(&'a [&'a str]),
@@ -373,8 +521,88 @@ pub struct Annotation<'a> {
     pub typ: &'a Located<Type<'a>>,
 }
 
+pub use nash_source::DirectBuiltin;
+
+#[derive(Clone, Copy, Debug)]
+pub struct CallArgument<'a> {
+    pub label: Option<&'a Located<&'a str>>,
+    pub value: &'a Located<Expr<'a>>,
+}
+
+/// Stable, process-unique identity carried through canonical interfaces.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct DeclaredHoleId(u64);
+
+impl DeclaredHoleId {
+    pub fn fresh() -> Self {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        Self(NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum DeclaredHoleKind {
+    Inference,
+    Generic,
+}
+
+/// Immutable declaration identity. Refinements live in an owned external store,
+/// never behind a borrowed mutable pointer in the canonical tree.
+#[derive(Debug)]
+pub struct DeclaredHole<'a> {
+    pub id: DeclaredHoleId,
+    pub kind: DeclaredHoleKind,
+    pub owner: QualifiedName<'a>,
+    pub region: Region,
+}
+
+impl<'a> DeclaredHole<'a> {
+    pub fn new(owner: QualifiedName<'a>, region: Region) -> Self {
+        Self::with_id(
+            DeclaredHoleId::fresh(),
+            DeclaredHoleKind::Inference,
+            owner,
+            region,
+        )
+    }
+
+    pub fn with_id(
+        id: DeclaredHoleId,
+        kind: DeclaredHoleKind,
+        owner: QualifiedName<'a>,
+        region: Region,
+    ) -> Self {
+        Self {
+            id,
+            kind,
+            owner,
+            region,
+        }
+    }
+}
+
+impl PartialEq for DeclaredHole<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.kind == other.kind
+    }
+}
+impl Eq for DeclaredHole<'_> {}
+impl std::hash::Hash for DeclaredHole<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::hash::Hash::hash(&self.id, state);
+        std::hash::Hash::hash(&self.kind, state);
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Type<'a> {
+    /// Fresh flexible inference variable at each annotation instantiation.
+    Hole,
+    DeclaredHole(&'a DeclaredHole<'a>),
+    Function {
+        arguments: &'a [&'a Located<Type<'a>>],
+        result: &'a Located<Type<'a>>,
+    },
     Lambda {
         from: &'a Located<Type<'a>>,
         to: &'a Located<Type<'a>>,
@@ -609,9 +837,15 @@ pub enum Evidence<'a> {
         typ: &'a Located<Type<'a>>,
     },
     /// The compiler-owned core Lift rule for an already-equal Big type.
-    ReflexiveLift { typ: &'a Located<Type<'a>> },
+    ReflexiveLift {
+        trait_: QualifiedName<'a>,
+        typ: &'a Located<Type<'a>>,
+    },
     /// Compiler-owned structural equality for any Big type.
-    StructuralEq { typ: &'a Located<Type<'a>> },
+    StructuralEq {
+        trait_: QualifiedName<'a>,
+        typ: &'a Located<Type<'a>>,
+    },
     Impl {
         impl_: ImplRef<'a>,
         /// The impl head's variables, in head order, at this use.
@@ -689,6 +923,7 @@ mod evidence_tests {
         let name = Located::at_zero("box");
         let ctors = [&ctor];
         let union = Union {
+            data_layout: None,
             kind: &Kind::Type,
             context: &[],
             name: &name,
@@ -769,14 +1004,26 @@ mod evidence_tests {
             remaining: &[],
             target: AliasType::Open(&body),
         });
-        let first = Evidence::ReflexiveLift { typ: &open };
-        let second = Evidence::ReflexiveLift { typ: &filled };
+        let first = Evidence::ReflexiveLift {
+            trait_: primitives::lift_trait(),
+            typ: &open,
+        };
+        let second = Evidence::ReflexiveLift {
+            trait_: primitives::lift_trait(),
+            typ: &filled,
+        };
         assert_eq!(first, second);
         let keys = HashSet::from([
             first,
             second,
-            Evidence::ReflexiveLift { typ: &partial },
-            Evidence::ReflexiveLift { typ: &other },
+            Evidence::ReflexiveLift {
+                trait_: primitives::lift_trait(),
+                typ: &partial,
+            },
+            Evidence::ReflexiveLift {
+                trait_: primitives::lift_trait(),
+                typ: &other,
+            },
         ]);
         assert_eq!(keys.len(), 3);
     }
@@ -842,9 +1089,18 @@ mod evidence_tests {
         assert_ne!(a, c);
         let keys = HashSet::from([a, b, c]);
         assert_eq!(keys.len(), 2);
-        let a = Evidence::ReflexiveLift { typ: &first };
-        let b = Evidence::ReflexiveLift { typ: &second };
-        let c = Evidence::ReflexiveLift { typ: &other };
+        let a = Evidence::ReflexiveLift {
+            trait_: primitives::lift_trait(),
+            typ: &first,
+        };
+        let b = Evidence::ReflexiveLift {
+            trait_: primitives::lift_trait(),
+            typ: &second,
+        };
+        let c = Evidence::ReflexiveLift {
+            trait_: primitives::lift_trait(),
+            typ: &other,
+        };
         assert_eq!(a, b);
         assert_ne!(a, c);
         assert_eq!(HashSet::from([a, b, c]).len(), 2);
@@ -879,6 +1135,7 @@ mod record_tests {
         let body = Located::at_zero(Type::Record { fields: &fields });
         let name = Located::at_zero("point");
         let alias = Alias {
+            transparent: false,
             kind: &Kind::Type,
             context: &[],
             name: &name,

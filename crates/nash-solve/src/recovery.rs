@@ -125,6 +125,9 @@ fn children(content: &Content<'_>) -> Vec<Variable> {
         Content::Structure(FlatType::AppV1(head, args)) => {
             [*head].into_iter().chain(args.iter().copied()).collect()
         }
+        Content::Structure(FlatType::Function1(arguments, result)) => {
+            arguments.iter().copied().chain([*result]).collect()
+        }
         Content::Structure(FlatType::Fun1(from, to)) => vec![*from, *to],
         Content::Structure(FlatType::Tuple1(first, second, rest)) => [*first, *second]
             .into_iter()

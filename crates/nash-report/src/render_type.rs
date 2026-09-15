@@ -24,6 +24,21 @@ pub fn lambda(ctx: Ctx, a: Doc, b: Doc, rest: Vec<Doc>) -> Doc {
     ));
     if ctx == Ctx::None { doc } else { parens(doc) }
 }
+fn grouped_function(ctx: Ctx, arguments: impl IntoIterator<Item = Doc>, result: Doc) -> Doc {
+    let arguments = arguments.into_iter().enumerate().map(|(index, argument)| {
+        if index == 0 {
+            argument
+        } else {
+            Doc::cat([Doc::text(", "), argument])
+        }
+    });
+    let doc = Doc::align(Doc::sep([
+        Doc::cat([Doc::text("fn("), Doc::cat(arguments), Doc::text(")")]),
+        Doc::text("->"),
+        result,
+    ]));
+    if ctx == Ctx::None { doc } else { parens(doc) }
+}
 pub fn apply(ctx: Ctx, name: Doc, args: Vec<Doc>) -> Doc {
     if args.is_empty() {
         return name;
@@ -96,6 +111,7 @@ pub fn vrecord_snippet(first: (Doc, Doc), rest: Vec<(Doc, Doc)>) -> Doc {
 pub fn src_to_doc(ctx: Ctx, typ: &Located<nash_source::Type<'_>>) -> Doc {
     use nash_source::Type::*;
     match &typ.value {
+        Hole => Doc::text("_"),
         Repr { typ, repr } => {
             let annotation = match repr.value {
                 nash_source::Repr::Big => "Big",
@@ -121,6 +137,13 @@ pub fn src_to_doc(ctx: Ctx, typ: &Located<nash_source::Type<'_>>) -> Doc {
             let b = parts.remove(0);
             lambda(ctx, a, b, parts)
         }
+        Function { arguments, result } => grouped_function(
+            ctx,
+            arguments
+                .iter()
+                .map(|argument| src_to_doc(Ctx::None, argument)),
+            src_to_doc(Ctx::None, result),
+        ),
         Var(name) => variable(name),
         VarApp { name, args, .. } => apply(
             ctx,
@@ -161,6 +184,7 @@ pub fn src_to_doc(ctx: Ctx, typ: &Located<nash_source::Type<'_>>) -> Doc {
 pub fn can_to_doc(localizer: &Localizer, ctx: Ctx, typ: &nash_ast::Type<'_>) -> Doc {
     use nash_ast::Type::*;
     match typ {
+        Hole | DeclaredHole(_) => Doc::text("_"),
         Lambda { from, to } => {
             let mut parts = vec![can_to_doc(localizer, Ctx::Func, &from.value)];
             let mut last = &to.value;
@@ -173,6 +197,13 @@ pub fn can_to_doc(localizer: &Localizer, ctx: Ctx, typ: &nash_ast::Type<'_>) -> 
             let b = parts.remove(0);
             lambda(ctx, a, b, parts)
         }
+        Function { arguments, result } => grouped_function(
+            ctx,
+            arguments
+                .iter()
+                .map(|argument| can_to_doc(localizer, Ctx::None, &argument.value)),
+            can_to_doc(localizer, Ctx::None, &result.value),
+        ),
         Var(name) => variable(name),
         App { head, args } => apply(
             ctx,

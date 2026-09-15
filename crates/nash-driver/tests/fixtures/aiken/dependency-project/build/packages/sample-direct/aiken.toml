@@ -1,0 +1,8 @@
+name="sample/direct"
+version="v1.0.0"
+compiler="v1.1.23"
+plutus="v3"
+[[dependencies]]
+name="sample/transitive"
+version="v1.0.0"
+source="github"

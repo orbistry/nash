@@ -2588,7 +2588,7 @@ Files: `crates/nash-driver/src/compile.rs`, `crates/nash-can/src/interface.rs`,
 
 Change: the driver passes tables to the solver, keeps each module's
 `SolvedTypes` output for codegen, and imports traits/impls across modules.
-Package identity now flows from discovery through `ModuleOrigins` into
+Package identity now flows from discovery through `ModuleCatalog`/`SourceSpec` into
 `nash_can::Context`. Application modules retain `None`. Repeated discovery of
 the same URI and package is deduplicated; conflicting package ownership is
 rejected. Logical source URLs remain the graph/cache keys. A real CLI workspace

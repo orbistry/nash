@@ -49,6 +49,9 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                                             PackageName {
                                                 author: "nash",
                                                 project: "core",
+                                                version: "",
+                                                source: Compiler,
+                                                compilation: None,
                                             },
                                         ),
                                         name: "Builtin",
@@ -81,6 +84,9 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",
@@ -112,6 +118,9 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",

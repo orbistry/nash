@@ -13,6 +13,46 @@ use crate::error_type::ErrorType;
 
 #[derive(Debug)]
 pub enum Error<'a> {
+    InvalidCall {
+        region: Region,
+        reason: &'a str,
+    },
+    PrivateTypeLeak {
+        region: Region,
+        declaration: Option<Region>,
+        name: &'a str,
+    },
+    PolymorphicModuleConstant {
+        region: Region,
+        typ: &'a ErrorType<'a>,
+    },
+    InvalidTupleIndex {
+        region: Region,
+        index: usize,
+        typ: &'a ErrorType<'a>,
+    },
+    InvalidDataCast {
+        region: Region,
+        reason: &'static str,
+        typ: &'a ErrorType<'a>,
+    },
+    InvalidRunnable {
+        region: Region,
+        message: &'static str,
+        typ: &'a ErrorType<'a>,
+    },
+    IllegalComparison {
+        region: Region,
+        typ: &'a ErrorType<'a>,
+    },
+    IllegalTraceArgument {
+        region: Region,
+        typ: &'a ErrorType<'a>,
+    },
+    IllegalDataType {
+        region: Region,
+        typ: &'a ErrorType<'a>,
+    },
     MainParameterIsTerm {
         region: Region,
         index: usize,

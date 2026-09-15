@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use nash_driver::{
-    Database, DriverError, FileSystemSource, InMemorySource, ModuleOrigins, ModuleResult,
-    OverlaySource, Project, build, build_graph,
+    Database, DriverError, FileSystemSource, InMemorySource, ModuleCatalog, ModuleResult,
+    OverlaySource, Project, SourceSpec, build, build_graph,
 };
 use nash_report::Source;
 use tokio::sync::Mutex;
@@ -66,6 +66,74 @@ impl Workspace {
             .or_else(|| url.as_str().parse().ok())
     }
 
+    fn project_uri(&self, url: &Url) -> Option<Uri> {
+        self.uris
+            .get(url)
+            .cloned()
+            .or_else(|| {
+                let target = url.to_file_path().ok()?;
+                // Project diagnostics use the client's project-root spelling.
+                // Source diagnostics keep canonical identities until opened.
+                self.uris
+                    .values()
+                    .filter_map(|uri| {
+                        let source = Url::parse(uri.as_str()).ok()?.to_file_path().ok()?;
+                        source.ancestors().skip(1).find_map(|ancestor| {
+                            let canonical = ancestor.canonicalize().ok()?;
+                            let relative = target.strip_prefix(&canonical).ok()?;
+                            Some((canonical.components().count(), ancestor.join(relative)))
+                        })
+                    })
+                    .max_by_key(|(depth, _)| *depth)
+                    .and_then(|(_, path)| Url::from_file_path(path).ok()?.as_str().parse().ok())
+            })
+            .or_else(|| url.as_str().parse().ok())
+    }
+
+    async fn project_diagnostics(
+        &self,
+        problems: &[nash_driver::ProjectDiagnostic],
+        severity: DiagnosticSeverity,
+        fallback: &Uri,
+        diagnostics: &mut BTreeMap<Uri, Vec<Diagnostic>>,
+    ) {
+        for problem in problems {
+            let uri = Url::from_file_path(&problem.path)
+                .ok()
+                .and_then(|url| self.project_uri(&url));
+            let (uri, message) = match uri {
+                Some(uri) => (uri, problem.message.clone()),
+                None => (fallback.clone(), problem.to_string()),
+            };
+            let mut diagnostic = Diagnostic {
+                severity: Some(severity),
+                code: Some(NumberOrString::String(problem.code.into())),
+                message,
+                source: Some("nash".into()),
+                ..Diagnostic::default()
+            };
+            if let Some(region) = problem.region {
+                match tokio::fs::read_to_string(&problem.path).await {
+                    Ok(text) => {
+                        if let Some(range) =
+                            crate::diagnostics::to_range(region, &Source::new(&text))
+                        {
+                            diagnostic.range = range;
+                        } else {
+                            diagnostic
+                                .message
+                                .push_str("\nThe source position exceeds LSP's coordinate limits.");
+                        }
+                    }
+                    Err(error) => diagnostic
+                        .message
+                        .push_str(&format!("\nCannot read diagnostic source: {error}")),
+                }
+            }
+            diagnostics.entry(uri).or_default().push(diagnostic);
+        }
+    }
+
     pub async fn rebuild(
         &mut self,
         trigger: &Uri,
@@ -82,8 +150,16 @@ impl Workspace {
             .iter()
             .filter(|root| path.starts_with(root))
             .max_by_key(|root| root.components().count());
+        let additional_sources: Vec<_> = self.buffers.keys().filter_map(file_url).collect();
         let project = match root {
-            Some(root) => match Project::load(root).await {
+            Some(root) => match Project::load_with_sources(
+                root,
+                None,
+                nash_driver::ProjectMode::Editor,
+                &additional_sources,
+            )
+            .await
+            {
                 Ok(project)
                     if project
                         .source_directories()
@@ -92,10 +168,26 @@ impl Workspace {
                 {
                     Ok(project)
                 }
-                Ok(_) | Err(DriverError::ProjectNotFound { .. }) => Project::load(&parent).await,
+                Ok(_) | Err(DriverError::ProjectNotFound { .. }) => {
+                    Project::load_with_sources(
+                        &parent,
+                        None,
+                        nash_driver::ProjectMode::Editor,
+                        &additional_sources,
+                    )
+                    .await
+                }
                 Err(error) => Err(error),
             },
-            None => Project::load(&parent).await,
+            None => {
+                Project::load_with_sources(
+                    &parent,
+                    None,
+                    nash_driver::ProjectMode::Editor,
+                    &additional_sources,
+                )
+                .await
+            }
         };
         let scope = project.as_ref().map_or_else(
             |_| {
@@ -104,11 +196,23 @@ impl Workspace {
                     .filter(|root| path.starts_with(root))
                     .max_by_key(|root| root.components().count())
                     .cloned()
-                    .unwrap_or_else(|| parent.clone())
+                    .unwrap_or_else(|| {
+                        parent
+                            .ancestors()
+                            .find(|dir| {
+                                dir.join("aiken.toml").is_file() || dir.join("nash.jsonc").is_file()
+                            })
+                            .unwrap_or(&parent)
+                            .to_path_buf()
+                    })
             },
             |project| project.root.clone(),
         );
         let source_dirs = project.as_ref().ok().map(Project::source_directories);
+        let warnings = project
+            .as_ref()
+            .map(|project| project.loaded.warnings.clone())
+            .unwrap_or_default();
         let overlay =
             InMemorySource::with_files(self.buffers.iter().filter_map(|(uri, buffer)| {
                 let url = file_url(uri)?;
@@ -128,21 +232,25 @@ impl Workspace {
         let modules = match project {
             Ok(project) => project.discover_modules(&*db.lock().await).await,
             // Standalone files still get parser, name, and type diagnostics.
-            Err(DriverError::ProjectNotFound { .. }) => Ok(self
+            Err(DriverError::ProjectNotFound { .. }) => self
                 .buffers
                 .keys()
                 .filter_map(|uri| {
                     let uri = file_url(uri)?;
                     let candidate = uri.to_file_path().ok()?;
-                    (candidate.parent() == Some(parent.as_path())).then_some((uri, None))
+                    (candidate.parent() == Some(parent.as_path())).then_some(uri)
                 })
-                .collect::<ModuleOrigins>()),
+                .map(|uri| {
+                    SourceSpec::standalone(&uri)
+                        .map(|spec| (uri, spec))
+                        .map_err(DriverError::from)
+                })
+                .collect::<Result<ModuleCatalog, DriverError>>(),
             Err(error) => Err(error),
         };
         let result = async {
             let modules = modules?;
-            let graph =
-                build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>()).await?;
+            let graph = build_graph(db.clone(), &modules).await?;
             Ok::<_, DriverError>(build(db, &graph, &modules).await)
         }
         .await;
@@ -179,8 +287,40 @@ impl Workspace {
                 }
                 None
             }
-            Err(error) => Some(error.to_string()),
+            Err(error) => {
+                match &error {
+                    DriverError::ProjectLoad {
+                        diagnostics: problems,
+                    } => {
+                        self.project_diagnostics(
+                            problems,
+                            DiagnosticSeverity::ERROR,
+                            trigger,
+                            &mut diagnostics,
+                        )
+                        .await;
+                    }
+                    DriverError::ProjectDiagnostic(problem) => {
+                        self.project_diagnostics(
+                            std::slice::from_ref(problem),
+                            DiagnosticSeverity::ERROR,
+                            trigger,
+                            &mut diagnostics,
+                        )
+                        .await;
+                    }
+                    _ => {}
+                }
+                Some(error.to_string())
+            }
         };
+        self.project_diagnostics(
+            &warnings,
+            DiagnosticSeverity::WARNING,
+            trigger,
+            &mut diagnostics,
+        )
+        .await;
         diagnostics.retain(|uri, _| !self.closed.contains(uri));
         let current: BTreeSet<_> = diagnostics.keys().cloned().collect();
         let previous = self.published.insert(scope, current).unwrap_or_default();
@@ -210,9 +350,15 @@ fn file_url(uri: &Uri) -> Option<Url> {
     let url = Url::parse(uri.as_str()).ok()?;
     let path = url.to_file_path().ok()?;
     let canonical = path
-        .canonicalize()
-        .ok()
-        .or_else(|| Some(path.parent()?.canonicalize().ok()?.join(path.file_name()?)))
+        .ancestors()
+        .find_map(|ancestor| {
+            ancestor.canonicalize().ok().map(|root| {
+                root.join(
+                    path.strip_prefix(ancestor)
+                        .expect("ancestor is a path prefix"),
+                )
+            })
+        })
         .unwrap_or(path);
     Url::from_file_path(canonical).ok()
 }
@@ -311,9 +457,7 @@ mod tests {
         ))));
         let project = Project::load(dir.path()).await.unwrap();
         let modules = project.discover_modules(&*db.lock().await).await.unwrap();
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
-            .await
-            .unwrap();
+        let graph = build_graph(db.clone(), &modules).await.unwrap();
         let result = build(db, &graph, &modules).await;
         let modules = result.ordered_reports();
         let problems: Vec<_> = modules
@@ -494,6 +638,146 @@ mod tests {
             for_uri(&notifications, &unavailable_uri)
                 .diagnostics
                 .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    async fn aiken_unsaved_project_and_standalone_buffers_share_selection_and_diagnostics() {
+        const VALID: &str = "test addition() { 1 + 1 == 2 }\n";
+        const INVALID: &str = "test addition() { 1 + True == 2 }\n";
+        for project in ["nash", "aiken", "standalone"] {
+            let dir = tempfile::tempdir().unwrap();
+            let source_dir = match project {
+                "nash" => {
+                    std::fs::write(
+                        dir.path().join("nash.jsonc"),
+                        r#"{"type":"application","sourceDirectories":["src"]}"#,
+                    )
+                    .unwrap();
+                    let source_dir = dir.path().join("src");
+                    std::fs::create_dir(&source_dir).unwrap();
+                    source_dir
+                }
+                "aiken" => {
+                    std::fs::write(dir.path().join("aiken.toml"), "name = \"test/editor\"\nversion = \"1.0.0\"\ncompiler = \"v1.1.23\"\nplutus = \"v3\"\n").unwrap();
+                    // Neither the source file nor its directory exists on disk.
+                    dir.path().join("lib")
+                }
+                _ => dir.path().to_path_buf(),
+            };
+            let uri: Uri = Url::from_file_path(source_dir.join("add_one.ak"))
+                .unwrap()
+                .as_str()
+                .parse()
+                .unwrap();
+            let mut workspace = Workspace::default();
+            workspace.open(uri.clone(), VALID.into(), 1);
+            let (notifications, error) = workspace.rebuild(&uri).await;
+            assert!(error.is_none(), "{error:?}");
+            assert!(
+                for_uri(&notifications, &uri).diagnostics.is_empty(),
+                "{notifications:?}"
+            );
+            workspace.change(&uri, INVALID.into(), 2);
+            let (notifications, error) = workspace.rebuild(&uri).await;
+            assert!(error.is_none(), "{error:?}");
+            let notification = for_uri(&notifications, &uri);
+            let diagnostic = notification
+                .diagnostics
+                .iter()
+                .find(|diagnostic| diagnostic.severity == Some(DiagnosticSeverity::ERROR))
+                .unwrap();
+            assert_eq!(notification.version, Some(2));
+            assert_eq!(diagnostic.range.start.line, 0);
+            assert_ne!(diagnostic.range.start, diagnostic.range.end);
+
+            workspace.change(&uri, VALID.into(), 3);
+            let (notifications, error) = workspace.rebuild(&uri).await;
+            assert!(error.is_none(), "{error:?}");
+            let notification = for_uri(&notifications, &uri);
+            assert_eq!(notification.version, Some(3));
+            assert!(
+                notification.diagnostics.is_empty(),
+                "{:?}",
+                notification.diagnostics
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn unsaved_default_environment_is_available_before_project_validation() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::write(root.join("aiken.toml"), "name = \"test/editor\"\nversion = \"1.0.0\"\ncompiler = \"v1.1.23\"\nplutus = \"v3\"\n[config.default]\noffset = 1\n").unwrap();
+        std::fs::create_dir(root.join("env")).unwrap();
+        std::fs::write(root.join("env/preview.ak"), "pub const value = 0\n").unwrap();
+        let uri = |relative| {
+            Url::from_file_path(root.join(relative))
+                .unwrap()
+                .as_str()
+                .parse::<Uri>()
+                .unwrap()
+        };
+        let main = uri("lib/main.ak");
+        let default = uri("env/default.ak");
+        let mut workspace = Workspace::default();
+        workspace.open(
+            main.clone(),
+            "use env\nuse config\npub fn selected() -> Int { env.value + config.offset }\n".into(),
+            1,
+        );
+        workspace.open(default.clone(), "pub const value = 41\n".into(), 1);
+        let (notifications, error) = workspace.rebuild(&main).await;
+        assert!(error.is_none(), "{error:?}");
+        assert!(
+            for_uri(&notifications, &main).diagnostics.is_empty(),
+            "{notifications:?}"
+        );
+        workspace.change(&default, "pub const value = False\n".into(), 2);
+        let (notifications, error) = workspace.rebuild(&default).await;
+        assert!(error.is_none(), "{error:?}");
+        assert!(
+            for_uri(&notifications, &main)
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.severity == Some(DiagnosticSeverity::ERROR)),
+            "{notifications:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn aiken_manifest_errors_are_located_and_clear_after_repair() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        let manifest = "name = \"test/editor\"\nversion = \"1.0.0\"\ncompiler = \"v1.1.23\"\nplutus = \"v2\"\n";
+        std::fs::write(root.join("aiken.toml"), manifest).unwrap();
+        let uri = |relative| {
+            Url::from_file_path(root.join(relative))
+                .unwrap()
+                .as_str()
+                .parse::<Uri>()
+                .unwrap()
+        };
+        let main = uri("lib/main.ak");
+        let config = uri("aiken.toml");
+        let mut workspace = Workspace::default();
+        workspace.open(main.clone(), "pub const value = 42\n".into(), 1);
+        let (notifications, error) = workspace.rebuild(&main).await;
+        assert!(error.is_some());
+        let diagnostic = &for_uri(&notifications, &config).diagnostics[0];
+        assert_eq!(
+            diagnostic.code,
+            Some(NumberOrString::String("NAP4103".into()))
+        );
+        assert_eq!(diagnostic.range.start.line, 3);
+        assert_ne!(diagnostic.range.start, diagnostic.range.end);
+        std::fs::write(root.join("aiken.toml"), manifest.replace("v2", "v3")).unwrap();
+        let (notifications, error) = workspace.rebuild(&main).await;
+        assert!(error.is_none(), "{error:?}");
+        assert!(for_uri(&notifications, &config).diagnostics.is_empty());
+        assert!(
+            for_uri(&notifications, &main).diagnostics.is_empty(),
+            "{notifications:?}"
         );
     }
 }

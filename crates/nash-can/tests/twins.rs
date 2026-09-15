@@ -19,7 +19,12 @@ fn twin_imports_preserve_privacy_and_explicit_exposure() {
             .module()
             .unwrap();
         let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
-        let interface = nash_can::from_module(&bump, &canonical.module, &Default::default());
+        let interface = nash_can::from_module(
+            &bump,
+            &canonical.module,
+            &Default::default(),
+            &canonical.tables.kinds.declared,
+        );
         let interfaces = std::collections::BTreeMap::from([("Status", interface)]);
         for (constructor, expected) in [("Ready", bare), ("S.Ready", qualified)] {
             let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Status as S exposing ({imports})\nvalue = {constructor}\n"));

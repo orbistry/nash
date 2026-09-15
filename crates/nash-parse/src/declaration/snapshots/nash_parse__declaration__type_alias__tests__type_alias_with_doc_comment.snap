@@ -120,6 +120,7 @@ Alias(
                 ),
             },
             attributes: [],
+            transparent: false,
         },
     },
 )

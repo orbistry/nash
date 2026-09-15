@@ -3,6 +3,10 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (PublicAlias)\n\ntype alias PublicAlias 'a = 'a\n\ntype alias PrivateAlias 'a = 'a\n\ntype PrivateUnion\n    = Foo\n    | Bar\n"
 ---
 Interface {
+    declared: DeclaredStore {
+        refinements: 0,
+        ..
+    },
     impls: [],
     traits: [],
     home: ModuleName {
@@ -24,6 +28,9 @@ Interface {
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",
@@ -69,6 +76,7 @@ Interface {
                 ),
             },
             visibility: Public,
+            transparent: false,
         },
         InterfaceAlias {
             kind: Arrow(
@@ -83,6 +91,9 @@ Interface {
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",
@@ -128,6 +139,7 @@ Interface {
                 ),
             },
             visibility: Private,
+            transparent: false,
         },
     ],
     unions: [
@@ -155,6 +167,7 @@ Interface {
             alternatives: 2,
             options: Enum,
             visibility: Private,
+            data_layout: None,
         },
     ],
     binops: [],

@@ -6,7 +6,7 @@
 //! - **Caching**: `Database` for managing source files and compilation results
 //! - **Project loading**: Parse `nash.jsonc` and discover source files
 //! - **Dependency graph**: Build and analyze module dependencies
-//! - **Compilation**: Fetch sources concurrently, then compile in dependency order
+//! - **Compilation**: Fetch sources, then compile in dependency order
 //! - **Incremental builds**: Interface-based caching for fast rebuilds
 //!
 //! # Example
@@ -29,7 +29,7 @@
 //!     let modules = project.discover_modules(&db.lock().await).await?;
 //!
 //!     // Build dependency graph
-//!     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>()).await?;
+//!     let graph = build_graph(db.clone(), &modules).await?;
 //!
 //!     // Compile everything
 //!     let result = build(db, &graph, &modules).await;
@@ -58,5 +58,15 @@ pub use database::Database;
 pub use error::DriverError;
 pub use graph::DepGraph;
 pub use interface::{Export, Interface};
-pub use project::{ModuleOrigins, Project, ProjectMember};
+pub use nash_frontend::{
+    LoadedProject, ModuleCatalog, ModuleKey, PackageId, PackageSourceId, ProjectDiagnostic,
+    ProjectFormat, ProjectMetadata, ProjectMode, ResolvedDependency, SourceSpec,
+};
+pub use project::{Project, ProjectMember};
 pub use source::{FileSource, FileSystemSource, InMemorySource, OverlaySource};
+
+/// The same source selection policy is used by discovery, graph inspection and builds.
+pub static FRONTENDS: nash_frontend::FrontendRegistry = nash_frontend::FrontendRegistry::new(&[
+    &nash_frontend_nash::NashFrontend,
+    &nash_frontend_aiken::AikenFrontend,
+]);

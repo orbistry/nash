@@ -21,16 +21,14 @@ async fn real_core_vesting_artifacts_execute_all_ledger_cases() {
         .expect("discover core and app sources");
     for module in ["Lift", "Literal"] {
         assert!(
-            origins.iter().any(|(uri, owner)| {
+            origins.iter().any(|(uri, spec)| {
                 uri.path().ends_with(&format!("/core/src/{module}.nash"))
-                    && owner
-                        .as_ref()
-                        .is_some_and(|owner| owner.to_string() == "nash/core")
+                    && spec.key.package.name.as_deref() == Some("nash/core")
             }),
             "{module} must come from the actual nash/core package"
         );
     }
-    let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
+    let graph = build_graph(db.clone(), &origins)
         .await
         .expect("build dependency graph");
     let (report, result) = build_with(db, &graph, &origins, |solved| {

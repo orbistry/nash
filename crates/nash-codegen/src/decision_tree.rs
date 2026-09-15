@@ -1,12 +1,12 @@
 //! Ordered pattern matrices with shared constructor tests and field bindings.
 use crate::ty_of::{TypeEnv, TypeError};
-use nash_ast::{NodeId, Pattern};
+use nash_ast::{DataEncoding, NodeId, Pattern};
 use nash_ir::{
     build::Builder,
-    core::{Binder, Branch, CaseKind, Core, Test},
+    core::{Binder, Branch, CaseKind, CastKind, Core, Test},
     ty::{BigTy, ConstTy, TermTy, Ty},
 };
-use nash_plutus::builtin::DefaultFunction;
+use nash_plutus::{builtin::DefaultFunction, constant::Constant};
 use nash_region::Located;
 use std::collections::{BTreeMap, HashMap};
 
@@ -46,6 +46,10 @@ enum Pat<'a> {
     Bind(&'a str),
     Node(&'a Located<Pattern<'a>>),
     List(&'a [&'a Located<Pattern<'a>>]),
+    DataList(
+        &'a [&'a Located<Pattern<'a>>],
+        Option<&'a Located<Pattern<'a>>>,
+    ),
 }
 #[derive(Clone)]
 struct Row<'a> {
@@ -93,6 +97,7 @@ fn collect_bindings<'a>(
     records: &RecordFields<'a>,
     out: &mut BTreeMap<&'a str, Binder<'a>>,
 ) -> Result<(), Error<'a>> {
+    let pattern = normalize(pattern);
     match pattern {
         Pat::Any => return Ok(()),
         Pat::Bind(name) => {
@@ -114,6 +119,7 @@ fn collect_bindings<'a>(
             Pattern::Anything
             | Pattern::Unit
             | Pattern::Bool { .. }
+            | Pattern::Constant(_)
             | Pattern::Int(_)
             | Pattern::Bytes(_)
             | Pattern::Str(_) => return Ok(()),
@@ -126,7 +132,7 @@ fn collect_bindings<'a>(
             }
             _ => {}
         },
-        Pat::List(_) => {}
+        Pat::List(_) | Pat::DataList(_, _) => {}
     }
     let shape = shape(pattern).ok_or(Error::PatternType)?;
     let signature = signatures(types, ty)?
@@ -222,6 +228,7 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         for row in &mut rows {
             for (index, subject) in subjects.iter().enumerate() {
                 loop {
+                    row.patterns[index] = normalize(row.patterns[index]);
                     let (name, next) = match row.patterns[index] {
                         Pat::Bind(name) => (Some(name), Pat::Any),
                         Pat::Node(p) => match &p.value {
@@ -256,19 +263,61 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 }));
         };
         if let Pat::Node(pattern) = rows[0].patterns[column]
-            && matches!(
-                &pattern.value,
-                Pattern::Int(_) | Pattern::Str(_) | Pattern::Bytes(_)
-            )
+            && is_literal(rows[0].patterns[column])
         {
-            let matcher = *self
-                .inputs
-                .literal_tests
-                .get(&NodeId::pattern(pattern))
-                .ok_or(Error::LiteralMatcher)?;
-            let condition = self
-                .build
-                .app(matcher, &[self.build.var(subjects[column].binder.name)]);
+            let subject = subjects[column].binder;
+            let value = self.build.var(subject.name);
+            let condition = if let Pattern::Constant(constant) = pattern.value {
+                let (eq, literal) = match (constant, subject.ty) {
+                    (nash_ast::Constant::Int(n), Ty::Const(ConstTy::Int)) => {
+                        (DefaultFunction::EqualsInteger, self.build.int(n))
+                    }
+                    (nash_ast::Constant::BigInt(digits), Ty::Const(ConstTy::Int)) => {
+                        let integer = digits.parse().map_err(|_| Error::PatternType)?;
+                        let integer = self.build.arena.alloc_integer(integer);
+                        (
+                            DefaultFunction::EqualsInteger,
+                            self.build.lit(Constant::integer(self.build.arena, integer)),
+                        )
+                    }
+                    (nash_ast::Constant::Bytes(bytes), Ty::Const(ConstTy::Bytes)) => (
+                        DefaultFunction::EqualsByteString,
+                        self.build
+                            .lit(Constant::byte_string(self.build.arena, bytes)),
+                    ),
+                    (nash_ast::Constant::Str(s), Ty::Const(ConstTy::String)) => (
+                        DefaultFunction::EqualsString,
+                        self.build.lit(Constant::string(self.build.arena, s)),
+                    ),
+                    (nash_ast::Constant::BlsG1(bytes), Ty::Const(ConstTy::BlsG1)) => {
+                        let point =
+                            nash_plutus::bls::Compressable::uncompress(self.build.arena, bytes)
+                                .map_err(|_| Error::PatternType)?;
+                        (
+                            DefaultFunction::Bls12_381_G1_Equal,
+                            self.build.lit(Constant::g1(self.build.arena, point)),
+                        )
+                    }
+                    (nash_ast::Constant::BlsG2(bytes), Ty::Const(ConstTy::BlsG2)) => {
+                        let point =
+                            nash_plutus::bls::Compressable::uncompress(self.build.arena, bytes)
+                                .map_err(|_| Error::PatternType)?;
+                        (
+                            DefaultFunction::Bls12_381_G2_Equal,
+                            self.build.lit(Constant::g2(self.build.arena, point)),
+                        )
+                    }
+                    _ => return Err(Error::PatternType),
+                };
+                self.build.builtin(eq, &[value, literal])
+            } else {
+                let matcher = *self
+                    .inputs
+                    .literal_tests
+                    .get(&NodeId::pattern(pattern))
+                    .ok_or(Error::LiteralMatcher)?;
+                self.build.app(matcher, &[value])
+            };
             let mut yes = rows.clone();
             yes[0].patterns[column] = Pat::Any;
             let yes = self.compile(subjects.clone(), yes)?;
@@ -313,16 +362,106 @@ impl<'a> Matrix<'a, '_, '_, '_> {
             let body = self.compile(child_subjects, specialized)?;
             branches.push((signature.shape, fields, body));
         }
-        self.emit(subjects[column], branches)
+        let external = match subjects[column].binder.ty {
+            Ty::Big(BigTy::Adt(adt)) => self.types.layout(*adt)?.data_layout.is_some(),
+            _ => false,
+        };
+        let mut default = None;
+        let mut default_shape = None;
+        if external {
+            let defaults = rows
+                .iter()
+                .filter(|row| matches!(row.patterns[column], Pat::Any))
+                .cloned()
+                .collect::<Vec<_>>();
+            if defaults.is_empty() {
+                let mut seen = Vec::new();
+                for row in &rows {
+                    if let Some(shape) = shape(row.patterns[column])
+                        && !seen.contains(&shape)
+                    {
+                        seen.push(shape);
+                    }
+                }
+                default_shape = seen.last().copied();
+            } else {
+                default = Some(self.compile(subjects.clone(), defaults)?);
+            }
+        }
+        self.emit(subjects[column], branches, default, default_shape)
     }
 
     fn emit(
-        &self,
+        &mut self,
         subject: Subject<'a>,
         branches: Vec<(Shape, Vec<Binder<'a>>, &'a Core<'a>)>,
+        default: Option<&'a Core<'a>>,
+        default_shape: Option<Shape>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
         let value = self.build.var(subject.binder.name);
         let ty = subject.binder.ty;
+        if let Ty::Const(ConstTy::DataPair(_, _)) = ty {
+            let [(Shape::Product, fields, body)] = branches.as_slice() else {
+                return Err(Error::PatternType);
+            };
+            if fields.len() != 2 {
+                return Err(Error::PatternType);
+            }
+            let mut body = *body;
+            for (field, func) in fields
+                .iter()
+                .zip([DefaultFunction::FstPair, DefaultFunction::SndPair])
+                .rev()
+            {
+                let raw = self.build.builtin(func, &[value]);
+                body = self.bind_decoded(*field, raw, body);
+            }
+            return Ok(body);
+        }
+        if let Ty::Const(ConstTy::DataTuple(_)) = ty {
+            let [(Shape::Product, fields, body)] = branches.as_slice() else {
+                return Err(Error::PatternType);
+            };
+            return Ok(self.list_fields(value, fields, body, true));
+        }
+        if let Ty::Const(ConstTy::DataList(element)) = ty {
+            let map = matches!(element, Ty::Const(ConstTy::DataPair(_, _)));
+            let mut arms = Vec::new();
+            for (shape, fields, body) in branches {
+                match shape {
+                    Shape::Nil => arms.push(Branch {
+                        test: Test::Nil,
+                        binders: &[],
+                        body,
+                    }),
+                    Shape::Cons => {
+                        let [head, tail] = fields.as_slice() else {
+                            return Err(Error::PatternType);
+                        };
+                        let raw = Binder {
+                            name: self.build.fresh("encodedHead"),
+                            ty: if map { *element } else { Ty::Big(&BigTy::Data) },
+                        };
+                        let decoded = if map {
+                            self.build.var(raw.name)
+                        } else {
+                            self.decode_field(head.ty, self.build.var(raw.name))
+                        };
+                        arms.push(Branch {
+                            test: Test::Cons,
+                            binders: self.build.arena.alloc_slice_copy(&[raw, *tail]),
+                            body: if uses(body, head.name.unique) {
+                                self.build.let_(*head, decoded, body)
+                            } else {
+                                body
+                            },
+                        });
+                    }
+                    _ => return Err(Error::PatternType),
+                }
+            }
+            return Ok(self.build.case(CaseKind::List, value, &arms, None));
+        }
         if let Ty::Big(BigTy::List(element)) = ty {
             let mut arms = Vec::new();
             for (shape, fields, body) in branches {
@@ -364,7 +503,38 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 None,
             ));
         }
-        if matches!(ty, Ty::Big(BigTy::Adt(_))) {
+        if let Ty::Big(BigTy::Adt(adt)) = ty {
+            let layout = self.types.layout(*adt)?;
+            let external = layout.data_layout.is_some();
+            if layout
+                .data_layout
+                .is_some_and(|layout| layout.encoding == DataEncoding::Transparent)
+            {
+                let [(Shape::Tag(0), fields, body)] = branches.as_slice() else {
+                    return Err(Error::PatternType);
+                };
+                let [field] = fields.as_slice() else {
+                    return Err(Error::PatternType);
+                };
+                return Ok(self.bind_decoded(*field, value, body));
+            }
+            if external && layout.fields.len() == 1 {
+                let [(Shape::Tag(0), fields, body)] = branches.as_slice() else {
+                    return Err(Error::PatternType);
+                };
+                let fields_value = if layout
+                    .data_layout
+                    .is_some_and(|layout| layout.encoding == DataEncoding::List)
+                {
+                    self.build.builtin(DefaultFunction::UnListData, &[value])
+                } else {
+                    self.build.builtin(
+                        DefaultFunction::SndPair,
+                        &[self.build.builtin(DefaultFunction::UnConstrData, &[value])],
+                    )
+                };
+                return Ok(self.list_fields(fields_value, fields, body, true));
+            }
             let tag = Binder {
                 name: self.build.fresh("tag"),
                 ty: Ty::Const(&ConstTy::Int),
@@ -374,6 +544,13 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 ty: data_list(self.build),
             };
             let arms = branches
+                .iter()
+                .find(|(shape, _, _)| Some(*shape) == default_shape)
+                .map(|(_, fields, body)| {
+                    self.list_fields(self.build.var(list.name), fields, body, external)
+                });
+            let fallback = default.or(arms).unwrap_or(self.fallback);
+            let arms = branches
                 .into_iter()
                 .map(|(shape, fields, body)| {
                     let Shape::Tag(index) = shape else {
@@ -382,10 +559,12 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                     Ok(Branch {
                         test: Test::Int(nash_plutus::constant::integer_from(
                             self.build.arena,
-                            i128::from(index),
+                            layout.data_layout.map_or(i128::from(index), |data| {
+                                i128::from(data.tags[usize::from(index)])
+                            }),
                         )),
                         binders: &[],
-                        body: self.list_fields(self.build.var(list.name), &fields, body),
+                        body: self.list_fields(self.build.var(list.name), &fields, body, external),
                     })
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
@@ -393,7 +572,7 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 CaseKind::Int,
                 self.build.var(tag.name),
                 &arms,
-                Some(self.fallback),
+                Some(fallback),
             );
             return Ok(self.build.case(
                 CaseKind::Data,
@@ -414,6 +593,7 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 self.build.builtin(DefaultFunction::UnListData, &[value]),
                 fields,
                 body,
+                false,
             ));
         }
         let mut kind = None;
@@ -451,8 +631,11 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         value: &'a Core<'a>,
         fields: &[Binder<'a>],
         body: &'a Core<'a>,
+        decode: bool,
     ) -> &'a Core<'a> {
-        if fields.is_empty() {
+        if fields.is_empty()
+            || (decode && !fields.iter().any(|field| uses(body, field.name.unique)))
+        {
             return body;
         }
         let list = Binder {
@@ -462,30 +645,78 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         let tail = self
             .build
             .builtin(DefaultFunction::TailList, &[self.build.var(list.name)]);
-        let body = self.list_fields(tail, &fields[1..], body);
+        let body = self.list_fields(tail, &fields[1..], body, decode);
         let head = self
             .build
             .builtin(DefaultFunction::HeadList, &[self.build.var(list.name)]);
-        self.build
-            .let_(list, value, self.build.let_(fields[0], head, body))
+        let body = if decode {
+            self.bind_decoded(fields[0], head, body)
+        } else {
+            self.build.let_(fields[0], head, body)
+        };
+        self.build.let_(list, value, body)
+    }
+    fn decode_field(&self, ty: Ty<'a>, value: &'a Core<'a>) -> &'a Core<'a> {
+        if matches!(ty, Ty::Big(_)) {
+            value
+        } else {
+            self.build
+                .cast(CastKind::FromDataShallow, Ty::Big(&BigTy::Data), ty, value)
+        }
+    }
+    fn bind_decoded(
+        &self,
+        field: Binder<'a>,
+        value: &'a Core<'a>,
+        body: &'a Core<'a>,
+    ) -> &'a Core<'a> {
+        if uses(body, field.name.unique) {
+            self.build
+                .let_(field, self.decode_field(field.ty, value), body)
+        } else {
+            body
+        }
     }
 }
 fn data_list<'a>(build: &Builder<'a>) -> Ty<'a> {
     Ty::Const(build.arena.alloc(ConstTy::List(Ty::Big(&BigTy::Data))))
 }
+fn normalize<'a>(mut pattern: Pat<'a>) -> Pat<'a> {
+    loop {
+        pattern = match pattern {
+            Pat::Node(p) => match &p.value {
+                Pattern::DataList { elements, tail } => Pat::DataList(elements, *tail),
+                _ => return pattern,
+            },
+            Pat::DataList([], Some(tail)) => Pat::Node(tail),
+            _ => return pattern,
+        };
+    }
+}
+fn uses(body: &Core<'_>, name: u32) -> bool {
+    let mut found = false;
+    body.walk(&mut |node| {
+        found |= matches!(node, Core::Var(n) if n.unique == name);
+    });
+    found
+}
 fn is_literal(pattern: Pat<'_>) -> bool {
-    matches!(pattern,Pat::Node(p) if matches!(&p.value,Pattern::Int(_)|Pattern::Str(_)|Pattern::Bytes(_)))
+    matches!(pattern, Pat::Node(p) if matches!(&p.value,
+        Pattern::Constant(_) | Pattern::Int(_) | Pattern::Str(_) | Pattern::Bytes(_)))
 }
 fn shape(pattern: Pat<'_>) -> Option<Shape> {
-    match pattern {
-        Pat::List(xs) => Some(if xs.is_empty() {
+    match normalize(pattern) {
+        Pat::List(xs) | Pat::DataList(xs, _) => Some(if xs.is_empty() {
             Shape::Nil
         } else {
             Shape::Cons
         }),
         Pat::Node(p) => match &p.value {
             Pattern::Bool { value, .. } => Some(if *value { Shape::True } else { Shape::False }),
-            Pattern::Tuple { .. } | Pattern::Record(_) => Some(Shape::Product),
+            Pattern::Tuple { .. }
+            | Pattern::DataTuple { .. }
+            | Pattern::Pair { .. }
+            | Pattern::Record(_) => Some(Shape::Product),
             Pattern::List(xs) => Some(if xs.is_empty() {
                 Shape::Nil
             } else {
@@ -521,6 +752,7 @@ fn signatures<'a>(
     let result = match ty {
         Ty::Term(TermTy::Adt(adt)) | Ty::Big(BigTy::Adt(adt)) => types
             .layout(*adt)?
+            .fields
             .iter()
             .enumerate()
             .map(|(i, fields)| Signature {
@@ -528,11 +760,16 @@ fn signatures<'a>(
                 fields: fields.to_vec(),
             })
             .collect(),
-        Ty::Term(TermTy::Tuple(fields))
+        Ty::Const(ConstTy::DataTuple(fields))
+        | Ty::Term(TermTy::Tuple(fields))
         | Ty::Term(TermTy::Record(fields))
         | Ty::Big(BigTy::Record(fields)) => vec![Signature {
             shape: Shape::Product,
             fields: fields.to_vec(),
+        }],
+        Ty::Const(ConstTy::DataPair(first, second)) => vec![Signature {
+            shape: Shape::Product,
+            fields: vec![*first, *second],
         }],
         Ty::Const(ConstTy::Bool) => vec![
             Signature {
@@ -544,7 +781,9 @@ fn signatures<'a>(
                 fields: vec![],
             },
         ],
-        Ty::Const(ConstTy::List(element)) | Ty::Big(BigTy::List(element)) => vec![
+        Ty::Const(ConstTy::DataList(element))
+        | Ty::Const(ConstTy::List(element))
+        | Ty::Big(BigTy::List(element)) => vec![
             Signature {
                 shape: Shape::Nil,
                 fields: vec![],
@@ -591,6 +830,7 @@ fn children<'a>(
     signature: &Signature<'a>,
     records: &RecordFields<'a>,
 ) -> Result<Option<Vec<Pat<'a>>>, Error<'a>> {
+    let pattern = normalize(pattern);
     if shape(pattern) != Some(signature.shape)
         && !(matches!(pattern,Pat::Node(p) if matches!(p.value,Pattern::Record(_)))
             && signature.shape == Shape::Tag(0))
@@ -605,6 +845,13 @@ fn children<'a>(
                 vec![Pat::Node(xs[0]), Pat::List(&xs[1..])]
             }
         }
+        Pat::DataList(xs, tail) => {
+            if xs.is_empty() {
+                vec![]
+            } else {
+                vec![Pat::Node(xs[0]), Pat::DataList(&xs[1..], tail)]
+            }
+        }
         Pat::Node(p) => match &p.value {
             Pattern::List(xs) => {
                 if xs.is_empty() {
@@ -615,7 +862,13 @@ fn children<'a>(
             }
             Pattern::Cons { head, tail } => vec![Pat::Node(head), Pat::Node(tail)],
             Pattern::Bool { .. } => vec![],
-            Pattern::Tuple {
+            Pattern::Pair { first, second } => vec![Pat::Node(first), Pat::Node(second)],
+            Pattern::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Pattern::Tuple {
                 first,
                 second,
                 rest,

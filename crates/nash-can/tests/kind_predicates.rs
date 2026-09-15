@@ -239,7 +239,7 @@ fn late_applied_relevance_rechecks_existing_recursive_references() {
 
 fn imported<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, Vec<Error<'a>>> {
     let builtin = nash_can::kinds::builtin_interface(bump);
-    let interfaces = BTreeMap::from([("Builtin", builtin)]);
+    let interfaces = BTreeMap::from([("Builtin", builtin.clone())]);
     let source = bump.alloc_str("module Types exposing (..)\nimport Builtin exposing (..)\ntype Box 'a = Box 'a\ntype wrap 'f 'a = Wrap ('f 'a)\ntype option 'a = None | Some 'a\ntype alias count = int\n");
     let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     let checked = nash_can::canonicalize(
@@ -251,7 +251,12 @@ fn imported<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, V
         &parsed,
     )
     .unwrap();
-    let interface = nash_can::from_module(bump, &checked.module, &BTreeMap::new());
+    let interface = nash_can::from_module(
+        bump,
+        &checked.module,
+        &BTreeMap::new(),
+        &checked.tables.kinds.declared,
+    );
     let interfaces = BTreeMap::from([("Builtin", builtin), ("Types", interface)]);
     let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (..)\n{body}\n"));
     let parsed = nash_parse::Parser::new(bump, source).module().unwrap();

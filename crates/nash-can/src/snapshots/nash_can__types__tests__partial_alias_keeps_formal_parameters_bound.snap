@@ -150,6 +150,9 @@ source: crates/nash-can/src/types.rs
                                         PackageName {
                                             author: "nash",
                                             project: "core",
+                                            version: "",
+                                            source: Compiler,
+                                            compilation: None,
                                         },
                                     ),
                                     name: "Builtin",
@@ -255,6 +258,9 @@ source: crates/nash-can/src/types.rs
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",

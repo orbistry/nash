@@ -20,8 +20,11 @@ pub enum Pattern<'a> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Literal<'a> {
     Int(i128),
+    BigInt(&'a str),
     Str(&'a str),
     Bytes(&'a [u8]),
+    BlsG1(&'a [u8]),
+    BlsG2(&'a [u8]),
 }
 
 /// Elm's `Nitpick.PatternMatches.Error`.
@@ -78,6 +81,7 @@ static UNIT_CTOR: Ctor<'static> = Ctor {
     arguments: &[],
 };
 pub(crate) static UNIT: Union<'static> = Union {
+    data_layout: None,
     kind: &Kind::Type,
     context: &[],
     name: &UNIT_LOCATED,
@@ -96,6 +100,7 @@ static PAIR_CTOR: Ctor<'static> = Ctor {
     arguments: &[&VAR_A, &VAR_B],
 };
 pub(crate) static PAIR: Union<'static> = Union {
+    data_layout: None,
     kind: &Kind::Arrow(&Kind::Type, &Kind::Arrow(&Kind::Type, &Kind::Type)),
     context: &[],
     name: &PAIR_LOCATED,
@@ -114,6 +119,7 @@ static TRIPLE_CTOR: Ctor<'static> = Ctor {
     arguments: &[&VAR_A, &VAR_B, &VAR_C],
 };
 pub(crate) static TRIPLE: Union<'static> = Union {
+    data_layout: None,
     kind: &Kind::Arrow(
         &Kind::Type,
         &Kind::Arrow(&Kind::Type, &Kind::Arrow(&Kind::Type, &Kind::Type)),
@@ -142,6 +148,7 @@ static CONS_CTOR: Ctor<'static> = Ctor {
     arguments: &[&VAR_A, &LIST_A],
 };
 pub(crate) static LIST: Union<'static> = Union {
+    data_layout: None,
     kind: &Kind::Arrow(&Kind::Type, &Kind::Type),
     context: &[],
     name: &LIST_LOCATED,
@@ -163,18 +170,41 @@ const NIL: Pattern<'static> = Pattern::Ctor {
 pub fn simplify<'a>(bump: &'a Bump, pattern: &Located<CanPattern<'a>>) -> Pattern<'a> {
     match &pattern.value {
         CanPattern::Anything | CanPattern::Var(_) | CanPattern::Record(_) => Pattern::Anything,
+        CanPattern::Pair { first, second } => Pattern::Ctor {
+            union: &PAIR,
+            name: PAIR_NAME,
+            args: bump.alloc_slice_fill_iter([simplify(bump, first), simplify(bump, second)]),
+        },
         CanPattern::Unit => Pattern::Ctor {
             union: &UNIT,
             name: UNIT_NAME,
             args: &[],
         },
+        CanPattern::DataTuple {
+            first,
+            second,
+            rest,
+        } => {
+            // Nested products preserve every field without a fixed tuple arity.
+            let mut fields = [*first, *second]
+                .into_iter()
+                .chain(rest.iter().copied())
+                .rev();
+            let mut product = simplify(bump, fields.next().unwrap());
+            for field in fields {
+                product = Pattern::Ctor {
+                    union: &PAIR,
+                    name: PAIR_NAME,
+                    args: bump.alloc_slice_fill_iter([simplify(bump, field), product]),
+                };
+            }
+            product
+        }
         CanPattern::Tuple {
             first,
             second,
             rest,
         } => {
-            // Canonicalization rejects tuples above three (`TupleLargerThanThree`),
-            // so `rest` is empty or one element; the walk is generic anyway.
             let union: &'a Union<'a> = if rest.is_empty() { &PAIR } else { &TRIPLE };
             Pattern::Ctor {
                 union,
@@ -206,8 +236,20 @@ pub fn simplify<'a>(bump: &'a Bump, pattern: &Located<CanPattern<'a>>) -> Patter
             .iter()
             .rev()
             .fold(NIL, |tail, head| cons(bump, head, tail)),
+        CanPattern::DataList { elements, tail } => elements.iter().rev().fold(
+            tail.map_or(NIL, |tail| simplify(bump, tail)),
+            |tail, head| cons(bump, head, tail),
+        ),
         CanPattern::Cons { head, tail } => cons(bump, head, simplify(bump, tail)),
         CanPattern::Alias { pattern, .. } => simplify(bump, pattern),
+        CanPattern::Constant(value) => Pattern::Literal(match value {
+            nash_ast::Constant::Int(n) => Literal::Int(*n),
+            nash_ast::Constant::BigInt(n) => Literal::BigInt(n),
+            nash_ast::Constant::Bytes(bytes) => Literal::Bytes(bytes),
+            nash_ast::Constant::Str(text) => Literal::Str(text),
+            nash_ast::Constant::BlsG1(bytes) => Literal::BlsG1(bytes),
+            nash_ast::Constant::BlsG2(bytes) => Literal::BlsG2(bytes),
+        }),
         CanPattern::Bytes(bytes) => Pattern::Literal(Literal::Bytes(bytes)),
         CanPattern::Int(n) => Pattern::Literal(Literal::Int(*n)),
         CanPattern::Str(s) => Pattern::Literal(Literal::Str(s)),

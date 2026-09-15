@@ -13,6 +13,8 @@ use nash_region::Located;
 pub struct InterfaceValue<'a> {
     pub name: &'a str,
     pub annotation: &'a Annotation<'a>,
+    /// Labels in the defining source function's argument order, never inferred from names.
+    pub callable: Option<&'a [&'a str]>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -28,8 +30,9 @@ pub enum AliasVisibility {
     Private,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Interface<'a> {
+    pub declared: nash_ast::declared::DeclaredStore,
     pub impls: &'a [crate::environment::ImplInfo<'a>],
     pub traits: &'a [InterfaceTrait<'a>],
     pub home: ModuleName<'a>,
@@ -67,6 +70,7 @@ pub struct InterfaceUnion<'a> {
     pub alternatives: u16,
     pub options: CtorOpts,
     pub visibility: UnionVisibility,
+    pub data_layout: Option<nash_ast::DataLayout<'a>>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -77,6 +81,7 @@ pub struct InterfaceAlias<'a> {
     pub parameters: &'a [&'a str],
     pub typ: &'a Located<CanType<'a>>,
     pub visibility: AliasVisibility,
+    pub transparent: bool,
 }
 
 /// Mirrors Elm's `I.Binop op annotation associativity precedence`: the
@@ -104,8 +109,10 @@ pub fn from_module<'a>(
     bump: &'a Bump,
     module: &CanModule<'a>,
     annotations: &Annotations<'a>,
+    declared: &nash_ast::declared::DeclaredStore,
 ) -> Interface<'a> {
     Interface {
+        declared: declared.clone(),
         impls: bump.alloc_slice_fill_iter(
             module
                 .impls
@@ -173,8 +180,9 @@ fn extract_values<'a>(
     let mut names = Vec::new();
     collect_decl_names(decls, &mut names);
 
-    let to_value = |name: &'a str| InterfaceValue {
+    let to_value = |(name, callable): (&'a str, Option<&'a [&'a str]>)| InterfaceValue {
         name,
+        callable,
         annotation: annotations
             .get(name)
             .copied()
@@ -186,17 +194,31 @@ fn extract_values<'a>(
         Exports::Explicit(exports) => bump.alloc_slice_fill_iter(
             names
                 .into_iter()
-                .filter(|name| is_exported_value(exports, name))
+                .filter(|(name, _)| is_exported_value(exports, name))
                 .map(to_value)
                 .collect::<Vec<_>>(),
         ),
     }
 }
 
-fn collect_decl_names<'a>(decls: &Decls<'a>, names: &mut Vec<&'a str>) {
+fn callable_labels<'a>(def: &Def<'a>) -> Option<&'a [&'a str]> {
+    let body = match def {
+        Def::Def { body, .. } | Def::TypedDef { body, .. } => *body,
+    };
+    let body = match &body.value {
+        nash_ast::Expr::RunnableCheck { function, .. } => *function,
+        _ => body,
+    };
+    match &body.value {
+        nash_ast::Expr::Callable { labels, .. } => Some(*labels),
+        _ => None,
+    }
+}
+
+fn collect_decl_names<'a>(decls: &Decls<'a>, names: &mut Vec<(&'a str, Option<&'a [&'a str]>)>) {
     match decls {
         Decls::Declare { definition, next } => {
-            names.push(def_name(definition));
+            names.push((def_name(definition), callable_labels(definition)));
             collect_decl_names(next, names);
         }
         Decls::DeclareRec {
@@ -204,9 +226,9 @@ fn collect_decl_names<'a>(decls: &Decls<'a>, names: &mut Vec<&'a str>) {
             following,
             next,
         } => {
-            names.push(def_name(definition));
+            names.push((def_name(definition), callable_labels(definition)));
             for def in *following {
-                names.push(def_name(def));
+                names.push((def_name(def), callable_labels(def)));
             }
             collect_decl_names(next, names);
         }
@@ -241,6 +263,7 @@ fn extract_unions<'a>(
             ctors: union.value.ctors,
             alternatives: union.value.alternatives,
             options: union.value.options,
+            data_layout: union.value.data_layout,
             visibility: union_visibility(exports, name),
         }
     }))
@@ -260,6 +283,7 @@ fn extract_aliases<'a>(
             parameters: alias.value.parameters,
             typ: alias.value.typ,
             visibility: alias_visibility(exports, name),
+            transparent: alias.value.transparent,
         }
     }))
 }

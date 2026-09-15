@@ -3,6 +3,10 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias pair 'a 'b = ('a, 'b)\n\ntype Maybe 'a\n    = Just 'a\n    | Nothing\n"
 ---
 Interface {
+    declared: DeclaredStore {
+        refinements: 0,
+        ..
+    },
     impls: [],
     traits: [],
     home: ModuleName {
@@ -71,6 +75,7 @@ Interface {
                 },
             },
             visibility: Public,
+            transparent: false,
         },
     ],
     unions: [
@@ -87,6 +92,9 @@ Interface {
                                 PackageName {
                                     author: "nash",
                                     project: "core",
+                                    version: "",
+                                    source: Compiler,
+                                    compilation: None,
                                 },
                             ),
                             name: "Builtin",
@@ -151,6 +159,7 @@ Interface {
             alternatives: 2,
             options: Normal,
             visibility: Open,
+            data_layout: None,
         },
     ],
     binops: [],

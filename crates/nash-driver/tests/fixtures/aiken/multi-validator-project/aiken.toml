@@ -1,0 +1,17 @@
+name = "acceptance/multiple"
+version = "1.0.0"
+compiler = "v1.1.23"
+plutus = "v3"
+license = "Apache-2.0"
+description = "Named validator and checked tool declaration acceptance"
+
+[repository]
+user = "acceptance"
+project = "multiple"
+platform = "github"
+
+[config.default]
+target = 17
+
+[config.preview]
+target = 18

@@ -182,7 +182,12 @@ fn with_core(source: &str, check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedN
         .unwrap();
         interfaces.insert(
             canonical.module.name.name,
-            nash_can::from_module(bump, &canonical.module, &annotations),
+            nash_can::from_module(
+                bump,
+                &canonical.module,
+                &annotations,
+                &canonical.tables.kinds.declared,
+            ),
         );
         units.push(Unit { canonical, solved });
     }

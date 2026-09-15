@@ -61,6 +61,21 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
         ],
         args: [
             ReflexiveLift {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                                version: "",
+                                source: Compiler,
+                                compilation: None,
+                            },
+                        ),
+                        name: "Lift",
+                    },
+                    name: "Lift",
+                },
                 typ: Located {
                     region: Region {
                         start: Position {
@@ -118,6 +133,9 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
                     PackageName {
                         author: "nash",
                         project: "core",
+                        version: "",
+                        source: Compiler,
+                        compilation: None,
                     },
                 ),
                 name: "Lift",
@@ -129,6 +147,9 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
                             PackageName {
                                 author: "nash",
                                 project: "core",
+                                version: "",
+                                source: Compiler,
+                                compilation: None,
                             },
                         ),
                         name: "Lift",
@@ -143,6 +164,9 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
                                     PackageName {
                                         author: "nash",
                                         project: "core",
+                                        version: "",
+                                        source: Compiler,
+                                        compilation: None,
                                     },
                                 ),
                                 name: "Builtin",
@@ -158,6 +182,9 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
                                     PackageName {
                                         author: "nash",
                                         project: "core",
+                                        version: "",
+                                        source: Compiler,
+                                        compilation: None,
                                     },
                                 ),
                                 name: "Builtin",
@@ -173,6 +200,21 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
         args: [],
     },
     ReflexiveLift {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                        version: "",
+                        source: Compiler,
+                        compilation: None,
+                    },
+                ),
+                name: "Lift",
+            },
+            name: "Lift",
+        },
         typ: Located {
             region: Region {
                 start: Position {
@@ -197,6 +239,21 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
         },
     },
     ReflexiveLift {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                        version: "",
+                        source: Compiler,
+                        compilation: None,
+                    },
+                ),
+                name: "Lift",
+            },
+            name: "Lift",
+        },
         typ: Located {
             region: Region {
                 start: Position {
@@ -214,6 +271,21 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
         },
     },
     ReflexiveLift {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "core",
+                        version: "",
+                        source: Compiler,
+                        compilation: None,
+                    },
+                ),
+                name: "Lift",
+            },
+            name: "Lift",
+        },
         typ: Located {
             region: Region {
                 start: Position {

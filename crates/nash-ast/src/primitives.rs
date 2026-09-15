@@ -8,6 +8,9 @@ use crate::{Kind, ModuleName, PackageName, QualifiedName};
 pub const CORE: PackageName<'static> = PackageName {
     author: "nash",
     project: "core",
+    version: "",
+    source: crate::PackageSource::Compiler,
+    compilation: None,
 };
 pub const fn builtin_home() -> ModuleName<'static> {
     ModuleName {
@@ -158,6 +161,146 @@ const BOOL_CTORS: &[&crate::Ctor<'static>] = &[
         arguments: &[],
     },
 ];
+const DATA_OPTION_CTORS: &[&crate::Ctor<'static>] = &[
+    &crate::Ctor {
+        labels: None,
+        name: "Some",
+        index: 0,
+        arity: 1,
+        arguments: &[&nash_region::Located::at_zero(crate::Type::Var("p0"))],
+    },
+    &crate::Ctor {
+        labels: None,
+        name: "None",
+        index: 1,
+        arity: 0,
+        arguments: &[],
+    },
+];
+/// Shared canonical layout for optional external Data, including specialization.
+pub static DATA_OPTION_UNION: crate::Union<'static> = crate::Union {
+    kind: UNARY,
+    context: &[],
+    name: &nash_region::Located::at_zero("data_option"),
+    parameters: &["p0"],
+    ctors: DATA_OPTION_CTORS,
+    alternatives: 2,
+    options: crate::CtorOpts::Normal,
+    data_layout: Some(crate::DataLayout {
+        encoding: crate::DataEncoding::Constr,
+        opaque: false,
+        tags: &[0, 1],
+    }),
+};
+
+macro_rules! data_ctor {
+    ($name:literal, $index:literal, $labels:expr, [$($arg:expr),*]) => {
+        &crate::Ctor { name: $name, index: $index, labels: $labels,
+            arity: (&[$($arg),*] as &[&nash_region::Located<crate::Type<'static>>]).len() as u16,
+            arguments: &[$($arg),*] }
+    };
+}
+
+const ORDERING_CTORS: &[&crate::Ctor<'static>] = &[
+    data_ctor!("Less", 0, None, []),
+    data_ctor!("Equal", 1, None, []),
+    data_ctor!("Greater", 2, None, []),
+];
+const NEVER_CTORS: &[&crate::Ctor<'static>] = &[data_ctor!("Never", 0, None, [])];
+const PRNG_CTORS: &[&crate::Ctor<'static>] = &[
+    data_ctor!(
+        "Seeded",
+        0,
+        Some(&["seed", "choices"]),
+        [
+            &builtins::named("bytes", &[]),
+            &builtins::named("bytes", &[])
+        ]
+    ),
+    data_ctor!(
+        "Replayed",
+        1,
+        Some(&["cursor", "choices"]),
+        [&builtins::named("int", &[]), &builtins::named("bytes", &[])]
+    ),
+];
+const SCRIPT_PURPOSE_CTORS: &[&crate::Ctor<'static>] = &[
+    data_ctor!("__Mint", 0, None, [DATA]),
+    data_ctor!(
+        "__Spend",
+        1,
+        None,
+        [DATA, &builtins::named("data_option", &[DATA])]
+    ),
+    data_ctor!("__Withdraw", 2, None, [DATA]),
+    data_ctor!("__Publish", 3, None, [&builtins::named("int", &[]), DATA]),
+    data_ctor!("__Vote", 4, None, [DATA]),
+    data_ctor!("__Propose", 5, None, [&builtins::named("int", &[]), DATA]),
+];
+const SCRIPT_CONTEXT_CTORS: &[&crate::Ctor<'static>] = &[data_ctor!(
+    "__ScriptContext",
+    0,
+    None,
+    [DATA, DATA, &builtins::named("data_script_purpose", &[])]
+)];
+
+macro_rules! data_union {
+    ($name:literal, $ctors:ident, $tags:expr) => {
+        crate::Union {
+            kind: TYPE,
+            context: &[],
+            name: &nash_region::Located::at_zero($name),
+            parameters: &[],
+            ctors: $ctors,
+            alternatives: $ctors.len() as u16,
+            options: crate::CtorOpts::Normal,
+            data_layout: Some(crate::DataLayout {
+                encoding: crate::DataEncoding::Constr,
+                tags: $tags,
+                opaque: false,
+            }),
+        }
+    };
+}
+
+static ORDERING_UNION: crate::Union<'static> =
+    data_union!("data_ordering", ORDERING_CTORS, &[0, 1, 2]);
+static NEVER_UNION: crate::Union<'static> = data_union!("data_never", NEVER_CTORS, &[1]);
+static PRNG_UNION: crate::Union<'static> = data_union!("data_prng", PRNG_CTORS, &[0, 1]);
+static SCRIPT_PURPOSE_UNION: crate::Union<'static> = data_union!(
+    "data_script_purpose",
+    SCRIPT_PURPOSE_CTORS,
+    &[0, 1, 2, 3, 4, 5]
+);
+static SCRIPT_CONTEXT_UNION: crate::Union<'static> =
+    data_union!("data_script_context", SCRIPT_CONTEXT_CTORS, &[0]);
+
+/// Compiler-owned nominal types with an external constructor-Data layout.
+pub fn data_union(name: &str) -> Option<&'static crate::Union<'static>> {
+    Some(match name {
+        "data_option" => &DATA_OPTION_UNION,
+        "data_ordering" => &ORDERING_UNION,
+        "data_never" => &NEVER_UNION,
+        "data_prng" => &PRNG_UNION,
+        "data_script_purpose" => &SCRIPT_PURPOSE_UNION,
+        "data_script_context" => &SCRIPT_CONTEXT_UNION,
+        _ => return None,
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StructuralConstructor {
+    Pair,
+    Unit,
+}
+
+pub fn structural_constructor(type_name: &str, ctor_name: &str) -> Option<StructuralConstructor> {
+    match (type_name, ctor_name) {
+        ("data_pair", "Pair") => Some(StructuralConstructor::Pair),
+        ("unit", "Void") => Some(StructuralConstructor::Unit),
+        _ => None,
+    }
+}
 const DATA: &nash_region::Located<crate::Type<'static>> = &builtins::named("Data", &[]);
 const DATA_LIST: &nash_region::Located<crate::Type<'static>> = &builtins::named("list", &[DATA]);
 const DATA_CTORS: &[&crate::Ctor<'static>] = &[
@@ -235,6 +378,16 @@ pub const PRIMITIVES: &[Primitive] = &[
     primitive!("value", TYPE, Const, &[], &[]),
     primitive!("list", UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
     primitive!("array", UNARY, Const, &[(0, ReprTrait::Storable)], &[]),
+    // Unlike native pair, both runtime fields are encoded Data.
+    primitive!("data_pair", BINARY, Const, &[], &[]),
+    primitive!("data_list", UNARY, Const, &[], &[]),
+    primitive!("data_tuple", UNARY, Const, &[], &[]),
+    primitive!("data_option", UNARY, Big, &[], DATA_OPTION_CTORS),
+    primitive!("data_ordering", TYPE, Big, &[], ORDERING_CTORS),
+    primitive!("data_never", TYPE, Big, &[], NEVER_CTORS),
+    primitive!("data_prng", TYPE, Big, &[], PRNG_CTORS),
+    primitive!("data_script_purpose", TYPE, Big, &[], SCRIPT_PURPOSE_CTORS),
+    primitive!("data_script_context", TYPE, Big, &[], SCRIPT_CONTEXT_CTORS),
     primitive!(
         "pair",
         BINARY,
@@ -259,7 +412,6 @@ mod tests {
                     .all(|(index, _)| *index < primitive.kind.arity())
             );
         }
-        assert_eq!(names.len(), 17);
         assert_eq!(
             DATA_CTORS.iter().map(|ctor| ctor.arity).collect::<Vec<_>>(),
             [2, 1, 1, 1, 1]

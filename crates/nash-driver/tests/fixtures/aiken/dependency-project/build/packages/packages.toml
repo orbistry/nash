@@ -1,0 +1,9 @@
+[[packages]]
+name = "sample/direct"
+version = "v1.0.0"
+source = "github"
+
+[[packages]]
+name = "sample/transitive"
+version = "v1.0.0"
+source = "github"

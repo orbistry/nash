@@ -14,7 +14,7 @@ pub fn map<'a>(
     f: &mut impl FnMut(&'a Core<'a>) -> Option<&'a Core<'a>>,
 ) -> &'a Core<'a> {
     let changed = match core {
-        Core::Var(_) | Core::Lit(_) | Core::Error => None,
+        Core::Var(_) | Core::Lit(_) | Core::Evaluated { .. } | Core::Error => None,
         Core::Lam { params, body } => {
             let mapped = map(build, body, f);
             (!ptr::eq(*body, mapped)).then_some(Core::Lam {

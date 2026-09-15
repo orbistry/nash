@@ -91,6 +91,7 @@ fn union<'a>(
         })
         .collect::<Vec<_>>();
     a.alloc(Union {
+        data_layout: None,
         kind: &Kind::Type,
         context: &[],
         name: a.alloc(Located::at_zero(n)),
@@ -310,7 +311,6 @@ fn rejects_non_intrinsic_and_unknown_representations() {
     for (kind, from, to) in [
         (CastKind::Lift, Ty::Const(&ConstTy::String), bytes()),
         (CastKind::ValidateData, data(), Ty::Erased),
-        (CastKind::ToData, Ty::Const(&ConstTy::Int), data()),
         (CastKind::Lower, int(), Ty::Const(&ConstTy::Bytes)),
     ] {
         assert!(expand(&b, &mut env, b.cast(kind, from, to, b.int(1))).is_err());

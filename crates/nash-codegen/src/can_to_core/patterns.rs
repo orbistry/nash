@@ -13,6 +13,16 @@ impl<'a> Engine<'a, '_, '_> {
         body: &'a Located<Expr<'a>>,
         ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
+        self.lambda_with_policy(parameters, body, ctx, false)
+    }
+
+    fn lambda_with_policy(
+        &mut self,
+        parameters: &[&'a Located<Pattern<'a>>],
+        body: &'a Located<Expr<'a>>,
+        ctx: &Context<'a>,
+        source_let: bool,
+    ) -> Result<&'a Core<'a>, Error<'a>> {
         if parameters.is_empty() {
             return self.expr(body, ctx);
         }
@@ -46,6 +56,7 @@ impl<'a> Engine<'a, '_, '_> {
         let mut body = self.expr(body, &child)?;
         for (pattern, binder, bindings, records, literals) in matches.into_iter().rev() {
             let fallback = self.match_failure();
+            let continuation = body;
             body = decision_tree::compile(
                 &self.ir,
                 &mut self.types,
@@ -62,8 +73,46 @@ impl<'a> Engine<'a, '_, '_> {
                 },
                 fallback,
             )?;
+            if source_let {
+                crate::build::source_lets::mark_pattern_bindings(
+                    body,
+                    continuation,
+                    &mut self.source_lets,
+                );
+            }
+        }
+        if source_let {
+            self.source_lets
+                .extend(params.iter().map(|param| param.name.unique));
         }
         Ok(self.ir.lam(&params, body))
+    }
+
+    pub(super) fn source_let(
+        &mut self,
+        pattern: &'a Located<Pattern<'a>>,
+        value: &'a Located<Expr<'a>>,
+        body: &'a Located<Expr<'a>>,
+        ctx: &Context<'a>,
+    ) -> Result<&'a Core<'a>, Error<'a>> {
+        let function = self.lambda_with_policy(&[pattern], body, ctx, true)?;
+        let Core::Lam {
+            params: [binder],
+            body,
+        } = function
+        else {
+            unreachable!("one source binding produces exactly one runtime parameter")
+        };
+        let value = self.expr(value, ctx)?;
+        Ok(self.ir.let_(*binder, value, body))
+    }
+
+    pub(super) fn no_inline_function(&mut self, function: &'a Core<'a>) -> &'a Core<'a> {
+        if let Core::Lam { params, .. } = function {
+            self.no_inline
+                .extend(params.iter().map(|param| param.name.unique));
+        }
+        function
     }
 
     pub(super) fn case(
@@ -109,6 +158,111 @@ impl<'a> Engine<'a, '_, '_> {
         )?)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn refutable_match(
+        &mut self,
+        node: NodeId,
+        value: &'a Located<Expr<'a>>,
+        pattern: &'a Located<Pattern<'a>>,
+        body: &'a Located<Expr<'a>>,
+        fallback: &'a Located<Expr<'a>>,
+        site: Option<ConversionSite>,
+        ctx: &Context<'a>,
+    ) -> Result<&'a Core<'a>, Error<'a>> {
+        let target = self.ty(NodeId::pattern(pattern), ctx)?;
+        if target == DATA
+            && matches!(pattern.value, Pattern::Anything)
+            && matches!(
+                site,
+                Some(
+                    ConversionSite::ValidatorParameter
+                        | ConversionSite::ValidatorRedeemer
+                        | ConversionSite::ValidatorContext
+                )
+            )
+        {
+            return self.expr(body, ctx);
+        }
+        let source = self.ty(NodeId::expr(value), ctx)?;
+        let kind = if site.is_some() {
+            *self
+                .solved(ctx)
+                .conversions
+                .get(&node)
+                .ok_or(Error::MissingType(node))?
+        } else {
+            ConversionKind::Identity
+        };
+        let value = self.expr(value, ctx)?;
+        let input = Binder {
+            name: self.ir.fresh("matched"),
+            ty: source,
+        };
+        let input_value = self.ir.var(input.name);
+        let refuting_cast = kind == ConversionKind::ValidateData
+            && matches!(
+                site,
+                Some(ConversionSite::CastTest | ConversionSite::CastPattern)
+            );
+        let converted = match kind {
+            ConversionKind::Identity | ConversionKind::ViewData => input_value,
+            ConversionKind::ToData => self.ir.cast(CastKind::ToData, source, target, input_value),
+            ConversionKind::FromDataShallow => {
+                self.ir
+                    .cast(CastKind::FromDataShallow, source, target, input_value)
+            }
+            ConversionKind::FromDataBytesView => self.ir.builtin(F::UnBData, &[input_value]),
+            ConversionKind::ValidateData => self.ir.cast(
+                if refuting_cast {
+                    CastKind::FromDataShallow
+                } else {
+                    CastKind::ValidateData
+                },
+                source,
+                target,
+                input_value,
+            ),
+            ConversionKind::Ascription(_) => return Err(Error::InvalidInstance(node)),
+        };
+        let converted_binding = Binder {
+            name: self.ir.fresh("decoded"),
+            ty: target,
+        };
+        let (records, literals) = self.pattern_inputs(pattern, ctx)?;
+        let bindings =
+            decision_tree::bindings(&self.ir, &mut self.types, target, pattern, &records)?;
+        let mut child = ctx.clone();
+        for (name, binder) in &bindings {
+            child.env.insert(name, Binding::Value(*binder));
+        }
+        let body = self.expr(body, &child)?;
+        let fallback = self.expr(fallback, ctx)?;
+        let matched = decision_tree::compile(
+            &self.ir,
+            &mut self.types,
+            target,
+            self.ir.var(converted_binding.name),
+            &[MatchBranch {
+                pattern,
+                bindings,
+                body,
+            }],
+            MatchInputs {
+                record_fields: &records,
+                literal_tests: &literals,
+            },
+            fallback,
+        )?;
+        let matched = self.ir.let_(converted_binding, converted, matched);
+        let matched = if refuting_cast {
+            let valid = crate::casts::data_matches(&self.ir, &mut self.types, target, input_value)?;
+            self.ir.if_(valid, matched, fallback)
+        } else {
+            matched
+        };
+        Ok(self.ir.let_(input, value, matched))
+    }
+
     fn pattern_inputs(
         &mut self,
         pattern: &'a Located<Pattern<'a>>,
@@ -134,7 +288,20 @@ impl<'a> Engine<'a, '_, '_> {
                     );
                 }
                 Pattern::Alias { pattern, .. } => pending.push(pattern),
-                Pattern::Tuple {
+                Pattern::Pair { first, second } => {
+                    pending.push(first);
+                    pending.push(second);
+                }
+                Pattern::DataList { elements, tail } => {
+                    pending.extend_from_slice(elements);
+                    pending.extend(tail.iter().copied());
+                }
+                Pattern::DataTuple {
+                    first,
+                    second,
+                    rest,
+                }
+                | Pattern::Tuple {
                     first,
                     second,
                     rest,
@@ -156,7 +323,11 @@ impl<'a> Engine<'a, '_, '_> {
                 Pattern::Int(_) | Pattern::Str(_) | Pattern::Bytes(_) => {
                     literals.insert(node, self.literal_pattern(pattern, ctx)?);
                 }
-                _ => {}
+                Pattern::Constant(_)
+                | Pattern::Anything
+                | Pattern::Var(_)
+                | Pattern::Unit
+                | Pattern::Bool { .. } => {}
             }
         }
         Ok((records, literals))
@@ -183,7 +354,9 @@ impl<'a> Engine<'a, '_, '_> {
         };
         let literal = self.literal(trait_name, method, node, raw, ctx, 0)?;
         let typ = self.substitute(self.can_type(node, ctx)?, &ctx.subst)?;
-        let trait_ = primitives::eq_trait();
+        let trait_ = self.build.inputs[ctx.input]
+            .tables
+            .core_trait(primitives::eq_trait());
         let annotation = self.method_annotation(trait_, "eq")?;
         let info = self
             .build
@@ -302,7 +475,20 @@ fn bound_names<'a>(pattern: &'a Located<Pattern<'a>>) -> Vec<&'a str> {
                 pending.push(pattern);
                 result.push(*name);
             }
-            Pattern::Tuple {
+            Pattern::Pair { first, second } => {
+                pending.push(first);
+                pending.push(second);
+            }
+            Pattern::DataList { elements, tail } => {
+                pending.extend_from_slice(elements);
+                pending.extend(tail.iter().copied());
+            }
+            Pattern::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Pattern::Tuple {
                 first,
                 second,
                 rest,

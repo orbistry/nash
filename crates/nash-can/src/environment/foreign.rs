@@ -52,12 +52,14 @@ pub fn create_initial_env<'a>(
         q_traits: BTreeMap::new(),
         home,
         vars: BTreeMap::new(),
+        callables: BTreeMap::new(),
         types: BTreeMap::new(),
         ctors: BTreeMap::new(),
         binops: BTreeMap::new(),
         q_vars: BTreeMap::new(),
         q_types: BTreeMap::new(),
         q_ctors: BTreeMap::new(),
+        generated_names: Default::default(),
     };
 
     // Compiler-known types are always in scope, independently of value imports.
@@ -90,27 +92,28 @@ pub fn create_initial_env<'a>(
         // Filter the synthetic interface before every import route, including
         // explicit exposure and diagnostics. Only exact nash/core may name casts.
         let restricted_interface;
-        let interface =
-            if interface.home == builtin_home && home.package != Some(nash_ast::primitives::CORE) {
-                restricted_interface = Interface {
-                    values: bump.alloc_slice_fill_iter(
-                        interface
-                            .values
-                            .iter()
-                            .filter(|value| {
-                                !nash_ast::primitives::BUILTINS.iter().any(|builtin| {
-                                    builtin.name == value.name && builtin.lowering.is_core_only()
-                                })
+        let interface = if interface.home == builtin_home
+            && !(home.package).is_some_and(nash_ast::PackageName::is_core)
+        {
+            restricted_interface = Interface {
+                values: bump.alloc_slice_fill_iter(
+                    interface
+                        .values
+                        .iter()
+                        .filter(|value| {
+                            !nash_ast::primitives::BUILTINS.iter().any(|builtin| {
+                                builtin.name == value.name && builtin.lowering.is_core_only()
                             })
-                            .copied()
-                            .collect::<Vec<_>>(),
-                    ),
-                    ..*interface
-                };
-                &restricted_interface
-            } else {
-                interface
+                        })
+                        .copied()
+                        .collect::<Vec<_>>(),
+                ),
+                ..interface.clone()
             };
+            &restricted_interface
+        } else {
+            interface
+        };
         let prefix = import.alias.unwrap_or(import.import.value);
 
         let raw_type_info = build_raw_type_info(bump, interface);
@@ -126,6 +129,15 @@ pub fn create_initial_env<'a>(
             }
         }
         for value in interface.values {
+            if let Some(labels) = value.callable {
+                env.callables.insert(
+                    nash_ast::QualifiedName {
+                        home: interface.home,
+                        name: value.name,
+                    },
+                    labels,
+                );
+            }
             merge_qualified(
                 &mut env.q_vars,
                 prefix,
@@ -212,6 +224,7 @@ fn build_raw_type_info<'a>(bump: &'a Bump, interface: &Interface<'a>) -> RawType
                 ctors: public.ctors,
                 alternatives: public.alternatives,
                 options: public.options,
+                data_layout: public.data_layout,
             });
             let typ = Type::Union {
                 arity: public.parameters.len(),

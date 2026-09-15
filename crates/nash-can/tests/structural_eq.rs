@@ -14,6 +14,9 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
         PackageName {
             author: "other",
             project: "core",
+            version: "",
+            source: nash_ast::PackageSource::Compiler,
+            compilation: None,
         },
     ] {
         for head in ["Token", "Box", "(Alias 'a)", "(Applied 'f 'a)"] {
@@ -38,7 +41,12 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
             let mut interfaces = builtins;
             interfaces.insert(
                 "Eq",
-                nash_can::from_module(&bump, &canonical.module, &Default::default()),
+                nash_can::from_module(
+                    &bump,
+                    &canonical.module,
+                    &Default::default(),
+                    &canonical.tables.kinds.declared,
+                ),
             );
             let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = {{ item : Int }}\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq {head} where\n    eq _ _ = Builtin.True\n"));
             let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))

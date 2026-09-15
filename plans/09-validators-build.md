@@ -16,7 +16,7 @@ Plan 07 brings forward the minimum hooks needed for its executable validator
 acceptance tests. Canonical modules already retain `ModuleKind`. The canonical
 checker requires an exposed `main`, and the driver calls
 `nash_constrain::module::check_main_parameters` after solving and before the
-finish callback. `build_with(db, graph, origins, finish)` owns the solved module
+finish callback. `build_with(db, graph, catalog, finish)` owns the solved module
 tables until the callback returns an owned result. There is no separate compile
 mode in this API.
 
@@ -27,6 +27,13 @@ fields, other target versions, hashes, and stale-output removal remain work for
 this plan. The code sketches below must be adapted to those implemented APIs.
 This prerequisite does not mark Plan 09 complete.
 
+Plan 14 integration note: driver discovery/build-graph inputs are now
+`ModuleCatalog` values carrying `SourceSpec` metadata, not URI lists. Future test
+helpers and `build_with` orchestration must retain that identity/package metadata
+and use the shared frontend registry. The bounded Aiken mint/fallback profile now
+lowers through this path, with official runtime conformance coverage. Other
+handler sets and custom boundary layouts remain explicitly unsupported; see
+[the frontend profile](../docs/aiken-frontend.md).
 
 ## Prerequisites
 

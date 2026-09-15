@@ -847,6 +847,7 @@ Module {
                     },
                 ],
                 attributes: [],
+                data_layout: None,
             },
         },
         Located {
@@ -989,6 +990,7 @@ Module {
                     },
                 ],
                 attributes: [],
+                data_layout: None,
             },
         },
         Located {
@@ -1138,6 +1140,7 @@ Module {
                         ],
                     },
                 ],
+                data_layout: None,
             },
         },
     ],
@@ -1294,6 +1297,7 @@ Module {
                     ),
                 },
                 attributes: [],
+                transparent: false,
             },
         },
     ],

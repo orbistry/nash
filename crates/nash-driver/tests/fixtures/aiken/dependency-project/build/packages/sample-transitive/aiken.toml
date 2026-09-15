@@ -1,0 +1,4 @@
+name="sample/transitive"
+version="v1.0.0"
+compiler="v1.1.23"
+plutus="v3"

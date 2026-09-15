@@ -84,6 +84,9 @@ fn same_content(uf: &mut UnionFind<'_>, first: &Content<'_>, second: &Content<'_
             (FlatType::AppV1(ah, aa), FlatType::AppV1(bh, ba)) => {
                 uf.find(*ah) == uf.find(*bh) && same_vars(uf, aa, ba)
             }
+            (FlatType::Function1(aa, ar), FlatType::Function1(ba, br)) => {
+                same_vars(uf, aa, ba) && uf.find(*ar) == uf.find(*br)
+            }
             (FlatType::Fun1(af, at), FlatType::Fun1(bf, bt)) => {
                 same_vars(uf, &[*af, *at], &[*bf, *bt])
             }
@@ -605,6 +608,50 @@ fn unify_structure<'a>(
                 )
             }
 
+            (FlatType::Function1(args, result), FlatType::Function1(other_args, other_result)) => {
+                unify_args(uf, vars, &args, &other_args)?;
+                sub_unify(uf, vars, result, other_result)?;
+                merge(
+                    uf,
+                    context,
+                    Content::Structure(FlatType::Function1(other_args, other_result)),
+                )
+            }
+            (FlatType::Function1(args, result), FlatType::Fun1(arg, tail))
+            | (FlatType::Fun1(arg, tail), FlatType::Function1(args, result)) => {
+                let (first, rest) = if let Some((first, rest)) = args.split_first() {
+                    (*first, rest)
+                } else {
+                    (
+                        fresh(
+                            uf,
+                            vars,
+                            context,
+                            Content::Structure(FlatType::App1(
+                                nash_ast::primitives::builtin_home(),
+                                "unit",
+                                vec![],
+                            )),
+                        ),
+                        &[][..],
+                    )
+                };
+                let remaining = rest.iter().rev().fold(result, |tail, argument| {
+                    fresh(
+                        uf,
+                        vars,
+                        context,
+                        Content::Structure(FlatType::Fun1(*argument, tail)),
+                    )
+                });
+                sub_unify(uf, vars, first, arg)?;
+                sub_unify(uf, vars, remaining, tail)?;
+                merge(
+                    uf,
+                    context,
+                    Content::Structure(FlatType::Function1(args, result)),
+                )
+            }
             (FlatType::Fun1(arg1, res1), FlatType::Fun1(arg2, res2)) => {
                 sub_unify(uf, vars, arg1, arg2)?;
                 sub_unify(uf, vars, res1, res2)?;

@@ -61,6 +61,8 @@ pub struct Tables<'a> {
     pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: BTreeMap<nash_ast::QualifiedName<'a>, &'a TraitInfo<'a>>,
     pub impls: ImplTable<'a>,
+    /// Implicit core references selected from this module's imports, not transitive metadata.
+    pub core_traits: BTreeMap<nash_ast::QualifiedName<'a>, nash_ast::QualifiedName<'a>>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -105,6 +107,37 @@ pub fn visible_fields<'a>(
 }
 
 impl<'a> Tables<'a> {
+    /// Resolve an implicit native operation to the visible release of its source trait.
+    pub fn core_trait(
+        &self,
+        reference: nash_ast::QualifiedName<'a>,
+    ) -> nash_ast::QualifiedName<'a> {
+        self.core_traits
+            .get(&reference)
+            .copied()
+            .unwrap_or_else(|| resolve_core_trait(reference, self.traits.keys().copied()))
+    }
+
+    pub(crate) fn select_core_traits(&mut self, env: &Env<'a>) {
+        let literal = |name| nash_ast::QualifiedName {
+            home: nash_ast::primitives::literal_home(),
+            name,
+        };
+        for reference in [
+            literal("FromInt"),
+            literal("FromString"),
+            literal("FromBytes"),
+            nash_ast::primitives::eq_trait(),
+            nash_ast::primitives::lift_trait(),
+            nash_ast::primitives::num_trait(),
+            nash_ast::primitives::monad_trait(),
+        ] {
+            let selected = env.core_trait(reference);
+            if selected != reference {
+                self.core_traits.insert(reference, selected);
+            }
+        }
+    }
     /// ImplKey orders the trait before its head slice. The empty slice is the
     /// first possible head key, so lookup visits only this trait's candidates.
     pub fn impls_for(
@@ -116,14 +149,30 @@ impl<'a> Tables<'a> {
             .take_while(move |(key, _)| key.trait_ == trait_)
     }
 
-    pub fn has_structural_eq(&self) -> bool {
-        self.traits.contains_key(&nash_ast::primitives::eq_trait())
+    pub fn has_structural_eq(&self, trait_: nash_ast::QualifiedName<'a>) -> bool {
+        trait_.is_core_trait(nash_ast::primitives::eq_trait()) && self.traits.contains_key(&trait_)
     }
 
-    pub fn has_reflexive_lift(&self) -> bool {
-        self.traits
-            .contains_key(&nash_ast::primitives::lift_trait())
+    pub fn has_reflexive_lift(&self, trait_: nash_ast::QualifiedName<'a>) -> bool {
+        trait_.is_core_trait(nash_ast::primitives::lift_trait())
+            && self.traits.contains_key(&trait_)
     }
+}
+
+fn resolve_core_trait<'a>(
+    reference: nash_ast::QualifiedName<'a>,
+    traits: impl IntoIterator<Item = nash_ast::QualifiedName<'a>>,
+) -> nash_ast::QualifiedName<'a> {
+    let mut found = None;
+    for trait_ in traits {
+        if trait_.is_core_trait(reference) {
+            if found.is_some_and(|previous| previous != trait_) {
+                return reference;
+            }
+            found = Some(trait_);
+        }
+    }
+    found.unwrap_or(reference)
 }
 
 /// A value variable in scope.
@@ -277,6 +326,7 @@ pub struct Env<'a> {
     pub q_traits: Qualified<'a, &'a TraitInfo<'a>>,
     pub home: ModuleName<'a>,
     pub vars: BTreeMap<&'a str, Var<'a>>,
+    pub callables: BTreeMap<nash_ast::QualifiedName<'a>, &'a [&'a str]>,
     pub types: Exposed<'a, Type<'a>>,
     pub ctors: Exposed<'a, Ctor<'a>>,
     pub binops: Exposed<'a, Binop<'a>>,
@@ -284,6 +334,8 @@ pub struct Env<'a> {
     pub q_vars: Qualified<'a, QualifiedValue<'a>>,
     pub q_types: Qualified<'a, Type<'a>>,
     pub q_ctors: Qualified<'a, Ctor<'a>>,
+    /// Per-module hygienic name supply; initialize to zero for a new environment.
+    pub generated_names: std::cell::Cell<usize>,
 }
 
 /// Local bindings borrow module information and their parent scope. Scope exit,
@@ -367,6 +419,30 @@ impl<'scope, 'a> Scope<'scope, 'a> {
 }
 
 impl<'a> Env<'a> {
+    pub(crate) fn fresh_local(&self, bump: &'a Bump) -> &'a str {
+        let index = self.generated_names.get();
+        self.generated_names.set(index + 1);
+        bump.alloc_str(&format!("$canonical{index}"))
+    }
+
+    pub fn core_trait(
+        &self,
+        reference: nash_ast::QualifiedName<'a>,
+    ) -> nash_ast::QualifiedName<'a> {
+        resolve_core_trait(
+            reference,
+            self.traits
+                .values()
+                .chain(self.q_traits.values().flat_map(|traits| traits.values()))
+                .filter_map(|info| match info {
+                    Info::Specific(_, info) => Some(nash_ast::QualifiedName {
+                        home: info.home,
+                        name: info.name,
+                    }),
+                    Info::Ambiguous(..) => None,
+                }),
+        )
+    }
     /// Compiler-generated calls use trait identity, independent of value names
     /// and import aliases in the source module.
     pub fn method_annotation(
@@ -622,6 +698,9 @@ mod tests {
             Some(PackageName {
                 author: "a",
                 project: "b",
+                version: "",
+                source: nash_ast::PackageSource::Compiler,
+                compilation: None,
             }),
         ] {
             for module in ["A", "AA", "B"] {

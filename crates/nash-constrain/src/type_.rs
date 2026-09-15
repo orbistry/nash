@@ -59,6 +59,7 @@ pub enum FlatType<'a> {
     App1(ModuleName<'a>, &'a str, Vec<Variable>),
     AppV1(Variable, Vec<Variable>),
     Fun1(Variable, Variable),
+    Function1(Vec<Variable>, Variable),
     Record1(BTreeMap<&'a str, Variable>),
     Tuple1(Variable, Variable, Vec<Variable>),
 }
@@ -196,7 +197,9 @@ pub fn literal_annotation<'a>(
 
 /// Only the compiler-known literal traits select a little default type.
 pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<FlatType<'static>> {
-    if trait_.home.package != Some(nash_ast::primitives::CORE) || trait_.home.name != "Literal" {
+    if !(trait_.home.package).is_some_and(nash_ast::PackageName::is_core)
+        || trait_.home.name != "Literal"
+    {
         return None;
     }
     let name = match trait_.name {

@@ -2,11 +2,14 @@
 use nash_ast::{primitives, *};
 use nash_region::Located;
 use nash_solve::SolvedTypes;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DemandKind {
+    /// Encoded list storage distinguishes pairs from ordinary Data, not payloads.
+    DataListElement,
     Native,
+    Encoding,
     Deep,
 }
 pub type Demands<'a> = HashMap<NodeId, BTreeMap<&'a str, DemandKind>>;
@@ -65,11 +68,28 @@ struct Analysis<'a> {
     methods: HashMap<(QualifiedName<'a>, &'a str), Vec<NodeId>>,
     calls: Vec<Call<'a>>,
     method_calls: Vec<MethodCall<'a>>,
+    external: HashSet<QualifiedName<'a>>,
+    literal_traits: [QualifiedName<'a>; 3],
+}
+
+fn literal_traits<'a>(tables: &nash_can::environment::Tables<'a>) -> [QualifiedName<'a>; 3] {
+    ["FromInt", "FromString", "FromBytes"].map(|name| {
+        tables.core_trait(QualifiedName {
+            home: primitives::literal_home(),
+            name,
+        })
+    })
 }
 
 /// Type names are local to each definition's solved scheme. Captured variables
 /// flow to the enclosing owner; only quantified variables substitute at calls.
-pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
+pub fn analyze<'a>(
+    modules: &[(
+        &Module<'a>,
+        &SolvedTypes<'a>,
+        &nash_can::environment::Tables<'a>,
+    )],
+) -> Demands<'a> {
     let mut a = Analysis {
         demands: HashMap::new(),
         owners: HashMap::new(),
@@ -77,8 +97,28 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
         methods: HashMap::new(),
         calls: vec![],
         method_calls: vec![],
+        literal_traits: literal_traits(&nash_can::environment::Tables::default()),
+        external: modules
+            .iter()
+            .flat_map(|(module, _, _)| {
+                module.unions.iter().filter_map(|union| {
+                    union.value.data_layout.map(|_| QualifiedName {
+                        home: module.name,
+                        name: union.value.name.value,
+                    })
+                })
+            })
+            .collect(),
     };
-    for (module, _) in modules {
+    for primitive in primitives::PRIMITIVES {
+        if primitives::data_union(primitive.name).is_some() {
+            a.external.insert(QualifiedName {
+                home: primitives::builtin_home(),
+                name: primitive.name,
+            });
+        }
+    }
+    for (module, _, _) in modules {
         for def in declarations(module.decls) {
             let (name, _) = definition(def);
             a.top.insert(
@@ -115,7 +155,8 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
             }
         }
     }
-    for (module, solved) in modules {
+    for (module, solved, tables) in modules {
+        a.literal_traits = literal_traits(tables);
         let env = declarations(module.decls)
             .into_iter()
             .map(|def| {
@@ -149,7 +190,12 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
                 if let Some(index) = owner.free.iter().position(|v| *v == name)
                     && let Some(typ) = call.args.get(index)
                 {
-                    variables(typ, kind, a.demands.entry(call.caller).or_default());
+                    operation_variables(
+                        typ,
+                        kind,
+                        &a.external,
+                        a.demands.entry(call.caller).or_default(),
+                    );
                 }
             }
         }
@@ -166,7 +212,12 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
                 .copied()
             {
                 for typ in call.args {
-                    variables(typ, kind, a.demands.entry(call.caller).or_default());
+                    operation_variables(
+                        typ,
+                        kind,
+                        &a.external,
+                        a.demands.entry(call.caller).or_default(),
+                    );
                 }
             }
         }
@@ -221,10 +272,14 @@ fn variables<'a>(
     out: &mut BTreeMap<&'a str, DemandKind>,
 ) {
     match &typ.value {
+        // Declaration IDs have no scheme-local variable names. Instantiated
+        // generic declarations appear as ordinary Type::Var in solved schemes.
+        Type::DeclaredHole(_) => {}
         Type::Var(name) => insert(out, name, kind),
         Type::Named { reference, args }
             if kind == DemandKind::Deep
-                || (reference.home == primitives::builtin_home()
+                || (kind == DemandKind::Native
+                    && reference.home == primitives::builtin_home()
                     && matches!(reference.name, "list" | "pair" | "array")) =>
         {
             for t in *args {
@@ -233,13 +288,21 @@ fn variables<'a>(
         }
         Type::App { head, args } => {
             variables(head, kind, out);
-            for t in *args {
-                variables(t, kind, out);
+            if kind != DemandKind::DataListElement {
+                for t in *args {
+                    variables(t, kind, out);
+                }
             }
         }
         Type::Lambda { from, to } if kind == DemandKind::Deep => {
             variables(from, kind, out);
             variables(to, kind, out);
+        }
+        Type::Function { arguments, result } if kind == DemandKind::Deep => {
+            for argument in *arguments {
+                variables(argument, kind, out);
+            }
+            variables(result, kind, out);
         }
         Type::Record { fields } if kind == DemandKind::Deep => {
             for f in *fields {
@@ -293,7 +356,24 @@ fn bind<'a>(p: &'a Located<Pattern<'a>>, target: Option<NodeId>, env: &mut Scope
             bind(pattern, target, env);
             env.insert(name, target);
         }
-        Pattern::Tuple {
+        Pattern::Pair { first, second } => {
+            bind(first, target, env);
+            bind(second, target, env);
+        }
+        Pattern::DataList { elements, tail } => {
+            for p in *elements {
+                bind(p, target, env);
+            }
+            if let Some(p) = tail {
+                bind(p, target, env);
+            }
+        }
+        Pattern::DataTuple {
+            first,
+            second,
+            rest,
+        }
+        | Pattern::Tuple {
             first,
             second,
             rest,
@@ -321,6 +401,93 @@ fn bind<'a>(p: &'a Located<Pattern<'a>>, target: Option<NodeId>, env: &mut Scope
         _ => {}
     }
 }
+fn operation_variables<'a>(
+    typ: &'a Located<Type<'a>>,
+    kind: DemandKind,
+    external: &HashSet<QualifiedName<'a>>,
+    out: &mut BTreeMap<&'a str, DemandKind>,
+) {
+    if kind == DemandKind::Encoding {
+        encoding_variables(typ, external, out);
+    } else {
+        variables(typ, kind, out);
+    }
+}
+
+/// Encoding already-encoded values only inspects their outer storage shape.
+/// Payload layout demands belong to the operations that construct those values.
+fn encoding_variables<'a>(
+    typ: &'a Located<Type<'a>>,
+    external: &HashSet<QualifiedName<'a>>,
+    out: &mut BTreeMap<&'a str, DemandKind>,
+) {
+    match &typ.value {
+        Type::DeclaredHole(_) => {}
+        Type::Var(name) => insert(out, name, DemandKind::Encoding),
+        Type::Named { reference, args }
+            if reference.home == primitives::builtin_home() && reference.name == "data_list" =>
+        {
+            variables(args[0], DemandKind::DataListElement, out);
+        }
+        Type::Named { reference, .. }
+            if external.contains(reference)
+                || reference
+                    .name
+                    .chars()
+                    .next()
+                    .is_some_and(char::is_uppercase)
+                || (reference.home == primitives::builtin_home()
+                    && matches!(reference.name, "data_pair" | "data_tuple")) => {}
+        Type::Named { reference, args }
+            if reference.home == primitives::builtin_home()
+                && matches!(reference.name, "list" | "pair") =>
+        {
+            variables(typ, DemandKind::Native, out);
+            for argument in *args {
+                encoding_variables(argument, external, out);
+            }
+        }
+        Type::Tuple {
+            first,
+            second,
+            rest,
+        } => {
+            encoding_variables(first, external, out);
+            encoding_variables(second, external, out);
+            for field in *rest {
+                encoding_variables(field, external, out);
+            }
+        }
+        Type::Record { fields } => {
+            for field in *fields {
+                encoding_variables(field.typ, external, out);
+            }
+        }
+        Type::Alias {
+            target: AliasType::Filled { typ, .. },
+            ..
+        } => {
+            encoding_variables(typ, external, out);
+        }
+        Type::Alias {
+            target: AliasType::Open(body),
+            arguments,
+            ..
+        } => {
+            let mut names = BTreeMap::new();
+            encoding_variables(body, external, &mut names);
+            for (name, kind) in names {
+                if let Some(argument) = arguments.iter().find(|a| a.name == name) {
+                    operation_variables(argument.typ, kind, external, out);
+                } else {
+                    insert(out, name, kind);
+                }
+            }
+        }
+        _ => variables(typ, DemandKind::Deep, out),
+    }
+}
+
 impl<'a> Analysis<'a> {
     fn owner(&mut self, id: NodeId, parent: Option<NodeId>, solved: &SolvedTypes<'a>) {
         self.owners.insert(
@@ -350,12 +517,14 @@ impl<'a> Analysis<'a> {
         match def {
             Def::Def { args, .. } => {
                 for p in *args {
+                    self.pattern(p, id, solved);
                     bind(p, None, &mut env);
                 }
             }
             Def::TypedDef { args, .. } => {
                 for p in *args {
                     bind(p.pattern, None, &mut env);
+                    self.pattern(p.pattern, id, solved);
                 }
             }
         }
@@ -371,21 +540,40 @@ impl<'a> Analysis<'a> {
         if reference.home == primitives::builtin_home()
             && primitives::BUILTINS
                 .iter()
-                .any(|b| b.name == reference.name && b.lowering.is_core_only())
+                .any(|b| b.name == reference.name && b.lowering.requires_layout())
         {
             let kind = if reference.name == "castToData" {
                 // The checked Big value already is Data. Its nominal layout
                 // cannot change this identity operation or its binder shape.
                 DemandKind::Native
+            } else if matches!(
+                reference.name,
+                "dataListHead" | "dataListCons" | "dataPairFirst" | "dataPairSecond" | "enumerate"
+            ) {
+                DemandKind::Encoding
             } else {
                 DemandKind::Deep
             };
             if let Some(instance) = solved.instances.get(&node) {
-                for t in instance.type_args {
-                    variables(t, kind, self.demands.entry(owner).or_default());
+                for (index, t) in instance.type_args.iter().enumerate() {
+                    let inspected = match reference.name {
+                        "dataPairFirst" | "enumerate" => index == 0,
+                        "dataPairSecond" => index == 1,
+                        _ => true,
+                    };
+                    if inspected {
+                        operation_variables(
+                            t,
+                            kind,
+                            &self.external,
+                            self.demands.entry(owner).or_default(),
+                        );
+                    }
                 }
             }
-            if let Some(t) = solved.exprs.get(&node) {
+            if kind != DemandKind::Encoding
+                && let Some(t) = solved.exprs.get(&node)
+            {
                 variables(t, kind, self.demands.entry(owner).or_default());
             }
         } else if let Some(&target) = self.top.get(&reference) {
@@ -424,6 +612,72 @@ impl<'a> Analysis<'a> {
             args: solved.instances.get(&node).map_or(&[], |i| i.type_args),
         });
     }
+    fn pattern(
+        &mut self,
+        pattern: &'a Located<Pattern<'a>>,
+        owner: NodeId,
+        solved: &SolvedTypes<'a>,
+    ) {
+        let mut pending = vec![pattern];
+        while let Some(pattern) = pending.pop() {
+            if (matches!(
+                &pattern.value,
+                Pattern::Pair { .. } | Pattern::DataList { .. } | Pattern::DataTuple { .. }
+            ) || matches!(&pattern.value, Pattern::Constructor(c) if c.union.data_layout.is_some()))
+                && let Some(typ) = solved.patterns.get(&NodeId::pattern(pattern))
+            {
+                variables(
+                    typ,
+                    DemandKind::Deep,
+                    self.demands.entry(owner).or_default(),
+                );
+            }
+            match &pattern.value {
+                Pattern::Pair { first, second } => pending.extend([*first, *second]),
+                Pattern::DataList { elements, tail } => {
+                    pending.extend_from_slice(elements);
+                    pending.extend(tail.iter().copied());
+                }
+                Pattern::DataTuple {
+                    first,
+                    second,
+                    rest,
+                }
+                | Pattern::Tuple {
+                    first,
+                    second,
+                    rest,
+                } => {
+                    pending.extend([*first, *second]);
+                    pending.extend_from_slice(rest);
+                }
+                Pattern::List(elements) => pending.extend_from_slice(elements),
+                Pattern::Cons { head, tail } => pending.extend([*head, *tail]),
+                Pattern::Alias { pattern, .. } => pending.push(pattern),
+                Pattern::Constructor(c) => {
+                    pending.extend(c.arguments.iter().map(|arg| arg.pattern))
+                }
+                _ => {}
+            }
+        }
+    }
+    fn data_runtime(&self, typ: &Located<Type<'a>>) -> bool {
+        match &typ.value {
+            Type::DeclaredHole(_) => false,
+            Type::Named { reference, .. } => {
+                self.external.contains(reference)
+                    || (reference.home == primitives::builtin_home()
+                        && matches!(reference.name, "data_pair" | "data_list" | "data_tuple"))
+            }
+            Type::Alias { target, .. } => match target {
+                AliasType::Open(body) | AliasType::Filled { body, .. } => self.data_runtime(body),
+            },
+            _ => false,
+        }
+    }
+    fn encoding(&mut self, typ: &'a Located<Type<'a>>, owner: NodeId) {
+        encoding_variables(typ, &self.external, self.demands.entry(owner).or_default());
+    }
     fn expr(
         &mut self,
         expr: &'a Located<Expr<'a>>,
@@ -433,6 +687,112 @@ impl<'a> Analysis<'a> {
     ) {
         let node = NodeId::expr(expr);
         match &expr.value {
+            Expr::Convert { kind, value, .. } => {
+                let kind = solved.conversions.get(&node).unwrap_or(kind);
+                let target = if *kind == ConversionKind::ToData {
+                    NodeId::expr(value)
+                } else {
+                    node
+                };
+                if !matches!(
+                    kind,
+                    ConversionKind::Identity
+                        | ConversionKind::ViewData
+                        | ConversionKind::FromDataBytesView
+                ) && let Some(typ) = solved.exprs.get(&target)
+                {
+                    if *kind == ConversionKind::ToData {
+                        self.encoding(typ, owner);
+                    } else {
+                        variables(
+                            typ,
+                            DemandKind::Deep,
+                            self.demands.entry(owner).or_default(),
+                        );
+                    }
+                }
+                self.expr(value, owner, env, solved);
+            }
+            Expr::Equal { left, right, .. } => {
+                for operand in [*left, *right] {
+                    if let Some(typ) = solved.exprs.get(&NodeId::expr(operand)) {
+                        self.encoding(typ, owner);
+                    }
+                    self.expr(operand, owner, env, solved);
+                }
+            }
+            Expr::Format { value } => {
+                if let Some(typ) = solved.exprs.get(&NodeId::expr(value))
+                    && !matches!(
+                        &typ.value,
+                        Type::Named { reference, .. }
+                            if reference.home == primitives::builtin_home()
+                                && reference.name == "string"
+                    )
+                {
+                    self.encoding(typ, owner);
+                }
+                self.expr(value, owner, env, solved);
+            }
+            Expr::TupleIndex { tuple, .. } => {
+                for target in [NodeId::expr(tuple), node] {
+                    if let Some(typ) = solved.exprs.get(&target) {
+                        variables(
+                            typ,
+                            DemandKind::Native,
+                            self.demands.entry(owner).or_default(),
+                        );
+                    }
+                }
+                self.expr(tuple, owner, env, solved);
+            }
+            Expr::Pair { first, second } => {
+                for field in [first, second] {
+                    if let Some(typ) = solved.exprs.get(&NodeId::expr(field)) {
+                        self.encoding(typ, owner);
+                    }
+                }
+                self.expr(first, owner, env, solved);
+                self.expr(second, owner, env, solved);
+            }
+            Expr::DataList { elements, tail } => {
+                if let Some(typ) = solved.exprs.get(&node) {
+                    self.encoding(typ, owner);
+                }
+                for element in *elements {
+                    if let Some(typ) = solved.exprs.get(&NodeId::expr(element)) {
+                        self.encoding(typ, owner);
+                    }
+                    self.expr(element, owner, env, solved);
+                }
+                if let Some(tail) = tail {
+                    self.expr(tail, owner, env, solved);
+                }
+            }
+            Expr::VarConstructor { reference, .. } => {
+                if self.external.contains(&QualifiedName {
+                    home: reference.home,
+                    name: reference.union,
+                }) && let Some(typ) = solved.exprs.get(&node)
+                {
+                    let mut typ = *typ;
+                    loop {
+                        match &typ.value {
+                            Type::Lambda { from, to } => {
+                                self.encoding(from, owner);
+                                typ = to;
+                            }
+                            Type::Function { arguments, result } => {
+                                for argument in *arguments {
+                                    self.encoding(argument, owner);
+                                }
+                                typ = result;
+                            }
+                            _ => break,
+                        }
+                    }
+                }
+            }
             Expr::VarLocal(name) => {
                 if let Some(Some(target)) = env.get(name) {
                     self.call(*target, node, owner, solved);
@@ -447,21 +807,12 @@ impl<'a> Analysis<'a> {
                 self.method(*trait_, method, node, owner, solved)
             }
             Expr::Str(_) | Expr::Bytes(_) | Expr::Int(_) => {
-                let (name, method) = match expr.value {
-                    Expr::Str(_) => ("FromString", "fromString"),
-                    Expr::Bytes(_) => ("FromBytes", "fromBytes"),
-                    _ => ("FromInt", "fromInt"),
+                let (index, method) = match expr.value {
+                    Expr::Str(_) => (1, "fromString"),
+                    Expr::Bytes(_) => (2, "fromBytes"),
+                    _ => (0, "fromInt"),
                 };
-                self.method(
-                    QualifiedName {
-                        home: primitives::literal_home(),
-                        name,
-                    },
-                    method,
-                    node,
-                    owner,
-                    solved,
-                );
+                self.method(self.literal_traits[index], method, node, owner, solved);
             }
             Expr::List(items) => {
                 if let Some(typ) = solved.exprs.get(&node) {
@@ -475,7 +826,12 @@ impl<'a> Analysis<'a> {
                     self.expr(item, owner, env, solved);
                 }
             }
-            Expr::Assert(e) | Expr::Comptime(e) => self.expr(e, owner, env, solved),
+            Expr::Assert(e)
+            | Expr::Comptime(e)
+            | Expr::Callable { value: e, .. }
+            | Expr::ModuleConstantCheck { value: e }
+            | Expr::TypeScope { value: e }
+            | Expr::RunnableCheck { function: e, .. } => self.expr(e, owner, env, solved),
             Expr::Fail(e) | Expr::Todo(e) => {
                 if let Some(e) = e {
                     self.expr(e, owner, env, solved);
@@ -483,6 +839,18 @@ impl<'a> Analysis<'a> {
             }
             Expr::Trace { message, body } => {
                 self.expr(message, owner, env, solved);
+                self.expr(body, owner, env, solved);
+            }
+            Expr::TraceLabel {
+                label,
+                arguments,
+                body,
+                ..
+            } => {
+                self.expr(label, owner, env, solved);
+                for argument in *arguments {
+                    self.expr(argument, owner, env, solved);
+                }
                 self.expr(body, owner, env, solved);
             }
             Expr::Binop {
@@ -495,9 +863,10 @@ impl<'a> Analysis<'a> {
                 self.expr(left, owner, env, solved);
                 self.expr(right, owner, env, solved);
             }
-            Expr::Lambda { parameters, body } => {
+            Expr::Lambda { parameters, body } | Expr::Function { parameters, body } => {
                 let mut env = env.clone();
                 for p in *parameters {
+                    self.pattern(p, owner, solved);
                     bind(p, None, &mut env);
                 }
                 self.expr(body, owner, &env, solved);
@@ -509,6 +878,30 @@ impl<'a> Analysis<'a> {
                 self.expr(function, owner, env, solved);
                 for arg in *arguments {
                     self.expr(arg, owner, env, solved);
+                }
+            }
+            Expr::SurfaceCall {
+                function,
+                arguments,
+                ..
+            } => {
+                self.expr(function, owner, env, solved);
+                for argument in *arguments {
+                    self.expr(argument.value, owner, env, solved);
+                }
+            }
+            Expr::Pipe {
+                input,
+                function,
+                arguments,
+                ..
+            } => {
+                self.expr(input, owner, env, solved);
+                self.expr(function, owner, env, solved);
+                if let Some(arguments) = arguments {
+                    for argument in *arguments {
+                        self.expr(argument.value, owner, env, solved);
+                    }
                 }
             }
             Expr::If {
@@ -542,6 +935,23 @@ impl<'a> Analysis<'a> {
                 }
                 self.expr(body, owner, &env, solved);
             }
+            Expr::LetValue {
+                pattern,
+                value,
+                body,
+                uses,
+                ..
+            } => {
+                if *uses != 0 {
+                    self.pattern(pattern, owner, solved);
+                    self.expr(value, owner, env, solved);
+                    let mut env = env.clone();
+                    bind(pattern, None, &mut env);
+                    self.expr(body, owner, &env, solved);
+                } else {
+                    self.expr(body, owner, env, solved);
+                }
+            }
             Expr::LetDestruct {
                 pattern,
                 value,
@@ -549,6 +959,7 @@ impl<'a> Analysis<'a> {
             } => {
                 let id = NodeId::pattern(pattern);
                 self.owner(id, Some(owner), solved);
+                self.pattern(pattern, id, solved);
                 self.expr(value, id, env, solved);
                 let mut env = env.clone();
                 bind(pattern, Some(id), &mut env);
@@ -560,13 +971,81 @@ impl<'a> Analysis<'a> {
             } => {
                 self.expr(scrutinee, owner, env, solved);
                 for b in *branches {
+                    self.pattern(b.pattern, owner, solved);
                     let mut env = env.clone();
                     bind(b.pattern, None, &mut env);
                     self.expr(b.body, owner, &env, solved);
                 }
             }
-            Expr::Access { record, .. } => self.expr(record, owner, env, solved),
-            Expr::Update { base, fields, .. } => {
+            Expr::Match {
+                value,
+                pattern,
+                body,
+                fallback,
+                ..
+            } => {
+                if let Some(kind) = solved.conversions.get(&node) {
+                    if *kind == ConversionKind::ToData {
+                        if let Some(typ) = solved.exprs.get(&NodeId::expr(value)) {
+                            self.encoding(typ, owner);
+                        }
+                    } else if !matches!(
+                        kind,
+                        ConversionKind::Identity
+                            | ConversionKind::ViewData
+                            | ConversionKind::FromDataBytesView
+                    ) && let Some(typ) = solved.patterns.get(&NodeId::pattern(pattern))
+                    {
+                        variables(
+                            typ,
+                            DemandKind::Deep,
+                            self.demands.entry(owner).or_default(),
+                        );
+                    }
+                }
+                self.pattern(pattern, owner, solved);
+                self.expr(value, owner, env, solved);
+                self.expr(fallback, owner, env, solved);
+                let mut env = env.clone();
+                bind(pattern, None, &mut env);
+                self.expr(body, owner, &env, solved);
+            }
+            Expr::FieldOrModule { module, .. }
+                if !solved
+                    .field_selections
+                    .get(&node)
+                    .copied()
+                    .expect("solved field/module selection") =>
+            {
+                self.expr(
+                    module.expect("selected module candidate"),
+                    owner,
+                    env,
+                    solved,
+                );
+            }
+            Expr::Access { record, .. } | Expr::FieldOrModule { record, .. } => {
+                if let Some(typ) = solved.exprs.get(&NodeId::expr(record))
+                    && self.data_runtime(typ)
+                {
+                    variables(
+                        typ,
+                        DemandKind::Deep,
+                        self.demands.entry(owner).or_default(),
+                    );
+                }
+                self.expr(record, owner, env, solved);
+            }
+            Expr::Update { base, fields, .. } | Expr::RecordUpdate { base, fields, .. } => {
+                if let Some(typ) = solved.exprs.get(&node)
+                    && self.data_runtime(typ)
+                {
+                    variables(
+                        typ,
+                        DemandKind::Deep,
+                        self.demands.entry(owner).or_default(),
+                    );
+                }
                 self.expr(base, owner, env, solved);
                 for f in *fields {
                     self.expr(f.value, owner, env, solved);
@@ -577,18 +1056,44 @@ impl<'a> Analysis<'a> {
                     self.expr(f.value, owner, env, solved);
                 }
             }
-            Expr::Tuple {
+            Expr::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Expr::Tuple {
                 first,
                 second,
                 rest,
             } => {
+                if matches!(&expr.value, Expr::DataTuple { .. })
+                    && let Some(typ) = solved.exprs.get(&node)
+                {
+                    variables(
+                        typ,
+                        DemandKind::Deep,
+                        self.demands.entry(owner).or_default(),
+                    );
+                }
                 self.expr(first, owner, env, solved);
                 self.expr(second, owner, env, solved);
                 for e in *rest {
                     self.expr(e, owner, env, solved);
                 }
             }
-            Expr::Accessor(_) | Expr::VarConstructor { .. } | Expr::Unit => {}
+            Expr::Accessor(_) => {
+                if let Some(typ) = solved.exprs.get(&node)
+                    && let Type::Lambda { from, .. } = &typ.value
+                    && self.data_runtime(from)
+                {
+                    variables(
+                        typ,
+                        DemandKind::Deep,
+                        self.demands.entry(owner).or_default(),
+                    );
+                }
+            }
+            Expr::Unit | Expr::Constant(_) => {}
         }
     }
 }
@@ -705,7 +1210,9 @@ mod graph_tests {
         instance(&b, &mut s, call, option);
         let d = def(&b, &mut s, "plain", &["a"], call);
         let m = module(&b, &[d]);
-        assert!(analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)].is_empty());
+        assert!(
+            analyze(&[(&m, &s, &Default::default())])[&NodeId::def(definition(d).0)].is_empty()
+        );
     }
     #[test]
     fn nil_demand_propagates_across_helpers_with_scoped_names() {
@@ -734,7 +1241,7 @@ mod graph_tests {
         );
         let outer = def(&b, &mut s, "outer", &["opaque"], opaque);
         let m = module(&b, &[helper, caller, outer]);
-        let demands = analyze(&[(&m, &s)]);
+        let demands = analyze(&[(&m, &s, &Default::default())]);
         assert_eq!(
             demands[&NodeId::def(definition(helper).0)],
             BTreeMap::from([("element", DemandKind::Native)])
@@ -760,7 +1267,7 @@ mod graph_tests {
         );
         let outer = def(&b, &mut s, "outer", &["captured"], body);
         let m = module(&b, &[outer]);
-        let demands = analyze(&[(&m, &s)]);
+        let demands = analyze(&[(&m, &s, &Default::default())]);
         assert_eq!(
             demands[&NodeId::def(definition(outer).0)],
             BTreeMap::from([("captured", DemandKind::Native)])
@@ -781,7 +1288,9 @@ mod graph_tests {
         );
         let d = def(&b, &mut s, "plain", &["a"], c);
         let m = module(&b, &[d]);
-        assert!(analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)].is_empty());
+        assert!(
+            analyze(&[(&m, &s, &Default::default())])[&NodeId::def(definition(d).0)].is_empty()
+        );
     }
     #[test]
     fn representation_evidence_alone_does_not_demand_a_layout() {
@@ -807,7 +1316,9 @@ mod graph_tests {
         );
         let d = def(&b, &mut s, "plain", &["a"], call);
         let m = module(&b, &[d]);
-        assert!(analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)].is_empty());
+        assert!(
+            analyze(&[(&m, &s, &Default::default())])[&NodeId::def(definition(d).0)].is_empty()
+        );
     }
 
     #[test]
@@ -832,7 +1343,7 @@ mod graph_tests {
         }));
         m.impls = b.alloc_slice_copy(&[&*impl_]);
         assert_eq!(
-            analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)],
+            analyze(&[(&m, &s, &Default::default())])[&NodeId::def(definition(d).0)],
             BTreeMap::from([("a", DemandKind::Native)])
         );
     }

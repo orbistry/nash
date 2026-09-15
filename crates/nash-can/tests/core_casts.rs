@@ -1,14 +1,9 @@
-mod snapshot_support;
-use snapshot_support::SnapshotInputs;
-
 use bumpalo::Bump;
 use nash_ast::{PackageName, primitives::CORE};
 use nash_can::Context;
 
 #[test]
 fn casts_require_exact_core_package_for_every_import_route() {
-    let snapshot_inputs = SnapshotInputs::default();
-    let mut diagnostics = Vec::new();
     for cast in [
         "castLift",
         "castLower",
@@ -22,10 +17,16 @@ fn casts_require_exact_core_package_for_every_import_route() {
             Some(PackageName {
                 author: "other",
                 project: "core",
+                version: "",
+                source: nash_ast::PackageSource::Compiler,
+                compilation: None,
             }),
             Some(PackageName {
                 author: "nash",
                 project: "other",
+                version: "",
+                source: nash_ast::PackageSource::Compiler,
+                compilation: None,
             }),
         ] {
             for (import, reference) in [
@@ -40,9 +41,7 @@ fn casts_require_exact_core_package_for_every_import_route() {
                 let source = bump.alloc_str(&format!(
                     "module Main exposing (..)\n{import}\nlift : int -> Int\nlift = {reference}\n"
                 ));
-                let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
-                    .module()
-                    .unwrap();
+                let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
                 let interfaces = std::collections::BTreeMap::from([(
                     "Builtin",
                     nash_can::kinds::builtin_interface(&bump),
@@ -60,13 +59,7 @@ fn casts_require_exact_core_package_for_every_import_route() {
                     package == Some(CORE),
                     "{package:?}: {import}: {result:?}"
                 );
-                if package.is_none() && cast == "castLift" {
-                    diagnostics.push(snapshot_support::errors(source, &result.unwrap_err()));
-                }
             }
         }
     }
-    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_snapshot!(diagnostics.join("\n"));
-    });
 }

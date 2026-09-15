@@ -213,7 +213,7 @@ pub(crate) fn names(core: &Core<'_>) -> HashSet<u32> {
                     result.insert(n.unique);
                 }
             }
-            Core::Lit(_) | Core::Error => {}
+            Core::Lit(_) | Core::Evaluated { .. } | Core::Error => {}
             Core::Lam { params, body } => {
                 bound.extend(params.iter().map(|p| p.name.unique));
                 pending.push((body, bound));
@@ -358,7 +358,7 @@ pub(super) fn hoist_strings<'a>(build: &Builder<'a>, core: &'a Core<'a>) -> &'a 
                     });
                     self.build.var(binder.name)
                 }
-                Core::Var(_) | Core::Lit(_) | Core::Error => core,
+                Core::Var(_) | Core::Lit(_) | Core::Evaluated { .. } | Core::Error => core,
                 Core::Lam { params, body } => {
                     let body = self.term(body);
                     self.build.lam(params, body)

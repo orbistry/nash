@@ -47,7 +47,12 @@ fn solve<'a>(
     nash_nitpick::check(bump, &canonical.module).expect("vesting matches are exhaustive");
     interfaces.insert(
         canonical.module.name.name,
-        nash_can::from_module(bump, &canonical.module, &annotations),
+        nash_can::from_module(
+            bump,
+            &canonical.module,
+            &annotations,
+            &canonical.tables.kinds.declared,
+        ),
     );
     SourceModule { canonical, solved }
 }

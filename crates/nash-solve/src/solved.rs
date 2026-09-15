@@ -12,6 +12,25 @@ pub struct SolvedTypes<'a> {
     pub instances: HashMap<NodeId, Instance<'a>>,
     /// Named definitions and aggregate let-destructuring patterns.
     pub schemes: HashMap<NodeId, Scheme<'a>>,
+    /// Inference-selected operations for source-site-sensitive ascriptions.
+    pub conversions: HashMap<NodeId, nash_ast::ConversionKind>,
+    /// Whether a type-directed pipeline inserts its input into the argument group.
+    pub pipe_insertions: HashMap<NodeId, bool>,
+    /// Record-field precedence over a same-named imported module.
+    pub field_selections: HashMap<NodeId, bool>,
+    /// Declaration-order indices for calls resolved after field/module selection.
+    pub call_orders: HashMap<NodeId, &'a [usize]>,
+    /// Owned refinements awaiting whole-module acceptance, including nitpick.
+    pub declared_refinements: Vec<(
+        nash_ast::DeclaredHoleId,
+        Option<nash_ast::declared::OwnedType>,
+    )>,
+}
+
+impl SolvedTypes<'_> {
+    pub fn commit_declared_holes(&mut self, store: &nash_ast::declared::DeclaredStore) {
+        store.commit(self.declared_refinements.drain(..));
+    }
 }
 
 #[derive(Debug)]

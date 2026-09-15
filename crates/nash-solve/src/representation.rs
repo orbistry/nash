@@ -54,6 +54,80 @@ pub fn subject<'a>(
     current
 }
 
+/// Query the source casting restriction without constraining unresolved types.
+/// Opaque containment of nominal constructor fields is closed in KindEnv;
+/// instantiated arguments and structural containers are inspected here.
+pub fn contains_opaque<'a>(
+    uf: &mut UnionFind<'a>,
+    env: &KindEnv<'a>,
+    variable: Variable,
+    allocated: &mut Vec<Variable>,
+) -> bool {
+    let mut pending = vec![variable];
+    let mut seen = BTreeSet::new();
+    while let Some(variable) = pending.pop() {
+        let variable = subject(uf, env, variable, allocated);
+        if !seen.insert(variable) {
+            continue;
+        }
+        match &uf.get(variable).content {
+            Content::Structure(FlatType::App1(home, name, args)) => {
+                if env
+                    .constructor(QualifiedName { home: *home, name })
+                    .opaque()
+                {
+                    return true;
+                }
+                pending.extend_from_slice(args);
+            }
+            Content::Alias {
+                home,
+                name,
+                args,
+                real,
+                ..
+            } => {
+                if env
+                    .constructor(QualifiedName { home: *home, name })
+                    .opaque()
+                {
+                    return true;
+                }
+                pending.extend(args.iter().map(|(_, typ)| *typ));
+                pending.push(*real);
+            }
+            Content::PartialAlias {
+                home, name, args, ..
+            } => {
+                if env
+                    .constructor(QualifiedName { home: *home, name })
+                    .opaque()
+                {
+                    return true;
+                }
+                pending.extend(args.iter().map(|(_, typ)| *typ));
+            }
+            Content::Structure(FlatType::AppV1(head, args)) => {
+                pending.push(*head);
+                pending.extend_from_slice(args);
+            }
+            Content::Structure(FlatType::Tuple1(first, second, rest)) => {
+                pending.push(*first);
+                pending.push(*second);
+                pending.extend_from_slice(rest);
+            }
+            Content::Structure(FlatType::Record1(fields)) => {
+                pending.extend(fields.values().copied());
+            }
+            Content::FlexVar(_)
+            | Content::RigidVar(_)
+            | Content::Error
+            | Content::Structure(FlatType::Fun1(..) | FlatType::Function1(..)) => {}
+        }
+    }
+    false
+}
+
 pub fn known<'a>(
     uf: &mut UnionFind<'a>,
     env: &KindEnv<'a>,
@@ -76,7 +150,9 @@ pub fn known<'a>(
                 TypeInfo::Defined { repr, .. } => repr,
             }
         }
-        Content::Structure(FlatType::Fun1(..) | FlatType::Tuple1(..)) => Some(Repr::Term),
+        Content::Structure(FlatType::Fun1(..) | FlatType::Function1(..) | FlatType::Tuple1(..)) => {
+            Some(Repr::Term)
+        }
 
         _ => None,
     }
@@ -179,6 +255,7 @@ mod tests {
                 context: &[],
                 repr: None,
                 alias: Some(body),
+                opaque: false,
             },
         );
         let partial = uf.fresh(make_descriptor(Content::PartialAlias {

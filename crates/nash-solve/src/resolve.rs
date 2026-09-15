@@ -26,6 +26,10 @@ pub(crate) fn has_outer_flex(uf: &mut UnionFind<'_>, args: &[Variable], rank: us
                 pending.extend(args.iter().map(|var| (*var, outer)))
             }
             Content::Structure(FlatType::Fun1(a, b)) => pending.extend([(*a, outer), (*b, outer)]),
+            Content::Structure(FlatType::Function1(arguments, result)) => {
+                pending.extend(arguments.iter().map(|var| (*var, outer)));
+                pending.push((*result, outer));
+            }
             Content::Structure(FlatType::Tuple1(a, b, c)) => {
                 pending.extend([(*a, outer), (*b, outer)]);
                 pending.extend(c.iter().map(|var| (*var, outer)));
@@ -58,6 +62,7 @@ enum View<'a> {
     Named(QualifiedName<'a>),
     Tuple(usize),
     Function,
+    GroupedFunction(usize),
     Record(Vec<&'a str>),
     Application,
     Flexible,
@@ -104,6 +109,11 @@ impl<'a> InferenceTypes<'_, 'a> {
                 [a, b].into_iter().chain(rest).collect(),
             ),
             Content::Structure(FlatType::Fun1(a, b)) => (View::Function, vec![a, b]),
+            Content::Structure(FlatType::Function1(mut arguments, result)) => {
+                let arity = arguments.len();
+                arguments.push(result);
+                (View::GroupedFunction(arity), arguments)
+            }
             Content::Structure(FlatType::Record1(fields)) => (
                 View::Record(fields.keys().copied().collect()),
                 fields.into_values().collect(),
@@ -133,7 +143,7 @@ impl<'a> nash_ast::head::Types<'a> for InferenceTypes<'_, 'a> {
             View::Tuple(arity) => HeadCon::Tuple(arity),
             View::Function => HeadCon::Fun,
             View::Application | View::Flexible | View::Error => return Match::Deferred,
-            View::Rigid(_) | View::Record(_) => return Match::No,
+            View::Rigid(_) | View::Record(_) | View::GroupedFunction(_) => return Match::No,
         };
         if actual == expected {
             Match::Yes(args)
@@ -187,10 +197,12 @@ pub(crate) fn select<'a>(
 ) -> Selection<'a> {
     use nash_ast::head::{Match, matches};
     let mut types = InferenceTypes(uf);
-    if args
-        .iter()
-        .any(|arg| matches!(types.view(*arg).0, View::Record(_) | View::Function))
-    {
+    if args.iter().any(|arg| {
+        matches!(
+            types.view(*arg).0,
+            View::Record(_) | View::Function | View::GroupedFunction(_)
+        )
+    }) {
         return Selection::Missing;
     }
     let unknown_outer = args.iter().any(|arg| {

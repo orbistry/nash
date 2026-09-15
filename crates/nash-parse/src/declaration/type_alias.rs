@@ -33,6 +33,7 @@ impl<'a> Parser<'a> {
             arguments: args,
             typ,
             attributes,
+            transparent: false,
         };
         let located_alias = self.add_end(start, alias);
 

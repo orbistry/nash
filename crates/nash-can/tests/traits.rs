@@ -269,7 +269,12 @@ fn imported_trait_methods_retain_context_and_defaults() {
         );
         let can =
             nash_can::canonicalize(source_bump, nash_can::Context::default(), source).unwrap();
-        nash_can::from_module(source_bump, &can.module, &Default::default())
+        nash_can::from_module(
+            source_bump,
+            &can.module,
+            &Default::default(),
+            &can.tables.kinds.declared,
+        )
     };
     let interfaces = std::collections::BTreeMap::from([("Identity", interface)]);
     let source = parse(
@@ -322,7 +327,12 @@ fn imported_trait_methods_retain_context_and_defaults() {
 fn interface_from_source<'a>(bump: &'a Bump, source: &str) -> nash_can::Interface<'a> {
     let can =
         nash_can::canonicalize(bump, nash_can::Context::default(), parse(bump, source)).unwrap();
-    nash_can::from_module(bump, &can.module, &Default::default())
+    nash_can::from_module(
+        bump,
+        &can.module,
+        &Default::default(),
+        &can.tables.kinds.declared,
+    )
 }
 
 #[test]

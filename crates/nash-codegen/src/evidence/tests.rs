@@ -176,12 +176,28 @@ fn repr_superclasses_and_executable_erasure_are_separate() {
         ExecutableEvidence::Erased
     );
     assert_eq!(
-        executable_identity(&Evidence::ReflexiveLift { typ: int }).unwrap(),
-        executable_identity(&Evidence::ReflexiveLift { typ: bytes }).unwrap()
+        executable_identity(&Evidence::ReflexiveLift {
+            trait_: nash_ast::primitives::lift_trait(),
+            typ: int
+        })
+        .unwrap(),
+        executable_identity(&Evidence::ReflexiveLift {
+            trait_: nash_ast::primitives::lift_trait(),
+            typ: bytes
+        })
+        .unwrap()
     );
     assert_eq!(
-        executable_identity(&Evidence::StructuralEq { typ: int }).unwrap(),
-        executable_identity(&Evidence::StructuralEq { typ: bytes }).unwrap()
+        executable_identity(&Evidence::StructuralEq {
+            trait_: nash_ast::primitives::eq_trait(),
+            typ: int
+        })
+        .unwrap(),
+        executable_identity(&Evidence::StructuralEq {
+            trait_: nash_ast::primitives::eq_trait(),
+            typ: bytes
+        })
+        .unwrap()
     );
     assert_ne!(
         executable_identity(&resolve(&arena, &tables, "Keep", int)).unwrap(),
@@ -452,13 +468,16 @@ fn substitutions_are_simultaneous_and_erased_payloads_can_stay_open() {
     let output = ground(
         &arena,
         &tables,
-        &Evidence::StructuralEq { typ: a },
+        &Evidence::StructuralEq {
+            trait_: nash_ast::primitives::eq_trait(),
+            typ: a,
+        },
         &subst,
         &HashMap::new(),
     )
     .unwrap();
     assert!(
-        matches!(output, Evidence::StructuralEq { typ } if matches!(typ.value, Type::Var("b")))
+        matches!(output, Evidence::StructuralEq { typ, .. } if matches!(typ.value, Type::Var("b")))
     );
     assert_eq!(
         executable_identity(&output).unwrap(),

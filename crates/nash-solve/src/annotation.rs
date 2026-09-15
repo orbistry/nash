@@ -35,6 +35,82 @@ pub(crate) fn to_solved_type<'a>(
     variable_to_can_type(bump, uf, &mut NameState::new(&BTreeMap::new()), var)
 }
 
+/// Give unresolved descendants of declared cells persistent arena identities
+/// before schemes and interfaces are rendered. This only changes local UF state.
+pub(crate) fn prepare_declared_holes<'a>(bump: &'a Bump, uf: &mut UnionFind<'a>) {
+    let roots: Vec<_> = uf.declared_holes().collect();
+    let mut pending = roots;
+    let mut seen = BTreeSet::new();
+    while let Some((owner, variable)) = pending.pop() {
+        let variable = uf.find(variable);
+        if !seen.insert(variable) {
+            continue;
+        }
+        match uf.get(variable).content.clone() {
+            Content::FlexVar(_) => {
+                if uf.declared_hole(variable).is_none() {
+                    let hole = bump.alloc(nash_ast::DeclaredHole::new(owner.owner, owner.region));
+                    uf.bind_declared_hole(hole, variable);
+                }
+            }
+            Content::RigidVar(_) => {}
+            Content::Structure(flat) => {
+                let children = match flat {
+                    FlatType::Fun1(from, to) => vec![from, to],
+                    FlatType::Function1(mut arguments, result) => {
+                        arguments.push(result);
+                        arguments
+                    }
+                    FlatType::App1(_, _, arguments) => arguments,
+                    FlatType::AppV1(head, mut arguments) => {
+                        arguments.push(head);
+                        arguments
+                    }
+                    FlatType::Tuple1(first, second, mut rest) => {
+                        rest.extend([first, second]);
+                        rest
+                    }
+                    FlatType::Record1(fields) => fields.into_values().collect(),
+                };
+                pending.extend(children.into_iter().map(|child| (owner, child)));
+            }
+            Content::Alias { args, real, .. } => {
+                pending.push((owner, real));
+                pending.extend(args.into_iter().map(|(_, variable)| (owner, variable)));
+            }
+            Content::PartialAlias { args, .. } => {
+                pending.extend(args.into_iter().map(|(_, variable)| (owner, variable)));
+            }
+            Content::Error => {}
+        }
+    }
+}
+
+/// Stage an owned graph without changing the shared store. The module driver
+/// commits this transaction only after all semantic checks succeed.
+pub(crate) fn stage_declared_holes<'a>(
+    bump: &'a Bump,
+    uf: &mut UnionFind<'a>,
+) -> Vec<(
+    nash_ast::DeclaredHoleId,
+    Option<nash_ast::declared::OwnedType>,
+)> {
+    let roots: Vec<_> = uf.declared_holes().collect();
+    let mut state = NameState::new(&BTreeMap::new());
+    let mut refinements = Vec::with_capacity(roots.len());
+    for (hole, variable) in roots {
+        state.capture_owner = Some((hole.owner, hole.region));
+        let typ = variable_to_can_type(bump, uf, &mut state, variable);
+        let value = if matches!(&typ.value, CanType::DeclaredHole(other) if hole == *other) {
+            None
+        } else {
+            Some(nash_ast::declared::OwnedType::capture(typ))
+        };
+        refinements.push((hole.id, value));
+    }
+    refinements
+}
+
 pub(crate) fn ordered_quantifiers<'a>(
     uf: &mut UnionFind<'a>,
     quantified: &[Variable],
@@ -150,6 +226,11 @@ fn variable_to_can_type<'a>(
     state: &mut NameState<'a>,
     variable: Variable,
 ) -> &'a Located<CanType<'a>> {
+    if matches!(uf.get(variable).content, Content::FlexVar(_))
+        && let Some(hole) = uf.declared_hole(variable)
+    {
+        return bump.alloc(Located::at(hole.region, CanType::DeclaredHole(hole)));
+    }
     if matches!(uf.get(variable).content, Content::Structure(_))
         && let Some(alias) = nash_constrain::instantiate::alias_application(uf, variable)
     {
@@ -199,7 +280,22 @@ fn variable_to_can_type<'a>(
             bump.alloc(Located::at_zero(CanType::Var(name)))
         }
 
-        Content::RigidVar(name) => bump.alloc(Located::at_zero(CanType::Var(name))),
+        Content::RigidVar(name) => {
+            if let Some((owner, region)) = state.capture_owner {
+                let root = uf.find(variable);
+                let hole = *state.generic_holes.entry(root).or_insert_with(|| {
+                    bump.alloc(nash_ast::DeclaredHole::with_id(
+                        nash_ast::DeclaredHoleId::fresh(),
+                        nash_ast::DeclaredHoleKind::Generic,
+                        owner,
+                        region,
+                    ))
+                });
+                bump.alloc(Located::at(region, CanType::DeclaredHole(hole)))
+            } else {
+                bump.alloc(Located::at_zero(CanType::Var(name)))
+            }
+        }
 
         Content::Alias {
             home,
@@ -251,6 +347,14 @@ fn term_to_can_type<'a>(
             ),
         })),
 
+        FlatType::Function1(arguments, result) => bump.alloc(Located::at_zero(CanType::Function {
+            arguments: bump.alloc_slice_fill_iter(
+                arguments
+                    .into_iter()
+                    .map(|arg| variable_to_can_type(bump, uf, state, arg)),
+            ),
+            result: variable_to_can_type(bump, uf, state, result),
+        })),
         FlatType::Fun1(a, b) => bump.alloc(Located::at_zero(CanType::Lambda {
             from: variable_to_can_type(bump, uf, state, a),
             to: variable_to_can_type(bump, uf, state, b),
@@ -404,6 +508,26 @@ fn term_to_error_type<'a>(
             ),
         }),
 
+        FlatType::Function1(arguments, result) => {
+            let result = variable_to_error_type(bump, uf, state, result);
+            let mut args: Vec<_> = arguments
+                .into_iter()
+                .map(|arg| variable_to_error_type(bump, uf, state, arg))
+                .collect();
+            if args.is_empty() {
+                args.push(bump.alloc(ErrorType::Type {
+                    home: nash_ast::primitives::builtin_home(),
+                    name: "unit",
+                    args: &[],
+                }));
+            }
+            args.push(result);
+            bump.alloc(ErrorType::Lambda(
+                args[0],
+                args[1],
+                bump.alloc_slice_copy(&args[2..]),
+            ))
+        }
         FlatType::Fun1(a, b) => {
             let arg = variable_to_error_type(bump, uf, state, a);
             let result = variable_to_error_type(bump, uf, state, b);
@@ -446,6 +570,8 @@ fn term_to_error_type<'a>(
 struct NameState<'a> {
     taken: BTreeMap<&'a str, ()>,
     normals: usize,
+    capture_owner: Option<(QualifiedName<'a>, nash_region::Region)>,
+    generic_holes: BTreeMap<Variable, &'a nash_ast::DeclaredHole<'a>>,
 }
 
 impl<'a> NameState<'a> {
@@ -453,6 +579,8 @@ impl<'a> NameState<'a> {
         NameState {
             taken: taken.keys().map(|name| (*name, ())).collect(),
             normals: 0,
+            capture_owner: None,
+            generic_holes: BTreeMap::new(),
         }
     }
 
@@ -517,6 +645,9 @@ fn get_var_names<'a>(
         return taken_names;
     }
     let content = uf.get(var).content.clone();
+    if matches!(content, Content::FlexVar(_)) && uf.declared_hole(var).is_some() {
+        return taken_names;
+    }
 
     match content {
         Content::Error => taken_names,
@@ -553,6 +684,12 @@ fn get_var_names<'a>(
                 get_var_names(bump, uf, seen, *arg, taken)
             }),
 
+            FlatType::Function1(arguments, result) => {
+                let taken = get_var_names(bump, uf, seen, result, taken_names);
+                arguments.into_iter().rev().fold(taken, |taken, arg| {
+                    get_var_names(bump, uf, seen, arg, taken)
+                })
+            }
             FlatType::Fun1(arg, body) => {
                 let taken = get_var_names(bump, uf, seen, body, taken_names);
                 get_var_names(bump, uf, seen, arg, taken)

@@ -139,6 +139,7 @@ Union(
                 },
             ],
             attributes: [],
+            data_layout: None,
         },
     },
 )

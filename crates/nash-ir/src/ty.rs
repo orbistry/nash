@@ -9,7 +9,7 @@ pub enum Ty<'a> {
     /// A parametric value whose runtime representation is never inspected.
     Erased,
     /// A partially applied type constructor, retained only as type metadata.
-    Constructor(AdtRef<'a>),
+    Constructor(&'a AdtRef<'a>),
     Big(&'a BigTy<'a>),
     Const(&'a ConstTy<'a>),
     Term(&'a TermTy<'a>),
@@ -24,6 +24,12 @@ pub enum ConstTy<'a> {
     Unit,
     List(Ty<'a>),
     Pair(Ty<'a>, Ty<'a>),
+    /// A pair whose components remain encoded as Data until projected.
+    DataPair(Ty<'a>, Ty<'a>),
+    /// A list whose logical elements are stored as Data (or Data pairs for maps).
+    DataList(Ty<'a>),
+    /// A tuple whose fields remain encoded in a builtin list until projected.
+    DataTuple(&'a [Ty<'a>]),
     Array(Ty<'a>),
     BlsG1,
     BlsG2,
@@ -85,6 +91,14 @@ impl<'a> Ty<'a> {
                 ConstTy::Pair(a, b) => {
                     Type::pair(arena, a.plutus_type(arena)?, b.plutus_type(arena)?)
                 }
+                ConstTy::DataPair(_, _) => Type::pair(arena, Type::data(arena), Type::data(arena)),
+                ConstTy::DataList(Ty::Const(ConstTy::DataPair(_, _))) => Type::list(
+                    arena,
+                    Type::pair(arena, Type::data(arena), Type::data(arena)),
+                ),
+                ConstTy::DataList(_) | ConstTy::DataTuple(_) => {
+                    Type::list(arena, Type::data(arena))
+                }
                 ConstTy::Array(t) => Type::array(arena, t.plutus_type(arena)?),
                 ConstTy::BlsG1 => Type::g1(arena),
                 ConstTy::BlsG2 => Type::g2(arena),
@@ -96,10 +110,17 @@ impl<'a> Ty<'a> {
     }
 }
 
-/// Constructor layouts of every ADT instance mentioned in a program.
+/// Constructor fields and optional external wire layout of one ADT instance.
+#[derive(Clone, Copy, Debug)]
+pub struct AdtLayout<'a> {
+    pub fields: &'a [&'a [Ty<'a>]],
+    pub data_layout: Option<nash_ast::DataLayout<'a>>,
+}
+
+/// Constructor layouts of every qualified ADT instance mentioned in a program.
 #[derive(Debug, Default)]
 pub struct Adts<'a> {
-    pub layouts: std::collections::HashMap<AdtRef<'a>, &'a [&'a [Ty<'a>]]>,
+    pub layouts: std::collections::HashMap<AdtRef<'a>, AdtLayout<'a>>,
 }
 
 impl std::fmt::Display for Ty<'_> {
@@ -172,6 +193,12 @@ fn fmt_ty(ty: Ty<'_>, f: &mut std::fmt::Formatter<'_>, context: u8) -> std::fmt:
             ConstTy::List(t) => application(f, "list", &[*t], context),
             ConstTy::Array(t) => application(f, "array", &[*t], context),
             ConstTy::Pair(a, b) => application(f, "pair", &[*a, *b], context),
+            ConstTy::DataPair(a, b) => application(f, "data_pair", &[*a, *b], context),
+            ConstTy::DataList(t) => application(f, "data_list", &[*t], context),
+            ConstTy::DataTuple(ts) => {
+                f.write_str("data_tuple ")?;
+                fields(f, ts, false)
+            }
         },
         Ty::Term(t) => match t {
             TermTy::Adt(adt) => application(f, &qualified_name(adt.name), adt.args, context),

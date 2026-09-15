@@ -1,0 +1,27 @@
+[package]
+name = "nash-frontend-aiken"
+version = "0.1.0"
+edition.workspace = true
+description = "Official Aiken syntax adapter for the Nash compiler"
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+aiken-lang = "=1.1.23"
+bumpalo.workspace = true
+miette.workspace = true
+num-bigint.workspace = true
+nash-frontend = { path = "../nash-frontend" }
+nash-region = { path = "../nash-region" }
+nash-source = { path = "../nash-source" }
+
+[dev-dependencies]
+url.workspace = true
+nash-parse = { path = "../nash-parse" }
+nash-ast = { path = "../nash-ast" }
+uplc = "=1.1.23"
+nash-driver = { path = "../nash-driver" }
+nash-codegen = { path = "../nash-codegen" }
+nash-plutus = { path = "../nash-plutus" }
+tokio.workspace = true

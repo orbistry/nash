@@ -83,6 +83,7 @@ impl<'a> Checker<'a> {
     fn expr(&mut self, expr: &Located<Expr<'a>>) {
         match &expr.value {
             Expr::VarMethod { .. }
+            | Expr::Constant(_)
             | Expr::Bytes(_)
             | Expr::VarLocal(_)
             | Expr::VarTopLevel(_)
@@ -94,6 +95,21 @@ impl<'a> Checker<'a> {
             | Expr::Accessor(_)
             | Expr::Unit => {}
             Expr::Assert(inner) | Expr::Comptime(inner) => self.expr(inner),
+            Expr::Convert { value, .. }
+            | Expr::Format { value }
+            | Expr::Callable { value, .. }
+            | Expr::ModuleConstantCheck { value }
+            | Expr::TypeScope { value }
+            | Expr::TupleIndex { tuple: value, .. } => self.expr(value),
+            Expr::Pair { first, second } => {
+                self.expr(first);
+                self.expr(second);
+            }
+            Expr::DataList { elements, tail } => {
+                for element in elements.iter().copied().chain(tail.iter().copied()) {
+                    self.expr(element);
+                }
+            }
             Expr::Fail(message) | Expr::Todo(message) => {
                 if let Some(message) = message {
                     self.expr(message);
@@ -103,16 +119,38 @@ impl<'a> Checker<'a> {
                 self.expr(message);
                 self.expr(body);
             }
+            Expr::TraceLabel {
+                label,
+                arguments,
+                body,
+                ..
+            } => {
+                self.expr(label);
+                for argument in *arguments {
+                    self.expr(argument);
+                }
+                self.expr(body);
+            }
+            Expr::RunnableCheck {
+                generator,
+                function,
+                ..
+            } => {
+                if let Some(generator) = generator {
+                    self.expr(generator);
+                }
+                self.expr(function);
+            }
             Expr::List(entries) => {
                 for entry in *entries {
                     self.expr(entry);
                 }
             }
-            Expr::Binop { left, right, .. } => {
+            Expr::Binop { left, right, .. } | Expr::Equal { left, right, .. } => {
                 self.expr(left);
                 self.expr(right);
             }
-            Expr::Lambda { parameters, body } => {
+            Expr::Lambda { parameters, body } | Expr::Function { parameters, body } => {
                 for parameter in *parameters {
                     self.arg(parameter);
                 }
@@ -138,6 +176,30 @@ impl<'a> Checker<'a> {
                     }
                 }
             }
+            Expr::SurfaceCall {
+                function,
+                arguments,
+                ..
+            } => {
+                self.expr(function);
+                for argument in *arguments {
+                    self.expr(argument.value);
+                }
+            }
+            Expr::Pipe {
+                input,
+                function,
+                arguments,
+                ..
+            } => {
+                self.expr(input);
+                self.expr(function);
+                if let Some(arguments) = arguments {
+                    for argument in *arguments {
+                        self.expr(argument.value);
+                    }
+                }
+            }
             Expr::If {
                 branches,
                 final_else,
@@ -147,6 +209,16 @@ impl<'a> Checker<'a> {
                     self.expr(branch.then_branch);
                 }
                 self.expr(final_else);
+            }
+            Expr::LetValue {
+                pattern,
+                value,
+                body,
+                ..
+            } => {
+                self.expr(value);
+                self.patterns(pattern.region, Context::BadDestruct, &[*pattern]);
+                self.expr(body);
             }
             Expr::Let { .. } | Expr::LetRec { .. } | Expr::LetDestruct { .. } => {
                 self.let_expr(expr)
@@ -158,8 +230,26 @@ impl<'a> Checker<'a> {
                 self.expr(scrutinee);
                 self.cases(expr.region, branches);
             }
+            Expr::Match {
+                value,
+                body,
+                fallback,
+                ..
+            } => {
+                self.expr(value);
+                // A source match permits a refutable pattern and an explicit
+                // fallback even when its success pattern is irrefutable.
+                self.expr(body);
+                self.expr(fallback);
+            }
             Expr::Access { record, .. } => self.expr(record),
-            Expr::Update { base, fields, .. } => {
+            Expr::FieldOrModule { record, module, .. } => {
+                self.expr(record);
+                if let Some(module) = module {
+                    self.expr(module);
+                }
+            }
+            Expr::Update { base, fields, .. } | Expr::RecordUpdate { base, fields, .. } => {
                 self.expr(base);
                 let mut ordered: Vec<_> = fields.iter().collect();
                 ordered.sort_by_key(|field| field.field.region.start);
@@ -174,7 +264,12 @@ impl<'a> Checker<'a> {
                     self.expr(field.value);
                 }
             }
-            Expr::Tuple {
+            Expr::DataTuple {
+                first,
+                second,
+                rest,
+            }
+            | Expr::Tuple {
                 first,
                 second,
                 rest,

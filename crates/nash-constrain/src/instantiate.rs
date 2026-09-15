@@ -123,8 +123,10 @@ pub fn normalize_variable<'a>(
                 }
             } else {
                 let substitution = args.iter().copied().collect();
+                uf.push_instantiation_scope();
                 let real =
                     canonical_to_variable(uf, descriptor.rank, variables, &substitution, body);
+                uf.pop_instantiation_scope();
                 Content::Alias {
                     home,
                     name,
@@ -160,7 +162,45 @@ pub fn canonical_to_variable<'a>(
     flex_vars: &BTreeMap<&'a str, Variable>,
     src_type: &Located<CanType<'a>>,
 ) -> Variable {
+    let owned = uf.begin_instantiation();
+    let variable = canonical_to_variable_inner(uf, rank, variables, flex_vars, src_type);
+    uf.end_instantiation(owned);
+    variable
+}
+
+fn canonical_to_variable_inner<'a>(
+    uf: &mut UnionFind<'a>,
+    rank: usize,
+    variables: &mut Vec<Variable>,
+    flex_vars: &BTreeMap<&'a str, Variable>,
+    src_type: &Located<CanType<'a>>,
+) -> Variable {
     match &src_type.value {
+        CanType::Hole => register(uf, rank, variables, Content::FlexVar(None)),
+        CanType::DeclaredHole(hole) => {
+            if hole.kind == nash_ast::DeclaredHoleKind::Generic {
+                if let Some(variable) = uf.generic_variable(hole.id) {
+                    return variable;
+                }
+                let variable = register(uf, rank, variables, Content::FlexVar(None));
+                uf.bind_generic_variable(hole.id, variable);
+                return variable;
+            }
+            if let Some(variable) = uf.declared_variable(hole) {
+                return variable;
+            }
+            if let Some(solution) = uf.resolve_declared(hole) {
+                // An imported resolved graph is instantiated, not captured at
+                // module rank. Its Generic descriptors bind by ID, never by an
+                // unrelated annotation variable with the same printed name.
+                return canonical_to_variable(uf, rank, variables, &BTreeMap::new(), solution);
+            }
+            let mut descriptor = crate::type_::make_descriptor(Content::FlexVar(None));
+            descriptor.rank = crate::type_::OUTERMOST_RANK;
+            let variable = uf.fresh(descriptor);
+            uf.bind_declared_hole(hole, variable);
+            variable
+        }
         CanType::App { head, args } => {
             let head = canonical_to_variable(uf, rank, variables, flex_vars, head);
             let args = args
@@ -172,6 +212,19 @@ pub fn canonical_to_variable<'a>(
                 rank,
                 variables,
                 Content::Structure(FlatType::AppV1(head, args)),
+            )
+        }
+        CanType::Function { arguments, result } => {
+            let args = arguments
+                .iter()
+                .map(|arg| canonical_to_variable(uf, rank, variables, flex_vars, arg))
+                .collect();
+            let result = canonical_to_variable(uf, rank, variables, flex_vars, result);
+            register(
+                uf,
+                rank,
+                variables,
+                Content::Structure(FlatType::Function1(args, result)),
             )
         }
         CanType::Lambda { from, to } => {
@@ -271,6 +324,7 @@ pub fn canonical_to_variable<'a>(
                     },
                 );
             }
+            uf.push_instantiation_scope();
             let alias_var = match target {
                 nash_ast::AliasType::Open(real_type) => {
                     let arg_dict: BTreeMap<&'a str, Variable> = arg_vars.iter().copied().collect();
@@ -280,6 +334,7 @@ pub fn canonical_to_variable<'a>(
                     canonical_to_variable(uf, rank, variables, flex_vars, real_type)
                 }
             };
+            uf.pop_instantiation_scope();
             register(
                 uf,
                 rank,
