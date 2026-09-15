@@ -99,14 +99,14 @@ impl<'a, 'b> minicbor::decode::Decode<'b, Ctx<'a>> for &'a PlutusData<'a> {
                             bytes.extend_from_slice(chunk);
                         }
 
-                        let integer = ctx.arena.alloc_integer(num::BigInt::from_bytes_be(
-                            if x == IanaTag::PosBignum {
-                                num_bigint::Sign::Plus
-                            } else {
-                                num_bigint::Sign::Minus
-                            },
-                            &bytes,
-                        ));
+                        let magnitude = num::BigInt::from_bytes_be(num_bigint::Sign::Plus, &bytes);
+                        // CBOR tag 3 stores -1 - n, not the absolute magnitude.
+                        let value = if x == IanaTag::NegBignum {
+                            -magnitude - 1
+                        } else {
+                            magnitude
+                        };
+                        let integer = ctx.arena.alloc_integer(value);
 
                         Ok(PlutusData::integer(ctx.arena, integer))
                     }
@@ -264,13 +264,15 @@ impl<C> minicbor::encode::Encode<C> for PlutusData<'_> {
                         }
                     }
                     num_bigint::Sign::Minus => {
-                        if digits.len() == 1 {
-                            let integer =
-                                minicbor::data::Int::try_from(-(digits[0] as i128)).unwrap();
+                        let magnitude = -(*n) - 1u8;
+                        let (_, digits) = magnitude.to_u64_digits();
+                        if digits.len() <= 1 {
+                            let value = -1 - i128::from(digits.first().copied().unwrap_or(0));
+                            let integer = minicbor::data::Int::try_from(value).unwrap();
                             e.int(integer)?;
                         } else {
                             e.tag(Tag::new(3))?;
-                            let (_sign, bytes) = n.to_bytes_be();
+                            let (_, bytes) = magnitude.to_bytes_be();
                             encode_bytestring(e, &bytes)?;
                         }
                     }
@@ -304,6 +306,20 @@ impl<C> minicbor::encode::Encode<C> for PlutusData<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn negative_bignum_uses_cbor_minus_one_magnitude() {
+        let arena = crate::arena::Arena::new();
+        let cbor = hex::decode("c35100ffffffffffffffffffffffffffffffff").unwrap();
+        let data = PlutusData::from_cbor(&arena, &cbor).unwrap();
+        let expected = "-340282366920938463463374607431768211456"
+            .parse::<num::BigInt>()
+            .unwrap();
+        assert_eq!(data, &PlutusData::Integer(&expected));
+        let mut bytes = Vec::new();
+        minicbor::encode(data, &mut bytes).unwrap();
+        assert_eq!(hex::encode(bytes), "c350ffffffffffffffffffffffffffffffff");
+    }
 
     #[test]
     fn encode_empty_record() {

@@ -256,8 +256,8 @@ fn encode_constant_value<'a>(e: &mut Encoder, x: &'a &Constant<'a>) -> Result<()
 
             encode_constant_value(e, b)?;
         }
-        Constant::Data(_data) => {
-            todo!();
+        Constant::Data(data) => {
+            e.bytes(&minicbor::to_vec(*data)?)?;
         }
         Constant::Value(v) => {
             encode_value(e, v)?;
@@ -323,6 +323,23 @@ mod tests {
         assert_eq!(decoder.bytes().unwrap(), flat.as_slice());
         assert_eq!(decoder.position(), cbor.len());
         let decoded: &Program<DeBruijn> = decode(&arena, &flat).unwrap();
+        assert_eq!(
+            crate::pretty::program(decoded),
+            crate::pretty::program(program)
+        );
+    }
+
+    #[test]
+    fn nested_data_constants_roundtrip() {
+        let arena = Arena::new();
+        let program: &Program<DeBruijn> = crate::syn::parse_program(
+            &arena,
+            "(program 1.1.0 (con (list (pair data data)) [(I 42, B #abcd)]))",
+        )
+        .into_result()
+        .unwrap();
+        let bytes = encode(program).unwrap();
+        let decoded: &Program<DeBruijn> = decode(&arena, &bytes).unwrap();
         assert_eq!(
             crate::pretty::program(decoded),
             crate::pretty::program(program)
