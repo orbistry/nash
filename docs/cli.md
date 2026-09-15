@@ -1,21 +1,22 @@
 # CLI
 
-The `nash` binary is `crates/nash-cli`. Every command loads the project from
-`PATH` (default `.`) by walking up to the nearest `nash.jsonc`, exactly like
-`Project::load` in `crates/nash-driver/src/project.rs` does today.
+The `nash` binary is `crates/nash-cli`. `check` and `build` load `PATH`
+(default `.`) through the nearest owning `nash.jsonc` or `aiken.toml`.
+Pass a manifest path explicitly to select a format when both files exist in one
+directory; an unqualified directory selection reports that ambiguity.
 
-Source directories may contain native `.nash` and supported Aiken `.ak` modules.
-Both use the shared frontend registry for import inspection and compilation.
-`check` and `build` accept the [bounded Aiken frontend profile](aiken-frontend.md),
-including mint/fallback validators; no `aiken.toml` or automatic Aiken package
-resolution is implied.
+Native `.nash` and Aiken `.ak` sources share import inspection and the Nash
+compiler pipeline. The [Aiken source/project frontend](aiken-frontend.md) targets
+exact Aiken 1.1.23 and Plutus V3, including locked packages, environments,
+configuration, workspaces and multiple named validators. Tests and benchmarks
+are checked, not executed or emitted as production entry points.
 
 ## Commands
 
 | Command | Status | Purpose |
 |---|---|---|
 | `nash check [PATH]` | exists | Parse, canonicalize and type check every module, including `tests` blocks. No codegen. |
-| `nash build [PATH]` | exists (Plan 07 prerequisite) | Check the frontend, then compile every validator module to Plutus V3 files in `build/`. |
+| `nash build [PATH]` | exists | Check all sources, then emit UPLC, Flat and CBOR for each native validator module and each named Aiken validator. |
 | `nash test [PATH]` | planned (plans/10) | `check`, then compile and run every `test` and `prop`. |
 | `nash fmt [PATH...]` | planned | Format files in place, or `--check` to report unformatted files. |
 | `nash docs [PATH]` | planned | Generate HTML documentation for exposed modules into `docs/`. |
@@ -45,6 +46,7 @@ Global flags, accepted before the subcommand:
 | `--trace-level silent\|compact\|verbose` | `silent` | User `trace` compilation mode. |
 | `--compiler-traces` | off | Keep compiler-generated traces. |
 | `--out DIR` | `build` | Output directory. |
+| `--env NAME` | `default` for Aiken | Select the environment module and configuration section. |
 
 The current build targets Plutus V3 without optimization. Config defaults,
 `--optimize`, and other target versions remain Plans 08/09 work.
@@ -74,6 +76,7 @@ The current build targets Plutus V3 without optimization. Config defaults,
 |---|---|
 | `--no-warnings` | Suppress warnings; errors only. |
 | `--report human\|json` | `json` prints nash-report's Elm-shaped JSON document (`{"type":"compile-errors",...}`) instead of the terminal rendering. Default `human`. |
+| `--env NAME` | Select the Aiken environment module and configuration section; defaults to `default`. |
 
 Plans 09/10 add these two flags to `build` and `test`. The initial build
 command uses human diagnostics and shows warnings.
@@ -84,7 +87,7 @@ command uses human diagnostics and shows warnings.
 |---|---|
 | `0` | Success. For `test`: all tests passed. For `fmt --check`: nothing to change. |
 | `1` | The project has errors: parse, canonicalization, type, kind, or codegen errors; or a test failed; or `fmt --check` found a file to change. |
-| `2` | The command could not run: no `nash.jsonc`, invalid config, unknown flag, missing output directory permissions, import cycle. |
+| `2` | The command could not run, such as an unknown flag. Project-loading and compiler errors are reported through the command's diagnostic path. |
 
 Warnings never change the exit code.
 
@@ -103,14 +106,36 @@ Warnings never change the exit code.
   .nash/                      caches (interfaces, downloaded compilers)
 ```
 
-`build/` and `.nash/` are safe to delete. The initial `nash build` writes
-outputs only after successful compilation. Stale-output removal remains Plan 09
-work; obsolete files must currently be removed explicitly. `.cbor` is one CBOR
-byte string containing the `.flat` bytes.
+Native output names remain `Module.Name`. Aiken output names include package,
+version, module and validator; delimiter bytes inside components are
+percent-encoded. Each name has `.uplc`, `.flat` and `.cbor` files.
+`.cbor` is one CBOR byte string containing the `.flat` bytes.
+
+Outputs are written only after successful checking and code generation.
+Stale-output removal remains Plan 09 work; obsolete artifacts must currently
+be removed explicitly. For Aiken projects, `build/packages/` also contains
+materialized dependencies and their tracking file. Do not delete edited package
+sources inadvertently.
 
 Human-readable output goes to stderr. Machine-readable output (`--json`) goes
 to stdout. Diagnostics use the miette fancy renderer with Elm's prose (see
 [diagnostics.md](diagnostics.md)).
+
+### First Aiken manual checks
+
+```sh
+cargo run -p nash-cli -- check crates/nash-driver/tests/fixtures/aiken/full-language
+cargo run -p nash-cli -- check crates/nash-driver/tests/fixtures/aiken/env-config-project --env preview
+cargo run -p nash-cli -- build crates/nash-driver/tests/fixtures/aiken/multi-validator-project --out build/manual
+cargo test -p nash-driver --test aiken_projects
+```
+
+The first three projects need no downloads. The integration test prepares the
+committed stdlib and direct/transitive package archives offline and checks them
+through normal project loading. A direct CLI check of `stdlib-project` or
+`dependency-project` needs those packages in the normal cache/build directory.
+The multi-validator build emits two artifact sets and does not run its test or
+benchmark. Blueprint serialization and parameter application are not provided.
 
 ### Planned `nash build` transcript
 

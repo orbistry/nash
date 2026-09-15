@@ -1,4 +1,47 @@
-# Aiken-syntax frontend
+# Aiken source and project frontend
+
+## Runtime compatibility contract (Plan 14)
+
+The compatibility target is **Aiken 1.1.23**, with **Plutus V3**. The same input
+must have the same observable result, failure behavior and relevant user traces.
+This includes malformed and partly decoded Data: do not add validation where
+the pinned compiler performs only shallow extraction or a typed view.
+
+Compatibility does not require identical UPLC bytes, script hashes, execution
+budgets, compiler diagnostics or blueprints. Source/project acceptance is tracked
+by Plan 14 G1–G11; this is not a claim of full Aiken tool parity.
+
+The consolidated [Plan 14](../plans/14-aiken-frontend.md) records the completed
+frontend and runtime milestones and the remaining source/project work. Explicit
+frontend-neutral layouts and conversions supersede the original lowercase
+user-type shortcut, bounded validator dispatch and integer limit. The profile
+below describes the implementation; the plan records behavioral and workspace
+verification.
+
+R1–R3 now pass the permanent assignment regression group: empty `[]`, `None`,
+a `Data` module constant and concrete `List<Int>` encode correctly; a named
+function's incompatible `Data` return annotation fails during checking.
+Thirty-five pinned differential tests pass, including the original eleven and
+the repair group. Plan 14 records the completed source/project gates separately
+from the historical runtime milestone.
+
+### Exact source and project reference
+
+The semantic reference is Aiken `v1.1.23`,
+`8949565a9969278846ffefe30bc3b892029dd318`. The selected standard library is
+official `v3.1.0`, `7d5cee54b2bb4eea211ae3bd806c7c39e5fd899d`, with its
+unchanged `aiken-lang/fuzz` `v2.2.0` dependency. The normal locked package path
+checks all 62 project/dependency modules (810 declarations). Only Plutus V3 is accepted by pinned
+`aiken-project/src/config.rs::validate_v3_only`. A manifest compiler-version
+mismatch is a warning in `Project::new`, not a dependency constraint.
+An empty `env/` directory does not require a default module; an environment
+directory containing `.ak` files does (`Project::aiken_files`).
+
+Nash is the ownership, lifetime and native-semantics reference. Exact Aiken is
+the source-acceptance and runtime reference, including malformed and partly
+decoded Data. Tests are regressions, not authority over a verified pinned rule.
+Conversions must preserve shallow extraction, demand-driven decoding, full
+expect validation, failure timing and relevant user trace order.
 
 ## Decision and current finish line
 
@@ -21,29 +64,28 @@ The branch is based on `release/main`. It includes the source-to-UPLC code
 generation and native validator builds from `plan-7`. `nash check` ends at solved
 interfaces. `nash build` uses the same frontend path and calls the backend while
 the solved arena is alive. Supported Aiken libraries can run in native validators.
-The bounded Aiken validator profile below also builds to UPLC, Flat and CBOR.
+The supported runtime validator profile below builds to UPLC, Flat and CBOR.
 Nash codegen is available and used for both source languages.
 
-The concrete finish-line project is
-`crates/nash-driver/tests/fixtures/aiken/supported`, containing:
+The compact acceptance projects are under
+`crates/nash-driver/tests/fixtures/aiken/`:
 
-```aiken
-pub fn add_one(value: Int) -> Int {
-  value + 1
-}
-```
+- `full-language`: annotations, calls, patterns, operations and checked tools.
+- `stdlib-project`: unchanged official stdlib `v3.1.0` and fuzz `v2.2.0`.
+- `dependency-project`: direct/transitive packages and a typed validator boundary.
+- `env-config-project`: default/named environments and synthetic configuration.
+- `multi-validator-project`: named validators, parameter metadata and tools.
 
-Run it with:
+`cargo test -p nash-driver --test aiken_projects` materializes the committed
+package archives into temporary normal Aiken build directories. No acceptance
+test needs a network request. The archive provenance is recorded in
+`crates/nash-driver/tests/fixtures/aiken/packages/README.md`; all 56 stdlib and
+five fuzz library files were compared byte-for-byte against their pinned commits.
 
-```sh
-cargo run -p nash-cli -- check crates/nash-driver/tests/fixtures/aiken/supported
-cargo run -p nash-cli -- check crates/nash-driver/tests/fixtures/aiken/unsupported --report=json
-```
+The older `unsupported` fixture contains a test declaration. That declaration
+is now in scope: valid tests check without being executed or producing scripts.
 
-The first succeeds; the second deliberately contains an Aiken test declaration
-and exits unsuccessfully with located diagnostic `NAF2201`.
-
-The executable integration regression imports this Aiken function into a native
+The existing `add_one` integration regression imports an Aiken function into a native
 validator, matches its result against a fixed integer pattern, serializes UPLC and
 runs it in CEK: input `41` succeeds and input `40` fails.
 
@@ -77,19 +119,24 @@ compilation never calls the official Aiken type checker or code generator.
   native headers/identity/explicit roles, and copies imports for inspection.
   It uses existing `nash-report` syntax conversion inside the adapter, projecting
   reports to owned frontend fields; parser errors never cross the boundary.
-- **`nash-frontend-aiken`** exports `AikenFrontend`. It alone depends on
-  `aiken-lang`. Private `spans`, `profile`, `validate`, and `lower` modules separate
-  coordinates, compatibility policy, preflight and AST conversion. Declaration,
-  type, pattern, expression and validator lowerers are separate files.
-- **`nash-driver`** composes the static `FRONTENDS` registry, discovers files,
-  derives source metadata, builds the graph, projects frontend diagnostics back
-  to reports, and runs the existing compiler pipeline in dependency order.
+- **`nash-frontend-aiken`** exports `AikenFrontend`. It alone uses the
+  `aiken-lang` parser for source syntax. Private span, validation, documentation,
+  declaration, type, pattern, expression and validator modules project the AST
+  into arena-backed Nash nodes.
+- **`nash-project-aiken`** uses exact-pinned project configuration/path models.
+  Manifest parsing, workspace expansion, package access, source discovery and
+  synthetic configuration are separate operations. Its public boundary contains
+  only Nash-owned contracts from `nash-frontend`; it does not depend on the driver.
+- **`nash-driver`** selects the closest owning project, composes `FRONTENDS`,
+  resolves package-aware imports, projects diagnostics and runs the existing
+  compiler pipeline in dependency order.
 - **`nash-codegen` / `nash-ir`** consume only Nash canonical nodes and solved
   metadata. Fixed constants lower directly to primitive Core/UPLC literals, and
   fixed patterns use primitive equality rather than native literal/`Eq` evidence.
 - **CLI and LSP** use the same project/catalog/graph/build entry points.
-- **`nash-report`** is unchanged. Nash canonicalization, solving and nitpick have
-  no Aiken dependency or parser-specific branches.
+- **Semantic stages** receive only Nash nodes, declared call shapes and solved
+  choices. They implement explicit neutral operations for grouped functions,
+  conversion sites, equality, indexing, record updates and trace formatting.
 
 The native adapter's report dependency reuses the existing error hierarchy rather
 than duplicating it. This does not introduce a report dependency into the common
@@ -112,18 +159,16 @@ pub trait Frontend: Send + Sync {
 }
 ```
 
-`SourceInput` contains source text, URI, expected canonical module name and an
-optional role. `None` lets syntax determine the role; `Some(Library|Validator)`
-enforces explicit metadata. Current project configuration does not specify roles,
-so discovery uses `None`, preserving native `validator module` headers.
+`SourceInput` contains source text, URI, expected module name, origin and optional
+role. Roles distinguish libraries, validators, environments and configuration.
+Dependency origin controls the exclusion of dependency tests, benchmarks and
+validators; it does not relax errors in imported production definitions.
 
-`inspect` returns owned `ModuleDependency { module, region }` records and owned
-diagnostics. It retains no arena or parser references. Both adapters use the same
-parser and module-level validation for inspection and compilation. Aiken inspection
-does not lower expression bodies, so a later lowering error can still retain its
-valid dependency edges.
+`inspect` returns owned dependencies and diagnostics. It retains no arena or
+parser references. Aiken inspection does not lower expression bodies, so a later
+lowering error can still retain valid dependency edges.
 
-`parse` returns `ParseOutput { module: &nash_source::Module, diagnostics }`.
+`parse` returns the Nash module, source entry-point metadata and owned diagnostics.
 Compilation copies source into the existing **build-wide arena**; native parsing
 borrows that copy, and Aiken lowering copies its owned AST strings/bytes/nodes into
 the arena. The temporary Aiken AST is dropped before returning. Source, canonical
@@ -144,35 +189,42 @@ contract crate.
 
 ## Project identity, imports and editor integration
 
-The driver-owned `ModuleCatalog` maps URI to `SourceSpec`: source root, canonical
-module name, optional role, optional package owner and optional explicit frontend
-ID. Identity is derived relative to a configured source directory, with the
-extension removed and path components joined by `.`:
+`nash-frontend` owns `PackageId`, `ModuleKey`, `SourceSpec`, `ModuleCatalog`,
+`ResolvedDependency`, project metadata, loader requests and diagnostics.
+The catalog maps URI to a source specification; URI is an I/O/diagnostic location,
+not semantic identity. `PackageId` contains name, version and source
+(local path, GitHub, GitLab, Bitbucket or compiler).
+
+Names are derived relative to configured roots:
 
 ```text
 src/Json/Decode.nash -> Json.Decode
-src/folder/math.ak  -> folder.math
+lib/folder/math.ak  -> folder.math
 Aiken use folder/math -> folder.math
 ```
 
-Native headers must match that identity. Aiken has no header; its module identity
-comes from metadata. No import resolution appends a source suffix or picks a
-matching path tail. `aiken/builtin` maps to the compiler-owned `Builtin` interface.
-Other imports resolve exactly through the catalog, without automatic stdlib,
-package-download or case-folding behavior.
+Native headers must agree with the catalog. Source imports remain module-only;
+resolution records the exact provider package and URI at the import region.
+Ambiguous visible providers are errors, never filesystem-order choices.
+`aiken/builtin` and prelude names map to compiler-owned operations; the official
+stdlib is ordinary imported source, not compiler-generated replacement bodies.
 
 Names remain case-sensitive. Native code can import an Aiken file with a
 Nash-compatible canonical path, such as `Math.ak`. The official Aiken import
 grammar cannot spell uppercase native module paths, so arbitrary native imports
 from Aiken are not claimed. Mixed native-to-Aiken graphs and Aiken-to-Aiken nested
-imports are supported and tested. Mixed type APIs use the profile's lowercase
-Nash type spelling described below.
+imports are supported. Mixed type APIs retain original Aiken type spelling;
+`Choice` is exported as `Choice`, not the former compatibility spelling `choice`.
 
-Canonical interfaces are currently keyed by module name, not package. Duplicate
-providers across roots/packages are therefore diagnosed instead of silently
-choosing one; package-aware duplicate-name resolution is deferred. Package owners
-still reach canonicalization for normal ownership/trait rules. Overlapping roots
-that assign conflicting identities to one source are rejected.
+Canonical module names contain package source/version and compilation context.
+Definition, constructor, ADT, specialized layout and decoder keys inherit that
+identity. Interfaces are stored by resolution scope plus `ModuleKey`, with
+source-spelled aliases supplied to canonicalization only after resolution.
+Independent workspace members retain distinct environment/configuration scopes,
+even when they load the same hosted dependency. The canonical compilation
+fingerprint includes root package identity, selected configuration/environment
+source and import aliases; public metadata retains the source package identity.
+Overlapping roots assigning conflicting source identities are rejected.
 
 Inspection failures are retained on their graph nodes. Failed sources publish no
 interface, their dependents are blocked, and independent modules continue. Unknown
@@ -185,157 +237,323 @@ and include open sibling buffers. Existing UTF-16 diagnostic conversion consumes
 the same owned reports; there is no separate editor parser path. Formatting,
 completion and other unrelated editor features remain outside this milestone.
 
-## NashV1 compatibility profile
+## Source and runtime implementation
 
-Policy is a private concrete `profile` module, not an unused extensibility trait.
-It deliberately targets Nash semantics and representations, not every program
-accepted by Aiken's separate type checker.
+Adapters retain source policy and provenance. Nash resolves names, checks types
+and representations, specializes and generates code. The source/project gates
+cover Aiken 1.1.23; excluded tool commands are listed below.
 
-### Supported common syntax
+### Source syntax
 
-- Public/private functions and constants; named/anonymous functions and calls.
-- Complete polymorphic annotations and partial monomorphic function annotations;
-  function, tuple, named type, alias and primitive annotations.
-- Fixed integer, byte-array and string literals, including decoded hex integers.
-- Integer arithmetic/comparisons, Boolean short-circuiting/negation, conditionals.
-- Lists and list tails, tuples, ordinary field access, fully labeled constructor
-  calls, sequential `let`, `when` and alternative patterns.
-- Variables/discards, alias patterns, positional constructors, tuple/list/tail
-  patterns and fixed primitive literal patterns.
-- Undecorated algebraic data declarations, aliases, opaque constructor visibility
-  and explicit public exports. Documentation comments are not projected into Docs.
-- Module aliases and unqualified import renames.
-- `fail` and simple traces. Trace continuations are thunked so tracing precedes
-  evaluation of the continuation.
+Functions, constants, imports, aliases, data types and validators all use Nash
+canonicalization, inference and codegen. Tests and benchmarks retain their
+generator/signature checks but are not build roots. Invalid tool bodies remain
+normal checking errors. Dependency tool declarations are omitted under the
+pinned project rule.
 
-Nullary functions and calls lower through an explicit unit argument; a function
-is never silently collapsed to a constant. Other function types use Nash's curried
-function representation. Sequential bindings lower through strict, hygienic lambda
-applications, not recursive Nash `let`; initializer references and shadowing keep
-their lexical meaning.
+Grouped function types retain Aiken call arity separately from native curried
+functions. Labels come from resolved declarations/interfaces, never parameter
+name guesses. Pipelines select argument insertion versus applying a returned
+function using the declared or inferred group. Type holes remain inference
+variables; local annotation variables keep their lexical scope.
 
-### Primitive representations
+Source nodes preserve type-directed equality, tuple indexing, record updates,
+trace formatting and refutable pattern conversions. Backpassing and sequential
+bindings preserve single evaluation. Native overloaded literals, trait evidence,
+record-update restrictions and validator `main` behavior remain unchanged.
 
-| Aiken | Nash compiler-owned type |
+The recursive inference and codegen dispatchers use smaller expression-family
+frames. LLDB located stack overflows in the former monolithic dispatchers on
+unchanged stdlib/prelude programs; no larger stack or reduced source limit is used.
+
+Nested pipelines use a deterministic per-module fresh-name supply. Reusing one
+generated `$pipe` binder incorrectly unified independent callback inputs in the
+unchanged fuzz library.
+
+Record/module ambiguity is represented by a neutral `FieldOrModule` node.
+Inference selects a valid record field before trying the imported module, as
+specified by pinned `tipo/expr.rs:1163–1184`; selected call labels and argument
+order survive into specialization. A failed field lookup still counts as a
+lexical use, preserving the pinned initializer traces.
+
+The frontend's explicit private-export policy is enforced on solved interfaces.
+Aiken public value and constructor signatures cannot leak private types;
+aliases expand before checking, and opaque wrapper implementation fields remain
+private. Native Nash exports retain their existing rules.
+
+Large partially applied constructor metadata is arena-referenced rather than
+stored inline in every runtime `Ty`. Owned evidence keys and cold diagnostics
+likewise avoid multiplying package-qualified identity payloads through hot
+recursive compiler frames.
+
+### Exact pinned syntax inventory
+
+The exhaustive adapter matches follow `aiken-lang 1.1.23`'s `ast.rs` and
+`expr.rs:639–783`, not a newer release. Direct means representation-preserving
+lowering; desugaring preserves source order/scope; type-directed means a Nash
+declaration or solved type selects the operation.
+
+| Inventory | Forms | Classification and implementation |
+|---|---|---|
+| Definitions (8) | `Fn`, `TypeAlias`, `DataType`, `Use`, `ModuleConstant` | Direct/declaration elaboration in `lower/declarations.rs`; constant checks preserve their source site |
+| Definitions | `Validator` | Desugared handlers and named entry metadata in `lower/validators.rs` |
+| Definitions | `Test`, `Benchmark` | Tool declarations; `RunnableCheck` validates bodies, signatures and generators |
+| Annotations (6) | `Constructor`, `Fn`, `Var`, `Hole`, `Tuple`, `Pair` | Direct type nodes in `lower/types.rs`; holes and local variables resolved by Nash |
+| Expressions (24) | `UInt`, `String`, `ByteArray`, `CurvePoint`, `Var`, `ErrorTerm` | Direct constants/names/failure; G1/G2 bytes are validated curve constants |
+| Expressions | `Sequence`, `Assignment`, `Fn` | Scope/signature desugaring, strict single-evaluation bindings and backpassing |
+| Expressions | `List`, `Tuple`, `Pair` | Direct encoded-container construction, with solved payload layouts |
+| Expressions | `Call`, `PipeLine` | Type-directed group/label resolution and pipeline insertion/application |
+| Expressions | `BinOp`, `UnOp`, `LogicalOpChain` | Primitive arithmetic and short-circuit desugaring; equality selected by solved type |
+| Expressions | `Trace`, `TraceIfFalse` | Type-directed formatting and single condition evaluation |
+| Expressions | `When`, `If` | Pattern/branch lowering, including `is` alternatives |
+| Expressions | `FieldAccess`, `TupleIndex`, `RecordUpdate` | Resolved fields/declarations and solved container types |
+| Patterns (9) | `Int`, `ByteArray`, `Var`, `Assign`, `Discard`, `List`, `Pair`, `Tuple` | Direct patterns or encoded-container patterns in `lower/patterns.rs` |
+| Patterns | `Constructor` | Declaration-directed positional/labeled/spread/qualified pattern resolution |
+| Assignment/argument forms | `let`, `expect`, `is`, backpassing, multiple patterns, named/discarded/pattern parameters, renamed labels, `via` | Sequential binding/refutation/callback lowering; generated terms use the same call and conversion rules |
+| Module kinds | `Lib`, `Validator`, `Env`, `Config` | Project role/origin controls discovery, defaults, synthetic source and entry eligibility |
+
+Adding a pinned enum variant must break an exhaustive match. A classification
+alone is not an acceptance gate: the unchanged stdlib, compact source fixtures
+and runtime comparisons exercise these routes.
+
+### Types and wire layouts
+
+| Aiken | Nash compiler-owned type / representation |
 |---|---|
-| `Int` | `Builtin.int` |
+| `Int` | `Builtin.int`, arbitrary precision |
 | `ByteArray` | `Builtin.bytes` |
-| `Bool` | `Builtin.bool` |
-| `String` | `Builtin.string` |
-| `Data` | `Builtin.Data` |
-| `Void` | `Builtin.unit` |
-| `List<a>` | `Builtin.list a` |
-| `Pair<a, b>` | `Builtin.pair a b` |
-| `G1Element` | `Builtin.bls_g1` |
-| `G2Element` | `Builtin.bls_g2` |
-| `MillerLoopResult` | `Builtin.bls_mlr` |
+| `Bool`, `String`, `Void` | `Builtin.bool`, `Builtin.string`, `Builtin.unit` |
+| `Data` | `Builtin.Data`, unchanged Data |
+| `List<a>` | `Builtin.data_list a`, encoded elements |
+| `Pair<a,b>` | `Builtin.data_pair a b`, pair of encoded Data |
+| `(a,b,...)` | `Builtin.data_tuple (a,b,...)`, encoded Data fields |
+| `Option<a>` | `Builtin.data_option a`, Some tag 0 / None tag 1 |
+| Curve types | Compiler primitive G1/G2/ML-result types; validated G1/G2 constants and pinned serialisability restrictions |
 
-Native literal nodes are overloaded through `Literal` traits. Reusing them would
-add constraints and require a Nash stdlib module even for `add_one`. Instead,
-frontend-neutral `nash_source::Constant::{Int, Bytes, Str}` is carried by source
-and canonical `Expr::Constant`/`Pattern::Constant`. Nash's existing solver assigns
-the primitive type directly; fixed patterns use primitive equality rather than
-user `Eq` instances. Native literal nodes and evidence behavior are unchanged.
-Integers currently must fit signed `i128`; overflow returns `NAF2101`.
+The separate encoded container types preserve native Nash `list`, `pair` and
+tuple behavior. They admit nested user types and heterogeneous tuples without
+weakening native representation constraints. A standalone Pair encodes as a
+two-element Data list. A List of Pair encodes as a Data map; other lists and
+tuples encode as Data lists.
 
-Aiken user type names lowercase their first ASCII character (`Choice` -> `choice`)
-in declarations, references, imports and exports. Constructors retain their
-spelling. This is deliberate: uppercase Nash data declarations require Big fields,
-while Aiken primitive fields map to constant types. Little Nash data declarations
-admit those fields without implicit Data casts. They do **not** promise Aiken wire
-encoding. Nash `Storable` excludes Term, so `List`/`Pair` containing little user
-ADTs can fail Nash representation checking. Full Aiken container/data-layout
-compatibility needs future boundary conversions, not unchecked coercions here.
+Fixed constants use `Constant::Int(i128)` for the inline range and
+`Constant::BigInt(&str)` for normalized, arena-owned decimal digits outside it.
+Both have primitive integer type. Expressions and patterns emit arbitrary-
+precision Plutus integers. Native Nash literal syntax is unchanged.
 
-### Builtins
+User type names are never lowercased to select representation. Source `Union`,
+canonical `Union` and `InterfaceUnion` carry:
 
-Integer operators call real `Builtin` operations directly, without importing
-native operator traits. Division/modulo use `divideInteger`/`modInteger` as the
-official compiler does. Greater comparisons negate the corresponding less
-comparison, retaining left-to-right operand evaluation.
-
-`aiken/builtin` has an explicit 33-name whitelist in
-`crates/nash-frontend-aiken/src/profile.rs`: integer arithmetic/comparison;
-byte-array operations; supported hashes/signature verification; string operations,
-UTF-8 conversion, Data equality and serialization. Names are mapped explicitly,
-not guessed by snake-to-camel conversion. Imported aliases and qualified accesses
-share that mapping. Other builtin names return `NAF2201`. For example:
-
-```aiken
-use aiken/builtin.{equals_integer}
-pub fn equal(left: Int, right: Int) -> Bool {
-  equals_integer(left, right)
+```rust
+DataEncoding::{Constr, List, Transparent}
+DataLayout<'a> {
+    encoding: DataEncoding,
+    tags: &'a [u64],
 }
 ```
 
-### Bounded validator profile
+Constructor field types stay in the owning union instead of a parallel duplicated
+schema. The owner supplies qualified identity. Backend `AdtRef` contains the
+qualified type name and instantiated arguments; `TypeEnv::layout` substitutes the
+canonical fields into `AdtLayout { fields, data_layout }`. `Adts.layouts` is keyed
+by that full reference, not an unqualified name. Interfaces preserve layout
+metadata and canonical field templates. Constructor generation, projections,
+pattern matching and validation consume the same specialized layout.
 
-One validator declaration per `.ak` module lowers to an ordinary Nash validator
-module with an exported `main`. Helpers, constants and imports use the existing
-library lowering. The generated `main` takes zero or more raw `Data` parameters,
-then one raw `Data` script context, and returns `unit` on success.
+- Ordinary declarations encode `Constr(declaration_index, encoded_fields)`.
+- Constructor `@tag(n)` overrides the tag; single-constructor type-level `@tag`
+  is supported too. Tags include zero-field constructors.
+- Type-level `@list` requires one constructor and encodes its fields as a Data list.
+- Aiken opaque single-field wrappers without `@list` use `Transparent`: their wire
+  value is the encoded field itself. This is an explicit layout, not native
+  constructor unboxing or a name-based representation exception.
+- Conflicting decorators within one decorator list, misplaced `@list`, colliding
+  tags and unrepresentable counts are diagnosed. Type and constructor decorators
+  can coexist: the constructor tag precedes the type tag, while type-level
+  `@list` selects list storage. This corrects the bounded-profile rejection,
+  following `tipo/infer.rs:1057–1097` and `gen_uplc/builder.rs:1378–1385`.
+- External aliases carry `Alias.transparent`, deriving representation from their
+  body rather than the alias name. Native aliases retain the original rule.
 
-Accepted handler sets:
+Native unions have `data_layout: None`; their existing representation and
+constructor rules remain intact.
 
-- One `mint(redeemer: Int, policy: ByteArray, transaction: Data)` handler and an
-  optional `else(context: Data)` handler.
-- An `else`-only validator, which receives the context unchanged, without
-  destructuring its purpose.
-- Redeemers may be explicitly annotated `Int`, `ByteArray` or `Data`. Named
-  `Int`/`ByteArray` redeemers are decoded even if the body does not use the value;
-  `_ : Data` discards a redeemer without decoding.
-- Validator parameters, transactions and fallback contexts are raw `Data`;
-  omitting their annotations selects this profile's raw boundary. Mint policy
-  arguments must explicitly use `ByteArray` and are decoded even when discarded.
-- Handlers return `Bool`: `True` becomes `unit`, `False` becomes an explicit
-  error. An omitted fallback fails. User traces preserve evaluation order.
+### Conversion interfaces and evaluation
 
-For mint dispatch, the official V3 context layout is constructor fields
-`[transaction, redeemer, purpose]`, with mint at purpose tag `0`. Other purpose
-tags invoke the fallback. `unConstrData`/list projections validate the parts
-needed for dispatch; `unIData` and `unBData` validate decoded boundary values.
-Discarded raw `Data` fields remain unforced; mint policies are always decoded
-before redeemers, as in the official compiler. This is **not**
-an independent, exhaustive ledger-context schema validator: raw `Data` stays raw,
-and the profile does not promise to reject extra fields or every malformed
-ignored component.
+Source/canonical `Expr::Convert { kind, typ, value }` retains the expression and
+type source regions. `typ` is the output type; ToData's input type comes from
+ordinary Nash inference, not an adapter type checker.
 
-The official compiler's `TypedPattern::mint_purpose` decodes the policy to bytes
-even though its internal prelude constructor advertises `Data`. Differential
-execution caught the mismatch; requiring `ByteArray` avoids accepting a source
-annotation whose runtime representation would silently differ.
+| ConversionKind | Contract |
+|---|---|
+| `ToData` | Recursively encode the solved runtime input |
+| `FromDataShallow` | Extract the outer runtime representation only |
+| `ViewData` | View raw Data as a Data-backed type, without inspection |
+| `ValidateData` | Fully validate every required nested field, then decode |
+| `FromDataBytesView` | Mandatory mint-policy byte extraction with its pinned internal type view |
 
-Located `NAF2301` rejects multiple validator declarations, multiple/non-mint
-handlers, wrong arities, non-Boolean return annotations, non-Data parameters,
-unsupported boundary annotations and primitive-shadowing boundary imports.
-Explicit library metadata cannot contain a validator; explicit validator metadata
-requires a declaration. `main` is reserved for the generated entry point.
-Handler calls such as `example.mint(...)`, argument patterns/renamed labels and
-references to generated `main` are unsupported rather than silently reinterpreted.
+Views require a Data-backed result at canonicalization, including through aliases.
+The other operations lower to existing Core `CastKind` operations and the shared
+`nash-codegen::casts` expansion. Decoder/checker helpers are shared by complete
+runtime type and validation mode. Validation-only helpers avoid constructing
+discarded decoded containers. Specialization preserves strict conversion effects,
+including unused polymorphic bindings.
 
-The compact differential tests cover mint/fallback dispatch, raw parameters and
-contexts, named policies/transactions, integer/byte-array redeemer checks,
-unused-but-named redeemer decoding, discarded-policy validation, explicit/default
-fallback failure and traces.
-They use the official parser, inference and codegen **only as a test oracle** and
-compare execution outcomes rather than script bytes or costs.
+Ascriptions retain `ConversionSite` until the single inference planner resolves
+them. The planner returns either a legal operation or a located checking error.
+It runs after enclosing initializer/call constraints and before generalization;
+deciding on a still-flexible input during continuation-first inference would
+incorrectly constrain a later concrete list argument to Data. Resolved operations
+are stored in `SolvedTypes::conversions` and consumed by specialization/emission.
 
-### Intentional exclusions
+| Source site | Source → target | Result and validation |
+|---|---|---|
+| Local annotated binding / module constant | Concrete serializable value → Data | `ToData`; no decode validation |
+| Local annotated binding / module constant | Same type → same type | Identity |
+| Named function result (complete or partial signature) | Int → Data | Checking error; no artifact |
+| Named function result | Data → Data | Identity |
+| Lambda result annotation | Int body annotated Data | Retain inferred Int result; no encoding |
+| Function argument / record update field | Concrete serializable value → Data parameter/field | `ToData`; no added decode validation |
+| `expect` / `is` cast pattern | Data → inferred or annotated serializable type | Full checking/refutation; unannotated Data patterns must determine their type before the body |
+| Any implicit encoding site | String, function, or unconstrained root → Data | Checking error, not runtime coercion |
+| Data cast pattern | Data → opaque type or container containing one | Checking error |
+| Explicit annotated expect | Data → supported concrete type | Full validation, including unused fields/bindings |
+| Validator parameter | Data → supported boundary type | Shallow extraction |
+| Optional datum / Data-backed purpose | Data → Data-backed view | No inspection until demanded |
 
-Located `NAF2201` diagnostics reject tests, benchmarks, environment/configuration
-modules, custom encoding decorators, type holes, partial polymorphic annotations,
-polymorphic local ascriptions, polymorphic `==`/`!=`, pipelines requiring inferred
-arity, `expect`/Data casts, backpassing/multi-pattern assignments, Pair
-construction/patterns, unknown-arity tuple indexing, curve literals, record updates,
-trace formatting/trace-if-false, labeled function calls/renamed parameter labels,
-and labeled/spread/type-qualified constructor patterns. Invalid duplicate bindings,
-qualifiers and primitive-shadowing type declarations are also rejected.
+These assignment/signature rules follow pinned `tipo/infer.rs:690–708`,
+`tipo/expr.rs:1457–1474,178–190,1982–1996` and
+`tipo/environment.rs:1704–1717`. Lambda behavior is independently established by
+`tipo/expr.rs:359–408,1901–1924`; its permissive annotation check does not replace
+the inferred body result with Data. Parameter annotations and contextual argument
+types constrain a lambda before checking its body; its written result annotation
+remains a separate conversion decision. Unbound/generic root inputs, functions
+and String do not gain implicit assignment encoding merely from a Data target.
 
-Spend, withdraw, publish, vote and propose handlers, optional datum conversion,
-custom user-data boundary layouts and complete validator ABI compatibility remain
-outside this profile. They require their own checked lowering and official runtime
-comparisons. Exact package/stdlib compatibility, blueprints and formatter support
-are not claimed.
+Encoding demands follow emitted operations. Encoded containers and external
+constructors retain their outer representation without demanding unused payload
+layouts. A shape-only list-element demand selects map storage only for a known
+Pair; unresolved nonpair payloads remain erased. Actual payload construction
+still demands its encoding layout. This follows pinned `gen_uplc.rs:4004–4085,
+4771–4793`, `gen_uplc/builder.rs:751–807` and `tipo.rs:386–395,535–542,1050–1054`.
+No generic type default is introduced.
+
+Pinned `gen_uplc.rs:4379–4384` implements `>`/`>=` by swapping operands into
+less-than builtins, including right-before-left user traces. The adapter follows
+that order rather than the former truth-equivalent negated comparison. The
+runtime regression also checks short-circuiting, sequential shadowing, imported
+renames, nullary calls and lambda annotation behavior. Native Nash is unchanged.
+
+Full decoding supports Data, Int, ByteArray, Bool, String/UTF-8, Void, encoded
+lists, pairs, tuples, Option, compressed G1/G2 points and explicitly laid-out user
+types after substitution. It rejects wrong Data forms, constructor tags, arities,
+invalid points and nested field types. Functions and ML results retain the pinned
+serialisability restrictions. Checked decoding is distinct from shallow parameter
+extraction: ignored nested tuple/list fields are not validated by a shallow cast.
+
+### Validator calling convention and artifact metadata
+
+Each named validator has a distinct generated entry function: zero or more raw
+Data parameters followed by a raw V3 context. True returns unit; False fails.
+The context fields are `[transaction, redeemer, purpose]`. Several validators in
+one module compile independently; native validator modules still select `main`.
+
+| Handler | Purpose tag | Handler inputs | Purpose fields |
+|---|---:|---|---|
+| mint | 0 | redeemer, policy, transaction | policy bytes |
+| spend | 1 | optional datum, redeemer, output reference, transaction | output reference, optional datum |
+| withdraw | 2 | redeemer, credential, transaction | credential |
+| publish | 3 | redeemer, certificate, transaction | integer index, certificate |
+| vote | 4 | redeemer, voter, transaction | voter |
+| propose | 5 | redeemer, proposal, transaction | integer index, proposal |
+| else | fallback | raw context | context unchanged |
+
+Parameters use shallow extraction. Redeemers use full checked conversion even
+when named but unused; use a named binding for decoded redeemers, or `_ : Data`
+to discard raw Data. Mint policy decoding is mandatory, including discarded
+policies. Publish/propose extract their integer index before invoking the handler.
+Transactions and non-mint purpose arguments are raw Data or Data-backed user-type
+views, not arbitrary primitive casts. Redeemer annotations are explicit; omitted
+raw boundary annotations retain the frontend baseline's Data default.
+The purpose argument field is projected even when discarded; this preserves the
+official failure on a missing field without adding nested validation.
+
+Spend requires `Option<Datum>`. Aiken's generated optional-datum binding is a
+typed view, not `expect` from raw Data: nested datum decoding occurs when fields
+are used. This preserves trace ordering and the official behavior of malformed
+ignored values. Exhaustive matching of externally laid-out data follows the
+official final-constructor default; it must not substitute for full validation.
+Use explicit `expect` from Data where full validation is intended.
+
+Each purpose can occur once. Spend has four arguments, others three. An explicit
+else with all six purposes is rejected, matching Aiken. Else-only validators do
+not unpack context. Other missing purposes reach else; an omitted fallback fails.
+This is not an independent exhaustive ledger-context schema validator.
+
+Compatibility tests use compiler traces disabled, as the real CLI does by default.
+User traces preserve evaluation order; optional Nash `--compiler-traces` adds
+implementation-specific diagnostic traces, not Aiken trace compatibility.
+
+### Compiler prelude and builtin surface
+
+`profile.rs` maps the exact pinned builtin names to compiler-owned operations.
+Its completeness check compares the full upstream builtin inventory. The prelude
+supplies Option, Bool, Ordering, Data, PRNG, Pair/container aliases and its
+higher-order and diagnostic functions without native default imports.
+The `from_int` implementation uses the internal name `integerDecimal`, avoiding
+a collision with native `Literal.fromInt`.
+
+Pinned `builtins.rs:429–443` advertises `tautology : fn(a) -> Void`, but
+`1474–1507` implements a Bool result. Compatibility preserves that discrepancy,
+including failure when the result is consumed as Void; it does not silently
+repair the upstream program. Void equality checks its operands using `ChooseUnit`.
+
+### Project loading and tools
+
+Nearest-manifest selection accepts `aiken.toml` or `nash.jsonc`; a direct manifest
+path selects explicitly. Both in one owning directory are an ambiguity.
+Aiken sources use the pinned root/name rules for `lib/`, `validators/` and `env/`.
+Config values are projected through the pinned `SimpleExpr` model into synthetic
+source with Nash-owned metadata. Only a populated environment directory requires
+`default.ak`; `--env` selects the environment import alias and config section.
+
+The lockfile is the pinned flat resolved package set. Unchanged requirements keep
+its versions; changed requirements regenerate that set. Dependency manifests do
+not recursively override the root's lock. Packages materialize under
+`build/packages/`, using the normal zipball cache or a prepared offline provider.
+Missing/malformed inputs are diagnostics. Cache fallback retains a warning;
+untracked package directories are not overwritten.
+
+Workspace members compile independently, with explicit dependencies; workspace
+membership alone does not create an import. Stable package ownership and separate
+resolution contexts prevent cross-member config/environment leakage.
+
+Solved validator metadata owns package/module/name, documentation, parameter
+labels/order/types, handler purpose and datum/redeemer bindings. A layout registry
+retains qualified type names, parameters, constructor tags, field order/types and
+encoding, including aliases and declaration refinements. Project metadata retains
+name, version, license, description, repository, compiler and Plutus target.
+No later artifact consumer must reparse the Aiken AST.
+
+Aiken output stems are `<package>@<version>.<module>.<validator>` with UTF-8 bytes
+outside ASCII letters/digits/underscore/hyphen percent-encoded using uppercase
+hex. Each entry emits `.uplc`, `.flat` and `.cbor`; collisions are errors before
+writing. Native output stems are unchanged.
+
+Blueprint serialization, parameter application, test/benchmark execution,
+formatting, HTML documentation, completion and parser extraction are excluded.
+
+### Runtime corrections to the original frontend baseline
+
+Original type spelling and explicit layouts replace the former lowercase Term
+shortcut, including across mixed-language interfaces. Encoded containers replace
+native container representations only for Aiken. Runtime tests exposed the need
+for shallow tuples and demand-driven optional datum behavior, distinct from full
+expect validation. Opaque single-field Data transparency is now explicit.
+
+The arbitrary-integer differential also exposed a shared Plutus CBOR bug:
+negative bignum tag 3 stores `-1 - value`, not the absolute magnitude. Encoding and
+decoding now follow CBOR; native source-language behavior is otherwise unchanged.
 
 ## Diagnostics and dependency maintenance
 
@@ -350,22 +568,27 @@ Nash semantic errors remain ordinary Nash reports for terminal, JSON and LSP.
 - `NAF1002`: unknown canonical import.
 - `NAF1003`: ambiguous/reserved module identity or import.
 - `NAF2001`: official Aiken parser failure.
-- `NAF2101`: integer outside the temporary source literal range.
-- `NAF2201`: unsupported NashV1 feature.
-- `NAF2301`: unsupported validator profile or role/boundary mismatch.
+- `NAF2101`: invalid integer digits (there is no i128 compatibility limit).
+- `NAF2201`: invalid/unknown adapter forms, including duplicate declarations and unknown builtin names; no valid production category uses this rejection.
+- `NAF2301`: invalid validator declaration or role/boundary mismatch.
+- `NAF2401`: invalid, conflicting or unrepresentable external data layout.
+- `NAF2402`: invalid checked-conversion source.
+- `NAP41xx`: located manifest, dependency, workspace, environment and configuration diagnostics.
+- `nash::type::private_type_leak`: Aiken public signatures exposing private types.
 
 The production Aiken dependency is exact-pinned `aiken-lang = "=1.1.23"`; its MSRV requires
 Rust 1.94.1, now selected by `rust-toolchain.toml`. The lockfile is checked in.
 An update must review upstream untyped AST/parser changes, builtin naming/signatures
 and diagnostics, then run the focused adapter/driver tests plus workspace checks.
-The compact compatibility coverage is native regression, `add_one` plus typed
-imports, unsupported declarations/regions, fixed primitives, scope/nullary behavior,
-exports and CLI/LSP paths. Backend regressions cover Aiken-backed validator execution
-and fixed integer/byte/string pattern equality, aliases and native-literal
-fallthrough. The bounded validator profile has pinned official runtime differential
-tests; extending handler/data-layout support requires extending those checks.
+Acceptance combines the unchanged pinned packages, six real-path project tests,
+the complete builtin/prelude classification checks, 35 pinned source/runtime
+comparisons, native and mixed-source regression suites, and real CLI artifacts.
+The final workspace run passed 3,272 tests; the three ignored tests are existing
+documentation examples, not compatibility gates. `cargo insta test` passes with
+no pending snapshots. Full command records and preserved historical failures live
+in Plan 14.
 
 An upstream parser-only `aiken-syntax` extraction remains desirable but is not
 available or required at runtime. Proposing that upstream split and replacing the
-dependency are Phase 3 follow-on work; one private AST version keeps that change
-local to this adapter.
+dependency are optional follow-on work in Plan 14; one private AST version keeps
+that change local to this adapter.

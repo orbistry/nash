@@ -24,7 +24,8 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-parse` | parser + Elm error hierarchy | extend ([plans/01](plans/01-syntax.md)) |
 | `nash-frontend` | parser-neutral contract and registry | done ([plans/14](plans/14-aiken-frontend.md)) |
 | `nash-frontend-nash` | native syntax adapter | done |
-| `nash-frontend-aiken` | official Aiken parser + NashV1 lowering | common syntax done; validators deferred |
+| `nash-frontend-aiken` | exact Aiken 1.1.23 parser adapter and Nash-owned source lowering | source/runtime compatibility done ([plans/14](plans/14-aiken-frontend.md)) |
+| `nash-project-aiken` | Aiken manifests, locks/packages, workspaces, environments and config | source/project compatibility done ([plans/14](plans/14-aiken-frontend.md)) |
 | `nash-ast` | canonical AST | extend |
 | `nash-can` | canonicalization, interfaces | extend |
 | `nash-constrain` | union-find types, canonical instantiation, type errors | done |
@@ -73,8 +74,10 @@ Planned, in execution order (each links to its plan):
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)
 - [ ] 12 Stdlib `nash/core` — [plans/12-stdlib.md](plans/12-stdlib.md)
 - [ ] 13 `nash fmt`, `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md)
-- [x] 14 Frontend seam, Aiken common syntax and bounded mint/fallback validators (Phases 0–2) — [plans/14-aiken-frontend.md](plans/14-aiken-frontend.md)
-- [ ] 14 follow-on: additional Aiken validator purposes/custom layouts; upstream parser-only extraction when available
+- [x] 14 Aiken frontend, runtime, source and project compatibility — [plans/14-aiken-frontend.md](plans/14-aiken-frontend.md)
+  - [x] Shared frontend, common syntax, runtime layouts, checked expect and all six validator purposes; R1–R3 repaired with pinned source/runtime regressions
+  - [x] Complete pinned language/prelude/builtins, unchanged official stdlib, projects/packages, environments, checked tools, multiple validators and solved artifact metadata; G1–G11 verified
+  - [ ] Follow-on artifacts, test/benchmark execution, user tools and optional upstream parser-only extraction
 
 Later: LSP features, web playground, package registry (pubgrub), TypeScript codegen.
 

@@ -2,11 +2,12 @@
 
 ## Status and scope
 
-This is the single tracker for the former Plans 14, 15 and 16. Completed frontend
-and runtime work is summarized below; the source/project completion gates and
-19 implementation chunks remain open. Preserve the completed runtime contract
-while implementing those chunks; an inventory item already supported by the
-baseline needs verification or extension, not a second implementation.
+This is the single tracker for the former Plans 14, 15 and 16. Baseline repairs
+R1–R3, source/project gates G1–G11 and applicable Chunks 1–19 are complete.
+The earlier frontend/runtime milestones and their reported defects remain
+recorded below as history. The final validation record identifies the checks
+performed on the completed implementation; it does not infer a pass from that
+history. Follow-on artifact serialization, runners and user tools remain excluded.
 
 The source/project finish line does not include full Aiken tool parity. Tooling
 and optional dependency extraction remain explicit follow-on work at the end.
@@ -15,9 +16,11 @@ The supported implementation profile is documented in
 
 ### How to use this tracker
 
-The current assignment is to complete the remaining source/project gates G1–G11
-and all applicable work in Chunks 1–19. Historical gate labels refer to completed
-milestones. The unchecked follow-on items are outside this assignment.
+The current assignment is to resolve baseline repairs R1–R3, then complete the
+remaining source/project gates G1–G11 and all applicable work in Chunks 1–19.
+The repairs are prerequisites within this plan, not a new milestone or a second
+tracker. Historical gate labels refer to recorded milestones. The unchecked
+follow-on items are outside this assignment.
 
 Record the starting commit and check the working tree before editing. Preserve
 unrelated changes. Verify the current code and run a focused baseline check.
@@ -31,12 +34,271 @@ Do not stop after an audit, new interfaces, one chunk, or a sample build. Comple
 the remaining gates on the final code. Record a real blocker against its gate;
 do not mark a blocked gate complete or replace it with a weaker check.
 
+Current implementation run starts at `633212a050c60c41abcf52325a65d4140294489d`.
+The initial tree has 106 unstaged and two untracked paths; preserve this work.
+Baseline: `cargo test -p nash-frontend-aiken --test validators` passes all
+11 existing pinned differential tests. This is not a workspace pass.
+The reference, malformed-Data, validation-depth, source-acceptance and tool
+declaration clarifications in this assignment are recorded below and remain
+binding; R1–R3 precede the remaining source/project gates.
+
+Focused reproduction: `cargo test -p nash-frontend-aiken --test validators
+assignment_encoding` reports one pass (concrete List<Int>) and four failures:
+empty list/None require an erased layout, module constant has a type mismatch,
+and the rejected function result is incorrectly accepted. Each case first
+checks exact-pinned source acceptance/rejection.
+
+Pinned references: Aiken `v1.1.23` commit
+`8949565a9969278846ffefe30bc3b892029dd318`; selected official stdlib `v3.1.0`
+commit `7d5cee54b2bb4eea211ae3bd806c7c39e5fd899d` (manifest compiler `v1.1.21`,
+Plutus `v3`, dependency `aiken-lang/fuzz` `v2.2.0`). Project adapter crate
+`aiken-project = "=1.1.23"` is available from crates.io.
+Pinned `aiken-project/src/config.rs::validate_v3_only` accepts only V3.
+`Project::new` warns, rather than rejects, when the manifest compiler version
+differs from the running compiler; preserve that behavior, not an invented
+semver requirement. `aiken_files` requires `env/default.ak` only when an `.ak`
+file exists in `env/`, not for an empty directory. These qualify Chunk 12's
+target/environment checks.
+The pinned project model uses a flat resolved lock package set:
+`deps/manifest.rs::resolve_versions` seeds it from root dependencies and
+`Project::with_dependencies` loads those packages, without recursively merging
+dependency manifests. Workspace `watch.rs::with_project` checks members
+independently; membership does not implicitly expose another member's modules.
+Dependency/workspace acceptance must use explicit dependency declarations and
+the prepared resolved package set, not invent implicit member imports or a
+newer package-version solver. Required direct/transitive source-import and
+workspace gates remain required under these verified rules.
+
+Continuation baseline at the same commit: 182 unstaged tracked paths and 22
+untracked paths, all preserved. `cargo test -p nash-frontend-aiken --test
+validators assignment_encoding`: five passed. Existing repair claims remain
+supported by this focused check, not a new workspace pass.
+`cargo test -p nash-driver --test aiken_projects`: named validators passed;
+transitive layout metadata assertion, env/config Flat encoding and imported
+record update failed; the official stdlib check aborted with stack overflow.
+LLDB locates the overflow in the large recursive `infer_expr_inner` frame.
+At this continuation baseline, G1–G11 remained open pending those integration repairs.
+
+Commit completed, verified sections as they land. Keep shared compiler/project
+contract changes together when splitting them would leave an unusable checkout;
+record final acceptance and documentation in a subsequent commit.
+
+### Final implementation and validation
+
+Implementation commits:
+- `c2e04c66` — Plutus Data serialization and discharged-value repairs.
+- `ff78b987` — Aiken source/runtime, shared identities and project compilation.
+
+Shared project contracts live in `nash-frontend`, below both the driver and
+project adapter. Package/source/version identities reach interfaces, layouts,
+specialization and owned validator metadata. Independent workspace resolution
+contexts preserve environment/config selection. The implementation uses existing
+arena lifetimes and concrete APIs, not the illustrative trait scaffolding below.
+
+The unchanged stdlib exposed two integration defects: nested pipelines reused
+one generated binder, and lambda parameter/context constraints arrived after
+body operations. Hygienic canonical names and earlier parameter constraints fix
+both without relaxing function-result conversions. `FieldOrModule` preserves
+pinned record-first/module-fallback resolution; lexical uses remain observable.
+Aiken private-export checking is an explicit frontend policy, leaving native
+export behavior unchanged. Cross-list decorators and the prelude `tautology`
+signature/runtime discrepancy follow the pinned rules recorded in the architecture
+document. Recursive compiler frames and large runtime metadata were corrected
+without raising stacks or lowering resource limits.
+
+Final commands, run sequentially to avoid Cargo artifact interference:
+- `cargo fmt --all -- --check` — passed.
+- `cargo check --workspace --all-targets` — passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — passed.
+- `cargo test --workspace` — 3,272 passed, three ignored documentation examples.
+- `cargo insta test` — passed; no snapshots to review.
+
+The passing workspace includes all 35 pinned differential tests, six project
+integration tests (including the non-ignored stdlib check), 15 offline project
+loader tests and 16 LSP tests. The ignored examples are the existing driver
+overview and parser `one_of`/number-literal documentation; no required gate was
+skipped. Earlier snapshot failures, the growing-layout stack overflow and editor
+URI regressions were repaired and rerun. Doctest artifact errors from overlapping
+Cargo invocations disappeared on the sequential full run.
+
+Real `cargo run -p nash-cli --` checks used temporary copies of the committed
+fixtures with prepared normal package directories; official source was unchanged:
+- `check <stdlib-project> --no-warnings` — 62 modules, 810 declarations.
+- `check <dependency-project> --no-warnings` — three modules, four declarations;
+  only the direct package is a root requirement, with the transitive package
+  retained in the pinned flat lock.
+- `check <env-config-project> --env preview --no-warnings` — five modules,
+  ten declarations.
+- `build <multi-validator-project>` — two distinct UPLC/Flat/CBOR sets,
+  `alpha` 198 Flat bytes and `beta` 135 bytes. The project combines default/named
+  environments, config, a test and a benchmark; the tools are not executed.
+  It currently emits one non-fatal generated unused-variable warning (`$aiken2`).
+- `build examples/vesting --out <temporary-directory>` — native `Vesting`
+  515 Flat bytes and `VestingParam` 520 bytes, unchanged.
+- Final repair CLI smoke: accepted R1/R2/control project checks and builds
+  (126 Flat bytes); isolated R3 exits 1 for both commands, with no build directory.
+
+All required source/project gates pass. No in-scope external blocker remains.
+Temporary source probes and generated acceptance artifacts are removed after
+verification. This is source/project compatibility, not full Aiken tool parity.
+
+## Required baseline repairs
+
+A review of the unstaged branch reported the three defects below. The review
+reported 11 pinned differential tests and 1,788 affected-suite tests passing. Its
+additional isolated probes reproduced the defects against exact Aiken `v1.1.23`.
+It did not run the full workspace checks. Those results belong to that reviewed
+working tree; they are not a new full-workspace pass.
+
+This section records the review supplied by the project owner. The current
+unstaged source was not included with the report. Reproduce each case on the
+working tree before changing code. Treat the file locations as search hints;
+line numbers can change. Record a short result if a case is already fixed.
+
+These defects affect the claimed runtime profile. They are not deferred package,
+standard-library, or language-surface work. Preserve the recorded history below,
+but do not treat it as proof that the current runtime profile has no defects.
+
+### [x] R1 — Encode empty polymorphic values without needless layout demands
+
+Reported locations:
+
+- `crates/nash-codegen/src/demand.rs:533–545,559–565`
+- `crates/nash-codegen/src/build.rs:597–603`
+
+Reported reproductions, each used in an isolated validator:
+
+```aiken
+let encoded: Data = []
+```
+
+```aiken
+let encoded: Data = None
+```
+
+The review reports that Aiken compiles and evaluates both. Nash fails with:
+
+```text
+BuildError: operation needs a concrete runtime layout, got 'erased
+```
+
+**Required result**
+
+- Both cases must compile and evaluate with the same encoded result as the pinned
+  compiler. The test must use the encoded value so that optimization cannot remove
+  the operation being checked.
+- Determine how the pinned compiler handles the unconstrained type argument.
+  Check the shared demand, specialization, and encoding path before choosing a fix.
+- Do not require an element or payload layout when the emitted operation does not
+  use it. Keep concrete layout demands where the emitted operation needs them.
+- Do not assign a guessed type to every erased variable. Do not special-case the
+  source spellings `[]` or `None` in the frontend to bypass the shared rules.
+- Retain a concrete `List<Int>` control to check that payload encoding still works.
+
+### [x] R2 — Apply the verified Data-ascription rule to module constants
+
+Reported location:
+
+- `crates/nash-frontend-aiken/src/lower/declarations.rs:78–100`
+
+```aiken
+pub const encoded: Data = 1
+```
+
+The review reports that Aiken accepts this declaration and a validator can use
+its integer `Data` value. Nash reports `nash::type::mismatch`. The constant lowerer
+attaches the annotation without the conversion used for local binding ascriptions.
+
+**Required result**
+
+- The declaration must check, build, and produce the same `Data` value as the
+  pinned compiler when used by a validator.
+- Apply the verified assignment-ascription rule through the shared conversion
+  policy. Preserve module-constant initializer restrictions and source regions.
+- Retain enough source-site information to distinguish a module constant, a local
+  binding, and a function result. Shared code must not erase those distinctions.
+- Do not add a constant-only conversion shortcut that remains outside the planner
+  when Chunk 6 is complete.
+
+### [x] R3 — Reject implicit function-result encoding where Aiken rejects it
+
+Reported location:
+
+- `crates/nash-frontend-aiken/src/lower/declarations.rs:287–292`
+
+```aiken
+pub fn encoded() -> Data { 1 }
+```
+
+The review reports that Aiken rejects this with `CouldNotUnify`. Nash inserts an
+encoding conversion and emits `iData 1`.
+
+**Required result**
+
+- Reject this declaration during checking with a located type diagnostic. A
+  runtime failure is not an equivalent result. Do not emit a new successful build
+  artifact for the rejected source.
+- Remove the rule that treats a complete `Data` return annotation as permission
+  to encode any body value. Verify the exact function-signature rule before the
+  replacement is implemented.
+- Keep conversions at source sites where the pinned compiler permits them. Do
+  not ban `ToData` globally to repair this case.
+- Do not infer rules for function arguments, lambdas, partial annotations, or
+  nested contexts from this one example. Audit those sites in Chunk 6.
+
+### Repair acceptance and order
+
+Use one small regression group with five logical cases: the empty list, `None`,
+the module constant, the rejected function return, and the concrete `List<Int>`
+control. Reuse the current differential harness. Keep the rejected source in a
+separate case so that it does not prevent the accepted cases from being checked.
+Compare source acceptance or rejection first. Evaluate and compare the encoded
+values only for accepted cases. Exact diagnostic text does not need to match.
+
+Run the affected suites and the existing pinned differential tests after the
+repairs. Preserve native Nash behavior and the recorded shallow, view, and full
+validation rules. Do not claim a new full-workspace pass unless it was run.
+
+Resolve R1–R3 before new language or package features. Bring forward the necessary
+part of Chunk 6 if a shared conversion rule is needed. Do not create two planners.
+Mark each repair complete only after its regression check passes. Record the fix
+and the pinned rule briefly in `docs/aiken-frontend.md`; update `SPEC.md` and the
+changeset as needed. Then continue through Chunks 1–19 and gates G1–G11. Do not stop
+the full assignment after the repairs.
+
+Repair implementation uses one deferred inference-time ascription planner;
+decisions run before scope generalization, after initializer/call constraints.
+An eager planner incorrectly constrained the concrete-list control's input to
+Data before its generated sequential-binding argument was inferred.
+Six tests that asserted the old private lowering shape were removed rather than
+re-pinned. A compact runtime comparison retains their import/rename, nullary
+call, shadowing, short-circuit and builtin behavior coverage and checks lambda
+result annotations independently. It also exposed a baseline trace-order defect:
+pinned `gen_uplc.rs:4379–4384` emits `>`/`>=` by swapping operands into
+`lessThanInteger`/`lessThanEqualsInteger`, evaluating the right operand first.
+The old negated comparison preserved truth values but not that trace order.
+The adapter now follows the pinned operation; native Nash is unchanged.
+
+Repair verification: `cargo test -p nash-frontend-aiken --test validators`:
+17 passed. Affected suites (`cargo test -p nash-source -p nash-ast -p nash-can
+-p nash-constrain -p nash-solve -p nash-ir -p nash-codegen
+-p nash-frontend-aiken -p nash-driver`): 953 passed, one ignored. This is not a
+workspace pass and does not satisfy the remaining source/project gates.
+Real CLI `check` and `build` accepted the combined R1/R2/control project and
+emitted a 123-byte Flat validator; the isolated R3 project exited 1 for both
+commands with a located type mismatch and no build directory.
+The old mixed-language layout fixture relied on the rejected implicit function
+return; it now uses a legal local Data ascription and its runtime test passes.
+At this repair checkpoint, R1–R3 were complete; shared identities and the remaining
+source/project chunks still awaited implementation. The final state is recorded above.
+
 ## Completed work
 
-The former frontend and runtime plans are complete: frontend gates G1–G7,
-bounded-validator gates V1–V5, and runtime gates G1–G7 passed. Their overlapping
-checklists are consolidated below. These are recorded implementation results,
-not a claim that the remaining source/project gates pass.
+The former frontend and runtime plans recorded passes for frontend gates G1–G7,
+bounded-validator gates V1–V5, and runtime gates G1–G7. Their overlapping checklists
+are consolidated below. Preserve these historical results. The later defects in
+R1–R3 qualify the runtime completion claim until repaired. This section does not
+claim that the remaining source/project gates pass.
 
 - [x] **Shared frontend and common syntax.** `nash-frontend` and
   `nash-frontend-nash` provide one parser-neutral registry for discovery,
@@ -101,8 +363,9 @@ not a claim that the remaining source/project gates pass.
 
 ### Stable runtime decisions and corrections
 
-Preserve these semantics unless a remaining source or package feature exposes an
-actual defect:
+Preserve these semantics except where a defect is established against the pinned
+compiler. The baseline repairs above are required corrections, not permission to
+change unrelated validation or evaluation rules:
 
 - Opaque single-field wrappers use explicit Transparent wire encoding. Shallow
   tuple extraction retains encoded fields; Bool/Void/Pair shallow casts
@@ -164,9 +427,13 @@ The supported project can contain:
 - The synthetic `config` module.
 - More than one named validator in one source module.
 
-The same source must have equivalent observable on-chain behavior when the
-Aiken 1.1.23 compiler and Nash compile it. Compare the same input under matching
-target, environment, parameter, and trace settings.
+For in-scope Aiken source, Nash must match the pinned compiler's source acceptance
+and rejection rules. A program that Aiken rejects must not become valid only
+because Nash adds an implicit conversion. Native Nash source keeps its own rules.
+
+For source accepted by both compilers, the same source must have equivalent
+observable on-chain behavior when Aiken 1.1.23 and Nash compile it. Compare the same
+input under matching target, environment, parameter, and trace settings.
 
 Observable behavior means:
 
@@ -252,139 +519,145 @@ It must not call the Aiken type checker or code generator.
 
 ### G1 — Exact language inventory
 
-- [ ] Every Aiken 1.1.23 definition variant has an explicit compatibility
+- [x] Every Aiken 1.1.23 definition variant has an explicit compatibility
   classification.
-- [ ] Every Aiken 1.1.23 annotation variant has an explicit compatibility
+- [x] Every Aiken 1.1.23 annotation variant has an explicit compatibility
   classification.
-- [ ] Every Aiken 1.1.23 expression variant has an explicit compatibility
+- [x] Every Aiken 1.1.23 expression variant has an explicit compatibility
   classification.
-- [ ] Every Aiken 1.1.23 pattern variant has an explicit compatibility
+- [x] Every Aiken 1.1.23 pattern variant has an explicit compatibility
   classification.
-- [ ] Every assignment and argument form has an explicit compatibility
+- [x] Every assignment and argument form has an explicit compatibility
   classification.
-- [ ] Every module kind has an explicit project and compiler rule.
-- [ ] Production lowering has no wildcard branch that returns a general
+- [x] Every module kind has an explicit project and compiler rule.
+- [x] Production lowering has no wildcard branch that returns a general
   unsupported-language diagnostic.
-- [ ] An Aiken dependency update that adds an AST variant causes a compile-time
+- [x] An Aiken dependency update that adds an AST variant causes a compile-time
   match failure or a focused coverage-test failure.
 
 ### G2 — Complete production language surface
 
-- [ ] All production Aiken 1.1.23 syntax reaches Nash canonicalization and type
+- [x] All production Aiken 1.1.23 syntax reaches Nash canonicalization and type
   solving.
-- [ ] Type-dependent syntax is not guessed by the untyped frontend.
-- [ ] Evaluation order matches Aiken for pipelines, assignments, calls, traces,
+- [x] Type-dependent syntax is not guessed by the untyped frontend.
+- [x] Evaluation order matches Aiken for pipelines, assignments, calls, traces,
   record updates, and logical chains.
-- [ ] Valid test and benchmark declarations parse and type-check but do not
+- [x] Valid test and benchmark declarations parse and type-check but do not
   become production validator roots. Invalid bodies and signatures produce
   normal diagnostics.
-- [ ] `NAF2201` is not used for a valid Aiken 1.1.23 production language form.
+- [x] `NAF2201` is not used for a valid Aiken 1.1.23 production language form.
 
 ### G3 — Type-directed operations and conversions
 
-- [ ] One compiler operation owns all implicit conversion decisions.
-- [ ] Each conversion has a documented source site and source region.
-- [ ] Shallow extraction, view conversion, and full validation remain distinct.
-- [ ] Polymorphic equality and inequality select Aiken operations from solved
+- [x] One compiler operation owns all implicit conversion decisions.
+- [x] Each conversion has a documented source site and source region.
+- [x] Baseline repairs R1–R3 pass their focused regression checks.
+- [x] Local binding, module-constant, and function-result ascriptions follow
+  their verified acceptance and rejection rules. A `Data` target alone does not
+  authorize encoding.
+- [x] Layout demands match the emitted operation. Empty polymorphic values work
+  without guessed type defaults or the removal of required payload layout checks.
+- [x] Shallow extraction, view conversion, and full validation remain distinct.
+- [x] Polymorphic equality and inequality select Aiken operations from solved
   types. They do not use user Nash trait instances.
-- [ ] Labeled calls, tuple indexing, record updates, trace arguments, and
+- [x] Labeled calls, tuple indexing, record updates, trace arguments, and
   pipelines use resolved types or declarations.
-- [ ] Every compatibility conversion follows a rule verified against the
+- [x] Every compatibility conversion follows a rule verified against the
   pinned Aiken behavior, with a defined validation depth. No arbitrary cast or
   added full validation replaces a required shallow or view operation.
 
 ### G4 — Aiken prelude and builtins
 
-- [ ] `.ak` modules use the Aiken prelude. They do not receive Nash default
+- [x] `.ak` modules use the Aiken prelude. They do not receive Nash default
   imports.
-- [ ] Native `.nash` modules keep their current default imports and behavior.
-- [ ] Every builtin exposed by Aiken 1.1.23 has one explicit classification.
-- [ ] Each builtin either maps to a Nash builtin, uses a defined lowering, or
+- [x] Native `.nash` modules keep their current default imports and behavior.
+- [x] Every builtin exposed by Aiken 1.1.23 has one explicit classification.
+- [x] Each builtin either maps to a Nash builtin, uses a defined lowering, or
   returns a precise Plutus-version diagnostic.
-- [ ] The builtin table has a focused completeness test.
+- [x] The builtin table has a focused completeness test.
 
 ### G5 — Official standard library
 
-- [ ] One exact official Aiken standard-library release is pinned in the
+- [x] One exact official Aiken standard-library release is pinned in the
   acceptance fixture.
-- [ ] Its source checks through Nash without source edits.
-- [ ] The package enters through the normal Aiken package path.
-- [ ] Nash does not replace the standard library with `nash/core` shims.
-- [ ] No module-name-specific exception exists for a standard-library file.
+- [x] Its source checks through Nash without source edits.
+- [x] The package enters through the normal Aiken package path.
+- [x] Nash does not replace the standard library with `nash/core` shims.
+- [x] No module-name-specific exception exists for a standard-library file.
 
 ### G6 — Aiken project loading
 
-- [ ] `nash check <path>` finds the nearest `aiken.toml` when no nearer
+- [x] `nash check <path>` finds the nearest `aiken.toml` when no nearer
   `nash.jsonc` owns the path.
-- [ ] A direct manifest path selects the correct project loader.
-- [ ] A directory that contains both manifest kinds gives a clear ambiguity
+- [x] A direct manifest path selects the correct project loader.
+- [x] A directory that contains both manifest kinds gives a clear ambiguity
   diagnostic unless the caller selects one format explicitly.
-- [ ] Root `lib/`, `validators/`, and `env/` source roots use Aiken naming rules.
-- [ ] The selected configuration creates a synthetic `config` module.
-- [ ] The selected environment follows Aiken `default` and `--env` behavior.
-- [ ] Aiken workspace members load with stable package ownership.
+- [x] Root `lib/`, `validators/`, and `env/` source roots use Aiken naming rules.
+- [x] The selected configuration creates a synthetic `config` module.
+- [x] The selected environment follows Aiken `default` and `--env` behavior.
+- [x] Aiken workspace members load with stable package ownership.
 
 ### G7 — Package and lock resolution
 
-- [ ] Direct and transitive dependencies resolve from `aiken.toml`.
-- [ ] `aiken.lock` is read and written with the selected Aiken 1.1.23 behavior.
-- [ ] The normal Aiken package cache and build dependency paths work.
-- [ ] CI tests use local fixtures or a prepared cache. They do not need network
+- [x] Direct and transitive dependencies resolve from `aiken.toml`.
+- [x] `aiken.lock` is read and written with the selected Aiken 1.1.23 behavior.
+- [x] The normal Aiken package cache and build dependency paths work.
+- [x] CI tests use local fixtures or a prepared cache. They do not need network
   access.
-- [ ] A dependency package contributes only its library surface to production
+- [x] A dependency package contributes only its library surface to production
   compilation.
-- [ ] Duplicate or ambiguous module providers return a clear located project
+- [x] Duplicate or ambiguous module providers return a clear located project
   diagnostic.
-- [ ] Package identity is part of compiler-owned type, layout, decoder, entry
+- [x] Package identity is part of compiler-owned type, layout, decoder, entry
   point, and artifact identities.
 
 ### G8 — Multiple validators and artifact metadata
 
-- [ ] One source module can define more than one named validator.
-- [ ] Each validator becomes a separate compiler entry point and build artifact.
-- [ ] Native Nash validator modules still use their current `main` model.
-- [ ] Validator name, module, package, documentation, parameter order, parameter
+- [x] One source module can define more than one named validator.
+- [x] Each validator becomes a separate compiler entry point and build artifact.
+- [x] Native Nash validator modules still use their current `main` model.
+- [x] Validator name, module, package, documentation, parameter order, parameter
   labels, handlers, datum, redeemer, solved types, and layout identities survive
   the build.
-- [ ] Project title, version, license, description, repository, compiler target,
+- [x] Project title, version, license, description, repository, compiler target,
   and Plutus version survive as project metadata.
-- [ ] This plan does not serialize a blueprint.
+- [x] This plan does not serialize a blueprint.
 
 ### G9 — CLI, diagnostics, and editor safety
 
-- [ ] `nash check` and `nash build` accept an Aiken project root without a Nash
+- [x] `nash check` and `nash build` accept an Aiken project root without a Nash
   configuration file.
-- [ ] `nash build` emits one UPLC, Flat, and CBOR set for each Aiken validator
+- [x] `nash build` emits one UPLC, Flat, and CBOR set for each Aiken validator
   entry point.
-- [ ] File names are stable and contain enough identity to avoid collisions.
-- [ ] Source and package errors have useful regions and file paths.
-- [ ] Existing `.ak` LSP diagnostics continue to use the shared project and
+- [x] File names are stable and contain enough identity to avoid collisions.
+- [x] Source and package errors have useful regions and file paths.
+- [x] Existing `.ak` LSP diagnostics continue to use the shared project and
   frontend paths.
-- [ ] This plan adds no formatter, documentation generator, or completion
+- [x] This plan adds no formatter, documentation generator, or completion
   engine.
 
 ### G10 — Native Nash regression safety
 
-- [ ] Native Nash projects keep their current project, import, type, validator,
+- [x] Native Nash projects keep their current project, import, type, validator,
   and build behavior.
-- [ ] Native script sizes do not change without a recorded reason.
-- [ ] Mixed Nash and Aiken graphs still compile where the public types are
+- [x] Native script sizes do not change without a recorded reason.
+- [x] Mixed Nash and Aiken graphs still compile where the public types are
   compatible.
-- [ ] No Aiken parser or project type enters Nash canonicalization, solving, IR,
+- [x] No Aiken parser or project type enters Nash canonicalization, solving, IR,
   or code generation.
 
 ### G11 — Final compatibility acceptance
 
-- [ ] One unmodified Aiken project with the official standard library checks
+- [x] One unmodified Aiken project with the official standard library checks
   through Nash.
-- [ ] One unmodified Aiken project with a direct and a transitive dependency
+- [x] One unmodified Aiken project with a direct and a transitive dependency
   checks through Nash from a prepared local cache.
-- [ ] One project uses `env`, synthetic `config`, tests, benchmarks, and more
+- [x] One project uses `env`, synthetic `config`, tests, benchmarks, and more
   than one validator.
-- [ ] The representative validators build and execute with equivalent outcomes
+- [x] The representative validators build and execute with equivalent outcomes
   under Aiken 1.1.23 and Nash.
-- [ ] All required workspace validation commands pass.
-- [ ] `docs/aiken-frontend.md`, `SPEC.md`, and changesets describe the final
+- [x] All required workspace validation commands pass.
+- [x] `docs/aiken-frontend.md`, `SPEC.md`, and changesets describe the final
   supported claim and the remaining tool-only exclusions.
 
 ## Architecture
@@ -764,11 +1037,19 @@ or name error. It must not fall back to source order.
 
 ### Conversion planner
 
-Use one frontend-neutral conversion planner.
+Use one frontend-neutral conversion planner. Preserve source-site distinctions
+until the rule is selected. A shared implementation does not mean that all sites
+permit the same source and target types. A rejected conversion returns a normal
+checking diagnostic through `Result`; it must not become `Identity` or `Apply`.
+
+The example below gives module constants their own site. Equivalent context is
+acceptable. Separate `let` and `expect` when their validation rules differ. The
+presence of `FunctionResult` names a context; it does not authorize a conversion.
 
 ```rust
 pub enum ConversionSite {
     AnnotatedBinding,
+    ModuleConstant,
     PatternBinding,
     ValidatorParameter,
     ValidatorDatum,
@@ -799,13 +1080,19 @@ pub fn plan_conversion(
 
 `plan_conversion` is unimplemented at the start of this plan.
 
-Purpose: select the one legal conversion for a solved source and target type.
+Purpose: select a legal conversion, or reject it, for a source site and the solved
+source and target types.
 
 Example: an annotated `expect value: MyRecord = raw_data` selects
 `ValidateData`, while a validator parameter can select `FromDataShallow`.
 
-Every generated `Expr::Convert` must have one planner result or one explicit
-source construct from the completed runtime baseline.
+Every generated `Expr::Convert` must have one planner result or one verified
+explicit source construct from the runtime baseline. A lowerer-added conversion
+is not an explicit user operation. Correct R2 and R3 before treating any existing
+ascription path as a rule to preserve.
+
+The matrix must include the reported differences between a local binding, a
+module constant, and a function return. Record both accepted and rejected cases.
 
 ### Aiken compiler environment
 
@@ -1044,8 +1331,10 @@ Constructor patterns must include:
 
 ## Remaining work sequence
 
-Each chunk below is pending. Mark its heading complete only when its done
-criteria pass. The G1–G11 checklist records the shared acceptance requirements.
+Resolve the required baseline repairs R1–R3 first. Each chunk below remains
+pending unless its full done criteria pass. The G1–G11 checklist records the shared
+acceptance requirements. Reuse the repaired conversion path in Chunk 6; do not
+implement it a second time.
 
 Chunk numbers are tracking identifiers, not a strict execution order. Use the
 order required by dependencies. Keep the existing numbers so references remain
@@ -1061,7 +1350,7 @@ Use the pinned standard library early to find language gaps. Its final acceptanc
 must still use the normal project and package path without source changes.
 Verify existing support before adding it again.
 
-## [ ] Chunk 1 — Freeze the compatibility matrix
+## [x] Chunk 1 — Freeze the compatibility matrix
 
 **Files**
 
@@ -1093,7 +1382,7 @@ upstream AST variant cannot enter silently.
 
 ---
 
-## [ ] Chunk 2 — Add type-directed surface nodes
+## [x] Chunk 2 — Add type-directed surface nodes
 
 **Files**
 
@@ -1138,7 +1427,7 @@ resolved declaration or type.
 
 ---
 
-## [ ] Chunk 3 — Complete annotations, parameters, and calls
+## [x] Chunk 3 — Complete annotations, parameters, and calls
 
 **Files**
 
@@ -1181,7 +1470,7 @@ syntax.
 
 ---
 
-## [ ] Chunk 4 — Complete expressions
+## [x] Chunk 4 — Complete expressions
 
 **Files**
 
@@ -1225,7 +1514,7 @@ returns `NAF2201`.
 
 ---
 
-## [ ] Chunk 5 — Complete patterns and assignments
+## [x] Chunk 5 — Complete patterns and assignments
 
 **Files**
 
@@ -1272,7 +1561,7 @@ pattern compilation.
 
 ---
 
-## [ ] Chunk 6 — Centralize implicit conversions
+## [x] Chunk 6 — Centralize implicit conversions
 
 **Files**
 
@@ -1290,31 +1579,38 @@ pattern compilation.
 - Keep explicit `expect` validation and validator boundary behavior from the completed runtime baseline.
 - Add rules found by the exact Aiken 1.1.23 type-inference and code-generation
   audit.
-- Reject conversion pairs that Aiken rejects.
+- Reject source-site and type combinations that Aiken rejects. The same pair of
+  source and target types can be legal at one site and illegal at another.
+- Preserve the R1–R3 fixes and use their regression cases for this chunk. Verify
+  constant assignments and function-signature checking as separate source sites.
 - Preserve qualified specialized layout identity in every conversion.
 
 Create a conversion matrix in the architecture document. It must state:
 
 - Source type class.
 - Target type class.
-- Source site.
-- Conversion kind.
+- Source site, including local bindings, module constants, and function results.
+- Whether the source is accepted or rejected.
+- Conversion kind when accepted.
+- Required layout information, including unresolved empty payload types.
 - Validation depth.
-- Failure behavior.
+- Failure stage and behavior.
 
 **Tests**
 
-Use a small matrix test for legal and illegal conversion plans. Keep the existing
-runtime-baseline differential tests.
+Use a small matrix test for legal and illegal source-site conversion plans. Reuse
+the R1–R3 tests. Keep the existing runtime-baseline differential tests. A successful
+build alone does not prove that a source form should have been accepted.
 
 **Done when**
 
-Every implicit conversion has one documented planner rule. No lowerer contains a
-private conversion decision.
+Every implicit conversion has one documented, source-site-specific planner rule.
+Rejected sites produce checking diagnostics. No lowerer contains a private
+conversion decision. R1–R3 still pass after the shared policy is complete.
 
 ---
 
-## [ ] Chunk 7 — Complete polymorphic operations and traces
+## [x] Chunk 7 — Complete polymorphic operations and traces
 
 **Files**
 
@@ -1345,7 +1641,7 @@ Aiken 1.1.23 and Nash.
 
 ---
 
-## [ ] Chunk 8 — Add the Aiken compiler environment
+## [x] Chunk 8 — Add the Aiken compiler environment
 
 **Files**
 
@@ -1380,7 +1676,7 @@ missing prelude or builtin definitions.
 
 ---
 
-## [ ] Chunk 9 — Accept tests and benchmarks without runners
+## [x] Chunk 9 — Accept tests and benchmarks without runners
 
 **Files**
 
@@ -1412,7 +1708,7 @@ A project does not fail only because it contains valid Aiken tests or benchmarks
 
 ---
 
-## [ ] Chunk 10 — Compile the official standard library from a local source tree
+## [x] Chunk 10 — Compile the official standard library from a local source tree
 
 **Files**
 
@@ -1444,7 +1740,7 @@ lowering.
 
 ---
 
-## [ ] Chunk 11 — Add project-loader registration and manifest selection
+## [x] Chunk 11 — Add project-loader registration and manifest selection
 
 **Files**
 
@@ -1478,7 +1774,7 @@ lowering.
 
 ---
 
-## [ ] Chunk 12 — Implement Aiken manifest, environment, and config behavior
+## [x] Chunk 12 — Implement Aiken manifest, environment, and config behavior
 
 **Files**
 
@@ -1516,7 +1812,7 @@ One unmodified project that imports `env` and `config` checks through Nash.
 
 ---
 
-## [ ] Chunk 13 — Implement dependency, lock, and cache resolution
+## [x] Chunk 13 — Implement dependency, lock, and cache resolution
 
 **Files**
 
@@ -1554,7 +1850,7 @@ CI.
 
 ---
 
-## [ ] Chunk 14 — Make module and interface identity package-aware
+## [x] Chunk 14 — Make module and interface identity package-aware
 
 **Files**
 
@@ -1590,7 +1886,7 @@ No semantic cache or lookup can confuse definitions from different packages.
 
 ---
 
-## [ ] Chunk 15 — Add Aiken workspace support
+## [x] Chunk 15 — Add Aiken workspace support
 
 **Files**
 
@@ -1617,7 +1913,7 @@ One small workspace with two members is sufficient. One member imports the other
 
 ---
 
-## [ ] Chunk 16 — Support multiple validators and stable metadata
+## [x] Chunk 16 — Support multiple validators and stable metadata
 
 **Files**
 
@@ -1665,7 +1961,7 @@ validator.
 
 ---
 
-## [ ] Chunk 17 — Preserve future blueprint input without generating a blueprint
+## [x] Chunk 17 — Preserve future blueprint input without generating a blueprint
 
 **Files**
 
@@ -1706,7 +2002,7 @@ source or calling the Aiken type checker.
 
 ---
 
-## [ ] Chunk 18 — CLI and language-server integration
+## [x] Chunk 18 — CLI and language-server integration
 
 **Files**
 
@@ -1740,7 +2036,7 @@ paths as the integration tests.
 
 ---
 
-## [ ] Chunk 19 — Final standard-library and project acceptance
+## [x] Chunk 19 — Final standard-library and project acceptance
 
 **Files**
 
@@ -1816,10 +2112,12 @@ cargo run -p nash-cli -- build <aiken-multi-validator-project>
 cargo run -p nash-cli -- build examples/vesting
 ```
 
-Keep the existing runtime-baseline differential tests. Add only the focused
-differential cases listed in Chunk 19. Compare matching target, environment,
-parameter, input, and trace settings. Compare results, failures, and relevant user
-traces; do not require identical bytes, hashes, or execution budgets.
+Keep the existing runtime-baseline differential tests. Add the small R1–R3
+regression group and the focused differential cases listed in Chunk 19. Compare
+source acceptance and rejection first. For accepted cases, compare matching
+target, environment, parameter, input, and trace settings. Compare results,
+failures, and relevant user traces; do not require identical bytes, hashes, or
+execution budgets. Reuse cases when they cover several requirements.
 
 Do not require network access in the final test suite.
 
