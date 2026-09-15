@@ -1,265 +1,1941 @@
-# Implementation checklist
+# Plan 14 — Aiken frontend, runtime, source and project compatibility
 
-## Completion gates for this branch
+## Status and scope
 
-- [x] G1: `nash-frontend` owns the parser-neutral contract; adapters return owned
-  diagnostics/inspection and arena-backed `nash_source::Module` only.
-- [x] G2: Native graph construction, compilation, diagnostics, CLI and LSP pass
-  existing regressions through the shared frontend selection path.
-- [x] G3: `tests/fixtures/aiken/supported/src/add_one.ak` reaches the official
-  parser, lowering, canonicalization, solving, nitpick and interface construction
-  through project discovery and the real `nash check` command.
-  A native validator consumer also reaches Core/UPLC and executes in CEK.
-- [x] G4: Functions, constants, imports, primitive annotations, patterns,
-  expressions, undecorated data types, aliases and exports have explicit lowering
-  policies; unsupported syntax and overflowing integers have located diagnostics.
-- [x] G5: Source-root module identity, mixed-language imports, retained inspection
-  failures and ambiguity diagnostics agree between discovery and compilation.
-- [x] G6: No reachable placeholders or Aiken types outside the adapter; formatting
-  and strict lint checks pass.
-- [x] G7: Focused frontend/driver tests, full workspace checks/tests, native CLI
-  and Aiken CLI fixtures pass; the unsupported fixture fails with a stable code.
+This is the single tracker for the former Plans 14, 15 and 16. Completed frontend
+and runtime work is summarized below; the source/project completion gates and
+19 implementation chunks remain open. Preserve the completed runtime contract
+while implementing those chunks; an inventory item already supported by the
+baseline needs verification or extension, not a second implementation.
 
-### Current completion pass
+The source/project finish line does not include full Aiken tool parity. Tooling
+and optional dependency extraction remain explicit follow-on work at the end.
+The supported implementation profile is documented in
+[`docs/aiken-frontend.md`](../docs/aiken-frontend.md).
 
-The existing G1–G7 checkmarks record the common-syntax implementation. This pass
-also completes Phase 2 for an explicitly bounded validator profile, rather than
-treating the available backend as a blocker. Full package/layout compatibility
-and upstream parser extraction remain follow-on work.
+### How to use this tracker
 
-- [x] V1: Define a minimal official-Aiken-compatible handler/parameter/input
-  profile and reject every other handler combination with located diagnostics.
-- [x] V2: Lower supported validators to ordinary Nash `main`, including purpose
-  dispatch, checked boundary decoding, and Boolean-result-to-unit/failure.
-- [x] V3: Build the same supported validator with the pinned official Aiken
-  compiler and Nash; compare CEK success, failure and user traces, including
-  malformed boundary Data.
-- [x] V4: Exercise real native and Aiken CLI check/build paths and retain existing
-  native, mixed-language, source-region and editor regressions.
-- [x] V5: Update final architecture, profile exclusions and progress; pass focused
-  regressions, workspace check, strict clippy, formatting and full workspace tests.
+The current assignment is to complete the remaining source/project gates G1–G11
+and all applicable work in Chunks 1–19. Historical gate labels refer to completed
+milestones. The unchecked follow-on items are outside this assignment.
 
-The concrete fixtures live under `crates/nash-driver/tests/fixtures/aiken/`.
-`unsupported/src/unsupported.ak` contains an Aiken test declaration, deliberately
-outside the concrete NashV1 compatibility profile.
+Record the starting commit and check the working tree before editing. Preserve
+unrelated changes. Verify the current code and run a focused baseline check.
+The completed-work record below is not proof that the current checkout passes.
 
-### Scope facts and prerequisite work
+Keep this file as the only task tracker. Use the goal prompt to start the work,
+not as a second scope document. Apply the reference rules near the end of this
+plan when code and documents disagree.
 
-The first implementation was based on `main`, where production compilation ended
-at solved interfaces. The branch now uses `release/main`, which includes the
-source-to-UPLC code generation and native validator builds from `plan-7`.
-The current completion pass adds bounded Aiken mint/fallback validators and
-official runtime comparisons. `NAF2301` now denotes unsupported handler sets,
-boundary annotations or role metadata, rather than rejecting every validator.
+Do not stop after an audit, new interfaces, one chunk, or a sample build. Complete
+the remaining gates on the final code. Record a real blocker against its gate;
+do not mark a blocked gate complete or replace it with a weaker check.
 
-Phase 3's upstream parser-only extraction is external follow-on work. This branch
-pins the official `aiken-lang` parser behind one adapter and records its sync policy.
-The acceptance strategy below is refined to focused behavioral/integration tests,
-not four fixtures per private helper: consumers and semantic boundaries are the
-contract, and the requested finish-line fixture is mandatory.
+## Completed work
 
-### Plan 7 rebase integration
+The former frontend and runtime plans are complete: frontend gates G1–G7,
+bounded-validator gates V1–V5, and runtime gates G1–G7 passed. Their overlapping
+checklists are consolidated below. These are recorded implementation results,
+not a claim that the remaining source/project gates pass.
 
-- [x] Preserve the original work and rebase onto the current codegen branch.
-- [x] Preserve the backend finish callback while threading frontend catalog metadata.
-- [x] Lower fixed primitive expressions and patterns through Core/UPLC without
-  native literal/equality evidence.
-- [x] Execute an Aiken-backed native validator in CEK and retain native build checks.
-- [x] Re-run workspace validation and replace the obsolete no-codegen documentation.
+- [x] **Shared frontend and common syntax.** `nash-frontend` and
+  `nash-frontend-nash` provide one parser-neutral registry for discovery,
+  compilation, CLI and LSP. `Frontend::inspect` retains module-local failures
+  without stopping independent graph nodes; `Frontend::parse` returns
+  arena-backed `nash_source::Module` with owned diagnostics/inspection. The
+  driver converts diagnostics without changing `nash-report`; the native adapter
+  retains its syntax-report conversion and validator role metadata. One
+  build-wide arena holds source, canonical nodes, evidence and interfaces.
+  `ModuleCatalog`/`SourceSpec` replace suffix inference with source-root identity
+  and package ownership, exact mixed-language imports and ambiguity diagnostics.
+  The exact-pinned `aiken-lang = "=1.1.23"` parser stays behind the Aiken adapter;
+  Rust 1.94.1 resolves the former 1.92.0 toolchain mismatch. Functions, constants,
+  imports, primitive annotations, patterns, expressions, types, aliases and
+  exports lower with source regions and explicit unsupported-feature policies.
+  Fixed primitive `Constant` expressions/patterns use Nash's solver and backend
+  without native `Literal`/`Eq` evidence; native overloaded literals are unchanged.
+  Sequential bindings use strict hygienic lambda applications; nullary functions
+  retain the unit-argument ABI. A private concrete profile, upstream sync policy
+  and focused coverage matrix replace an unused profile abstraction.
+- [x] **Runtime layouts, conversions and integers.** Original Aiken type names
+  and frontend-neutral `DataLayout { encoding, tags }` propagate through source,
+  canonical unions and interfaces; `DataEncoding::{Constr, List, Transparent}`
+  replaces the historical lowercase Term shortcut. Qualified, instantiated
+  `AdtRef`/`AdtLayout` identities specialize canonical constructor field types.
+  Shared `Expr::Convert` operations (`ToData`, `FromDataShallow`, `ViewData`,
+  `ValidateData`) cover recursive primitive, list, pair, tuple and user-type
+  encoding/decoding, custom tags, list encoding, zero/multiple fields, substituted
+  generics and imported/mixed-language layouts. Annotated `expect` performs full
+  validation even for discarded/unused bindings, with located conversion errors.
+  Arena-safe arbitrary-precision constants and patterns replace the i128 limit
+  without changing native syntax. Native representations remain stable when no
+  external layout is present.
+- [x] **Validator ABI and backend integration.** The initial mint/optional-else
+  or else-only NashV1 profile now extends to all six V3 purposes: mint, spend,
+  withdraw, publish, vote and propose, plus fallback. Parameters, optional datum,
+  redeemer, purpose and transaction positions use shared conversions and official
+  demand-driven context decoding; `False` fails and `True` returns unit.
+  Else-only validators retain raw context. Located layout, conversion and
+  handler diagnostics replace blanket rejection; `NAF2301` denotes unsupported
+  handler sets, boundary annotations or role metadata. The Plan 7 codegen rebase
+  preserved the backend finish callback and catalog metadata; Aiken-backed native
+  validators reach Core/UPLC and execute in CEK. Production uses Nash semantic
+  stages and code generation; the pinned official compiler/CEK is a test-only
+  differential oracle, with the driver a dev-dependency for real-path coverage.
+- [x] **Regression and end-to-end verification.** Focused tests cover native
+  parsing/validator headers, frontend selection and overrides, common lowering,
+  fixed primitive typing (including mismatches), scope/nullary behavior, exports,
+  mixed imports, exact nested identity, ambiguity, isolated failures and useful
+  CRLF/non-ASCII regions. CLI supported/unsupported fixtures and unsaved/standalone
+  LSP diagnostics pass. Runtime fixtures cover default/custom/list/transparent
+  layouts, nested values, generic cross-module identity collisions, strict
+  `expect`, every purpose and native/mixed execution. Eleven pinned official
+  differential tests cover accepted/rejected Data, results and user traces,
+  including maps, UTF-8, opaque layouts, shallow parameters and optional datum.
+  Final recorded validation passed formatting, workspace/all-target check,
+  strict workspace/all-feature clippy, `cargo test --workspace` (3,222 passed,
+  3 ignored) and `cargo insta test` (no pending snapshots; runner temporarily
+  installed in isolation). Real CLI checks/builds exercised the Aiken library,
+  custom-layout validator (372 Flat bytes) and native vesting (515/520 Flat bytes),
+  emitting UPLC/Flat/CBOR. Temporary projects and generated artifacts were removed.
 
-### Required semantic bridge discovered during implementation
+### Stable runtime decisions and corrections
 
-Native Nash literal expressions and patterns are overloaded through
-`Literal.FromInt`/`FromBytes`/`FromString` (and pattern `Eq`). Aiken primitive
-literals cannot use those nodes without changing their semantics or requiring a
-synthetic standard library. Add frontend-neutral fixed `Constant` nodes to the
-source and canonical ASTs, with direct primitive typing in Nash's existing solver.
-Native literal nodes and their evidence behavior remain unchanged.
+Preserve these semantics unless a remaining source or package feature exposes an
+actual defect:
 
-- [x] Validate fixed primitive expression and pattern types without `Literal`/`Eq`
-  imports, including rejection of a mismatched primitive annotation.
+- Opaque single-field wrappers use explicit Transparent wire encoding. Shallow
+  tuple extraction retains encoded fields; Bool/Void/Pair shallow casts
+  intentionally accept more than full `expect` validation.
+- Optional datum is a typed Option view with nested decoding on demand, preserving
+  user trace order. Exhaustive external matches use the official final-case
+  default rather than adding tag validation. This is not exhaustive ledger-schema
+  validation; full validation remains a separate operation.
+- Mint policy patterns decode to ByteArray despite the upstream internal prelude's
+  Data annotation. Policy decoding is mandatory even when discarded: missing
+  fields and non-byte policy Data fail before redeemer decoding. All-six-purpose
+  dispatch rejects an explicit redundant fallback.
+- Negative CBOR bignums use minus-one magnitude; the shared runtime bug is fixed.
+  A native depth-limit stack overflow was traced with LLDB to nested iterator
+  frames in `TypeEnv::instance`; an explicit argument loop restored the limit
+  without enlarging the stack or lowering the limit.
+- Native AST snapshots now carry explicit None/false metadata. Meaningful source
+  and canonical snapshots were refreshed; passthrough-only interface tests were
+  removed and constructor privacy uses a focused assertion. Shared conversions
+  have real interface callers, no dummy success or silent fallback, and normal
+  user errors do not panic.
 
-## Phase 0: frontend seam
+### Historical verification context
 
-- [x] Add `nash-frontend`.
-- [x] Add `nash-frontend-nash`.
-- [x] Register one shared frontend registry for graph building, compilation, CLI, and LSP.
-- [x] Replace direct parser use in graph construction with `Frontend::inspect`.
-- [x] Retain inspection failures as module-local diagnostics; do not stop independent graph nodes.
-- [x] Replace direct parser use in `compile_module` with `Frontend::parse`.
-- [x] Add `ModuleCatalog` and remove `.nash` suffix inference.
-- [x] Convert frontend diagnostics in `nash-driver`; keep `nash-report` unchanged.
-- [x] Keep the current build-wide arena for source, canonical nodes, evidence, and interfaces.
+The original solved-interface-only `main` baseline was rebased onto the Plan 7
+codegen branch, then `origin/release/main` at `f2b3e766`, preserving release versions
+and frontend dependencies. Work was restored unstaged; the backup branch
+`backup/aiken-frontend-before-release-main-20260914` and named stash were retained
+at that time. Earlier workspace passes recorded 3,211 and then 3,215 tests passed
+(3 ignored); the later 3,222-test runtime pass above supersedes those counts.
+An Aiken-backed native validator accepted 41 and rejected 40 (51 Flat bytes);
+the bounded mint fixture built to 138 Flat bytes with user traces. The unsupported
+fixture exited 1 with located `NAF2201` and no artifacts. Integer overflow
+rejection belonged to the superseded i128 profile, not the current contract.
 
-## Phase 1: Aiken dependency and common syntax
+Concrete fixtures live under `crates/nash-driver/tests/fixtures/aiken/`, including
+`supported/src/add_one.ak` and `unsupported/src/unsupported.ak`. The latter's Aiken
+test declaration was deliberately unsupported by the bounded profile; accepting
+and type-checking these declarations is remaining work below. Historical CLI and
+rebase checks alone did not establish ABI conformance; pinned runtime comparisons
+do. No external blocker remained for the completed milestones.
 
-- [x] Resolve the Rust 1.92.0 versus 1.94.1 toolchain mismatch.
-- [x] Add exact-pinned `aiken-lang` behind the adapter crate.
-- [x] Add Aiken dependency inspection.
-- [x] Add Aiken import lowering and module mapping.
-- [x] Add type annotation lowering and primitive representation mapping.
-- [x] Add pattern lowering.
-- [x] Add integer range diagnostics or change Nash's literal representation.
-- [x] Add expression lowering.
-- [x] Add functions and constants.
-- [x] Add undecorated data types and aliases.
-- [x] Add public export generation.
-- [x] Preserve source regions in all lowered nodes.
-- [x] Run `nash check` on `.ak` fixtures.
+## Goal
 
-Implementation choices, justified by the current compiler:
+An unmodified Aiken 1.1.23 project can use the Nash compiler to check and build
+its production code.
 
-- Fixed `Constant` nodes preserve Aiken primitive literals without native literal
-  trait requirements. Native literal semantics are unchanged.
-- User type names map to little Nash names (`Choice` -> `choice`) so primitive
-  fields are representable without unchecked Data conversion. Nash representation
-  restrictions still apply to containers of these types; no Aiken wire-layout
-  compatibility is claimed.
-- Sequential bindings use strict hygienic lambda applications. Nullary functions
-  use the native unit-argument ABI, not constant declarations.
-- `ModuleCatalog` carries source-root identity and package ownership. Duplicate
-  canonical names are diagnosed because current semantic interfaces cannot safely
-  distinguish same-name providers across packages.
-- Optional role metadata preserves native validator headers. The native adapter
-  reuses existing syntax report conversion internally; the common contract and
-  driver receive no parser-specific types.
-- A private concrete profile replaces the proposed unused profile trait. The
-  source of truth for the complete supported subset and explicit exclusions is
-  `docs/aiken-frontend.md`, including case-sensitive mixed-language import limits.
+The supported project can contain:
 
-## Phase 2: bounded validators
+- Library modules.
+- Validator modules.
+- All Aiken 1.1.23 production language forms.
+- The official Aiken prelude and builtin surface.
+- The official Aiken standard library.
+- Direct and transitive package dependencies.
+- `aiken.toml` and `aiken.lock`.
+- Aiken workspaces.
+- Environment modules.
+- The synthetic `config` module.
+- More than one named validator in one source module.
 
-NashV1 accepts one mint handler plus optional else, or else-only validators.
-Validator parameters, transactions and fallback contexts remain raw Data; redeemers
-support explicit Int, ByteArray or Data, and mint policies use ByteArray. Other
-purposes and custom datum/layout conversion are explicitly rejected. This is the
-smallest nontrivial dispatch profile, not full Aiken validator ABI compatibility.
+The same source must have equivalent observable on-chain behavior when the
+Aiken 1.1.23 compiler and Nash compile it. Compare the same input under matching
+target, environment, parameter, and trace settings.
 
-- [x] Define the accepted Aiken handler set.
-- [x] Synthesize purpose dispatch.
-- [x] Turn a handler result of `False` into explicit Nash failure.
-- [x] Insert boundary conversion and validation.
-- [x] Reject unsupported handler combinations with precise diagnostics.
-- [x] Compare CEK results and traces with the official Aiken compiler.
+Observable behavior means:
 
-The adapter's private validator lowerer emits only existing Nash source nodes.
-The exact-pinned official compiler and CEK are test-only oracles inside the adapter;
-the driver is a dev-dependency there solely to exercise the real Nash path.
+- The same boundary `Data` has the same observable outcome, including malformed
+  or partly decoded data.
+- Validators agree on success and failure.
+- Successful evaluations return equivalent values.
+- Relevant user traces have the same order and content, including before failure.
 
-The first differential run exposed that official mint policy patterns decode to
-ByteArray despite the internal prelude's Data annotation. The accepted profile
-therefore requires ByteArray, rather than duplicating a misleading annotation.
-Context decoding follows the official demand-driven boundary, not a new exhaustive
-ledger schema check. The architecture document records discarded/raw field behavior.
+Do not require all malformed `Data` to fail at entry. Do not require all valid
+`Data` to succeed when the validator's own rules reject it. Match the pinned Aiken
+behavior. Preserve shallow extraction, demand-driven decoding, full `expect`
+validation, and failure order. Do not add validation where Aiken does not perform
+it.
 
-## Phase 3: dependency cleanup — partial, upstream follow-on
+The following results do not have to match:
 
-- [ ] Propose an upstream parser-only `aiken-syntax` crate.
-- [ ] Replace `aiken-lang` when the parser-only crate is available.
-- [x] Keep one Aiken AST version behind `nash-frontend-aiken`.
-- [x] Add an upstream sync policy and focused compatibility coverage matrix.
+- UPLC bytes.
+- Script hashes.
+- Execution budgets.
+- Optimization choices.
+- Diagnostic text.
 
-## Full Aiken support: remaining scope
+This plan completes **Aiken source and project compatibility**. It does not
+provide full Aiken command-line tool parity.
 
-Phases 0–2 complete the bounded NashV1 profile, not full Aiken compatibility.
-The exclusions in `docs/aiken-frontend.md` remain intentional follow-on work:
+## Product boundary
 
-1. **Additional validator contracts and runtime checks.** Extend beyond mint and
-   fallback to other purposes and optional datum conversion. Add corresponding
-   pinned official compiler fixtures and CEK comparisons before enabling each ABI.
-   The existing mixed native/Aiken test alone is not an ABI conformance check;
-   adapter-local official comparisons now cover the enabled profile.
-2. **Data layout and containers.** Define Aiken-compatible encoding for user
-   data types and custom encoding decorators. Add checked boundary conversions.
-   Resolve the current little-ADT limits in `List` and `Pair`. Add Pair values
-   and patterns. The current lowercase type mapping does not provide wire
-   compatibility. This work must support the boundary rules in item 1.
-3. **Remaining language and builtins.** Remove the temporary `i128` limit.
-   Extend the 33-name builtin mapping with verified signatures and semantics.
-   Add the excluded expressions, patterns and annotations, including `expect`,
-   Data casts, equality, pipelines, record updates, tuple indexing, labels,
-   curve literals and trace formatting. Use the exclusion list in the design
-   doc as the full inventory; representative syntax tests are not full coverage.
-4. **Projects, packages and standard library.** Add Aiken project/dependency
-   support and verify real Aiken standard-library imports. Resolve package
-   identity and the current duplicate-module-name limit. Exact catalog imports
-   and Nash's planned `nash/core` library do not provide this compatibility.
-   Include the currently rejected environment/configuration modules.
-5. **Build artifacts.** Define and add blueprint/schema, script-hash and target
-   version support with Plan 09. Current builds emit only UPLC, Flat and CBOR.
-   Verify artifact compatibility against the same validator contract.
-6. **Tests and user tools.** Extend Plan 10 for Aiken test and benchmark
-   declarations; both are currently rejected. Define Aiken formatting,
-   documentation and editor support with Plan 13 and the LSP work. Current LSP
-   support provides shared compiler diagnostics, not a full Aiken editor.
+### Included
 
-Phase 3's parser-only extraction is optional dependency work. It does not block
-validator or language support. Keep the exact parser pin until an upstream
-replacement is available.
+- All Aiken 1.1.23 definition, annotation, expression, pattern, assignment, and
+  module variants.
+- All type-directed syntax and implicit conversions that Aiken 1.1.23 uses.
+- Aiken prelude behavior.
+- Complete Aiken 1.1.23 builtin classification and lowering.
+- Official Aiken standard-library source without local edits.
+- Aiken manifest, lock, dependency, cache, workspace, environment, and
+  configuration behavior needed by `check` and `build`.
+- Separate build entry points for all named validators.
+- Metadata that a later Nash artifact layer needs for CIP-57 output.
+- Parse and type-check support for test and benchmark declarations.
 
-## Acceptance tests
+### Not included
 
-The original per-helper four-fixture proposal is replaced with focused semantic
-coverage, as requested for this implementation:
+- CIP-57 or `plutus.json` serialization.
+- Parameter application to an existing blueprint.
+- Test execution.
+- Benchmark execution.
+- Source formatting.
+- HTML documentation generation.
+- Editor completion.
+- Exact Aiken diagnostic text.
+- Exact UPLC, Flat, CBOR, hash, or budget parity.
 
-- [x] Native parsing, nested identity, validator header and compiler regressions.
-- [x] Extension selection and explicit frontend override.
-- [x] Real Aiken `add_one` project through solved interfaces and typed consumers.
-- [x] Representative expression, scope, pattern, data, alias and export lowering.
-- [x] Unsupported declarations/features and integer overflow diagnostics.
-- [x] Useful byte regions, including CRLF/non-ASCII source and native syntax errors.
-- [x] Mixed-language imports, exact nested identity, ambiguity and isolated failures.
-- [x] Real CLI supported/unsupported fixtures and unsaved/standalone LSP diagnostics.
+Valid test and benchmark declarations must parse and type-check. Invalid
+bodies and signatures must produce normal diagnostics. These declarations do not
+run or become production entry points in this plan. Follow the dependency rules
+in Chunk 9 for declarations outside the root project.
 
-Validation on the `plan-7` baseline: `cargo fmt --all -- --check`,
-`cargo check --workspace --all-targets`, strict workspace/all-feature clippy,
-focused adapters/solver/backend tests, and `cargo test --workspace`
-(3,211 passed, 3 ignored). The Aiken-backed native validator executes in CEK
-(41 succeeds, 40 fails) and the real CLI emits UPLC/Flat/CBOR (51 Flat bytes).
-The native vesting CLI build emits both validators (515 and 520 Flat bytes);
-its existing ledger-case execution regressions pass. Temporary CLI projects and
-generated artifacts were removed after smoke checks.
+Documentation comments must survive as metadata. Nash does not generate Aiken
+HTML documentation in this plan.
 
-Additional validator purposes and data-layout features require further official
-Aiken differential tests; the bounded mint/fallback profile is covered.
+## Upstream reference
 
-### Release/main rebase checks
+Use the exact Aiken tag `v1.1.23` as the semantic reference.
 
-The branch was rebased onto `origin/release/main` at `f2b3e766`. The manifest
-conflict was resolved with the release versions and the frontend dependencies.
-The local work was restored as unstaged changes. The backup branch
-`backup/aiken-frontend-before-release-main-20260914` and the named stash were kept.
+Primary reference files:
 
-Checks on this base passed:
+- `crates/aiken-lang/src/ast.rs`
+- `crates/aiken-lang/src/expr.rs`
+- `crates/aiken-lang/src/builtins.rs`
+- `crates/aiken-lang/src/tipo/infer.rs`
+- `crates/aiken-lang/src/gen_uplc.rs`
+- `crates/aiken-project/src/config.rs`
+- `crates/aiken-project/src/deps.rs`
+- `crates/aiken-project/src/paths.rs`
+- `crates/aiken-project/src/lib.rs`
 
-- `cargo fmt --all -- --check`
-- `cargo clippy --all-targets --all-features -- -D warnings`
-- `cargo test --workspace`: 3,211 passed, 3 ignored.
-- Real CLI check of the supported Aiken fixture.
-- Real CLI check of the unsupported fixture: exit 1 with located `NAF2201`.
-- Real CLI build of a temporary native validator that imports Aiken: UPLC,
-  Flat and CBOR files, with 51 Flat bytes.
+Production Nash code can use the official Aiken parser and project-model code.
+It must not call the Aiken type checker or code generator.
 
-These historical rebase checks did not establish official validator conformance.
-The current completion pass adds the adapter-local comparisons described above.
+## Remaining source/project completion gates
 
-### Completed bounded frontend validation
+### G1 — Exact language inventory
 
-All G1–G7 and V1–V5 gates were rechecked for this completion pass:
+- [ ] Every Aiken 1.1.23 definition variant has an explicit compatibility
+  classification.
+- [ ] Every Aiken 1.1.23 annotation variant has an explicit compatibility
+  classification.
+- [ ] Every Aiken 1.1.23 expression variant has an explicit compatibility
+  classification.
+- [ ] Every Aiken 1.1.23 pattern variant has an explicit compatibility
+  classification.
+- [ ] Every assignment and argument form has an explicit compatibility
+  classification.
+- [ ] Every module kind has an explicit project and compiler rule.
+- [ ] Production lowering has no wildcard branch that returns a general
+  unsupported-language diagnostic.
+- [ ] An Aiken dependency update that adds an AST variant causes a compile-time
+  match failure or a focused coverage-test failure.
 
-- `cargo fmt --all -- --check`, `cargo check --workspace --all-targets`,
-  `cargo clippy --workspace --all-targets --all-features -- -D warnings`.
-- Focused frontend/driver tests and `cargo test --workspace`: 3,215 passed,
-  3 ignored, including native/mixed imports, diagnostics and editor buffers.
-- Exact-pinned Aiken/Nash differential CEK tests cover the enabled validator
-  boundaries, return values and user traces.
-- Real CLI native vesting check/build (515/520 Flat bytes), Aiken library and
-  validator checks, and Aiken mint build (138 Flat bytes with user traces).
-- Unsupported Aiken CLI build exits 1 with located `NAF2201`, without artifacts.
-- Final review reproduced and fixed mandatory policy decoding when the policy
-  argument is discarded. Differential cases now reject both missing policy fields
-  and non-byte policy Data, matching the official purpose pattern before redeemer
-  decoding. Final checks were rerun after this correction.
+### G2 — Complete production language surface
 
-No external blocker remains for the bounded profile. Phase 3's upstream extraction
-and the explicitly listed full-compatibility extensions remain follow-on work.
+- [ ] All production Aiken 1.1.23 syntax reaches Nash canonicalization and type
+  solving.
+- [ ] Type-dependent syntax is not guessed by the untyped frontend.
+- [ ] Evaluation order matches Aiken for pipelines, assignments, calls, traces,
+  record updates, and logical chains.
+- [ ] Valid test and benchmark declarations parse and type-check but do not
+  become production validator roots. Invalid bodies and signatures produce
+  normal diagnostics.
+- [ ] `NAF2201` is not used for a valid Aiken 1.1.23 production language form.
+
+### G3 — Type-directed operations and conversions
+
+- [ ] One compiler operation owns all implicit conversion decisions.
+- [ ] Each conversion has a documented source site and source region.
+- [ ] Shallow extraction, view conversion, and full validation remain distinct.
+- [ ] Polymorphic equality and inequality select Aiken operations from solved
+  types. They do not use user Nash trait instances.
+- [ ] Labeled calls, tuple indexing, record updates, trace arguments, and
+  pipelines use resolved types or declarations.
+- [ ] Every compatibility conversion follows a rule verified against the
+  pinned Aiken behavior, with a defined validation depth. No arbitrary cast or
+  added full validation replaces a required shallow or view operation.
+
+### G4 — Aiken prelude and builtins
+
+- [ ] `.ak` modules use the Aiken prelude. They do not receive Nash default
+  imports.
+- [ ] Native `.nash` modules keep their current default imports and behavior.
+- [ ] Every builtin exposed by Aiken 1.1.23 has one explicit classification.
+- [ ] Each builtin either maps to a Nash builtin, uses a defined lowering, or
+  returns a precise Plutus-version diagnostic.
+- [ ] The builtin table has a focused completeness test.
+
+### G5 — Official standard library
+
+- [ ] One exact official Aiken standard-library release is pinned in the
+  acceptance fixture.
+- [ ] Its source checks through Nash without source edits.
+- [ ] The package enters through the normal Aiken package path.
+- [ ] Nash does not replace the standard library with `nash/core` shims.
+- [ ] No module-name-specific exception exists for a standard-library file.
+
+### G6 — Aiken project loading
+
+- [ ] `nash check <path>` finds the nearest `aiken.toml` when no nearer
+  `nash.jsonc` owns the path.
+- [ ] A direct manifest path selects the correct project loader.
+- [ ] A directory that contains both manifest kinds gives a clear ambiguity
+  diagnostic unless the caller selects one format explicitly.
+- [ ] Root `lib/`, `validators/`, and `env/` source roots use Aiken naming rules.
+- [ ] The selected configuration creates a synthetic `config` module.
+- [ ] The selected environment follows Aiken `default` and `--env` behavior.
+- [ ] Aiken workspace members load with stable package ownership.
+
+### G7 — Package and lock resolution
+
+- [ ] Direct and transitive dependencies resolve from `aiken.toml`.
+- [ ] `aiken.lock` is read and written with the selected Aiken 1.1.23 behavior.
+- [ ] The normal Aiken package cache and build dependency paths work.
+- [ ] CI tests use local fixtures or a prepared cache. They do not need network
+  access.
+- [ ] A dependency package contributes only its library surface to production
+  compilation.
+- [ ] Duplicate or ambiguous module providers return a clear located project
+  diagnostic.
+- [ ] Package identity is part of compiler-owned type, layout, decoder, entry
+  point, and artifact identities.
+
+### G8 — Multiple validators and artifact metadata
+
+- [ ] One source module can define more than one named validator.
+- [ ] Each validator becomes a separate compiler entry point and build artifact.
+- [ ] Native Nash validator modules still use their current `main` model.
+- [ ] Validator name, module, package, documentation, parameter order, parameter
+  labels, handlers, datum, redeemer, solved types, and layout identities survive
+  the build.
+- [ ] Project title, version, license, description, repository, compiler target,
+  and Plutus version survive as project metadata.
+- [ ] This plan does not serialize a blueprint.
+
+### G9 — CLI, diagnostics, and editor safety
+
+- [ ] `nash check` and `nash build` accept an Aiken project root without a Nash
+  configuration file.
+- [ ] `nash build` emits one UPLC, Flat, and CBOR set for each Aiken validator
+  entry point.
+- [ ] File names are stable and contain enough identity to avoid collisions.
+- [ ] Source and package errors have useful regions and file paths.
+- [ ] Existing `.ak` LSP diagnostics continue to use the shared project and
+  frontend paths.
+- [ ] This plan adds no formatter, documentation generator, or completion
+  engine.
+
+### G10 — Native Nash regression safety
+
+- [ ] Native Nash projects keep their current project, import, type, validator,
+  and build behavior.
+- [ ] Native script sizes do not change without a recorded reason.
+- [ ] Mixed Nash and Aiken graphs still compile where the public types are
+  compatible.
+- [ ] No Aiken parser or project type enters Nash canonicalization, solving, IR,
+  or code generation.
+
+### G11 — Final compatibility acceptance
+
+- [ ] One unmodified Aiken project with the official standard library checks
+  through Nash.
+- [ ] One unmodified Aiken project with a direct and a transitive dependency
+  checks through Nash from a prepared local cache.
+- [ ] One project uses `env`, synthetic `config`, tests, benchmarks, and more
+  than one validator.
+- [ ] The representative validators build and execute with equivalent outcomes
+  under Aiken 1.1.23 and Nash.
+- [ ] All required workspace validation commands pass.
+- [ ] `docs/aiken-frontend.md`, `SPEC.md`, and changesets describe the final
+  supported claim and the remaining tool-only exclusions.
+
+## Architecture
+
+The Rust snippets below are design examples, not required signatures. Check the
+current APIs and arena ownership before changing them. Reuse working code and
+choose the smallest sound interface. Do not add unused types, traits, or stubs
+only to copy a snippet. Keep the required behavior and dependency boundaries.
+
+### Dependency direction
+
+```text
+Aiken project files
+  -> nash-project-aiken
+       -> exact-pinned Aiken config/dependency/path APIs
+       -> Nash-owned LoadedProject and ModuleCatalog
+
+Aiken source
+  -> nash-frontend-aiken
+       -> exact-pinned Aiken parser
+       -> nash_source::Module + source entry-point metadata
+
+Nash source
+  -> nash-frontend-nash
+       -> nash_source::Module + native entry-point metadata
+
+Both paths
+  -> nash-driver
+       -> nash-can
+       -> nash-solve
+       -> nash-nitpick
+       -> nash-codegen
+       -> nash-plutus
+```
+
+Rules:
+
+- `nash-project-aiken` can depend on `aiken-project` and `aiken-lang`.
+- `nash-frontend-aiken` can depend on `aiken-lang`.
+- No other production compiler crate can depend on Aiken crates.
+- `nash-project-aiken` must not call `aiken_project::Project::check`, `build`,
+  `type_check`, or Aiken code generation.
+- Aiken project and AST types must be converted to Nash-owned types at the crate
+  boundary.
+
+Use `aiken-project = "=1.1.23"` when that crate is available from the selected
+registry. Otherwise, use an exact Git tag or commit for `v1.1.23`. Do not use a
+moving branch.
+
+### Shared contract ownership
+
+Shared project, package, module, import, and diagnostic contracts must sit below
+both the project adapters and the driver. This includes the common types needed
+by `ProjectLoader`, `LoadedProject`, `SourceSpec`, and `ModuleCatalog`.
+
+The driver can depend on the adapters and the shared contracts. The adapters can
+depend on the shared contracts. They must not depend on the driver. The shared
+contracts must not depend on either adapter or on the driver.
+
+Use an existing lower-level crate when it fits. Add a small shared crate only
+when needed. Keep driver-specific compilation state in the driver. Do not create
+a dependency cycle between `nash-project-aiken` and `nash-driver`.
+
+### New crate
+
+Add:
+
+```text
+crates/nash-project-aiken/
+```
+
+Responsibilities:
+
+- Find and load `aiken.toml`.
+- Distinguish project and workspace manifests.
+- Normalize Aiken package identity.
+- Resolve the lock file and dependency set.
+- Find package cache and build dependency paths.
+- Discover `lib/`, `validators/`, and `env/` modules.
+- Create the synthetic `config` module.
+- Select the active environment.
+- Produce Nash-owned project metadata and source specifications.
+
+It does not parse function bodies. It does not type-check source.
+
+### Project-loader seam
+
+Add a small project-loader contract. It must have two real implementations:
+Nash and Aiken.
+
+```rust
+pub trait ProjectLoader: Send + Sync {
+    fn descriptor(&self) -> &'static ProjectLoaderDescriptor;
+
+    fn locate(
+        &self,
+        start: &Path,
+    ) -> Result<Option<ProjectLocation>, ProjectDiagnostic>;
+
+    fn load(
+        &self,
+        request: ProjectLoadRequest<'_>,
+    ) -> Result<LoadedProject, Vec<ProjectDiagnostic>>;
+}
+```
+
+```rust
+pub struct ProjectLoaderDescriptor {
+    pub id: &'static str,
+    pub manifests: &'static [&'static str],
+}
+
+pub struct ProjectLoadRequest<'a> {
+    pub location: &'a ProjectLocation,
+    pub selected_environment: Option<&'a str>,
+    pub mode: ProjectMode,
+    pub package_store: &'a dyn PackageStore,
+}
+
+pub enum ProjectMode {
+    Check,
+    Build,
+    Editor,
+}
+```
+
+`ProjectLoader::load` is unimplemented at the start of this plan.
+
+Purpose: load one manifest format into the common driver model.
+
+Example: `AikenProjectLoader` loads `aiken.toml`, selects `env/default.ak`, and
+returns source specifications for `lib/`, `validators/`, dependencies, and the
+synthetic `config` module.
+
+### Composition for project loading
+
+The Aiken loader must be an orchestration function. Keep manifest parsing,
+dependency resolution, source discovery, configuration synthesis, and catalog
+assembly in separate functions.
+
+```rust
+pub fn load_aiken_project(
+    request: ProjectLoadRequest<'_>,
+) -> Result<LoadedProject, Vec<ProjectDiagnostic>> {
+    let manifest = manifest::load(request.location)?;
+    let lock = lock::load_if_present(request.location)?;
+    let packages = dependencies::resolve(
+        &manifest,
+        lock.as_ref(),
+        request.package_store,
+    )?;
+    let environment = environment::select(
+        &manifest,
+        request.selected_environment,
+    )?;
+    let sources = discovery::discover(
+        request.location,
+        &manifest,
+        &packages,
+        &environment,
+        request.mode,
+    )?;
+    let synthetic = config_module::build(
+        &manifest,
+        &environment,
+    )?;
+
+    project::assemble(
+        manifest,
+        lock,
+        packages,
+        environment,
+        sources,
+        synthetic,
+    )
+}
+```
+
+### Package store
+
+Network and cache access must sit behind one interface.
+
+```rust
+pub trait PackageStore: Send + Sync {
+    fn resolve(
+        &self,
+        request: PackageResolutionRequest<'_>,
+    ) -> Result<ResolvedPackageSet, Vec<ProjectDiagnostic>>;
+}
+```
+
+The production implementation can wrap the exact-pinned Aiken dependency code.
+The test implementation uses fixture directories.
+
+`PackageStore::resolve` is unimplemented at the start of this plan.
+
+Purpose: produce the complete locked dependency set and local package roots.
+
+Example: resolve `aiken-lang/stdlib` and one transitive package from a prepared
+cache without a network request.
+
+### Package and module identity
+
+Add compiler-owned identity types. Do not use a file URI or a source spelling as
+semantic identity.
+
+```rust
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct PackageId {
+    pub name: PackageName,
+    pub version: PackageVersion,
+    pub source: PackageSourceId,
+}
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct ModuleKey {
+    pub package: PackageId,
+    pub module: ModuleName,
+}
+```
+
+The root application also gets a stable package identity.
+
+`SourceSpec` must contain `ModuleKey`. The URI remains the source location.
+
+```rust
+pub struct SourceSpec {
+    pub key: ModuleKey,
+    pub uri: Url,
+    pub source_root: PathBuf,
+    pub role: Option<ModuleRole>,
+    pub frontend: Option<String>,
+    pub origin: SourceOrigin,
+}
+```
+
+`SourceOrigin` distinguishes root project source, dependency source, compiler
+source, and synthetic source.
+
+The source import remains a module name. Project resolution selects one provider.
+
+```rust
+pub struct ResolvedDependency {
+    pub requested: ModuleName,
+    pub provider: ModuleKey,
+    pub uri: Url,
+    pub region: Region,
+}
+```
+
+Aiken source cannot select a package in an import. If more than one visible
+package provides the same module, report an ambiguity. Do not select one by
+filesystem order.
+
+### Interface lookup
+
+Replace interface maps that use only module text with package-aware keys.
+
+```rust
+pub struct InterfaceStore<'a> {
+    by_module: BTreeMap<ModuleKeyRef<'a>, Interface<'a>>,
+}
+```
+
+Canonicalization must receive the resolved import map for the module being
+compiled.
+
+```rust
+pub struct CanonicalContext<'a> {
+    pub home: ModuleKeyRef<'a>,
+    pub imports: &'a ResolvedImportMap<'a>,
+    pub interfaces: &'a InterfaceStore<'a>,
+}
+```
+
+This change must also update:
+
+- `AdtRef`.
+- Specialized layout keys.
+- Decoder identities.
+- Constructor identities.
+- Definition identities.
+- Entry-point identities.
+- Artifact metadata.
+
+Aiken still reports duplicate visible module names as an error. Package-aware
+identity prevents internal collisions and gives stable metadata.
+
+### Language compatibility classification
+
+Use one explicit classification for each exact-pinned Aiken AST variant.
+
+```rust
+pub enum CompatibilityClass {
+    LowerDirectly,
+    Desugar,
+    TypeDirected,
+    ToolDeclaration,
+}
+```
+
+Do not add `Unsupported` for an Aiken 1.1.23 production language form.
+
+The classification table belongs in `docs/aiken-frontend.md`. The implementation
+must use exhaustive matches over the pinned enums.
+
+### Type-directed source nodes
+
+The frontend can desugar syntax only when no solved type or resolved declaration
+is needed.
+
+Add or retain frontend-neutral source nodes for forms such as:
+
+```rust
+pub enum Expr<'a> {
+    // Existing variants.
+
+    Pipeline {
+        input: &'a Located<Expr<'a>>,
+        stages: &'a [&'a Located<Expr<'a>>],
+    },
+
+    LabeledCall {
+        function: &'a Located<Expr<'a>>,
+        arguments: &'a [&'a CallArgument<'a>],
+    },
+
+    TupleIndex {
+        tuple: &'a Located<Expr<'a>>,
+        index: usize,
+    },
+
+    RecordUpdate {
+        record: &'a Located<Expr<'a>>,
+        fields: &'a [&'a RecordUpdateField<'a>],
+    },
+
+    PolymorphicEquality {
+        operation: EqualityOperation,
+        left: &'a Located<Expr<'a>>,
+        right: &'a Located<Expr<'a>>,
+    },
+
+    TraceValues {
+        label: &'a Located<Expr<'a>>,
+        arguments: &'a [&'a Located<Expr<'a>>],
+        then: &'a Located<Expr<'a>>,
+    },
+}
+```
+
+The exact enum shape can differ. The required property is that the Aiken
+frontend does not guess arity, parameter labels, record identity, tuple arity,
+equality operation, or trace rendering from untyped syntax.
+
+### Function labels
+
+Preserve declaration labels in local definitions and interfaces.
+
+```rust
+pub struct ParameterShape<'a> {
+    pub label: Option<&'a str>,
+    pub binding: Option<&'a str>,
+    pub position: usize,
+}
+
+pub struct CallableShape<'a> {
+    pub parameters: &'a [ParameterShape<'a>],
+}
+```
+
+Canonicalization resolves a labeled call against `CallableShape`. It then places
+arguments in declaration order.
+
+A labeled call to a value with no known callable shape must produce a clear type
+or name error. It must not fall back to source order.
+
+### Conversion planner
+
+Use one frontend-neutral conversion planner.
+
+```rust
+pub enum ConversionSite {
+    AnnotatedBinding,
+    PatternBinding,
+    ValidatorParameter,
+    ValidatorDatum,
+    ValidatorRedeemer,
+    ValidatorPurpose,
+    ConfigValue,
+    FunctionArgument,
+    FunctionResult,
+}
+
+pub struct ConversionRequest<'a> {
+    pub site: ConversionSite,
+    pub source: SolvedTypeRef<'a>,
+    pub target: SolvedTypeRef<'a>,
+    pub region: Region,
+}
+
+pub enum ConversionPlan {
+    Identity,
+    Apply(ConvertKind),
+}
+
+pub fn plan_conversion(
+    request: ConversionRequest<'_>,
+    layouts: &LayoutStore<'_>,
+) -> Result<ConversionPlan, ConversionDiagnostic>;
+```
+
+`plan_conversion` is unimplemented at the start of this plan.
+
+Purpose: select the one legal conversion for a solved source and target type.
+
+Example: an annotated `expect value: MyRecord = raw_data` selects
+`ValidateData`, while a validator parameter can select `FromDataShallow`.
+
+Every generated `Expr::Convert` must have one planner result or one explicit
+source construct from the completed runtime baseline.
+
+### Aiken compiler environment
+
+Aiken source uses a compiler-owned prelude and builtin environment.
+
+Do not give Aiken modules Nash default imports.
+
+The implementation can use synthetic source modules or compiler-owned interface
+construction. It must expose the exact Aiken 1.1.23 surface needed by user code
+and the official standard library.
+
+```rust
+pub trait CompilerEnvironment: Send + Sync {
+    fn language(&self) -> &'static str;
+
+    fn compiler_modules(
+        &self,
+    ) -> Result<Vec<CompilerModule>, CompilerEnvironmentDiagnostic>;
+
+    fn default_imports(
+        &self,
+        module: &ModuleKey,
+    ) -> Vec<DefaultImport>;
+}
+```
+
+`compiler_modules` is unimplemented for Aiken at the start of this plan.
+
+Purpose: add the Aiken prelude and builtin interfaces before project modules.
+
+Example: an Aiken module can use `Option`, `Some`, `None`, `Bool`, `True`, and
+`False` without a Nash `Prelude` import.
+
+### Builtin mapping
+
+Replace the bounded whitelist with one exhaustive table.
+
+```rust
+pub enum AikenBuiltinLowering {
+    NashBuiltin(BuiltinId),
+    FrontendDesugaring(AikenBuiltinDesugaring),
+    InvalidForPlutusVersion {
+        minimum: PlutusVersion,
+    },
+}
+
+pub fn classify_builtin(
+    name: &str,
+    plutus: PlutusVersion,
+) -> Result<AikenBuiltinLowering, FrontendDiagnostic>;
+```
+
+`classify_builtin` is unimplemented for names outside the current bounded builtin table.
+
+Purpose: map each Aiken 1.1.23 builtin by exact name and version.
+
+Example: `equals_integer` maps to the Nash integer equality builtin, while a
+builtin that is not valid for the selected target returns a version diagnostic.
+
+### Tests and benchmarks as tool declarations
+
+Add frontend-neutral metadata for declarations that must type-check but must not
+enter production code generation.
+
+```rust
+pub enum RunnableKind {
+    Test,
+    Benchmark,
+}
+
+pub struct RunnableDecl<'a> {
+    pub kind: RunnableKind,
+    pub name: &'a str,
+    pub function: DefId,
+    pub region: Region,
+}
+```
+
+The compiler checks their bodies and signatures. `nash build` does not make them
+entry points. A later tool plan can run them.
+
+### Validator entry points
+
+A module can have zero, one, or many compiler entry points.
+
+```rust
+pub struct EntryPointId {
+    pub module: ModuleKey,
+    pub name: String,
+}
+
+pub enum EntryPointKind {
+    NativeValidator,
+    AikenValidator,
+}
+
+pub struct SourceEntryPoint<'a> {
+    pub id: EntryPointId,
+    pub kind: EntryPointKind,
+    pub function_name: &'a str,
+    pub metadata: SourceValidatorMetadata<'a>,
+}
+```
+
+After solving:
+
+```rust
+pub struct SolvedEntryPoint<'a> {
+    pub id: EntryPointId,
+    pub function: DefId,
+    pub parameters: Vec<SolvedBoundaryBinding<'a>>,
+    pub datum: Option<SolvedBoundaryBinding<'a>>,
+    pub redeemer: Option<SolvedBoundaryBinding<'a>>,
+    pub handlers: Vec<SolvedHandlerMetadata<'a>>,
+    pub docs: Option<String>,
+}
+```
+
+Entry-point metadata is not a blueprint. It is the stable input for a later Nash
+artifact plan.
+
+The build composition becomes:
+
+```rust
+pub fn compile_entry_points(
+    solved: &SolvedProject<'_>,
+) -> Result<Vec<CompiledArtifact>, Vec<BuildDiagnostic>> {
+    solved
+        .entry_points()
+        .map(|entry| compile_entry_point(solved, entry))
+        .collect()
+}
+```
+
+`compile_entry_point` is unimplemented for multiple Aiken validators at the start
+of this plan.
+
+Purpose: compile each named validator as an independent script.
+
+Example: `validator alpha` and `validator beta` in one `.ak` module produce two
+artifact sets with distinct names.
+
+## Exact language inventory
+
+The first implementation change must create and check this inventory against the
+exact-pinned Aiken enums.
+
+### Definitions
+
+- `Fn`
+- `TypeAlias`
+- `DataType`
+- `Use`
+- `ModuleConstant`
+- `Test`
+- `Benchmark`
+- `Validator`
+
+### Annotations
+
+- `Constructor`
+- `Fn`
+- `Var`
+- `Hole`
+- `Tuple`
+- `Pair`
+
+### Expressions
+
+- `UInt`
+- `String`
+- `Sequence`
+- `Var`
+- `Fn`
+- `List`
+- `Call`
+- `BinOp`
+- `ByteArray`
+- `CurvePoint`
+- `PipeLine`
+- `Assignment`
+- `Trace`
+- `TraceIfFalse`
+- `When`
+- `If`
+- `FieldAccess`
+- `Tuple`
+- `Pair`
+- `TupleIndex`
+- `ErrorTerm`
+- `RecordUpdate`
+- `UnOp`
+- `LogicalOpChain`
+
+### Patterns
+
+- `Int`
+- `ByteArray`
+- `Var`
+- `Assign`
+- `Discard`
+- `List`
+- `Constructor`
+- `Pair`
+- `Tuple`
+
+Constructor patterns must include:
+
+- Positional arguments.
+- Labeled arguments.
+- Renamed bindings.
+- Spread.
+- Module qualification.
+- Type qualification.
+
+### Assignments and arguments
+
+- `is` alternatives.
+- `let`.
+- `expect`.
+- Backpassing `let`.
+- Backpassing `expect`.
+- More than one assignment pattern.
+- Named arguments.
+- Discarded arguments.
+- Pattern arguments.
+- Labeled parameters with a different local binding name.
+- `via` arguments on tests and benchmarks.
+
+### Module kinds
+
+- `Lib`
+- `Validator`
+- `Env`
+- `Config`
+
+## Remaining work sequence
+
+Each chunk below is pending. Mark its heading complete only when its done
+criteria pass. The G1–G11 checklist records the shared acceptance requirements.
+
+Chunk numbers are tracking identifiers, not a strict execution order. Use the
+order required by dependencies. Keep the existing numbers so references remain
+stable.
+
+Define the shared contracts and the package-aware identities from Chunk 14 before
+the compiler environment, project loaders, or dependency resolver need them.
+Complete their use in interfaces, layouts, decoders, definitions, and entry points
+before final package, workspace, and multi-validator acceptance. Do not make
+Chunk 13 depend on identity types that are still only planned.
+
+Use the pinned standard library early to find language gaps. Its final acceptance
+must still use the normal project and package path without source changes.
+Verify existing support before adding it again.
+
+## [ ] Chunk 1 — Freeze the compatibility matrix
+
+**Files**
+
+- `docs/aiken-frontend.md`
+- `crates/nash-frontend-aiken/src/validate.rs`
+- `crates/nash-frontend-aiken/src/lower/*`
+- Focused adapter tests
+
+**Change**
+
+- Add the exact inventory above to the architecture document.
+- Mark each form as direct lowering, desugaring, type-directed lowering, or tool
+  declaration.
+- Remove general wildcard fallback from production lowering.
+- Add a focused completeness test or exact exhaustive match for each pinned enum.
+- Record the exact Aiken crate version and update procedure.
+
+**Tests**
+
+- One test proves that every builtin table entry has a classification.
+- One test proves that every compatibility-matrix row has an implementation
+  route.
+- Do not generate one fixture for each private helper.
+
+**Done when**
+
+The architecture document and code have the same exhaustive inventory. A new
+upstream AST variant cannot enter silently.
+
+---
+
+## [ ] Chunk 2 — Add type-directed surface nodes
+
+**Files**
+
+- `crates/nash-source`
+- `crates/nash-ast`
+- `crates/nash-can`
+- `crates/nash-constrain`
+- `crates/nash-solve`
+- `crates/nash-codegen`
+- `docs/aiken-frontend.md`
+- `SPEC.md`
+
+**Change**
+
+Add only the neutral nodes that the remaining Aiken forms require. Reuse native
+Nash nodes when they already preserve the required semantics.
+
+The required type-directed cases include:
+
+- Pipelines with inferred call arity.
+- Labeled function calls.
+- Renamed parameter labels.
+- Tuple indexing.
+- Record updates.
+- Polymorphic equality and inequality.
+- Trace formatting arguments.
+- Qualified constructor resolution.
+
+Keep the nodes neutral. Do not name them `Aiken*` in common compiler crates.
+
+**Tests**
+
+- One canonicalization test for labeled call ordering.
+- One type test for an invalid tuple index.
+- One type test for an invalid record update.
+- One codegen test for a solved polymorphic equality operation.
+
+**Done when**
+
+The Aiken lowerer can preserve each type-directed form without guessing its
+resolved declaration or type.
+
+---
+
+## [ ] Chunk 3 — Complete annotations, parameters, and calls
+
+**Files**
+
+- `crates/nash-frontend-aiken/src/lower/annotation.rs`
+- `crates/nash-frontend-aiken/src/lower/declaration.rs`
+- `crates/nash-frontend-aiken/src/lower/expression.rs`
+- Common callable-shape and interface code
+
+**Change**
+
+Implement:
+
+- Type holes.
+- Partial annotations.
+- Polymorphic local annotations.
+- Pair annotations.
+- Pattern function parameters.
+- Labeled parameters.
+- Renamed local parameter bindings.
+- Labeled function calls.
+- Labeled constructor calls.
+- Correct argument reordering and duplicate-label errors.
+
+A type hole creates a fresh inference variable. It does not create a runtime
+conversion.
+
+Preserve callable labels in imported interfaces.
+
+**Tests**
+
+- One local labeled call.
+- One imported labeled call.
+- One hole that infers successfully.
+- One duplicate or unknown label diagnostic.
+
+**Done when**
+
+The official standard library no longer fails because of annotation or call-label
+syntax.
+
+---
+
+## [ ] Chunk 4 — Complete expressions
+
+**Files**
+
+- `crates/nash-frontend-aiken/src/lower/expression.rs`
+- `crates/nash-source`
+- `crates/nash-ast`
+- `crates/nash-can`
+- `crates/nash-codegen`
+
+**Change**
+
+Implement the remaining expression forms:
+
+- Pipelines.
+- Pair construction.
+- Tuple indexing.
+- Record updates.
+- Curve-point literals.
+- Trace formatting.
+- `trace_if_false`.
+- Logical operation chains.
+- Any remaining unary or binary form.
+
+Preserve source evaluation order.
+
+A curve literal must become the correct primitive constant. Do not convert it to
+an unchecked byte array.
+
+A pipeline stage must use the solved call shape. Do not assume that the piped
+value is always the first source argument.
+
+**Tests**
+
+Use one compact source fixture that covers the expression forms. Add separate
+runtime tests only for forms with evaluation-order or representation risk.
+
+**Done when**
+
+Every `UntypedExpr` variant in Aiken 1.1.23 has a working route and no valid form
+returns `NAF2201`.
+
+---
+
+## [ ] Chunk 5 — Complete patterns and assignments
+
+**Files**
+
+- `crates/nash-frontend-aiken/src/lower/pattern.rs`
+- `crates/nash-frontend-aiken/src/lower/expression.rs`
+- `crates/nash-source`
+- `crates/nash-ast`
+- `crates/nash-can`
+- `crates/nash-nitpick`
+- Pattern compilation in codegen
+
+**Change**
+
+Implement:
+
+- Pair patterns.
+- Labeled constructor patterns.
+- Renamed labeled bindings.
+- Spread constructor patterns.
+- Module-qualified constructor patterns.
+- Type-qualified constructor patterns.
+- Pattern function arguments.
+- Multi-pattern assignment.
+- Backpassing `let`.
+- Backpassing `expect`.
+
+Desugar only when the transformation does not need solved types. Otherwise,
+preserve a neutral node until canonicalization or solving.
+
+Backpassing and multi-pattern lowering must evaluate the source value once.
+
+**Tests**
+
+- One pair-pattern match.
+- One labeled spread pattern.
+- One qualified imported constructor pattern.
+- One multi-pattern assignment that proves single evaluation.
+- One backpassing `expect` failure.
+
+**Done when**
+
+Every Aiken 1.1.23 pattern and assignment form type-checks and reaches existing
+pattern compilation.
+
+---
+
+## [ ] Chunk 6 — Centralize implicit conversions
+
+**Files**
+
+- The completed runtime conversion representation
+- `crates/nash-constrain` or the current solved-type elaboration location
+- `crates/nash-codegen`
+- `docs/aiken-frontend.md`
+- `SPEC.md`
+
+**Change**
+
+- Add `ConversionSite`, `ConversionRequest`, and `ConversionPlan`, or equivalent
+  types.
+- Route all implicit Aiken compatibility conversions through one planner.
+- Keep explicit `expect` validation and validator boundary behavior from the completed runtime baseline.
+- Add rules found by the exact Aiken 1.1.23 type-inference and code-generation
+  audit.
+- Reject conversion pairs that Aiken rejects.
+- Preserve qualified specialized layout identity in every conversion.
+
+Create a conversion matrix in the architecture document. It must state:
+
+- Source type class.
+- Target type class.
+- Source site.
+- Conversion kind.
+- Validation depth.
+- Failure behavior.
+
+**Tests**
+
+Use a small matrix test for legal and illegal conversion plans. Keep the existing
+runtime-baseline differential tests.
+
+**Done when**
+
+Every implicit conversion has one documented planner rule. No lowerer contains a
+private conversion decision.
+
+---
+
+## [ ] Chunk 7 — Complete polymorphic operations and traces
+
+**Files**
+
+- `crates/nash-constrain`
+- `crates/nash-solve`
+- `crates/nash-codegen`
+- `crates/nash-frontend-aiken`
+
+**Change**
+
+- Implement Aiken `==` and `!=` from solved operand types.
+- Use Aiken's allowed type set and runtime operations.
+- Do not use Nash user `Eq` implementations.
+- Implement trace label and argument rendering with Aiken evaluation order.
+- Implement `trace_if_false` with one evaluation of the condition.
+
+**Tests**
+
+- Equality for representative primitive and `Data` cases.
+- One rejected equality type.
+- One trace with more than one argument.
+- One `trace_if_false` success and failure case.
+
+**Done when**
+
+Representative programs have the same result and relevant trace order under
+Aiken 1.1.23 and Nash.
+
+---
+
+## [ ] Chunk 8 — Add the Aiken compiler environment
+
+**Files**
+
+- `crates/nash-frontend-aiken`
+- Driver compiler-module registration
+- Interface construction
+- `docs/aiken-frontend.md`
+
+**Change**
+
+- Provide the Aiken prelude types, constructors, values, and function shapes.
+- Provide the complete `aiken/builtin` surface.
+- Remove the bounded frontend builtin whitelist.
+- Prevent Nash default imports from entering `.ak` modules.
+- Keep Nash defaults unchanged for `.nash` modules.
+- Add exact package and module identity for compiler-owned modules.
+
+The implementation can build synthetic source modules or direct interfaces. Use
+one method consistently.
+
+**Tests**
+
+- One Aiken module uses prelude names without imports.
+- One module imports representative builtin groups.
+- One native module still uses the Nash prelude.
+- One exhaustive builtin-classification test.
+
+**Done when**
+
+The official Aiken standard library reaches normal project type checking without
+missing prelude or builtin definitions.
+
+---
+
+## [ ] Chunk 9 — Accept tests and benchmarks without runners
+
+**Files**
+
+- `crates/nash-source`
+- `crates/nash-ast`
+- `crates/nash-can`
+- `crates/nash-constrain`
+- `crates/nash-frontend-aiken`
+- `crates/nash-driver`
+
+**Change**
+
+- Lower Aiken `test` and `bench` declarations to tool declarations.
+- Type-check their arguments, `via` generators, bodies, and result types.
+- Do not add them to production entry points.
+- Do not emit them in validator artifacts.
+- For dependency packages, follow Aiken behavior and omit dependency tests,
+  benchmarks, and validators from the imported production surface.
+
+**Tests**
+
+- One project with a test and benchmark passes `nash check`.
+- The same project produces no extra build artifact.
+- One invalid test body still returns a normal type diagnostic.
+
+**Done when**
+
+A project does not fail only because it contains valid Aiken tests or benchmarks.
+
+---
+
+## [ ] Chunk 10 — Compile the official standard library from a local source tree
+
+**Files**
+
+- A pinned test fixture or prepared package cache
+- `crates/nash-frontend-aiken` fixes found by the gate
+- Relevant common compiler crates
+
+**Change**
+
+- Select one exact official Aiken standard-library release.
+- Record its version and source checksum in the fixture README.
+- Check all library modules through Nash without source changes.
+- Fix general language, prelude, builtin, representation, or interface defects.
+- Do not add module-name checks or standard-library-specific lowering.
+
+This chunk uses a local source tree. It does not wait for network package
+resolution.
+
+**Tests**
+
+One integration test checks the pinned standard library. It can be ignored in a
+fast unit-test group if its normal runtime is high, but it must run in the final
+workspace gate.
+
+**Done when**
+
+The exact standard-library source checks without edits and without special-case
+lowering.
+
+---
+
+## [ ] Chunk 11 — Add project-loader registration and manifest selection
+
+**Files**
+
+- `crates/nash-driver/src/project.rs`
+- New project-loader contract or the smallest equivalent location
+- Native Nash project adapter
+- `crates/nash-project-aiken`
+- `crates/nash-cli`
+- Driver project tests
+
+**Change**
+
+- Move current `nash.jsonc` loading behind the common project-loader seam.
+- Add `AikenProjectLoader` for `aiken.toml`.
+- Select the closest owning manifest.
+- Accept a direct manifest path.
+- Report same-directory manifest ambiguity.
+- Add an explicit selection option only if it is needed to resolve ambiguity.
+- Keep current Nash project behavior unchanged.
+
+**Tests**
+
+- Nash project discovery.
+- Aiken project discovery.
+- Direct `aiken.toml` path.
+- Ambiguous same-directory manifests.
+
+**Done when**
+
+`nash check` can enter an Aiken project without a Nash config file.
+
+---
+
+## [ ] Chunk 12 — Implement Aiken manifest, environment, and config behavior
+
+**Files**
+
+- `crates/nash-project-aiken/src/manifest.rs`
+- `crates/nash-project-aiken/src/discovery.rs`
+- `crates/nash-project-aiken/src/environment.rs`
+- `crates/nash-project-aiken/src/config_module.rs`
+- Driver catalog integration
+
+**Change**
+
+- Load project name, version, compiler requirement, Plutus version, license,
+  description, repository, dependencies, and config values.
+- Validate the supported compiler and Plutus target.
+- Discover `lib/`, `validators/`, and `env/` with Aiken file-name rules.
+- Require `env/default.ak` when the environment directory exists and Aiken
+  requires it.
+- Select a named environment when requested.
+- Implement Aiken `use env` resolution.
+- Create a synthetic `config` module from the selected config section.
+- Preserve generated definitions as synthetic source with useful project
+  diagnostics.
+
+**Tests**
+
+- Default environment.
+- Named environment.
+- Missing default environment.
+- Config values for bool, integer, bytes, list, and tuple shapes supported by
+  Aiken 1.1.23.
+
+**Done when**
+
+One unmodified project that imports `env` and `config` checks through Nash.
+
+---
+
+## [ ] Chunk 13 — Implement dependency, lock, and cache resolution
+
+**Files**
+
+- `crates/nash-project-aiken/src/dependencies.rs`
+- `crates/nash-project-aiken/src/lock.rs`
+- `crates/nash-project-aiken/src/store.rs`
+- Driver package and module identity
+- Project diagnostics
+
+**Change**
+
+- Resolve direct and transitive dependencies.
+- Read and update `aiken.lock` with the exact selected behavior.
+- Use Aiken package cache and build dependency paths.
+- Normalize each dependency to `PackageId` and local package root.
+- Discover dependency `lib/` only.
+- Keep tests, benchmarks, validators, and environment modules from dependency
+  packages out of the production import surface, as Aiken does.
+- Support prepared-cache and offline test operation.
+- Report missing packages, invalid locks, source failures, and version conflicts.
+
+Do not call the Aiken type checker or compiler.
+
+**Tests**
+
+- One direct dependency.
+- One transitive dependency.
+- One locked prepared-cache build.
+- One missing package diagnostic.
+
+**Done when**
+
+An unmodified locked Aiken project resolves and checks without network access in
+CI.
+
+---
+
+## [ ] Chunk 14 — Make module and interface identity package-aware
+
+**Files**
+
+- `crates/nash-driver`
+- `crates/nash-can`
+- `crates/nash-ast`
+- Completed runtime layout and decoder identity code
+- `crates/nash-codegen`
+- `crates/nash-report`
+
+**Change**
+
+- Add `PackageId`, `ModuleKey`, and resolved dependency records.
+- Key interfaces by package and module identity.
+- Pass resolved imports to canonicalization.
+- Extend definition, ADT, layout, decoder, and specialization identities with
+  package identity.
+- Keep Aiken source imports module-only.
+- Report duplicate visible module providers instead of selecting one.
+- Keep source URI only for diagnostics and I/O.
+
+**Tests**
+
+- Two packages with distinct modules.
+- A transitive imported type keeps its package-qualified layout and decoder.
+- Two visible packages that provide the same source module produce an ambiguity
+  diagnostic.
+- Native package ownership tests still pass.
+
+**Done when**
+
+No semantic cache or lookup can confuse definitions from different packages.
+
+---
+
+## [ ] Chunk 15 — Add Aiken workspace support
+
+**Files**
+
+- `crates/nash-project-aiken/src/workspace.rs`
+- Project-loader registry
+- Module catalog assembly
+
+**Change**
+
+- Detect an Aiken workspace manifest.
+- Expand member paths and globs with Aiken 1.1.23 behavior.
+- Load each member as a package.
+- Keep member package identity stable.
+- Resolve member and external dependencies through one package graph.
+- Report missing, duplicate, and nested conflicting members.
+
+**Tests**
+
+One small workspace with two members is sufficient. One member imports the other.
+
+**Done when**
+
+`nash check` on the workspace root checks all members in dependency order.
+
+---
+
+## [ ] Chunk 16 — Support multiple validators and stable metadata
+
+**Files**
+
+- `crates/nash-source`
+- `crates/nash-ast`
+- `crates/nash-can`
+- `crates/nash-driver`
+- `crates/nash-codegen`
+- `crates/nash-frontend-aiken/src/lower/validator.rs`
+- Build output naming
+
+**Change**
+
+- Replace the one-generated-`main` assumption with source entry-point metadata.
+- Allow more than one Aiken validator declaration in a module.
+- Keep one generated entry function per validator.
+- Permit source references to validator handler functions where Aiken permits
+  them.
+- Compile each solved entry point separately.
+- Keep native Nash `main` as one native entry point.
+- Preserve project and validator metadata for a later artifact layer.
+- Emit collision-safe UPLC, Flat, and CBOR file names.
+
+Recommended file identity:
+
+```text
+<package>.<module>.<validator>.uplc
+<package>.<module>.<validator>.flat
+<package>.<module>.<validator>.cbor
+```
+
+The exact escaping rules must be documented and stable.
+
+**Tests**
+
+- Two validators in one module produce two artifacts.
+- Parameterized validators keep parameter order and labels.
+- Two modules with the same validator name do not collide.
+- Native validator output remains unchanged.
+
+**Done when**
+
+The solved build exposes one typed metadata record and one compiled artifact per
+validator.
+
+---
+
+## [ ] Chunk 17 — Preserve future blueprint input without generating a blueprint
+
+**Files**
+
+- Solved build output
+- Driver artifact metadata
+- `docs/aiken-frontend.md`
+- `SPEC.md`
+
+**Change**
+
+Preserve:
+
+- Project name.
+- Project version.
+- License.
+- Description.
+- Repository.
+- Compiler target.
+- Plutus version.
+- Package and module identity.
+- Validator name and documentation.
+- Handler purpose and documentation.
+- Parameter name, label, order, solved type, and data layout.
+- Datum and redeemer names, solved types, and data layouts.
+- Compiled program and output identity.
+
+Do not serialize CIP-57 JSON in this plan.
+
+**Tests**
+
+One solved validator metadata snapshot or structural assertion is sufficient. Do
+not create a large artifact snapshot suite.
+
+**Done when**
+
+A later Nash artifact plan can generate a blueprint without reparsing Aiken
+source or calling the Aiken type checker.
+
+---
+
+## [ ] Chunk 18 — CLI and language-server integration
+
+**Files**
+
+- `crates/nash-cli`
+- `crates/nash-driver`
+- `crates/nash-language-server`
+- `docs/cli.md`
+- `docs/aiken-frontend.md`
+
+**Change**
+
+- Route `check` and `build` through project-loader selection.
+- Add environment selection to the shared build options.
+- Show package and module identity in ambiguous project diagnostics.
+- Build every solved validator entry point.
+- Keep the existing editor parse and diagnostic path.
+- Load Aiken project context for an open `.ak` file when practical through the
+  shared project loader.
+- Add no formatter or completion work.
+
+**Tests**
+
+- Real CLI `check` on an Aiken project.
+- Real CLI `build` on a multi-validator Aiken project.
+- One LSP diagnostic smoke test for an Aiken project file.
+
+**Done when**
+
+The public Nash commands exercise the same project, frontend, compiler, and build
+paths as the integration tests.
+
+---
+
+## [ ] Chunk 19 — Final standard-library and project acceptance
+
+**Files**
+
+- `crates/nash-driver/tests/fixtures/aiken/`
+- Adapter differential tests
+- Project integration tests
+- Architecture and specification documents
+- Sampo changesets
+
+**Change**
+
+Create a small final acceptance set:
+
+1. `full-language`
+   - Covers all remaining language categories in a compact set of modules.
+2. `stdlib-project`
+   - Uses the exact pinned official standard library through normal package
+     resolution.
+3. `dependency-project`
+   - Uses one direct and one transitive dependency from a prepared cache.
+4. `env-config-project`
+   - Uses default and named environments plus synthetic config.
+5. `multi-validator-project`
+   - Contains tests, benchmarks, and at least two validators.
+
+Use the official Aiken compiler as a differential oracle only for representative
+semantic risks. Do not create a large generated evidence corpus.
+
+Recommended differential cases:
+
+- Pipeline with labeled arguments.
+- Record update and qualified pattern.
+- Polymorphic equality.
+- Trace argument order.
+- One package-defined custom data type at a validator boundary.
+- Two validators from one module.
+
+**Done when**
+
+G1 through G11 pass and the final supported claim is accurate.
+
+## Validation strategy
+
+Run focused tests after each chunk. Run the broad workspace commands once near
+completion and again after final fixes.
+
+Reuse existing tests and fixtures first. One compact fixture can cover repeated
+test requirements in several chunks. Add focused tests for new behavior and
+specific risks, not one test for each private helper. Do not add a generated
+corpus, an evidence generator, or a large report.
+
+Run required standard-library and integration tests explicitly when the normal
+command skips them. A skipped, ignored, unavailable, or failing required check
+does not pass a gate. Keep records short: command, result, and unresolved failure.
+
+Required final commands:
+
+```sh
+cargo fmt --all -- --check
+cargo check --workspace --all-targets
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace
+cargo insta test
+```
+
+Required real command checks:
+
+```sh
+cargo run -p nash-cli -- check <aiken-stdlib-project>
+cargo run -p nash-cli -- check <aiken-dependency-project>
+cargo run -p nash-cli -- check <aiken-env-config-project> --env <name>
+cargo run -p nash-cli -- build <aiken-multi-validator-project>
+cargo run -p nash-cli -- build examples/vesting
+```
+
+Keep the existing runtime-baseline differential tests. Add only the focused
+differential cases listed in Chunk 19. Compare matching target, environment,
+parameter, input, and trace settings. Compare results, failures, and relevant user
+traces; do not require identical bytes, hashes, or execution budgets.
+
+Do not require network access in the final test suite.
+
+## Diagnostics
+
+Add stable project-level diagnostic codes. Keep frontend syntax and lowering codes
+separate.
+
+Suggested groups:
+
+```text
+NAP1xxx  Aiken project and manifest loading
+NAP2xxx  dependency, lock, and cache resolution
+NAP3xxx  environment and config selection
+NAP4xxx  package and module identity
+NAF2xxx  Aiken source parsing and lowering
+NAF3xxx  Aiken type-directed compatibility lowering
+NAB1xxx  Aiken validator entry-point and artifact errors
+```
+
+Examples:
+
+```text
+NAP1001  no aiken.toml found
+NAP1002  both aiken.toml and nash.jsonc own this path
+NAP2001  locked dependency is not available
+NAP2002  dependency graph has conflicting versions
+NAP3001  selected environment does not exist
+NAP3002  env/ has no required default module
+NAP4001  more than one visible package provides this module
+NAF3001  labeled call does not match the resolved function labels
+NAF3002  no Aiken equality operation exists for this solved type
+NAB1001  two validator entry points map to the same output name
+```
+
+Normal user input must return diagnostics. It must not panic.
+
+## Implementation rules
+
+- Do not add reachable `todo!()`, `unimplemented!()`, or placeholder panics.
+- Do not return dummy success values.
+- Do not use silent fallbacks for an Aiken source or package rule.
+- Do not call the Aiken type checker or code generator in production.
+- Do not use standard-library module names as compiler conditions.
+- Do not infer semantic identity from file names after project resolution.
+- Do not let project-network code enter the syntax frontend.
+- Do not let Aiken crate types enter common compiler crates.
+- Do not change native Nash semantics to imitate Aiken.
+- Update the architecture document when repository facts require a design
+  change.
+- Record each material design change in the pull-request description.
+
+## Reference rules
+
+Use a separate reference for each kind of decision:
+
+- **Nash ownership and integration:** use the current repository for lifetimes,
+  arena ownership, internal architecture, and native Nash behavior.
+- **Aiken compatibility:** use exact Aiken `v1.1.23` for language, typing,
+  project, and runtime behavior. Confirm the inventory, selected standard-library
+  release, and compiler and Plutus targets against that source.
+- **Required scope:** use this plan. Keep `docs/aiken-frontend.md` and `SPEC.md`
+  aligned with the implemented design and verified compatibility rules.
+
+Existing tests are regression checks. They do not override a verified Aiken
+compatibility defect. Preserve the recorded runtime contract unless a concrete
+upstream rule shows that it is wrong. For such a correction, record the pinned
+source location, explain the change, and add or adapt a focused regression test.
+Do not change native Nash semantics to match Aiken.
+
+If a concrete inventory or project claim conflicts with the pinned source, record
+the source location and correct the claim. Do not silently add behavior from a
+newer release or invent replacement behavior. Do not reduce the target version,
+remove a required language category, or make a required gate optional to claim
+completion.
+
+Update this plan and the architecture document when repository facts require a
+design change. Record material changes and their reasons in the pull-request
+description. Do not force the code to match an old interface sketch.
+
+## Final claim
+
+After all remaining source/project gates G1–G11 pass on the final code, Nash can
+state:
+
+> Nash supports Aiken 1.1.23 source and project compilation. An unmodified Aiken
+> project can use the official prelude, standard library, dependencies,
+> environments, configuration, libraries, and validators, and can check and
+> build through Nash with equivalent observable on-chain behavior.
+
+The documentation must also state:
+
+> Nash does not yet provide Aiken test execution, benchmark execution, blueprint
+> serialization, formatting, HTML documentation, editor completion, or exact
+> script-byte compatibility.
+
+
+## Follow-on work beyond source and project compatibility
+
+These items remain tracked here but do not block the G1–G11 source/project gates.
+They are not part of the current assignment. Leave them unchecked unless a
+separate assignment completes them. Do not treat every unchecked box in this
+file as part of the source/project finish line:
+
+- [ ] **Artifacts (Plan 09).** Add CIP-57/`plutus.json` blueprint and schema
+  serialization, script-hash and target-version artifact support, and parameter
+  application to an existing blueprint. Use the solved metadata preserved above
+  and verify artifacts against the same validator contract. Current builds emit
+  UPLC, Flat and CBOR; identical bytes, hashes and budgets are not requirements.
+- [ ] **Test and benchmark execution (Plan 10).** Run Aiken test and benchmark
+  declarations after the source/project work enables parsing and type checking.
+- [ ] **User tools (Plan 13 and LSP work).** Add Aiken source formatting, HTML
+  documentation generation and editor completion. Preserve documentation comments
+  as metadata now; shared compiler diagnostics are not a complete Aiken editor.
+- [ ] **Optional upstream parser extraction.** Propose a parser-only
+  `aiken-syntax` crate upstream, then replace `aiken-lang` when it is available.
+  Keep the exact parser pin, one private AST version, sync policy and compatibility
+  coverage until then. This external dependency cleanup does not block language,
+  validator or project compatibility.
