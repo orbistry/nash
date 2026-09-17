@@ -1190,7 +1190,7 @@ fn canonicalize_let<'a>(
     for def in defs {
         collect_def_names(&def.value, &mut name_regions);
     }
-    let bindings = environment::dups::detect(name_regions.into_iter(), |name, first, second| {
+    let bindings = environment::dups::detect(name_regions, |name, first, second| {
         Error::DuplicatePattern {
             context: DuplicatePatternContext::LetBinding,
             name,
