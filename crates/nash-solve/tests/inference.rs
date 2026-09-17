@@ -726,7 +726,6 @@ fn render_type(typ: &Located<CanType<'_>>, ctx: Ctx) -> String {
         CanType::Alias {
             reference,
             arguments,
-            target: _,
             ..
         } => {
             let args: Vec<&Located<CanType<'_>>> =
