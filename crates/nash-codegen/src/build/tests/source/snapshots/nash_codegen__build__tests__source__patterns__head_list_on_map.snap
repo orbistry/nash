@@ -1,0 +1,48 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nmain =\n    let\n        x = [mkPairData (I 1) (B #\"\"), mkPairData (I 2) (B #\"aa\")]\n        first = headList x\n    in\n    equalsData (mapData [first]) (mapData [mkPairData (I 1) (B #\"\")])\n"
+---
+--- core
+let fromInt#5 : int -> int = \value#12 : int -> value#12 in
+let fromBytes#7 : bytes -> bytes = \value#13 : bytes -> value#13 in
+let x#2 : list (pair Data Data) = mkCons (mkPairData ((\field#8 : int -> iData field#8) (fromInt#5 1)) ((\field#9 : bytes -> bData field#9) (fromBytes#7 (con bytestring #)))) (mkCons (mkPairData ((\field#10 : int -> iData field#10) (fromInt#5 2)) ((\field#11 : bytes -> bData field#11) (fromBytes#7 (con bytestring #aa)))) (con (list (pair data data)) [])) in
+let projection#14 : pair Data Data = headList x#2 in
+let first#3 : pair Data Data = projection#14 in
+let main#1 : bool = equalsData (mapData (mkCons first#3 (con (list (pair data data)) []))) (mapData (mkCons (mkPairData ((\field#4 : int -> iData field#4) (fromInt#5 1)) ((\field#6 : bytes -> bData field#6) (fromBytes#7 (con bytestring #)))) (con (list (pair data data)) []))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_5
+    [(lam fromBytes_7
+      [(lam x_2
+        [(lam projection_14
+          [(lam first_3
+            [(lam main_1 main_1)
+              [[(builtin equalsData)
+                [(builtin mapData)
+                  [[(force (builtin mkCons)) first_3] (con (list (pair data data)) [])]]]
+                [(builtin mapData)
+                  [[(force (builtin mkCons))
+                    [[(builtin mkPairData)
+                      [(lam field_4 [(builtin iData) field_4]) [fromInt_5 (con integer 1)]]]
+                      [(lam field_6 [(builtin bData) field_6]) [fromBytes_7 (con bytestring #)]]]]
+                    (con (list (pair data data)) [])]]]])
+            projection_14])
+          [(force (builtin headList)) x_2]])
+        [[(force (builtin mkCons))
+          [[(builtin mkPairData)
+            [(lam field_8 [(builtin iData) field_8]) [fromInt_5 (con integer 1)]]]
+            [(lam field_9 [(builtin bData) field_9]) [fromBytes_7 (con bytestring #)]]]]
+          [[(force (builtin mkCons))
+            [[(builtin mkPairData)
+              [(lam field_10 [(builtin iData) field_10]) [fromInt_5 (con integer 2)]]]
+              [(lam field_11 [(builtin bData) field_11]) [fromBytes_7 (con bytestring #aa)]]]]
+            (con (list (pair data data)) [])]]])
+      (lam value_13 value_13)])
+    (lam value_12 value_12)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 3663328, memory: 11613

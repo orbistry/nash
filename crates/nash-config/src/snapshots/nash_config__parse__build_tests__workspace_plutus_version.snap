@@ -1,0 +1,7 @@
+---
+source: crates/nash-config/src/parse.rs
+description: "{\"type\":\"workspace\",\"members\":[],\"plutusVersion\":\"v3\"}"
+info: diagnostic
+---
+  × 'nash.jsonc' at 1:34: 'plutusVersion' must be set in workspace members,
+  │ not the workspace config

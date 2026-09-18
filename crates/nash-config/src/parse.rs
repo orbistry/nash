@@ -11,8 +11,8 @@ use jsonc_parser::common::{Range, Ranged};
 use jsonc_parser::{CollectOptions, ParseOptions, parse_to_ast};
 
 use crate::config::{
-    Application, Config, Dependency, DependencySource, ExposedModules, GitDep, Package, PathDep,
-    Workspace, WorkspaceDep,
+    Application, Build, Config, Dependency, DependencySource, ExposedModules, GitDep, Package,
+    PathDep, PlutusVersion, TraceLevel, Workspace, WorkspaceDep,
 };
 use crate::error::{ConfigError, Position};
 use crate::name::{PackageName, PackageNameError};
@@ -48,6 +48,13 @@ pub fn parse(contents: &str, path: impl AsRef<Path>) -> Result<Config, ConfigErr
 }
 
 fn parse_config(contents: &str, path: &Path, obj: &Object) -> Result<Config, ConfigError> {
+    if let Some(prop) = find_property(obj, "optimize") {
+        return Err(ConfigError::OptimizerUnavailable {
+            path: path.into(),
+            pos: position_of(contents, prop.name.range()),
+        });
+    }
+
     let type_prop = find_property(obj, "type").ok_or_else(|| {
         ConfigError::missing_field(path, "type", position_of(contents, obj.range))
     })?;
@@ -94,10 +101,62 @@ fn parse_application(
     };
 
     Ok(Application {
+        build: parse_build(contents, path, obj)?,
         compiler,
         source_directories,
         dependencies,
         test_dependencies,
+    })
+}
+
+fn parse_build(contents: &str, path: &Path, obj: &Object) -> Result<Build, ConfigError> {
+    let invalid_enum = |field, value: String, expected| ConfigError::InvalidEnum {
+        path: path.into(),
+        pos: position_of(contents, find_property(obj, field).unwrap().value.range()),
+        field,
+        value,
+        expected,
+    };
+    let plutus_version =
+        match parse_optional_string(contents, path, obj, "plutusVersion")?.as_deref() {
+            None | Some("v3") => PlutusVersion::V3,
+            Some("v1") => PlutusVersion::V1,
+            Some("v2") => PlutusVersion::V2,
+            Some(other) => {
+                return Err(invalid_enum(
+                    "plutusVersion",
+                    other.into(),
+                    "'v1', 'v2', or 'v3'",
+                ));
+            }
+        };
+    let trace_level = match parse_optional_string(contents, path, obj, "traceLevel")?.as_deref() {
+        None | Some("silent") => TraceLevel::Silent,
+        Some("compact") => TraceLevel::Compact,
+        Some("verbose") => TraceLevel::Verbose,
+        Some(other) => {
+            return Err(invalid_enum(
+                "traceLevel",
+                other.into(),
+                "'silent', 'compact', or 'verbose'",
+            ));
+        }
+    };
+    let compiler_traces = match find_property(obj, "compilerTraces") {
+        None => false,
+        Some(prop) => {
+            prop.value
+                .as_boolean_lit()
+                .ok_or_else(|| {
+                    ConfigError::expected_bool(path, position_of(contents, prop.value.range()))
+                })?
+                .value
+        }
+    };
+    Ok(Build {
+        plutus_version,
+        trace_level,
+        compiler_traces,
     })
 }
 
@@ -137,6 +196,7 @@ fn parse_package(contents: &str, path: &Path, obj: &Object) -> Result<Package, C
     };
 
     Ok(Package {
+        build: parse_build(contents, path, obj)?,
         compiler,
         name,
         version,
@@ -149,6 +209,16 @@ fn parse_package(contents: &str, path: &Path, obj: &Object) -> Result<Package, C
 }
 
 fn parse_workspace(contents: &str, path: &Path, obj: &Object) -> Result<Workspace, ConfigError> {
+    for field in ["plutusVersion", "traceLevel", "compilerTraces"] {
+        if let Some(prop) = find_property(obj, field) {
+            return Err(ConfigError::WorkspaceBuildSetting {
+                path: path.into(),
+                pos: position_of(contents, prop.name.range()),
+                field,
+            });
+        }
+    }
+
     let compiler = parse_optional_string(contents, path, obj, "compiler")?;
 
     let members = {
@@ -750,4 +820,147 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("4:") || msg.contains("line 4"));
     }
+}
+
+#[cfg(test)]
+mod build_tests {
+    use super::*;
+    use crate::{Build, PlutusVersion, TraceLevel};
+    use miette::{GraphicalReportHandler, GraphicalTheme, MietteDiagnostic};
+
+    macro_rules! config_error_snapshot {
+        ($name:ident, $source:expr) => {
+            #[test]
+            fn $name() {
+                let source = indoc::indoc!($source);
+                let error = parse(source, "nash.jsonc").unwrap_err();
+                let mut rendered = String::new();
+                GraphicalReportHandler::new_themed(GraphicalTheme::unicode_nocolor())
+                    .with_width(80)
+                    .render_report(&mut rendered, &MietteDiagnostic::new(error.to_string()))
+                    .unwrap();
+                insta::with_settings!({ description => source, omit_expression => true, info => &"diagnostic" }, {
+                    insta::assert_snapshot!(rendered);
+                });
+            }
+        };
+    }
+
+    #[test]
+    fn build_defaults() {
+        for source in [
+            r#"{"type":"application"}"#,
+            r#"{"type":"workspace","members":[]}"#,
+            r#"{"type":"package","name":"test/lib","version":"1.0.0","summary":"","license":"MIT","exposedModules":[]}"#,
+        ] {
+            let config = parse(source, "nash.jsonc").unwrap();
+            assert_eq!(config.build(), Build::default());
+            assert_eq!(config.build().plutus_version, PlutusVersion::V3);
+            assert_eq!(config.build().trace_level, TraceLevel::Silent);
+            assert!(!config.build().compiler_traces);
+            assert_eq!(serde_json::from_str::<Config>(source).unwrap(), config);
+        }
+    }
+
+    #[test]
+    fn build_roundtrip() {
+        for (version, expected_version) in [
+            ("v1", PlutusVersion::V1),
+            ("v2", PlutusVersion::V2),
+            ("v3", PlutusVersion::V3),
+        ] {
+            for (trace, expected_trace) in [
+                ("silent", TraceLevel::Silent),
+                ("compact", TraceLevel::Compact),
+                ("verbose", TraceLevel::Verbose),
+            ] {
+                for compiler_traces in [false, true] {
+                    let source = format!(
+                        r#"{{"type":"application","plutusVersion":"{version}","traceLevel":"{trace}","compilerTraces":{compiler_traces}}}"#
+                    );
+                    let config = parse(&source, "nash.jsonc").unwrap();
+                    assert_eq!(
+                        config.build(),
+                        Build {
+                            plutus_version: expected_version,
+                            trace_level: expected_trace,
+                            compiler_traces
+                        }
+                    );
+                    let serialized = serde_json::to_string(&config).unwrap();
+                    assert_eq!(parse(&serialized, "nash.jsonc").unwrap(), config);
+                    assert_eq!(serde_json::from_str::<Config>(&serialized).unwrap(), config);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn package_build_settings() {
+        let source = r#"{"type":"package","name":"test/lib","version":"1.0.0","summary":"","license":"MIT","exposedModules":[],"plutusVersion":"v1","traceLevel":"verbose","compilerTraces":true}"#;
+        let config = parse(source, "nash.jsonc").unwrap();
+        assert_eq!(
+            config.build(),
+            Build {
+                plutus_version: PlutusVersion::V1,
+                trace_level: TraceLevel::Verbose,
+                compiler_traces: true
+            }
+        );
+        assert_eq!(serde_json::from_str::<Config>(source).unwrap(), config);
+        assert_eq!(
+            parse(&serde_json::to_string(&config).unwrap(), "nash.jsonc").unwrap(),
+            config
+        );
+    }
+
+    config_error_snapshot!(
+        workspace_plutus_version,
+        r#"{"type":"workspace","members":[],"plutusVersion":"v3"}"#
+    );
+    config_error_snapshot!(
+        workspace_trace_level,
+        r#"{"type":"workspace","members":[],"traceLevel":"compact"}"#
+    );
+    config_error_snapshot!(
+        workspace_compiler_traces,
+        r#"{"type":"workspace","members":[],"compilerTraces":false}"#
+    );
+    config_error_snapshot!(
+        invalid_plutus_version,
+        r#"
+        {
+            "type": "application",
+            "plutusVersion": "v4"
+        }
+    "#
+    );
+    config_error_snapshot!(
+        invalid_trace_level,
+        r#"{"type":"application","traceLevel":"loud"}"#
+    );
+    config_error_snapshot!(
+        plutus_version_wrong_type,
+        r#"{"type":"application","plutusVersion":3}"#
+    );
+    config_error_snapshot!(
+        trace_level_wrong_type,
+        r#"{"type":"application","traceLevel":null}"#
+    );
+    config_error_snapshot!(
+        compiler_traces_wrong_type,
+        r#"{"type":"application","compilerTraces":"true"}"#
+    );
+    config_error_snapshot!(
+        optimizer_unavailable,
+        r#"{"type":"application","optimize":0}"#
+    );
+    config_error_snapshot!(
+        workspace_optimizer_unavailable,
+        r#"{"type":"workspace","members":[],"optimize":2}"#
+    );
+    config_error_snapshot!(
+        package_optimizer_unavailable,
+        r#"{"type":"package","optimize":null}"#
+    );
 }

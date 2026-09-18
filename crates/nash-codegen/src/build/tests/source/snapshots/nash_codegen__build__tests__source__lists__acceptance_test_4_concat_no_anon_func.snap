@@ -1,0 +1,111 @@
+---
+source: crates/nash-codegen/src/build/tests/source/lists.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nfoldr xs f zero =\n    case xs of\n        [] -> zero\n        x :: rest -> f x (foldr rest f zero)\nprepend x xs = mkCons x xs\nconcat left right = foldr left prepend right\nmain = eq (concat [1, 2, 3] [4, 5, 6]) [1, 2, 3, 4, 5, 6]\n"
+---
+--- core
+let eq#7 : int -> int -> bool = equalsInteger in
+let eq#2 : list 'erased -> list 'erased -> bool = (\self#28 : 'erased -> self#28 self#28) (\self#28 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
+  True -> nullList ys#6
+  False -> case@Bool nullList ys#6 of
+    True -> false
+    False -> let projection#23 : 'erased = headList xs#5 in
+    let projection#24 : 'erased = headList ys#6 in
+    case@Bool eq#7 projection#23 projection#24 of
+      True -> let projection#25 : list 'erased = tailList xs#5 in
+      let projection#26 : list 'erased = tailList ys#6 in
+      self#28 self#28 projection#25 projection#26
+      False -> false) in
+let foldr#10 : list 'erased -> ('erased -> 'erased -> 'erased) -> 'erased -> 'erased = \xs#13 : list 'erased (f#14 : 'erased -> 'erased -> 'erased) zero#15 : 'erased -> (\self#27 : 'erased -> self#27 self#27) (\self#27 : 'erased xs#13 : list 'erased -> let match#18 : list 'erased = xs#13 in
+case@List match#18 of
+  Nil -> zero#15
+  Cons field#19 field#20 -> let x#16 : 'erased = field#19 in
+  let rest#17 : list 'erased = field#20 in
+  f#14 x#16 (self#27 self#27 rest#17)) xs#13 in
+let prepend#11 : 'erased -> list 'erased -> list 'erased = \x#21 : 'erased xs#22 : list 'erased -> mkCons x#21 xs#22 in
+let concat#3 : list 'erased -> list 'erased -> list 'erased = \left#8 : list 'erased right#9 : list 'erased -> foldr#10 left#8 prepend#11 right#9 in
+let fromInt#4 : int -> int = \value#12 : int -> value#12 in
+let main#1 : bool = eq#2 (concat#3 (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mkCons (fromInt#4 3) (con (list integer) [])))) (mkCons (fromInt#4 4) (mkCons (fromInt#4 5) (mkCons (fromInt#4 6) (con (list integer) []))))) (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mkCons (fromInt#4 3) (mkCons (fromInt#4 4) (mkCons (fromInt#4 5) (mkCons (fromInt#4 6) (con (list integer) []))))))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam eq_7
+    [(lam eq_2
+      [(lam foldr_10
+        [(lam prepend_11
+          [(lam concat_3
+            [(lam fromInt_4
+              [(lam main_1 main_1)
+                [[eq_2
+                  [[concat_3
+                    [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
+                      [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]] (con (list integer) [])]]]]
+                    [[(force (builtin mkCons)) [fromInt_4 (con integer 4)]]
+                      [[(force (builtin mkCons)) [fromInt_4 (con integer 5)]]
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 6)]] (con (list integer) [])]]]]]
+                  [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
+                    [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
+                      [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]]
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 4)]]
+                          [[(force (builtin mkCons)) [fromInt_4 (con integer 5)]]
+                            [[(force (builtin mkCons)) [fromInt_4 (con integer 6)]] (con (list integer) [])]]]]]]]])
+              (lam value_12 value_12)])
+            (lam left_8 (lam right_9 [[[foldr_10 left_8] prepend_11] right_9]))])
+          (lam x_21 (lam xs_22 [[(force (builtin mkCons)) x_21] xs_22]))])
+        (lam xs_13
+          (lam f_14
+            (lam zero_15
+              [[(lam self_27 [self_27 self_27])
+                (lam self_27
+                  (lam xs_13
+                    [(lam match_18
+                      [(lam generated_29
+                        (force
+                          [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_29]]
+                            (delay zero_15)]
+                            (delay
+                              [[(lam field_19
+                                (lam field_20
+                                  [(lam x_16 [(lam rest_17 [[f_14 x_16] [[self_27 self_27] rest_17]]) field_20])
+                                    field_19]))
+                                [(force (builtin headList)) generated_29]]
+                                [(force (builtin tailList)) generated_29]])]))
+                        match_18])
+                      xs_13]))]
+                xs_13])))])
+      [(lam self_28 [self_28 self_28])
+        (lam self_28
+          (lam xs_5
+            (lam ys_6
+              [(lam generated_30
+                (force
+                  [[[(force (builtin ifThenElse)) generated_30]
+                    (delay [(force (builtin nullList)) ys_6])]
+                    (delay
+                      [(lam generated_31
+                        (force
+                          [[[(force (builtin ifThenElse)) generated_31] (delay (con bool False))]
+                            (delay
+                              [(lam projection_23
+                                [(lam projection_24
+                                  [(lam generated_32
+                                    (force
+                                      [[[(force (builtin ifThenElse)) generated_32]
+                                        (delay
+                                          [(lam projection_25
+                                            [(lam projection_26 [[[self_28 self_28] projection_25] projection_26])
+                                              [(force (builtin tailList)) ys_6]])
+                                            [(force (builtin tailList)) xs_5]])]
+                                        (delay (con bool False))]))
+                                    [[eq_7 projection_23] projection_24]])
+                                  [(force (builtin headList)) ys_6]])
+                                [(force (builtin headList)) xs_5]])]))
+                        [(force (builtin nullList)) ys_6]])]))
+                [(force (builtin nullList)) xs_5]])))]])
+    (builtin equalsInteger)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 20128644, memory: 84445

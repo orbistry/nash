@@ -52,7 +52,7 @@ Done:
 - [x] `nash check`
 - [x] UPLC runtime (`nash-plutus`): conformance suite passes
 
-Planned, in execution order (each links to its plan):
+Implementation plans (Plan 08 is deferred; proceed with Plan 09):
 
 - [x] 01 Syntax: `'a` type vars, little/Big names, `trait`/`impl`, `=>` contexts, representation annotations, `validator module`, `tests` block, `do`, attributes, `name!()`, `comptime`, `assert`/`fail`/`todo`/`trace`; drop `Float`/`Char`/record extension types — [plans/01-syntax.md](plans/01-syntax.md)
 - [x] 02 Kinds: original declaration checking and representation rules (engine replaced by the follow-up) — [plans/02-kinds.md](plans/02-kinds.md)
@@ -63,7 +63,7 @@ Planned, in execution order (each links to its plan):
 - [x] 05 Exhaustiveness (`Nitpick/PatternMatches` port) — [plans/05-nitpick.md](plans/05-nitpick.md)
 - [x] 06 Diagnostics (`nash-report`, concise source labels, stable codes, JSON/LSP) — [plans/06-diagnostics.md](plans/06-diagnostics.md); [concise diagnostics refactor](plans/diagnostics-refactor.md) complete
 - [x] 07 Codegen: Core IR, monomorphization, decision trees, recursion, Data casts, UPLC lowering — [plans/07-codegen.md](plans/07-codegen.md)
-- [ ] 08 Optimizer: inlining, builtin force caching, DCE, case-of-known-ctor/constant folding — [plans/08-optimizer.md](plans/08-optimizer.md)
+- [ ] 08 Optimizer: inlining, builtin force caching, DCE, case-of-known-ctor/constant folding — [plans/08-optimizer.md](plans/08-optimizer.md) (deferred)
 - [ ] 09 Validators + `nash build` — [plans/09-validators-build.md](plans/09-validators-build.md)
 - [ ] 10 Testing: `tests` block, props, fuzzers, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)

@@ -1,0 +1,71 @@
+---
+source: crates/nash-codegen/src/build/tests/source/lists.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmap opt f =\n    case opt of\n        None -> None\n        Some a -> Some (f a)\naddOne n = addInteger n 1\nmain = eq (map None addOne) None\n"
+---
+--- core
+let eq#9 : int -> int -> bool = equalsInteger in
+let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#5 : Main.option 'erased b#6 : Main.option 'erased -> let match#10 : (Main.option 'erased, Main.option 'erased) = constr 0 a#5 b#6 in
+let leaf#16 : 'erased = delay false in
+case@Tag match#10 of
+  0 field#17 field#18 -> case@Tag field#17 of
+    0 -> case@Tag field#18 of
+      0 -> true
+      1 field#19 -> force leaf#16
+    1 field#20 -> case@Tag field#18 of
+      0 -> force leaf#16
+      1 field#21 -> let x#7 : 'erased = field#20 in
+      let y#8 : 'erased = field#21 in
+      eq#9 x#7 y#8 in
+let map#3 : Main.option 'erased -> ('erased -> 'erased) -> Main.option 'erased = \opt#22 : Main.option 'erased (f#23 : 'erased -> 'erased) -> let match#26 : Main.option 'erased = opt#22 in
+case@Tag match#26 of
+  0 -> constr 0
+  1 field#27 -> let a#24 : 'erased = field#27 in
+  (\field#25 : 'erased -> constr 1 field#25) (f#23 a#24) in
+let fromInt#29 : int -> int = \value#30 : int -> value#30 in
+let addOne#4 : int -> int = \n#28 : int -> addInteger n#28 (fromInt#29 1) in
+let main#1 : bool = eq#2 (map#3 (constr 0) addOne#4) (constr 0) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam eq_9
+    [(lam eq_2
+      [(lam map_3
+        [(lam fromInt_29
+          [(lam addOne_4
+            [(lam main_1 main_1) [[eq_2 [[map_3 (constr 0)] addOne_4]] (constr 0)]])
+            (lam n_28 [[(builtin addInteger) n_28] [fromInt_29 (con integer 1)]])])
+          (lam value_30 value_30)])
+        (lam opt_22
+          (lam f_23
+            [(lam match_26
+              (case
+                match_26
+                (constr 0)
+                (lam field_27
+                  [(lam a_24 [(lam field_25 (constr 1 field_25)) [f_23 a_24]]) field_27])))
+              opt_22]))])
+      (lam a_5
+        (lam b_6
+          [(lam match_10
+            [(lam leaf_16
+              (case
+                match_10
+                (lam field_17
+                  (lam field_18
+                    (case
+                      field_17
+                      (case field_18 (con bool True) (lam field_19 (force leaf_16)))
+                      (lam field_20
+                        (case
+                          field_18
+                          (force leaf_16)
+                          (lam field_21 [(lam x_7 [(lam y_8 [[eq_9 x_7] y_8]) field_21]) field_20]))))))))
+              (delay (con bool False))])
+            (constr 0 a_5 b_6)]))])
+    (builtin equalsInteger)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 832100, memory: 5300

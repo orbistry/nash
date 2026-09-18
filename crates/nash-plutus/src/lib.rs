@@ -10,6 +10,7 @@ pub mod ledger_value;
 pub mod machine;
 pub mod pretty;
 pub mod program;
+pub mod script;
 pub mod syn;
 pub mod term;
 pub mod typ;

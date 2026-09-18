@@ -16,6 +16,20 @@
         "type": {
           "const": "application"
         },
+        "plutusVersion": {
+          "type": "string",
+          "enum": ["v1", "v2", "v3"],
+          "default": "v3"
+        },
+        "traceLevel": {
+          "type": "string",
+          "enum": ["silent", "compact", "verbose"],
+          "default": "silent"
+        },
+        "compilerTraces": {
+          "type": "boolean",
+          "default": false
+        },
         "sourceDirectories": {
           "type": "array",
           "description": "Source directories (defaults to [\"src\"])",
@@ -38,6 +52,20 @@
       "properties": {
         "type": {
           "const": "package"
+        },
+        "plutusVersion": {
+          "type": "string",
+          "enum": ["v1", "v2", "v3"],
+          "default": "v3"
+        },
+        "traceLevel": {
+          "type": "string",
+          "enum": ["silent", "compact", "verbose"],
+          "default": "silent"
+        },
+        "compilerTraces": {
+          "type": "boolean",
+          "default": false
         },
         "name": {
           "$ref": "#/$defs/packageName"

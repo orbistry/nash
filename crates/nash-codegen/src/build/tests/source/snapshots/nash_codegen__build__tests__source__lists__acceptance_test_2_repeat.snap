@@ -1,0 +1,90 @@
+---
+source: crates/nash-codegen/src/build/tests/source/lists.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nrepeat x n =\n    if lessThanEqualsInteger n 0 then []\n    else mkCons x (repeat x (subtractInteger n 1))\nmain = eq (repeat #\"61696b656e\" 2) [#\"61696b656e\", #\"61696b656e\"]\n"
+---
+--- core
+let eq#8 : bytes -> bytes -> bool = equalsByteString in
+let eq#2 : list 'erased -> list 'erased -> bool = (\self#18 : 'erased -> self#18 self#18) (\self#18 : 'erased xs#6 : list 'erased ys#7 : list 'erased -> case@Bool nullList xs#6 of
+  True -> nullList ys#7
+  False -> case@Bool nullList ys#7 of
+    True -> false
+    False -> let projection#13 : 'erased = headList xs#6 in
+    let projection#14 : 'erased = headList ys#7 in
+    case@Bool eq#8 projection#13 projection#14 of
+      True -> let projection#15 : list 'erased = tailList xs#6 in
+      let projection#16 : list 'erased = tailList ys#7 in
+      self#18 self#18 projection#15 projection#16
+      False -> false) in
+let fromInt#5 : int -> int = \value#12 : int -> value#12 in
+let repeat#3 : bytes -> int -> list bytes = \x#9 : bytes n#10 : int -> (\self#17 : 'erased -> self#17 self#17) (\self#17 : 'erased n#10 : int -> case@Bool lessThanEqualsInteger n#10 (fromInt#5 0) of
+  True -> (con (list bytestring) [])
+  False -> mkCons x#9 (self#17 self#17 (subtractInteger n#10 (fromInt#5 1)))) n#10 in
+let fromBytes#4 : bytes -> bytes = \value#11 : bytes -> value#11 in
+let main#1 : bool = eq#2 (repeat#3 (fromBytes#4 (con bytestring #61696b656e)) (fromInt#5 2)) (mkCons (fromBytes#4 (con bytestring #61696b656e)) (mkCons (fromBytes#4 (con bytestring #61696b656e)) (con (list bytestring) []))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam eq_8
+    [(lam eq_2
+      [(lam fromInt_5
+        [(lam repeat_3
+          [(lam fromBytes_4
+            [(lam main_1 main_1)
+              [[eq_2
+                [[repeat_3 [fromBytes_4 (con bytestring #61696b656e)]]
+                  [fromInt_5 (con integer 2)]]]
+                [[(force (builtin mkCons)) [fromBytes_4 (con bytestring #61696b656e)]]
+                  [[(force (builtin mkCons)) [fromBytes_4 (con bytestring #61696b656e)]]
+                    (con (list bytestring) [])]]]])
+            (lam value_11 value_11)])
+          (lam x_9
+            (lam n_10
+              [[(lam self_17 [self_17 self_17])
+                (lam self_17
+                  (lam n_10
+                    [(lam generated_19
+                      (force
+                        [[[(force (builtin ifThenElse)) generated_19] (delay (con (list bytestring) []))]
+                          (delay
+                            [[(force (builtin mkCons)) x_9]
+                              [[self_17 self_17]
+                                [[(builtin subtractInteger) n_10] [fromInt_5 (con integer 1)]]]])]))
+                      [[(builtin lessThanEqualsInteger) n_10] [fromInt_5 (con integer 0)]]]))]
+                n_10]))])
+        (lam value_12 value_12)])
+      [(lam self_18 [self_18 self_18])
+        (lam self_18
+          (lam xs_6
+            (lam ys_7
+              [(lam generated_20
+                (force
+                  [[[(force (builtin ifThenElse)) generated_20]
+                    (delay [(force (builtin nullList)) ys_7])]
+                    (delay
+                      [(lam generated_21
+                        (force
+                          [[[(force (builtin ifThenElse)) generated_21] (delay (con bool False))]
+                            (delay
+                              [(lam projection_13
+                                [(lam projection_14
+                                  [(lam generated_22
+                                    (force
+                                      [[[(force (builtin ifThenElse)) generated_22]
+                                        (delay
+                                          [(lam projection_15
+                                            [(lam projection_16 [[[self_18 self_18] projection_15] projection_16])
+                                              [(force (builtin tailList)) ys_7]])
+                                            [(force (builtin tailList)) xs_6]])]
+                                        (delay (con bool False))]))
+                                    [[eq_8 projection_13] projection_14]])
+                                  [(force (builtin headList)) ys_7]])
+                                [(force (builtin headList)) xs_6]])]))
+                        [(force (builtin nullList)) ys_7]])]))
+                [(force (builtin nullList)) xs_6]])))]])
+    (builtin equalsByteString)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 7940887, memory: 34395

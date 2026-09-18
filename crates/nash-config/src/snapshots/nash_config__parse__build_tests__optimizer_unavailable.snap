@@ -1,0 +1,7 @@
+---
+source: crates/nash-config/src/parse.rs
+description: "{\"type\":\"application\",\"optimize\":0}"
+info: diagnostic
+---
+  × 'nash.jsonc' at 1:23: 'optimize' is unavailable; optimizer support is not
+  │ implemented

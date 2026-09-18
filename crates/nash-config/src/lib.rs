@@ -60,8 +60,8 @@ mod name;
 mod parse;
 
 pub use config::{
-    Application, CONFIG_FILE_NAME, Config, Dependency, DependencySource, ExposedModules, GitDep,
-    Package, PathDep, Workspace, WorkspaceDep,
+    Application, Build, CONFIG_FILE_NAME, Config, Dependency, DependencySource, ExposedModules,
+    GitDep, Package, PathDep, PlutusVersion, TraceLevel, Workspace, WorkspaceDep,
 };
 pub use error::{ConfigError, Position};
 pub use name::{PackageName, PackageNameError};

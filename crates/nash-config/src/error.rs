@@ -89,6 +89,27 @@ pub enum ConfigError {
     )]
     WorkspaceDepInWorkspace { path: PathBuf, pos: Position },
 
+    #[error("'{path}' at {pos}: invalid value '{value}' for '{field}' (expected {expected})")]
+    InvalidEnum {
+        path: PathBuf,
+        pos: Position,
+        field: &'static str,
+        value: String,
+        expected: &'static str,
+    },
+
+    #[error("'{path}' at {pos}: 'optimize' is unavailable; optimizer support is not implemented")]
+    OptimizerUnavailable { path: PathBuf, pos: Position },
+
+    #[error(
+        "'{path}' at {pos}: '{field}' must be set in workspace members, not the workspace config"
+    )]
+    WorkspaceBuildSetting {
+        path: PathBuf,
+        pos: Position,
+        field: &'static str,
+    },
+
     #[error("summary too long: must be under 80 characters, got {length}")]
     SummaryTooLong { length: usize },
 

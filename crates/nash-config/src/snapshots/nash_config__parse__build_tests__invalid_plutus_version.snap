@@ -1,0 +1,7 @@
+---
+source: crates/nash-config/src/parse.rs
+description: "{\n    \"type\": \"application\",\n    \"plutusVersion\": \"v4\"\n}\n"
+info: diagnostic
+---
+  × 'nash.jsonc' at 3:22: invalid value 'v4' for 'plutusVersion' (expected
+  │ 'v1', 'v2', or 'v3')

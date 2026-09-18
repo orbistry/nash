@@ -1,0 +1,38 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\ntype Option = Some Int | None\nmain : bool\nmain = Builtin.equalsData\n    (Builtin.listData (Builtin.mkCons (Some 42) [None]))\n    (Builtin.listData [Some 42, None])\n"
+---
+--- core
+let fromInt#3 : int -> Int = \value#5 : int -> iData value#5 in
+let main#1 : bool = equalsData (listData (mkCons ((\field#2 : Int -> constrData 0 (mkCons field#2 (con (list data) []))) (fromInt#3 42)) (mkCons (constrData 1 (con (list data) [])) (con (list data) [])))) (listData (mkCons ((\field#4 : Int -> constrData 0 (mkCons field#4 (con (list data) []))) (fromInt#3 42)) (mkCons (constrData 1 (con (list data) [])) (con (list data) [])))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam main_1 main_1)
+      [[(builtin equalsData)
+        [(builtin listData)
+          [[(force (builtin mkCons))
+            [(lam field_2
+              [[(builtin constrData) (con integer 0)]
+                [[(force (builtin mkCons)) field_2] (con (list data) [])]])
+              [fromInt_3 (con integer 42)]]]
+            [[(force (builtin mkCons))
+              [[(builtin constrData) (con integer 1)] (con (list data) [])]]
+              (con (list data) [])]]]]
+        [(builtin listData)
+          [[(force (builtin mkCons))
+            [(lam field_4
+              [[(builtin constrData) (con integer 0)]
+                [[(force (builtin mkCons)) field_4] (con (list data) [])]])
+              [fromInt_3 (con integer 42)]]]
+            [[(force (builtin mkCons))
+              [[(builtin constrData) (con integer 1)] (con (list data) [])]]
+              (con (list data) [])]]]]])
+    (lam value_5 [(builtin iData) value_5])])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 3215069, memory: 8249

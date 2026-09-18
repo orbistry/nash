@@ -1,0 +1,127 @@
+---
+source: crates/nash-codegen/src/build/tests/source/collections.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\noptionEq same a b =\n    case (a, b) of\n        (None, None) -> True\n        (Some x, Some y) -> same x y\n        _ -> False\nmap2 optA optB f =\n    case optA of\n        None -> None\n        Some a ->\n            case optB of\n                None -> None\n                Some b -> Some (f a b)\npairEq (a, b) (c, d) = if eq a c then eq b d else False\nmain = optionEq pairEq (map2 (Some 14) (Some 42) (\\a b -> (a, b))) (Some (14, 42))\n"
+---
+--- core
+let optionEq#2 : ('erased -> 'erased -> bool) -> Main.option 'erased -> Main.option 'erased -> bool = \(same#11 : 'erased -> 'erased -> bool) a#12 : Main.option 'erased b#13 : Main.option 'erased -> let match#16 : (Main.option 'erased, Main.option 'erased) = constr 0 a#12 b#13 in
+let leaf#22 : 'erased = delay false in
+case@Tag match#16 of
+  0 field#23 field#24 -> case@Tag field#23 of
+    0 -> case@Tag field#24 of
+      0 -> true
+      1 field#25 -> force leaf#22
+    1 field#26 -> case@Tag field#24 of
+      0 -> force leaf#22
+      1 field#27 -> let x#14 : 'erased = field#26 in
+      let y#15 : 'erased = field#27 in
+      same#11 x#14 y#15 in
+let eq#34 : int -> int -> bool = equalsInteger in
+let pairEq#3 : ('erased, 'erased) -> ('erased, 'erased) -> bool = \arg#28 : ('erased, 'erased) arg#31 : ('erased, 'erased) -> let match#38 : ('erased, 'erased) = arg#28 in
+case@Tag match#38 of
+  0 field#39 field#40 -> let a#29 : 'erased = field#39 in
+  let b#30 : 'erased = field#40 in
+  let match#35 : ('erased, 'erased) = arg#31 in
+  case@Tag match#35 of
+    0 field#36 field#37 -> let c#32 : 'erased = field#36 in
+    let d#33 : 'erased = field#37 in
+    case@Bool eq#34 a#29 c#32 of
+      True -> eq#34 b#30 d#33
+      False -> false in
+let map2#4 : Main.option 'erased -> Main.option 'erased -> ('erased -> 'erased -> 'erased) -> Main.option 'erased = \optA#41 : Main.option 'erased optB#42 : Main.option 'erased (f#43 : 'erased -> 'erased -> 'erased) -> let match#49 : Main.option 'erased = optA#41 in
+case@Tag match#49 of
+  0 -> constr 0
+  1 field#50 -> let a#44 : 'erased = field#50 in
+  let match#47 : Main.option 'erased = optB#42 in
+  case@Tag match#47 of
+    0 -> constr 0
+    1 field#48 -> let b#45 : 'erased = field#48 in
+    (\field#46 : 'erased -> constr 1 field#46) (f#43 a#44 b#45) in
+let fromInt#6 : int -> int = \value#51 : int -> value#51 in
+let main#1 : bool = optionEq#2 pairEq#3 (map2#4 ((\field#5 : int -> constr 1 field#5) (fromInt#6 14)) ((\field#7 : int -> constr 1 field#7) (fromInt#6 42)) (\a#8 : int b#9 : int -> constr 0 a#8 b#9)) ((\field#10 : (int, int) -> constr 1 field#10) (constr 0 (fromInt#6 14) (fromInt#6 42))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam optionEq_2
+    [(lam eq_34
+      [(lam pairEq_3
+        [(lam map2_4
+          [(lam fromInt_6
+            [(lam main_1 main_1)
+              [[[optionEq_2 pairEq_3]
+                [[[map2_4 [(lam field_5 (constr 1 field_5)) [fromInt_6 (con integer 14)]]]
+                  [(lam field_7 (constr 1 field_7)) [fromInt_6 (con integer 42)]]]
+                  (lam a_8 (lam b_9 (constr 0 a_8 b_9)))]]
+                [(lam field_10 (constr 1 field_10))
+                  (constr 0 [fromInt_6 (con integer 14)] [fromInt_6 (con integer 42)])]]])
+            (lam value_51 value_51)])
+          (lam optA_41
+            (lam optB_42
+              (lam f_43
+                [(lam match_49
+                  (case
+                    match_49
+                    (constr 0)
+                    (lam field_50
+                      [(lam a_44
+                        [(lam match_47
+                          (case
+                            match_47
+                            (constr 0)
+                            (lam field_48
+                              [(lam b_45 [(lam field_46 (constr 1 field_46)) [[f_43 a_44] b_45]]) field_48])))
+                          optB_42])
+                        field_50])))
+                  optA_41])))])
+        (lam arg_28
+          (lam arg_31
+            [(lam match_38
+              (case
+                match_38
+                (lam field_39
+                  (lam field_40
+                    [(lam a_29
+                      [(lam b_30
+                        [(lam match_35
+                          (case
+                            match_35
+                            (lam field_36
+                              (lam field_37
+                                [(lam c_32
+                                  [(lam d_33
+                                    [(lam generated_52
+                                      (force
+                                        [[[(force (builtin ifThenElse)) generated_52] (delay [[eq_34 b_30] d_33])]
+                                          (delay (con bool False))]))
+                                      [[eq_34 a_29] c_32]])
+                                    field_37])
+                                  field_36]))))
+                          arg_31])
+                        field_40])
+                      field_39]))))
+              arg_28]))])
+      (builtin equalsInteger)])
+    (lam same_11
+      (lam a_12
+        (lam b_13
+          [(lam match_16
+            [(lam leaf_22
+              (case
+                match_16
+                (lam field_23
+                  (lam field_24
+                    (case
+                      field_23
+                      (case field_24 (con bool True) (lam field_25 (force leaf_22)))
+                      (lam field_26
+                        (case
+                          field_24
+                          (force leaf_22)
+                          (lam field_27 [(lam x_14 [(lam y_15 [[same_11 x_14] y_15]) field_27]) field_26]))))))))
+              (delay (con bool False))])
+            (constr 0 a_12 b_13)])))])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 2884815, memory: 17003

@@ -7,6 +7,8 @@ use nash_plutus::{
     arena::Arena,
     binder::{DeBruijn, Name},
     debruijn,
+    machine::PlutusVersion,
+    script,
     program::{Program, Version},
     term::Term,
 };
@@ -31,6 +33,8 @@ pub enum Error<'a> {
     Lower(#[from] crate::lower::Error),
     #[error("{0}")]
     DeBruijn(debruijn::FreeVariable<'a>),
+    #[error("{0}")]
+    Target(#[from] script::TargetError),
 }
 
 /// Bindings must be in dependency order, with recursive groups represented by
@@ -55,6 +59,11 @@ pub fn assemble<'a>(arena: &'a Arena, module: &Module<'a>) -> Result<Compiled<'a
 /// Assemble an already wrapped Core root. Expand casts before calling this;
 /// recursion is rewritten here. Optimization is deferred to Plan 08.
 pub fn assemble_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Compiled<'a>, Error<'a>> {
+    assemble_core_for_version(arena, core, PlutusVersion::V3)
+}
+
+/// Assemble and validate for the selected ledger language at the PV10 baseline.
+pub fn assemble_core_for_version<'a>(arena: &'a Arena, core: &'a Core<'a>, version: PlutusVersion) -> Result<Compiled<'a>, Error<'a>> {
     if let Some(name) = free_variables(core).first() {
         return Err(Error::NotClosed(*name));
     }
@@ -62,10 +71,13 @@ pub fn assemble_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Compile
     let core = crate::recursion::rewrite(&build, core)?;
     let named = crate::lower::lower(arena, core)?;
     let term = debruijn::to_debruijn(arena, named).map_err(Error::DeBruijn)?;
-    Ok(Compiled {
-        program: Program::new(arena, Version::plutus_v3(arena), term),
-        named,
-    })
+    let uplc_version = match version {
+        PlutusVersion::V1 | PlutusVersion::V2 => Version::plutus_v1(arena),
+        PlutusVersion::V3 => Version::plutus_v3(arena),
+    };
+    let program = Program::new(arena, uplc_version, term);
+    script::validate_program(program, version)?;
+    Ok(Compiled { program, named })
 }
 
 /// Select a transitive dependency closure in the original binding order.

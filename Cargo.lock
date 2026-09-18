@@ -1958,8 +1958,10 @@ dependencies = [
  "indoc",
  "insta",
  "jsonc-parser",
+ "miette",
  "pubgrub",
  "serde",
+ "serde_json",
  "thiserror 2.0.20",
 ]
 
@@ -1981,6 +1983,7 @@ dependencies = [
  "async-trait",
  "bumpalo",
  "glob",
+ "hex",
  "indoc",
  "insta",
  "miette",

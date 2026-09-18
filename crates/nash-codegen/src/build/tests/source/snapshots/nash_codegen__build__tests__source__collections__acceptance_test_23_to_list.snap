@@ -1,0 +1,122 @@
+---
+source: crates/nash-codegen/src/build/tests/source/collections.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype assocList = AssocList { inner : list (pair Data Data) }\nimpl Eq assocList where\n    eq left right = equalsData (mapData left.inner) (mapData right.inner)\nnew = AssocList { inner = [] }\ntoList : assocList -> list (pair Data Data)\ntoList m = m.inner\ninsert : assocList -> bytes -> int -> assocList\ninsert m k v = AssocList { inner = (doInsert m.inner k v) }\ndoInsert elems k v =\n    case elems of\n        [] -> [mkPairData (bData k) (iData v)]\n        entry :: rest ->\n            let\n                k2 = unBData (fstPair entry)\n                v2 = unIData (sndPair entry)\n            in\n            if eq k k2 then mkCons (mkPairData (bData k) (iData v)) rest\n            else mkCons (mkPairData (bData k2) (iData v2)) (doInsert rest k v)\nfixture1 = insert (insert new \"foo\" 42) \"bar\" 14\nmain = equalsData (mapData (toList fixture1)) (mapData [mkPairData (bData \"foo\") (iData 42), mkPairData (bData \"bar\") (iData 14)])\n"
+---
+--- core
+let message#31 : string = "foo" in
+let message#32 : string = "bar" in
+let toList#2 : Main.assocList -> list (pair Data Data) = \m#6 : Main.assocList -> let projection#27 : 'erased = field@0/1 m#6 in
+projection#27 in
+let fromString#4 : string -> bytes = encodeUtf8 in
+let fromInt#5 : int -> int = \value#9 : int -> value#9 in
+let eq#23 : bytes -> bytes -> bool = equalsByteString in
+let doInsert#14 : list (pair Data Data) -> bytes -> int -> list (pair Data Data) = \elems#16 : list (pair Data Data) k#17 : bytes v#18 : int -> (\self#33 : 'erased -> self#33 self#33) (\self#33 : 'erased elems#16 : list (pair Data Data) -> let match#24 : list (pair Data Data) = elems#16 in
+case@List match#24 of
+  Nil -> mkCons (mkPairData (bData k#17) (iData v#18)) (con (list (pair data data)) [])
+  Cons field#25 field#26 -> let entry#19 : pair Data Data = field#25 in
+  let rest#20 : list (pair Data Data) = field#26 in
+  let projection#28 : Data = sndPair entry#19 in
+  let v2#21 : int = unIData projection#28 in
+  let projection#29 : Data = fstPair entry#19 in
+  let k2#22 : bytes = unBData projection#29 in
+  case@Bool eq#23 k#17 k2#22 of
+    True -> mkCons (mkPairData (bData k#17) (iData v#18)) rest#20
+    False -> mkCons (mkPairData (bData k2#22) (iData v2#21)) (self#33 self#33 rest#20)) elems#16 in
+let insert#7 : Main.assocList -> bytes -> int -> Main.assocList = \m#10 : Main.assocList k#11 : bytes v#12 : int -> let projection#30 : 'erased = field@0/1 m#10 in
+(\field#13 : list (pair Data Data) -> constr 0 field#13) (doInsert#14 projection#30 k#11 v#12) in
+let new#8 : Main.assocList = (\field#15 : list (pair Data Data) -> constr 0 field#15) (con (list (pair data data)) []) in
+let fixture1#3 : Main.assocList = insert#7 (insert#7 new#8 (fromString#4 message#31) (fromInt#5 42)) (fromString#4 message#32) (fromInt#5 14) in
+let main#1 : bool = equalsData (mapData (toList#2 fixture1#3)) (mapData (mkCons (mkPairData (bData (fromString#4 message#31)) (iData (fromInt#5 42))) (mkCons (mkPairData (bData (fromString#4 message#32)) (iData (fromInt#5 14))) (con (list (pair data data)) [])))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_31
+    [(lam message_32
+      [(lam toList_2
+        [(lam fromString_4
+          [(lam fromInt_5
+            [(lam eq_23
+              [(lam doInsert_14
+                [(lam insert_7
+                  [(lam new_8
+                    [(lam fixture1_3
+                      [(lam main_1 main_1)
+                        [[(builtin equalsData) [(builtin mapData) [toList_2 fixture1_3]]]
+                          [(builtin mapData)
+                            [[(force (builtin mkCons))
+                              [[(builtin mkPairData) [(builtin bData) [fromString_4 message_31]]]
+                                [(builtin iData) [fromInt_5 (con integer 42)]]]]
+                              [[(force (builtin mkCons))
+                                [[(builtin mkPairData) [(builtin bData) [fromString_4 message_32]]]
+                                  [(builtin iData) [fromInt_5 (con integer 14)]]]]
+                                (con (list (pair data data)) [])]]]]])
+                      [[[insert_7
+                        [[[insert_7 new_8] [fromString_4 message_31]] [fromInt_5 (con integer 42)]]]
+                        [fromString_4 message_32]]
+                        [fromInt_5 (con integer 14)]]])
+                    [(lam field_15 (constr 0 field_15)) (con (list (pair data data)) [])]])
+                  (lam m_10
+                    (lam k_11
+                      (lam v_12
+                        [(lam projection_30
+                          [(lam field_13 (constr 0 field_13)) [[[doInsert_14 projection_30] k_11] v_12]])
+                          (case m_10 (lam generated_34 generated_34))])))])
+                (lam elems_16
+                  (lam k_17
+                    (lam v_18
+                      [[(lam self_33 [self_33 self_33])
+                        (lam self_33
+                          (lam elems_16
+                            [(lam match_24
+                              [(lam generated_35
+                                (force
+                                  [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_35]]
+                                    (delay
+                                      [[(force (builtin mkCons))
+                                        [[(builtin mkPairData) [(builtin bData) k_17]] [(builtin iData) v_18]]]
+                                        (con (list (pair data data)) [])])]
+                                    (delay
+                                      [[(lam field_25
+                                        (lam field_26
+                                          [(lam entry_19
+                                            [(lam rest_20
+                                              [(lam projection_28
+                                                [(lam v2_21
+                                                  [(lam projection_29
+                                                    [(lam k2_22
+                                                      [(lam generated_36
+                                                        (force
+                                                          [[[(force (builtin ifThenElse)) generated_36]
+                                                            (delay
+                                                              [[(force (builtin mkCons))
+                                                                [[(builtin mkPairData) [(builtin bData) k_17]] [(builtin iData) v_18]]]
+                                                                rest_20])]
+                                                            (delay
+                                                              [[(force (builtin mkCons))
+                                                                [[(builtin mkPairData) [(builtin bData) k2_22]] [(builtin iData) v2_21]]]
+                                                                [[self_33 self_33] rest_20]])]))
+                                                        [[eq_23 k_17] k2_22]])
+                                                      [(builtin unBData) projection_29]])
+                                                    [(force (force (builtin fstPair))) entry_19]])
+                                                  [(builtin unIData) projection_28]])
+                                                [(force (force (builtin sndPair))) entry_19]])
+                                              field_26])
+                                            field_25]))
+                                        [(force (builtin headList)) generated_35]]
+                                        [(force (builtin tailList)) generated_35]])]))
+                                match_24])
+                              elems_16]))]
+                        elems_16])))])
+              (builtin equalsByteString)])
+            (lam value_9 value_9)])
+          (builtin encodeUtf8)])
+        (lam m_6
+          [(lam projection_27 projection_27) (case m_6 (lam generated_37 generated_37))])])
+      (con string "bar")])
+    (con string "foo")])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 9119055, memory: 34338

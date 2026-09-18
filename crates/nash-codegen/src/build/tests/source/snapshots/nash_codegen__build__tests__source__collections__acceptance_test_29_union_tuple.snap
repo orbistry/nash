@@ -1,0 +1,250 @@
+---
+source: crates/nash-codegen/src/build/tests/source/collections.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\n-- Native lists require Storable elements; tuples use a recursive source list.\ntype sequence 'a = Nil | Cons 'a (sequence 'a)\nseqEq same left right =\n    case (left, right) of\n        (Nil, Nil) -> True\n        (Cons x xs, Cons y ys) -> if same x y then seqEq same xs ys else False\n        _ -> False\ntupleEq (a, b) (c, d) = if eq a c then eq b d else False\ntype assocList 'key 'value = AssocList { inner : sequence ('key, 'value) }\nimpl (Eq 'key, Eq 'value) => Eq (assocList 'key 'value) where\n    eq left right = seqEq tupleEq left.inner right.inner\nemptyList = AssocList { inner = Nil }\nfromList xs = AssocList { inner = (doFromList xs) }\ndoFromList xs =\n    case xs of\n        Nil -> Nil\n        Cons (k, v) rest -> doInsert (doFromList rest) k v\ninsert : Eq 'key => assocList 'key 'value -> 'key -> 'value -> assocList 'key 'value\ninsert m k v = AssocList { inner = (doInsert m.inner k v) }\ndoInsert elems k v =\n    case elems of\n        Nil -> Cons (k, v) Nil\n        Cons (k2, v2) rest ->\n            if eq k k2 then Cons (k, v) rest\n            else Cons (k2, v2) (doInsert rest k v)\nunion : Eq 'key => assocList 'key 'value -> assocList 'key 'value -> assocList 'key 'value\nunion left right = AssocList { inner = (doUnion left.inner right.inner) }\ndoUnion left right =\n    case left of\n        Nil -> right\n        Cons (k, v) rest -> doUnion rest (doInsert right k v)\nfixture1 : assocList bytes int\nfixture1 = insert (insert emptyList \"foo\" 42) \"bar\" 14\nmain = eq (union fixture1 emptyList) fixture1\n"
+---
+--- core
+let message#95 : string = "foo" in
+let message#96 : string = "bar" in
+let seqEq#8 : ('erased -> 'erased -> bool) -> Main.sequence 'erased -> Main.sequence 'erased -> bool = \(same#18 : 'erased -> 'erased -> bool) left#19 : Main.sequence 'erased right#20 : Main.sequence 'erased -> (\self#30 : 'erased -> self#30 self#30) (\self#30 : 'erased left#19 : Main.sequence 'erased right#20 : Main.sequence 'erased -> let match#25 : (Main.sequence 'erased, Main.sequence 'erased) = constr 0 left#19 right#20 in
+let leaf#34 : 'erased = delay false in
+case@Tag match#25 of
+  0 field#35 field#36 -> case@Tag field#35 of
+    0 -> case@Tag field#36 of
+      0 -> true
+      1 field#37 field#38 -> force leaf#34
+    1 field#39 field#40 -> case@Tag field#36 of
+      0 -> force leaf#34
+      1 field#41 field#42 -> let x#21 : 'erased = field#39 in
+      let xs#22 : Main.sequence 'erased = field#40 in
+      let y#23 : 'erased = field#41 in
+      let ys#24 : Main.sequence 'erased = field#42 in
+      case@Bool same#18 x#21 y#23 of
+        True -> self#30 self#30 xs#22 ys#24
+        False -> false) left#19 right#20 in
+let eq#49 : bytes -> bytes -> bool = equalsByteString in
+let eq#50 : int -> int -> bool = equalsInteger in
+let tupleEq#9 : ('erased, 'erased) -> ('erased, 'erased) -> bool = \arg#43 : ('erased, 'erased) arg#46 : ('erased, 'erased) -> let match#54 : ('erased, 'erased) = arg#43 in
+case@Tag match#54 of
+  0 field#55 field#56 -> let a#44 : 'erased = field#55 in
+  let b#45 : 'erased = field#56 in
+  let match#51 : ('erased, 'erased) = arg#46 in
+  case@Tag match#51 of
+    0 field#52 field#53 -> let c#47 : 'erased = field#52 in
+    let d#48 : 'erased = field#53 in
+    case@Bool eq#49 a#44 c#47 of
+      True -> eq#50 b#45 d#48
+      False -> false in
+let eq#2 : Main.assocList 'erased 'erased -> Main.assocList 'erased 'erased -> bool = \left#6 : Main.assocList 'erased 'erased right#7 : Main.assocList 'erased 'erased -> let projection#90 : 'erased = field@0/1 left#6 in
+let projection#91 : 'erased = field@0/1 right#7 in
+seqEq#8 tupleEq#9 projection#90 projection#91 in
+let doInsert#62 : Main.sequence ('erased, 'erased) -> 'erased -> 'erased -> Main.sequence ('erased, 'erased) = \elems#73 : Main.sequence ('erased, 'erased) k#74 : 'erased v#75 : 'erased -> (\self#29 : 'erased -> self#29 self#29) (\self#29 : 'erased elems#73 : Main.sequence ('erased, 'erased) -> let match#85 : Main.sequence ('erased, 'erased) = elems#73 in
+case@Tag match#85 of
+  0 -> (\field#76 : ('erased, 'erased) field#77 : Main.sequence ('erased, 'erased) -> constr 1 field#76 field#77) (constr 0 k#74 v#75) (constr 0)
+  1 field#86 field#87 -> case@Tag field#86 of
+    0 field#88 field#89 -> let rest#80 : Main.sequence ('erased, 'erased) = field#87 in
+    let k2#78 : 'erased = field#88 in
+    let v2#79 : 'erased = field#89 in
+    case@Bool eq#49 k#74 k2#78 of
+      True -> (\field#83 : ('erased, 'erased) field#84 : Main.sequence ('erased, 'erased) -> constr 1 field#83 field#84) (constr 0 k#74 v#75) rest#80
+      False -> (\field#81 : ('erased, 'erased) field#82 : Main.sequence ('erased, 'erased) -> constr 1 field#81 field#82) (constr 0 k2#78 v2#79) (self#29 self#29 rest#80)) elems#73 in
+let doUnion#13 : Main.sequence ('erased, 'erased) -> Main.sequence ('erased, 'erased) -> Main.sequence ('erased, 'erased) = (\self#26 : 'erased -> self#26 self#26) (\self#26 : 'erased left#57 : Main.sequence ('erased, 'erased) right#58 : Main.sequence ('erased, 'erased) -> let match#63 : Main.sequence ('erased, 'erased) = left#57 in
+case@Tag match#63 of
+  0 -> right#58
+  1 field#64 field#65 -> case@Tag field#64 of
+    0 field#66 field#67 -> let rest#61 : Main.sequence ('erased, 'erased) = field#65 in
+    let k#59 : 'erased = field#66 in
+    let v#60 : 'erased = field#67 in
+    self#26 self#26 rest#61 (doInsert#62 right#58 k#59 v#60)) in
+let union#3 : Main.assocList 'erased 'erased -> Main.assocList 'erased 'erased -> Main.assocList 'erased 'erased = \left#10 : Main.assocList 'erased 'erased right#11 : Main.assocList 'erased 'erased -> let projection#92 : 'erased = field@0/1 left#10 in
+let projection#93 : 'erased = field@0/1 right#11 in
+(\field#12 : Main.sequence ('erased, 'erased) -> constr 0 field#12) (doUnion#13 projection#92 projection#93) in
+let emptyList#5 : Main.assocList 'erased 'erased = (\field#17 : Main.sequence ('erased, 'erased) -> constr 0 field#17) (constr 0) in
+let insert#14 : Main.assocList 'erased 'erased -> 'erased -> 'erased -> Main.assocList 'erased 'erased = \m#68 : Main.assocList 'erased 'erased k#69 : 'erased v#70 : 'erased -> let projection#94 : 'erased = field@0/1 m#68 in
+(\field#71 : Main.sequence ('erased, 'erased) -> constr 0 field#71) (doInsert#62 projection#94 k#69 v#70) in
+let fromString#15 : string -> bytes = encodeUtf8 in
+let fromInt#16 : int -> int = \value#72 : int -> value#72 in
+let fixture1#4 : Main.assocList bytes int = insert#14 (insert#14 emptyList#5 (fromString#15 message#95) (fromInt#16 42)) (fromString#15 message#96) (fromInt#16 14) in
+let main#1 : bool = eq#2 (union#3 fixture1#4 emptyList#5) fixture1#4 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_95
+    [(lam message_96
+      [(lam seqEq_8
+        [(lam eq_49
+          [(lam eq_50
+            [(lam tupleEq_9
+              [(lam eq_2
+                [(lam doInsert_62
+                  [(lam doUnion_13
+                    [(lam union_3
+                      [(lam emptyList_5
+                        [(lam insert_14
+                          [(lam fromString_15
+                            [(lam fromInt_16
+                              [(lam fixture1_4
+                                [(lam main_1 main_1) [[eq_2 [[union_3 fixture1_4] emptyList_5]] fixture1_4]])
+                                [[[insert_14
+                                  [[[insert_14 emptyList_5] [fromString_15 message_95]]
+                                    [fromInt_16 (con integer 42)]]]
+                                  [fromString_15 message_96]]
+                                  [fromInt_16 (con integer 14)]]])
+                              (lam value_72 value_72)])
+                            (builtin encodeUtf8)])
+                          (lam m_68
+                            (lam k_69
+                              (lam v_70
+                                [(lam projection_94
+                                  [(lam field_71 (constr 0 field_71)) [[[doInsert_62 projection_94] k_69] v_70]])
+                                  (case m_68 (lam generated_97 generated_97))])))])
+                        [(lam field_17 (constr 0 field_17)) (constr 0)]])
+                      (lam left_10
+                        (lam right_11
+                          [(lam projection_92
+                            [(lam projection_93
+                              [(lam field_12 (constr 0 field_12)) [[doUnion_13 projection_92] projection_93]])
+                              (case right_11 (lam generated_98 generated_98))])
+                            (case left_10 (lam generated_99 generated_99))]))])
+                    [(lam self_26 [self_26 self_26])
+                      (lam self_26
+                        (lam left_57
+                          (lam right_58
+                            [(lam match_63
+                              (case
+                                match_63
+                                right_58
+                                (lam field_64
+                                  (lam field_65
+                                    (case
+                                      field_64
+                                      (lam field_66
+                                        (lam field_67
+                                          [(lam rest_61
+                                            [(lam k_59
+                                              [(lam v_60 [[[self_26 self_26] rest_61] [[[doInsert_62 right_58] k_59] v_60]])
+                                                field_67])
+                                              field_66])
+                                            field_65])))))))
+                              left_57])))]])
+                  (lam elems_73
+                    (lam k_74
+                      (lam v_75
+                        [[(lam self_29 [self_29 self_29])
+                          (lam self_29
+                            (lam elems_73
+                              [(lam match_85
+                                (case
+                                  match_85
+                                  [[(lam field_76 (lam field_77 (constr 1 field_76 field_77)))
+                                    (constr 0 k_74 v_75)]
+                                    (constr 0)]
+                                  (lam field_86
+                                    (lam field_87
+                                      (case
+                                        field_86
+                                        (lam field_88
+                                          (lam field_89
+                                            [(lam rest_80
+                                              [(lam k2_78
+                                                [(lam v2_79
+                                                  [(lam generated_100
+                                                    (force
+                                                      [[[(force (builtin ifThenElse)) generated_100]
+                                                        (delay
+                                                          [[(lam field_83 (lam field_84 (constr 1 field_83 field_84)))
+                                                            (constr 0 k_74 v_75)]
+                                                            rest_80])]
+                                                        (delay
+                                                          [[(lam field_81 (lam field_82 (constr 1 field_81 field_82)))
+                                                            (constr 0 k2_78 v2_79)]
+                                                            [[self_29 self_29] rest_80]])]))
+                                                    [[eq_49 k_74] k2_78]])
+                                                  field_89])
+                                                field_88])
+                                              field_87])))))))
+                                elems_73]))]
+                          elems_73])))])
+                (lam left_6
+                  (lam right_7
+                    [(lam projection_90
+                      [(lam projection_91 [[[seqEq_8 tupleEq_9] projection_90] projection_91])
+                        (case right_7 (lam generated_101 generated_101))])
+                      (case left_6 (lam generated_102 generated_102))]))])
+              (lam arg_43
+                (lam arg_46
+                  [(lam match_54
+                    (case
+                      match_54
+                      (lam field_55
+                        (lam field_56
+                          [(lam a_44
+                            [(lam b_45
+                              [(lam match_51
+                                (case
+                                  match_51
+                                  (lam field_52
+                                    (lam field_53
+                                      [(lam c_47
+                                        [(lam d_48
+                                          [(lam generated_103
+                                            (force
+                                              [[[(force (builtin ifThenElse)) generated_103] (delay [[eq_50 b_45] d_48])]
+                                                (delay (con bool False))]))
+                                            [[eq_49 a_44] c_47]])
+                                          field_53])
+                                        field_52]))))
+                                arg_46])
+                              field_56])
+                            field_55]))))
+                    arg_43]))])
+            (builtin equalsInteger)])
+          (builtin equalsByteString)])
+        (lam same_18
+          (lam left_19
+            (lam right_20
+              [[[(lam self_30 [self_30 self_30])
+                (lam self_30
+                  (lam left_19
+                    (lam right_20
+                      [(lam match_25
+                        [(lam leaf_34
+                          (case
+                            match_25
+                            (lam field_35
+                              (lam field_36
+                                (case
+                                  field_35
+                                  (case field_36 (con bool True) (lam field_37 (lam field_38 (force leaf_34))))
+                                  (lam field_39
+                                    (lam field_40
+                                      (case
+                                        field_36
+                                        (force leaf_34)
+                                        (lam field_41
+                                          (lam field_42
+                                            [(lam x_21
+                                              [(lam xs_22
+                                                [(lam y_23
+                                                  [(lam ys_24
+                                                    [(lam generated_104
+                                                      (force
+                                                        [[[(force (builtin ifThenElse)) generated_104]
+                                                          (delay [[[self_30 self_30] xs_22] ys_24])]
+                                                          (delay (con bool False))]))
+                                                      [[same_18 x_21] y_23]])
+                                                    field_42])
+                                                  field_41])
+                                                field_40])
+                                              field_39]))))))))))
+                          (delay (con bool False))])
+                        (constr 0 left_19 right_20)])))]
+                left_19]
+                right_20])))])
+      (con string "bar")])
+    (con string "foo")])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 12122730, memory: 70032

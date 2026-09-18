@@ -2,6 +2,8 @@ use super::*;
 use nash_ast::primitives;
 use std::collections::BTreeMap;
 
+mod source;
+
 fn fixture<'a>(arena: &'a Arena, source: &str) -> (nash_can::CanResult<'a>, SolvedTypes<'a>) {
     fixture_in(arena, source, None)
 }
@@ -136,14 +138,30 @@ struct Unit<'a> {
     solved: SolvedTypes<'a>,
 }
 fn with_core(source: &str, check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedName<'_>)) {
+    with_core_modules(source, &[], check);
+}
+
+fn with_core_modules(
+    source: &str,
+    extra_modules: &[&str],
+    check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedName<'_>),
+) {
+    let modules: Vec<_> = [
+        include_str!("../../../../core/src/Literal.nash"),
+        include_str!("../../../../core/src/Eq.nash"),
+    ]
+    .into_iter()
+    .chain(extra_modules.iter().copied())
+    .map(|source| (source, Some(primitives::CORE)))
+    .chain(std::iter::once((source, None)))
+    .collect();
     let mut settings = insta::Settings::clone_current();
     settings.set_description(
-        [
-            include_str!("../../../../core/src/Literal.nash"),
-            include_str!("../../../../core/src/Eq.nash"),
-            source,
-        ]
-        .join("\n"),
+        modules
+            .iter()
+            .map(|(source, _)| *source)
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
     settings.set_omit_expression(true);
     let _guard = settings.bind_to_scope();
@@ -151,17 +169,7 @@ fn with_core(source: &str, check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedN
     let bump = arena.as_bump();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
     let mut units = Vec::new();
-    for (source, package) in [
-        (
-            include_str!("../../../../core/src/Literal.nash"),
-            Some(primitives::CORE),
-        ),
-        (
-            include_str!("../../../../core/src/Eq.nash"),
-            Some(primitives::CORE),
-        ),
-        (source, None),
-    ] {
+    for (source, package) in modules {
         let source = bump.alloc_str(source);
         let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(

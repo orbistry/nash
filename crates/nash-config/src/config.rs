@@ -18,12 +18,49 @@ pub enum Config {
     Workspace(Workspace),
 }
 
+/// Plutus ledger language version used for validator compilation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum PlutusVersion {
+    V1,
+    V2,
+    #[default]
+    V3,
+}
+
+/// Amount of user trace information included in compiled validators.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum TraceLevel {
+    #[default]
+    Silent,
+    Compact,
+    Verbose,
+}
+
+/// Project build settings, stored at the top level of `nash.jsonc`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Build {
+    #[serde(default)]
+    pub plutus_version: PlutusVersion,
+    #[serde(default)]
+    pub trace_level: TraceLevel,
+    /// Include compiler-generated runtime failure traces.
+    #[serde(default)]
+    pub compiler_traces: bool,
+}
+
 /// An application project configuration.
 ///
 /// Applications are executables that compile to UPLC validators.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Application {
+    /// Validator build settings.
+    #[serde(flatten)]
+    pub build: Build,
+
     /// Required compiler version (semver).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compiler: Option<String>,
@@ -51,6 +88,10 @@ fn default_source_dirs() -> Vec<String> {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Package {
+    /// Package build settings.
+    #[serde(flatten)]
+    pub build: Build,
+
     /// Required compiler version (semver).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compiler: Option<String>,
@@ -119,6 +160,15 @@ pub struct Workspace {
 }
 
 impl Config {
+    /// Returns application or package build settings, or defaults for workspaces.
+    pub fn build(&self) -> Build {
+        match self {
+            Config::Application(app) => app.build,
+            Config::Package(pkg) => pkg.build,
+            Config::Workspace(_) => Build::default(),
+        }
+    }
+
     /// Returns the `compiler` version requirement, if specified.
     pub fn compiler(&self) -> Option<&str> {
         match self {

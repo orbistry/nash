@@ -1,0 +1,40 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nmain =\n    let\n        a : list int\n        a = [1, 2, 3]\n    in\n    case a of\n        h :: _ -> equalsInteger h h\n        _ -> fail\n"
+---
+--- core
+let fromInt#7 : int -> int = \value#8 : int -> value#8 in
+let a#2 : list int = mkCons (fromInt#7 1) (mkCons (fromInt#7 2) (mkCons (fromInt#7 3) (con (list integer) []))) in
+let match#4 : list int = a#2 in
+let main#1 : bool = case@List match#4 of
+  Nil -> error
+  Cons field#5 field#6 -> let h#3 : int = field#5 in
+  equalsInteger h#3 h#3 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_7
+    [(lam a_2
+      [(lam match_4
+        [(lam main_1 main_1)
+          [(lam generated_9
+            (force
+              [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_9]]
+                (delay (error))]
+                (delay
+                  [[(lam field_5
+                    (lam field_6 [(lam h_3 [[(builtin equalsInteger) h_3] h_3]) field_5]))
+                    [(force (builtin headList)) generated_9]]
+                    [(force (builtin tailList)) generated_9]])]))
+            match_4]])
+        a_2])
+      [[(force (builtin mkCons)) [fromInt_7 (con integer 1)]]
+        [[(force (builtin mkCons)) [fromInt_7 (con integer 2)]]
+          [[(force (builtin mkCons)) [fromInt_7 (con integer 3)]] (con (list integer) [])]]]])
+    (lam value_8 value_8)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 1720814, memory: 7394

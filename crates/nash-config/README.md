@@ -99,6 +99,24 @@ Members can inherit workspace dependencies:
 }
 ```
 
+## Build Settings
+
+Applications and packages accept these optional top-level fields:
+
+| Field | Values | Default |
+| --- | --- | --- |
+| `plutusVersion` | `"v1"`, `"v2"`, `"v3"` | `"v3"` |
+| `traceLevel` | `"silent"`, `"compact"`, `"verbose"` | `"silent"` |
+| `compilerTraces` | `true`, `false` | `false` |
+
+`Config::build()` returns these settings. Workspace configs return defaults;
+set build fields on each member. `parse` and `parse_file` reject build fields
+on workspace configs and reject `optimize` on every config type because the
+optimizer is not implemented. Other unknown fields retain the parser's existing
+ignore policy; the JSON Schema rejects unknown fields. Use `parse` or `parse_file`
+for full configuration validation; direct Serde deserialization retains its
+existing unknown-field policy.
+
 ## Dependency Types
 
 Dependencies can be specified in several ways:
