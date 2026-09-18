@@ -34,63 +34,67 @@ are obsolete. Extend the actual APIs; do not recreate those sketches.
 
 ## 1. Configuration and command-line precedence
 
-- [ ] Add application and package `plutusVersion` (`v1`, `v2`, `v3`, default
+- [x] Add application and package `plutusVersion` (`v1`, `v2`, `v3`, default
   `v3`), `traceLevel` (`silent`, `compact`, `verbose`, default `silent`), and
   `compilerTraces` (boolean, default `false`) configuration.
-- [ ] Validate configuration types and values through existing source-aware
+- [x] Validate configuration types and values through existing source-aware
   diagnostics; keep the JSON schema and serde representation consistent.
-- [ ] CLI overrides take precedence over the selected validator project's
+- [x] CLI overrides take precedence over the selected validator project's
   config. Workspace members retain their own settings. A validator's settings
   apply to its complete dependency closure, not its dependencies' settings.
-- [ ] Keep user tracing and compiler tracing independently configurable,
+- [x] Keep user tracing and compiler tracing independently configurable,
   including disabling configured compiler traces from the command line.
-- [ ] Reject unavailable optimizer settings; do not advertise optimization
+- [x] Reject unavailable optimizer settings; do not advertise optimization
   levels or introduce an identity optimizer as a substitute for Plan 08.
 
 ## 2. Production frontend
 
-- [ ] Exclude parsed `tests` blocks before canonicalization for `nash build`.
+- [x] Exclude parsed `tests` blocks before canonicalization for `nash build`.
   Keep ordinary checking behavior unchanged. Test-only imports must not enter
   the production dependency graph.
-- [ ] Retain the existing `build_with` callback and arena lifetime guarantees.
+- [x] Retain the existing `build_with` callback and arena lifetime guarantees.
   Add only the policy needed to distinguish production builds from checking.
-- [ ] Snapshot real Nash sources covering test-only names/imports, ordinary
+- [x] Snapshot real Nash sources covering test-only names/imports, ordinary
   imports, validator checks, and failure gating. Do not implement test execution.
 
 ## 3. Target validation and script hashes
 
-- [ ] Assemble UPLC with the selected target's version, independently of the
+- [x] Assemble UPLC with the selected target's version, independently of the
   script hash language tag.
-- [ ] Validate every generated term, constant type, and builtin against an
+- [x] Validate every generated term, constant type, and builtin against an
   explicit supported ledger/protocol compatibility baseline. Reject unsupported
   features, including `constr`/`case` on the V1/V2 baseline, rather than merely
   changing a version field or hash tag. State that baseline in diagnostics/docs.
-- [ ] Preserve `assemble_core` as the default V3 API for existing callers.
-- [ ] Compute script hashes from the correct language tag and single-wrapped
+- [x] Preserve `assemble_core` as the default V3 API for existing callers.
+- [x] Compute script hashes from the correct language tag and single-wrapped
   CBOR bytes using Blake2b-224. Verify against independent known Cardano vectors,
   including V3, and cross-check target tags and serialization round trips.
 
 ## 4. Artifacts
 
-- [ ] Write `Module.Name.uplc` as named UPLC text, `.flat` as raw bytes, and
+- [x] Write `Module.Name.uplc` as named UPLC text, `.flat` as raw bytes, and
   `.cbor` as hex text of `CBOR(bytes(flat))`. Do not double-wrap CBOR.
-- [ ] Print each validator's hash in the CLI.
-- [ ] Remove only stale artifacts owned by earlier successful builds, including
+- [x] Print each validator's hash in the CLI.
+- [x] Remove only stale artifacts owned by earlier successful builds, including
   when the new build contains no validators. Preserve unrelated files.
-- [ ] Preserve existing artifacts on frontend or codegen failure. Reject unsafe
+- [x] Preserve existing artifacts on frontend or codegen failure. Reject unsafe
   output paths and unsafe ownership metadata; do not follow artifact symlinks.
-- [ ] Preserve deterministic output order and duplicate module-name rejection.
+- [x] Preserve deterministic output order and duplicate module-name rejection.
 
 ## 5. Acceptance
 
-- [ ] Source-based snapshots and integration tests prove config/CLI precedence,
+- [x] Source-based snapshots and integration tests prove config/CLI precedence,
   member-specific targets, production test exclusion, target rejection, hash
   vectors, dotted filenames, artifact encodings, zero-validator cleanup,
   unrelated-file preservation, and failure preserving prior output.
-- [ ] Existing validator checks, diagnostics, codegen, and snapshots remain green.
-- [ ] Update the specifications and add changesets for changed crates.
-- [ ] `cargo fmt --all`
-- [ ] `cargo clippy --all-targets --all-features -- -D warnings`
-- [ ] `cargo test`
-- [ ] Mark Plan 09 complete in `SPEC.md` only after the acceptance audit. Leave
+- [x] Existing validator checks, diagnostics, codegen, and snapshots remain green.
+- [x] Update the specifications and add changesets for changed crates.
+- [x] `cargo fmt --all`
+- [x] `cargo clippy --all-targets --all-features -- -D warnings`
+- [x] `cargo test`
+- [x] Mark Plan 09 complete in `SPEC.md` only after the acceptance audit. Leave
   Plan 08 unchecked and deferred. Personal scratch cases are outside this plan.
+
+Acceptance verified with `cargo fmt --all`, strict workspace Clippy, and
+`cargo test`: 3,305 passed, 3 ignored, 0 failed. Target compatibility uses the
+Plomin/protocol 10 baseline. Plan 08 remains deferred.
