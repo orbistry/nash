@@ -254,7 +254,7 @@ enum VariantArgState<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{assert_decl_error_snapshot, assert_decl_snapshot};
+    use super::super::assert_decl_snapshot;
 
     #[test]
     fn union_simple() {
@@ -294,11 +294,6 @@ mod tests {
     }
 
     #[test]
-    fn union_rejects_kind_arrow_annotation() {
-        assert_decl_error_snapshot!("type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))");
-    }
-
-    #[test]
     fn little_union() {
         assert_decl_snapshot!("type step 'a = Done 'a | Next int 'a");
     }
@@ -317,26 +312,6 @@ mod tests {
                 | Rect { w : int, h : int }
         "#
         );
-    }
-
-    #[test]
-    fn error_bare_parameter() {
-        assert_decl_error_snapshot!("type Maybe a = Just a");
-    }
-
-    #[test]
-    fn error_empty_representation_annotation() {
-        assert_decl_error_snapshot!("type T ('f : ) = A");
-    }
-
-    #[test]
-    fn error_unknown_representation_annotation() {
-        assert_decl_error_snapshot!("type T ('f : Foo) = A");
-    }
-
-    #[test]
-    fn error_labeled_field_without_type() {
-        assert_decl_error_snapshot!("type D = D { owner }");
     }
 
     #[test]

@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2277
+description: "Code:\n\nmodule Main exposing (swap)\n\nswap ( a, b ) = ( b, a )\n"
+---
+swap : forall a b. ( a, b ) -> ( b, a )

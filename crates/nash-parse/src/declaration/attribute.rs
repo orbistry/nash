@@ -98,7 +98,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{assert_decl_error_snapshot, assert_decl_snapshot};
+    use super::super::assert_decl_snapshot;
 
     #[test]
     fn derive_union() {
@@ -119,17 +119,5 @@ mod tests {
     #[test]
     fn stacked() {
         assert_decl_snapshot!("@first\n@second(1)\nf = 1");
-    }
-    #[test]
-    fn error_upper_name() {
-        assert_decl_error_snapshot!("@Derive(Eq)\ntype T = A");
-    }
-    #[test]
-    fn error_unclosed() {
-        assert_decl_error_snapshot!("@derive(Eq\ntype T = A");
-    }
-    #[test]
-    fn error_same_line() {
-        assert_decl_error_snapshot!("@derive(Eq) type T = A");
     }
 }

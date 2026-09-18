@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/expression/bytes.rs
+assertion_line: 15
+description: "Code:\n\n#\"ab"
+info: diagnostic
+---
+nash::syntax::unclosed_delimiter
+
+  × Expected `"` to close `#"`.
+   ╭─[src/Main.nash:1:5]
+ 1 │ #"ab
+   · ─┬  ┬
+   ·  │  ╰── expected `"`
+   ·  ╰── opened here
+   ╰────
+  help: Add `"` here.

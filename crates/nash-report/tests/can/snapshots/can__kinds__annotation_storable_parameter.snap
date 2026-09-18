@@ -1,0 +1,9 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 348
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\nf : 'a -> list 'a -> list 'a\nf x xs = xs\n"
+---
+(
+    [],
+    [],
+)

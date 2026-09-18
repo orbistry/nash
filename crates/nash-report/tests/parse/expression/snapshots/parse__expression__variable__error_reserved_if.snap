@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/expression/variable.rs
+assertion_line: 5
+description: "Code:\n\nif"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected an expression in the `value` definition.
+   ╭─[src/Main.nash:1:1]
+ 1 │ if
+   · ─
+   ╰────
+  help: Add an expression or `todo` for an unfinished body.

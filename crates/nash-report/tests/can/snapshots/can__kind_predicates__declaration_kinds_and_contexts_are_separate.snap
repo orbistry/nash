@@ -1,0 +1,104 @@
+---
+source: crates/nash-report/tests/can/kind_predicates.rs
+assertion_line: 57
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Box 'a = Box 'a\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)\n"
+---
+[
+    (
+        "Box",
+        Arrow(
+            Type,
+            Type,
+        ),
+        [
+            Implied {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "Big",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 19,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 21,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+    ),
+    (
+        "option",
+        Arrow(
+            Type,
+            Type,
+        ),
+        [],
+    ),
+    (
+        "wrap",
+        Arrow(
+            Arrow(
+                Type,
+                Type,
+            ),
+            Arrow(
+                Type,
+                Type,
+            ),
+        ),
+        [
+            Apply {
+                head: Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 25,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 27,
+                        },
+                    },
+                    value: Var(
+                        "f",
+                    ),
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 7,
+                                column: 28,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 30,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+    ),
+]

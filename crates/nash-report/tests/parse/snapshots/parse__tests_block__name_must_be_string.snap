@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/tests_block.rs
+assertion_line: 30
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test name = do\n        assert True\n"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected a quoted test name.
+   ╭─[src/Main.nash:4:10]
+ 3 │ tests
+ 4 │     test name = do
+   ·          ─
+ 5 │         assert True
+   ╰────
+  help: Give the test a name in double quotes.

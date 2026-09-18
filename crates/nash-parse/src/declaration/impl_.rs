@@ -88,7 +88,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{assert_decl_error_snapshot, assert_decl_snapshot};
+    use super::super::assert_decl_snapshot;
 
     #[test]
     fn implementation_simple() {
@@ -127,42 +127,6 @@ mod tests {
             r#"
             impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where
                 eq (a, b) (c, d) = a == c && b == d
-        "#
-        );
-    }
-
-    #[test]
-    fn implementation_head_requires_trait() {
-        assert_decl_error_snapshot!("impl int where");
-    }
-
-    #[test]
-    fn implementation_head_requires_argument() {
-        assert_decl_error_snapshot!("impl Eq where");
-    }
-
-    #[test]
-    fn implementation_requires_where() {
-        assert_decl_error_snapshot!("impl Eq int");
-    }
-
-    #[test]
-    fn implementation_method_cannot_have_annotation() {
-        assert_decl_error_snapshot!(
-            r#"
-            impl Eq int where
-                eq : int -> bool
-        "#
-        );
-    }
-
-    #[test]
-    fn implementation_methods_must_align() {
-        assert_decl_error_snapshot!(
-            r#"
-            impl Lift int Int where
-                lift = liftInt
-                 lower = lowerInt
         "#
         );
     }

@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2329
+description: "module Main exposing (bump)\n\nbump r = { r | x = 1 }\n"
+info: diagnostic
+---
+nash::type::ambiguous_record_access
+
+  × Cannot determine record type `'a`.
+   ╭─[Main.nash:3:16]
+ 2 │ 
+ 3 │ bump r = { r | x = 1 }
+   ·                ┬
+   ·                ╰── field `x` update of `r`
+   ╰────
+  help: Add a type annotation that identifies the record.

@@ -21,7 +21,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::{assert_expr_error_snapshot, assert_expr_snapshot};
+    use crate::expression::assert_expr_snapshot;
 
     #[test]
     fn int_simple() {
@@ -36,25 +36,5 @@ mod tests {
     #[test]
     fn int_hex() {
         assert_expr_snapshot!("0xFF");
-    }
-
-    #[test]
-    fn error_leading_zero() {
-        assert_expr_error_snapshot!("007");
-    }
-
-    #[test]
-    fn error_hex_no_digits() {
-        assert_expr_error_snapshot!("0x");
-    }
-
-    #[test]
-    fn error_float_nonzero() {
-        assert_expr_error_snapshot!("1.5");
-    }
-
-    #[test]
-    fn error_float_zero() {
-        assert_expr_error_snapshot!("0.5");
     }
 }

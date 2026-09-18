@@ -399,23 +399,6 @@ mod tests {
         }};
     }
 
-    macro_rules! assert_module_error_snapshot {
-        ($input:expr) => {{
-            let input = indoc!($input);
-            let bump = Bump::new();
-            let src = bump.alloc_str(input);
-            let mut parser = nash_parse::Parser::new(&bump, src);
-            let error = parser.module().expect_err("expected module parse error");
-            insta::with_settings!({
-                description => format!("Code:\n\n{}", input),
-                omit_expression => true,
-                info => &"diagnostic",
-            }, {
-                insta::assert_snapshot!($crate::test_support::render_module_error(src, &error));
-            });
-        }};
-    }
-
     #[test]
     fn module_header_only() {
         assert_module_snapshot!("module Main exposing (..)\n");
@@ -579,40 +562,5 @@ mod tests {
             main datum = assert True
         "#
         );
-    }
-
-    #[test]
-    fn validator_requires_module_keyword() {
-        assert_module_error_snapshot!("validator Vesting exposing (main)");
-    }
-
-    #[test]
-    fn validator_module_must_remain_indented() {
-        assert_module_error_snapshot!("validator\nmodule V exposing (..)");
-    }
-
-    #[test]
-    fn module_preserves_import_alias_error() {
-        assert_module_error_snapshot!("import Cardano.Tx as tx");
-    }
-
-    #[test]
-    fn module_preserves_type_alias_error() {
-        assert_module_error_snapshot!("type alias account");
-    }
-
-    #[test]
-    fn module_preserves_pattern_error() {
-        assert_module_error_snapshot!("f (x as) = x");
-    }
-
-    #[test]
-    fn module_preserves_expression_error() {
-        assert_module_error_snapshot!("value = if True then 42");
-    }
-
-    #[test]
-    fn module_preserves_annotation_name_error() {
-        assert_module_error_snapshot!("f : int\ng = 1");
     }
 }

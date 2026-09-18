@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 387
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\nf : ('f 'a, 'f) -> int\nf x = 1\n"
+info: diagnostic
+---
+nash::names::kind_mismatch
+
+  × Kind mismatch in the annotation for `f`.
+   ╭─[src/Main.nash:5:13]
+ 4 │ 
+ 5 │ f : ('f 'a, 'f) -> int
+   ·             ──
+ 6 │ f x = 1
+   ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

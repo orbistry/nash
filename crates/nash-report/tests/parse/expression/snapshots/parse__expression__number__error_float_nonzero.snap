@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/expression/number.rs
+assertion_line: 15
+description: "Code:\n\n1.5"
+info: diagnostic
+---
+nash::syntax
+
+  × Floating point numbers are not supported.
+   ╭─[src/Main.nash:1:2]
+ 1 │ 1.5
+   ·  ─
+   ╰────
+  help: Use an integer such as `1`.

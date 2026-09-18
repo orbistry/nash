@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2079
+description: "Code:\n\nmodule Main exposing (compose)\n\ncompose f g = \\x -> g (f x)\n"
+---
+compose : forall a b c. (a -> b) -> (b -> c) -> a -> c

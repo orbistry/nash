@@ -1,0 +1,18 @@
+---
+source: crates/nash-report/tests/can/impls.rs
+assertion_line: 357
+description: "module Main exposing (..)\ntype alias Box 'a = { value : 'a }\ntype alias Other 'a = { value : 'a }\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq (Box 'a) => Ord (Box 'a) where\n    compare x = x\n\n\nmodule Main exposing (..)\ntype alias Box 'a = { value : 'a }\ntype alias Other 'a = { value : 'a }\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq (Other 'a) => Ord (Box 'a) where\n    compare x = x\n"
+info: diagnostic
+---
+Case 1: accepted
+nash::names::missing_superclass
+
+  × The `Main.Ord` impl for (Main.Box 'a0) does not establish superclass 1:
+   ╭─[src/Main.nash:8:1]
+ 7 │         compare : 'a -> 'a
+ 8 │ ╭─▶ impl Eq (Other 'a) => Ord (Box 'a) where
+ 9 │ ╰─▶     compare x = x
+   ╰────
+  help: It must also satisfy `Main.Eq (Main.Box 'a)`. I cannot find an impl or context
+        constraint that provides it. Add the required impl or include the necessary
+        constraint in this impl's context.

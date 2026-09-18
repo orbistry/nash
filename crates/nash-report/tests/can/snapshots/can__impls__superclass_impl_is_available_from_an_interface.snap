@@ -1,0 +1,49 @@
+---
+source: crates/nash-report/tests/can/impls.rs
+assertion_line: 434
+description: "module Base exposing (..)\ntype Color = Red\ntrait Eq 'a where\n    eq : 'a -> 'a\nimpl Eq Color where\n    eq x = x\n\n\nmodule Main exposing (..)\nimport Base exposing (Eq, Color)\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Ord Color where\n    compare x = x\n"
+---
+[
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Base",
+            },
+            name: "Eq",
+        },
+        heads: [
+            Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Base",
+                    },
+                    name: "Color",
+                },
+                args: [],
+            },
+        ],
+    },
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Ord",
+        },
+        heads: [
+            Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Base",
+                    },
+                    name: "Color",
+                },
+                args: [],
+            },
+        ],
+    },
+]

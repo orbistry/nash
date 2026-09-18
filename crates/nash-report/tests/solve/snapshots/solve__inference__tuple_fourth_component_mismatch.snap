@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 1988
+description: "module Main exposing (..)\nvalue : (unit, unit, unit, unit)\nvalue = ((), (), (), \\x -> x)\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `( unit, unit, unit, unit )`,
+  │ found `( unit, unit, unit, 'a -> 'a )`.
+   ╭─[Main.nash:3:9]
+ 1 │ module Main exposing (..)
+ 2 │ value : (unit, unit, unit, unit)
+   ·         ────────────┬───────────
+   ·                     ╰── declared type
+ 3 │ value = ((), (), (), \x -> x)
+   ·         ──────────┬──────────
+   ·                   ╰── body of `value`
+   ╰────

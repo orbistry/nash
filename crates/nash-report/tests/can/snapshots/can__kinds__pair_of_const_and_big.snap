@@ -1,0 +1,25 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 199
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias p = pair int Data\ntype alias q = pair Data int\ntype alias r = pair Data Data\n"
+---
+(
+    [],
+    [
+        (
+            "p",
+            Type,
+            [],
+        ),
+        (
+            "q",
+            Type,
+            [],
+        ),
+        (
+            "r",
+            Type,
+            [],
+        ),
+    ],
+)

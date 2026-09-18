@@ -1,0 +1,21 @@
+---
+source: crates/nash-report/tests/can/traits.rs
+assertion_line: 460
+description: "module Main exposing (..)\n\ntrait First 'a where\n    duplicate : 'a -> 'a\n\ntrait Second 'a where\n    duplicate : 'a -> 'a\n"
+info: diagnostic
+---
+nash::names::duplicate_method
+
+  × This trait has multiple `duplicate` methods.
+   ╭─[src/Main.nash:7:5]
+ 3 │ trait First 'a where
+ 4 │     duplicate : 'a -> 'a
+   ·     ────┬────
+   ·         ╰── first definition
+ 5 │ 
+ 6 │ trait Second 'a where
+ 7 │     duplicate : 'a -> 'a
+   ·     ────┬────
+   ·         ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.

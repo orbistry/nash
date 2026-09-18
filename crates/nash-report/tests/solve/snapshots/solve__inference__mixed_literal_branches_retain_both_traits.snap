@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2489
+description: "Code:\n\nmodule Main exposing (pick)\n\npick b = if b then 1 else \"two\"\n"
+---
+pick : forall a. (FromInt a, FromString a) => bool -> a

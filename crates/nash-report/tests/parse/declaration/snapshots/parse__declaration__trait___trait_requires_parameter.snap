@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/parse/declaration/trait_.rs
+assertion_line: 5
+description: trait Eq where
+info: diagnostic
+---
+nash::syntax
+
+  × Expected a type parameter.
+   ╭─[src/Main.nash:1:10]
+ 1 │ trait Eq where
+   ·          ─
+   ╰────
+  help: Use a quoted name such as `'a`, or a bounded parameter such as `('a :
+        Storable)`.

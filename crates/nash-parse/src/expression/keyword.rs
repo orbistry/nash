@@ -139,10 +139,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::{
-        assert_expression_error_snapshot, assert_expression_snapshot,
-        assert_indented_expression_snapshot,
-    };
+    use crate::expression::{assert_expression_snapshot, assert_indented_expression_snapshot};
 
     #[test]
     fn assert_parenthesized() {
@@ -189,17 +186,5 @@ mod tests {
                 Continue -> 1
         "#
         );
-    }
-    #[test]
-    fn error_assert_without_body() {
-        assert_expression_error_snapshot!("assert");
-    }
-    #[test]
-    fn error_trace_without_body() {
-        assert_expression_error_snapshot!("trace \"m\"");
-    }
-    #[test]
-    fn error_comptime_without_body() {
-        assert_expression_error_snapshot!("comptime");
     }
 }

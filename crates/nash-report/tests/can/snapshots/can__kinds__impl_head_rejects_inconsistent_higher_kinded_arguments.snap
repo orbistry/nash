@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 897
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype tag 'a = Tag\ntype option 'a = Some 'a\ntype app 'f 'a = App ('f 'a)\ntype wrap 'f 'g 'a = Wrap ('f ('g 'a))\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (wrap (app tag) app option) where\n    marker x = ()\n"
+info: diagnostic
+---
+nash::names::kind_mismatch
+
+  × Kind mismatch in head 1 of impl `Main.Marker`.
+    ╭─[src/Main.nash:11:29]
+ 10 │     marker : 'a -> unit
+ 11 │ impl Marker (wrap (app tag) app option) where
+    ·                             ───
+ 12 │     marker x = ()
+    ╰────
+  help: Expected kind `Type`, found `Type -> Type`.

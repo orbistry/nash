@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 139
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias Id = Int\n"
+---
+(
+    [],
+    [
+        (
+            "Id",
+            Type,
+            [],
+        ),
+    ],
+)

@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/parse/declaration/impl_.rs
+assertion_line: 30
+description: "impl Lift int Int where\n    lift = liftInt\n     lower = lowerInt\n"
+info: diagnostic
+---
+nash::syntax
+
+  × Unexpected `=` in expression.
+   ╭─[src/Main.nash:3:12]
+ 2 │     lift = liftInt
+ 3 │      lower = lowerInt
+   ·            ─
+   ╰────
+  help: Use `==` for a comparison, or align a new definition with `lift`.

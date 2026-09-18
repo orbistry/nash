@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 151
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias acc = { total : int, seen : list Int }\n"
+---
+(
+    [],
+    [
+        (
+            "acc",
+            Type,
+            [],
+        ),
+    ],
+)

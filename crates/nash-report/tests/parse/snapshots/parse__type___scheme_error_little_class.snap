@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/parse/type_.rs
+assertion_line: 20
+description: "Code:\n\nint 'a => 'a"
+info: diagnostic
+---
+nash::syntax
+
+  × Invalid type constraint.
+   ╭─[src/Main.nash:1:1]
+ 1 │ int 'a => 'a
+   · ─
+   ╰────
+  help: Write `Trait args => type`; enclose multiple constraints in parentheses,
+        separated by commas.

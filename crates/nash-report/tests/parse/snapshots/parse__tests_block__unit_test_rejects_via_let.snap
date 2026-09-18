@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/tests_block.rs
+assertion_line: 67
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"t\" = let x via int in do\n        assert True\n"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected a do block for the test body.
+   ╭─[src/Main.nash:4:16]
+ 3 │ tests
+ 4 │     test "t" = let x via int in do
+   ·                ─
+ 5 │         assert True
+   ╰────
+  help: Write `do` and indent its statements.

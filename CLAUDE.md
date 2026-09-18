@@ -52,6 +52,10 @@ We use **insta** for snapshot testing with extremely granular tests:
 
 Macros are defined in each module's test submodule for proper namespacing.
 
+Error macros that render diagnostics live in `crates/nash-report/tests/{parse,can,solve}`,
+not in the crate under test: a crate never dev-depends on its own reporter, because a
+versioned dev-dependency cycle breaks `cargo publish --workspace`.
+
 Example snapshot output:
 ```
 ---

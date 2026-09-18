@@ -291,7 +291,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::{assert_expr_error_snapshot, assert_expr_snapshot};
+    use crate::expression::assert_expr_snapshot;
 
     #[test]
     fn lower_simple() {
@@ -339,28 +339,8 @@ mod tests {
     }
 
     #[test]
-    fn error_reserved_if() {
-        assert_expr_error_snapshot!("if");
-    }
-
-    #[test]
-    fn error_reserved_let() {
-        assert_expr_error_snapshot!("let");
-    }
-
-    #[test]
     fn not_reserved_prefix() {
         assert_expr_snapshot!("letter");
-    }
-
-    #[test]
-    fn error_reserved_do() {
-        assert_expr_error_snapshot!("do");
-    }
-
-    #[test]
-    fn error_reserved_trait() {
-        assert_expr_error_snapshot!("trait");
     }
 
     #[test]

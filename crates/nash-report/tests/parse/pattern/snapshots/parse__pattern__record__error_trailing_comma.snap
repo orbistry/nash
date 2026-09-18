@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/pattern/record.rs
+assertion_line: 10
+description: "Code:\n\n{ x, y, }"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected a field name in this record pattern.
+   ╭─[src/Main.nash:1:9]
+ 1 │ { x, y, }
+   ·         ─
+   ╰────
+  help: List the required field names, separated by commas.

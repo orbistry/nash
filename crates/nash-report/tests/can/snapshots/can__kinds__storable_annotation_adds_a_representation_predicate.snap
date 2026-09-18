@@ -1,0 +1,50 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 616
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias xs ('a : Storable) = list 'a\n"
+---
+(
+    [],
+    [
+        (
+            "xs",
+            Arrow(
+                Type,
+                Type,
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 38,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 40,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
+        ),
+    ],
+)

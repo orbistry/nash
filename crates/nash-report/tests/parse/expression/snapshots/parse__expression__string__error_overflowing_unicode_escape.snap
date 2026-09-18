@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/expression/string.rs
+assertion_line: 5
+description: "Code:\n\n\"\\u{FFFFFFFFF}\""
+info: diagnostic
+---
+nash::syntax
+
+  × Invalid Unicode scalar value.
+   ╭─[src/Main.nash:1:3]
+ 1 │ "\u{FFFFFFFFF}"
+   ·   ────────────
+   ╰────
+  help: Use 0000–10FFFF, excluding D800–DFFF.

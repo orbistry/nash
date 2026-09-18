@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 3502
+description: "module Main exposing (..)\nuseBig : ('a : Big) -> ()\nuseBig x = ()\nuseTerm : ('a : Term) -> ()\nuseTerm x = ()\nbad x = (useBig x, useTerm x)\n"
+info: diagnostic
+---
+nash::type::contradictory_representation
+
+  × `bad` requires incompatible representations for `'a`.
+   ╭─[Main.nash:6:1]
+ 5 │ useTerm x = ()
+ 6 │ bad x = (useBig x, useTerm x)
+   · ───
+   ╰────
+  help: Required: Big, Term.
+
+        Use a consistent representation or convert the value explicitly.

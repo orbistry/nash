@@ -1,0 +1,32 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 3097
+description: "module Main exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nbad xs = first (Some ()) xs\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable (option unit)`.
+   ╭─[Main.nash:6:10]
+ 5 │ first x xs = x
+ 6 │ bad xs = first (Some ()) xs
+   ·          ──┬──
+   ·            ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming list (option unit)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable (option unit)`.
+   ╭─[Main.nash:6:10]
+ 5 │ first x xs = x
+ 6 │ bad xs = first (Some ()) xs
+   ·          ──┬──
+   ·            ╰── required by `first`
+   ╰────
+  help: Use a type with Big or Const representation; an impl cannot change representation.

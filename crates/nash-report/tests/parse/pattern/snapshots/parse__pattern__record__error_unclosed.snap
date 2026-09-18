@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/pattern/record.rs
+assertion_line: 5
+description: "Code:\n\n{ x, y"
+info: diagnostic
+---
+nash::syntax::unclosed_delimiter
+
+  × Expected `}` to close `{`.
+   ╭─[src/Main.nash:1:7]
+ 1 │ { x, y
+   · ┬     ┬
+   · │     ╰── expected `}`
+   · ╰── opened here
+   ╰────
+  help: Add `}` here.

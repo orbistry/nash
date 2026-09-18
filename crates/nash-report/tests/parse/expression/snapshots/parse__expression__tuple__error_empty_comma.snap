@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/expression/tuple.rs
+assertion_line: 15
+description: "Code:\n\n(,)"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected an expression or `)`.
+   ╭─[src/Main.nash:1:2]
+ 1 │ (,)
+   ·  ─
+   ╰────
+  help: Add an expression inside the parentheses.

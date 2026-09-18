@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/tests/can/impls.rs
+assertion_line: 774
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep int where\n    keep x = x\n    keep y = y\n"
+info: diagnostic
+---
+nash::names::duplicate_method
+
+  × This trait has multiple `keep` methods.
+   ╭─[src/Main.nash:6:5]
+ 4 │ impl Keep int where
+ 5 │     keep x = x
+   ·     ──┬─
+   ·       ╰── first definition
+ 6 │     keep y = y
+   ·     ──┬─
+   ·       ╰── and another first definition
+   ╰────
+  help: Rename one of the definitions.

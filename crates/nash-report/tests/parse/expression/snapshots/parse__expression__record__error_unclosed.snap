@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/expression/record.rs
+assertion_line: 5
+description: "Code:\n\n{ x = 1"
+info: diagnostic
+---
+nash::syntax::unclosed_delimiter
+
+  × Expected `}` to close `{`.
+   ╭─[src/Main.nash:1:8]
+ 1 │ { x = 1
+   · ┬      ┬
+   · │      ╰── expected `}`
+   · ╰── opened here
+   ╰────
+  help: Add `}` here.

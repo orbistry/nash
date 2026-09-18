@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/expression/tuple.rs
+assertion_line: 20
+description: "Code:\n\n(> 5"
+info: diagnostic
+---
+nash::syntax::unclosed_delimiter
+
+  × Expected `)` to close `(`.
+   ╭─[src/Main.nash:1:5]
+ 1 │ (> 5
+   · ┬   ┬
+   · │   ╰── expected `)`
+   · ╰── opened here
+   ╰────
+  help: Add `)` here.

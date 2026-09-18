@@ -1,0 +1,50 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 687
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype wrapper ('a : Term) = Wrap 'a\n"
+---
+(
+    [
+        (
+            "wrapper",
+            Arrow(
+                Type,
+                Type,
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Term",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 17,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
+        ),
+    ],
+    [],
+)

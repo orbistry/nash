@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 4045
+description: "module Main exposing (..)\nf : int -> ()\nf {} = ()\n"
+info: diagnostic
+---
+nash::type::not_a_record
+
+  × Expected a record, found `int`.
+   ╭─[Main.nash:3:3]
+ 2 │ f : int -> ()
+ 3 │ f {} = ()
+   ·   ─┬
+   ·    ╰── fields pattern
+   ╰────

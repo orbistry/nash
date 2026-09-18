@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 379
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype option 'a = None | Some 'a\nf : list (option int) -> int\nf x = 1\n"
+info: diagnostic
+---
+nash::names::representation_mismatch
+
+  × This position requires `Storable` in the annotation for `f`:
+   ╭─[src/Main.nash:6:11]
+ 5 │ type option 'a = None | Some 'a
+ 6 │ f : list (option int) -> int
+   ·           ──────────
+ 7 │ f x = 1
+   ╰────
+  help: The type has `Term` representation, but `Storable` admits Big or Const types.
+        Change the type or the representation requirement.

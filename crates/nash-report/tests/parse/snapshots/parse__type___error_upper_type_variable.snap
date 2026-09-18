@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/type_.rs
+assertion_line: 40
+description: "Code:\n\n'A"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected a type in the annotation for `value`.
+   ╭─[src/Main.nash:1:1]
+ 1 │ 'A
+   · ─
+   ╰────
+  help: Write a type name or a quoted type variable, such as `'a`.

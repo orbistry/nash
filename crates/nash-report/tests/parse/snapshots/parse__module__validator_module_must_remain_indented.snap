@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/parse/module.rs
+assertion_line: 10
+description: "Code:\n\nvalidator\nmodule V exposing (..)"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected a module declaration after `validator`.
+   ╭─[src/Main.nash:1:10]
+ 1 │ validator
+   ·          ─
+ 2 │ module V exposing (..)
+   ╰────
+  help: Write `validator module Name exposing (main)`.

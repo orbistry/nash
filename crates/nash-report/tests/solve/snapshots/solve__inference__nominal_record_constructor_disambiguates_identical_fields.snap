@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 4142
+description: "Code:\n\nmodule Main exposing (..)\ntype alias first = { x : unit }\ntype alias second = { x : unit }\na = first ()\nb = second ()\n"
+---
+a : first
+b : second

@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 994
+description: "module Main exposing (..)\nsame : 'a -> 'a -> 'a\nsame x _ = x\ndiscard x = ()\nvalue = discard (same 1 \"one\")\n"
+info: diagnostic
+---
+nash::type::ambiguous_type
+
+  × Cannot determine type `'a` in `value`.
+   ╭─[Main.nash:5:1]
+ 4 │ discard x = ()
+ 5 │ value = discard (same 1 "one")
+   · ─────
+   ╰────
+  help: Required constraints: Literal.FromInt 'a Literal.FromString 'a
+
+        Add a type annotation that determines this variable.

@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/parse/declaration/trait_.rs
+assertion_line: 15
+description: "trait Eq 'a\n    eq : 'a -> bool\n"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected `where` before the trait methods.
+   ╭─[src/Main.nash:2:5]
+ 1 │ trait Eq 'a
+ 2 │     eq : 'a -> bool
+   ·     ─
+   ╰────
+  help: Add `where` after the trait parameters and constraints.

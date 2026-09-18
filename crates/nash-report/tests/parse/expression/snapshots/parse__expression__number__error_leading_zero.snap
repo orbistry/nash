@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/expression/number.rs
+assertion_line: 5
+description: "Code:\n\n007"
+info: diagnostic
+---
+nash::syntax
+
+  × Integer has leading zeros.
+   ╭─[src/Main.nash:1:2]
+ 1 │ 007
+   ·  ─
+   ╰────
+  help: Remove the leading zeros.

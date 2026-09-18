@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 663
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Box 'a = Box 'a\ntype first ('a : Const) = First (second 'a)\ntype second 'a = Second (Box 'a) (first 'a)\n"
+info: diagnostic
+---
+nash::names::contradictory_representation
+
+  × The representation requirements on 'a are incompatible:
+   ╭─[src/Main.nash:7:41]
+ 6 │ type first ('a : Const) = First (second 'a)
+ 7 │ type second 'a = Second (Box 'a) (first 'a)
+   ·                                         ──
+   ╰────
+  help: Change the incompatible constraints or uses of this variable.

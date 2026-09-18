@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2288
+description: "Code:\n\nmodule Main exposing (head)\n\nhead fallback list =\n    case list of\n        first :: rest ->\n            first\n\n        [] ->\n            fallback\n"
+---
+head : forall a. Storable a => a -> list a -> a

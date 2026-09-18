@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/module.rs
+assertion_line: 20
+description: "Code:\n\ntype alias account"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected `=` in the type alias.
+   ╭─[src/Main.nash:1:19]
+ 1 │ type alias account
+   ·                   ─
+   ╰────
+  help: Write `type alias Name = Type`.

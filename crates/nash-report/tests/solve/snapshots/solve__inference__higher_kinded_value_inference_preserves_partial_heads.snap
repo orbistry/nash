@@ -1,0 +1,8 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 3535
+description: "Code:\n\nmodule Main exposing (..)\nidentityK : 'f 'a -> 'f 'a\nidentityK x = x\ntwo : 'g 'b 'a -> 'g 'b 'a\ntwo x = identityK x\nreverse : 'f 'a -> 'f 'b -> ( 'f 'b, 'f 'a )\nreverse x y = (identityK y, identityK x)\n"
+---
+identityK : forall a f. Apply f a => f a -> f a
+reverse : forall a b f. (Apply f a, Apply f b) => f a -> f b -> ( f b, f a )
+two : forall a b g. Apply g b a => g b a -> g b a

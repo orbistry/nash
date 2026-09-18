@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/pattern/list.rs
+assertion_line: 5
+description: "Code:\n\n[a, b"
+info: diagnostic
+---
+nash::syntax::unclosed_delimiter
+
+  × Expected `]` to close `[`.
+   ╭─[src/Main.nash:1:6]
+ 1 │ [a, b
+   · ┬    ┬
+   · │    ╰── expected `]`
+   · ╰── opened here
+   ╰────
+  help: Add `]` here.

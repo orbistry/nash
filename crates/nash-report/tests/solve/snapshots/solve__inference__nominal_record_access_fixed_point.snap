@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 3983
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\ntype alias outer = { inner : point }\ng : outer -> int\ng p = p.inner.x\nf p = (p.inner.x, g p)\n"
+---
+f : outer -> ( int, int )
+g : outer -> int

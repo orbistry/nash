@@ -1,0 +1,19 @@
+---
+source: crates/nash-report/tests/can/traits.rs
+assertion_line: 224
+description: "module Main exposing (..)\n\ntrait First 'a where\n    first : Second 'a => 'a -> 'a\n\ntrait Second 'a where\n    second : First 'a => 'a -> 'a\n"
+---
+[
+    (
+        "First",
+        [
+            Type,
+        ],
+    ),
+    (
+        "Second",
+        [
+            Type,
+        ],
+    ),
+]

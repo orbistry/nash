@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/expression/do_.rs
+assertion_line: 25
+description: "Code (indented inside a def):\n\n    do\n        x <- e\n      y\n"
+info: diagnostic
+---
+nash::syntax
+
+  × Do statements must align.
+   ╭─[src/Main.nash:3:7]
+ 1 │     do
+ 2 │         x <- e
+ 3 │       y
+   ·       ─
+   ╰────
+  help: Indent the statement with 9 spaces.

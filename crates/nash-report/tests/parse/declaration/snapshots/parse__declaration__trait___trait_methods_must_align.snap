@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/parse/declaration/trait_.rs
+assertion_line: 35
+description: "trait Eq 'a where\n    eq : 'a -> bool\n     neq : 'a -> bool\n"
+info: diagnostic
+---
+nash::syntax
+
+  × Trait methods must align.
+   ╭─[src/Main.nash:3:10]
+ 1 │ trait Eq 'a where
+ 2 │     eq : 'a -> bool
+ 3 │      neq : 'a -> bool
+   ·          ─
+   ╰────
+  help: Start each method in column 5.

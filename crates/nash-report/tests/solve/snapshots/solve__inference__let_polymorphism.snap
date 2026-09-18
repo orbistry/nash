@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2120
+description: "Code:\n\nmodule Main exposing (main)\n\nmain =\n    let\n        id x = x\n    in\n    ( id 1, id \"one\" )\n"
+---
+main : forall a a1. (FromInt a1, FromString a) => ( a1, a )

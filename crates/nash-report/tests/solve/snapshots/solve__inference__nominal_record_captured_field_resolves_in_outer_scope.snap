@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 4012
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\ng : point -> int\ng p = p.x\nf p =\n    let\n        get ignored = p.x\n    in\n    (get (), g p)\n"
+---
+f : point -> ( int, int )
+g : point -> int

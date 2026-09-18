@@ -1,0 +1,8 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 4281
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : unit }\ntype wrapper = Wrap { inner : point }\npositional = Wrap ({ x = () })\nlabeled = Wrap { inner = { x = () } }\nget (Wrap inner) = inner.x\n"
+---
+get : wrapper -> unit
+labeled : wrapper
+positional : wrapper

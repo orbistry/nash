@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/expression/tuple.rs
+assertion_line: 25
+description: "Code:\n\n(=> 5)"
+info: diagnostic
+---
+nash::syntax
+
+  × Unexpected `=>` in expression.
+   ╭─[src/Main.nash:1:2]
+ 1 │ (=> 5)
+   ·  ──
+   ╰────
+  help: Use `=>` after type constraints; use `->` for function and case bodies.

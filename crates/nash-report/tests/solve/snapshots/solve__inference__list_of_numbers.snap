@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2020
+description: "Code:\n\nmodule Main exposing (numbers)\n\nnumbers = [ 1, 2, 3 ]\n"
+---
+numbers : forall a. (FromInt a, Storable a) => list a

@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2057
+description: "Code:\n\nmodule Main exposing (always)\n\nalways x y = x\n"
+---
+always : forall a b. a -> b -> a

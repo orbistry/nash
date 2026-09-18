@@ -103,7 +103,7 @@ enum AliasNameState<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{assert_decl_error_snapshot, assert_decl_snapshot};
+    use super::super::assert_decl_snapshot;
 
     #[test]
     fn type_alias_simple() {
@@ -133,10 +133,5 @@ mod tests {
     #[test]
     fn little_alias() {
         assert_decl_snapshot!("type alias acc = { total : int, seen : list Int }");
-    }
-
-    #[test]
-    fn error_missing_name() {
-        assert_decl_error_snapshot!("type alias = int");
     }
 }

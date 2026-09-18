@@ -1,0 +1,66 @@
+---
+source: crates/nash-report/tests/can/core_casts.rs
+assertion_line: 69
+description: "module Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castLift\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castLift\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castLift\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castLift)\nlift : int -> Int\nlift = castLift\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castLower\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castLower\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castLower\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castLower)\nlift : int -> Int\nlift = castLower\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castToData\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castToData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castToData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castToData)\nlift : int -> Int\nlift = castToData\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castFromDataShallow)\nlift : int -> Int\nlift = castFromDataShallow\n\n\nmodule Main exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.castValidateData\n\n\nmodule Main exposing (..)\nimport Builtin as B\nlift : int -> Int\nlift = B.castValidateData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nlift : int -> Int\nlift = castValidateData\n\n\nmodule Main exposing (..)\nimport Builtin exposing (castValidateData)\nlift : int -> Int\nlift = castValidateData\n"
+info: diagnostic
+---
+nash::names::not_found_var
+
+  × Unknown variable `Builtin.castLift`.
+   ╭─[src/Main.nash:4:8]
+ 3 │ lift : int -> Int
+ 4 │ lift = Builtin.castLift
+   ·        ────────────────
+   ╰────
+  help: Similar names:
+
+            Builtin.tailList
+            Builtin.chooseList
+            Builtin.dropList
+            Builtin.headList
+
+nash::names::not_found_var
+
+  × Unknown variable `B.castLift`.
+   ╭─[src/Main.nash:4:8]
+ 3 │ lift : int -> Int
+ 4 │ lift = B.castLift
+   ·        ──────────
+   ╰────
+  help: Similar names:
+
+            B.tailList
+            B.chooseList
+            B.dropList
+            B.headList
+
+nash::names::not_found_var
+
+  × Unknown variable `castLift`.
+   ╭─[src/Main.nash:4:8]
+ 3 │ lift : int -> Int
+ 4 │ lift = castLift
+   ·        ────────
+   ╰────
+  help: Similar names:
+
+            lift
+            tailList
+            chooseList
+            dropList
+
+nash::names::import_exposing_not_found
+
+  × The `Builtin` module does not expose `castLift`:
+   ╭─[src/Main.nash:2:26]
+ 1 │ module Main exposing (..)
+ 2 │ import Builtin exposing (castLift)
+   ·                          ────────
+ 3 │ lift : int -> Int
+   ╰────
+  help: Similar names:
+
+            tailList
+            chooseList
+            dropList
+            headList

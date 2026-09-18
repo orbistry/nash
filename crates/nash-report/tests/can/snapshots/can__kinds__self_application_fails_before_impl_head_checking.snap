@@ -1,0 +1,17 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 752
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype self 'f = Self ('f 'f)\ntrait Marker 'a where\n    marker : 'a -> unit\nimpl Marker (self self) where\n    marker x = ()\n"
+info: diagnostic
+---
+nash::names::kind_infinite
+
+  × This application in field 1 of little constructor `Self` in `self` would require
+  │ an infinite kind:
+   ╭─[src/Main.nash:5:25]
+ 4 │ 
+ 5 │ type self 'f = Self ('f 'f)
+   ·                         ──
+ 6 │ trait Marker 'a where
+   ╰────
+  help: Check the type application and the kinds of its arguments.

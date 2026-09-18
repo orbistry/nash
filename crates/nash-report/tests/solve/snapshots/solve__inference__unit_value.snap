@@ -1,0 +1,6 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 1901
+description: "Code:\n\nmodule Main exposing (nothing)\n\nnothing = ()\n"
+---
+nothing : unit

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/pattern/term.rs
+assertion_line: 5
+description: "Code:\n\n#\"0\""
+info: diagnostic
+---
+nash::syntax
+
+  × Byte string has an odd number of hexadecimal digits.
+   ╭─[src/Main.nash:1:1]
+ 1 │ #"0"
+   · ─
+   ╰────
+  help: Use two hexadecimal digits per byte.

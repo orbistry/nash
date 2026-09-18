@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 4309
+description: "Code:\n\nmodule Main exposing (..)\ntype Box 'a = Box { z : 'a }\ntype box 'a = Box { z : 'a }\nlittle : box unit\nlittle = Box { z = () }\nget : box 'a -> 'a\nget b = b.z\n"
+---
+get : forall a. box a -> a
+little : box unit

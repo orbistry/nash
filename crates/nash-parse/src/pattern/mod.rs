@@ -350,23 +350,6 @@ macro_rules! assert_pattern_snapshot {
 
 /// Snapshot test macro for pattern parse errors.
 #[cfg(test)]
-macro_rules! assert_pattern_error_snapshot {
-    ($code:expr) => {{
-        let bump = bumpalo::Bump::new();
-        let src = bump.alloc_str(indoc::indoc!($code));
-        let mut parser = nash_parse::Parser::new(&bump, src);
-        let result = parser.pattern_expr().expect_err("expected parse error");
-
-        insta::with_settings!({
-            description => format!("Code:\n\n{}", indoc::indoc!($code)),
-            omit_expression => true,
-                info => &"diagnostic",
-        }, {
-            insta::assert_snapshot!($crate::test_support::render_pattern_error(src, &result));
-        });
-    }};
-}
-
 /// Snapshot test macro for multiline patterns, laid out as they would
 /// appear indented inside a definition (see `test_support::indent_fragment`).
 #[cfg(test)]
@@ -396,7 +379,6 @@ macro_rules! assert_indented_pattern_snapshot {
 #[cfg(test)]
 pub(crate) use assert_indented_pattern_snapshot;
 #[cfg(test)]
-pub(crate) use assert_pattern_error_snapshot;
 #[cfg(test)]
 pub(crate) use assert_pattern_snapshot;
 

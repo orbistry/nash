@@ -1,0 +1,101 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 740
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype apply3 'f 'a 'b 'c = Apply3 ('f 'a 'b 'c)\n"
+---
+(
+    [
+        (
+            "apply3",
+            Arrow(
+                Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Arrow(
+                            Type,
+                            Type,
+                        ),
+                    ),
+                ),
+                Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Arrow(
+                            Type,
+                            Type,
+                        ),
+                    ),
+                ),
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 35,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 37,
+                            },
+                        },
+                        value: Var(
+                            "f",
+                        ),
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 38,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 40,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 41,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 43,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 44,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 46,
+                                },
+                            },
+                            value: Var(
+                                "c",
+                            ),
+                        },
+                    ],
+                },
+            ],
+        ),
+    ],
+    [],
+)

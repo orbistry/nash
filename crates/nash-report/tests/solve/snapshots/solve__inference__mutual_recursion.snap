@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2463
+description: "Code:\n\nmodule Main exposing (ping, pong)\n\nping x = pong x\n\npong x = ping x\n"
+---
+ping : forall a b. a -> b
+pong : forall a b. a -> b

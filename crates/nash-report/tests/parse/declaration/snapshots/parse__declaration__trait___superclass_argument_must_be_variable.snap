@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/declaration/trait_.rs
+assertion_line: 46
+description: "trait Eq int => Ord 'a where"
+info: diagnostic
+---
+nash::syntax
+
+  × Superclass argument must be a trait parameter.
+   ╭─[src/Main.nash:1:10]
+ 1 │ trait Eq int => Ord 'a where
+   ·          ─
+   ╰────
+  help: Use one of this trait's quoted type parameters.

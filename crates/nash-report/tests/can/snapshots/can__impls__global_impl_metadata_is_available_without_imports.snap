@@ -1,0 +1,175 @@
+---
+source: crates/nash-report/tests/can/impls.rs
+assertion_line: 667
+description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidden : 'a -> 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Hidden 'a => Keep (List 'a) where\n    keep x = x\n\n\nmodule Main exposing (..)\n"
+---
+(
+    [
+        QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Instances",
+            },
+            name: "Hidden",
+        },
+        QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Instances",
+            },
+            name: "Keep",
+        },
+    ],
+    {
+        ImplKey {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Instances",
+                },
+                name: "Keep",
+            },
+            heads: [
+                Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "List",
+                    },
+                    args: [
+                        Var(
+                            0,
+                        ),
+                    ],
+                },
+            ],
+        }: ImplInfo {
+            variables: [
+                "a",
+            ],
+            home: ModuleName {
+                package: None,
+                name: "Instances",
+            },
+            region: Region {
+                start: Position {
+                    line: 6,
+                    column: 1,
+                },
+                end: Position {
+                    line: 7,
+                    column: 15,
+                },
+            },
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Instances",
+                },
+                name: "Keep",
+            },
+            context: [
+                Trait {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: None,
+                            name: "Instances",
+                        },
+                        name: "Hidden",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 13,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 15,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 30,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 32,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
+            heads: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 25,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 32,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "core",
+                                    },
+                                ),
+                                name: "Builtin",
+                            },
+                            name: "List",
+                        },
+                        args: [
+                            Var(
+                                0,
+                            ),
+                        ],
+                    },
+                },
+            ],
+            methods: [
+                "keep",
+            ],
+        },
+    },
+)

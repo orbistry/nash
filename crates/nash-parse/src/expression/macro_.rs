@@ -87,7 +87,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::{assert_expression_error_snapshot, assert_expression_snapshot};
+    use crate::expression::assert_expression_snapshot;
 
     #[test]
     fn record_argument() {
@@ -120,17 +120,5 @@ mod tests {
     #[test]
     fn uppercase_is_operator() {
         assert_expression_snapshot!("Foo!(x)");
-    }
-    #[test]
-    fn error_unclosed() {
-        assert_expression_error_snapshot!("m!(");
-    }
-    #[test]
-    fn error_trailing_comma() {
-        assert_expression_error_snapshot!("m!(1,)");
-    }
-    #[test]
-    fn error_double_comma() {
-        assert_expression_error_snapshot!("m!(1,,2)");
     }
 }

@@ -1,0 +1,219 @@
+---
+source: crates/nash-report/tests/can/kinds.rs
+assertion_line: 745
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype apply2 'f ('a : Storable) ('b : Storable) = Apply2 (('f 'a 'b) : Term)\n"
+---
+(
+    [
+        (
+            "apply2",
+            Arrow(
+                Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Type,
+                    ),
+                ),
+                Arrow(
+                    Type,
+                    Arrow(
+                        Type,
+                        Type,
+                    ),
+                ),
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 59,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 61,
+                            },
+                        },
+                        value: Var(
+                            "f",
+                        ),
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 62,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 64,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 65,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 67,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 17,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 19,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 33,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 35,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+                Trait {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Term",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 59,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 67,
+                                },
+                            },
+                            value: App {
+                                head: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 59,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 61,
+                                        },
+                                    },
+                                    value: Var(
+                                        "f",
+                                    ),
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 62,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 64,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 65,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 67,
+                                            },
+                                        },
+                                        value: Var(
+                                            "b",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            ],
+        ),
+    ],
+    [],
+)

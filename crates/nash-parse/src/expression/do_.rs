@@ -168,26 +168,6 @@ impl<'a> Parser<'a> {
 mod tests {
     use crate::expression::assert_indented_expression_snapshot;
 
-    macro_rules! assert_indented_do_error_snapshot {
-        ($code:expr) => {{
-            let bump = bumpalo::Bump::new();
-            let indented = crate::test_support::indent_fragment(indoc::indoc!($code));
-            let source = bump.alloc_str(&indented);
-            let mut parser = nash_parse::Parser::new(&bump, source);
-            parser
-                .chomp(|_, _, _| "space error")
-                .expect("expected leading indent");
-            let error = parser.expression().expect_err("expected do parse error");
-            insta::with_settings!({
-                description => format!("Code (indented inside a def):\n\n{}", indented),
-                omit_expression => true,
-                info => &"diagnostic",
-            }, {
-                insta::assert_snapshot!($crate::test_support::render_expr_error(source, &error));
-            });
-        }};
-    }
-
     #[test]
     fn bind_and_expressions() {
         assert_indented_expression_snapshot!(
@@ -278,41 +258,5 @@ mod tests {
                 let y = 1 in pure y
         "#
         );
-    }
-
-    #[test]
-    fn error_trailing_bind() {
-        assert_indented_do_error_snapshot!(
-            r#"
-            do
-                x <- e
-        "#
-        );
-    }
-
-    #[test]
-    fn error_trailing_let() {
-        assert_indented_do_error_snapshot!(
-            r#"
-            do
-                let y = 1
-        "#
-        );
-    }
-
-    #[test]
-    fn error_misaligned_statement() {
-        assert_indented_do_error_snapshot!(
-            r#"
-            do
-                x <- e
-              y
-        "#
-        );
-    }
-
-    #[test]
-    fn error_empty_do() {
-        assert_indented_do_error_snapshot!("do");
     }
 }

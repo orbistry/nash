@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/expression/tuple.rs
+assertion_line: 30
+description: "Code:\n\n(> ,)"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected an expression in some parentheses.
+   ╭─[src/Main.nash:1:4]
+ 1 │ (> ,)
+   ·    ─
+   ╰────
+  help: Add an expression or `todo` for an unfinished body.

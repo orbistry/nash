@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/tests/parse/pattern/term.rs
+assertion_line: 15
+description: "Code:\n\n'x'"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected an argument pattern.
+   ╭─[src/Main.nash:1:1]
+ 1 │ 'x'
+   · ─
+   ╰────
+  help: Use a variable, constructor pattern, or `_`.

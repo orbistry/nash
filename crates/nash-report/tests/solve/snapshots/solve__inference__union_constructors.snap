@@ -1,0 +1,7 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2239
+description: "Code:\n\nmodule Main exposing (Maybe(..), just, nothing)\n\ntype Maybe 'a\n    = Just 'a\n    | Nothing\n\njust = Just\n\nnothing = Nothing\n"
+---
+just : forall a. Big a => a -> Maybe a
+nothing : forall a. Big a => Maybe a

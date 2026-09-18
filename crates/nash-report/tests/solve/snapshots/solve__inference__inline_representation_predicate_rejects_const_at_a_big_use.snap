@@ -1,0 +1,16 @@
+---
+source: crates/nash-report/tests/solve/inference.rs
+assertion_line: 2739
+description: "module Main exposing (..)\nidentity : ('a : Big) -> 'a\nidentity x = x\nrejected = identity ()\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Builtin.Big unit`.
+   ╭─[Main.nash:4:12]
+ 3 │ identity x = x
+ 4 │ rejected = identity ()
+   ·            ────┬───
+   ·                ╰── required by `identity`
+   ╰────
+  help: Use a type with Big representation; an impl cannot change representation.
