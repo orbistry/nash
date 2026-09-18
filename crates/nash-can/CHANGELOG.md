@@ -1,5 +1,19 @@
 # nash-can
 
+## 0.8.0 — 2026-09-18
+
+### Minor changes
+
+- [1650217](https://github.com/orbistry/nash/commit/165021768b6e9a7d0737a3f31c817a73bd2ba60f) Add validator entry-point diagnostics and build solved modules into Plutus V3 scripts with `nash build` output in UPLC, Flat, and single-wrapped CBOR formats. — Thanks @MicroProofs!
+- [fb37ab1](https://github.com/orbistry/nash/commit/fb37ab1fb480e0b1658258954855d62c2dd1a524) Canonicalize and type-check assertions, aborts, traces, and compile-time expressions while preserving source locations, dependency tracking, solved node types, and pattern coverage checks. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [3cb7a0f](https://github.com/orbistry/nash/commit/3cb7a0f1ec352bf13522e1eb71f0100ff873d3df) Preserve miette diagnostic codes and error/warning markers in terminal output. Show source paths relative to the project root while keeping file hyperlinks absolute.
+  
+  Expand colorless rendered diagnostic snapshot coverage across parser, canonicalizer, solver, driver, and CLI tests. Record Nash source instead of Rust assertion expressions in source-driven snapshots, move codegen snapshots to source-compilation tests, and check snapshot metadata for regressions. Keep direct assertions for internal error values and hand-built Core behavior. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.8.0, nash-can@0.8.0, nash-parse@0.6.1, nash-report@0.4.0
+
 ## 0.7.0 — 2026-09-10
 
 ### Minor changes

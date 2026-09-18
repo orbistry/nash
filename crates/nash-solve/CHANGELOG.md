@@ -1,5 +1,19 @@
 # nash-solve
 
+## 0.6.0 — 2026-09-18
+
+### Minor changes
+
+- [fb37ab1](https://github.com/orbistry/nash/commit/fb37ab1fb480e0b1658258954855d62c2dd1a524) Canonicalize and type-check assertions, aborts, traces, and compile-time expressions while preserving source locations, dependency tracking, solved node types, and pattern coverage checks. — Thanks @MicroProofs!
+- [c064513](https://github.com/orbistry/nash/commit/c064513b20c99c4f0313cf781080c0084a3bbec6) Publish solved types for every canonical expression and pattern in the owning scheme's type-variable scope for code generation. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [3cb7a0f](https://github.com/orbistry/nash/commit/3cb7a0f1ec352bf13522e1eb71f0100ff873d3df) Preserve miette diagnostic codes and error/warning markers in terminal output. Show source paths relative to the project root while keeping file hyperlinks absolute.
+  
+  Expand colorless rendered diagnostic snapshot coverage across parser, canonicalizer, solver, driver, and CLI tests. Record Nash source instead of Rust assertion expressions in source-driven snapshots, move codegen snapshots to source-compilation tests, and check snapshot metadata for regressions. Keep direct assertions for internal error values and hand-built Core behavior. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.8.0, nash-can@0.8.0, nash-constrain@0.6.0, nash-parse@0.6.1, nash-report@0.4.0
+
 ## 0.5.0 — 2026-09-10
 
 ### Minor changes

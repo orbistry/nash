@@ -1,5 +1,25 @@
 # nash-cli
 
+## 0.5.0 — 2026-09-18
+
+### Minor changes
+
+- [1650217](https://github.com/orbistry/nash/commit/165021768b6e9a7d0737a3f31c817a73bd2ba60f) Add validator entry-point diagnostics and build solved modules into Plutus V3 scripts with `nash build` output in UPLC, Flat, and single-wrapped CBOR formats. — Thanks @MicroProofs!
+- [bf78f35](https://github.com/orbistry/nash/commit/bf78f35258de7823f8d147f85b12aba1ed57b783) Complete validator builds with project and CLI target/trace settings, production
+  test-block exclusion, protocol-10 target validation, and verified script hashes.
+  Write single-wrapped CBOR as hex text instead of binary and track generated
+  artifacts for safe stale-output cleanup. Existing output directories without an
+  ownership manifest must be cleared of colliding artifacts or replaced with a
+  fresh output directory. Optimizer settings remain unavailable. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [6a9afd5](https://github.com/orbistry/nash/commit/6a9afd52121a3ab7a511d0277c27fdfdaea9c82a) Display diagnostic source paths relative to the loaded workspace or package root, with absolute file hyperlinks on supported terminals, including related diagnostics. Preserve miette diagnostic-code headers and severity markers, and retain absolute source identities for JSON and editor clients. — Thanks @MicroProofs!
+- [3cb7a0f](https://github.com/orbistry/nash/commit/3cb7a0f1ec352bf13522e1eb71f0100ff873d3df) Preserve miette diagnostic codes and error/warning markers in terminal output. Show source paths relative to the project root while keeping file hyperlinks absolute.
+  
+  Expand colorless rendered diagnostic snapshot coverage across parser, canonicalizer, solver, driver, and CLI tests. Record Nash source instead of Rust assertion expressions in source-driven snapshots, move codegen snapshots to source-compilation tests, and check snapshot metadata for regressions. Keep direct assertions for internal error values and hand-built Core behavior. — Thanks @MicroProofs!
+- Updated dependencies: nash-codegen@0.2.0, nash-config@0.4.0, nash-driver@0.7.0, nash-language-server@0.4.1, nash-plutus@0.2.0, nash-report@0.4.0
+
 ## 0.4.0 — 2026-09-10
 
 ### Minor changes

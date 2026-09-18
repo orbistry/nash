@@ -1,5 +1,11 @@
 # nash-language-server
 
+## 0.4.1 — 2026-09-18
+
+### Patch changes
+
+- Updated dependencies: nash-driver@0.7.0, nash-report@0.4.0
+
 ## 0.4.0 — 2026-09-10
 
 ### Minor changes
