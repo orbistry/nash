@@ -1,4 +1,4 @@
-# nash-plutus
+# nash-codegen
 
 ## 0.2.0 — 2026-09-18
 
@@ -13,13 +13,12 @@
   ownership manifest must be cleared of colliding artifacts or replaced with a
   fresh output directory. Optimizer settings remain unavailable. — Thanks @MicroProofs!
 
-## 0.1.0 — 2026-03-15
+### Patch changes
 
-### Minor changes
-
-- [001497d](https://github.com/utxo-company/nash/commit/001497df610aa7cd599ba20d699d519862c835ea) Integrate `nash-plutus` (UPLC CEK machine) into the workspace.
+- [4d27cd2](https://github.com/orbistry/nash/commit/4d27cd200f4473f503eaa2212325fa479c1a268c) Add Nash source-to-UPLC snapshot tests for collections, pattern matching,
+  data conversions, traces, and validators. — Thanks @MicroProofs!
+- [3cb7a0f](https://github.com/orbistry/nash/commit/3cb7a0f1ec352bf13522e1eb71f0100ff873d3df) Preserve miette diagnostic codes and error/warning markers in terminal output. Show source paths relative to the project root while keeping file hyperlinks absolute.
   
-  Workspace-ify dependencies, rename `uplc_turbo` to `nash_plutus`, upgrade
-  thiserror v1 to v2, and replace the proc-macro test generator with a dedicated
-  task crate using `quote` and `cargo fmt`. — Thanks @rvcas!
+  Expand colorless rendered diagnostic snapshot coverage across parser, canonicalizer, solver, driver, and CLI tests. Record Nash source instead of Rust assertion expressions in source-driven snapshots, move codegen snapshots to source-compilation tests, and check snapshot metadata for regressions. Keep direct assertions for internal error values and hand-built Core behavior. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.8.0, nash-can@0.8.0, nash-constrain@0.6.0, nash-ir@0.2.0, nash-nitpick@0.2.2, nash-parse@0.6.1, nash-plutus@0.2.0, nash-solve@0.6.0
 

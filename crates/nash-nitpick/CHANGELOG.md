@@ -1,5 +1,12 @@
 # nash-nitpick
 
+## 0.2.2 — 2026-09-18
+
+### Patch changes
+
+- [fb37ab1](https://github.com/orbistry/nash/commit/fb37ab1fb480e0b1658258954855d62c2dd1a524) Canonicalize and type-check assertions, aborts, traces, and compile-time expressions while preserving source locations, dependency tracking, solved node types, and pattern coverage checks. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.8.0
+
 ## 0.2.1 — 2026-09-10
 
 ### Patch changes
