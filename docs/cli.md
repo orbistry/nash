@@ -8,8 +8,8 @@ The `nash` binary is `crates/nash-cli`. Every command loads the project from
 
 | Command | Status | Purpose |
 |---|---|---|
-| `nash check [PATH]` | exists | Parse, canonicalize and type check every module, including `tests` blocks. No codegen. |
-| `nash build [PATH]` | exists (Plan 07 prerequisite) | Check the frontend, then compile every validator module to Plutus V3 files in `build/`. |
+| `nash check [PATH]` | exists | Parse, canonicalize and type check every module. Test blocks remain unsupported until Plan 10. No codegen. |
+| `nash build [PATH]` | exists | Exclude test blocks, check the frontend, then compile every validator module for its configured target. |
 | `nash test [PATH]` | planned (plans/10) | `check`, then compile and run every `test` and `prop`. |
 | `nash fmt [PATH...]` | planned | Format files in place, or `--check` to report unformatted files. |
 | `nash docs [PATH]` | planned | Generate HTML documentation for exposed modules into `docs/`. |
@@ -36,12 +36,14 @@ Global flags, accepted before the subcommand:
 
 | Flag | Default | Effect |
 |---|---|---|
-| `--trace-level silent\|compact\|verbose` | `silent` | User `trace` compilation mode. |
-| `--compiler-traces` | off | Keep compiler-generated traces. |
+| `--plutus-version v1\|v2\|v3` | config `plutusVersion`, else `v3` | Ledger language target at the Plomin/protocol 10 baseline. |
+| `--trace-level silent\|compact\|verbose` | config `traceLevel`, else `silent` | User `trace` compilation mode. |
+| `--compiler-traces[=true\|false]` | config `compilerTraces`, else false | Independently control compiler traces; the bare flag enables them. |
 | `--out DIR` | `build` | Output directory. |
 
-The current build targets Plutus V3 without optimization. Config defaults,
-`--optimize`, and other target versions remain Plans 08/09 work.
+CLI options override the owning project's configuration. Builds are unoptimized;
+`--optimize` and the `optimize` config field are rejected while Plan 08 is deferred.
+See [target compatibility](validators.md#target-compatibility).
 
 `nash test` (planned):
 
@@ -69,8 +71,8 @@ The current build targets Plutus V3 without optimization. Config defaults,
 | `--no-warnings` | Suppress warnings; errors only. |
 | `--report human\|json` | `json` prints nash-report's Elm-shaped JSON document (`{"type":"compile-errors",...}`) instead of the terminal rendering. Default `human`. |
 
-Plans 09/10 add these two flags to `build` and `test`. The initial build
-command uses human diagnostics and shows warnings.
+`build` uses human diagnostics and shows warnings. Additional report controls
+for `build` and the future `test` command are not implemented.
 
 ## Exit codes
 
@@ -92,29 +94,32 @@ Warnings never change the exit code.
     Module.Name.uplc
     Module.Name.flat
     Module.Name.cbor
+    .nash-artifacts            generated-file ownership
   docs/                       nash docs
   .nash/                      caches (interfaces, downloaded compilers)
 ```
 
-`build/` and `.nash/` are safe to delete. The initial `nash build` writes
-outputs only after successful compilation. Stale-output removal remains Plan 09
-work; obsolete files must currently be removed explicitly. `.cbor` is one CBOR
-byte string containing the `.flat` bytes.
+Outputs are written only after every module and validator compiles successfully.
+The `.nash-artifacts` manifest records generated filenames. A successful build
+removes stale owned outputs, including when there are no validators. Other
+files are preserved; a new output colliding with an unowned file is rejected.
+Pre-manifest outputs are not claimed automatically: remove or relocate them
+explicitly, or choose a fresh `--out` directory. Artifact and manifest symlinks
+are rejected before writing.
+
+`.flat` is raw bytes. `.cbor` is hex text representing a single CBOR byte
+string containing those Flat bytes. The CLI prints a script hash for each
+validator. Compilation failure leaves the previous artifacts and manifest intact.
 
 Human-readable output goes to stderr. Machine-readable output (`--json`) goes
 to stdout. Diagnostics use the miette fancy renderer with Elm's prose (see
 [diagnostics.md](diagnostics.md)).
 
-### Planned `nash build` transcript
+### `nash build` output
 
-```
-   Compiling 14 modules
-    Building Vesting (build/Vesting.cbor, 2.1 KB)
-             hash 3a9f…c41e
-    Building Vesting.Mint (build/Vesting.Mint.cbor, 1.4 KB)
-             hash 88b0…12ff
-    Finished 2 validators in 0.42s
-```
+After the existing frontend diagnostic summary, each validator prints its module
+name, Flat size, and script hash. The final line reports the validator count and
+output directory.
 
 ### `nash test` transcript
 
@@ -122,8 +127,7 @@ See [testing.md](testing.md#example-output).
 
 ## `nash.jsonc` additions
 
-Plan 09 adds three optional fields on `application` and `package` configs.
-The initial build command does not read them:
+Three optional build settings are accepted on `application` and `package` configs:
 
 ```jsonc
 {
@@ -131,24 +135,24 @@ The initial build command does not read them:
     "sourceDirectories": ["src"],
     "plutusVersion": "v3",       // "v1" | "v2" | "v3"; default "v3"
     "traceLevel": "compact",     // "silent" | "compact" | "verbose"; default "silent"
-    "optimize": 2,               // 0 | 1 | 2; default 2
+    "compilerTraces": false,     // boolean; default false
     "dependencies": { }
 }
 ```
 
 | Field | Used by | Meaning |
 |---|---|---|
-| `plutusVersion` | `build`, `test` | Builtin set available to codegen; cost model used by `nash test`. |
-| `traceLevel` | `build`, `test` | Default for `--trace-level`. `nash test` overrides the default to `verbose` when the field is absent. |
-| `optimize` | `build`, `test` | Default for `--optimize`. Tests always run the same passes as the build so budgets in `within` reflect what ships. |
+| `plutusVersion` | `build` | Ledger language target and permitted generated features at the supported protocol baseline. |
+| `traceLevel` | `build` | Default for `--trace-level`. |
+| `compilerTraces` | `build` | Default for `--compiler-traces`; independent of user traces. |
 
-Workspace configs do not carry these fields; each member sets its own. A
+Workspace configs reject these fields; each member sets its own. CLI overrides
+apply to every member for that invocation. A
 dependency's values are ignored: the building project's settings apply to the
 whole script.
 
 Rust side (`crates/nash-config/src/config.rs`): `PlutusVersion` and
-`TraceLevel` enums, `optimize: u8` validated to `0..=2` at parse time, all
-with serde defaults. Details in [plans/09](../plans/09-validators-build.md).
+`TraceLevel` enums and `Build` settings with validated JSONC defaults. Details in [plans/09](../plans/09-validators-build.md).
 
 ## Open questions
 

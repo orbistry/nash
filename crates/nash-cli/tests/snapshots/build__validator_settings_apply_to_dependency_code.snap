@@ -1,0 +1,14 @@
+---
+source: crates/nash-cli/tests/build.rs
+description: "{\"type\":\"application\",\"plutusVersion\":\"v2\",\"traceLevel\":\"verbose\"}\n{\"type\":\"package\",\"name\":\"nash/core\",\"version\":\"0.1.0\",\"summary\":\"core\",\"license\":\"Apache-2.0\",\"exposedModules\":[\"Literal\",\"Helper\"],\"plutusVersion\":\"v1\",\"traceLevel\":\"silent\"}\n\nmodule Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Check exposing (validate)\nimport Builtin\nvalidate : Data -> Int\nvalidate = Builtin.castValidateData\n\nmodule Helper exposing (run)\nimport Builtin\nimport Literal exposing (..)\nrun : Data -> bytes\nrun d = trace \"helper trace\" (Builtin.serialiseData d)\n\nvalidator module Main exposing (main)\nimport Helper\nmain : Data -> bytes\nmain = Helper.run\n"
+---
+(program 1.0.0
+  [(lam message_6
+    [(lam fromString_4
+      [(lam run_2 [(lam main_1 main_1) run_2])
+        (lam d_3
+          (force
+            [[(force (builtin trace)) [fromString_4 message_6]]
+              (delay [(builtin serialiseData) d_3])]))])
+      (lam value_5 value_5)])
+    (con string "helper trace")])

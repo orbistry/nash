@@ -8,8 +8,8 @@ use nash_plutus::{
     binder::{DeBruijn, Name},
     debruijn,
     machine::PlutusVersion,
-    script,
     program::{Program, Version},
+    script,
     term::Term,
 };
 use std::collections::{HashMap, HashSet};
@@ -63,7 +63,11 @@ pub fn assemble_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Compile
 }
 
 /// Assemble and validate for the selected ledger language at the PV10 baseline.
-pub fn assemble_core_for_version<'a>(arena: &'a Arena, core: &'a Core<'a>, version: PlutusVersion) -> Result<Compiled<'a>, Error<'a>> {
+pub fn assemble_core_for_version<'a>(
+    arena: &'a Arena,
+    core: &'a Core<'a>,
+    version: PlutusVersion,
+) -> Result<Compiled<'a>, Error<'a>> {
     if let Some(name) = free_variables(core).first() {
         return Err(Error::NotClosed(*name));
     }

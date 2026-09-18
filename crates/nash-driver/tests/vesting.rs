@@ -1,7 +1,6 @@
 //! Execute serialized validator artifacts built from the real core workspace.
 use std::{path::Path, sync::Arc};
 
-use nash_codegen::build::TraceConfig;
 use nash_driver::{
     Database, FileSystemSource, Project, build::build_validators, build_graph, build_with,
 };
@@ -34,7 +33,14 @@ async fn real_core_vesting_artifacts_execute_all_ledger_cases() {
         .await
         .expect("build dependency graph");
     let (report, result) = build_with(db, &graph, &origins, |solved| {
-        build_validators(solved, TraceConfig::default())
+        build_validators(
+            solved,
+            nash_config::Build {
+                trace_level: nash_config::TraceLevel::Verbose,
+                compiler_traces: true,
+                ..Default::default()
+            },
+        )
     })
     .await;
     assert!(report.is_success(), "{report:#?}");

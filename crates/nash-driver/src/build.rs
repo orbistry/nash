@@ -107,14 +107,14 @@ pub fn build_validators_with(
         });
     }
     outputs.sort_by(|a, b| a.module.cmp(&b.module));
-    if let Some(pair) = outputs
-        .windows(2)
-        .find(|pair| pair[0].module == pair[1].module)
-    {
-        return Err(BuildError {
-            module: pair[0].module.clone(),
-            message: "multiple validator modules would write the same output filename".into(),
-        });
+    let mut module_names = BTreeSet::new();
+    for output in &outputs {
+        if !module_names.insert(output.module.to_ascii_lowercase()) {
+            return Err(BuildError {
+                module: output.module.clone(),
+                message: "multiple validator modules would write the same output filename (ignoring ASCII case)".into(),
+            });
+        }
     }
     Ok(outputs)
 }
@@ -125,7 +125,9 @@ const MANIFEST_HEADER: &str = "nash-artifacts-v1";
 fn valid_module_name(name: &str) -> bool {
     name.split('.').all(|part| {
         !part.is_empty()
-            && part.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+            && part
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
     })
 }
 
@@ -137,14 +139,14 @@ fn valid_artifact_name(name: &str) -> bool {
 
 // Reject links before either reading the manifest or overwriting artifacts.
 // Cleanup never follows paths supplied by the manifest into subdirectories.
-async fn check_regular_or_missing(path: &Path) -> io::Result<()> {
+async fn check_regular_or_missing(path: &Path) -> io::Result<bool> {
     match tokio::fs::symlink_metadata(path).await {
-        Ok(metadata) if metadata.is_file() => Ok(()),
+        Ok(metadata) if metadata.is_file() => Ok(true),
         Ok(_) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("refusing non-regular artifact {}", path.display()),
         )),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(error) => Err(error),
     }
 }
@@ -154,13 +156,26 @@ async fn check_regular_or_missing(path: &Path) -> io::Result<()> {
 /// A manifest records ownership so stale cleanup preserves unrelated files.
 pub async fn write_outputs(directory: &Path, outputs: &[ValidatorOutput]) -> io::Result<()> {
     let mut names = BTreeSet::new();
+    let mut module_names = BTreeSet::new();
     for output in outputs {
         if !valid_module_name(&output.module) {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid validator module name"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid validator module name",
+            ));
+        }
+        if !module_names.insert(output.module.to_ascii_lowercase()) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "duplicate validator module name (ignoring ASCII case)",
+            ));
         }
         for extension in ["uplc", "flat", "cbor"] {
             if !names.insert(format!("{}.{}", output.module, extension)) {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput, "duplicate validator module name"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "duplicate validator module name",
+                ));
             }
         }
     }
@@ -171,11 +186,17 @@ pub async fn write_outputs(directory: &Path, outputs: &[ValidatorOutput]) -> io:
         Ok(contents) => {
             let mut lines = contents.lines();
             if lines.next() != Some(MANIFEST_HEADER) {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid Nash artifact manifest"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "invalid Nash artifact manifest",
+                ));
             }
             for name in lines {
                 if !valid_artifact_name(name) {
-                    return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid artifact filename in Nash manifest"));
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "invalid artifact filename in Nash manifest",
+                    ));
                 }
                 previous.insert(name.to_owned());
             }
@@ -183,9 +204,31 @@ pub async fn write_outputs(directory: &Path, outputs: &[ValidatorOutput]) -> io:
         Err(error) if error.kind() == io::ErrorKind::NotFound => {}
         Err(error) => return Err(error),
     }
+    // Apply one portable filename identity even on case-sensitive filesystems.
+    // Case-only renames must first remove the old owned outputs with an empty build.
+    let mut folded_names = BTreeSet::new();
+    for name in names.union(&previous) {
+        if !folded_names.insert(name.to_ascii_lowercase()) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "artifact filenames differ only by ASCII case near {name}; remove old owned outputs before renaming"
+                ),
+            ));
+        }
+    }
     // Validate all destinations before changing any artifact.
     for name in names.union(&previous) {
-        check_regular_or_missing(&directory.join(name)).await?;
+        let exists = check_regular_or_missing(&directory.join(name)).await?;
+        if exists && !previous.contains(name) {
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                format!(
+                    "refusing to overwrite unowned artifact {}",
+                    directory.join(name).display()
+                ),
+            ));
+        }
     }
     if outputs.is_empty() && previous.is_empty() {
         return Ok(());
@@ -198,7 +241,11 @@ pub async fn write_outputs(directory: &Path, outputs: &[ValidatorOutput]) -> io:
             ("flat", output.flat.as_slice()),
             ("cbor", cbor_hex.as_bytes()),
         ] {
-            tokio::fs::write(directory.join(format!("{}.{}", output.module, extension)), bytes).await?;
+            tokio::fs::write(
+                directory.join(format!("{}.{}", output.module, extension)),
+                bytes,
+            )
+            .await?;
         }
     }
     for stale in previous.difference(&names) {

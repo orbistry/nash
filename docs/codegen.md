@@ -485,8 +485,8 @@ listData [headList (unListData base), e, ..]         -- Big
 | `trace "msg" e` | `Trace(Lit "msg", e)` | |
 | `assert c` | `Case(Bool, c, [Lit (), Trace(msg, Error)])` | `msg` is the power-assert rendering built at compile time (see [testing.md](testing.md)) |
 
-Trace levels are a build setting (`--trace-level`; config support follows in
-Plan 09, [cli.md](cli.md)):
+Trace levels are a build setting (`--trace-level`, config `traceLevel`;
+[cli.md](cli.md)):
 
 - `silent`: every user `Trace(m, b)` becomes `b`; `fail "msg"` becomes
   `Error`.
@@ -494,8 +494,11 @@ Plan 09, [cli.md](cli.md)):
   originating expression.
 - `verbose`: the message is kept verbatim.
 
+Explicit `trace`, `fail`, `todo`, and `assert` messages follow this user trace
+level. Failed cast validation and implicit match failures use compiler traces.
+
 Compiler-generated traces ("validateData: field 1 of Datum",
-"incomplete pattern match", "validator returned false") are controlled by a
+"incomplete pattern match") are controlled by a
 separate boolean switch, `compilerTraces`, so a user can ship verbose user
 traces without the compiler's, or the reverse. In Aiken both are one
 `TraceLevel` (`crates/aiken-lang/src/ast.rs:2305`, used in
@@ -601,3 +604,11 @@ list element type merely to execute it. A generalized local value with no eviden
 or layout demand can use an erased instance and retains strict let evaluation;
 for example, an unused `let stopped = fail` still fails. Ordinary monomorphic
 local bindings also retain strict evaluation.
+
+## Build targets
+
+Production assembly accepts a ledger target and validates generated UPLC against
+the Plomin/protocol 10 compatibility baseline described in [validators.md](validators.md#target-compatibility).
+`assemble_core` remains the default V3 entrypoint; `assemble_core_for_version`
+selects V1/V2 UPLC 1.0.0 or V3 UPLC 1.1.0 and checks the complete program.
+No optimizer passes run while Plan 08 is deferred.

@@ -21,6 +21,7 @@ clap.workspace = true
 color-print.workspace = true
 dirs.workspace = true
 futures.workspace = true
+hex.workspace = true
 miette.workspace = true
 serde_json.workspace = true
 nash-config = { path = "../nash-config", version = "0.3.0" }
@@ -39,3 +40,4 @@ supports-hyperlinks = "3.2"
 
 [dev-dependencies]
 insta.workspace = true
+nash-plutus = { path = "../nash-plutus", version = "0.1.0" }

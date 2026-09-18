@@ -141,38 +141,65 @@ builders that need the double-wrapped `PlutusV3Script` envelope wrap it once
 more. `nash build` also prints the script hash (blake2b-224 of the language tag
 byte followed by the single-wrapped bytes) for each validator.
 
-Every script is compiled for one `PlutusVersion` (`plutusVersion` in
-`nash.jsonc`, default `"v3"`). The version selects the builtin set the code
-generator may use and the cost model `nash test` evaluates with. Plutus V3 is
-the only version the stdlib targets; V1 and V2 are accepted for experiments and
-reject programs that use `case`/`constr` or V3-only builtins at codegen time.
+## Target compatibility
+
+Each validator uses its owning application's or package's `plutusVersion`
+(default `"v3"`), overridden by `--plutus-version`. Workspace members retain
+their own settings; dependency settings do not change the caller's script.
+
+Compatibility is pinned to **Plomin, protocol version 10**. Ledger language
+versions and UPLC versions are distinct:
+
+| Target | UPLC output | Permitted builtin tags |
+|---|---|---|
+| V1 | 1.0.0 | 0–50 |
+| V2 | 1.0.0 | 0–53 and integer/bytes conversions (73, 74) |
+| V3 | 1.1.0 | 0–86 |
+
+The entire generated program is validated. `constr` and `case` require V3;
+unsupported builtins and constant types are errors, including inside nested
+terms or empty typed containers. Array/Value features requiring protocol 11
+are not accepted, and BLS runtime constants cannot be serialized as script
+literals. BLS builtins can construct values at runtime on V3.
+
+This deliberately does not adopt protocol 11's expanded V1/V2 capabilities.
+The compatibility table follows `PlutusLedgerApi/Common/Versions.hs` at
+Plutus revision `7d6eead0f0fba7958125a03a5123acef9f0e9c69`.
+
+Generated files are tracked in `.nash-artifacts` in the output directory.
+Successful builds remove only stale tracked files, including when no validators
+remain. Unowned files and previous outputs on compilation failure are preserved;
+unowned output collisions and artifact/manifest symlinks are errors. Old outputs
+without a manifest must be relocated or removed explicitly before reuse.
 
 ## `nash build` flags
 
 ```
-nash build [PATH] [--trace-level LEVEL] [--compiler-traces] [--optimize N]
-           [--out DIR]
+nash build [PATH] [--plutus-version v1|v2|v3] [--trace-level LEVEL]
+           [--compiler-traces[=true|false]] [--out DIR]
 ```
 
 | Flag | Values | Default | Effect |
 |---|---|---|---|
 | `--trace-level` | `silent`, `compact`, `verbose` | `traceLevel` in `nash.jsonc`, else `silent` | How user `trace` calls compile. `silent` removes them, `compact` keeps a short code per site, `verbose` keeps the full message. |
-| `--compiler-traces` | flag | off | Also keep traces the compiler generates (failed pattern match sites, `assert` sites, `todo`). Independent of `--trace-level`. |
-| `--optimize` | `0`, `1`, `2` | `optimize` in `nash.jsonc`, else `2` | `0` no Core passes, `1` inlining, DCE and builtin force caching, `2` adds case-of-known-constructor and CEK constant folding. |
+| `--compiler-traces` | optional boolean | `compilerTraces` in config, else false | Keep compiler traces independently of user traces. The bare flag enables them; `--compiler-traces=false` disables them. |
+| `--plutus-version` | `v1`, `v2`, `v3` | `plutusVersion` in config, else `v3` | Select the target compatibility rules. |
 | `--out` | path | `build` | Output directory. |
 
-The flag overrides the config value for one run. See [cli.md](cli.md).
+Flags override config values for one run. Builds remain unoptimized; optimizer
+settings are rejected until Plan 08. See [cli.md](cli.md).
 
 ## Tests inside validator modules
 
 A validator module may end with a `tests` block. `nash build` strips it
 before canonicalization: the block's own imports are not resolved, test-only
 dependencies are not needed, and nothing from the block reaches the script.
-`nash check` and `nash test` keep the block. See [testing.md](testing.md).
+`nash check` retains and currently diagnoses unsupported test blocks; Plan 10
+will add test checking and execution. See [testing.md](testing.md).
 
-Stripping happens on the source AST in the driver, so a test that references a
-private value of the module keeps working under `nash test` and costs nothing
-under `nash build`.
+Stripping happens on the source AST in the driver, before name resolution and type checking. Syntactically valid test-only names
+and imports therefore cost nothing under `nash build`. Syntax errors still fail
+parsing; this does not implement a test runner.
 
 ## Interactions
 

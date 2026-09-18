@@ -1,5 +1,4 @@
 use miette::{IntoDiagnostic, Result};
-use nash_codegen::build::{TraceConfig, TraceLevel};
 use nash_driver::{Database, FileSystemSource, Project, build_graph, build_with};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
@@ -13,11 +12,14 @@ pub struct Args {
     #[arg(long, default_value = "build")]
     pub out: PathBuf,
     /// Include user traces in the script.
-    #[arg(long, value_enum, default_value = "silent")]
-    pub trace_level: TraceLevelArg,
+    #[arg(long, value_enum)]
+    pub trace_level: Option<TraceLevelArg>,
+    /// Ledger language target (Plomin/protocol 10 compatibility).
+    #[arg(long, value_enum)]
+    pub plutus_version: Option<PlutusVersionArg>,
     /// Include compiler traces for failed casts and pattern checks.
-    #[arg(long)]
-    pub compiler_traces: bool,
+    #[arg(long, num_args = 0..=1, require_equals = true, default_missing_value = "true")]
+    pub compiler_traces: Option<bool>,
 }
 
 #[derive(Clone, Copy, clap::ValueEnum)]
@@ -25,6 +27,13 @@ pub enum TraceLevelArg {
     Silent,
     Compact,
     Verbose,
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+pub enum PlutusVersionArg {
+    V1,
+    V2,
+    V3,
 }
 
 impl Args {
@@ -38,16 +47,54 @@ impl Args {
         let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
             .await
             .into_diagnostic()?;
-        let trace = TraceConfig {
-            user: match self.trace_level {
-                TraceLevelArg::Silent => TraceLevel::Silent,
-                TraceLevelArg::Compact => TraceLevel::Compact,
-                TraceLevelArg::Verbose => TraceLevel::Verbose,
-            },
-            compiler: self.compiler_traces,
-        };
+        let member_settings: Vec<_> = project
+            .members
+            .iter()
+            .flat_map(|member| {
+                member.source_dirs.iter().map(move |directory| {
+                    (
+                        directory
+                            .canonicalize()
+                            .unwrap_or_else(|_| directory.clone()),
+                        member.config.build(),
+                    )
+                })
+            })
+            .collect();
+        let configs: std::collections::BTreeMap<_, _> = modules
+            .keys()
+            .map(|uri| {
+                let path = uri
+                    .to_file_path()
+                    .expect("discovered source has a file URL");
+                let path = path.canonicalize().unwrap_or(path);
+                let mut config = member_settings
+                    .iter()
+                    .filter(|(directory, _)| path.starts_with(directory))
+                    .max_by_key(|(directory, _)| directory.components().count())
+                    .map_or_else(|| project.config.build(), |(_, config)| *config);
+                if let Some(version) = self.plutus_version {
+                    config.plutus_version = match version {
+                        PlutusVersionArg::V1 => nash_config::PlutusVersion::V1,
+                        PlutusVersionArg::V2 => nash_config::PlutusVersion::V2,
+                        PlutusVersionArg::V3 => nash_config::PlutusVersion::V3,
+                    };
+                }
+                if let Some(level) = self.trace_level {
+                    config.trace_level = match level {
+                        TraceLevelArg::Silent => nash_config::TraceLevel::Silent,
+                        TraceLevelArg::Compact => nash_config::TraceLevel::Compact,
+                        TraceLevelArg::Verbose => nash_config::TraceLevel::Verbose,
+                    };
+                }
+                if let Some(enabled) = self.compiler_traces {
+                    config.compiler_traces = enabled;
+                }
+                (uri.clone(), config)
+            })
+            .collect();
         let (report, output) = build_with(db, &graph, &modules, move |solved| {
-            nash_driver::build::build_validators(solved, trace)
+            nash_driver::build::build_validators_with(solved, |uri| configs[uri])
         })
         .await;
         super::check::Args {
@@ -65,6 +112,7 @@ impl Args {
             .into_diagnostic()?;
         for output in &outputs {
             eprintln!("Built {} ({} Flat bytes)", output.module, output.flat.len());
+            eprintln!("  hash {}", hex::encode(output.hash));
         }
         eprintln!(
             "Finished {} validators in {}",

@@ -13,6 +13,7 @@ fn rejected(source: &str) -> String {
         &Ok(source.to_owned()),
         &bump,
         &interfaces,
+        false,
     );
     assert!(
         compiled.is_none(),

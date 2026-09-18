@@ -125,15 +125,30 @@ pub async fn build(
     graph: &DepGraph,
     origins: &crate::ModuleOrigins,
 ) -> BuildResult {
-    build_with(db, graph, origins, |_| ()).await.0
+    build_with_policy(db, graph, origins, false, |_| ()).await.0
 }
 
 /// Finish a successful frontend build while its original canonical arena and
 /// owned metadata maps remain alive. Failed builds never call the backend.
+/// Parsed test blocks are excluded from production compilation.
 pub async fn build_with<R, F>(
     db: Arc<Mutex<Database>>,
     graph: &DepGraph,
     origins: &crate::ModuleOrigins,
+    finish: F,
+) -> (BuildResult, Option<R>)
+where
+    R: Send + 'static,
+    F: for<'a> FnOnce(Solved<'a>) -> R + Send + 'static,
+{
+    build_with_policy(db, graph, origins, true, finish).await
+}
+
+async fn build_with_policy<R, F>(
+    db: Arc<Mutex<Database>>,
+    graph: &DepGraph,
+    origins: &crate::ModuleOrigins,
+    exclude_tests: bool,
     finish: F,
 ) -> (BuildResult, Option<R>)
 where
@@ -151,9 +166,11 @@ where
         .collect();
 
     let edges = graph.edges.clone();
-    tokio::task::spawn_blocking(move || build_sync_with_edges_and(sources, &edges, finish))
-        .await
-        .expect("compile task panicked")
+    tokio::task::spawn_blocking(move || {
+        build_sync_with_policy(sources, &edges, exclude_tests, finish)
+    })
+    .await
+    .expect("compile task panicked")
 }
 
 /// Compile modules one at a time in dependency order, threading each
@@ -173,6 +190,7 @@ fn build_sync_with_edges(
     build_sync_with_edges_and(sources, edges, |_| ()).0
 }
 
+#[cfg(test)]
 fn build_sync_with_edges_and<R>(
     sources: Vec<(
         Url,
@@ -180,6 +198,19 @@ fn build_sync_with_edges_and<R>(
         Result<String, String>,
     )>,
     edges: &HashMap<Url, Vec<Url>>,
+    finish: impl for<'a> FnOnce(Solved<'a>) -> R,
+) -> (BuildResult, Option<R>) {
+    build_sync_with_policy(sources, edges, false, finish)
+}
+
+fn build_sync_with_policy<R>(
+    sources: Vec<(
+        Url,
+        Option<nash_config::PackageName>,
+        Result<String, String>,
+    )>,
+    edges: &HashMap<Url, Vec<Url>>,
+    exclude_tests: bool,
     finish: impl for<'a> FnOnce(Solved<'a>) -> R,
 ) -> (BuildResult, Option<R>) {
     let store = Bump::new();
@@ -212,7 +243,14 @@ fn build_sync_with_edges_and<R>(
             );
             continue;
         }
-        let (output, compiled) = compile_module(uri, package.as_ref(), source, &store, &interfaces);
+        let (output, compiled) = compile_module(
+            uri,
+            package.as_ref(),
+            source,
+            &store,
+            &interfaces,
+            exclude_tests,
+        );
         if let Some((interface, module)) = compiled {
             public_interfaces.insert(
                 uri.clone(),
@@ -297,6 +335,7 @@ fn compile_module<'s>(
     source: &Result<String, String>,
     store: &'s Bump,
     interfaces: &BTreeMap<&'s str, Interface<'s>>,
+    exclude_tests: bool,
 ) -> (CompileOutput, Option<(Interface<'s>, SolvedModule<'s>)>) {
     let source = match source {
         Ok(source) => source,
@@ -350,7 +389,7 @@ fn compile_module<'s>(
     let bump = store;
     let src: &str = bump.alloc_str(source);
     let mut parser = nash_parse::Parser::new(bump, src);
-    let module = match parser.module() {
+    let mut module = match parser.module() {
         Ok(module) => module,
         Err(error) => {
             return failed(
@@ -362,6 +401,9 @@ fn compile_module<'s>(
             );
         }
     };
+    if exclude_tests {
+        module.tests = None;
+    }
     let name = module.name.map_or(expected_name, |name| name.value);
     // Default imports belong to Plan 12; localize exactly the imports in use.
     let localizer =
@@ -549,7 +591,7 @@ mod tests {
         let (output, compiled) = compile_module(
             &url("Base.nash"), None,
             &Ok("module Base exposing (..)\ntrait Keep 'a where keep : 'a -> 'a\nidentity x = keep x\n".to_owned()),
-            &store, &interfaces,
+            &store, &interfaces, false,
         );
         assert!(matches!(output.result, ModuleResult::Success { .. }));
         let (interface, base) = compiled.unwrap();
@@ -560,6 +602,7 @@ mod tests {
             &Ok("module Main exposing (..)\nimport Base\nforward x = Base.identity x\n".to_owned()),
             &store,
             &interfaces,
+            false,
         );
         assert!(
             matches!(output.result, ModuleResult::Success { .. }),
