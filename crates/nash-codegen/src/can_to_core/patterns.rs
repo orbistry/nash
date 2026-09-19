@@ -109,7 +109,7 @@ impl<'a> Engine<'a, '_, '_> {
         )?)
     }
 
-    fn pattern_inputs(
+    pub(crate) fn pattern_inputs(
         &mut self,
         pattern: &'a Located<Pattern<'a>>,
         ctx: &Context<'a>,

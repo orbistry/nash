@@ -1,0 +1,13 @@
+module Test exposing (label, assertFailed)
+
+import Builtin
+
+label : string -> unit
+label s = trace (Builtin.appendString "\u{0000}label\u{0000}" s) ()
+
+-- A thunk ensures each trace is emitted before the recursive failure.
+assertFailed : list string -> 'a
+assertFailed msgs =
+    case msgs of
+        [] -> (fail "assertion failed")
+        m :: rest -> (trace m (\() -> assertFailed rest)) ()

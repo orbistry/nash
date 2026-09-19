@@ -8,6 +8,8 @@ use url::Url;
 /// Main error type for driver operations.
 #[derive(Debug, Error, Diagnostic)]
 pub enum DriverError {
+    #[error("cannot resolve dependency {package}: {message}")]
+    Dependency { package: String, message: String },
     #[error("module {uri} belongs to both {first} and {second}")]
     ConflictingModuleOwners {
         uri: Box<Url>,

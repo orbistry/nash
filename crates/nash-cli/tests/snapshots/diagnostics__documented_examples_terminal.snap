@@ -54,4 +54,4 @@ nash::pattern::incomplete
 
         Add the missing branches; use `todo` for unfinished bodies.
 
-Compilation failed: 22 succeeded, 3 failed or blocked.
+Compilation failed: 24 succeeded, 3 failed or blocked.

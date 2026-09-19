@@ -1,12 +1,12 @@
 ---
 source: crates/nash-test/tests/runtime.rs
-expression: "serde_json::to_string_pretty(&json[\"tests\"][0][\"assert\"]).unwrap()"
+description: "  assert (identity \"界\" == identity \"é\" ++ z\n      && identity \"名\" == value)"
 ---
 {
   "column": 11,
   "file": "Example.nash",
   "line": 1,
-  "source": "界 == é + z\n      && 名 == value",
+  "source": "identity \"界\" == identity \"é\" ++ z\n      && identity \"名\" == value",
   "values": [
     {
       "column": 0,
@@ -14,7 +14,7 @@ expression: "serde_json::to_string_pretty(&json[\"tests\"][0][\"assert\"]).unwra
       "value": "left\ncontinued"
     },
     {
-      "column": 6,
+      "column": 17,
       "row": 0,
       "value": "right"
     },
@@ -24,12 +24,12 @@ expression: "serde_json::to_string_pretty(&json[\"tests\"][0][\"assert\"]).unwra
       "value": "name"
     },
     {
-      "column": 15,
+      "column": 26,
       "row": 1,
       "value": "first\nsecond"
     },
     {
-      "column": 10,
+      "column": 33,
       "row": 0,
       "value": "zero"
     }

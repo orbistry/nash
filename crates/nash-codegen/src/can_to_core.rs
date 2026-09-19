@@ -35,6 +35,9 @@ impl<'a> Engine<'a, '_, '_> {
         ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
         let node = NodeId::expr(expr);
+        if let Some(value) = self.replacements.get(&node) {
+            return Ok(value);
+        }
         Ok(match &expr.value {
             Expr::Unit => self.ir.lit(Constant::unit(self.ir.arena)),
             Expr::Int(n) => {
@@ -82,6 +85,16 @@ impl<'a> Engine<'a, '_, '_> {
                 right,
                 ..
             } => {
+                if let Some(conjunction) = short_circuit(*reference) {
+                    let left = self.expr(left, ctx)?;
+                    let right = self.expr(right, ctx)?;
+                    let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
+                    return Ok(if conjunction {
+                        self.ir.if_(left, right, constant)
+                    } else {
+                        self.ir.if_(left, constant, right)
+                    });
+                }
                 let func = self.reference(*reference, node, ctx)?;
                 let left = self.expr(left, ctx)?;
                 let right = self.expr(right, ctx)?;
@@ -211,7 +224,13 @@ impl<'a> Engine<'a, '_, '_> {
             }
             Expr::Trace { message, body } => {
                 let body = self.expr(body, ctx)?;
-                self.user_trace(Some(message), None, expr.region, body, ctx)?
+                let home = self.build.inputs[ctx.input].module.name;
+                if home.package == Some(primitives::CORE) && home.name == "Test" {
+                    let message = self.expr(message, ctx)?;
+                    self.ir.trace(message, body)
+                } else {
+                    self.user_trace(Some(message), None, expr.region, body, ctx)?
+                }
             }
             Expr::Fail(message) | Expr::Todo(message) => {
                 let todo = matches!(expr.value, Expr::Todo(_));
@@ -224,6 +243,9 @@ impl<'a> Engine<'a, '_, '_> {
                 )?
             }
             Expr::Assert(condition) => {
+                if ctx.test {
+                    return self.power_assert(condition, ctx);
+                }
                 let value = self.expr(condition, ctx)?;
                 let failed = self.user_trace(
                     None,
@@ -366,7 +388,11 @@ impl<'a> Engine<'a, '_, '_> {
             &[self.ir.int(i128::from(tag)), self.list(DATA, fields)?],
         ))
     }
-    fn product(&self, ty: Ty<'a>, fields: &[&'a Core<'a>]) -> Result<&'a Core<'a>, Error<'a>> {
+    pub(crate) fn product(
+        &self,
+        ty: Ty<'a>,
+        fields: &[&'a Core<'a>],
+    ) -> Result<&'a Core<'a>, Error<'a>> {
         Ok(match ty {
             Ty::Big(BigTy::Record(_)) => self.ir.builtin(F::ListData, &[self.list(DATA, fields)?]),
             Ty::Term(TermTy::Record(_) | TermTy::Tuple(_) | TermTy::Adt(_)) => {
@@ -375,7 +401,7 @@ impl<'a> Engine<'a, '_, '_> {
             _ => return Err(Error::RuntimeLayout(ty)),
         })
     }
-    fn field(
+    pub(crate) fn field(
         &self,
         ty: Ty<'a>,
         value: &'a Core<'a>,
@@ -402,7 +428,7 @@ impl<'a> Engine<'a, '_, '_> {
         Ok(self.ir.builtin(F::HeadList, &[list]))
     }
 
-    fn user_trace(
+    pub(crate) fn user_trace(
         &mut self,
         message: Option<&'a Located<Expr<'a>>>,
         prefix: Option<&str>,
@@ -456,5 +482,19 @@ impl<'a> Engine<'a, '_, '_> {
         } else {
             self.ir.error()
         }
+    }
+}
+
+/// Logical operators are identified by their resolved standard-library target.
+/// An unrelated user operator with the same spelling keeps normal call rules.
+pub(crate) fn short_circuit(reference: QualifiedName<'_>) -> Option<bool> {
+    if reference.home.package == Some(primitives::CORE) && reference.home.name == "Bool" {
+        match reference.name {
+            "and" => Some(true),
+            "or" => Some(false),
+            _ => None,
+        }
+    } else {
+        None
     }
 }

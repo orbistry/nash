@@ -1,0 +1,50 @@
+---
+source: crates/nash-codegen/src/tests/integration.rs
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nimport Literal\nprivateValue : int\nprivateValue = 1\ntests\n    test \"passes\" = do\n        assert True\n    test \"fails without captures\" = do\n        assert False\n    test \"captures private value\" = do\n        assert (Builtin.equalsInteger privateValue 2)\n"
+---
+[
+    AssertSite {
+        id: 0,
+        region: Region {
+            start: Position {
+                line: 12,
+                column: 17,
+            },
+            end: Position {
+                line: 12,
+                column: 53,
+            },
+        },
+        captures: [
+            Capture {
+                index: 0,
+                region: Region {
+                    start: Position {
+                        line: 12,
+                        column: 17,
+                    },
+                    end: Position {
+                        line: 12,
+                        column: 38,
+                    },
+                },
+                shown: false,
+            },
+            Capture {
+                index: 1,
+                region: Region {
+                    start: Position {
+                        line: 12,
+                        column: 39,
+                    },
+                    end: Position {
+                        line: 12,
+                        column: 51,
+                    },
+                },
+                shown: true,
+            },
+        ],
+    },
+]
+["\0assert\00", "\0assert\00\01\01"]

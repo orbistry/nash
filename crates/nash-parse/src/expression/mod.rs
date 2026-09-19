@@ -105,6 +105,7 @@ impl<'a> Parser<'a> {
     ) -> Result<(&'a Located<Expr<'a>>, Position), error::Expr<'a>> {
         // Track ops for binary operator chains
         let mut ops: BumpVec<'a, &'a BinOpOperand<'a>> = BumpVec::new_in(self.bump);
+        let mut current_start = start;
         let mut current_expr = expr;
         let mut current_args = args;
         let mut current_end = end;
@@ -173,7 +174,9 @@ impl<'a> Parser<'a> {
                                             let new_end = p.get_position();
                                             p.chomp(error::Expr::Space)?;
 
-                                            Ok(ExprEndState::MoreOps(op, new_expr, new_end))
+                                            Ok(ExprEndState::MoreOps(
+                                                op, new_expr, new_start, new_end,
+                                            ))
                                         }),
                                         // Parse a "final" expression (let, case, if, lambda)
                                         Box::new(|p: &mut Parser<'a>| {
@@ -213,21 +216,28 @@ impl<'a> Parser<'a> {
                     current_args.push(arg);
                     current_end = new_end;
                 }
-                ExprEndState::MoreOps(op, new_expr, new_end) => {
+                ExprEndState::MoreOps(op, new_expr, new_start, new_end) => {
                     // Push (toCall current_expr current_args, op) onto ops
-                    let call_expr =
-                        to_call(self, start, current_expr, std::mem::take(&mut current_args));
+                    let call_expr = to_call(
+                        self,
+                        current_start,
+                        current_end,
+                        current_expr,
+                        std::mem::take(&mut current_args),
+                    );
                     let operand = self.alloc(BinOpOperand {
                         expr: call_expr,
                         op,
                     });
                     ops.push(operand);
+                    current_start = new_start;
                     current_expr = new_expr;
                     current_end = new_end;
                 }
                 ExprEndState::Final(op, final_expr, final_end) => {
                     // Push current and build final Binops
-                    let call_expr = to_call(self, start, current_expr, current_args);
+                    let call_expr =
+                        to_call(self, current_start, current_end, current_expr, current_args);
                     let operand = self.alloc(BinOpOperand {
                         expr: call_expr,
                         op,
@@ -244,7 +254,8 @@ impl<'a> Parser<'a> {
                 }
                 ExprEndState::Done => {
                     // No accumulator changes occur until a parse attempt succeeds.
-                    let final_call = to_call(self, start, current_expr, current_args);
+                    let final_call =
+                        to_call(self, current_start, current_end, current_expr, current_args);
 
                     if ops.is_empty() {
                         return Ok((final_call, current_end));
@@ -361,15 +372,17 @@ impl<'a> Parser<'a> {
 /// ```
 fn to_call<'a>(
     parser: &Parser<'a>,
-    _start: Position,
+    start: Position,
+    end: Position,
     func: &'a Located<Expr<'a>>,
     args: Vec<&'a Located<Expr<'a>>>,
 ) -> &'a Located<Expr<'a>> {
     if args.is_empty() {
         func
     } else {
-        let last_arg = args.last().unwrap();
-        let region = Region::span_across(&func.region, &last_arg.region);
+        // Grouped arguments keep their inner node region. The parser endpoint
+        // includes their closing delimiters without changing those child nodes.
+        let region = Region::new(start, end);
         let args_slice = parser.alloc_slice_copy(&args);
         parser.alloc(Located::at(
             region,
@@ -386,7 +399,12 @@ enum ExprEndState<'a> {
     /// One successfully parsed function argument
     MoreArgs(&'a Located<Expr<'a>>, Position),
     /// Binary operator found, continue parsing chain
-    MoreOps(&'a Located<&'a str>, &'a Located<Expr<'a>>, Position),
+    MoreOps(
+        &'a Located<&'a str>,
+        &'a Located<Expr<'a>>,
+        Position,
+        Position,
+    ),
     /// Final expression found (let, case, if, lambda) after operator
     Final(&'a Located<&'a str>, &'a Located<Expr<'a>>, Position),
     /// Done parsing, finalize expression
@@ -538,6 +556,27 @@ pub(crate) use assert_indented_expression_snapshot;
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn call_region_retains_grouped_argument_end() {
+        for (index, source) in [
+            "outer (inner ())",
+            "outer (inner (\")\"))",
+            "outer (((value)))",
+            "(\\x -> x) False",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let bump = bumpalo::Bump::new();
+            let (expression, end) = crate::Parser::new(&bump, source).expression().unwrap();
+            assert_eq!(expression.region.end, end, "{source}");
+            assert_eq!(end.column, source.len() + 1);
+            insta::with_settings!({description => source, omit_expression => true}, {
+                insta::assert_debug_snapshot!(format!("call_grouping_{index}"), expression);
+            });
+        }
+    }
+
     #[test]
     fn operator_chain_arena_growth_is_linear() {
         let mut previous = None;

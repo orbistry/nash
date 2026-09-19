@@ -449,6 +449,10 @@ fn coverage_counts_duplicate_labels_and_uses_requested_denominator() {
 fn terminal_and_json_reports_snapshot() {
     let mut outcome = run(unit(false, Expect::Pass));
     outcome.budget = ExBudget::new(1200, 345100);
+    let mut settings = insta::Settings::clone_current();
+    settings.set_description(&outcome.test.source);
+    settings.set_omit_expression(true);
+    let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(report::terminal::render(std::slice::from_ref(&outcome),Coverage::Labels,42,std::time::Duration::from_millis(810)), @r"
       Testing Example (Example.nash)
 
@@ -472,7 +476,11 @@ fn terminal_and_json_reports_snapshot() {
 }
 #[test]
 fn multiline_assert_uses_source_rows_display_width_and_indented_values() {
-    let source = "  assert (界 == e\u{301} + z\n      && 名 == value)";
+    let source = "  assert (identity \"界\" == identity \"e\u{301}\" ++ z\n      && identity \"名\" == value)";
+    let mut settings = insta::Settings::clone_current();
+    settings.set_description(source);
+    settings.set_omit_expression(true);
+    let _guard = settings.bind_to_scope();
     let position = |offset: usize| {
         let prefix = &source[..offset];
         Position::new(
@@ -492,13 +500,13 @@ fn multiline_assert_uses_source_rows_display_width_and_indented_values() {
         site: AssertSite {
             id: 0,
             region: Region::new(
-                position(source.find('界').unwrap()),
+                position(source.find("identity").unwrap()),
                 position(source.len() - 1),
             ),
             captures: vec![
-                capture(0, "界"),
-                capture(1, "e\u{301}"),
-                capture(2, "名"),
+                capture(0, "identity \"界\""),
+                capture(1, "identity \"e\u{301}\""),
+                capture(2, "identity \"名\""),
                 capture(3, "value"),
                 capture(4, "z"),
             ],
@@ -530,6 +538,6 @@ fn multiline_assert_uses_source_rows_display_width_and_indented_values() {
             .iter()
             .map(|v| (v["row"].as_u64().unwrap(), v["column"].as_u64().unwrap()))
             .collect::<Vec<_>>(),
-        [(0, 0), (0, 6), (1, 9), (1, 15), (0, 10)]
+        [(0, 0), (0, 17), (1, 9), (1, 26), (0, 33)]
     );
 }

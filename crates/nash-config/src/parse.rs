@@ -156,6 +156,7 @@ fn parse_build(contents: &str, path: &Path, obj: &Object) -> Result<Build, Confi
     Ok(Build {
         plutus_version,
         trace_level,
+        trace_level_explicit: find_property(obj, "traceLevel").is_some(),
         compiler_traces,
     })
 }
@@ -884,6 +885,7 @@ mod build_tests {
                         Build {
                             plutus_version: expected_version,
                             trace_level: expected_trace,
+                            trace_level_explicit: true,
                             compiler_traces
                         }
                     );
@@ -904,6 +906,7 @@ mod build_tests {
             Build {
                 plutus_version: PlutusVersion::V1,
                 trace_level: TraceLevel::Verbose,
+                trace_level_explicit: true,
                 compiler_traces: true
             }
         );

@@ -969,7 +969,9 @@ andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
 
 ## `Fuzz`
 
-Exactly testing.md "Fuzzers": `Prng` is Big, choices are `Int`s, the
+Plan 10 supplies the executable core subset. `oneOf` uses `Cons.cons` because
+fuzzers contain functions and cannot inhabit the native Storable-only list.
+Further helpers below remain Plan 12 work. See testing.md "Fuzzers": `Prng` is Big, choices are `Int`s, the
 primitive is `choice`.
 
 ```elm
@@ -1039,7 +1041,7 @@ bytesExactly : int -> fuzzer bytes
 option : fuzzer 'a -> fuzzer (option 'a)
 listOf : fuzzer 'a -> fuzzer (list 'a)   -- length 0..20
 listBetween : int -> int -> fuzzer 'a -> fuzzer (list 'a)
-oneOf : list (fuzzer 'a) -> fuzzer 'a
+oneOf : cons (fuzzer 'a) -> fuzzer 'a
 frequency : list (int, fuzzer 'a) -> fuzzer 'a
 suchThat : ('a -> bool) -> fuzzer 'a -> fuzzer 'a       -- gives up after 100 draws
 data : fuzzer Data                        -- arbitrary well-formed Data, depth-bounded

@@ -94,6 +94,8 @@ impl BuildResult {
 #[derive(Debug)]
 pub struct SolvedModule<'a> {
     pub uri: Url,
+    /// Original source allocated in the same arena as the canonical nodes.
+    pub source: &'a str,
     pub tables: nash_can::environment::Tables<'a>,
     pub module: &'a nash_ast::Module<'a>,
     pub annotations: nash_can::Annotations<'a>,
@@ -144,6 +146,20 @@ where
     build_with_policy(db, graph, origins, true, finish).await
 }
 
+/// Compile tests and finish while canonical nodes and solved evidence remain alive.
+pub async fn test_with<R, F>(
+    db: Arc<Mutex<Database>>,
+    graph: &DepGraph,
+    origins: &crate::ModuleOrigins,
+    finish: F,
+) -> (BuildResult, Option<R>)
+where
+    R: Send + 'static,
+    F: for<'a> FnOnce(Solved<'a>) -> R + Send + 'static,
+{
+    build_with_policy(db, graph, origins, false, finish).await
+}
+
 async fn build_with_policy<R, F>(
     db: Arc<Mutex<Database>>,
     graph: &DepGraph,
@@ -166,8 +182,15 @@ where
         .collect();
 
     let edges = graph.edges.clone();
+    let test_modules = graph.test_modules.clone();
     tokio::task::spawn_blocking(move || {
-        build_sync_with_policy(sources, &edges, exclude_tests, finish)
+        build_sync_with_policy(
+            sources,
+            &edges,
+            exclude_tests,
+            test_modules.as_ref(),
+            finish,
+        )
     })
     .await
     .expect("compile task panicked")
@@ -200,7 +223,7 @@ fn build_sync_with_edges_and<R>(
     edges: &HashMap<Url, Vec<Url>>,
     finish: impl for<'a> FnOnce(Solved<'a>) -> R,
 ) -> (BuildResult, Option<R>) {
-    build_sync_with_policy(sources, edges, false, finish)
+    build_sync_with_policy(sources, edges, false, None, finish)
 }
 
 fn build_sync_with_policy<R>(
@@ -211,6 +234,7 @@ fn build_sync_with_policy<R>(
     )>,
     edges: &HashMap<Url, Vec<Url>>,
     exclude_tests: bool,
+    test_modules: Option<&std::collections::HashSet<Url>>,
     finish: impl for<'a> FnOnce(Solved<'a>) -> R,
 ) -> (BuildResult, Option<R>) {
     let store = Bump::new();
@@ -249,7 +273,7 @@ fn build_sync_with_policy<R>(
             source,
             &store,
             &interfaces,
-            exclude_tests,
+            exclude_tests || test_modules.is_some_and(|roots| !roots.contains(uri)),
         );
         if let Some((interface, module)) = compiled {
             public_interfaces.insert(
@@ -302,9 +326,10 @@ fn build_sync(
     let edges = sources
         .iter()
         .map(|(uri, _, source)| {
-            let dependencies = source
-                .as_ref()
-                .map_or_else(|_| vec![], |source| extract_imports(source, uri, &known));
+            let dependencies = source.as_ref().map_or_else(
+                |_| vec![],
+                |source| extract_imports(source, uri, &known, true),
+            );
             (uri.clone(), dependencies)
         })
         .collect();
@@ -467,6 +492,7 @@ fn compile_module<'s>(
     let interface = nash_can::from_module(bump, module, &annotations);
     let solved = SolvedModule {
         uri: uri.clone(),
+        source: src,
         tables: can_result.tables,
         module,
         annotations,
@@ -500,8 +526,26 @@ pub async fn build_graph(
     db: Arc<Mutex<Database>>,
     modules: &[Url],
 ) -> Result<DepGraph, DriverError> {
+    build_graph_with_tests(db, modules, modules).await
+}
+
+/// Build a production graph without test-only imports.
+pub async fn build_graph_production(
+    db: Arc<Mutex<Database>>,
+    modules: &[Url],
+) -> Result<DepGraph, DriverError> {
+    build_graph_with_tests(db, modules, &[]).await
+}
+
+/// Only root modules contribute tests; dependency package tests are excluded.
+pub async fn build_graph_with_tests(
+    db: Arc<Mutex<Database>>,
+    modules: &[Url],
+    test_modules: &[Url],
+) -> Result<DepGraph, DriverError> {
     let mut graph = DepGraph::new();
 
+    graph.test_modules = Some(test_modules.iter().cloned().collect());
     for uri in modules {
         // Parse module to get imports
         let source = {
@@ -511,9 +555,10 @@ pub async fn build_graph(
 
         // Retain unreadable nodes: the build reports their I/O failure and
         // blocks dependents while continuing independent modules.
-        let imports = source
-            .as_ref()
-            .map_or_else(|_| vec![], |source| extract_imports(source, uri, modules));
+        let imports = source.as_ref().map_or_else(
+            |_| vec![],
+            |source| extract_imports(source, uri, modules, test_modules.contains(uri)),
+        );
         graph.add_module(uri.clone(), imports);
     }
 
@@ -524,7 +569,12 @@ pub async fn build_graph(
 /// Extract import URIs from source code.
 ///
 /// This is a simplified implementation - in production we'd use the parser.
-fn extract_imports(source: &str, current: &Url, known_modules: &[Url]) -> Vec<Url> {
+fn extract_imports(
+    source: &str,
+    current: &Url,
+    known_modules: &[Url],
+    include_tests: bool,
+) -> Vec<Url> {
     let mut imports = Vec::new();
 
     // Parse to get imports
@@ -533,11 +583,19 @@ fn extract_imports(source: &str, current: &Url, known_modules: &[Url]) -> Vec<Ur
     let mut parser = nash_parse::Parser::new(&bump, src);
 
     if let Ok(module) = parser.module() {
-        for import in module.imports {
+        for import in module.imports.iter().chain(
+            module
+                .tests
+                .into_iter()
+                .filter(|_| include_tests)
+                .flat_map(|tests| tests.imports.iter()),
+        ) {
             let import_name = import.import.value;
 
             // Try to resolve import to a known module
-            if let Some(uri) = resolve_import(import_name, current, known_modules) {
+            if let Some(uri) = resolve_import(import_name, current, known_modules)
+                && !imports.contains(&uri)
+            {
                 imports.push(uri);
             }
         }

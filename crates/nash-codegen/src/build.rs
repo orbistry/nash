@@ -260,6 +260,7 @@ pub(crate) enum Binding<'a> {
 }
 #[derive(Clone)]
 pub(crate) struct Context<'a> {
+    pub test: bool,
     pub input: usize,
     pub env: BTreeMap<&'a str, Binding<'a>>,
     pub subst: Substitution<'a>,
@@ -316,6 +317,8 @@ struct Group {
 }
 
 pub(crate) struct Engine<'a, 'b, 's> {
+    pub asserts: Vec<nash_test::AssertSite>,
+    pub replacements: HashMap<NodeId, &'a Core<'a>>,
     pub build: &'b Build<'a, 's>,
     pub ir: Builder<'a>,
     pub types: TypeEnv<'a, 'b>,
@@ -329,12 +332,14 @@ pub(crate) struct Engine<'a, 'b, 's> {
 }
 
 impl<'a, 'b, 's> Engine<'a, 'b, 's> {
-    fn new(build: &'b Build<'a, 's>, arena: &'a Arena, trace: TraceConfig) -> Self {
+    pub(crate) fn new(build: &'b Build<'a, 's>, arena: &'a Arena, trace: TraceConfig) -> Self {
         let mut types = TypeEnv::new(arena, &build.unions);
         for (name, alias) in &build.aliases {
             types.insert_alias(*name, alias);
         }
         let mut engine = Self {
+            asserts: Vec::new(),
+            replacements: HashMap::new(),
             build,
             ir: Builder::new(arena),
             types,
@@ -348,6 +353,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         };
         for (input, unit) in build.inputs.iter().enumerate() {
             let ctx = Context {
+                test: false,
                 input,
                 env: BTreeMap::new(),
                 subst: Substitution::new(),
@@ -431,6 +437,40 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
                 .collect();
         }
         engine
+    }
+
+    pub(crate) fn test_context(&self, input: usize) -> Context<'a> {
+        let home = self.build.inputs[input].module.name;
+        Context {
+            test: true,
+            input,
+            env: self
+                .top
+                .iter()
+                .filter(|(name, _)| name.home == home)
+                .map(|(name, id)| {
+                    (
+                        name.name,
+                        Binding::Template {
+                            id: *id,
+                            projection: None,
+                        },
+                    )
+                })
+                .collect(),
+            subst: Substitution::new(),
+            runtime_subst: Substitution::new(),
+            givens: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn finish_root(&mut self, root: &'a Core<'a>) -> Result<&'a Core<'a>, Error<'a>> {
+        self.drain(0)?;
+        let core = self.emit_group(0, root, false)?;
+        let core =
+            crate::casts::expand_with_traces(&self.ir, &mut self.types, core, self.trace.compiler)?;
+        let core = accessors::share(&self.ir, core);
+        Ok(hoist_strings(&self.ir, core))
     }
 
     pub fn add_group(&mut self) -> usize {

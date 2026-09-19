@@ -1,6 +1,7 @@
 pub mod build;
 pub mod check;
 pub mod lsp;
+pub mod test;
 
 #[derive(clap::Subcommand)]
 pub enum Cmd {
@@ -10,6 +11,9 @@ pub enum Cmd {
     /// Compile validator modules to Plutus V3 scripts
     #[clap(visible_alias = "b")]
     Build(build::Args),
+    /// Compile and execute module tests and properties
+    #[clap(visible_alias = "t")]
+    Test(test::Args),
     /// Start the Nash language server over stdio
     Lsp(lsp::Args),
 }
@@ -19,6 +23,7 @@ impl Cmd {
         match self {
             Cmd::Check(args) => args.exec(color).await,
             Cmd::Build(args) => args.exec(color).await,
+            Cmd::Test(args) => args.exec(color).await,
             Cmd::Lsp(args) => lsp::exec(args).await,
         }
     }

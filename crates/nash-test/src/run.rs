@@ -60,16 +60,20 @@ fn draw(
     version: MachineVersion,
     bytes: &[u8],
     prng: &Prng,
+    machine_budget: ExBudget,
 ) -> Result<(Prng, Vec<String>), Failure> {
-    match eval::run_draw(version, bytes, prng) {
+    match eval::run_draw_with_budget(version, bytes, prng, machine_budget) {
         Ok(Drawn::Some { prng, shown }) => Ok((prng, shown)),
         Ok(Drawn::None) => Err(Failure::Fuzzer {
             message: "generator returned None on a seeded run".into(),
         }),
-        Err(message) => Err(Failure::Fuzzer { message }),
+        Err(failure) => Err(failure),
     }
 }
 fn run_one(test: TestProgram, config: &Config) -> Outcome {
+    run_one_with_budget(test, config, ExBudget::max())
+}
+fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBudget) -> Outcome {
     let v = version(test.plutus_version);
     let mut out = Outcome {
         test,
@@ -98,7 +102,8 @@ fn run_one(test: TestProgram, config: &Config) -> Outcome {
         out.iterations += 1;
         let arena = Arena::new();
         let arg = draw_program.map(|_| Term::data(&arena, prng.to_data(&arena)));
-        let ev = eval::evaluate(&arena, v, run, arg);
+        let ev = eval::evaluate_with_budget(&arena, v, run, arg, machine_budget);
+        let exhaustion = ev.exhaustion_failure();
         out.budget.mem = out.budget.mem.max(ev.budget.mem);
         out.budget.cpu = out.budget.cpu.max(ev.budget.cpu);
         let logs = eval::split_logs(ev.logs);
@@ -109,6 +114,11 @@ fn run_one(test: TestProgram, config: &Config) -> Outcome {
             out.status = Status::Fail(Failure::InvalidProgram {
                 message: ev.term.unwrap_err(),
             });
+            record(&mut out, logs);
+            return out;
+        }
+        if let Some(failure) = exhaustion {
+            out.status = Status::Fail(failure);
             record(&mut out, logs);
             return out;
         }
@@ -150,7 +160,7 @@ fn run_one(test: TestProgram, config: &Config) -> Outcome {
         // An error may originate in a generator. Recovery distinguishes it from a body failure,
         // including iterations expected to fail and budget violations.
         let recovered = if next.is_none() || counterexample {
-            match draw(v, draw_program, &prng) {
+            match draw(v, draw_program, &prng, machine_budget) {
                 Ok(p) => Some(p),
                 Err(f) => {
                     out.status = Status::Fail(f);
@@ -173,14 +183,19 @@ fn run_one(test: TestProgram, config: &Config) -> Outcome {
             let budget_limit = out.test.budget;
             let oracle = |choices: &[u64]| {
                 let p = Prng::from_choices(choices);
-                let shown = match eval::run_draw(v, draw_program, &p) {
+                let shown = match eval::run_draw_with_budget(v, draw_program, &p, machine_budget) {
                     Ok(Drawn::Some { shown, .. }) => shown,
                     _ => return shrink::Status::Invalid,
                 };
                 let arena = Arena::new();
-                let ev =
-                    eval::evaluate(&arena, v, run, Some(Term::data(&arena, p.to_data(&arena))));
-                if ev.invalid_program || exceeded(budget_limit, ev.budget).is_some() {
+                let ev = eval::evaluate_with_budget(
+                    &arena,
+                    v,
+                    run,
+                    Some(Term::data(&arena, p.to_data(&arena))),
+                    machine_budget,
+                );
+                if invalid_shrink_evaluation(&ev, budget_limit) {
                     return shrink::Status::Invalid;
                 }
                 let failed = match ev.term {
@@ -238,4 +253,119 @@ fn run_one(test: TestProgram, config: &Config) -> Outcome {
         out.status = Status::Fail(Failure::NoCounterexample);
     }
     out
+}
+
+fn invalid_shrink_evaluation(ev: &eval::Evaluated<'_>, budget: Option<Budget>) -> bool {
+    ev.invalid_program || ev.exhausted.is_some() || exceeded(budget, ev.budget).is_some()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nash_plutus::{
+        binder::DeBruijn,
+        flat,
+        program::{Program, Version},
+    };
+    use nash_region::Region;
+
+    fn bytes(arena: &Arena, term: &Term<'_, DeBruijn>) -> Vec<u8> {
+        flat::encode(Program::new(arena, Version::plutus_v3(arena), term)).unwrap()
+    }
+    fn fixture(programs: Programs, expect: Expect, budget: Option<Budget>) -> TestProgram {
+        TestProgram {
+            module: "Budget".into(),
+            name: "machine exhaustion".into(),
+            expect,
+            budget,
+            region: Region::one(),
+            programs,
+            asserts: vec![],
+            binder_texts: vec![],
+            plutus_version: PlutusVersion::V3,
+            source: String::new(),
+            source_path: "Budget.nash".into(),
+        }
+    }
+    #[test]
+    fn machine_exhaustion_fails_every_modifier_even_without_within() {
+        let arena = &Arena::new();
+        let unit = bytes(arena, Term::unit(arena));
+        let property = bytes(
+            arena,
+            Term::unit(arena).lambda(arena, DeBruijn::zero(arena)),
+        );
+        let machine_limit = ExBudget::new(0, 0);
+        for expect in [Expect::Pass, Expect::Fail, Expect::FailOnce] {
+            for budget in [
+                None,
+                Some(Budget::Both {
+                    cpu: i128::MAX,
+                    mem: i128::MAX,
+                }),
+            ] {
+                for programs in [
+                    Programs::Unit { run: unit.clone() },
+                    Programs::Prop {
+                        run: property.clone(),
+                        draw: property.clone(),
+                    },
+                ] {
+                    let outcome = run_one_with_budget(
+                        fixture(programs, expect, budget),
+                        &Config::default(),
+                        machine_limit,
+                    );
+                    let Status::Fail(Failure::BudgetExceeded { limit, used }) = outcome.status
+                    else {
+                        panic!("unexpected outcome: {:?}", outcome.status);
+                    };
+                    assert_eq!(limit, Budget::Both { cpu: 0, mem: 0 });
+                    assert!(used.cpu > 0 || used.mem > 0);
+                    assert!(outcome.counterexample.is_none());
+                    assert!(!outcome.expected_failure);
+                }
+            }
+        }
+    }
+    #[test]
+    fn actual_exhaustion_cannot_be_a_shrink_counterexample() {
+        let arena = &Arena::new();
+        let run = bytes(arena, Term::error(arena));
+        let exhausted =
+            eval::evaluate_with_budget(arena, MachineVersion::V3, &run, None, ExBudget::new(0, 0));
+        assert!(exhausted.term.is_err());
+        assert_eq!(exhausted.exhausted, Some(ExBudget::new(0, 0)));
+        assert!(invalid_shrink_evaluation(&exhausted, None));
+        assert!(invalid_shrink_evaluation(
+            &exhausted,
+            Some(Budget::Cpu(i128::MAX))
+        ));
+        let body_error = eval::evaluate(arena, MachineVersion::V3, &run, None);
+        assert!(body_error.term.is_err());
+        assert_eq!(body_error.exhausted, None);
+        assert!(!invalid_shrink_evaluation(&body_error, None));
+    }
+    #[test]
+    fn draw_exhaustion_preserves_budget_failure() {
+        let arena = &Arena::new();
+        let program = bytes(
+            arena,
+            Term::unit(arena).lambda(arena, DeBruijn::zero(arena)),
+        );
+        let failure = draw(
+            MachineVersion::V3,
+            &program,
+            &Prng::from_seed(42),
+            ExBudget::new(0, 0),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            failure,
+            Failure::BudgetExceeded {
+                limit: Budget::Both { cpu: 0, mem: 0 },
+                ..
+            }
+        ));
+    }
 }

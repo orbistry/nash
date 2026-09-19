@@ -88,7 +88,7 @@ Module {
                             },
                             end: Position {
                                 line: 5,
-                                column: 22,
+                                column: 24,
                             },
                         },
                         value: Binop {
@@ -189,7 +189,7 @@ Module {
                                                     },
                                                     end: Position {
                                                         line: 5,
-                                                        column: 19,
+                                                        column: 20,
                                                     },
                                                 },
                                                 value: Binop {

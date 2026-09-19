@@ -1158,8 +1158,13 @@ fn build_tree_rec<'a>(
     let op = &ops[root_idx];
     let left = build_tree_rec(bump, exprs, ops, start, root_idx, overall_region)?;
     let right = build_tree_rec(bump, exprs, ops, root_idx + 1, end, overall_region)?;
+    let region = if start == 0 && end == exprs.len() - 1 {
+        overall_region
+    } else {
+        Region::span_across(&left.region, &right.region)
+    };
     Ok(bump.alloc(Located::at(
-        Region::span_across(&left.region, &right.region),
+        region,
         CanExpr::Binop {
             symbol: op.symbol,
             operator_home: op.home,

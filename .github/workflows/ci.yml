@@ -26,3 +26,11 @@ jobs:
         run: cargo test
       - name: Core acceptance
         run: cargo run -p nash-cli -- check tests/core
+      - name: Property counterexample acceptance
+        shell: bash
+        run: |
+          status=0
+          cargo run -p nash-cli -- test examples/order --seed 1 > /tmp/nash-order.log 2>&1 || status=$?
+          cat /tmp/nash-order.log
+          test "$status" -eq 1
+          grep -q '× counterexample' /tmp/nash-order.log

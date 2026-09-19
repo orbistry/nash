@@ -34,6 +34,15 @@ pub fn build_validators_with(
     solved: Solved<'_>,
     mut config_for: impl FnMut(&url::Url) -> nash_config::Build,
 ) -> Result<Vec<ValidatorOutput>, BuildError> {
+    build_validators_matching_with(solved, |uri| Some(config_for(uri)))
+}
+
+/// Compile selected validator roots while retaining all dependency definitions.
+/// Return `None` for dependency modules that must not emit artifacts.
+pub fn build_validators_matching_with(
+    solved: Solved<'_>,
+    mut config_for: impl FnMut(&url::Url) -> Option<nash_config::Build>,
+) -> Result<Vec<ValidatorOutput>, BuildError> {
     let arena = Arena::new();
     let build = Build::new(solved.modules.iter().map(|module| Input {
         module: module.module,
@@ -45,7 +54,9 @@ pub fn build_validators_with(
         if !matches!(module.module.kind, ModuleKind::Validator(_)) {
             continue;
         }
-        let config = config_for(&module.uri);
+        let Some(config) = config_for(&module.uri) else {
+            continue;
+        };
         let trace = TraceConfig {
             user: match config.trace_level {
                 nash_config::TraceLevel::Silent => nash_codegen::build::TraceLevel::Silent,
@@ -261,4 +272,62 @@ pub async fn write_outputs(directory: &Path, outputs: &[ValidatorOutput]) -> io:
         manifest.push('\n');
     }
     tokio::fs::write(manifest_path, manifest).await
+}
+
+/// Compile selected module tests to owned programs before dropping the solved arena.
+/// Return `None` for dependency modules whose tests must not execute.
+pub fn compile_tests_with(
+    solved: Solved<'_>,
+    config_for: impl FnMut(&url::Url) -> Option<nash_config::Build>,
+) -> Result<Vec<nash_test::TestProgram>, BuildError> {
+    compile_tests_matching_with(solved, config_for, |_, _| true)
+}
+
+/// Select test roots before code generation so excluded tests cannot cause backend errors.
+pub fn compile_tests_matching_with(
+    solved: Solved<'_>,
+    mut config_for: impl FnMut(&url::Url) -> Option<nash_config::Build>,
+    mut include: impl FnMut(&str, &str) -> bool,
+) -> Result<Vec<nash_test::TestProgram>, BuildError> {
+    let arena = Arena::new();
+    let build = Build::new(solved.modules.iter().map(|module| Input {
+        module: module.module,
+        types: &module.types,
+        tables: &module.tables,
+    }));
+    let mut outputs = Vec::new();
+    for module in &solved.modules {
+        let Some(config) = config_for(&module.uri) else {
+            continue;
+        };
+        let config = config.for_tests();
+        let trace = TraceConfig {
+            user: match config.trace_level {
+                nash_config::TraceLevel::Silent => nash_codegen::build::TraceLevel::Silent,
+                nash_config::TraceLevel::Compact => nash_codegen::build::TraceLevel::Compact,
+                nash_config::TraceLevel::Verbose => nash_codegen::build::TraceLevel::Verbose,
+            },
+            compiler: true,
+        };
+        let path = module
+            .uri
+            .to_file_path()
+            .unwrap_or_else(|_| module.uri.path().into());
+        let programs = nash_codegen::tests::compile_tests_matching(
+            &arena,
+            &build,
+            module.module.name,
+            module.source,
+            &path,
+            config.plutus_version,
+            trace,
+            |test| include(module.module.name.name, test.name.value),
+        )
+        .map_err(|error| BuildError {
+            module: module.module.name.name.to_owned(),
+            message: error.to_string(),
+        })?;
+        outputs.extend(programs);
+    }
+    Ok(outputs)
 }

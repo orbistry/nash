@@ -77,7 +77,7 @@ impl Project {
     }
 
     /// Discover all Nash source files in the project.
-    pub async fn discover_modules(&self, db: &Database) -> Result<ModuleOrigins, DriverError> {
+    pub async fn discover_own_modules(&self, db: &Database) -> Result<ModuleOrigins, DriverError> {
         let mut modules = ModuleOrigins::new();
 
         for member in &self.members {
@@ -105,6 +105,135 @@ impl Project {
             }
         }
 
+        Ok(modules)
+    }
+
+    /// Discover project sources and local dependencies, including root test dependencies.
+    pub async fn discover_modules(&self, db: &Database) -> Result<ModuleOrigins, DriverError> {
+        self.discover_with_dependencies(db, true).await
+    }
+
+    /// Discover production sources without test dependencies.
+    pub async fn discover_modules_production(
+        &self,
+        db: &Database,
+    ) -> Result<ModuleOrigins, DriverError> {
+        self.discover_with_dependencies(db, false).await
+    }
+
+    async fn discover_with_dependencies(
+        &self,
+        db: &Database,
+        tests: bool,
+    ) -> Result<ModuleOrigins, DriverError> {
+        let mut modules = self.discover_own_modules(db).await?;
+        let mut queue: Vec<_> = self
+            .members
+            .iter()
+            .map(|member| (member.root.clone(), member.config.clone(), tests))
+            .collect();
+        let mut seen = std::collections::BTreeSet::new();
+        while let Some((root, config, include_tests)) = queue.pop() {
+            if !seen.insert((root.clone(), include_tests)) {
+                continue;
+            }
+            let (normal, testing) = match &config {
+                Config::Application(app) => (&app.dependencies, &app.test_dependencies),
+                Config::Package(pkg) => (&pkg.dependencies, &pkg.test_dependencies),
+                Config::Workspace(_) => continue,
+            };
+            for (name, dependency) in normal
+                .iter()
+                .chain(testing.iter().filter(|_| include_tests))
+            {
+                let (dependency, base) = match dependency {
+                    nash_config::Dependency::Source(nash_config::DependencySource::Workspace(
+                        _,
+                    )) => {
+                        let Config::Workspace(workspace) = &self.config else {
+                            return Err(DriverError::Dependency {
+                                package: name.to_string(),
+                                message: "workspace dependency used outside a workspace".into(),
+                            });
+                        };
+                        (
+                            workspace.dependencies.get(name).ok_or_else(|| {
+                                DriverError::Dependency {
+                                    package: name.to_string(),
+                                    message: "missing workspace dependency declaration".into(),
+                                }
+                            })?,
+                            &self.root,
+                        )
+                    }
+                    _ => (dependency, &root),
+                };
+                let member = if let nash_config::Dependency::Source(nash_config::DependencySource::Path(path)) = dependency {
+                    let dep_root = base.join(&path.path).canonicalize().map_err(|source| DriverError::ReadError { path: base.join(&path.path), source })?;
+                    let config = nash_config::parse_file(dep_root.join("nash.jsonc"))?;
+                    make_member(&dep_root, config)
+                } else if let Some(member) = self.members.iter().find(|member| matches!(&member.config, Config::Package(package) if &package.name == name)) {
+                    make_member(&member.root, member.config.clone())
+                } else {
+                    return Err(DriverError::Dependency { package: name.to_string(), message: "registry and git resolution are not implemented; use a local path dependency or a workspace package".into() });
+                };
+                if !matches!(&member.config, Config::Package(package) if &package.name == name) {
+                    return Err(DriverError::Dependency {
+                        package: name.to_string(),
+                        message: format!(
+                            "{} must declare the requested package name",
+                            member.root.display()
+                        ),
+                    });
+                }
+                for source_dir in &member.source_dirs {
+                    for uri in db.glob(&path_to_uri(source_dir)?, "**/*.nash").await? {
+                        let owner = Some(name.clone());
+                        if let Some(previous) = modules.insert(uri.clone(), owner.clone())
+                            && previous != owner
+                        {
+                            return Err(DriverError::ConflictingModuleOwners {
+                                uri: Box::new(uri),
+                                first: previous
+                                    .map_or_else(|| "application".into(), |name| name.to_string()),
+                                second: name.to_string(),
+                            });
+                        }
+                    }
+                }
+                // A dependency contributes its production dependencies, never its test dependencies.
+                queue.push((member.root, member.config, false));
+            }
+        }
+        if tests {
+            // Test packages are available only to block-local imports. Checking this
+            // before canonicalization prevents the global interface map from making
+            // a test dependency visible to ordinary production imports.
+            let production = Box::pin(self.discover_with_dependencies(db, false)).await?;
+            for uri in production.keys() {
+                let Ok(source) = db.file_source().read(uri).await else {
+                    // The compiler reports source I/O failures alongside independent modules.
+                    continue;
+                };
+                let arena = bumpalo::Bump::new();
+                let source = arena.alloc_str(&source);
+                if let Ok(module) = nash_parse::Parser::new(&arena, source).module() {
+                    for import in module.imports {
+                        let suffix = format!("/{}.nash", import.import.value.replace('.', "/"));
+                        let ordinary = production.keys().any(|uri| uri.path().ends_with(&suffix));
+                        if !ordinary && modules.keys().any(|uri| uri.path().ends_with(&suffix)) {
+                            return Err(DriverError::Dependency {
+                                package: import.import.value.to_owned(),
+                                message: format!(
+                                    "{} imports a test-only dependency outside its tests block; move the import into tests or declare a production dependency",
+                                    uri.path()
+                                ),
+                            });
+                        }
+                    }
+                }
+            }
+        }
         Ok(modules)
     }
 

@@ -49,6 +49,10 @@ uppercase Big.
 
 ---
 
+Plan 10 implements the minimum `Fuzz` and `Test` modules required by its runner.
+Chunks 8 and 9 here extend and verify those modules; they must not duplicate or
+replace the tested PRNG, replay, label, and assertion protocols.
+
 ## Chunk 1: package skeleton and embedding
 
 **Files**

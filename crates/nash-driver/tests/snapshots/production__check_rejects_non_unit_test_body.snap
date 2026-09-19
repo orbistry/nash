@@ -1,0 +1,14 @@
+---
+source: crates/nash-driver/tests/production.rs
+description: "module Main exposing (..)\nimport Builtin exposing (type bool(..))\ntests\n    test \"must return unit\" = do\n        True\n"
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `bool`.
+   ╭─[/project/src/Main.nash:5:9]
+ 3 │ tests
+ 4 │     test "must return unit" = do
+ 5 │         True
+   ·         ──┬─
+   ·           ╰── test body (which must return unit)
+   ╰────

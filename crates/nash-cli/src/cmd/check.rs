@@ -2,7 +2,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use miette::{IntoDiagnostic, Result};
-use nash_driver::{Database, FileSystemSource, ModuleResult, Project, build, build_graph};
+use nash_driver::{
+    Database, FileSystemSource, ModuleResult, Project, build, build_graph_with_tests,
+};
 use nash_report::Severity;
 use tokio::sync::Mutex;
 
@@ -160,9 +162,17 @@ impl Args {
             .discover_modules(&*db.lock().await)
             .await
             .into_diagnostic()?;
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
+        let roots = project
+            .discover_own_modules(&*db.lock().await)
             .await
             .into_diagnostic()?;
+        let graph = build_graph_with_tests(
+            db.clone(),
+            &modules.keys().cloned().collect::<Vec<_>>(),
+            &roots.keys().cloned().collect::<Vec<_>>(),
+        )
+        .await
+        .into_diagnostic()?;
         Ok((project.root, build(db, &graph, &modules).await))
     }
 }

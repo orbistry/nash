@@ -84,7 +84,7 @@ Module {
                         region: Region {
                             start: Position {
                                 line: 5,
-                                column: 13,
+                                column: 11,
                             },
                             end: Position {
                                 line: 5,
@@ -170,7 +170,7 @@ Module {
                                                 region: Region {
                                                     start: Position {
                                                         line: 5,
-                                                        column: 14,
+                                                        column: 13,
                                                     },
                                                     end: Position {
                                                         line: 5,

@@ -75,6 +75,8 @@ Rules the parser and canonicalizer enforce:
   use `test`). The left side is a pattern: `(a, b) via tuple2 int int` is
   fine. Irrefutable patterns only; a refutable pattern is the usual
   exhaustiveness error.
+- Generators resolve in the module and test-import scope; they do not refer to
+  other via-bound values. Use `Fuzz.bind` inside a generator for dependent draws.
 - The `let ... in` that holds `via` binders holds nothing else. Ordinary
   `let` follows in the body.
 - `within` takes one or two budgets in either order, at most one of each.
@@ -221,7 +223,8 @@ Rules:
   the rewrite runs after solving with the sub-expression types known.
 - **Cost.** A passing `assert` costs the `let` bindings only. The `show`
   calls sit in the failure branch. Test programs are not size sensitive.
-- **Payload.** On failure the program traces one line per captured
+- **Payload.** On failure the program emits `\0assert\0<assert-id>` even if
+  there are no captured values, then traces one line per captured
   sub-expression with a `Show` impl, `\0assert\0<assert-id>\0<index>\0<shown>`,
   then errors. The compiler records, per test, the table
   `assert-id -> (source region, text, [(index, sub-expression region)])`.
@@ -247,7 +250,7 @@ impl Functor fuzzer where
 
 impl Applicative fuzzer where
     pure a = Fuzzer (\prng -> Some (prng, a))
-    ap = ...
+    apply = ...
 
 impl Monad fuzzer where
     bind (Fuzzer g) k = Fuzzer (\prng -> case g prng of
@@ -263,9 +266,11 @@ impl Monad fuzzer where
   function. The result tuple is a UPLC `constr 0 [prng, value]` because `pair`
   only takes `Storable` components and `'a` may have any representation. The wrapper exists because
   impls attach to nominal types, not to function aliases.
-- Choices are non-negative integers, one per primitive draw, as in
+- Choices are integers in `0..18446744073709551615`, one per primitive draw, as in
   MiniThesis. Aiken uses bytes; Nash uses `Int` so a primitive can draw a
-  full-range integer in one choice and shrink it with one binary search.
+  64-bit integer in one choice and shrink it with one binary search. Larger
+  integers can be assembled from several choices. A primitive bound outside
+  that range is a generator error; values are never truncated.
 
 The single primitive:
 
@@ -347,14 +352,13 @@ itself a port of MiniThesis, with `u64` choices instead of `u8`:
 6. Repeat until a full pass makes no change.
 
 A candidate sequence is evaluated with `Prng::from_choices(candidate)`:
-`draw` first (error or `None` is `Invalid`), then `run` (error is `Keep`,
+`draw` first (error or `None` is `Invalid`), then `run` (body error is `Keep`,
 completion is `Ignore`; swapped for `fail`). A candidate is accepted when it
 is `Keep` and shorter, or equal length and lexicographically smaller
-(`consider`, `test_framework.rs:807-826`). Results are memoised in a Patricia
-trie keyed on the choice bytes, with the prefix rule from Aiken's `Cache`
-(`test_framework.rs:1061-1122`): a non-`Invalid` result for a prefix is the
-result for every extension, because the generator did not read past the
-prefix.
+(`consider`, `test_framework.rs:807-826`). Results are memoised by the exact choice sequence. A custom `Fuzzer` can
+inspect the public `Replayed` count or remaining choices, so a successful
+prefix does not prove that every extension has the same result. Exact caching
+preserves those generators' semantics.
 
 Shrinking reports `Simplifying counterexample from N choices` and
 `Simplified counterexample in Tms after S steps` on stderr while it works.
@@ -394,6 +398,11 @@ The label table shows each label with its share. `--coverage labels`
 divides by the number of iterations. Labels are sorted by count, descending.
 
 ### Example output
+
+Run `cargo run -p nash-cli -- test examples/order --seed 1` for the executable
+example. Its deliberately incorrect `invert` produces a shrunk counterexample
+and exit status 1. The following layout illustrates the report; budgets depend
+on the compiled program.
 
 ```
   Testing Order (src/Order.nash)
@@ -444,13 +453,18 @@ not part of this block.
       "counterexample": [ { "name": "a", "value": "1" }, { "name": "b", "value": "0" } ],
       "assert": { "file": "src/Order.nash", "line": 31, "column": 13,
                   "source": "compare a b == invert (compare b a)",
-                  "values": [ { "column": 0, "value": "GT" }, ... ] },
+                  "values": [ { "row": 0, "column": 0, "value": "GT" }, ... ] },
       "labels": {},
       "traces": []
     }
   ]
 }
 ```
+
+Capture `row` is zero-based relative to the assertion's first source line.
+`column` is a terminal display column, relative to the assertion start on its
+first line and to the source line start on later lines. Terminal reports place
+values below their own source line and indent multiline shown values.
 
 ## Parallel execution
 
@@ -468,11 +482,19 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - `draw` returns a `constr` term: `Some` is `constr 0 [constr 0 [data, list]]`,
   `None` is `constr 1 []`. The stdlib declares `type option 'a = Some 'a |
   None` in that order; the runner depends on the tags.
-- Test programs are compiled with the project's `optimize` level and with
-  compiler traces on, so pattern-match failures and `todo` sites show up in
-  the trace log.
+- Test programs use the same unoptimized Core passes as validator builds.
+  Compiler traces are enabled; user traces default to verbose unless the owning
+  project explicitly configures a level or the CLI overrides it. Plan 08 remains
+  deferred. Property result tuples/options require the supported V3 target;
+  requesting V1/V2 reports the unsupported generated feature.
 
 ## Interactions
+
+- **Checking.** `nash check` resolves and type-checks project test blocks without
+  executing them. Check/test include local path test dependencies; production
+  builds exclude them. Dependency packages contribute ordinary code, not their
+  tests or test dependencies. Registry/git fetching is not implemented; use
+  local path dependencies or workspace members.
 
 - **Validators.** `nash build` strips the `tests` block before
   canonicalization ([validators.md](validators.md)).
@@ -484,7 +506,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - **Codegen.** Each test program is a standalone UPLC program that inlines
   the module's dependency closure ([codegen.md](codegen.md)).
 - **Diagnostics.** Test-shape errors (`via` on a `test`, `once` on a `test`,
-  duplicate names) are canonicalization errors rendered by `nash-report`.
+  duplicate names) are parser/canonicalization errors rendered by `nash-report`.
 
 ## Open questions
 

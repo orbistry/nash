@@ -39,8 +39,8 @@ nash::type::missing_impl
    ╭─[/Main.nash:4:7]
  3 │ make x = Types.Holder [x]
  4 │ bad = Types.get (make (\x -> x))
-   ·       ────────────┬───────────
-   ·                   ╰── required by `type application`
+   ·       ─────────────┬────────────
+   ·                    ╰── required by `type application`
    ╰────
   help: Requirement chain:
 
