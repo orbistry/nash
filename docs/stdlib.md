@@ -1154,18 +1154,13 @@ exactly; each is covered by a golden test against a real transaction.
 ## `Debug`
 
 ```elm
-module Debug exposing (trace, todo, failWith)
+module Debug exposing (trace, todo)
 
 trace : string -> 'a -> 'a     -- subject to trace level (silent / compact / verbose)
 trace = Builtin.trace
 
-failWith : string -> 'a        -- traces msg and errors
-failWith msg =
-    trace msg
-    fail
-
 todo : string -> 'a            -- traces "TODO: msg" and errors; warning at compile time
-todo msg = failWith (Builtin.appendString "TODO: " msg)
+todo msg = fail (Builtin.appendString "TODO: " msg)
 ```
 
 `fail`, `todo`, `trace` have their own expression nodes (syntax.md) and

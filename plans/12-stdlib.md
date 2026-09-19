@@ -164,8 +164,8 @@ with the impls for compiler-known types listed in docs/stdlib.md "Trait
 modules"; `Lift.nash` holds representation.md's impl table (the reflexive
 `Big 'a => Lift 'a 'a` is compiler-provided and not written); `Prelude`
 gets the `infix` table, the operator helper functions, and the tuple
-impls; `Bool` gets the `bool` functions; `Debug` gets `trace`, `todo`,
-`failWith` using Nash trace/failure syntax. Impls for the twin types go in
+impls; `Bool` gets the `bool` functions; `Debug` gets `trace` and `todo`
+using Nash trace/failure syntax; failure uses `fail "message"` directly. Impls for the twin types go in
 the twin's module.
 
 **Code**
@@ -173,19 +173,15 @@ the twin's module.
 `crates/nash-driver/base/src/Debug.nash`:
 
 ```elm
-module Debug exposing (trace, todo, failWith)
+module Debug exposing (trace, todo)
 
 import Builtin
 
 trace : string -> 'a -> 'a
 trace = Builtin.trace
 
-failWith : string -> 'a
-failWith msg =
-    (trace msg (\() -> fail msg)) ()
-
 todo : string -> 'a
-todo msg = failWith (Builtin.appendString "TODO: " msg)
+todo msg = fail (Builtin.appendString "TODO: " msg)
 ```
 
 Failure uses Nash syntax, and identity is an ordinary Nash function. The
