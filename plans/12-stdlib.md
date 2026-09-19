@@ -53,6 +53,28 @@ Plan 10 implements the minimum `Fuzz` and `Test` modules required by its runner.
 Chunks 8 and 9 here extend and verify those modules; they must not duplicate or
 replace the tested PRNG, replay, label, and assertion protocols.
 
+## Current status
+
+Reconciled against the checkout after `bfb38fbc` (2026-09-19). Base currently
+ships 24 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
+
+| Chunk | Status | Remaining work |
+|---|---|---|
+| 1 embedding | complete | none |
+| 2 default imports | complete for shipped modules | extend catalog as modules land |
+| 3 Primitive / Builtin | complete | none |
+| 4 twin types | complete | none; helper APIs belong to chunks 5–6 |
+| 5 traits / operators | mostly implemented | Debug module and full planned API/test coverage |
+| 6 type modules | partial | Int, Bytes, String, List; complete existing helper APIs |
+| 7 Data / Map | partial | Data.Decode, Data.Encode, Map APIs |
+| 8 Fuzz | implemented foundation from Plan 10 | audit full planned API and property coverage |
+| 9 Test | complete through Plan 10 | preserve existing runner protocol |
+| 10 Ast / Derive | not implemented | requires Plan 11 |
+| 11 Cardano | not implemented in Base | library modules and ledger golden tests |
+
+Latest full validation: 3,372 tests passed, 3 ignored; strict Clippy passed.
+Tests use compiler libraries and the evaluator, never a Nash CLI subprocess.
+
 ## Chunk 1: package skeleton and embedding — complete
 
 - [x] Store the foundation Nash sources in `crates/nash-driver/base/src/`.
@@ -87,82 +109,43 @@ when later chunks add new modules; do not install placeholder interfaces.
 and output. It checks neither representation nor shape. The normal Nash
 blanket impls of `ToData` and `FromData` use it; `Validate` remains opt-in.
 
-## Chunk 4: compiler-known types and the twin type modules
+## Chunk 4: compiler-known types and the twin type modules — complete
 
-**Files**
+- [x] Seed compiler-known types from `nash_ast::primitives::PRIMITIVES`,
+  homed in `Primitive`; there is no second builtin type table.
+- [x] Ship `Bool`, `Unit`, `Option`, `Result`, and `Ordering` modules with
+  their Big/little twins. Primitive `bool` and `unit` remain compiler-known.
+- [x] Resolve little constructors unqualified and Big twins qualified
+  (`Some` versus `Option.Some`). Restrict duplicate twin constructor names
+  to the bundled package; reject ordinary user duplicate constructors.
+- [x] Give primitive Data constructors their native decoded payload types.
+  `Constr` has one `pair int (list Data)` payload; `Constr pair(tag, fields)`
+  explicitly destructures it with native UPLC case. `Constr payload` binds
+  the whole pair. `Builtin.constrData tag fields` constructs from two values.
+- [x] Compile bundled modules and import-free applications through the
+  driver. Verify storage constraints and little/Big constructor resolution.
 
-- `crates/nash-driver/base/src/Bool.nash`, `Unit.nash`, `Option.nash`, `Result.nash`, `Ordering.nash` (new; type declarations only, functions in chunk 6, impls in chunk 5)
-- `crates/nash-can/src/environment/foreign.rs` (`make_union_ctor` special case for `Primitive.bool`; the `List` pre-seed at `foreign.rs:34` is gone once plans/02 chunk 3 seeds from `PRIMITIVES`)
-- `crates/nash-can/src/environment/defaults.rs` (add the five modules)
+Evidence: `crates/nash-ast/src/primitives.rs`,
+`crates/nash-can/src/environment/foreign.rs`,
+`crates/nash-driver/base/src/{Bool,Unit,Option,Result,Ordering}.nash`,
+`crates/nash-driver/tests/bundled_base.rs`, `tests/base/app/src/Main.nash`,
+and canonicalization/type-inference snapshots.
 
-**Change**
-
-With kinds (plans/02) available: every compiler-known type comes from
-`nash_ast::primitives::PRIMITIVES` with home `Builtin` (docs/stdlib.md
-"Compiler-known types"); this chunk adds no second table. Declare the
-twins in their own modules, `type Bool = False | True`
-in `Bool.nash`, `type Unit = Unit` in `Unit.nash`,
-`type option 'a = Some 'a | None` and `type Option 'a = Some 'a | None` in
-`Option.nash`, and likewise `Result`, `Ordering` (representation.md
-"Prelude twins", constructor order is load-bearing); move the
-`Basics.Bool` special case (`foreign.rs:349`) to `Primitive.bool`.
-
-**Code**
-
-`crates/nash-driver/base/src/Option.nash` (chunk 4 version):
-
-```elm
-module Option exposing (Option(..), type option(..))
-
-type option 'a = Some 'a | None
-type Option 'a = Some 'a | None
-```
-
-Inside `Option.nash` both constructor sets are in scope unqualified, so the
-module's own code (chunk 6) writes `Option.Some` for the Big one, exactly
-as users do; a bare `Some` inside the module is the little constructor.
-Canonicalization treats a module's own Big twin constructors as
-qualified-only when a little constructor of the same name is declared in
-the same module (`Env.ctors` keeps the little one, `Env.q_ctors` the Big
-one). User modules may not declare two constructors with one name; only
-`nash/base` twin modules may, and only for a little/Big pair
-(`Context.package` check).
-
-The type seed is plans/02 chunk 3's (`primitives::PRIMITIVES`, homed by
-`primitives::builtin_home()`, `Data`/`Int`/`Bytes`/`List`/`Map` Big and
-`int`/`bytes`/`string`/`bool`/`unit`/`list`/`pair`/`array`/`bls_*`/`value`
-Const). What this chunk adds to that seed: `bool` gets constructors
-`False`, `True`, `unit` gets `()`, and `Data` gets `Constr`, `Map`, `List`,
-`I`, `B` with the little field types from data.md. `foreign.rs`
-`make_union_ctor`:
-
-```rust
-if home.name == "Builtin" && union_name == "bool" {
-    return Ctor::Bool { home, union: can_union, index: ctor.index };
-}
-```
-
-Big `Bool` is an ordinary union (`Constr 0`/`Constr 1`).
-
-**Elm/Aiken reference**
-
-`Canonicalize/Environment/Foreign.hs` `toCtor` (Bool special case);
-`Elm/Compiler/Type/Extract.hs` has nothing to port here. Aiken
-`builtins.rs` `prelude` (how `Option`, `Ordering`, `Bool` are declared as
-compiler-known ADTs).
-
-**Tests**
-
-- `core` compiles (the in-process Base compilation tests via the driver test `test_core_compiles`, kept green from here on).
-- nash-can: `if` on `bool` uses `Ctor::Bool`; `type t = A | B` little and `type T = A | B` Big in one user module is a dup-ctor error; `Some 1` and `Option.Some (lift 1)` from the defaults resolve to the little and the Big constructor.
-- kinds: `list (option int)` has kind `Type` but fails `Storable` storage formation; `list Int` and `list int` are fine.
-
-**Done when** `test_core_compiles` passes and the little/Big pairs are
-usable side by side in one user module.
+Further helper functions and trait API coverage belong to chunks 5–6.
 
 ---
 
-## Chunk 5: trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate`
+## Chunk 5: trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` — mostly implemented
+
+- [x] Ship the trait modules, literal instances, Prelude operators/helpers,
+  tuple Eq/Ord/Show instances through arity four, and lazy boolean lowering.
+- [x] Ship Lift instances, blanket Big ToData/FromData, and opt-in Validate.
+  Map Lift explicitly requires Big keys and values; native pair components
+  are rejected. Pair destructuring uses native UPLC case.
+- [ ] Add `Debug.nash` and verify its trace/failure semantics.
+- [ ] Audit all planned instances and executable tests against docs/stdlib.md.
+
+The remaining design below is a target, not a claim that every API exists.
 
 **Files**
 
@@ -172,7 +155,7 @@ usable side by side in one user module.
 - `crates/nash-driver/base/src/Debug.nash` (new)
 - `crates/nash-driver/base/src/Option.nash`, `Result.nash`, `Ordering.nash` (their `Eq`/`Functor`/`Applicative`/`Monad`/`Lift` impls)
 - `crates/nash-can/src/environment/foreign.rs` (lazy `and`/`or` special case marker)
-- `crates/nash-codegen/src/special.rs` (plans/07: `Bool.and`/`or` delay the second argument)
+- `crates/nash-codegen/src/can_to_core.rs` (plans/07: `Bool.and`/`or` delay the second argument)
 
 **Change**
 
@@ -182,7 +165,7 @@ modules"; `Lift.nash` holds representation.md's impl table (the reflexive
 `Big 'a => Lift 'a 'a` is compiler-provided and not written); `Prelude`
 gets the `infix` table, the operator helper functions, and the tuple
 impls; `Bool` gets the `bool` functions; `Debug` gets `trace`, `todo`,
-`fail` over `Builtin.trace` and `error`. Impls for the twin types go in
+`failWith` using Nash trace/failure syntax. Impls for the twin types go in
 the twin's module.
 
 **Code**
@@ -199,8 +182,7 @@ trace = Builtin.trace
 
 failWith : string -> 'a
 failWith msg =
-    trace msg
-    fail
+    (trace msg (\() -> fail msg)) ()
 
 todo : string -> 'a
 todo msg = failWith (Builtin.appendString "TODO: " msg)
@@ -209,8 +191,8 @@ todo msg = failWith (Builtin.appendString "TODO: " msg)
 Failure uses Nash syntax, and identity is an ordinary Nash function. The
 Builtin table contains only actual UPLC DefaultFunction operations.
 
-Import order that type-checks (no module imports `Prelude`; each trait
-module imports only `Builtin` and its superclass module):
+Dependency outline (Base modules use explicit imports; preserve the existing
+acyclic graph when adding modules):
 
 ```
 Builtin
@@ -219,7 +201,7 @@ Builtin
      Lift             Data (ToData/FromData/Validate)          Literal
 Bool, Unit                              (types only; `Bool` functions use `if`)
 Prelude                                 (imports every trait module and Bool)
-Option, Result, Ordering                (import Prelude and the trait modules they impl)
+Option, Result, Ordering                (explicit trait imports; avoid Prelude cycles)
 List, Int, Bytes, String, Map, ...      (import Prelude for operators; chunks 6–7)
 ```
 
@@ -259,7 +241,15 @@ Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 
 ---
 
-## Chunk 6: type modules
+## Chunk 6: type modules — partial
+
+- [x] Ship Cons, Pair, Array and initial Bool/Option/Result/Ordering helpers.
+- [ ] Add dedicated Int, Bytes, String and List modules.
+- [ ] Complete the documented APIs of existing modules and their tests.
+
+Current Pair exposes fst/snd/make; Array exposes fromList/length/at/get.
+Option and Result have initial helpers and trait instances, not their full
+planned helper surface.
 
 **Files**
 
@@ -283,7 +273,7 @@ total unless documented (`Array.at`, `Option.unwrap`).
 module List exposing (..)
 
 import Prelude exposing (..)
-import Builtin exposing (chooseList, headList, tailList, nullList)
+import Builtin
 import Functor
 
 map : ('a -> 'b) -> list 'a -> list 'b
@@ -291,11 +281,15 @@ map = Functor.map
 
 foldr : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
 foldr f acc xs =
-    chooseList xs acc (f (headList xs) (foldr f acc (tailList xs)))
+    case xs of
+        [] -> acc
+        x :: rest -> f x (foldr f acc rest)
 
 foldl : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
 foldl f acc xs =
-    chooseList xs acc (foldl f (f (headList xs) acc) (tailList xs))
+    case xs of
+        [] -> acc
+        x :: rest -> foldl f (f x acc) rest
 
 length : list 'a -> int
 length = foldl (\_ n -> n + 1) 0
@@ -318,12 +312,8 @@ sortBy cmp xs =
             sortBy cmp smaller ++ (pivot :: sortBy cmp larger)
 ```
 
-`chooseList xs acc (...)` is strict in its branches; the recursive calls
-are guarded because `chooseList`'s builtin type in the table is strict but
-codegen wraps `chooseList` branches in delays when both branches are
-present (plans/07 special case, same mechanism as `and`/`or`). Until that
-lands, write `foldr` with `if nullList xs then acc else ...`; the `if` is
-lazy today. This chunk uses the `if` form; plans/07 may rewrite.
+Use source list patterns; codegen lowers them to native UPLC case. Do not
+rely on automatic laziness for strict builtin applications.
 
 **Elm/Aiken reference**
 
@@ -345,7 +335,12 @@ the in-process Base test runner.
 
 ---
 
-## Chunk 7: `Data` and `Map` modules
+## Chunk 7: `Data` and `Map` modules — partial
+
+- [x] Ship Data.serialise, Data.tag and Data.fields alongside the Data traits.
+- [x] Use explicit `Constr pair(...)` patterns for tag/field extraction.
+- [ ] Add Data.Decode and Data.Encode combinators and round-trip tests.
+- [ ] Add the Map module and its lookup/update/collection API.
 
 **Files**
 
@@ -372,32 +367,32 @@ type alias decoder 'a = Data -> option 'a
 int : decoder int
 int d =
     case d of
-        I n -> Some (lower n)
+        I n -> Some n
         _ -> None
 
 bytes : decoder bytes
 bytes d =
     case d of
-        B b -> Some (lower b)
+        B b -> Some b
         _ -> None
 
 list : decoder 'a -> decoder (list 'a)
 list item d =
     case d of
-        List xs -> traverse item (lower xs)
+        List xs -> traverse item xs
         _ -> None
 
 constr : int -> decoder 'a -> decoder 'a
 constr tag inner d =
     case d of
-        Constr t fields -> if lower t == tag then inner d else None
+        Constr pair(t, _) -> if t == tag then inner d else None
         _ -> None
 
 field : int -> decoder 'a -> decoder 'a
 field i inner d =
     case d of
-        Constr _ fields ->
-            case List.at i (lower fields) of
+        Constr pair(_, fields) ->
+            case List.at i fields of
                 Some f -> inner f
                 None -> None
         _ -> None
@@ -420,7 +415,7 @@ traverse dec xs =
 ```
 
 `crates/nash-driver/base/src/Map.nash` works on `Map 'k 'v` through `lower`/`lift`
-(`Lift (list (pair 'k 'v)) (Map 'k 'v)`, one `unMapData`/`mapData` each):
+(`(Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v)`, one `unMapData`/`mapData` each):
 
 ```elm
 module Map exposing (..)
@@ -460,7 +455,17 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 
 ---
 
-## Chunk 8: `Fuzz`
+## Chunk 8: `Fuzz` — foundation implemented through Plan 10
+
+- [x] Ship Prng/fuzzer types, choice bounds, seeded draws and validated replay.
+- [x] Ship Functor/Applicative/Monad, run, constant, intBetween, int, listOf,
+  listBetween, tuple2, oneOf, bytes, map and bind.
+- [x] Test Nash generators against the Rust runner and replay protocol in
+  `crates/nash-driver/tests/testing_base.rs`.
+- [ ] Audit the complete docs/stdlib.md generator API and remaining properties.
+- [ ] Verify the specific shrinking/range properties listed below.
+
+Extend the existing implementation; do not replace its tested protocol.
 
 **Files**
 
@@ -475,112 +480,13 @@ runner builds as `PlutusData`, the **little** `fuzzer 'a` wrapper with
 over `u64` integer choices (not Aiken's bytes), and the generators listed
 in docs/stdlib.md "`Fuzz`" built on `choice`.
 
-**Code** (`crates/nash-driver/base/src/Fuzz.nash` excerpt; the type and impl definitions are
-docs/testing.md's)
+**Implementation and protocol**
 
-```elm
-module Fuzz exposing (..)
-
-import Prelude exposing (..)
-import Builtin
-import Functor exposing (Functor)
-import Applicative exposing (Applicative)
-import Monad exposing (Monad)
-import Lift exposing (Lift)
-import List
-
-type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
-
-type fuzzer 'a = Fuzzer (Prng -> option (Prng, 'a))
-
-run : fuzzer 'a -> Prng -> option (Prng, 'a)
-run (Fuzzer f) = f
-
--- Draw an integer in [0, bound]. The only primitive.
-choice : int -> fuzzer int
-choice bound =
-    Fuzzer
-        (\prng ->
-            case prng of
-                Seeded seed choices ->
-                    let
-                        seed2 = Builtin.blake2b_256 (lower seed)
-                        n = Builtin.byteStringToInteger True seed2 % (bound + 1)
-                    in
-                    Some (Seeded (lift seed2) (lift (lift n :: lower choices)), n)
-
-                Replayed 0 _ -> None
-                Replayed k rest ->
-                    case lower rest of
-                        c :: cs ->
-                            if lower c <= bound then Some (Replayed (lift (k - 1)) (lift cs), lower c) else None
-                        [] -> None)
-
-impl Functor fuzzer where
-    map f (Fuzzer g) =
-        Fuzzer (\prng ->
-            case g prng of
-                None -> None
-                Some (p, a) -> Some (p, f a))
-
-impl Applicative fuzzer where
-    pure a = Fuzzer (\prng -> Some (prng, a))
-    apply ff fa = bind ff (\f -> map f fa)
-
-impl Monad fuzzer where
-    bind (Fuzzer g) k =
-        Fuzzer (\prng ->
-            case g prng of
-                None -> None
-                Some (p, a) -> run (k a) p)
-
-constant : 'a -> fuzzer 'a
-constant = pure
-
-intBetween : int -> int -> fuzzer int
-intBetween lo hi =
-    if hi <= lo then constant lo else map (\n -> lo + n) (choice (hi - lo))
-
--- width first so small choices give small magnitudes (testing.md "Shrinking")
-int : fuzzer int
-int =
-    do
-        width <- choice 2
-        case width of
-            0 -> choice 255
-            1 -> intBetween -32768 32767
-            _ -> intBetween -9223372036854775808 9223372036854775807
-
-listOf : fuzzer 'a -> fuzzer (list 'a)
-listOf = listBetween 0 20
-
--- one `choice 1` continue bit per element; `0` stops
-listBetween : int -> int -> fuzzer 'a -> fuzzer (list 'a)
-listBetween lo hi item =
-    let
-        go n =
-            if n >= hi then constant []
-            else if n < lo then more n
-            else
-                do
-                    continue <- choice 1
-                    if continue == 0 then constant [] else more n
-        more n =
-            do
-                x <- item
-                xs <- go (n + 1)
-                pure (x :: xs)
-    in
-    go 0
-```
-
-`Seeded`/`Replayed` field representations are Big (`Bytes`, `List Int`, `Int`), so
-`choice` lowers them to work and lifts them back; the runner reads the
-returned `Prng` with `unwrap_constr`. The runner protocol (`draw`/`run`
-programs, `Prng::from_seed`, `Prng::from_choices`, replay returning `None`
-when the sequence runs out or a choice exceeds its bound) is
-docs/testing.md "How the runner drives a property" and plans/10 chunks
-4–7.
+Use `crates/nash-driver/base/src/Fuzz.nash` as the current implementation,
+with `crates/nash-test/src/prng.rs` and docs/testing.md for the wire contract.
+Choices are u64 integers. Invalid bounds fail; exhausted or invalid replay
+returns None. Seeded/Replayed payloads are Big. The existing runner owns
+sampling, replay and shrinking; preserve their behavior when extending APIs.
 
 **Elm/Aiken reference**
 
@@ -600,69 +506,33 @@ choice element type: `Int`, not bytes (testing.md "Open questions").
 
 ---
 
-## Chunk 9: `Test`
+## Chunk 9: `Test` — complete through Plan 10
 
-**Files**
+- [x] Ship Test.label and Test.assertFailed in Nash.
+- [x] Expose label unqualified only inside tests blocks.
+- [x] Preserve label/assertion logs even when ordinary user traces are silent.
+- [x] Integrate power-assert operand capture, failures and runner reporting.
+- [x] Execute protocol tests through codegen and the evaluator, without CLI subprocesses.
 
-- `crates/nash-driver/base/src/Test.nash`
-- `crates/nash-codegen/src/test.rs` (plans/10 chunks 3–4: power-assert rewrite, `draw`/`run` programs)
+Evidence: `crates/nash-driver/base/src/Test.nash`,
+`crates/nash-driver/tests/testing_base.rs`, `crates/nash-codegen/src/assertion.rs`,
+`crates/nash-codegen/src/tests/integration.rs`, and `crates/nash-test/`.
 
-**Change**
-
-`label` and `assertFailed` from docs/stdlib.md "`Test`". There is no test
-monad: a test body is a sequencing `do` block that desugars to plain `let`
-(docs/testing.md "Test body"), `label : string -> unit` compiles to a
-`\0label\0` trace, and `assert` is a keyword whose power-assert rewrite
-(plans/10 chunk 3) ends in `Test.assertFailed`, which traces one
-`\0assert\0` payload line per captured operand and then errors. This
-module provides the runtime side.
-
-**Code**
-
-```elm
-module Test exposing (label, assertFailed)
-
-import Builtin
-
-label : string -> unit
-label s = Builtin.trace (Builtin.appendString "\u{0}label\u{0}" s) ()
-
--- Target of the power-assert rewrite; payload lines in order, then the error.
-assertFailed : list string -> 'a
-assertFailed msgs =
-    case msgs of
-        [] -> fail
-        m :: rest -> Builtin.trace m (\() -> assertFailed rest) ()
-```
-
-Codegen for `Builtin.trace` delays its second argument (plans/07), which
-is what makes the traces fire before the error.
-
-**Elm/Aiken reference**
-
-Aiken `crates/aiken-lang/src/test_framework.rs` `Assertion` (operand
-capture for `==`, `!=`, `<`, etc.); Elm `elm-explorations/test` `Expect`
-for naming only.
-
-**Tests**
-
-`tests` block: `test "labels are traces" = do label "a"` passes and the
-runner's label table shows `a`; `test "assert False fails" fail = do assert False`;
-`test "assertFailed traces then errors" fail = do assertFailed ["x", "y"]`
-with the trace log `["x", "y"]`.
-
-**Done when** `nash test` on a user project reports labels and
-power-assert output through this module.
+Test bodies use sequencing do, not a test monad. Test.assertFailed explicitly
+thunks recursive failure so trace lines are emitted first. Do not assume
+ordinary Builtin.trace calls have special lazy argument evaluation.
 
 ---
 
-## Chunk 10: `Ast` and `Derive`
+## Chunk 10: `Ast` and `Derive` — not implemented
+
+- [ ] Ship Ast/Derive with Plan 11's tag contract and macro tests.
 
 **Files**
 
 - `crates/nash-driver/base/src/Ast.nash`
 - `crates/nash-driver/base/src/Derive.nash`
-- `core/tests/DeriveTests.nash`
+- `tests/base/derive/src/DeriveTests.nash`
 
 **Change**
 
@@ -698,11 +568,11 @@ tuple es = expr (Tuple es)
 and : cons expr -> expr
 and es =
     case es of
-        Nil -> expr (Var (Global builtinModule "True"))
+        Nil -> expr (Var (Global primitiveModule "True"))
         Cons e rest -> Cons.foldl (\b acc -> expr (BinOp (Global boolModule "and") acc b)) e rest
 
-builtinModule : modname
-builtinModule = { package = Some "nash/base", name = "Builtin" }
+primitiveModule : modname
+primitiveModule = { package = Some "nash/base", name = "Primitive" }
 
 boolModule : modname
 boolModule = { package = Some "nash/base", name = "Bool" }
@@ -721,7 +591,7 @@ None; see plans/11.
 
 **Tests**
 
-`core/tests/DeriveTests.nash` per plans/11 chunk 10; `Ast.nash` `tests`:
+`tests/base/derive/src/DeriveTests.nash` per plans/11 chunk 10; `Ast.nash` `tests`:
 `exprName (var (raw "Eq")) == Some "Eq"`, `and Nil` is the `True` node,
 `Cons.length (Cons (int 1) Nil) == 1`.
 
@@ -729,13 +599,18 @@ None; see plans/11.
 
 ---
 
-## Chunk 11: `Cardano.*`
+## Chunk 11: `Cardano.*` — not implemented in Base
+
+- [ ] Ship Cardano.Tx, Cardano.Address, Cardano.Value and Cardano.Time.
+- [ ] Add real ledger context fixtures and decoding tests.
+
+The vesting example's Cardano helpers are fixtures, not the planned library.
 
 **Files**
 
 - `crates/nash-driver/base/src/Cardano/Tx.nash`, `Cardano/Address.nash`, `Cardano/Value.nash`, `Cardano/Time.nash`
-- `core/tests/golden/*.cbor` (real V3 script contexts)
-- `core/tests/CardanoTests.nash`
+- `tests/base/cardano/golden/*.cbor` (real V3 script contexts)
+- `tests/base/cardano/src/CardanoTests.nash`
 
 **Change**
 
@@ -753,14 +628,14 @@ import Builtin
 type alias Value = Map Bytes (Map Bytes Int)
 
 impl Lift value Value where
-    lift = Builtin.unValueData << toData
-    lower = fromData << Builtin.valueData
+    lift = fromData << Builtin.valueData
+    lower = Builtin.unValueData << toData
 
 lovelace : Value -> int
-lovelace v = Builtin.lookupCoin "" "" (lift v)
+lovelace v = Builtin.lookupCoin #"" #"" (lower v)
 
 quantityOf : bytes -> bytes -> Value -> int
-quantityOf policy name v = Builtin.lookupCoin policy name (lift v)
+quantityOf policy name v = Builtin.lookupCoin policy name (lower v)
 ```
 
 Note the naming: `lift : value -> Value` here goes from Const to Big,
@@ -775,8 +650,7 @@ truth for the encoding.
 
 **Tests**
 
-`core/tests/CardanoTests.nash`: `validate` on each golden context is
-`Some`; `Tx.inputs` length matches; `lovelace` of the first output
+`tests/base/cardano/src/CardanoTests.nash`: `validate` on each golden context succeeds with a typed value; `Tx.inputs` length matches; `lovelace` of the first output
 matches the fixture.
 
 **Done when** all fixtures decode and the in-process Base compilation tests stays green.
@@ -793,5 +667,6 @@ matches the fixture.
 
 ## Open questions
 
-Same as docs/stdlib.md (`Fuzz`/`Test` as default imports; `value`
-builtins gated by target version). Neither blocks a chunk.
+Fuzz and Test are already in the default module catalog, with Test.label
+exposed only inside tests blocks. Keep target-version availability checks
+for value and other Plutus builtins aligned with the compiler target policy.
