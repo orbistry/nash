@@ -4,14 +4,15 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 ---
 --- core
 let validate#3 : Data -> Int = \value#6 : Data -> let match#8 : Data = value#6 in
-let leaf#15 : 'erased = delay error in
+let leaf#16 : 'erased = delay error in
 case@Data match#8 of
-  DataConstr field#16 field#17 -> force leaf#15
-  DataMap field#18 -> force leaf#15
-  DataList field#19 -> force leaf#15
-  DataI field#20 -> (\coerce#7 : 'erased -> coerce#7) value#6
-  DataB field#21 -> force leaf#15 in
-let fromBytes#5 : bytes -> bytes = \value#22 : bytes -> value#22 in
+  DataConstr pair#23 -> case@Pair pair#23 of
+    Pair field#17 field#18 -> force leaf#16
+  DataMap field#19 -> force leaf#16
+  DataList field#20 -> force leaf#16
+  DataI field#21 -> (\coerce#7 : 'erased -> coerce#7) value#6
+  DataB field#22 -> force leaf#16 in
+let fromBytes#5 : bytes -> bytes = \value#24 : bytes -> value#24 in
 let decoded#2 : Int = validate#3 ((\field#4 : bytes -> bData field#4) (fromBytes#5 (con bytestring #aa))) in
 let main#1 : int = unIData decoded#2 in
 main#1
@@ -22,23 +23,22 @@ main#1
       [(lam decoded_2 [(lam main_1 main_1) [(builtin unIData) decoded_2]])
         [validate_3
           [(lam field_4 [(builtin bData) field_4]) [fromBytes_5 (con bytestring #aa)]]]])
-      (lam value_22 value_22)])
+      (lam value_24 value_24)])
     (lam value_6
       [(lam match_8
-        [(lam leaf_15
-          [(lam generated_23
+        [(lam leaf_16
+          [(lam generated_25
             (force
-              [[[[[[(force (builtin chooseData)) generated_23]
+              [[[[[[(force (builtin chooseData)) generated_25]
                 (delay
-                  (case
-                    [(builtin unConstrData) generated_23]
-                    (lam field_16 (lam field_17 (force leaf_15)))))]
-                (delay [(lam field_18 (force leaf_15)) [(builtin unMapData) generated_23]])]
-                (delay [(lam field_19 (force leaf_15)) [(builtin unListData) generated_23]])]
+                  [(lam pair_23 (case pair_23 (lam field_17 (lam field_18 (force leaf_16)))))
+                    [(builtin unConstrData) generated_25]])]
+                (delay [(lam field_19 (force leaf_16)) [(builtin unMapData) generated_25]])]
+                (delay [(lam field_20 (force leaf_16)) [(builtin unListData) generated_25]])]
                 (delay
-                  [(lam field_20 [(lam coerce_7 coerce_7) value_6])
-                    [(builtin unIData) generated_23]])]
-                (delay [(lam field_21 (force leaf_15)) [(builtin unBData) generated_23]])]))
+                  [(lam field_21 [(lam coerce_7 coerce_7) value_6])
+                    [(builtin unIData) generated_25]])]
+                (delay [(lam field_22 (force leaf_16)) [(builtin unBData) generated_25]])]))
             match_8])
           (delay (error))])
         value_6])])

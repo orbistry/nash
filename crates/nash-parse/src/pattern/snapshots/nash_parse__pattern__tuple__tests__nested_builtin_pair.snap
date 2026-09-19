@@ -1,0 +1,102 @@
+---
+source: crates/nash-parse/src/pattern/tuple.rs
+description: "Code:\n\npair(pair(a, _), Some b)"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 25,
+        },
+    },
+    value: Pair {
+        first: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 6,
+                },
+                end: Position {
+                    line: 1,
+                    column: 16,
+                },
+            },
+            value: Pair {
+                first: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+                second: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 14,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 15,
+                        },
+                    },
+                    value: Anything,
+                },
+            },
+        },
+        second: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 18,
+                },
+                end: Position {
+                    line: 1,
+                    column: 24,
+                },
+            },
+            value: Ctor {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 18,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 22,
+                    },
+                },
+                name: "Some",
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 23,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 24,
+                            },
+                        },
+                        value: Var(
+                            "b",
+                        ),
+                    },
+                ],
+            },
+        },
+    },
+}

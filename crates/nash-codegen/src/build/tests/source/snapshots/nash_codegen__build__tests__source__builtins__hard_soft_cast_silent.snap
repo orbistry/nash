@@ -3,43 +3,44 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Option exposing (type option(..))\ntype foo = Bar | Bax\ntoData : foo -> Data\ntoData value =\n    case value of\n        Bar -> Constr 0 []\n        Bax -> Constr 1 []\ndecode : Data -> option foo\ndecode value =\n    case value of\n        Constr 0 [] -> Some Bar\n        Constr 1 [] -> Some Bax\n        _ -> None\nhardCast value =\n    case decode value of\n        Some result -> result\n        None -> fail\nsame a b =\n    case (a, b) of\n        (Bar, Bar) -> True\n        (Bax, Bax) -> True\n        _ -> False\nmain : bool\nmain =\n    let\n        x = toData Bar\n    in\n    case decode x of\n        Some _ -> True\n        None ->\n            let\n                y = hardCast x\n            in\n            same y y\n"
 ---
 --- core
-let fromInt#11 : int -> int = \value#57 : int -> value#57 in
+let fromInt#11 : int -> int = \value#59 : int -> value#59 in
 let eq#12 : int -> int -> bool = equalsInteger in
 let decode#3 : Data -> nash/base:Option.option Main.foo = \value#10 : Data -> let match#17 : Data = value#10 in
-let leaf#28 : 'erased = delay (constr 1) in
+let leaf#29 : 'erased = delay (constr 1) in
 case@Data match#17 of
-  DataConstr field#29 field#30 -> case@Bool (\literal#13 : int -> eq#12 literal#13 (fromInt#11 0)) field#29 of
-    True -> case@List field#30 of
-      Nil -> (\field#14 : Main.foo -> constr 0 field#14) (constr 0)
-      Cons field#31 field#32 -> force leaf#28
-    False -> case@Bool (\literal#15 : int -> eq#12 literal#15 (fromInt#11 1)) field#29 of
-      True -> case@List field#30 of
-        Nil -> (\field#16 : Main.foo -> constr 0 field#16) (constr 1)
-        Cons field#33 field#34 -> force leaf#28
-      False -> force leaf#28
-  DataMap field#35 -> force leaf#28
-  DataList field#36 -> force leaf#28
-  DataI field#37 -> force leaf#28
-  DataB field#38 -> force leaf#28 in
-let same#5 : Main.foo -> Main.foo -> bool = \a#39 : Main.foo b#40 : Main.foo -> let match#41 : (Main.foo, Main.foo) = constr 0 a#39 b#40 in
-let leaf#44 : 'erased = delay false in
-case@Tag match#41 of
-  0 field#45 field#46 -> case@Tag field#45 of
-    0 -> case@Tag field#46 of
+  DataConstr pair#40 -> case@Pair pair#40 of
+    Pair field#30 field#31 -> case@Bool (\literal#13 : int -> eq#12 literal#13 (fromInt#11 0)) field#30 of
+      True -> case@List field#31 of
+        Nil -> (\field#14 : Main.foo -> constr 0 field#14) (constr 0)
+        Cons field#32 field#33 -> force leaf#29
+      False -> case@Bool (\literal#15 : int -> eq#12 literal#15 (fromInt#11 1)) field#30 of
+        True -> case@List field#31 of
+          Nil -> (\field#16 : Main.foo -> constr 0 field#16) (constr 1)
+          Cons field#34 field#35 -> force leaf#29
+        False -> force leaf#29
+  DataMap field#36 -> force leaf#29
+  DataList field#37 -> force leaf#29
+  DataI field#38 -> force leaf#29
+  DataB field#39 -> force leaf#29 in
+let same#5 : Main.foo -> Main.foo -> bool = \a#41 : Main.foo b#42 : Main.foo -> let match#43 : (Main.foo, Main.foo) = constr 0 a#41 b#42 in
+let leaf#46 : 'erased = delay false in
+case@Tag match#43 of
+  0 field#47 field#48 -> case@Tag field#47 of
+    0 -> case@Tag field#48 of
       0 -> true
-      1 -> force leaf#44
-    1 -> case@Tag field#46 of
-      0 -> force leaf#44
+      1 -> force leaf#46
+    1 -> case@Tag field#48 of
+      0 -> force leaf#46
       1 -> true in
-let hardCast#6 : Data -> Main.foo = \value#47 : Data -> let match#49 : nash/base:Option.option Main.foo = decode#3 value#47 in
-case@Tag match#49 of
-  0 field#50 -> let result#48 : Main.foo = field#50 in
-  result#48
+let hardCast#6 : Data -> Main.foo = \value#49 : Data -> let match#51 : nash/base:Option.option Main.foo = decode#3 value#49 in
+case@Tag match#51 of
+  0 field#52 -> let result#50 : Main.foo = field#52 in
+  result#50
   1 -> error in
-let toData#9 : Main.foo -> Data = \value#51 : Main.foo -> let match#56 : Main.foo = value#51 in
-case@Tag match#56 of
-  0 -> (\field#52 : int field#53 : list Data -> constrData field#52 field#53) (fromInt#11 0) (con (list data) [])
-  1 -> (\field#54 : int field#55 : list Data -> constrData field#54 field#55) (fromInt#11 1) (con (list data) []) in
+let toData#9 : Main.foo -> Data = \value#53 : Main.foo -> let match#58 : Main.foo = value#53 in
+case@Tag match#58 of
+  0 -> (\field#54 : int field#55 : list Data -> constrData field#54 field#55) (fromInt#11 0) (con (list data) [])
+  1 -> (\field#56 : int field#57 : list Data -> constrData field#56 field#57) (fromInt#11 1) (con (list data) []) in
 let x#2 : Data = toData#9 (constr 0) in
 let match#7 : nash/base:Option.option Main.foo = decode#3 x#2 in
 let main#1 : bool = case@Tag match#7 of
@@ -64,71 +65,73 @@ main#1
                       [(lam y_4 [[same_5 y_4] y_4]) [hardCast_6 x_2]])])
                   [decode_3 x_2]])
                 [toData_9 (constr 0)]])
-              (lam value_51
-                [(lam match_56
+              (lam value_53
+                [(lam match_58
                   (case
-                    match_56
-                    [[(lam field_52 (lam field_53 [[(builtin constrData) field_52] field_53]))
+                    match_58
+                    [[(lam field_54 (lam field_55 [[(builtin constrData) field_54] field_55]))
                       [fromInt_11 (con integer 0)]]
                       (con (list data) [])]
-                    [[(lam field_54 (lam field_55 [[(builtin constrData) field_54] field_55]))
+                    [[(lam field_56 (lam field_57 [[(builtin constrData) field_56] field_57]))
                       [fromInt_11 (con integer 1)]]
                       (con (list data) [])]))
-                  value_51])])
-            (lam value_47
-              [(lam match_49
-                (case match_49 (lam field_50 [(lam result_48 result_48) field_50]) (error)))
-                [decode_3 value_47]])])
-          (lam a_39
-            (lam b_40
-              [(lam match_41
-                [(lam leaf_44
+                  value_53])])
+            (lam value_49
+              [(lam match_51
+                (case match_51 (lam field_52 [(lam result_50 result_50) field_52]) (error)))
+                [decode_3 value_49]])])
+          (lam a_41
+            (lam b_42
+              [(lam match_43
+                [(lam leaf_46
                   (case
-                    match_41
-                    (lam field_45
-                      (lam field_46
+                    match_43
+                    (lam field_47
+                      (lam field_48
                         (case
-                          field_45
-                          (case field_46 (con bool True) (force leaf_44))
-                          (case field_46 (force leaf_44) (con bool True)))))))
+                          field_47
+                          (case field_48 (con bool True) (force leaf_46))
+                          (case field_48 (force leaf_46) (con bool True)))))))
                   (delay (con bool False))])
-                (constr 0 a_39 b_40)]))])
+                (constr 0 a_41 b_42)]))])
         (lam value_10
           [(lam match_17
-            [(lam leaf_28
-              [(lam generated_58
+            [(lam leaf_29
+              [(lam generated_60
                 (force
-                  [[[[[[(force (builtin chooseData)) generated_58]
+                  [[[[[[(force (builtin chooseData)) generated_60]
                     (delay
-                      (case
-                        [(builtin unConstrData) generated_58]
-                        (lam field_29
+                      [(lam pair_40
+                        (case
+                          pair_40
                           (lam field_30
-                            (case
-                              [(lam literal_13 [[eq_12 literal_13] [fromInt_11 (con integer 0)]]) field_29]
+                            (lam field_31
                               (case
-                                [(lam literal_15 [[eq_12 literal_15] [fromInt_11 (con integer 1)]]) field_29]
-                                (force leaf_28)
+                                [(lam literal_13 [[eq_12 literal_13] [fromInt_11 (con integer 0)]]) field_30]
                                 (case
-                                  field_30
-                                  (lam field_33 (lam field_34 (force leaf_28)))
-                                  [(lam field_16 (constr 0 field_16)) (constr 1)]))
-                              (case
-                                field_30
-                                (lam field_31 (lam field_32 (force leaf_28)))
-                                [(lam field_14 (constr 0 field_14)) (constr 0)]))))))]
-                    (delay [(lam field_35 (force leaf_28)) [(builtin unMapData) generated_58]])]
-                    (delay [(lam field_36 (force leaf_28)) [(builtin unListData) generated_58]])]
-                    (delay [(lam field_37 (force leaf_28)) [(builtin unIData) generated_58]])]
-                    (delay [(lam field_38 (force leaf_28)) [(builtin unBData) generated_58]])]))
+                                  [(lam literal_15 [[eq_12 literal_15] [fromInt_11 (con integer 1)]]) field_30]
+                                  (force leaf_29)
+                                  (case
+                                    field_31
+                                    (lam field_34 (lam field_35 (force leaf_29)))
+                                    [(lam field_16 (constr 0 field_16)) (constr 1)]))
+                                (case
+                                  field_31
+                                  (lam field_32 (lam field_33 (force leaf_29)))
+                                  [(lam field_14 (constr 0 field_14)) (constr 0)]))))))
+                        [(builtin unConstrData) generated_60]])]
+                    (delay [(lam field_36 (force leaf_29)) [(builtin unMapData) generated_60]])]
+                    (delay [(lam field_37 (force leaf_29)) [(builtin unListData) generated_60]])]
+                    (delay [(lam field_38 (force leaf_29)) [(builtin unIData) generated_60]])]
+                    (delay [(lam field_39 (force leaf_29)) [(builtin unBData) generated_60]])]))
                 match_17])
               (delay (constr 1))])
             value_10])])
       (builtin equalsInteger)])
-    (lam value_57 value_57)])
+    (lam value_59 value_59)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1841547, memory: 10497
+cpu: 1889547, memory: 10797

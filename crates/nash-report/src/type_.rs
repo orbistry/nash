@@ -221,6 +221,7 @@ fn pattern_label(category: PCategory<'_>) -> String {
     match category {
         PCategory::Record => "record pattern".into(),
         PCategory::Unit => "unit pattern".into(),
+        PCategory::Pair => "pair pattern".into(),
         PCategory::Tuple => "tuple pattern".into(),
         PCategory::List => "list pattern".into(),
         PCategory::Ctor(name) => format!("`{name}` pattern"),

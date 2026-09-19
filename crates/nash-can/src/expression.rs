@@ -490,6 +490,9 @@ fn irrefutable(pattern: &SourcePattern<'_>) -> bool {
         | SourcePattern::Record(_)
         | SourcePattern::Unit => true,
         SourcePattern::Alias { pattern, .. } => irrefutable(&pattern.value),
+        SourcePattern::Pair { first, second } => {
+            irrefutable(&first.value) && irrefutable(&second.value)
+        }
         SourcePattern::Tuple {
             first,
             second,
@@ -1345,6 +1348,10 @@ fn collect_pattern_names<'a>(
             collect_pattern_names(&pattern.value, pattern.region, out);
             out.push((name.value, name.region));
         }
+        nash_source::Pattern::Pair { first, second } => {
+            collect_pattern_names(&first.value, first.region, out);
+            collect_pattern_names(&second.value, second.region, out);
+        }
         nash_source::Pattern::Tuple {
             first,
             second,
@@ -1399,6 +1406,9 @@ fn get_pattern_names<'a>(
         nash_source::Pattern::Alias { pattern, name } => {
             names.insert(0, (name.value, name.region));
             get_pattern_names(names, pattern)
+        }
+        nash_source::Pattern::Pair { first, second } => {
+            get_pattern_names(get_pattern_names(names, first), second)
         }
         nash_source::Pattern::Tuple {
             first,

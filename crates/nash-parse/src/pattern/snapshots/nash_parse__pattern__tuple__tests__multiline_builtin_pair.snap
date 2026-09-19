@@ -1,0 +1,48 @@
+---
+source: crates/nash-parse/src/pattern/tuple.rs
+description: "Code (indented inside a def):\n\n    pair(\n        first,\n        second\n    )\n"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 5,
+        },
+        end: Position {
+            line: 4,
+            column: 6,
+        },
+    },
+    value: Pair {
+        first: Located {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 9,
+                },
+                end: Position {
+                    line: 2,
+                    column: 14,
+                },
+            },
+            value: Var(
+                "first",
+            ),
+        },
+        second: Located {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 9,
+                },
+                end: Position {
+                    line: 3,
+                    column: 15,
+                },
+            },
+            value: Var(
+                "second",
+            ),
+        },
+    },
+}

@@ -1,0 +1,7 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nmain : pair int (list Data) -> int\nmain pair(tag, _) = tag\n"
+---
+(program 1.1.0
+  [(lam i0 i0)
+    (lam i0 [(lam i1 (case i1 (lam i2 (lam i3 [(lam i4 i4) i2])))) i0])])

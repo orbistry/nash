@@ -5,20 +5,20 @@ description: "module Literal exposing (..)\n\nimport Primitive exposing (..)\nim
 claim after deadline
 result: unit
 logs: []
-cpu: 3752113
-mem: 18256
+cpu: 3706121
+mem: 18824
 claim before deadline
 result: error
 logs: ["assertion failed"]
-cpu: 963611
-mem: 488
+cpu: 821619
+mem: 456
 cancel signed by owner
 result: unit
 logs: []
-cpu: 3588617
-mem: 18123
+cpu: 3542625
+mem: 18691
 cancel unsigned
 result: error
 logs: ["assertion failed"]
-cpu: 816115
-mem: 455
+cpu: 674123
+mem: 423

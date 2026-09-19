@@ -251,6 +251,7 @@ pub enum PContext<'a> {
 /// patterns.
 #[derive(Clone, Copy, Debug)]
 pub enum PCategory<'a> {
+    Pair,
     Record,
     Unit,
     Tuple,

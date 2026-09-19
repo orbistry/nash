@@ -18,39 +18,41 @@ description: "module Literal exposing (..)\n\nimport Primitive exposing (..)\nim
                           (force
                             [[[[[[(force (builtin chooseData)) i10]
                               (delay
-                                (case
-                                  [(builtin unConstrData) i10]
-                                  (lam i11
+                                [(lam i11
+                                  (case
+                                    i11
                                     (lam i12
-                                      [(lam i13
-                                        (case
-                                          [[(builtin equalsInteger) i13] (con integer 0)]
+                                      (lam i13
+                                        [(lam i14
                                           (case
-                                            [[(builtin equalsInteger) i13] (con integer 1)]
-                                            (force [[(force (builtin trace)) i1] (delay (error))])
-                                            [(lam i14
+                                            [[(builtin equalsInteger) i14] (con integer 0)]
+                                            (case
+                                              [[(builtin equalsInteger) i14] (con integer 1)]
+                                              (force [[(force (builtin trace)) i1] (delay (error))])
                                               [(lam i15
                                                 [(lam i16
-                                                  (case
-                                                    [[i5 i8] i16]
-                                                    (force [[(force (builtin trace)) i0] (delay (error))])
-                                                    (con unit ())))
-                                                  [(force (builtin headList)) i15]])
-                                                [(force (force (builtin sndPair))) i14]])
-                                              [(builtin unConstrData) i6]])
-                                          [(lam i14
+                                                  [(lam i17
+                                                    (case
+                                                      [[i5 i8] i17]
+                                                      (force [[(force (builtin trace)) i0] (delay (error))])
+                                                      (con unit ())))
+                                                    [(force (builtin headList)) i16]])
+                                                  (case i15 (lam i16 (lam i17 i17)))])
+                                                [(builtin unConstrData) i6]])
                                             [(lam i15
                                               [(lam i16
                                                 [(lam i17
-                                                  (case
-                                                    [[(builtin lessThanInteger) [i2 i17]] [i3 i8]]
-                                                    (force [[(force (builtin trace)) i0] (delay (error))])
-                                                    (con unit ())))
-                                                  [(force (builtin headList)) i16]])
-                                                [(force (builtin tailList)) i15]])
-                                              [(force (force (builtin sndPair))) i14]])
-                                            [(builtin unConstrData) i6]]))
-                                        i11]))))]
+                                                  [(lam i18
+                                                    (case
+                                                      [[(builtin lessThanInteger) [i2 i18]] [i3 i8]]
+                                                      (force [[(force (builtin trace)) i0] (delay (error))])
+                                                      (con unit ())))
+                                                    [(force (builtin headList)) i17]])
+                                                  [(force (builtin tailList)) i16]])
+                                                (case i15 (lam i16 (lam i17 i17)))])
+                                              [(builtin unConstrData) i6]]))
+                                          i12]))))
+                                  [(builtin unConstrData) i10]])]
                               (delay (force [[(force (builtin trace)) i1] (delay (error))]))]
                               (delay (force [[(force (builtin trace)) i1] (delay (error))]))]
                               (delay (force [[(force (builtin trace)) i1] (delay (error))]))]
@@ -65,35 +67,39 @@ description: "module Literal exposing (..)\n\nimport Primitive exposing (..)\nim
                         (force
                           [[[[[[(force (builtin chooseData)) i9]
                             (delay
-                              (case
-                                [(builtin unConstrData) i9]
-                                (lam i10
+                              [(lam i10
+                                (case
+                                  i10
                                   (lam i11
-                                    (case
-                                      i11
-                                      (lam i12
+                                    (lam i12
+                                      (case
+                                        i12
                                         (lam i13
-                                          (case
-                                            i13
-                                            (lam i14
+                                          (lam i14
+                                            (case
+                                              i14
                                               (lam i15
-                                                [(lam i16
-                                                  (force
-                                                    [[[[[[(force (builtin chooseData)) i16]
-                                                      (delay (case [(builtin unConstrData) i16] (lam i17 (lam i18 (force i8)))))]
-                                                      (delay [(lam i17 (force i8)) [(builtin unMapData) i16]])]
-                                                      (delay [(lam i17 (force i8)) [(builtin unListData) i16]])]
-                                                      (delay [(lam i17 (force i8)) [(builtin unIData) i16]])]
-                                                      (delay
-                                                        [(lam i17
-                                                          (case
-                                                            i15
-                                                            (lam i18 (lam i19 (force i8)))
-                                                            [(lam i18 [[(builtin equalsByteString) i18] [i4 i6]]) i17]))
-                                                          [(builtin unBData) i16]])]))
-                                                  i14]))
-                                            (force i8))))
-                                      (force i8))))))]
+                                                (lam i16
+                                                  [(lam i17
+                                                    (force
+                                                      [[[[[[(force (builtin chooseData)) i17]
+                                                        (delay
+                                                          [(lam i18 (case i18 (lam i19 (lam i20 (force i8)))))
+                                                            [(builtin unConstrData) i17]])]
+                                                        (delay [(lam i18 (force i8)) [(builtin unMapData) i17]])]
+                                                        (delay [(lam i18 (force i8)) [(builtin unListData) i17]])]
+                                                        (delay [(lam i18 (force i8)) [(builtin unIData) i17]])]
+                                                        (delay
+                                                          [(lam i18
+                                                            (case
+                                                              i16
+                                                              (lam i19 (lam i20 (force i8)))
+                                                              [(lam i19 [[(builtin equalsByteString) i19] [i4 i6]]) i18]))
+                                                            [(builtin unBData) i17]])]))
+                                                    i15]))
+                                              (force i8))))
+                                        (force i8))))))
+                                [(builtin unConstrData) i9]])]
                             (delay [(lam i10 (force i8)) [(builtin unMapData) i9]])]
                             (delay [(lam i10 (force i8)) [(builtin unListData) i9]])]
                             (delay [(lam i10 (force i8)) [(builtin unIData) i9]])]
@@ -109,31 +115,35 @@ description: "module Literal exposing (..)\n\nimport Primitive exposing (..)\nim
                   (force
                     [[[[[[(force (builtin chooseData)) i6]
                       (delay
-                        (case
-                          [(builtin unConstrData) i6]
-                          (lam i7
+                        [(lam i7
+                          (case
+                            i7
                             (lam i8
-                              (case
-                                i8
-                                (lam i9
+                              (lam i9
+                                (case
+                                  i9
                                   (lam i10
-                                    [(lam i11
-                                      (force
-                                        [[[[[[(force (builtin chooseData)) i11]
-                                          (delay (case [(builtin unConstrData) i11] (lam i12 (lam i13 (force i5)))))]
-                                          (delay [(lam i12 (force i5)) [(builtin unMapData) i11]])]
-                                          (delay [(lam i12 (force i5)) [(builtin unListData) i11]])]
-                                          (delay
-                                            [(lam i12
-                                              (case
-                                                i10
-                                                (lam i13
-                                                  (lam i14 (case i14 (lam i15 (lam i16 (force i5))) [(lam i15 i15) i12])))
-                                                (force i5)))
-                                              [(builtin unIData) i11]])]
-                                          (delay [(lam i12 (force i5)) [(builtin unBData) i11]])]))
-                                      i9]))
-                                (force i5))))))]
+                                    (lam i11
+                                      [(lam i12
+                                        (force
+                                          [[[[[[(force (builtin chooseData)) i12]
+                                            (delay
+                                              [(lam i13 (case i13 (lam i14 (lam i15 (force i5)))))
+                                                [(builtin unConstrData) i12]])]
+                                            (delay [(lam i13 (force i5)) [(builtin unMapData) i12]])]
+                                            (delay [(lam i13 (force i5)) [(builtin unListData) i12]])]
+                                            (delay
+                                              [(lam i13
+                                                (case
+                                                  i11
+                                                  (lam i14
+                                                    (lam i15 (case i15 (lam i16 (lam i17 (force i5))) [(lam i16 i16) i13])))
+                                                  (force i5)))
+                                                [(builtin unIData) i12]])]
+                                            (delay [(lam i13 (force i5)) [(builtin unBData) i12]])]))
+                                        i10]))
+                                  (force i5))))))
+                          [(builtin unConstrData) i6]])]
                       (delay [(lam i7 (force i5)) [(builtin unMapData) i6]])]
                       (delay [(lam i7 (force i5)) [(builtin unListData) i6]])]
                       (delay [(lam i7 (force i5)) [(builtin unIData) i6]])]

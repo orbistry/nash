@@ -31,6 +31,28 @@ pub(crate) fn to_pattern_report(
 ) -> Report {
     let report = match *error {
         Pattern::Record(e, r, c) => return to_p_record_report(source, e, r, c),
+        Pattern::Pair(e, r, c) => match e {
+            PTuple::Expr(inner, row, col) => {
+                return to_pattern_report(source, context, inner, *row, *col);
+            }
+            PTuple::Space(error, row, col) => return to_space_report(source, error, *row, *col),
+            PTuple::IndentExpr1(row, col)
+            | PTuple::IndentExprN(row, col)
+            | PTuple::IndentEnd(row, col) => problem(
+                "PAIR PATTERN INDENTATION",
+                *row,
+                *col,
+                "Expected an indented pair pattern.",
+                "Indent both fields and the closing parenthesis inside the surrounding definition.",
+            ),
+            _ => problem(
+                "INVALID PAIR PATTERN",
+                r,
+                c,
+                "A pair pattern needs exactly two fields.",
+                "Write `pair(first, second)`; either field may itself be a pattern.",
+            ),
+        },
         Pattern::Tuple(e, r, c) => return to_p_tuple_report(source, context, e, r, c),
         Pattern::List(e, r, c) => return to_p_list_report(source, context, e, r, c),
         Pattern::String(ref e, r, c) => return expr::to_string_report(source, e, r, c),

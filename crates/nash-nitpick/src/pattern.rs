@@ -50,6 +50,7 @@ pub enum Context {
 // BUILT-IN UNIONS
 
 pub(crate) const UNIT_NAME: &str = "#0";
+pub(crate) const BUILTIN_PAIR_NAME: &str = "#pair";
 pub(crate) const PAIR_NAME: &str = "#2";
 pub(crate) const TRIPLE_NAME: &str = "#3";
 pub(crate) const NIL_NAME: &str = "[]";
@@ -103,6 +104,19 @@ pub(crate) static PAIR: Union<'static> = Union {
     ctors: &[&PAIR_CTOR],
     alternatives: 1,
     options: CtorOpts::Normal,
+};
+
+static BUILTIN_PAIR_CTOR: Ctor<'static> = Ctor {
+    labels: None,
+    name: BUILTIN_PAIR_NAME,
+    index: 0,
+    arity: 2,
+    arguments: &[&VAR_A, &VAR_B],
+};
+static BUILTIN_PAIR: Union<'static> = Union {
+    name: &Located::at(Region::zero(), BUILTIN_PAIR_NAME),
+    ctors: &[&BUILTIN_PAIR_CTOR],
+    ..PAIR
 };
 
 static TRIPLE_LOCATED: Located<&str> = Located::at(Region::zero(), TRIPLE_NAME);
@@ -167,6 +181,11 @@ pub fn simplify<'a>(bump: &'a Bump, pattern: &Located<CanPattern<'a>>) -> Patter
             union: &UNIT,
             name: UNIT_NAME,
             args: &[],
+        },
+        CanPattern::Pair { first, second } => Pattern::Ctor {
+            union: &BUILTIN_PAIR,
+            name: BUILTIN_PAIR_NAME,
+            args: bump.alloc_slice_copy(&[simplify(bump, first), simplify(bump, second)]),
         },
         CanPattern::Tuple {
             first,

@@ -404,9 +404,26 @@ impl<'a> Engine<'a, '_, '_> {
     ) -> Result<&'a Core<'a>, Error<'a>> {
         let mut list = match ty {
             Ty::Big(BigTy::Record(_)) => self.ir.builtin(F::UnListData, &[value]),
-            Ty::Big(BigTy::Adt(_)) => self
-                .ir
-                .builtin(F::SndPair, &[self.ir.builtin(F::UnConstrData, &[value])]),
+            Ty::Big(BigTy::Adt(_)) => {
+                let tag = Binder {
+                    name: self.ir.fresh("tag"),
+                    ty: Ty::Const(&ConstTy::Int),
+                };
+                let fields = Binder {
+                    name: self.ir.fresh("fields"),
+                    ty: Ty::Const(&ConstTy::List(DATA)),
+                };
+                self.ir.case(
+                    CaseKind::Pair,
+                    self.ir.builtin(F::UnConstrData, &[value]),
+                    &[Branch {
+                        test: nash_ir::core::Test::Pair,
+                        binders: self.ir.arena.alloc_slice_copy(&[tag, fields]),
+                        body: self.ir.var(fields.name),
+                    }],
+                    None,
+                )
+            }
             Ty::Term(TermTy::Record(_) | TermTy::Tuple(_) | TermTy::Adt(_)) => {
                 return Ok(self.ir.field(
                     value,

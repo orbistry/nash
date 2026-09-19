@@ -3,39 +3,41 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validate)\nimport Lift exposing (lower)\nmain =\n    let\n        a : Data\n        a = List [I 1, I 2, I 3]\n        checked : List Int\n        checked = validate a\n        values : list int\n        values = lower checked\n    in\n    case values of\n        [h, i, j] -> if equalsInteger h h then\n                if equalsInteger i i then equalsInteger j j else False\n            else False\n        _ -> fail\n"
 ---
 --- core
-let mapList#34 : ('erased -> int) -> list 'erased -> list int = \(f#55 : 'erased -> int) values#56 : list 'erased -> (\self#10 : 'erased -> self#10 self#10) (\self#10 : 'erased values#56 : list 'erased -> let match#59 : list 'erased = values#56 in
-case@List match#59 of
+let mapList#34 : ('erased -> int) -> list 'erased -> list int = \(f#57 : 'erased -> int) values#58 : list 'erased -> (\self#10 : 'erased -> self#10 self#10) (\self#10 : 'erased values#58 : list 'erased -> let match#61 : list 'erased = values#58 in
+case@List match#61 of
   Nil -> (con (list integer) [])
-  Cons field#60 field#61 -> let x#57 : 'erased = field#60 in
-  let xs#58 : list 'erased = field#61 in
-  mkCons (f#55 x#57) (self#10 self#10 xs#58)) values#56 in
+  Cons field#62 field#63 -> let x#59 : 'erased = field#62 in
+  let xs#60 : list 'erased = field#63 in
+  mkCons (f#57 x#59) (self#10 self#10 xs#60)) values#58 in
 let lower#35 : Int -> int = unIData in
-let lower#26 : List Data -> list int = \values#33 : List Data -> let projection#85 : list Data = unListData values#33 in
-mapList#34 lower#35 projection#85 in
-let mapList#38 : ('erased -> Data) -> list 'erased -> list Data = \(f#62 : 'erased -> Data) values#63 : list 'erased -> (\self#9 : 'erased -> self#9 self#9) (\self#9 : 'erased values#63 : list 'erased -> let match#66 : list 'erased = values#63 in
-case@List match#66 of
+let lower#26 : List Data -> list int = \values#33 : List Data -> let projection#89 : list Data = unListData values#33 in
+mapList#34 lower#35 projection#89 in
+let mapList#38 : ('erased -> Data) -> list 'erased -> list Data = \(f#64 : 'erased -> Data) values#65 : list 'erased -> (\self#9 : 'erased -> self#9 self#9) (\self#9 : 'erased values#65 : list 'erased -> let match#68 : list 'erased = values#65 in
+case@List match#68 of
   Nil -> (con (list data) [])
-  Cons field#67 field#68 -> let first#64 : 'erased = field#67 in
-  let rest#65 : list 'erased = field#68 in
-  mkCons (f#62 first#64) (self#9 self#9 rest#65)) values#63 in
-let validate#39 : Data -> Int = \value#69 : Data -> let match#71 : Data = value#69 in
-let leaf#78 : 'erased = delay error in
-case@Data match#71 of
-  DataConstr field#79 field#80 -> force leaf#78
-  DataMap field#81 -> force leaf#78
-  DataList field#82 -> force leaf#78
-  DataI field#83 -> (\coerce#70 : 'erased -> coerce#70) value#69
-  DataB field#84 -> force leaf#78 in
+  Cons field#69 field#70 -> let first#66 : 'erased = field#69 in
+  let rest#67 : list 'erased = field#70 in
+  mkCons (f#64 first#66) (self#9 self#9 rest#67)) values#65 in
+let validate#39 : Data -> Int = \value#71 : Data -> let match#73 : Data = value#71 in
+let leaf#81 : 'erased = delay error in
+case@Data match#73 of
+  DataConstr pair#88 -> case@Pair pair#88 of
+    Pair field#82 field#83 -> force leaf#81
+  DataMap field#84 -> force leaf#81
+  DataList field#85 -> force leaf#81
+  DataI field#86 -> (\coerce#72 : 'erased -> coerce#72) value#71
+  DataB field#87 -> force leaf#81 in
 let validate#27 : Data -> List Data = \value#36 : Data -> let match#40 : Data = value#36 in
-let leaf#47 : 'erased = delay error in
+let leaf#48 : 'erased = delay error in
 case@Data match#40 of
-  DataConstr field#48 field#49 -> force leaf#47
-  DataMap field#50 -> force leaf#47
-  DataList field#51 -> let values#37 : list Data = field#51 in
+  DataConstr pair#55 -> case@Pair pair#55 of
+    Pair field#49 field#50 -> force leaf#48
+  DataMap field#51 -> force leaf#48
+  DataList field#52 -> let values#37 : list Data = field#52 in
   listData (mapList#38 validate#39 values#37)
-  DataI field#52 -> force leaf#47
-  DataB field#53 -> force leaf#47 in
-let fromInt#30 : int -> int = \value#54 : int -> value#54 in
+  DataI field#53 -> force leaf#48
+  DataB field#54 -> force leaf#48 in
+let fromInt#30 : int -> int = \value#56 : int -> value#56 in
 let a#2 : Data = (\field#28 : list Data -> listData field#28) (mkCons ((\field#29 : int -> iData field#29) (fromInt#30 1)) (mkCons ((\field#31 : int -> iData field#31) (fromInt#30 2)) (mkCons ((\field#32 : int -> iData field#32) (fromInt#30 3)) (con (list data) [])))) in
 let checked#3 : List Int = validate#27 a#2 in
 let values#4 : list int = lower#26 checked#3 in
@@ -116,86 +118,84 @@ main#1
                         [[(force (builtin mkCons))
                           [(lam field_32 [(builtin iData) field_32]) [fromInt_30 (con integer 3)]]]
                           (con (list data) [])]]]]])
-                (lam value_54 value_54)])
+                (lam value_56 value_56)])
               (lam value_36
                 [(lam match_40
-                  [(lam leaf_47
-                    [(lam generated_86
+                  [(lam leaf_48
+                    [(lam generated_90
                       (force
-                        [[[[[[(force (builtin chooseData)) generated_86]
+                        [[[[[[(force (builtin chooseData)) generated_90]
                           (delay
-                            (case
-                              [(builtin unConstrData) generated_86]
-                              (lam field_48 (lam field_49 (force leaf_47)))))]
-                          (delay [(lam field_50 (force leaf_47)) [(builtin unMapData) generated_86]])]
+                            [(lam pair_55 (case pair_55 (lam field_49 (lam field_50 (force leaf_48)))))
+                              [(builtin unConstrData) generated_90]])]
+                          (delay [(lam field_51 (force leaf_48)) [(builtin unMapData) generated_90]])]
                           (delay
-                            [(lam field_51
+                            [(lam field_52
                               [(lam values_37 [(builtin listData) [[mapList_38 validate_39] values_37]])
-                                field_51])
-                              [(builtin unListData) generated_86]])]
-                          (delay [(lam field_52 (force leaf_47)) [(builtin unIData) generated_86]])]
-                          (delay [(lam field_53 (force leaf_47)) [(builtin unBData) generated_86]])]))
+                                field_52])
+                              [(builtin unListData) generated_90]])]
+                          (delay [(lam field_53 (force leaf_48)) [(builtin unIData) generated_90]])]
+                          (delay [(lam field_54 (force leaf_48)) [(builtin unBData) generated_90]])]))
                       match_40])
                     (delay (error))])
                   value_36])])
-            (lam value_69
-              [(lam match_71
-                [(lam leaf_78
-                  [(lam generated_87
+            (lam value_71
+              [(lam match_73
+                [(lam leaf_81
+                  [(lam generated_91
                     (force
-                      [[[[[[(force (builtin chooseData)) generated_87]
+                      [[[[[[(force (builtin chooseData)) generated_91]
                         (delay
-                          (case
-                            [(builtin unConstrData) generated_87]
-                            (lam field_79 (lam field_80 (force leaf_78)))))]
-                        (delay [(lam field_81 (force leaf_78)) [(builtin unMapData) generated_87]])]
-                        (delay [(lam field_82 (force leaf_78)) [(builtin unListData) generated_87]])]
+                          [(lam pair_88 (case pair_88 (lam field_82 (lam field_83 (force leaf_81)))))
+                            [(builtin unConstrData) generated_91]])]
+                        (delay [(lam field_84 (force leaf_81)) [(builtin unMapData) generated_91]])]
+                        (delay [(lam field_85 (force leaf_81)) [(builtin unListData) generated_91]])]
                         (delay
-                          [(lam field_83 [(lam coerce_70 coerce_70) value_69])
-                            [(builtin unIData) generated_87]])]
-                        (delay [(lam field_84 (force leaf_78)) [(builtin unBData) generated_87]])]))
-                    match_71])
+                          [(lam field_86 [(lam coerce_72 coerce_72) value_71])
+                            [(builtin unIData) generated_91]])]
+                        (delay [(lam field_87 (force leaf_81)) [(builtin unBData) generated_91]])]))
+                    match_73])
                   (delay (error))])
-                value_69])])
-          (lam f_62
-            (lam values_63
+                value_71])])
+          (lam f_64
+            (lam values_65
               [[(lam self_9 [self_9 self_9])
                 (lam self_9
-                  (lam values_63
-                    [(lam match_66
+                  (lam values_65
+                    [(lam match_68
                       (case
-                        match_66
-                        (lam field_67
-                          (lam field_68
-                            [(lam first_64
-                              [(lam rest_65
-                                [[(force (builtin mkCons)) [f_62 first_64]] [[self_9 self_9] rest_65]])
-                                field_68])
-                              field_67]))
+                        match_68
+                        (lam field_69
+                          (lam field_70
+                            [(lam first_66
+                              [(lam rest_67
+                                [[(force (builtin mkCons)) [f_64 first_66]] [[self_9 self_9] rest_67]])
+                                field_70])
+                              field_69]))
                         (con (list data) [])))
-                      values_63]))]
-                values_63]))])
+                      values_65]))]
+                values_65]))])
         (lam values_33
-          [(lam projection_85 [[mapList_34 lower_35] projection_85])
+          [(lam projection_89 [[mapList_34 lower_35] projection_89])
             [(builtin unListData) values_33]])])
       (builtin unIData)])
-    (lam f_55
-      (lam values_56
+    (lam f_57
+      (lam values_58
         [[(lam self_10 [self_10 self_10])
           (lam self_10
-            (lam values_56
-              [(lam match_59
+            (lam values_58
+              [(lam match_61
                 (case
-                  match_59
-                  (lam field_60
-                    (lam field_61
-                      [(lam x_57
-                        [(lam xs_58 [[(force (builtin mkCons)) [f_55 x_57]] [[self_10 self_10] xs_58]])
-                          field_61])
-                        field_60]))
+                  match_61
+                  (lam field_62
+                    (lam field_63
+                      [(lam x_59
+                        [(lam xs_60 [[(force (builtin mkCons)) [f_57 x_59]] [[self_10 self_10] xs_60]])
+                          field_63])
+                        field_62]))
                   (con (list integer) [])))
-                values_56]))]
-          values_56]))])
+                values_58]))]
+          values_58]))])
 --- result
 (con bool True)
 --- logs

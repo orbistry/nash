@@ -1571,3 +1571,17 @@ fn keyword_children_keep_pattern_coverage_checks() {
         assert_diagnostics_snapshot!(errors);
     }
 }
+
+#[test]
+fn builtin_pair_missing_field_pattern() {
+    assert_nitpick_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (type bool(..))
+        f : pair bool int -> unit
+        f value =
+            case value of
+                pair(True, _) -> ()
+        "#
+    );
+}

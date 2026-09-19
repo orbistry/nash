@@ -99,6 +99,13 @@ pub fn canonicalize<'a>(
 
         SourcePattern::Unit => CanPattern::Unit,
 
+        SourcePattern::Pair { first, second } => {
+            let (first, second) = crate::accumulate::accumulate2(
+                canonicalize(bump, env, first, bindings),
+                canonicalize(bump, env, second, bindings),
+            )?;
+            CanPattern::Pair { first, second }
+        }
         SourcePattern::Tuple {
             first,
             second,

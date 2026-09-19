@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nf pair((a, b), _) = a\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Primitive.Storable ( 'a, 'b )`.
+   ╭─[Main.nash:2:3]
+ 1 │ module Main exposing (..)
+ 2 │ f pair((a, b), _) = a
+   ·   ───────┬───────
+   ·          ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming pair ( 'a, 'b ) 'c
+
+        Use a type with Big or Const representation; an impl cannot change representation.

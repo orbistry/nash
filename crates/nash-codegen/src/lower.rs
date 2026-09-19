@@ -204,6 +204,21 @@ impl<'a> Lower<'a> {
             None => Term::error(self.arena),
         };
         Ok(match kind {
+            CaseKind::Pair => {
+                let [branch] = branches else {
+                    return Err(Error::InvalidCase("pair case requires one branch"));
+                };
+                if branch.test != Test::Pair || branch.binders.len() != 2 || default.is_some() {
+                    return Err(Error::InvalidCase("pair branch must bind its two fields"));
+                }
+                let body = self.term(branch.body)?;
+                Term::case(
+                    self.arena,
+                    scrutinee,
+                    self.arena
+                        .alloc_slice_copy(&[self.lambda(branch.binders, body)]),
+                )
+            }
             CaseKind::Bool => {
                 let mut yes = None;
                 let mut no = None;
@@ -282,29 +297,21 @@ impl<'a> Lower<'a> {
                 let value = Term::var(self.arena, name);
                 let mut arms = [None; 5];
                 for b in branches {
-                    let (index, unwrap, arity) = match b.test {
-                        Test::DataConstr => (0, DefaultFunction::UnConstrData, 2),
-                        Test::DataMap => (1, DefaultFunction::UnMapData, 1),
-                        Test::DataList => (2, DefaultFunction::UnListData, 1),
-                        Test::DataI => (3, DefaultFunction::UnIData, 1),
-                        Test::DataB => (4, DefaultFunction::UnBData, 1),
+                    let (index, unwrap) = match b.test {
+                        Test::DataConstr => (0, DefaultFunction::UnConstrData),
+                        Test::DataMap => (1, DefaultFunction::UnMapData),
+                        Test::DataList => (2, DefaultFunction::UnListData),
+                        Test::DataI => (3, DefaultFunction::UnIData),
+                        Test::DataB => (4, DefaultFunction::UnBData),
                         _ => return Err(Error::InvalidCase("non-Data test")),
                     };
-                    if arms[index].is_some() || b.binders.len() != arity {
+                    if arms[index].is_some() || b.binders.len() != 1 {
                         return Err(Error::InvalidCase("invalid Data branch"));
                     }
                     let body = self.term(b.body)?;
                     let function = self.lambda(b.binders, body);
                     let unwrapped = self.builtin(unwrap, &[value]);
-                    arms[index] = Some(if index == 0 {
-                        Term::case(
-                            self.arena,
-                            unwrapped,
-                            self.arena.alloc_slice_copy(&[function]),
-                        )
-                    } else {
-                        function.apply(self.arena, unwrapped)
-                    });
+                    arms[index] = Some(function.apply(self.arena, unwrapped));
                 }
                 let [constr, map, list, int, bytes] =
                     arms.map(|arm| arm.unwrap_or(fallback).delay(self.arena));

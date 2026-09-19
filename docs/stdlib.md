@@ -876,7 +876,9 @@ using each element's Show impl, so Term elements such as tuples are supported.
 ```elm
 module Pair exposing (..)
 fst : pair 'a 'b -> 'a
+fst pair(first, _) = first
 snd : pair 'a 'b -> 'b
+snd pair(_, second) = second
 make : Data -> Data -> pair Data Data      -- only Data pairs can be built
 
 module Array exposing (..)

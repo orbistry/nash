@@ -12,6 +12,27 @@ use crate::Parser;
 use crate::error::{self, PTuple};
 
 impl<'a> Parser<'a> {
+    pub(super) fn pattern_pair(
+        &mut self,
+        start: Position,
+    ) -> Result<&'a Located<Pattern<'a>>, error::Pattern<'a>> {
+        self.in_context(
+            |bump, error, row, col| error::Pattern::Pair(bump.alloc(error), row, col),
+            |p| p.word1(b'(', error::Pattern::Start),
+            |p| {
+                p.chomp_and_check_indent(PTuple::Space, PTuple::IndentExpr1)?;
+                let (first, end) = p.pattern_tuple_entry()?;
+                p.check_indent(end.line, end.column, PTuple::IndentEnd)?;
+                p.word1(b',', PTuple::End)?;
+                p.chomp_and_check_indent(PTuple::Space, PTuple::IndentExprN)?;
+                let (second, end) = p.pattern_tuple_entry()?;
+                p.check_indent(end.line, end.column, PTuple::IndentEnd)?;
+                p.word1(b')', PTuple::End)?;
+                Ok(p.add_end(start, Pattern::Pair { first, second }))
+            },
+        )
+    }
+
     /// Parse a tuple pattern: `()`, `(p)`, `(p1, p2, ...)`
     pub(super) fn pattern_tuple(
         &mut self,
@@ -121,6 +142,34 @@ mod tests {
         assert_indented_pattern_snapshot, assert_pattern_error_snapshot, assert_pattern_snapshot,
     };
 
+    #[test]
+    fn builtin_pair_rejects_zero_fields() {
+        assert_pattern_error_snapshot!("pair()");
+    }
+    #[test]
+    fn multiline_builtin_pair() {
+        assert_indented_pattern_snapshot!("pair(\n    first,\n    second\n)");
+    }
+    #[test]
+    fn builtin_pair() {
+        assert_pattern_snapshot!("pair(a, b)");
+    }
+    #[test]
+    fn nested_builtin_pair() {
+        assert_pattern_snapshot!("pair(pair(a, _), Some b)");
+    }
+    #[test]
+    fn builtin_pair_requires_two_fields() {
+        assert_pattern_error_snapshot!("pair(a)");
+    }
+    #[test]
+    fn builtin_pair_rejects_extra_fields() {
+        assert_pattern_error_snapshot!("pair(a, b, c)");
+    }
+    #[test]
+    fn builtin_pair_does_not_flatten_tuple_argument() {
+        assert_pattern_error_snapshot!("pair((a, b))");
+    }
     #[test]
     fn unit() {
         assert_pattern_snapshot!("()");

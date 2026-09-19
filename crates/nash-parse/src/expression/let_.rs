@@ -118,6 +118,9 @@ impl<'a> Parser<'a> {
     ///     ]
     /// ```
     pub(crate) fn chomp_let_def(&mut self) -> Result<(&'a Located<Def<'a>>, Position), Let<'a>> {
+        if self.src[self.pos..].starts_with(b"pair(") {
+            return self.destructure();
+        }
         self.one_of(
             Let::DefName,
             vec![

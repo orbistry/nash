@@ -265,6 +265,10 @@ fn bind<'a>(p: &'a Located<Pattern<'a>>, target: Option<NodeId>, env: &mut Scope
             bind(pattern, target, env);
             env.insert(name, target);
         }
+        Pattern::Pair { first, second } => {
+            bind(first, target, env);
+            bind(second, target, env);
+        }
         Pattern::Tuple {
             first,
             second,

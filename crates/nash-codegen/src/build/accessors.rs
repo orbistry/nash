@@ -100,15 +100,10 @@ impl<'a> Scope<'a> {
             return;
         };
         let paths = match (kind, branch.test) {
-            (CaseKind::Data, Test::DataConstr) => vec![
-                vec![
-                    Projection::Builtin(F::UnConstrData),
-                    Projection::Builtin(F::FstPair),
-                ],
-                vec![
-                    Projection::Builtin(F::UnConstrData),
-                    Projection::Builtin(F::SndPair),
-                ],
+            (CaseKind::Data, Test::DataConstr) => vec![vec![Projection::Builtin(F::UnConstrData)]],
+            (CaseKind::Pair, Test::Pair) => vec![
+                vec![Projection::Builtin(F::FstPair)],
+                vec![Projection::Builtin(F::SndPair)],
             ],
             (CaseKind::Data, Test::DataMap) => vec![vec![Projection::Builtin(F::UnMapData)]],
             (CaseKind::Data, Test::DataList) => vec![vec![Projection::Builtin(F::UnListData)]],
@@ -210,7 +205,11 @@ impl<'a> Share<'a, '_> {
             unreachable!()
         };
         let key = (projection, scope.canonical(name.unique));
-        if let Some(binder) = scope.projections.get(&key) {
+        if let Some(binder) = scope
+            .projections
+            .get(&key)
+            .or_else(|| scope.case_paths.get(&(vec![projection], key.1)))
+        {
             parts.value = self.build.var(binder.name);
             return parts;
         }

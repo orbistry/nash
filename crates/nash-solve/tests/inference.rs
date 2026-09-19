@@ -4560,6 +4560,10 @@ impl<'a> MetadataNodes<'a> {
         self.patterns.push(pattern);
         match &pattern.value {
             Pattern::Alias { pattern, .. } => self.pattern(pattern),
+            Pattern::Pair { first, second } => {
+                self.pattern(first);
+                self.pattern(second);
+            }
             Pattern::Tuple {
                 first,
                 second,
@@ -5076,4 +5080,22 @@ fn owned_blanket_impl_rejects_const_context() {
         generic x = keep x
     "#
     );
+}
+
+#[test]
+fn builtin_pair_pattern_infers_storable_fields() {
+    assert_inference_snapshot!(
+        "module Main exposing (..)\nfirst pair(a, _) = a\nsecond pair(_, b) = b\nnested pair(pair(a, _), _) = a\n"
+    );
+}
+#[test]
+fn builtin_pair_pattern_rejects_tuple() {
+    assert_inference_error_snapshot!(
+        "module Main exposing (..)\nf : (int, int) -> int\nf pair(a, _) = a\n"
+    );
+}
+
+#[test]
+fn builtin_pair_pattern_rejects_term_field() {
+    assert_inference_error_snapshot!("module Main exposing (..)\nf pair((a, b), _) = a\n");
 }

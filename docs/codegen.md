@@ -81,6 +81,7 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 | `Case(Int, s, bs, d)` | switch on integer literals | chain of `equalsInteger` + boolean `Term::Case` |
 | `Case(Bytes, s, bs, d)` | switch on bytestring literals | chain of `equalsByteString` + boolean `Term::Case` |
 | `Case(List, s, [nil, cons], _)` | match on a `Const` list; `cons` binds head and tail | `case s [\head tail -> cons, nil]` |
+| `Case(Pair, s, [branch], _)` | destructure a builtin pair | `case s [\first second -> branch]`, including wildcard fields |
 | `Case(Data, s, bs, d)` | match on the `Data` tag; five branches `Constr\|Map\|List\|I\|B` | `force (chooseData s (delay constr) (delay map) (delay list) (delay int) (delay bytes))` |
 | `Constr(i, fs)` | build a UPLC constr | `Term::Constr` |
 | `Field(r, i)` | project field `i` of a constr | `case r [\f0 .. fn -> fi]` |
@@ -91,7 +92,8 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 
 `Case` branch binders come from the node, not from nested lambdas: a `Tag`
 branch is `(tag, &[Binder], body)`, a `List` cons branch binds `(head, tail)`,
-a `Data` `Constr` branch binds `(tag: int, fields: list Data)`. Keeping the
+a `Data` `Constr` branch binds the decoded `pair int (list Data)`; a nested
+`Case(Pair, ...)` binds its tag and fields. Keeping the
 binders in the node lets the decision-tree compiler and the optimizer treat
 them uniformly without pattern-matching on lambda shapes.
 

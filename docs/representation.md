@@ -21,7 +21,7 @@ A `Const` value is a UPLC constant. Each Nash Const type maps to one
 | `bool` | `Boolean(bool)` | `Bool` | the only type `if` accepts |
 | `unit` | `Unit` | `Unit` | written `()` in types and values |
 | `list 'a` | `ProtoList(&Type, &[&Constant])` | `List(elem)` | `'a : Storable` |
-| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `Pair(a, b)` | `'a 'b : Storable`; `mkPairData` preserves Big component types, while `unConstrData` returns `pair int (list Data)` |
+| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `pair(a, b)` | `'a 'b : Storable`; `mkPairData` preserves Big component types, while `unConstrData` returns `pair int (list Data)` |
 | `array 'a` | `ProtoArray(&Type, &[&Constant])` | `Array(elem)` | `'a : Storable` |
 | `bls_g1` | `Bls12_381G1Element` | `Bls12_381G1Element` | |
 | `bls_g2` | `Bls12_381G2Element` | `Bls12_381G2Element` | |
@@ -210,6 +210,8 @@ Ordinary types without a twin retain ordinary constructor lookup.
   On **`unit`**: the single branch.
 - `case` on **`Data`**: `chooseData` selects one of five delayed shape branches;
   the selected branch is forced.
+- `case` on **`pair 'a 'b`**: native `case` with one branch receiving both
+  fields, even when one field is a wildcard.
 - `case` on **`list 'a`**: native `case`, with cons at branch 0 and nil at
   branch 1. The cons branch is a lambda receiving head and tail.
 - `case` on **`List 'a`** (Big): `unListData` then as `list`.

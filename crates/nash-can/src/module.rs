@@ -1458,6 +1458,10 @@ fn collect_from_pattern<'a>(
             }
         }
         Alias { pattern, .. } => collect_from_pattern(&pattern.value, home, used),
+        Pair { first, second } => {
+            collect_from_pattern(&first.value, home, used);
+            collect_from_pattern(&second.value, home, used);
+        }
         Tuple {
             first,
             second,

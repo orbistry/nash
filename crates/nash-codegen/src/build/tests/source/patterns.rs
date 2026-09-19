@@ -618,3 +618,72 @@ case!(
 "#,
     Ok("(con bool True)")
 );
+
+case!(
+    builtin_pair_let,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    main : int
+    main =
+        let
+            pair(tag, fields) = Builtin.unConstrData (Constr 7 [I 42])
+        in
+        case fields of
+            [I number] -> Builtin.addInteger tag number
+            _ -> fail
+    "#,
+    Ok("(con integer 49)")
+);
+
+case!(
+    builtin_pair_arguments_and_lambda,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    first pair(a, _) = a
+    main : int
+    main =
+        let
+            value = Builtin.unConstrData (Constr 7 [])
+            pair = first value
+        in
+        (\pair(a, _) -> Builtin.addInteger pair a) value
+    "#,
+    Ok("(con integer 14)")
+);
+
+case!(
+    builtin_pair_nested_patterns,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    inspect value =
+        case value of
+            pair(I a, B bytes) -> Builtin.addInteger a (Builtin.lengthOfByteString bytes)
+            _ -> 0
+    main : int
+    main = Builtin.addInteger (inspect (Builtin.mkPairData (I 40) (B #"aabb"))) (inspect (Builtin.mkPairData (B #"") (I 2)))
+    "#,
+    Ok("(con integer 42)")
+);
+
+case!(
+    builtin_pair_do_binding,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Option exposing (type option(..))
+    import Monad exposing (Monad)
+    result =
+        do
+            pair(tag, _) <- Some (Builtin.unConstrData (Constr 42 []))
+            Some tag
+    main : int
+    main =
+        case result of
+            Some tag -> tag
+            None -> fail
+    "#,
+    Ok("(con integer 42)")
+);

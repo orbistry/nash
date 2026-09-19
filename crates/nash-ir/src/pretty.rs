@@ -269,14 +269,27 @@ mod tests {
             name: b.fresh("bytes"),
             ty: Ty::Const(&ConstTy::Bytes),
         };
+        let pair = Binder {
+            name: b.fresh("pair"),
+            ty: Ty::Const(arena.alloc(ConstTy::Pair(tag.ty, fields.ty))),
+        };
         assert_core_snapshot!(b.case(
             CaseKind::Data,
             b.var(data),
             &[
                 Branch {
                     test: Test::DataConstr,
-                    binders: arena.alloc_slice_copy(&[tag, fields]),
-                    body: b.int(0)
+                    binders: arena.alloc_slice_copy(&[pair]),
+                    body: b.case(
+                        CaseKind::Pair,
+                        b.var(pair.name),
+                        &[Branch {
+                            test: Test::Pair,
+                            binders: arena.alloc_slice_copy(&[tag, fields]),
+                            body: b.int(0),
+                        }],
+                        None
+                    )
                 },
                 Branch {
                     test: Test::DataMap,

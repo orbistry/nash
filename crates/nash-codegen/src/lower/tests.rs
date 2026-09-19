@@ -210,14 +210,12 @@ fn data_shapes_evaluate_once_and_only_unpack_the_selected_branch() {
         (Test::DataB, PlutusData::byte_string(&arena, b"bytes"), 1),
     ];
     for (selected, data, _) in cases {
-        let branches = arena.alloc_slice_fill_iter(cases.iter().map(|(test, _, arity)| Branch {
-            test: *test,
-            binders: if *arity == 2 {
-                arena.alloc_slice_copy(&[field, fields])
-            } else {
-                arena.alloc_slice_copy(&[field])
-            },
-            body: if *test == selected {
+        let pair = Binder {
+            name: b.fresh("pair"),
+            ty: Ty::Erased,
+        };
+        let branches = arena.alloc_slice_fill_iter(cases.iter().map(|(test, _, arity)| {
+            let body = if *test == selected {
                 b.trace(
                     b.lit(Constant::string(&arena, "branch")),
                     if matches!(selected, Test::DataConstr | Test::DataI) {
@@ -228,7 +226,25 @@ fn data_shapes_evaluate_once_and_only_unpack_the_selected_branch() {
                 )
             } else {
                 b.error()
-            },
+            };
+            Branch {
+                test: *test,
+                binders: arena.alloc_slice_copy(&[if *arity == 2 { pair } else { field }]),
+                body: if *arity == 2 {
+                    b.case(
+                        CaseKind::Pair,
+                        b.var(pair.name),
+                        &[Branch {
+                            test: Test::Pair,
+                            binders: arena.alloc_slice_copy(&[field, fields]),
+                            body,
+                        }],
+                        None,
+                    )
+                } else {
+                    body
+                },
+            }
         }));
         let scrutinee = b.trace(
             b.lit(Constant::string(&arena, "scrutinee")),

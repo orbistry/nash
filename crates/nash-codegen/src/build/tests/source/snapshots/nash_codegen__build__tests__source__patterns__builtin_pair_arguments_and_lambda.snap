@@ -1,0 +1,53 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nfirst pair(a, _) = a\nmain : int\nmain =\n    let\n        value = Builtin.unConstrData (Constr 7 [])\n        pair = first value\n    in\n    (\\pair(a, _) -> Builtin.addInteger pair a) value\n"
+---
+--- core
+let first#9 : pair 'erased 'erased -> 'erased = \arg#13 : pair 'erased 'erased -> let match#15 : pair 'erased 'erased = arg#13 in
+case@Pair match#15 of
+  Pair field#16 field#17 -> let a#14 : 'erased = field#16 in
+  a#14 in
+let fromInt#12 : int -> int = \value#18 : int -> value#18 in
+let evaluated#19 : 'erased = (\field#10 : int field#11 : list Data -> constrData field#10 field#11) (fromInt#12 7) (con (list data) []) in
+let projection#20 : pair int (list Data) = unConstrData evaluated#19 in
+let value#2 : pair int (list Data) = projection#20 in
+let pair#3 : int = first#9 value#2 in
+let main#1 : int = (\arg#4 : pair int (list Data) -> let match#6 : pair int (list Data) = arg#4 in
+case@Pair match#6 of
+  Pair field#7 field#8 -> let a#5 : int = field#7 in
+  addInteger pair#3 a#5) value#2 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam first_9
+    [(lam fromInt_12
+      [(lam evaluated_19
+        [(lam projection_20
+          [(lam value_2
+            [(lam pair_3
+              [(lam main_1 main_1)
+                [(lam arg_4
+                  [(lam match_6
+                    (case
+                      match_6
+                      (lam field_7
+                        (lam field_8 [(lam a_5 [[(builtin addInteger) pair_3] a_5]) field_7]))))
+                    arg_4])
+                  value_2]])
+              [first_9 value_2]])
+            projection_20])
+          [(builtin unConstrData) evaluated_19]])
+        [[(lam field_10 (lam field_11 [[(builtin constrData) field_10] field_11]))
+          [fromInt_12 (con integer 7)]]
+          (con (list data) [])]])
+      (lam value_18 value_18)])
+    (lam arg_13
+      [(lam match_15
+        (case match_15 (lam field_16 (lam field_17 [(lam a_14 a_14) field_16]))))
+        arg_13])])
+--- result
+(con integer 14)
+--- logs
+[]
+--- budget
+cpu: 1220047, memory: 6866

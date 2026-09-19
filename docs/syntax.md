@@ -585,12 +585,13 @@ pattern_expr   = pattern_part { '::' pattern_part } [ 'as' lower_var ] ;
 pattern_part   = ctor_pattern | pattern_term ;
 ctor_pattern   = ( upper_var | qualified_upper ) { pattern_term } ;
 pattern_term   = wildcard | lower_var | ctor_no_args | number | string | bytes
-               | pattern_record | pattern_tuple | pattern_list ;  (* changed *)
+               | pattern_record | pattern_tuple | pattern_pair | pattern_list ;  (* changed *)
 wildcard       = '_' ;
 ctor_no_args   = upper_var | qualified_upper ;
 pattern_record = '{' '}' | '{' lower_var { ',' lower_var } '}' ;
 pattern_tuple  = '(' ')' | '(' pattern_expr ')'
                | '(' pattern_expr ',' pattern_expr { ',' pattern_expr } ')' ;
+pattern_pair   = 'pair(' pattern_expr ',' pattern_expr ')' ;
 pattern_list   = '[' ']' | '[' pattern_expr { ',' pattern_expr } ']' ;
 ```
 
@@ -688,3 +689,21 @@ inner error:
 None. Record patterns `{ owner, deadline }` keep working on alias records
 because field names resolve through the scrutinee's type, and the same
 sugar applies to labeled constructors as described under Records.
+
+
+### Builtin pair patterns
+
+`pair(first, second)` destructures the builtin `pair 'a 'b` type. Both fields
+may be patterns. Use it in `let`, `case`, function arguments, lambdas, and
+`do` bindings. The `pair(` prefix is adjacent; bare `pair` remains a variable
+name. Ordinary tuple patterns `(first, second)` have a different type.
+
+```nash
+let
+    pair(tag, fields) = Builtin.unConstrData value
+in
+    tag
+```
+
+Pair destructuring lowers to native UPLC `case`, including wildcard fields.
+It does not implicitly construct a pair or convert a tuple to a pair.

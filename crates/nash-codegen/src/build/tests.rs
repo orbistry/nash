@@ -1276,3 +1276,27 @@ fn native_case_dispatches_lists_data_and_sparse_literals() {
         },
     );
 }
+
+#[test]
+fn pair_wildcard_uses_native_case_without_projection_builtins() {
+    with_base(
+        indoc::indoc!(
+            r#"
+            module Main exposing (..)
+            main : pair int (list Data) -> int
+            main pair(tag, _) = tag
+        "#
+        ),
+        |arena, build, root| {
+            let compiled = build
+                .compile(arena, root, None, TraceConfig::default())
+                .unwrap();
+            let program = crate::program::assemble_core(arena, compiled.core).unwrap();
+            let uplc = nash_plutus::pretty::program(program.program);
+            assert!(uplc.contains("(case"), "{uplc}");
+            assert!(!uplc.contains("fstPair"), "{uplc}");
+            assert!(!uplc.contains("sndPair"), "{uplc}");
+            insta::assert_snapshot!(uplc);
+        },
+    );
+}

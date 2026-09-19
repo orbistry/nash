@@ -3,39 +3,40 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lift)\nimport Data exposing (toData)\ntype MyDatum = MyDatum { a : Int }\nencodeMyDatum (MyDatum n) = Constr 0 [toData n]\ntype Address = Address { thing : Bytes }\ntype Datum = NoDatum | InlineDatum Data\ntype Option 'a = None | Some 'a\ntype alias Output =\n    { address : Address\n    , value : Map Bytes (Map Bytes Int)\n    , datum : Datum\n    , scriptRef : Option Bytes\n    }\nmain =\n    let\n        emptyPairs : list (pair Bytes (Map Bytes Int))\n        emptyPairs = []\n        prevOutput : Output\n        prevOutput =\n            { address = (Address { thing = #\"7363726970745f686173685f30\" })\n            , value = (lift emptyPairs)\n            , datum = (InlineDatum (encodeMyDatum (MyDatum 3)))\n            , scriptRef = None\n            }\n        nextOutput = { prevOutput | value = (lift emptyPairs), datum = prevOutput.datum }\n    in\n    eq prevOutput nextOutput\n"
 ---
 --- core
-let message#35 : string = "incomplete pattern match" in
+let message#36 : string = "incomplete pattern match" in
 let lift#6 : list (pair 'erased 'erased) -> Map 'erased 'erased = mapData in
 let fromBytes#8 : bytes -> Bytes = bData in
-let fromInt#17 : int -> int = \value#24 : int -> value#24 in
-let toData#18 : 'erased -> Data = \coerce#25 : 'erased -> coerce#25 in
+let fromInt#17 : int -> int = \value#25 : int -> value#25 in
+let toData#18 : 'erased -> Data = \coerce#26 : 'erased -> coerce#26 in
 let encodeMyDatum#10 : Main.MyDatum -> Data = \arg#13 : Main.MyDatum -> let match#19 : Main.MyDatum = arg#13 in
 case@Data match#19 of
-  DataConstr tag#21 fields#22 -> case@Int tag#21 of
-    0 -> let fieldList#23 : list Data = fields#22 in
-    let projection#26 : Data = headList fieldList#23 in
-    let field#20 : Int = projection#26 in
-    let n#14 : Int = field#20 in
-    (\field#15 : int field#16 : list Data -> constrData field#15 field#16) (fromInt#17 0) (mkCons (toData#18 n#14) (con (list data) []))
-    _ -> trace message#35 in error
-  _ -> trace message#35 in error in
+  DataConstr pair#24 -> case@Pair pair#24 of
+    Pair tag#21 fields#22 -> case@Int tag#21 of
+      0 -> let fieldList#23 : list Data = fields#22 in
+      let projection#27 : Data = headList fieldList#23 in
+      let field#20 : Int = projection#27 in
+      let n#14 : Int = field#20 in
+      (\field#15 : int field#16 : list Data -> constrData field#15 field#16) (fromInt#17 0) (mkCons (toData#18 n#14) (con (list data) []))
+      _ -> trace message#36 in error
+  _ -> trace message#36 in error in
 let fromInt#12 : int -> Int = iData in
 let emptyPairs#2 : list (pair Bytes (Map Bytes Int)) = (con (list (pair data data)) []) in
 let prevOutput#3 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = listData (mkCons ((\field#7 : Bytes -> constrData 0 (mkCons field#7 (con (list data) []))) (fromBytes#8 (con bytestring #7363726970745f686173685f30))) (mkCons (lift#6 emptyPairs#2) (mkCons ((\field#9 : Data -> constrData 1 (mkCons field#9 (con (list data) []))) (encodeMyDatum#10 ((\field#11 : Int -> constrData 0 (mkCons field#11 (con (list data) []))) (fromInt#12 3)))) (mkCons (constrData 0 (con (list data) [])) (con (list data) []))))) in
 let base#5 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = prevOutput#3 in
-let projection#27 : list Data = unListData base#5 in
-let projection#28 : Data = headList projection#27 in
-let evaluated#34 : 'erased = lift#6 emptyPairs#2 in
-let projection#29 : list Data = tailList projection#27 in
-let projection#30 : list Data = tailList projection#29 in
-let projection#31 : Data = headList projection#30 in
-let projection#32 : list Data = tailList projection#30 in
-let projection#33 : Data = headList projection#32 in
-let nextOutput#4 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = listData (mkCons projection#28 (mkCons evaluated#34 (mkCons projection#31 (mkCons projection#33 (con (list data) []))))) in
+let projection#28 : list Data = unListData base#5 in
+let projection#29 : Data = headList projection#28 in
+let evaluated#35 : 'erased = lift#6 emptyPairs#2 in
+let projection#30 : list Data = tailList projection#28 in
+let projection#31 : list Data = tailList projection#30 in
+let projection#32 : Data = headList projection#31 in
+let projection#33 : list Data = tailList projection#31 in
+let projection#34 : Data = headList projection#33 in
+let nextOutput#4 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = listData (mkCons projection#29 (mkCons evaluated#35 (mkCons projection#32 (mkCons projection#34 (con (list data) []))))) in
 let main#1 : bool = equalsData prevOutput#3 nextOutput#4 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_35
+  [(lam message_36
     [(lam lift_6
       [(lam fromBytes_8
         [(lam fromInt_17
@@ -45,28 +46,28 @@ main#1
                 [(lam emptyPairs_2
                   [(lam prevOutput_3
                     [(lam base_5
-                      [(lam projection_27
-                        [(lam projection_28
-                          [(lam evaluated_34
-                            [(lam projection_29
-                              [(lam projection_30
-                                [(lam projection_31
-                                  [(lam projection_32
-                                    [(lam projection_33
+                      [(lam projection_28
+                        [(lam projection_29
+                          [(lam evaluated_35
+                            [(lam projection_30
+                              [(lam projection_31
+                                [(lam projection_32
+                                  [(lam projection_33
+                                    [(lam projection_34
                                       [(lam nextOutput_4
                                         [(lam main_1 main_1) [[(builtin equalsData) prevOutput_3] nextOutput_4]])
                                         [(builtin listData)
-                                          [[(force (builtin mkCons)) projection_28]
-                                            [[(force (builtin mkCons)) evaluated_34]
-                                              [[(force (builtin mkCons)) projection_31]
-                                                [[(force (builtin mkCons)) projection_33] (con (list data) [])]]]]]])
-                                      [(force (builtin headList)) projection_32]])
-                                    [(force (builtin tailList)) projection_30]])
-                                  [(force (builtin headList)) projection_30]])
-                                [(force (builtin tailList)) projection_29]])
-                              [(force (builtin tailList)) projection_27]])
+                                          [[(force (builtin mkCons)) projection_29]
+                                            [[(force (builtin mkCons)) evaluated_35]
+                                              [[(force (builtin mkCons)) projection_32]
+                                                [[(force (builtin mkCons)) projection_34] (con (list data) [])]]]]]])
+                                      [(force (builtin headList)) projection_33]])
+                                    [(force (builtin tailList)) projection_31]])
+                                  [(force (builtin headList)) projection_31]])
+                                [(force (builtin tailList)) projection_30]])
+                              [(force (builtin tailList)) projection_28]])
                             [lift_6 emptyPairs_2]])
-                          [(force (builtin headList)) projection_27]])
+                          [(force (builtin headList)) projection_28]])
                         [(builtin unListData) base_5]])
                       prevOutput_3])
                     [(builtin listData)
@@ -92,38 +93,40 @@ main#1
                 (builtin iData)])
               (lam arg_13
                 [(lam match_19
-                  [(lam generated_36
+                  [(lam generated_37
                     (force
-                      [[[[[[(force (builtin chooseData)) generated_36]
+                      [[[[[[(force (builtin chooseData)) generated_37]
                         (delay
-                          (case
-                            [(builtin unConstrData) generated_36]
-                            (lam tag_21
-                              (lam fields_22
-                                [(lam generated_37
-                                  (case
-                                    [[(builtin equalsInteger) generated_37] (con integer 0)]
-                                    (force [[(force (builtin trace)) message_35] (delay (error))])
-                                    [(lam fieldList_23
-                                      [(lam projection_26
-                                        [(lam field_20
-                                          [(lam n_14
-                                            [[(lam field_15 (lam field_16 [[(builtin constrData) field_15] field_16]))
-                                              [fromInt_17 (con integer 0)]]
-                                              [[(force (builtin mkCons)) [toData_18 n_14]] (con (list data) [])]])
-                                            field_20])
-                                          projection_26])
-                                        [(force (builtin headList)) fieldList_23]])
-                                      fields_22]))
-                                  tag_21]))))]
-                        (delay (force [[(force (builtin trace)) message_35] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_35] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_35] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_35] (delay (error))]))]))
+                          [(lam pair_24
+                            (case
+                              pair_24
+                              (lam tag_21
+                                (lam fields_22
+                                  [(lam generated_38
+                                    (case
+                                      [[(builtin equalsInteger) generated_38] (con integer 0)]
+                                      (force [[(force (builtin trace)) message_36] (delay (error))])
+                                      [(lam fieldList_23
+                                        [(lam projection_27
+                                          [(lam field_20
+                                            [(lam n_14
+                                              [[(lam field_15 (lam field_16 [[(builtin constrData) field_15] field_16]))
+                                                [fromInt_17 (con integer 0)]]
+                                                [[(force (builtin mkCons)) [toData_18 n_14]] (con (list data) [])]])
+                                              field_20])
+                                            projection_27])
+                                          [(force (builtin headList)) fieldList_23]])
+                                        fields_22]))
+                                    tag_21]))))
+                            [(builtin unConstrData) generated_37]])]
+                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]
+                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]
+                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]
+                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]))
                     match_19])
                   arg_13])])
-            (lam coerce_25 coerce_25)])
-          (lam value_24 value_24)])
+            (lam coerce_26 coerce_26)])
+          (lam value_25 value_25)])
         (builtin bData)])
       (builtin mapData)])
     (con string "incomplete pattern match")])
@@ -132,4 +135,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 7869608, memory: 26358
+cpu: 7917608, memory: 26658
