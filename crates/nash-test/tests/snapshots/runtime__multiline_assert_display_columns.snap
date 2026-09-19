@@ -1,0 +1,15 @@
+---
+source: crates/nash-test/tests/runtime.rs
+expression: "report::terminal::render_assert(source, &report)"
+---
+× assert (界 == é + z
+          │     │   │
+          │     │   zero
+          │     right
+          left
+          continued
+                && 名 == value)
+                   │     │
+                   │     first
+                   │     second
+                   name

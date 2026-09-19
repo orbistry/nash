@@ -1,0 +1,37 @@
+---
+source: crates/nash-test/tests/runtime.rs
+expression: "serde_json::to_string_pretty(&json[\"tests\"][0][\"assert\"]).unwrap()"
+---
+{
+  "column": 11,
+  "file": "Example.nash",
+  "line": 1,
+  "source": "界 == é + z\n      && 名 == value",
+  "values": [
+    {
+      "column": 0,
+      "row": 0,
+      "value": "left\ncontinued"
+    },
+    {
+      "column": 6,
+      "row": 0,
+      "value": "right"
+    },
+    {
+      "column": 9,
+      "row": 1,
+      "value": "name"
+    },
+    {
+      "column": 15,
+      "row": 1,
+      "value": "first\nsecond"
+    },
+    {
+      "column": 10,
+      "row": 0,
+      "value": "zero"
+    }
+  ]
+}
