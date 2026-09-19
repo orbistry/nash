@@ -1,0 +1,55 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nrun captured =\n    let\n        first n =\n            if equalsInteger n 0 then captured\n            else\n                let next = second (subtractInteger n 1) in\n                next captured\n        second n value =\n            if equalsInteger n 0 then value\n            else (\\f -> f (subtractInteger n 1)) first\n    in\n    first 7\nmain : int\nmain = run 42\n"
+---
+--- core
+let fromInt#3 : int -> int = \value#12 : int -> value#12 in
+let run#2 : 'erased -> 'erased = \captured#4 : 'erased -> let dispatch#13 : 'erased = \request#14 : 'erased -> case@Tag request#14 of
+  0 self#15 n#7 -> case@Bool equalsInteger n#7 (fromInt#3 0) of
+    True -> captured#4
+    False -> let next#8 : 'erased -> 'erased = (\n#17 : int value#18 : 'erased -> self#15 (constr 1 self#15 n#17 value#18)) (subtractInteger n#7 (fromInt#3 1)) in
+    next#8 captured#4
+  1 self#19 n#9 value#10 -> case@Bool equalsInteger n#9 (fromInt#3 0) of
+    True -> value#10
+    False -> (\(f#11 : int -> 'erased) -> f#11 (subtractInteger n#9 (fromInt#3 1))) (\n#20 : int -> self#19 (constr 0 self#19 n#20)) in
+let first#5 : int -> 'erased = \n#25 : int -> dispatch#13 (constr 0 dispatch#13 n#25) in
+let second#6 : int -> 'erased -> 'erased = \n#23 : int value#24 : 'erased -> dispatch#13 (constr 1 dispatch#13 n#23 value#24) in
+first#5 (fromInt#3 7) in
+let main#1 : int = run#2 (fromInt#3 42) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam run_2 [(lam main_1 main_1) [run_2 [fromInt_3 (con integer 42)]]])
+      (lam captured_4
+        [(lam dispatch_13
+          [(lam first_5
+            [(lam second_6 [first_5 [fromInt_3 (con integer 7)]])
+              (lam n_23 (lam value_24 [dispatch_13 (constr 1 dispatch_13 n_23 value_24)]))])
+            (lam n_25 [dispatch_13 (constr 0 dispatch_13 n_25)])])
+          (lam request_14
+            (case
+              request_14
+              (lam self_15
+                (lam n_7
+                  (case
+                    [[(builtin equalsInteger) n_7] [fromInt_3 (con integer 0)]]
+                    [(lam next_8 [next_8 captured_4])
+                      [(lam n_17 (lam value_18 [self_15 (constr 1 self_15 n_17 value_18)]))
+                        [[(builtin subtractInteger) n_7] [fromInt_3 (con integer 1)]]]]
+                    captured_4)))
+              (lam self_19
+                (lam n_9
+                  (lam value_10
+                    (case
+                      [[(builtin equalsInteger) n_9] [fromInt_3 (con integer 0)]]
+                      [(lam f_11 [f_11 [[(builtin subtractInteger) n_9] [fromInt_3 (con integer 1)]]])
+                        (lam n_20 [self_19 (constr 0 self_19 n_20)])]
+                      value_10))))))])])
+    (lam value_12 value_12)])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 5703220, memory: 28722

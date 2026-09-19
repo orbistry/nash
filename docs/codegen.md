@@ -313,19 +313,24 @@ canonicalization already computed the SCCs.
    parameters gets a `Delay`/`Force` pair so the self-application does not
    loop at definition time.
 
-**Mutual recursion** (`DeclareRec` with `following` non-empty) uses a
-combined dispatcher, ported from `modify_cyclic_calls`
-(`builder.rs:410`) and the `FunctionVariants::Cyclic` lowering:
+**Mutual recursion** uses native UPLC constructor packets and case dispatch:
 
-```
-cycle = \cycle -> \select -> select (\a.. -> bodyA') (\b.. -> bodyB')
-A x   ==>  cycle cycle (\a b -> a) x
-B y   ==>  cycle cycle (\a b -> b) y
+```text
+dispatch = \request -> case request [
+    \self a.. -> bodyA',
+    \self b.. -> bodyB'
+]
+A a.. = dispatch (constr 0 [dispatch, a..])
+B b.. = dispatch (constr 1 [dispatch, b..])
 ```
 
-inside the bodies, and the same shape at outside call sites. `LetRec` keeps
-`static_params: &[u16]` per binder so the optimizer's unused-parameter pass
-does not undo the static lifting.
+Inside a branch, a saturated recursive call directly invokes
+`self (constr target [self, args..])`. Each branch binds its own self and
+parameter list, so functions may have different arities. Function values and
+partial applications use curried wrappers that build the packet once fully
+applied. Over-applied calls apply remaining arguments to the dispatch result.
+Only the selected function body executes; lexical captures remain in scope.
+Single-function recursion retains its self-application/static-parameter pass.
 
 No Y combinator is ever emitted.
 

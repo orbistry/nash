@@ -1,0 +1,49 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Builtin exposing (..)\nfirst n = if equalsInteger n 0 then 42 else second (subtractInteger n 1)\nsecond n = if equalsInteger n 0 then fail else first (subtractInteger n 1)\nmain : int\nmain = first 2\n"
+---
+--- core
+let fromInt#3 : int -> int = \value#6 : int -> value#6 in
+let dispatch#8 : 'erased = \request#9 : 'erased -> case@Tag request#9 of
+  0 self#10 n#4 -> case@Bool equalsInteger n#4 (fromInt#3 0) of
+    True -> fromInt#3 42
+    False -> self#10 (constr 1 self#10 (subtractInteger n#4 (fromInt#3 1)))
+  1 self#13 n#7 -> case@Bool equalsInteger n#7 (fromInt#3 0) of
+    True -> error
+    False -> self#13 (constr 0 self#13 (subtractInteger n#7 (fromInt#3 1))) in
+let first#2 : int -> 'erased = \n#17 : int -> dispatch#8 (constr 0 dispatch#8 n#17) in
+let second#5 : int -> 'erased = \n#16 : int -> dispatch#8 (constr 1 dispatch#8 n#16) in
+let main#1 : int = first#2 (fromInt#3 2) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam dispatch_8
+      [(lam first_2
+        [(lam second_5 [(lam main_1 main_1) [first_2 [fromInt_3 (con integer 2)]]])
+          (lam n_16 [dispatch_8 (constr 1 dispatch_8 n_16)])])
+        (lam n_17 [dispatch_8 (constr 0 dispatch_8 n_17)])])
+      (lam request_9
+        (case
+          request_9
+          (lam self_10
+            (lam n_4
+              (case
+                [[(builtin equalsInteger) n_4] [fromInt_3 (con integer 0)]]
+                [self_10
+                  (constr 1 self_10 [[(builtin subtractInteger) n_4] [fromInt_3 (con integer 1)]])]
+                [fromInt_3 (con integer 42)])))
+          (lam self_13
+            (lam n_7
+              (case
+                [[(builtin equalsInteger) n_7] [fromInt_3 (con integer 0)]]
+                [self_13
+                  (constr 0 self_13 [[(builtin subtractInteger) n_7] [fromInt_3 (con integer 1)]])]
+                (error))))))])
+    (lam value_6 value_6)])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 1847515, memory: 9407

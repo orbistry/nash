@@ -9,6 +9,8 @@ pub enum Error {
     RecursiveValue,
     #[error("recursive group repeats a binder")]
     DuplicateBinder,
+    #[error("recursive group exceeds the constructor tag limit")]
+    TooManyFunctions,
 }
 
 /// Parameters forwarded unchanged by every saturated self call. A first-class
@@ -55,6 +57,7 @@ pub fn rewrite<'a>(build: &Builder<'a>, core: &'a Core<'a>) -> Result<&'a Core<'
 struct Replacement<'a> {
     value: &'a Core<'a>,
     /// Direct calls can omit arguments proved to be unchanged variables.
+    packet: Option<(Name<'a>, u16, usize)>,
     direct: Option<(&'a Core<'a>, Vec<u16>)>,
 }
 type Environment<'a> = HashMap<Name<'a>, Replacement<'a>>;
@@ -100,6 +103,22 @@ impl<'a> Rewriter<'_, 'a> {
             ),
             Core::App { func, args } => {
                 if let Core::Var(n) = func
+                    && let Some((dispatcher, tag, arity)) = env.get(n).and_then(|r| r.packet)
+                    && args.len() >= arity
+                {
+                    let args = args
+                        .iter()
+                        .map(|arg| self.term(arg, env))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    let mut fields = vec![b.var(dispatcher)];
+                    fields.extend_from_slice(&args[..arity]);
+                    let call = b.app(b.var(dispatcher), &[b.constr(tag, &fields)]);
+                    if args.len() == arity {
+                        call
+                    } else {
+                        b.app(call, &args[arity..])
+                    }
+                } else if let Core::Var(n) = func
                     && let Some(Replacement {
                         direct: Some((target, excluded)),
                         ..
@@ -241,6 +260,7 @@ impl<'a> Rewriter<'_, 'a> {
                 single.binder.name,
                 Replacement {
                     value,
+                    packet: None,
                     direct: Some((self_call, statics.clone())),
                 },
             );
@@ -275,43 +295,67 @@ impl<'a> Rewriter<'_, 'a> {
             // dead branches; represent them correctly without evaluating them early.
             return Ok(b.let_(single.binder, definition, continuation));
         }
-        let cycle = self.fresh("cycle");
-        let select = self.fresh("select");
-        let mut recursive_env = outer.clone();
-        let mut aliases = Vec::new();
+        if binders.len() > usize::from(u16::MAX) + 1 {
+            return Err(Error::TooManyFunctions);
+        }
+        let dispatcher = self.fresh("dispatch");
+        let request = self.fresh("request");
+        let mut branches = Vec::new();
         for (index, rb) in binders.iter().enumerate() {
-            let picks = binders
-                .iter()
-                .map(|_| self.fresh("pick"))
-                .collect::<Vec<_>>();
-            let selector = b.lam(&picks, b.var(picks[index].name));
-            let call = b.app(b.var(cycle.name), &[b.var(cycle.name), selector]);
-            let alias = self.eta(call, rb.params);
-            recursive_env.insert(
-                rb.binder.name,
-                Replacement {
-                    value: alias,
-                    direct: None,
-                },
-            );
-            aliases.push(alias);
+            let self_arg = self.fresh("self");
+            let mut recursive_env = outer.clone();
+            for (target, callee) in binders.iter().enumerate() {
+                let alias = self.packet_alias(self_arg.name, target as u16, callee.params);
+                recursive_env.insert(
+                    callee.binder.name,
+                    Replacement {
+                        value: alias,
+                        packet: Some((self_arg.name, target as u16, callee.params.len())),
+                        direct: None,
+                    },
+                );
+            }
+            let body = self.term(
+                rb.body,
+                &without(&recursive_env, rb.params.iter().map(|p| p.name)),
+            )?;
+            let mut params = vec![self_arg];
+            params.extend_from_slice(rb.params);
+            branches.push(Branch {
+                test: Test::Tag(index as u16),
+                binders: b.arena.alloc_slice_copy(&params),
+                body,
+            });
         }
-        let arms = binders
-            .iter()
-            .map(|rb| {
-                let body = self.term(
-                    rb.body,
-                    &without(&recursive_env, rb.params.iter().map(|p| p.name)),
-                )?;
-                Ok(b.lam(rb.params, body))
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-        let dispatcher = b.lam(&[cycle, select], b.app(b.var(select.name), &arms));
+        let dispatch = b.lam(
+            &[request],
+            b.case(CaseKind::Tag, b.var(request.name), &branches, None),
+        );
         let mut result = continuation;
-        for (rb, value) in binders.iter().zip(aliases).rev() {
-            result = b.let_(rb.binder, value, result);
+        for (index, rb) in binders.iter().enumerate().rev() {
+            let alias = self.packet_alias(dispatcher.name, index as u16, rb.params);
+            result = b.let_(rb.binder, alias, result);
         }
-        Ok(b.let_(cycle, dispatcher, result))
+        Ok(b.let_(dispatcher, dispatch, result))
+    }
+
+    fn packet_alias(
+        &mut self,
+        dispatcher: Name<'a>,
+        tag: u16,
+        params: &[Binder<'a>],
+    ) -> &'a Core<'a> {
+        let params = params
+            .iter()
+            .map(|p| Binder {
+                ty: p.ty,
+                ..self.fresh(p.name.text)
+            })
+            .collect::<Vec<_>>();
+        let b = self.build;
+        let mut fields = vec![b.var(dispatcher)];
+        fields.extend(params.iter().map(|p| b.var(p.name)));
+        b.lam(&params, b.app(b.var(dispatcher), &[b.constr(tag, &fields)]))
     }
 }
 fn without<'a>(

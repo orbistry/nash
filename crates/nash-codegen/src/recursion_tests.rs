@@ -150,13 +150,12 @@ fn mutual_even_odd_and_three_cycle() {
                 rec(&b, *f, &[n], body)
             })
             .collect::<Vec<_>>();
-        assert_eq!(
-            eval(
-                &b,
-                b.let_rec(&binders, b.app(b.var(functions[0].name), &[b.int(7)]))
-            ),
-            format!("(con integer {})", 7 % size)
-        );
+        let program = b.let_rec(&binders, b.app(b.var(functions[0].name), &[b.int(7)]));
+        let measured = crate::harness::eval_core(&a, rewrite(&b, program).unwrap());
+        assert!(measured.uplc.contains("(case"));
+        assert!(measured.uplc.contains("(constr"));
+        assert!(!measured.uplc.contains("select"));
+        assert_eq!(eval(&b, program), format!("(con integer {})", 7 % size));
     }
 }
 #[test]
@@ -296,4 +295,40 @@ fn separate_builder_name_supply_does_not_capture_inputs() {
         b.let_rec(&[rec(&b, f, &[n], body)], b.app(b.var(f.name), &[b.int(3)])),
     );
     assert_eq!(eval(&Builder::new(&a), program), "(con integer 42)");
+}
+
+#[test]
+fn mutual_overapplication_applies_arguments_to_dispatch_result() {
+    let arena = Arena::new();
+    let b = Builder::new(&arena);
+    let f = function(&b, "f");
+    let g = function(&b, "g");
+    let n = binding(&b, "n");
+    let x = binding(&b, "x");
+    let m = binding(&b, "m");
+    let y = binding(&b, "y");
+    let first = rec(
+        &b,
+        f,
+        &[n],
+        b.lam(
+            &[x],
+            b.if_(
+                op(&b, F::EqualsInteger, b.var(n.name), b.int(0)),
+                b.var(x.name),
+                b.app(b.var(g.name), &[decrement(&b, n), b.var(x.name)]),
+            ),
+        ),
+    );
+    let second = rec(
+        &b,
+        g,
+        &[m, y],
+        b.app(b.var(f.name), &[b.var(m.name), b.var(y.name)]),
+    );
+    let program = b.let_rec(
+        &[first, second],
+        b.app(b.var(g.name), &[b.int(3), b.int(42)]),
+    );
+    assert_eq!(eval(&b, program), "(con integer 42)");
 }

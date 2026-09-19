@@ -749,3 +749,39 @@ case!(
     "#,
     Err(())
 );
+
+case!(
+    mutual_dispatch_mixed_arities_and_partial_application,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    run captured =
+        let
+            first n =
+                if equalsInteger n 0 then captured
+                else
+                    let next = second (subtractInteger n 1) in
+                    next captured
+            second n value =
+                if equalsInteger n 0 then value
+                else (\f -> f (subtractInteger n 1)) first
+        in
+        first 7
+    main : int
+    main = run 42
+    "#,
+    Ok("(con integer 42)")
+);
+
+case!(
+    mutual_dispatch_selected_body_is_lazy,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    first n = if equalsInteger n 0 then 42 else second (subtractInteger n 1)
+    second n = if equalsInteger n 0 then fail else first (subtractInteger n 1)
+    main : int
+    main = first 2
+    "#,
+    Ok("(con integer 42)")
+);
