@@ -179,7 +179,8 @@ pub(crate) fn canonicalize<'a>(
         let mut heads = Vec::new();
         let mut head_types = Vec::new();
         for arg in predicate.args {
-            let (head, typ) = canonicalize_head(bump, env, arg, &mut variables)?;
+            let (head, typ) =
+                canonicalize_head(bump, env, arg, &mut variables, trait_.home == env.home)?;
             heads.push(head);
             head_types.push(typ);
         }
@@ -187,11 +188,11 @@ pub(crate) fn canonicalize<'a>(
             && !heads.iter().any(|h| match &h.value {
                 Head::Named { reference, .. } => {
                     reference.home == env.home
-                        || (reference.home == nash_ast::primitives::builtin_home()
+                        || (reference.home == nash_ast::primitives::primitive_home()
                             && reference.name == "unit"
-                            && env.home.package == Some(nash_ast::primitives::CORE))
+                            && env.home.package == Some(nash_ast::primitives::BASE))
                 }
-                Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::CORE),
+                Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::BASE),
                 Head::Var(_) | Head::Function(..) => false,
             })
         {
@@ -251,15 +252,18 @@ pub(crate) fn canonicalize<'a>(
                         == wanted.key()
             })
         };
+        // A bare variable can instantiate to Big even without an explicit bound.
+        // As with source impl overlap, contexts do not make its head disjoint.
         if trait_ == nash_ast::primitives::eq_trait()
             && let [head] = head_types.as_slice()
-            && known_big(*head)
+            && (known_big(*head) || matches!(head.value, Type::Var(_)))
         {
             return Err(vec![Error::StructuralEqOverride { head }]);
         }
         if trait_ == nash_ast::primitives::lift_trait()
             && let [left, right] = heads.as_slice()
-            && head_types.iter().any(|typ| known_big(*typ))
+            && (head_types.iter().any(|typ| known_big(*typ))
+                || heads.iter().all(|head| matches!(head.value, Head::Var(_))))
             && nash_ast::head::can_equal(&[left.value], &[right.value], &mut 16_384).map_err(
                 |_| {
                     vec![Error::ImplPatternLimit {
@@ -344,9 +348,10 @@ fn canonicalize_head<'a>(
     env: &Env<'a>,
     typ: &'a Located<SourceType<'a>>,
     variables: &mut Vec<&'a str>,
+    owns_trait: bool,
 ) -> Result<CanonicalHead<'a>, Vec<Error<'a>>> {
     let reason = match typ.value.unannotated() {
-        SourceType::Var(_) => Some(BadHead::BareVariable),
+        SourceType::Var(_) if !owns_trait => Some(BadHead::BareVariable),
         SourceType::Lambda { .. } => Some(BadHead::Function),
         SourceType::Record(_) => Some(BadHead::Record),
         SourceType::VarApp { .. } => Some(BadHead::VariableApplication),

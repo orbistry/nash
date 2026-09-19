@@ -8,7 +8,7 @@ nash-plutus CEK machine. Two new crates:
 - `crates/nash-ir` — the `Core` IR (types, constructors, pretty printer,
   traversal helpers) and, in plan 08, the Core -> Core passes.
 - `crates/nash-codegen` — Can AST -> Core (monomorphization, decision
-  trees, desugaring, recursion rewrite, casts, traces) and Core -> UPLC
+  trees, desugaring, recursion rewrite, Data builtins, traces) and Core -> UPLC
   `Term` (lowering, program assembly, comptime evaluation).
 
 Specification: [docs/codegen.md](../docs/codegen.md),
@@ -53,7 +53,7 @@ Concrete integration choices:
 - Strict nullary recursive values are diagnosed during codegen. The historical
   `ones` sketch below does not create a lazy infinite native list.
 - Test-only power-assert rewriting remains Plan 10. Validator assertions retain
-  ordinary failure traces, independently of compiler-generated cast/match traces.
+  ordinary failure traces, independently of compiler-generated match traces.
 - Tests use focused semantic assertions plus Core/UPLC/budget snapshots. The
   historical snapshot counts below are sketches; the executable tests under
   `nash-codegen` and the driver are the current acceptance evidence.
@@ -67,7 +67,7 @@ Concrete integration choices:
 - [x] 4. Complete compiler-owned Builtin mapping and force/arity checks.
   - Compiler inventory, exact builtin ownership and source-call integration pass.
 - [x] 5. Little ADTs, tuples, native lists, and decision trees.
-- [x] 6. Big ADTs, Data patterns, checked casts and validation.
+- [x] 6. Big ADTs, Data patterns and source codecs.
 - [x] 7. Nominal records and labeled constructor layouts.
   - Scoped accessors share Data decoders and list prefixes, including mixed
     constructor patterns and field access. CEK tests preserve trace order
@@ -384,12 +384,6 @@ pub enum Core<'a> {
         func: DefaultFunction,
         args: &'a [&'a Core<'a>],
     },
-    Cast {
-        kind: CastKind,
-        from: Ty<'a>,
-        to: Ty<'a>,
-        arg: &'a Core<'a>,
-    },
     Trace {
         message: &'a Core<'a>,
         body: &'a Core<'a>,
@@ -442,15 +436,6 @@ pub enum Test<'a> {
     DataList,
     DataI,
     DataB,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CastKind {
-    ToData,
-    FromDataShallow,
-    ValidateData,
-    Lift,
-    Lower,
 }
 
 /// A whole program: top-level bindings in dependency order plus the root.
@@ -511,7 +496,7 @@ Types print in Nash surface syntax (`int`, `list Int`, `option int`,
 
 **Elm/Aiken reference**: `air.rs` for the node inventory;
 `tree.rs` `AirTree` for which nodes carry types (`Ty` is only on binders
-and casts in Nash); Elm `AST/Optimized.hs` for a tree IR with hoisted
+and typed Data builtins in Nash); Elm `AST/Optimized.hs` for a tree IR with hoisted
 decision trees.
 
 **Tests** (`crates/nash-ir/src/pretty.rs`, `mod tests`):
@@ -711,7 +696,6 @@ impl<'a> Lower<'a> {
             Core::Delay(t) => self.term(t).delay(self.arena),
             Core::Force(t) => self.term(t).force(self.arena),
             Core::LetRec { .. } => unreachable!("recursion rewrite runs before lowering"),
-            Core::Cast { .. } => unreachable!("casts are lowered in chunk 6"),
             Core::Case { .. } => unreachable!("case kind lowered in a later chunk"),
         }
     }
@@ -1316,10 +1300,10 @@ directly instead of applying the eta-expanded lambda.
 `lower.rs` additions:
 
 - `Case(Int)`: fold branches from the default:
-  `force (ifThenElse (equalsInteger s (con k)) (delay b_k) (delay rest))`
+  `case (equalsInteger s (con k)) [rest, b_k]`
   with `s` let-bound once by the decision tree.
 - `Case(Bytes)`: same with `equalsByteString`.
-- `Case(List)`: `force (chooseList s (delay nil) (delay (let h = headList s; t = tailList s in cons)))`.
+- `Case(List)`: `case s [\h t -> cons, nil]`.
 
 **Elm/Aiken reference**: `decision_tree.rs` `build_tree` (626),
 `do_build_tree` (730), `map_pattern_to_row` (1174), `highest_occurrence`
@@ -1382,173 +1366,41 @@ the `Core` snapshot shows a single `Field` accessor let shared by the two
 
 ---
 
-## Chunk 6 — Big ADTs, `Data` patterns, and casts
+## Chunk 6 — Big ADTs, Data patterns and source codecs
 
-**Files**
+Big constructors preserve their existing wire shapes: user ADTs use
+`constrData` with the declared tag and fields. Data patterns lower to
+`chooseData` and the matching concrete destructor. Existing Data constructors
+remain the universal Data API.
 
-- `crates/nash-codegen/src/can_to_core.rs` (Big constructors, `Data`
-  constructors, casts)
-- `crates/nash-codegen/src/decision_tree.rs` (`Path::BigField`,
-  `Path::Data*`, `CaseTest::Data`)
-- `crates/nash-codegen/src/checkers.rs` (new)
-- `crates/nash-codegen/src/lower.rs` (`Case(Data)`, `Cast`)
+Actual UPLC conversion builtins have nominal Nash signatures:
 
-**Change**
+- `iData : int -> Int`, `unIData : Int -> int`
+- `bData : bytes -> Bytes`, `unBData : Bytes -> bytes`
+- `listData : Big 'a => list 'a -> List 'a`, with inverse `unListData`
+- `mapData : (Big 'k, Big 'v) => list (pair 'k 'v) -> Map 'k 'v`,
+  with inverse `unMapData`
 
-A Big constructor application becomes `Builtin(ConstrData, [Lit tag, fields])`
-where `fields` is a `mkCons` chain of the (already `Data`) field values
-onto `Lit(ProtoList(data, []))`. Matching a Big ADT emits
-`Let p = unConstrData s` and a `Case(Int)` on `fstPair p`; fields come from
-`sndPair p` through the memoized accessors. `Data` constructors and
-patterns follow docs/data.md. `toData`/`fromData`/`validateData`/`lift`/
-`lower` arrive as trait-method calls resolved (chunk 9) to the stdlib's
-impls; those impl bodies are the intrinsic `Cast` nodes, which this chunk
-introduces through a small set of intrinsics the stdlib can name:
-`Builtin.castToData`, `Builtin.castFromDataShallow`, `Builtin.castValidateData`,
-`Builtin.castLift`, `Builtin.castLower`, each typed `'a -> 'b` and only
-usable inside `core/`.
+Lift and Literal use those builtins directly in Nash. ToData and FromData
+have ordinary blanket Big impls, both defining their methods as Primitive.coerce. This separate compiler intrinsic lowers to unchecked runtime identity,
+with no shape checks, traversal or reconstruction, for every Big type.
+Collections impose no element conversion or validation constraints.
+Validate is a separate opt-in trait. Its ordinary core impls check Data shape
+and recursively validate collection elements. User ADTs require source
+Validate impls until future derive macros produce them. Validation must not
+delegate to unchecked fromData.
 
-Plan 03 supplies these frontend schemes, symbolic builtin lowering operations,
-and exact `nash/core` package visibility so the core trait impls can type-check.
-This chunk consumes those bindings; it still owns typed Core casts, validation
-checkers, lowering and execution tests.
+No generated checker subsystem or extra wrapper constructors are part of
+this architecture. Failure uses language syntax. Real builtin lowering handles
+concrete DefaultFunction entries; Primitive.coerce is a separate intrinsic.
 
-**Code**
+**Tests**: snapshot Nash inputs covering primitive and nested collection
+round trips, preservation of existing Data encodings, malformed nested
+values, source user-ADT codecs, invalid UTF-8, and same-shape values with
+distinct nominal types. Inspect Core/UPLC to confirm concrete builtin calls.
 
-`checkers.rs`:
-
-```rust
-//! One `fromData#T` / `validateData#T` function per Big type, generated on
-//! demand and hoisted to the program's top-level bindings.
-
-pub struct Checkers<'a> {
-    shallow: HashMap<Ty<'a>, Name<'a>>,
-    full: HashMap<Ty<'a>, Name<'a>>,
-    pub bindings: Vec<RecBinder<'a>>,   // recursive types need LetRec
-}
-
-impl<'a> Checkers<'a> {
-    pub fn shallow(&mut self, gen: &mut Gen<'a>, ty: Ty<'a>) -> Name<'a>;
-    pub fn full(&mut self, gen: &mut Gen<'a>, ty: Ty<'a>) -> Name<'a>;
-
-    fn full_body(&mut self, gen: &mut Gen<'a>, ty: Ty<'a>, d: Binder<'a>) -> &'a Core<'a> {
-        let b = &gen.build;
-        match ty {
-            Ty::Big(BigTy::Data) => b.var(d.name),
-            Ty::Big(BigTy::Int) => choose_data(b, d, DataShape::I, b.var(d.name), gen.compiler_fail("validateData: expected I")),
-            Ty::Big(BigTy::Bytes) => choose_data(b, d, DataShape::B, ..),
-            Ty::Big(BigTy::List(elem)) => {
-                let check_elem = self.full(gen, *elem);
-                // let xs = unListData d in validate#each check_elem xs ; d
-                ...
-            }
-            Ty::Big(BigTy::Map(k, v)) => ...,
-            Ty::Big(BigTy::Adt(adt)) => {
-                // let p = unConstrData d ; case@Int (fstPair p) of tag_i -> check fields_i, arity; _ -> fail
-                let layouts = gen.tys.adts.layouts[&adt];
-                ...
-            }
-            Ty::Big(BigTy::Record(fields)) => ...,   // unListData, one check per field, nullList at the end
-            _ => unreachable!("only Big types have checkers"),
-        }
-    }
-}
-
-fn choose_data<'a>(b: &Builder<'a>, d: Binder<'a>, want: DataShape, ok: &'a Core<'a>, otherwise: &'a Core<'a>) -> &'a Core<'a> {
-    let branch = |shape| if shape == want { ok } else { otherwise };
-    b.case_data(b.var(d.name), [branch(Constr), branch(Map), branch(List), branch(I), branch(B)])
-}
-```
-
-`validate#each` is one shared recursive helper
-(`\check xs -> if nullList xs then () else (check (headList xs); each check (tailList xs))`)
-emitted as a `LetRec` binding through chunk 8.
-
-`lower.rs` additions:
-
-```rust
-Core::Case { kind: CaseKind::Data, scrutinee, branches, default } => {
-    // force (chooseData s (delay b_constr) (delay b_map) (delay b_list) (delay b_i) (delay b_b))
-    // each present branch binds its payload with the matching un*Data builtin around its body;
-    // absent shapes use `default`.
-}
-Core::Cast { kind: CastKind::ToData, arg, .. } => self.term(arg),
-Core::Cast { kind: CastKind::FromDataShallow | CastKind::ValidateData, .. } =>
-    unreachable!("replaced by a checker call in can_to_core"),
-Core::Cast { kind: CastKind::Lift, from, arg, .. } => match from {
-    Ty::Big(_) => self.term(arg),                                             // reflexive `Lift 'a 'a`
-    Ty::Const(ConstTy::Int) => Term::i_data(a).apply(a, self.term(arg)),
-    Ty::Const(ConstTy::Bytes) => Term::b_data(a).apply(a, self.term(arg)),
-    Ty::Const(ConstTy::List(elem)) if elem.repr() == Repr::Big => Term::list_data(a).apply(a, self.term(arg)),
-    Ty::Const(ConstTy::List(_)) => Term::map_data(a).apply(a, self.term(arg)),   // list (pair Data Data)
-    _ => unreachable!("only the intrinsic Lift impls reach a Cast node"),
-},
-Core::Cast { kind: CastKind::Lower, to, arg, .. } => /* the un* mirror */,
-```
-
-Only the `core/` impls whose body is one builtin (`int`/`Int`,
-`bytes`/`Bytes`, `list 'a`/`List 'a` with Big elements, `Map`) use
-`Builtin.castLift` / `Builtin.castLower`. The compiler's `ReflexiveLift`
-evidence lowers directly to identity. `Lift (list 'a) (List 'b)` given `Lift 'a 'b` is
-written in Nash in `core/` as a map of `lift` followed by `castLift`; when
-`'a = 'b` is Big the element map is identity, which plan 08
-inlines and folds to the bare `listData`. `Lift option Option`,
-`Lift result Result` and `Lift ordering Ordering` are ordinary `core/`
-functions (see docs/representation.md's `Lift` table) and never become
-`Cast` nodes.
-
-`can_to_core.rs` replaces `Cast(FromDataShallow)` / `Cast(ValidateData)`
-at construction time with `App(Var checker, [arg])`, so `lower.rs` never
-sees them; the `CastKind` variants stay in `Core` for the optimizer's
-cancellation rule and for pretty output.
-
-**Elm/Aiken reference**: `builder.rs` `known_data_to_type` (481),
-`unknown_data_to_type` (529), `softcast_data_to_type_otherwise` (589),
-`convert_type_to_data` (755), `to_data_builtin` (1045), `undata_builtin`
-(1016); `gen_uplc.rs` `expect_type_assign` (2016) for the full-check
-generator (Nash generates a named function per type instead of inlining
-the check at every site).
-
-**Tests**
-
-```rust
-assert_eval_snapshot!(r#"
-    type Redeemer = Claim | Cancel
-    main = case Cancel of
-        Claim -> 0
-        Cancel -> 1
-"#);
-assert_core_snapshot!(r#"
-    type Datum = Datum Bytes Int
-    main d = case d of
-        Datum owner deadline -> deadline
-"#);   // shows unConstrData bound once, fields via sndPair + headList (tailList ..)
-assert_eval_snapshot!(r#"
-    main = case Constr 0 [ I 1, B #"ff" ] of
-        Constr 0 [ I n, _ ] -> n
-        Constr _ _ -> 100
-        I n -> n
-        _ -> 200
-"#);
-assert_eval_snapshot!("main = case List [ I 7 ] of List [ I n ] -> n ; _ -> 0");
-assert_eval_snapshot!("main = Builtin.castLower (Builtin.castLift 41 : Int) : int");   // 41, and plan 08 later folds it
-assert_eval_snapshot!(r#"
-    type Datum = Datum Bytes Int
-    main = Builtin.castValidateData (Constr 0 [ B #"aa", I 1 ]) : Datum
-"#);   // result is the same Data
-assert_eval_snapshot!(r#"
-    type Datum = Datum Bytes Int
-    main = Builtin.castValidateData (Constr 0 [ I 1, I 1 ]) : Datum
-"#);   // error, log "validateData: Datum field 0: expected B"
-assert_eval_snapshot!(r#"
-    type Datum = Datum Bytes Int
-    main = Builtin.castFromDataShallow (Constr 0 [ I 1, I 1 ]) : Datum
-"#);   // ok: shallow only checks Constr/tag/arity
-```
-
-**Done when**: eight snapshots accepted; `checkers.rs` emits one binding
-per distinct type across all uses (asserted by a `Core` snapshot with two
-`validateData` calls at the same type).
+**Done when**: the source codecs execute, invalid nested inputs fail, and
+no virtual conversion hook remains in the compiler.
 
 ---
 
@@ -2052,7 +1904,7 @@ impl<'a> Traces<'a> {
         }
     }
 
-    /// A compiler trace (validateData, incomplete match): on or off.
+    /// A compiler trace (validate, incomplete match): on or off.
     pub fn compiler(&mut self, build: &Builder<'a>, text: &'a str, body: &'a Core<'a>) -> &'a Core<'a> {
         if self.config.compiler { build.trace(build.var(self.message(build, text)), body) } else { body }
     }
@@ -2265,9 +2117,8 @@ baseline for plan 08's measurement harness.
 
 ## Open questions
 
-1. **Casts as `Builtin.cast*` intrinsics** (chunk 6) versus compiler
-   knowledge of the stdlib impl names. Intrinsics keep the compiler free
-   of stdlib name knowledge and are restricted to `core/`.
+1. **Data conversions** (chunk 6) use typed real builtins and existing Data
+   patterns in Nash. No compiler knowledge of codec impl names is needed.
 3. **Order of chunks vs the brief.** Core -> Term lowering is chunk 2
    rather than second to last, because every later chunk's tests run on
    the CEK machine.

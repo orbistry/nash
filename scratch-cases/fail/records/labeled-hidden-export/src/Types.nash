@@ -1,0 +1,2 @@
+module Types exposing (type box)
+type box = Box { value : unit }

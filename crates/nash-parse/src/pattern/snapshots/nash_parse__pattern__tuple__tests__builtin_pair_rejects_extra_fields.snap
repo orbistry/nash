@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/pattern/tuple.rs
+description: "Code:\n\npair(a, b, c)"
+info: diagnostic
+---
+nash::syntax
+
+  × A pair pattern needs exactly two fields.
+   ╭─[src/Main.nash:1:5]
+ 1 │ pair(a, b, c)
+   ·     ─
+   ╰────
+  help: Write `pair(first, second)`; either field may itself be a pattern.

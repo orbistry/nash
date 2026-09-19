@@ -80,7 +80,7 @@ definition      = lower_var { pattern } '=' expression ;   (* same name, next fr
 ### Declaration attributes
 
 ```elm
-@derive(Ord, Show, ToData, FromData)
+@derive(Ord, Show, Validate)
 type Redeemer = Claim | Cancel
 
 @inline
@@ -214,7 +214,7 @@ predicateAll p xs =
 
 ## What the macro sees: the `Ast` module
 
-`nash/core` ships an `Ast` module. Every type in it is a **little** ADT
+`nash/base` ships an `Ast` module. Every type in it is a **little** ADT
 (representation `Term`): a value is a UPLC `constr` tree whose leaves are `string`,
 `int`, and `bytes` constants, exactly the layout of any user little type
 ([representation.md](representation.md)). The compiler builds that tree
@@ -433,7 +433,7 @@ Semantics:
 
 - `quote` is resolved during canonicalization of the *macro's* module.
   Free names inside the quote resolve there and become `Global` names.
-  `==` above becomes `BinOp (Global {nash/core} Eq "eq")` (the method
+  `==` above becomes `BinOp (Global {nash/base} Eq "eq")` (the method
   the `Prelude` infix binds to). The invocation site does not need to
   import `Prelude` or `Eq` items for the spliced code to work.
 - Binders introduced inside the quote (`\x ->`, `let y =`, pattern
@@ -560,7 +560,7 @@ Errors raised by the macro itself:
 deriveOne decl trait =
     case Ast.exprName trait of
         Some "Eq" -> deriveEq decl
-        _ -> fail "derive: expected a trait name such as Eq, Ord, Show, ToData, FromData"
+        _ -> fail "derive: expected a trait name such as Eq, Ord, Show, Validate"
 ```
 
 `fail msg` traces `msg` and errors. The runner reports the last trace
@@ -575,7 +575,7 @@ The macro `derive` failed while expanding this attribute:
    ^^^^^^^^^^^^^^^^^^^^
 It said:
 
-    derive: expected a trait name such as Eq, Ord, Show, ToData, FromData
+    derive: expected a trait name such as Eq, Ord, Show, Validate
 ```
 
 A macro that errors without a trace (a raw `error` term, a builtin
@@ -651,8 +651,8 @@ generator is `comptime` is a constant and is a warning.
 
 ## Deriving
 
-`@derive(Eq, Ord, Show, ToData, FromData)` is the declaration macro
-`Derive.derive` from `nash/core`, exposed by the default imports. It
+`@derive(Eq, Ord, Show, Validate)` is the declaration macro
+`Derive.derive` from `nash/base`, exposed by the default imports. It
 dispatches on the trait name and appends one `impl` per trait after the
 original declaration.
 
@@ -661,8 +661,11 @@ representation predicates. Eq
 derivation applies to little types. Big types already receive structural Eq
 from the compiler; deriving must not emit an Eq override for them. Generated
 impls go through the same checks as handwritten impls, including rejection
-of Big Eq overrides. For a Big Redeemer, request Ord/Show/ToData/FromData as
-needed and use the automatic Eq instance.
+of Big Eq overrides. For a Big Redeemer, request Ord/Show/Validate as
+needed and use the automatic Eq instance. `ToData` and `FromData` need no derivation:
+core supplies ordinary blanket impls for every Big type. A macro must not
+emit concrete conversion impls because they would overlap those blanket
+impls. `Validate` is the separate opt-in validation trait.
 
 Sketch of the `Eq` derivation in Nash:
 
@@ -683,10 +686,9 @@ deriveOne decl arg =
         Some "Eq" -> deriveEq decl
         Some "Ord" -> deriveOrd decl
         Some "Show" -> deriveShow decl
-        Some "ToData" -> deriveToData decl
-        Some "FromData" -> deriveFromData decl
+        Some "Validate" -> deriveValidate decl
         Some other -> fail ("derive: no derivation for " ++ other)
-        None -> fail "derive: expected a trait name such as Eq, Ord, Show, ToData, FromData"
+        None -> fail "derive: expected a trait name such as Eq, Ord, Show, Validate"
 
 deriveEq : decl -> decl
 deriveEq decl =
@@ -749,8 +751,13 @@ Notes on the sketch:
   conversion at any point.
 - The `fallthrough` arm is omitted for single-constructor types by the
   real implementation to avoid a redundant-pattern warning.
-- `ToData`/`FromData` derivations check `union.representation == Some Big` and fail
-  otherwise; `Show` and `Ord` work on any representation. `Ord` derives `compare` by
+- `Validate` derivations check `union.representation == Some Big` and fail
+  otherwise. Future derivation preserves constructor tags and field order:
+  `validate` generates ordinary
+  source cases that check tags, exact arity, and all fields recursively before
+  rebuilding typed constructors. Validation never delegates to unchecked
+  `fromData`; no hidden compiler-generated checkers are needed. `Show` and
+  `Ord` work on any representation. `Ord` derives `compare` by
   constructor index then lexicographic fields.
 
 ## Interactions with other components

@@ -70,7 +70,7 @@ The subsequent cleanup and its verification are recorded in
 - [x] Review changed snapshots, including contexts and dictionary indices.
 - [x] Final formatting, strict Clippy and full workspace tests.
 - [x] Snapshot verification and unreferenced-snapshot hygiene.
-- [x] Real `tests/core` CLI fixture and focused cross-module acceptance.
+- [x] Real `tests/base` CLI fixture and focused cross-module acceptance.
 - [x] Sampo changeset, dependency propagation and publication-order audit in
   a disposable release copy.
 

@@ -4,7 +4,7 @@ description: "module Types exposing (type holder(..), get)\ntype holder 'f 'a = 
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[/Main.nash:4:7]
  3 │ make x = Types.Holder [x]
  4 │ bad = Types.get (make (\x -> x))
@@ -20,7 +20,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[/Main.nash:4:7]
  3 │ make x = Types.Holder [x]
  4 │ bad = Types.get (make (\x -> x))
@@ -35,12 +35,12 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[/Main.nash:4:7]
  3 │ make x = Types.Holder [x]
  4 │ bad = Types.get (make (\x -> x))
-   ·       ────────────┬───────────
-   ·                   ╰── required by `type application`
+   ·       ─────────────┬────────────
+   ·                    ╰── required by `type application`
    ╰────
   help: Requirement chain:
 
@@ -50,7 +50,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[/Main.nash:4:18]
  3 │ make x = Types.Holder [x]
  4 │ bad = Types.get (make (\x -> x))
@@ -66,7 +66,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[/Main.nash:4:18]
  3 │ make x = Types.Holder [x]
  4 │ bad = Types.get (make (\x -> x))

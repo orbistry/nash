@@ -1,0 +1,571 @@
+---
+source: crates/nash-can/src/pattern.rs
+description: Constr payload
+---
+(
+    Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 15,
+            },
+        },
+        value: Constructor(
+            PatternCtor {
+                reference: ConstructorName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "base",
+                            },
+                        ),
+                        name: "Primitive",
+                    },
+                    union: "Data",
+                    name: "Constr",
+                },
+                union: Union {
+                    kind: Type,
+                    context: [],
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: "Data",
+                    },
+                    parameters: [],
+                    ctors: [
+                        Ctor {
+                            labels: None,
+                            name: "Constr",
+                            index: 0,
+                            arity: 1,
+                            arguments: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "base",
+                                                    },
+                                                ),
+                                                name: "Primitive",
+                                            },
+                                            name: "pair",
+                                        },
+                                        args: [
+                                            Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                },
+                                                value: Named {
+                                                    reference: QualifiedName {
+                                                        home: ModuleName {
+                                                            package: Some(
+                                                                PackageName {
+                                                                    author: "nash",
+                                                                    project: "base",
+                                                                },
+                                                            ),
+                                                            name: "Primitive",
+                                                        },
+                                                        name: "int",
+                                                    },
+                                                    args: [],
+                                                },
+                                            },
+                                            Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                },
+                                                value: Named {
+                                                    reference: QualifiedName {
+                                                        home: ModuleName {
+                                                            package: Some(
+                                                                PackageName {
+                                                                    author: "nash",
+                                                                    project: "base",
+                                                                },
+                                                            ),
+                                                            name: "Primitive",
+                                                        },
+                                                        name: "list",
+                                                    },
+                                                    args: [
+                                                        Located {
+                                                            region: Region {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                            },
+                                                            value: Named {
+                                                                reference: QualifiedName {
+                                                                    home: ModuleName {
+                                                                        package: Some(
+                                                                            PackageName {
+                                                                                author: "nash",
+                                                                                project: "base",
+                                                                            },
+                                                                        ),
+                                                                        name: "Primitive",
+                                                                    },
+                                                                    name: "Data",
+                                                                },
+                                                                args: [],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                        Ctor {
+                            labels: None,
+                            name: "Map",
+                            index: 1,
+                            arity: 1,
+                            arguments: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "base",
+                                                    },
+                                                ),
+                                                name: "Primitive",
+                                            },
+                                            name: "list",
+                                        },
+                                        args: [
+                                            Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                },
+                                                value: Named {
+                                                    reference: QualifiedName {
+                                                        home: ModuleName {
+                                                            package: Some(
+                                                                PackageName {
+                                                                    author: "nash",
+                                                                    project: "base",
+                                                                },
+                                                            ),
+                                                            name: "Primitive",
+                                                        },
+                                                        name: "pair",
+                                                    },
+                                                    args: [
+                                                        Located {
+                                                            region: Region {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                            },
+                                                            value: Named {
+                                                                reference: QualifiedName {
+                                                                    home: ModuleName {
+                                                                        package: Some(
+                                                                            PackageName {
+                                                                                author: "nash",
+                                                                                project: "base",
+                                                                            },
+                                                                        ),
+                                                                        name: "Primitive",
+                                                                    },
+                                                                    name: "Data",
+                                                                },
+                                                                args: [],
+                                                            },
+                                                        },
+                                                        Located {
+                                                            region: Region {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 0,
+                                                                },
+                                                            },
+                                                            value: Named {
+                                                                reference: QualifiedName {
+                                                                    home: ModuleName {
+                                                                        package: Some(
+                                                                            PackageName {
+                                                                                author: "nash",
+                                                                                project: "base",
+                                                                            },
+                                                                        ),
+                                                                        name: "Primitive",
+                                                                    },
+                                                                    name: "Data",
+                                                                },
+                                                                args: [],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                        Ctor {
+                            labels: None,
+                            name: "List",
+                            index: 2,
+                            arity: 1,
+                            arguments: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "base",
+                                                    },
+                                                ),
+                                                name: "Primitive",
+                                            },
+                                            name: "list",
+                                        },
+                                        args: [
+                                            Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                },
+                                                value: Named {
+                                                    reference: QualifiedName {
+                                                        home: ModuleName {
+                                                            package: Some(
+                                                                PackageName {
+                                                                    author: "nash",
+                                                                    project: "base",
+                                                                },
+                                                            ),
+                                                            name: "Primitive",
+                                                        },
+                                                        name: "Data",
+                                                    },
+                                                    args: [],
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                        Ctor {
+                            labels: None,
+                            name: "I",
+                            index: 3,
+                            arity: 1,
+                            arguments: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "base",
+                                                    },
+                                                ),
+                                                name: "Primitive",
+                                            },
+                                            name: "int",
+                                        },
+                                        args: [],
+                                    },
+                                },
+                            ],
+                        },
+                        Ctor {
+                            labels: None,
+                            name: "B",
+                            index: 4,
+                            arity: 1,
+                            arguments: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Named {
+                                        reference: QualifiedName {
+                                            home: ModuleName {
+                                                package: Some(
+                                                    PackageName {
+                                                        author: "nash",
+                                                        project: "base",
+                                                    },
+                                                ),
+                                                name: "Primitive",
+                                            },
+                                            name: "bytes",
+                                        },
+                                        args: [],
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                    alternatives: 5,
+                    options: Normal,
+                },
+                index: 0,
+                arguments: [
+                    PatternCtorArg {
+                        index: 0,
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "base",
+                                            },
+                                        ),
+                                        name: "Primitive",
+                                    },
+                                    name: "pair",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        value: Named {
+                                            reference: QualifiedName {
+                                                home: ModuleName {
+                                                    package: Some(
+                                                        PackageName {
+                                                            author: "nash",
+                                                            project: "base",
+                                                        },
+                                                    ),
+                                                    name: "Primitive",
+                                                },
+                                                name: "int",
+                                            },
+                                            args: [],
+                                        },
+                                    },
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        value: Named {
+                                            reference: QualifiedName {
+                                                home: ModuleName {
+                                                    package: Some(
+                                                        PackageName {
+                                                            author: "nash",
+                                                            project: "base",
+                                                        },
+                                                    ),
+                                                    name: "Primitive",
+                                                },
+                                                name: "list",
+                                            },
+                                            args: [
+                                                Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 0,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 0,
+                                                        },
+                                                    },
+                                                    value: Named {
+                                                        reference: QualifiedName {
+                                                            home: ModuleName {
+                                                                package: Some(
+                                                                    PackageName {
+                                                                        author: "nash",
+                                                                        project: "base",
+                                                                    },
+                                                                ),
+                                                                name: "Primitive",
+                                                            },
+                                                            name: "Data",
+                                                        },
+                                                        args: [],
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                        pattern: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 8,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 15,
+                                },
+                            },
+                            value: Var(
+                                "payload",
+                            ),
+                        },
+                    },
+                ],
+                options: Normal,
+                alternatives: 5,
+            },
+        ),
+    },
+    {
+        "payload": Region {
+            start: Position {
+                line: 1,
+                column: 8,
+            },
+            end: Position {
+                line: 1,
+                column: 15,
+            },
+        },
+    },
+)

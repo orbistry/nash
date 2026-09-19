@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Pair 'a 'b = { first : 'a, second : 'b }\n\np = Pair\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,
@@ -80,10 +81,10 @@ Module {
                                         package: Some(
                                             PackageName {
                                                 author: "nash",
-                                                project: "core",
+                                                project: "base",
                                             },
                                         ),
-                                        name: "Builtin",
+                                        name: "Primitive",
                                     },
                                     name: "Big",
                                 },
@@ -111,10 +112,10 @@ Module {
                                         package: Some(
                                             PackageName {
                                                 author: "nash",
-                                                project: "core",
+                                                project: "base",
                                             },
                                         ),
-                                        name: "Builtin",
+                                        name: "Primitive",
                                     },
                                     name: "Big",
                                 },
@@ -349,10 +350,10 @@ Module {
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "Big",
                         },
@@ -380,10 +381,10 @@ Module {
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "Big",
                         },

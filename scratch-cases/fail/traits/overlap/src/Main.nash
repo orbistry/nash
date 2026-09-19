@@ -1,0 +1,7 @@
+module Main exposing (..)
+trait Pick 'a where
+    pick : 'a -> 'a
+impl Pick (list 'a) where
+    pick x = x
+impl Pick (list ('a : Big)) where
+    pick x = x

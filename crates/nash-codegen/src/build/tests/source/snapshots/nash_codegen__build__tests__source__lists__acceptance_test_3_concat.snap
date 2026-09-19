@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nfoldr xs f zero =\n    case xs of\n        [] -> zero\n        x :: rest -> f x (foldr rest f zero)\nconcat left right = foldr left (\\x xs -> mkCons x xs) right\nmain = eq (concat [1, 2, 3] [4, 5, 6]) [1, 2, 3, 4, 5, 6]\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nfoldr xs f zero =\n    case xs of\n        [] -> zero\n        x :: rest -> f x (foldr rest f zero)\nconcat left right = foldr left (\\x xs -> mkCons x xs) right\nmain = eq (concat [1, 2, 3] [4, 5, 6]) [1, 2, 3, 4, 5, 6]\n"
 ---
 --- core
 let eq#7 : int -> int -> bool = equalsInteger in
@@ -60,53 +60,40 @@ main#1
                 (lam self_26
                   (lam xs_14
                     [(lam match_19
-                      [(lam generated_28
-                        (force
-                          [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_28]]
-                            (delay zero_16)]
-                            (delay
-                              [[(lam field_20
-                                (lam field_21
-                                  [(lam x_17 [(lam rest_18 [[f_15 x_17] [[self_26 self_26] rest_18]]) field_21])
-                                    field_20]))
-                                [(force (builtin headList)) generated_28]]
-                                [(force (builtin tailList)) generated_28]])]))
-                        match_19])
+                      (case
+                        match_19
+                        (lam field_20
+                          (lam field_21
+                            [(lam x_17 [(lam rest_18 [[f_15 x_17] [[self_26 self_26] rest_18]]) field_21])
+                              field_20]))
+                        zero_16))
                       xs_14]))]
                 xs_14])))])
       [(lam self_27 [self_27 self_27])
         (lam self_27
           (lam xs_5
             (lam ys_6
-              [(lam generated_29
-                (force
-                  [[[(force (builtin ifThenElse)) generated_29]
-                    (delay [(force (builtin nullList)) ys_6])]
-                    (delay
-                      [(lam generated_30
-                        (force
-                          [[[(force (builtin ifThenElse)) generated_30] (delay (con bool False))]
-                            (delay
-                              [(lam projection_22
-                                [(lam projection_23
-                                  [(lam generated_31
-                                    (force
-                                      [[[(force (builtin ifThenElse)) generated_31]
-                                        (delay
-                                          [(lam projection_24
-                                            [(lam projection_25 [[[self_27 self_27] projection_24] projection_25])
-                                              [(force (builtin tailList)) ys_6]])
-                                            [(force (builtin tailList)) xs_5]])]
-                                        (delay (con bool False))]))
-                                    [[eq_7 projection_22] projection_23]])
-                                  [(force (builtin headList)) ys_6]])
-                                [(force (builtin headList)) xs_5]])]))
-                        [(force (builtin nullList)) ys_6]])]))
-                [(force (builtin nullList)) xs_5]])))]])
+              (case
+                [(force (builtin nullList)) xs_5]
+                (case
+                  [(force (builtin nullList)) ys_6]
+                  [(lam projection_22
+                    [(lam projection_23
+                      (case
+                        [[eq_7 projection_22] projection_23]
+                        (con bool False)
+                        [(lam projection_24
+                          [(lam projection_25 [[[self_27 self_27] projection_24] projection_25])
+                            [(force (builtin tailList)) ys_6]])
+                          [(force (builtin tailList)) xs_5]]))
+                      [(force (builtin headList)) ys_6]])
+                    [(force (builtin headList)) xs_5]]
+                  (con bool False))
+                [(force (builtin nullList)) ys_6]))))]])
     (builtin equalsInteger)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 20080644, memory: 84145
+cpu: 13187346, memory: 56602

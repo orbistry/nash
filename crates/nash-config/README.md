@@ -29,7 +29,7 @@ An application compiles to UPLC validators for the Cardano blockchain.
     "type": "application",
     "sourceDirectories": ["src"],
     "dependencies": {
-        "nash/core": "1.0.0 <= v < 2.0.0",
+        "example/math": "1.0.0 <= v < 2.0.0",
         "alice/json": { "workspace": true }
     },
     "testDependencies": {
@@ -51,7 +51,7 @@ A publishable library that can be used as a dependency.
     "license": "MIT",
     "exposedModules": ["Json", "Json.Decode", "Json.Encode"],
     "dependencies": {
-        "nash/core": "1.0.0 <= v < 2.0.0"
+        "example/math": "1.0.0 <= v < 2.0.0"
     }
 }
 ```
@@ -76,7 +76,7 @@ A collection of related projects that share dependencies.
     "type": "workspace",
     "members": ["packages/*", "apps/my-app"],
     "dependencies": {
-        "nash/core": "1.0.0 <= v < 2.0.0",
+        "example/math": "1.0.0 <= v < 2.0.0",
         "alice/json": "2.0.0 <= v < 3.0.0"
     }
 }
@@ -94,7 +94,7 @@ Members can inherit workspace dependencies:
     "license": "MIT",
     "exposedModules": ["MyLib"],
     "dependencies": {
-        "nash/core": { "workspace": true }
+        "example/math": { "workspace": true }
     }
 }
 ```
@@ -124,7 +124,7 @@ Dependencies can be specified in several ways:
 ### Version Constraint
 
 ```jsonc
-"nash/core": "1.0.0 <= v < 2.0.0"
+"example/math": "1.0.0 <= v < 2.0.0"
 ```
 
 ### Workspace Inheritance
@@ -132,7 +132,7 @@ Dependencies can be specified in several ways:
 Inherit the constraint from the workspace root:
 
 ```jsonc
-"nash/core": { "workspace": true }
+"example/math": { "workspace": true }
 ```
 
 ### Path Dependency
@@ -164,7 +164,7 @@ Package names follow the `author/project` format:
 - Can contain lowercase letters, digits, and hyphens
 - Cannot end with a hyphen or have consecutive hyphens
 
-Examples: `nash/core`, `alice/json-parser`, `bob123/my-lib2`
+Examples: `example/math`, `alice/json-parser`, `bob123/my-lib2`
 
 ## Usage
 

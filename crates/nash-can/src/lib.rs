@@ -1,4 +1,5 @@
 mod accumulate;
+pub mod defaults;
 mod entailment;
 pub mod environment;
 mod error;

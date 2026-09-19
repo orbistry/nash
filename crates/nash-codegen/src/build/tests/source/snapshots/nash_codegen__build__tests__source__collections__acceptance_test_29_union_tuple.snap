@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\n-- Native lists require Storable elements; tuples use a recursive source list.\ntype sequence 'a = Nil | Cons 'a (sequence 'a)\nseqEq same left right =\n    case (left, right) of\n        (Nil, Nil) -> True\n        (Cons x xs, Cons y ys) -> if same x y then seqEq same xs ys else False\n        _ -> False\ntupleEq (a, b) (c, d) = if eq a c then eq b d else False\ntype assocList 'key 'value = AssocList { inner : sequence ('key, 'value) }\nimpl (Eq 'key, Eq 'value) => Eq (assocList 'key 'value) where\n    eq left right = seqEq tupleEq left.inner right.inner\nemptyList = AssocList { inner = Nil }\nfromList xs = AssocList { inner = (doFromList xs) }\ndoFromList xs =\n    case xs of\n        Nil -> Nil\n        Cons (k, v) rest -> doInsert (doFromList rest) k v\ninsert : Eq 'key => assocList 'key 'value -> 'key -> 'value -> assocList 'key 'value\ninsert m k v = AssocList { inner = (doInsert m.inner k v) }\ndoInsert elems k v =\n    case elems of\n        Nil -> Cons (k, v) Nil\n        Cons (k2, v2) rest ->\n            if eq k k2 then Cons (k, v) rest\n            else Cons (k2, v2) (doInsert rest k v)\nunion : Eq 'key => assocList 'key 'value -> assocList 'key 'value -> assocList 'key 'value\nunion left right = AssocList { inner = (doUnion left.inner right.inner) }\ndoUnion left right =\n    case left of\n        Nil -> right\n        Cons (k, v) rest -> doUnion rest (doInsert right k v)\nfixture1 : assocList bytes int\nfixture1 = insert (insert emptyList \"foo\" 42) \"bar\" 14\nmain = eq (union fixture1 emptyList) fixture1\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\n-- Native lists require Storable elements; tuples use a recursive source list.\ntype sequence 'a = Nil | Cons 'a (sequence 'a)\nseqEq same left right =\n    case (left, right) of\n        (Nil, Nil) -> True\n        (Cons x xs, Cons y ys) -> if same x y then seqEq same xs ys else False\n        _ -> False\ntupleEq (a, b) (c, d) = if eq a c then eq b d else False\ntype assocList 'key 'value = AssocList { inner : sequence ('key, 'value) }\nimpl (Eq 'key, Eq 'value) => Eq (assocList 'key 'value) where\n    eq left right = seqEq tupleEq left.inner right.inner\nemptyList = AssocList { inner = Nil }\nfromList xs = AssocList { inner = (doFromList xs) }\ndoFromList xs =\n    case xs of\n        Nil -> Nil\n        Cons (k, v) rest -> doInsert (doFromList rest) k v\ninsert : Eq 'key => assocList 'key 'value -> 'key -> 'value -> assocList 'key 'value\ninsert m k v = AssocList { inner = (doInsert m.inner k v) }\ndoInsert elems k v =\n    case elems of\n        Nil -> Cons (k, v) Nil\n        Cons (k2, v2) rest ->\n            if eq k k2 then Cons (k, v) rest\n            else Cons (k2, v2) (doInsert rest k v)\nunion : Eq 'key => assocList 'key 'value -> assocList 'key 'value -> assocList 'key 'value\nunion left right = AssocList { inner = (doUnion left.inner right.inner) }\ndoUnion left right =\n    case left of\n        Nil -> right\n        Cons (k, v) rest -> doUnion rest (doInsert right k v)\nfixture1 : assocList bytes int\nfixture1 = insert (insert emptyList \"foo\" 42) \"bar\" 14\nmain = eq (union fixture1 emptyList) fixture1\n"
 ---
 --- core
 let message#95 : string = "foo" in
@@ -147,18 +147,14 @@ main#1
                                             [(lam rest_80
                                               [(lam k2_78
                                                 [(lam v2_79
-                                                  [(lam generated_100
-                                                    (force
-                                                      [[[(force (builtin ifThenElse)) generated_100]
-                                                        (delay
-                                                          [[(lam field_83 (lam field_84 (constr 1 field_83 field_84)))
-                                                            (constr 0 k_74 v_75)]
-                                                            rest_80])]
-                                                        (delay
-                                                          [[(lam field_81 (lam field_82 (constr 1 field_81 field_82)))
-                                                            (constr 0 k2_78 v2_79)]
-                                                            [[self_29 self_29] rest_80]])]))
-                                                    [[eq_49 k_74] k2_78]])
+                                                  (case
+                                                    [[eq_49 k_74] k2_78]
+                                                    [[(lam field_81 (lam field_82 (constr 1 field_81 field_82)))
+                                                      (constr 0 k2_78 v2_79)]
+                                                      [[self_29 self_29] rest_80]]
+                                                    [[(lam field_83 (lam field_84 (constr 1 field_83 field_84)))
+                                                      (constr 0 k_74 v_75)]
+                                                      rest_80]))
                                                   field_89])
                                                 field_88])
                                               field_87])))))))
@@ -168,8 +164,8 @@ main#1
                   (lam right_7
                     [(lam projection_90
                       [(lam projection_91 [[[seqEq_8 tupleEq_9] projection_90] projection_91])
-                        (case right_7 (lam generated_101 generated_101))])
-                      (case left_6 (lam generated_102 generated_102))]))])
+                        (case right_7 (lam generated_100 generated_100))])
+                      (case left_6 (lam generated_101 generated_101))]))])
               (lam arg_43
                 (lam arg_46
                   [(lam match_54
@@ -185,12 +181,7 @@ main#1
                                   (lam field_52
                                     (lam field_53
                                       [(lam c_47
-                                        [(lam d_48
-                                          [(lam generated_103
-                                            (force
-                                              [[[(force (builtin ifThenElse)) generated_103] (delay [[eq_50 b_45] d_48])]
-                                                (delay (con bool False))]))
-                                            [[eq_49 a_44] c_47]])
+                                        [(lam d_48 (case [[eq_49 a_44] c_47] (con bool False) [[eq_50 b_45] d_48]))
                                           field_53])
                                         field_52]))))
                                 arg_46])
@@ -226,12 +217,7 @@ main#1
                                               [(lam xs_22
                                                 [(lam y_23
                                                   [(lam ys_24
-                                                    [(lam generated_104
-                                                      (force
-                                                        [[[(force (builtin ifThenElse)) generated_104]
-                                                          (delay [[[self_30 self_30] xs_22] ys_24])]
-                                                          (delay (con bool False))]))
-                                                      [[same_18 x_21] y_23]])
+                                                    (case [[same_18 x_21] y_23] (con bool False) [[[self_30 self_30] xs_22] ys_24]))
                                                     field_42])
                                                   field_41])
                                                 field_40])
@@ -247,4 +233,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 12122730, memory: 70032
+cpu: 10448910, memory: 64014

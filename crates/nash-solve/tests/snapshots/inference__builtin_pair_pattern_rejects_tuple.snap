@@ -1,0 +1,43 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nf : (int, int) -> int\nf pair(a, _) = a\n"
+info: diagnostic
+---
+nash::type::ambiguous_type
+
+  × Cannot determine type `'b` in `f`.
+   ╭─[Main.nash:3:1]
+ 2 │ f : (int, int) -> int
+ 3 │ f pair(a, _) = a
+   · ─
+   ╰────
+  help: Required constraints: Primitive.Storable 'b
+
+        Add a type annotation that determines this variable.
+
+
+nash::type::ambiguous_type
+
+  × Cannot determine type `'a` in `f`.
+   ╭─[Main.nash:3:1]
+ 2 │ f : (int, int) -> int
+ 3 │ f pair(a, _) = a
+   · ─
+   ╰────
+  help: Required constraints: Primitive.Storable 'a
+
+        Add a type annotation that determines this variable.
+
+
+nash::type::pattern_mismatch
+
+  × Type mismatch: expected `( int, int )`, found `pair 'a 'b`.
+   ╭─[Main.nash:3:3]
+ 1 │ module Main exposing (..)
+ 2 │ f : (int, int) -> int
+   ·     ────────┬────────
+   ·             ╰── declared argument type
+ 3 │ f pair(a, _) = a
+   ·   ─────┬────
+   ·        ╰── argument 1 of `f`
+   ╰────

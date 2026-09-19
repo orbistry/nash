@@ -30,14 +30,14 @@ fn source_settings(source: &str) -> insta::Settings {
 
 fn int() -> ErrorType<'static> {
     ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "int",
         args: &[],
     }
 }
 fn string() -> ErrorType<'static> {
     ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "string",
         args: &[],
     }
@@ -56,7 +56,7 @@ fn show(source: &str, error: &Error<'_>) -> String {
 
 #[test]
 fn mismatch_annotation_body() {
-    let source = "module Main exposing (..)\nvalue : Builtin.int\nvalue = \"hello\"\n";
+    let source = "module Main exposing (..)\nvalue : Primitive.int\nvalue = \"hello\"\n";
     let region = || source_region(source, "\"hello\"");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -68,7 +68,7 @@ fn mismatch_annotation_body() {
             &string(),
             Expected::FromAnnotation(
                 "value",
-                source_region(source, "Builtin.int"),
+                source_region(source, "Primitive.int"),
                 0,
                 SubContext::TypedBody,
                 &int()
@@ -132,7 +132,7 @@ fn mismatch_if_condition_not_bool() {
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     let boolean = ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "bool",
         args: &[],
     };
@@ -148,8 +148,7 @@ fn mismatch_if_condition_not_bool() {
 }
 #[test]
 fn mismatch_call_arg_first() {
-    let source =
-        "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf x = x\nvalue = f \"hello\"\n";
+    let source = "module Main exposing (..)\nf : Primitive.int -> Primitive.int\nf x = x\nvalue = f \"hello\"\n";
     let region = || source_region(source, "\"hello\"");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -169,7 +168,7 @@ fn mismatch_call_arg_first() {
 }
 #[test]
 fn mismatch_call_arg_second_has_hint() {
-    let source = "module Main exposing (..)\nf : Builtin.int -> Builtin.int -> Builtin.int\nf x y = x\nvalue = f 1 \"hello\"\n";
+    let source = "module Main exposing (..)\nf : Primitive.int -> Primitive.int -> Primitive.int\nf x y = x\nvalue = f 1 \"hello\"\n";
     let region = || source_region(source, "\"hello\"");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -281,7 +280,7 @@ fn op_cons_right_not_list() {
                 region(),
                 Context::OpRight("::"),
                 &ErrorType::Type {
-                    home: nash_ast::primitives::builtin_home(),
+                    home: nash_ast::primitives::primitive_home(),
                     name: "list",
                     args: &[&int()]
                 }
@@ -363,7 +362,7 @@ fn destructure_mismatch() {
 }
 #[test]
 fn record_field_mismatch() {
-    let source = "module Main exposing (..)\ntype alias Person = { name : Builtin.int }\nvalue : Person\nvalue = { name = \"hello\" }\n";
+    let source = "module Main exposing (..)\ntype alias Person = { name : Primitive.int }\nvalue : Person\nvalue = { name = \"hello\" }\n";
     let region = || source_region(source, "\"hello\"");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -413,7 +412,7 @@ fn pattern_case_later_mismatch() {
 #[test]
 fn pattern_ctor_arg_mismatch() {
     let source =
-        "module Main exposing (..)\ntype Option = Some Builtin.int\nvalue (Some \"hello\") = 1\n";
+        "module Main exposing (..)\ntype Option = Some Primitive.int\nvalue (Some \"hello\") = 1\n";
     let region = || source_region(source, "\"hello\"");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -429,7 +428,7 @@ fn pattern_ctor_arg_mismatch() {
 }
 #[test]
 fn pattern_typed_arg_mismatch() {
-    let source = "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf \"hello\" = 1\n";
+    let source = "module Main exposing (..)\nf : Primitive.int -> Primitive.int\nf \"hello\" = 1\n";
     let region = || source_region(source, "\"hello\"");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -441,7 +440,11 @@ fn pattern_typed_arg_mismatch() {
             &string(),
             PExpected::FromContext(
                 region(),
-                PContext::TypedArg("f", 0, source_region(source, "Builtin.int -> Builtin.int")),
+                PContext::TypedArg(
+                    "f",
+                    0,
+                    source_region(source, "Primitive.int -> Primitive.int")
+                ),
                 &int()
             )
         )
@@ -470,7 +473,7 @@ fn pattern_list_tail() {
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     let list = ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "list",
         args: &[&int()],
     };
@@ -488,7 +491,7 @@ fn pattern_list_tail() {
 #[test]
 fn too_many_args_on_function() {
     let source =
-        "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf x = x\nvalue = f 1 2 3\n";
+        "module Main exposing (..)\nf : Primitive.int -> Primitive.int\nf x = x\nvalue = f 1 2 3\n";
     let region = || source_region(source, "f 1 2 3");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -606,7 +609,7 @@ fn record_update_unknown_field() {
 }
 #[test]
 fn missing_field_alias() {
-    let source = "module Main exposing (..)\ntype alias Person = { age : Builtin.int }\nvalue : Person -> Builtin.int\nvalue person = person.aeg\n";
+    let source = "module Main exposing (..)\ntype alias Person = { age : Primitive.int }\nvalue : Person -> Primitive.int\nvalue person = person.aeg\n";
     let region = || source_region(source, "aeg");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -644,7 +647,7 @@ fn op_append_string_list() {
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     let list = ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "list",
         args: &[&int()],
     };
@@ -665,12 +668,12 @@ fn op_cons_element_mismatch() {
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     let actual = ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "list",
         args: &[&string()],
     };
     let expected = ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "list",
         args: &[&int()],
     };
@@ -686,7 +689,7 @@ fn op_cons_element_mismatch() {
 }
 #[test]
 fn op_pipe_argument_mismatch() {
-    let source = "module Main exposing (..)\nf : Builtin.string -> Builtin.string\nf x = x\nvalue = 1 |> f\n";
+    let source = "module Main exposing (..)\nf : Primitive.string -> Primitive.string\nf x = x\nvalue = 1 |> f\n";
     let region = || source_region(source, "f");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -721,8 +724,7 @@ fn ambiguous_record_access() {
 }
 #[test]
 fn not_a_record_pattern() {
-    let source =
-        "module Main exposing (..)\nvalue : Builtin.int -> Builtin.int\nvalue { name } = name\n";
+    let source = "module Main exposing (..)\nvalue : Primitive.int -> Primitive.int\nvalue { name } = name\n";
     let region = || source_region(source, "{ name }");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -770,8 +772,8 @@ fn field_mismatch_update() {
 }
 #[test]
 fn kind_mismatch() {
-    let source = "module Main exposing (..)\nf : 'f Builtin.int -> 'f\nf x = x\n";
-    let region = || source_region(source, "'f Builtin.int");
+    let source = "module Main exposing (..)\nf : 'f Primitive.int -> 'f\nf x = x\n";
+    let region = || source_region(source, "'f Primitive.int");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(show(
@@ -875,8 +877,8 @@ fn unresolved_constraint() {
 }
 #[test]
 fn unresolved_application() {
-    let source = "module Main exposing (..)\nf : 'f Builtin.int -> Builtin.int\nf x = 1\n";
-    let region = || source_region(source, "'f Builtin.int");
+    let source = "module Main exposing (..)\nf : 'f Primitive.int -> Primitive.int\nf x = 1\n";
+    let region = || source_region(source, "'f Primitive.int");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(show(
@@ -891,7 +893,7 @@ fn unresolved_application() {
 }
 #[test]
 fn impl_resolution_limit() {
-    let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nimpl Eq (Builtin.list 'a) => Eq 'a where\n    eq xs ys = True\nf xs = eq xs xs\n";
+    let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nimpl Eq (Primitive.list 'a) => Eq 'a where\n    eq xs ys = True\nf xs = eq xs xs\n";
     let region = || source_region(source, "eq xs xs");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -906,7 +908,7 @@ fn impl_resolution_limit() {
 }
 #[test]
 fn missing_constraint() {
-    let source = "module Main exposing (..)\nf : 'a -> Builtin.bool\nf x = x == x\n";
+    let source = "module Main exposing (..)\nf : 'a -> Primitive.bool\nf x = x == x\n";
     let region = || source_region(source, "x == x");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -939,7 +941,7 @@ fn annotation_variable_escapes() {
 #[test]
 fn missing_impl() {
     let source =
-        "module Main exposing (..)\ntype step = Done | Next Builtin.int\nf = Done == Done\n";
+        "module Main exposing (..)\ntype step = Done | Next Primitive.int\nf = Done == Done\n";
     let region = || source_region(source, "Done == Done");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -959,7 +961,7 @@ fn missing_impl() {
             }],
             available: &[&[nash_ast::Head::Named {
                 reference: nash_ast::QualifiedName {
-                    home: nash_ast::primitives::builtin_home(),
+                    home: nash_ast::primitives::primitive_home(),
                     name: "int"
                 },
                 args: &[]
@@ -984,7 +986,7 @@ fn missing_storable_constraint_for_list_element() {
             available: &[],
             because: &[nash_constrain::error::Requirement::Formation(
                 &ErrorType::Type {
-                    home: nash_ast::primitives::builtin_home(),
+                    home: nash_ast::primitives::primitive_home(),
                     name: "list",
                     args: &[&ErrorType::Lambda(&int(), &int(), &[])]
                 }
@@ -1054,12 +1056,12 @@ fn every_subcontext() {
         (
             "typed_if",
             SubContext::TypedIfBranch(1),
-            "module Main exposing (..)\nf : Builtin.bool -> Builtin.int\nf flag = if flag then 1 else \"hello\"\n",
+            "module Main exposing (..)\nf : Primitive.bool -> Primitive.int\nf flag = if flag then 1 else \"hello\"\n",
         ),
         (
             "typed_case",
             SubContext::TypedCaseBranch(1),
-            "module Main exposing (..)\nf : Builtin.bool -> Builtin.int\nf flag =\n    case flag of\n        True -> 1\n        False -> \"hello\"\n",
+            "module Main exposing (..)\nf : Primitive.bool -> Primitive.int\nf flag =\n    case flag of\n        True -> 1\n        False -> \"hello\"\n",
         ),
     ] {
         let settings = source_settings(source);
@@ -1074,7 +1076,7 @@ fn every_subcontext() {
                     &string(),
                     Expected::FromAnnotation(
                         "f",
-                        source_region(source, "Builtin.bool -> Builtin.int"),
+                        source_region(source, "Primitive.bool -> Primitive.int"),
                         1,
                         context,
                         &int()
@@ -1234,14 +1236,14 @@ fn source_pipeline_infinite_type() {
 }
 #[test]
 fn source_pipeline_missing_impl() {
-    let source = "module Main exposing (..)\ntype A = A\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nf : A -> Builtin.bool\nf a = eq a a\n";
+    let source = "module Main exposing (..)\ntype A = A\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nf : A -> Primitive.bool\nf a = eq a a\n";
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(type_error_reports(source));
 }
 #[test]
 fn source_pipeline_missing_constraint() {
-    let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Builtin.bool\nf : 'a -> Builtin.bool\nf a = eq a a\n";
+    let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nf : 'a -> Primitive.bool\nf a = eq a a\n";
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(type_error_reports(source));
@@ -1252,7 +1254,7 @@ fn example_one_big_little_annotation() {
     let source = "module Ledger exposing (settle)\n\ntype alias Account = { owner : Bytes, balance : Int }\n\nbalanceOf : Account -> Int\nbalanceOf account = account.balance\n\nsettle : list Account -> list int\nsettle accounts =\n    List.map balanceOf accounts\n";
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
-    let home = nash_ast::primitives::builtin_home();
+    let home = nash_ast::primitives::primitive_home();
     let big = ErrorType::Type {
         home,
         name: "Int",
@@ -1329,13 +1331,13 @@ fn operator_branches() {
         let expected_element = int();
         let expected = if matches!(op, "&&" | "||") {
             ErrorType::Type {
-                home: nash_ast::primitives::builtin_home(),
+                home: nash_ast::primitives::primitive_home(),
                 name: "bool",
                 args: &[],
             }
         } else if op == "++" {
             ErrorType::Type {
-                home: nash_ast::primitives::builtin_home(),
+                home: nash_ast::primitives::primitive_home(),
                 name: "list",
                 args: &[&expected_element],
             }
@@ -1405,7 +1407,7 @@ fn problem_hints() {
 #[test]
 fn missing_impl_local_union_suggests_a_supported_impl() {
     let source =
-        "module Main exposing (..)\ntype step = Done | Next Builtin.int\nf = Done == Done\n";
+        "module Main exposing (..)\ntype step = Done | Next Primitive.int\nf = Done == Done\n";
     let region = || source_region(source, "Done == Done");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
@@ -1517,7 +1519,7 @@ fn append_number_hints_wrap() {
 #[test]
 fn pipe_argument_mismatch_does_not_blame_the_function_operand() {
     let unit = ErrorType::Type {
-        home: nash_ast::primitives::builtin_home(),
+        home: nash_ast::primitives::primitive_home(),
         name: "unit",
         args: &[],
     };
@@ -1538,7 +1540,7 @@ fn pipe_argument_mismatch_does_not_blame_the_function_operand() {
 
 #[test]
 fn validator_term_parameter() {
-    let source = "module Main exposing (..)\nmain : Builtin.Data -> ((), ()) -> Builtin.bool\nmain datum pair = True\n";
+    let source = "module Main exposing (..)\nmain : Primitive.Data -> ((), ()) -> Primitive.bool\nmain datum pair = True\n";
     let region = || source_region(source, "((), ())");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();

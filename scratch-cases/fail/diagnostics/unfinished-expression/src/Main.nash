@@ -1,0 +1,2 @@
+module Main exposing (..)
+value = if True then ()

@@ -103,7 +103,7 @@ limits; no Paterson restriction or new impl admission policy is introduced.
 | `cargo clippy --all-targets --all-features -- -D warnings` | Pass. |
 | `cargo test --workspace` | 2,027 passed; zero failures; three existing doctests ignored. |
 | `cargo insta test --workspace --check --unreferenced delete` | Pass; no unreferenced snapshots and no snapshots to review. |
-| `cargo run -q -p nash-cli -- check tests/core` | 23 modules and 215 declarations compiled. |
+| `cargo run -q -p nash-cli -- check tests/base` | 23 modules and 215 declarations compiled. |
 | `git diff --check` | Pass. |
 
 Cross-module acceptance includes imported higher-kinded applications,

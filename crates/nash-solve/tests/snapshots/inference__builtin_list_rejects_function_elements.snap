@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[Main.nash:3:10]
  2 │ import Builtin
  3 │ bad xs = Builtin.mkCons (\x -> x) xs
@@ -21,7 +21,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[Main.nash:3:10]
  2 │ import Builtin
  3 │ bad xs = Builtin.mkCons (\x -> x) xs

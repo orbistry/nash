@@ -1,6 +1,0 @@
----
-source: crates/nash-cli/tests/build.rs
-description: "validator module Main exposing (main)\nimport Builtin\nmain : Data -> bytes\nmain = Builtin.serialiseData\n"
----
-Success! Compiled 1 modules (1 declarations)
-Error:   × code generation failed in Main: builtin SerialiseData is unavailable for V1 at the Plomin (protocol 10) compatibility baseline

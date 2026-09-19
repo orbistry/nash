@@ -1,0 +1,8 @@
+module Main exposing (..)
+trait Same 'a 'b where
+    same : 'a -> 'b -> 'a
+type box 'a = Box 'a
+impl Same (box 'a) (box 'a) where
+    same first _ = first
+bad : box unit -> box int -> box unit
+bad a b = same a b

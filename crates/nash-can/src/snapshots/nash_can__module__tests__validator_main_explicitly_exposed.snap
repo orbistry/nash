@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nvalidator module Foo exposing (main)\n\nmain ctx = ()\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Validator(

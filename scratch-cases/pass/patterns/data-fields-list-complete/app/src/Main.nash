@@ -1,0 +1,10 @@
+module Main exposing (..)
+import Builtin exposing (type bool(..), Data(..))
+import Eq exposing (Eq)
+import Literal exposing (FromInt, FromString, FromBytes)
+f : Data -> unit
+f d =
+    case d of
+        Constr _ [] -> ()
+        Constr _ (_ :: _) -> ()
+        _ -> ()

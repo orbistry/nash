@@ -1,14 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype small 'a = Small (pair ('a : Big) ('a : Const))\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype small 'a = Small (pair ('a : Big) ('a : Const))\n"
 info: diagnostic
 ---
 nash::names::contradictory_representation
 
   × The representation requirements on 'a are incompatible:
-   ╭─[src/Main.nash:5:41]
- 4 │ 
- 5 │ type small 'a = Small (pair ('a : Big) ('a : Const))
+   ╭─[src/Main.nash:6:41]
+ 5 │ 
+ 6 │ type small 'a = Small (pair ('a : Big) ('a : Const))
    ·                                         ──
    ╰────
   help: Change the incompatible constraints or uses of this variable.

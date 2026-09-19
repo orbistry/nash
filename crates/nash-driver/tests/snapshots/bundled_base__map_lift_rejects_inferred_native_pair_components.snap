@@ -1,0 +1,24 @@
+---
+source: crates/nash-driver/tests/bundled_base.rs
+description: "module Main exposing (..)\nasMap : Map Int (List Data) -> Map Int (List Data)\nasMap value = value\nbad value = asMap (lift [Builtin.unConstrData value])\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Lift (list (pair int (list Data))) (Map Int (List Data))`.
+   ╭─[/app/src/Main.nash:4:20]
+ 3 │ asMap value = value
+ 4 │ bad value = asMap (lift [Builtin.unConstrData value])
+   ·                    ──┬─
+   ·                      ╰── required by `lift`
+   ╰────
+  help: Available impl heads:
+
+            (option 'a0) (Option 'a1)
+            ordering Ordering
+            bool Bool
+            bytes Bytes
+
+        …
+
+        Import or define an impl for `Lift (list (pair int (list Data))) (Map Int (List Data))`.

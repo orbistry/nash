@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ('a -> 'a)`.
+  × Unsatisfied representation constraint `Primitive.Storable ('a -> 'a)`.
    ╭─[Main.nash:2:7]
  1 │ module Main exposing (..)
  2 │ bad = [\x -> x]

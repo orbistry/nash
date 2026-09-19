@@ -1,15 +1,15 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-description: "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf \"hello\" = 1\n"
+description: "module Main exposing (..)\nf : Primitive.int -> Primitive.int\nf \"hello\" = 1\n"
 ---
 nash::type::pattern_mismatch
 
-  × Type mismatch: expected `int`, found `string`.
+  × Type mismatch: expected `Primitive.int`, found `Primitive.string`.
    ╭─[Main.nash:3:3]
  1 │ module Main exposing (..)
- 2 │ f : Builtin.int -> Builtin.int
-   ·     ─────────────┬────────────
-   ·                  ╰── declared argument type
+ 2 │ f : Primitive.int -> Primitive.int
+   ·     ───────────────┬──────────────
+   ·                    ╰── declared argument type
  3 │ f "hello" = 1
    ·   ───┬───
    ·      ╰── argument 1 of `f`

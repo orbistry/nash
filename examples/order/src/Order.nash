@@ -1,0 +1,51 @@
+module Order exposing (compare, invert, sort)
+
+import Prelude exposing (..)
+import Literal
+import Bool exposing (not)
+import Ord exposing (Ord)
+import Ordering exposing (type ordering(..))
+
+compare : int -> int -> ordering
+compare = Ord.compare
+
+invert : ordering -> ordering
+invert order = order
+
+sort : list int -> list int
+sort xs =
+    case xs of
+        [] -> []
+        x :: rest -> insert x (sort rest)
+
+insert : int -> list int -> list int
+insert x xs =
+    case xs of
+        [] -> [x]
+        y :: rest ->
+            if x <= y then x :: xs
+            else y :: insert x rest
+
+tests
+    import Fuzz exposing (int)
+    import Test exposing (label)
+
+    test "lt is strict" = do
+        assert (not (lt 1 1))
+
+    prop "compare is antisymmetric" =
+        let
+            a via int
+            b via int
+        in
+        do
+            label (if a < b then "lt" else "ge")
+            assert (compare a b == invert (compare b a))
+
+    prop "division by zero fails" fail =
+        let x via int in
+        do
+            assert (x / 0 == 0)
+
+    test "sort stays within budget" within (cpu 1000000000, mem 1000000) = do
+        assert (sort [3, 1, 2] == [1, 2, 3])

@@ -301,6 +301,15 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             expected,
             actual,
         } => arity(*region, name, "trait", *expected, *actual),
+        Error::DuplicateTest {
+            name,
+            first,
+            second,
+        } => name_clash(
+            *first,
+            *second,
+            &format!("This file has multiple tests named `{name}`."),
+        ),
         Error::DuplicateDecl {
             name,
             first,
@@ -672,6 +681,11 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         ),
         Error::BadInstanceHead { region, reason } => {
             use nash_can::BadHead;
+            let hint = if matches!(reason, BadHead::BareVariable) {
+                "A bare-variable impl must be defined in the module that defines its trait."
+            } else {
+                "Use a named type constructor or a tuple as the outermost type of an impl head."
+            };
             let reason = match reason {
                 BadHead::BareVariable => "a bare type variable",
                 BadHead::Function => "a function type",
@@ -682,7 +696,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 "BAD IMPL HEAD",
                 *region,
                 &format!("This impl head is {reason}:"),
-                "Use a named type constructor or a tuple as the outermost type of an impl head.",
+                hint,
             )
         }
         Error::OrphanImpl {
@@ -980,6 +994,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         Error::BadArity { .. } => "nash::names::bad_arity",
         Error::ExportNotFound { .. } => "nash::names::export_not_found",
         Error::ExportOpenAlias { .. } => "nash::names::export_open_alias",
+        Error::DuplicateTest { .. } => "nash::names::duplicate_test",
         Error::DuplicateDecl { .. } => "nash::names::duplicate_decl",
         Error::DuplicateType { .. } => "nash::names::duplicate_type",
         Error::DuplicateCtor { .. } => "nash::names::duplicate_ctor",

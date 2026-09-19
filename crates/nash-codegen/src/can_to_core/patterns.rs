@@ -109,7 +109,7 @@ impl<'a> Engine<'a, '_, '_> {
         )?)
     }
 
-    fn pattern_inputs(
+    pub(crate) fn pattern_inputs(
         &mut self,
         pattern: &'a Located<Pattern<'a>>,
         ctx: &Context<'a>,
@@ -134,6 +134,10 @@ impl<'a> Engine<'a, '_, '_> {
                     );
                 }
                 Pattern::Alias { pattern, .. } => pending.push(pattern),
+                Pattern::Pair { first, second } => {
+                    pending.push(first);
+                    pending.push(second);
+                }
                 Pattern::Tuple {
                     first,
                     second,
@@ -301,6 +305,10 @@ fn bound_names<'a>(pattern: &'a Located<Pattern<'a>>) -> Vec<&'a str> {
             Pattern::Alias { pattern, name } => {
                 pending.push(pattern);
                 result.push(*name);
+            }
+            Pattern::Pair { first, second } => {
+                pending.push(first);
+                pending.push(second);
             }
             Pattern::Tuple {
                 first,

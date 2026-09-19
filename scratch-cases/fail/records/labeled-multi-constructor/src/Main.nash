@@ -1,0 +1,4 @@
+module Main exposing (..)
+type choice = First { x : unit } | Second { x : unit }
+get : choice -> unit
+get r = r.x

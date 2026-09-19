@@ -115,20 +115,6 @@ pub fn map<'a>(
                 args: mapped,
             })
         }
-        Core::Cast {
-            kind,
-            from,
-            to,
-            arg,
-        } => {
-            let mapped = map(build, arg, f);
-            (!ptr::eq(*arg, mapped)).then_some(Core::Cast {
-                kind: *kind,
-                from: *from,
-                to: *to,
-                arg: mapped,
-            })
-        }
         Core::Trace { message, body } => {
             let m = map(build, message, f);
             let t = map(build, body, f);

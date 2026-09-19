@@ -15,6 +15,8 @@ nash-solve = { path = "../nash-solve", version = "0.6.0" }
 bumpalo.workspace = true
 nash-ir = { path = "../nash-ir", version = "0.2.0" }
 nash-plutus = { path = "../nash-plutus", version = "0.2.0" }
+nash-test = { path = "../nash-test", version = "0.1.0" }
+nash-config = { path = "../nash-config", version = "0.4.0" }
 thiserror.workspace = true
 
 [dev-dependencies]
@@ -23,3 +25,4 @@ nash-constrain = { path = "../nash-constrain" }
 nash-nitpick = { path = "../nash-nitpick" }
 indoc.workspace = true
 insta.workspace = true
+serde_json.workspace = true

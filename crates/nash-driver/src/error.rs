@@ -8,6 +8,10 @@ use url::Url;
 /// Main error type for driver operations.
 #[derive(Debug, Error, Diagnostic)]
 pub enum DriverError {
+    #[error("module {name} in {uri} uses a name reserved for the compiler-bundled Base")]
+    ReservedModule { name: String, uri: Box<Url> },
+    #[error("cannot resolve dependency {package}: {message}")]
+    Dependency { package: String, message: String },
     #[error("module {uri} belongs to both {first} and {second}")]
     ConflictingModuleOwners {
         uri: Box<Url>,

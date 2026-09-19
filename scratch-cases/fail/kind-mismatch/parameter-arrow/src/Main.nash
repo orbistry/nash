@@ -1,0 +1,5 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type wrap ('f : Big) 'a = Wrap ('f 'a)

@@ -1,0 +1,50 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData, fromData)\ndecodedInt : Int\ndecodedInt = fromData (I 42)\ndecodedBytes : Bytes\ndecodedBytes = fromData (B #\"abcd\")\nmain =\n    if equalsInteger (unIData decodedInt) 42 then\n        if equalsByteString (unBData decodedBytes) #\"abcd\" then\n            equalsData (toData decodedInt) (I 42)\n        else False\n    else False\n"
+---
+--- core
+let fromInt#3 : int -> int = \value#10 : int -> value#10 in
+let fromData#8 : Data -> 'erased = \coerce#14 : 'erased -> coerce#14 in
+let decodedInt#2 : Int = fromData#8 ((\field#9 : int -> iData field#9) (fromInt#3 42)) in
+let fromBytes#5 : bytes -> bytes = \value#12 : bytes -> value#12 in
+let decodedBytes#4 : Bytes = fromData#8 ((\field#11 : bytes -> bData field#11) (fromBytes#5 (con bytestring #abcd))) in
+let toData#6 : 'erased -> Data = \coerce#13 : 'erased -> coerce#13 in
+let main#1 : bool = case@Bool equalsInteger (unIData decodedInt#2) (fromInt#3 42) of
+  True -> case@Bool equalsByteString (unBData decodedBytes#4) (fromBytes#5 (con bytestring #abcd)) of
+    True -> equalsData (toData#6 decodedInt#2) ((\field#7 : int -> iData field#7) (fromInt#3 42))
+    False -> false
+  False -> false in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam fromData_8
+      [(lam decodedInt_2
+        [(lam fromBytes_5
+          [(lam decodedBytes_4
+            [(lam toData_6
+              [(lam main_1 main_1)
+                (case
+                  [[(builtin equalsInteger) [(builtin unIData) decodedInt_2]]
+                    [fromInt_3 (con integer 42)]]
+                  (con bool False)
+                  (case
+                    [[(builtin equalsByteString) [(builtin unBData) decodedBytes_4]]
+                      [fromBytes_5 (con bytestring #abcd)]]
+                    (con bool False)
+                    [[(builtin equalsData) [toData_6 decodedInt_2]]
+                      [(lam field_7 [(builtin iData) field_7]) [fromInt_3 (con integer 42)]]]))])
+              (lam coerce_13 coerce_13)])
+            [fromData_8
+              [(lam field_11 [(builtin bData) field_11]) [fromBytes_5 (con bytestring #abcd)]]]])
+          (lam value_12 value_12)])
+        [fromData_8
+          [(lam field_9 [(builtin iData) field_9]) [fromInt_3 (con integer 42)]]]])
+      (lam coerce_14 coerce_14)])
+    (lam value_10 value_10)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 2495179, memory: 8363

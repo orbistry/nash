@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/structural_eq.rs
-description: "module Eq exposing (Eq)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq Token where\n    eq _ _ = Builtin.True\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq Box where\n    eq _ _ = Builtin.True\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq (Alias 'a) where\n    eq _ _ = Builtin.True\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq (Applied 'f 'a) where\n    eq _ _ = Builtin.True\n"
+description: "module Eq exposing (Eq)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq Token where\n    eq _ _ = Primitive.True\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq Box where\n    eq _ _ = Primitive.True\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq (Alias 'a) where\n    eq _ _ = Primitive.True\n\n\nmodule Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = { item : Int }\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq (Applied 'f 'a) where\n    eq _ _ = Primitive.True\n"
 info: diagnostic
 ---
 nash::names::structural_eq_override
@@ -10,7 +10,7 @@ nash::names::structural_eq_override
  7 │ type alias Applied 'f 'a = 'f 'a
  8 │ impl Eq Token where
    ·         ─────
- 9 │     eq _ _ = Builtin.True
+ 9 │     eq _ _ = Primitive.True
    ╰────
   help: Equality for this type is supplied by the compiler. Remove the explicit `Eq`
         impl.
@@ -22,7 +22,7 @@ nash::names::structural_eq_override
  7 │ type alias Applied 'f 'a = 'f 'a
  8 │ impl Eq Box where
    ·         ───
- 9 │     eq _ _ = Builtin.True
+ 9 │     eq _ _ = Primitive.True
    ╰────
   help: Equality for this type is supplied by the compiler. Remove the explicit `Eq`
         impl.
@@ -34,7 +34,7 @@ nash::names::structural_eq_override
  7 │ type alias Applied 'f 'a = 'f 'a
  8 │ impl Eq (Alias 'a) where
    ·          ────────
- 9 │     eq _ _ = Builtin.True
+ 9 │     eq _ _ = Primitive.True
    ╰────
   help: Equality for this type is supplied by the compiler. Remove the explicit `Eq`
         impl.
@@ -46,7 +46,7 @@ nash::names::structural_eq_override
  7 │ type alias Applied 'f 'a = 'f 'a
  8 │ impl Eq (Applied 'f 'a) where
    ·          ─────────────
- 9 │     eq _ _ = Builtin.True
+ 9 │     eq _ _ = Primitive.True
    ╰────
   help: Equality for this type is supplied by the compiler. Remove the explicit `Eq`
         impl.

@@ -7,7 +7,7 @@ fn infer<'a>(
     body: &str,
 ) -> Result<(nash_can::Annotations<'a>, nash_solve::SolvedTypes<'a>), Vec<Error<'a>>> {
     let source = bump.alloc_str(&format!(
-        "module Main exposing (..)\nimport Builtin exposing (..)\n{body}\n"
+        "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n{body}\n"
     ));
     let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
@@ -128,7 +128,7 @@ fn imported_scheme_defaults_are_fixed_before_instantiation() {
         ),
     ] {
         let source = bump.alloc_str(&format!(
-            "module {name} exposing (..)\nimport Builtin exposing (..)\n{body}\n"
+            "module {name} exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n{body}\n"
         ));
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
@@ -176,13 +176,13 @@ fn representation_givens_follow_transparent_alias_bodies() {
         ),
     ] {
         let source = bump.alloc_str(&format!(
-            "module {name} exposing (..)\nimport Builtin exposing (..)\n{body}\n"
+            "module {name} exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n{body}\n"
         ));
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
             &bump,
             nash_can::Context {
-                package: (name != "Main").then_some(nash_ast::primitives::CORE),
+                package: (name != "Main").then_some(nash_ast::primitives::BASE),
                 interfaces: Some(&interfaces),
             },
             &parsed,

@@ -7,11 +7,11 @@ import Lift exposing (Lift)
 currentSlot : Data -> int
 currentSlot ctx =
     case ctx of
-        Constr _ [ I slot, _ ] -> slot
+        Constr pair(_, [ I slot, _ ]) -> slot
         _ -> fail
 
 signedBy : Data -> Bytes -> bool
 signedBy ctx owner =
     case ctx of
-        Constr _ [ _, B signer ] -> Builtin.equalsByteString signer (lower owner)
+        Constr pair(_, [ _, B signer ]) -> Builtin.equalsByteString signer (lower owner)
         _ -> fail

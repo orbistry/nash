@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\ntype Box = Wrap\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Big 'a => Keep 'a where\n    keep x = x\nconcrete = keep Wrap\ngeneric : Big 'a => 'a -> 'a\ngeneric x = keep x\n"
+---
+concrete : Box
+generic : forall a. Big a => a -> a

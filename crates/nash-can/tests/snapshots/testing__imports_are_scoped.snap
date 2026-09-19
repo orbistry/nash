@@ -1,0 +1,20 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (public)\npublic = ()\ntests\n    import Aux exposing (value)\n    test \"import\" = do\n        value\n\nmodule Main exposing (public)\npublic = ()\nleak = value\ntests\n    import Aux exposing (value)\n    test \"import\" = do\n        value\n"
+info: diagnostic
+---
+nash::names::not_found_var
+
+  × Unknown variable `value`.
+   ╭─[src/Main.nash:3:8]
+ 2 │ public = ()
+ 3 │ leak = value
+   ·        ─────
+ 4 │ tests
+   ╰────
+  help: Similar names:
+
+            leak
+            public
+            Builtin.trace
+            Builtin.bData

@@ -16,6 +16,8 @@ nash::names::not_found_ctor
 
             Ready
             Waiting
+            Primitive.B
+            Primitive.I
 
 exports=type status, Status(..); imports=..; Ready:
 nash::names::not_found_ctor
@@ -30,6 +32,8 @@ nash::names::not_found_ctor
 
             S.Ready
             S.Waiting
+            Primitive.B
+            Primitive.I
 
 exports=..; imports=Status(..); Ready:
 nash::names::not_found_ctor
@@ -44,3 +48,5 @@ nash::names::not_found_ctor
 
             S.Ready
             S.Waiting
+            Primitive.B
+            Primitive.I

@@ -1,0 +1,34 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nchoose : bool -> int\nchoose flag =\n    if trace \"condition\" flag then trace \"true\" 42\n    else trace \"false\" 7\nmain = (choose True, choose False)\n"
+---
+--- uplc
+(program 1.1.0
+  [(lam message_8
+    [(lam message_9
+      [(lam message_10
+        [(lam fromInt_4
+          [(lam fromString_5
+            [(lam choose_2
+              [(lam main_1 main_1)
+                (constr 0 [choose_2 (con bool True)] [choose_2 (con bool False)])])
+              (lam flag_3
+                (case
+                  (force [[(force (builtin trace)) [fromString_5 message_8]] (delay flag_3)])
+                  (force
+                    [[(force (builtin trace)) [fromString_5 message_10]]
+                      (delay [fromInt_4 (con integer 7)])])
+                  (force
+                    [[(force (builtin trace)) [fromString_5 message_9]]
+                      (delay [fromInt_4 (con integer 42)])])))])
+            (lam value_7 value_7)])
+          (lam value_6 value_6)])
+        (con string "false")])
+      (con string "true")])
+    (con string "condition")])
+--- result
+(constr 0 (con integer 42) (con integer 7))
+--- logs
+["condition", "true", "condition", "false"]
+--- budget
+cpu: 1518092, memory: 8228

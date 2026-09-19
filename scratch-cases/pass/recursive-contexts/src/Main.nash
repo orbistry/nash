@@ -1,0 +1,7 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type ring 'f 'a 'b = Ring ('f 'a) (ring 'f 'b 'a)
+type Tree 'a = Node 'a (List (Tree 'a))
+type Nest 'a = Nest (Nest (List 'a))

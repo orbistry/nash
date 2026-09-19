@@ -1,0 +1,59 @@
+{"run_id":"1789784940-157250000","line":317,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":336,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"canonical_alias_keeps_public_name","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":336,"expression":"can_to_doc(&Localizer::from_names([\"A\"]),Ctx::App,&alias).render(80,false)"},"snapshot":"(Box 'a)"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"(Box 'a)"}}
+{"run_id":"1789784940-157250000","line":317,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"canonical_record_preserves_declaration_order","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":317,"expression":"can_to_doc(&Localizer::default(),Ctx::None,&Type::Record{fields:&fields}).render(80,false)"},"snapshot":"{ zebra : 'a, first : 'a }"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"{ zebra : 'a, first : 'a }"}}
+{"run_id":"1789784940-157250000","line":237,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":237,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"function_parentheses","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":237,"expression":"lambda(Ctx::App,variable(\"a\"),variable(\"b\"),vec![]).render(80,false)"},"snapshot":"('a -> 'b)"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"('a -> 'b)"}}
+{"run_id":"1789784940-157250000","line":292,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":292,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"source_record_and_tuple","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":292,"expression":"src_to_doc(Ctx::None,&record).render(80,false)"},"snapshot":"{ field : 'a }"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"{ field : 'a }"}}
+{"run_id":"1789784940-157250000","line":271,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":241,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":299,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":271,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"source_type_shapes","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":271,"expression":"src_to_doc(Ctx::None,&app).render(80,false)"},"snapshot":"'f ('a -> A.Thing)"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"'f ('a -> A.Thing)"}}
+{"run_id":"1789784940-157250000","line":248,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":299,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"source_record_and_tuple-2","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":299,"expression":"src_to_doc(Ctx::None,&tuple).render(80,false)"},"snapshot":"( 'a, 'a, 'a, 'a )"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"( 'a, 'a, 'a, 'a )"}}
+{"run_id":"1789784940-157250000","line":241,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"narrow_application","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":241,"expression":"apply(Ctx::None,Doc::text(\"Container\"),vec![Doc::text(\"LongArgument\")]).render(12,false)"},"snapshot":"Container\n    LongArgument"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"Container\n    LongArgument"}}
+{"run_id":"1789784940-157250000","line":248,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"vertical_snippet","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":248,"expression":"vrecord_snippet((Doc::text(\"x\"),variable(\"a\")),vec![]).render(80,false)"},"snapshot":"{ x : 'a\n, ...\n}"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"{ x : 'a\n, ...\n}"}}
+{"run_id":"1789784940-157250000","line":277,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":277,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"source_type_shapes-2","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":277,"expression":"src_to_doc(Ctx::None,&annotated).render(80,false)"},"snapshot":"('a : Big)"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"('a : Big)"}}
+{"run_id":"1789784940-157250000","line":279,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":279,"new":{"module_name":"nash_report__render_type__tests","snapshot_name":"source_type_shapes-3","metadata":{"source":"crates/nash-report/src/render_type.rs","assertion_line":279,"expression":"src_to_doc(Ctx::None,&unit).render(80,false)"},"snapshot":"()"},"old":{"module_name":"nash_report__render_type__tests","metadata":{},"snapshot":"()"}}
+{"run_id":"1789784992-933746000","line":317,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":336,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":237,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":241,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":292,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":271,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":248,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":299,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":277,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":279,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":336,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":237,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":317,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":241,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":292,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":271,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":299,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":248,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":277,"new":null,"old":null}
+{"run_id":"1789788059-643424000","line":279,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":241,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":317,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":237,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":336,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":271,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":292,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":277,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":248,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":299,"new":null,"old":null}
+{"run_id":"1789788182-908608000","line":279,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":336,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":317,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":237,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":241,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":292,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":271,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":248,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":299,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":277,"new":null,"old":null}
+{"run_id":"1789788219-538186000","line":279,"new":null,"old":null}

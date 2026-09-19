@@ -1,42 +1,14 @@
 //! Typed value schemes for the synthetic Builtin module.
 
-use super::builtin_home;
+use super::primitive_home;
 use crate::{QualifiedName, Type};
 use nash_region::Located;
-
-/// Backend operation; runtime arities and force counts remain in nash-plutus.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BuiltinLowering {
-    /// Symbolic DefaultFunction variant, resolved by code generation.
-    Plutus(&'static str),
-    Identity,
-    Error,
-    /// Core-only representation intrinsics; lowered to typed casts in Plan 07.
-    CastToData,
-    CastFromDataShallow,
-    CastValidateData,
-    CastLift,
-    CastLower,
-}
-
-impl BuiltinLowering {
-    pub fn is_core_only(self) -> bool {
-        matches!(
-            self,
-            Self::CastToData
-                | Self::CastFromDataShallow
-                | Self::CastValidateData
-                | Self::CastLift
-                | Self::CastLower
-        )
-    }
-}
 
 pub struct Builtin {
     pub name: &'static str,
     pub free_vars: &'static [&'static str],
     pub typ: &'static Located<Type<'static>>,
-    pub lowering: BuiltinLowering,
+    pub variant: &'static str,
     pub context: &'static [crate::Pred<'static>],
 }
 
@@ -46,7 +18,7 @@ pub(super) const fn named(
 ) -> Located<Type<'static>> {
     Located::at_zero(Type::Named {
         reference: QualifiedName {
-            home: builtin_home(),
+            home: primitive_home(),
             name,
         },
         args,
@@ -61,8 +33,8 @@ macro_rules! function {
 }
 
 macro_rules! builtin {
-    ($name:literal, $lowering:ident $(($variant:literal))?, [$($var:literal),*], $typ:expr) => {
-        Builtin { context: &[], name: $name, free_vars: &[$($var),*], typ: $typ, lowering: BuiltinLowering::$lowering $(($variant))? }
+    ($name:literal, $variant:literal, [$($var:literal),*], $typ:expr) => {
+        Builtin { context: &[], name: $name, free_vars: &[$($var),*], typ: $typ, variant: $variant }
     };
 }
 
@@ -79,592 +51,547 @@ const BLS_G2: &Located<Type<'static>> = &named("bls_g2", &[]);
 const BLS_MLR: &Located<Type<'static>> = &named("bls_mlr", &[]);
 const VALUE: &Located<Type<'static>> = &named("value", &[]);
 
+/// Unchecked, representation-preserving coercion; not a Plutus builtin.
+pub const COERCE: crate::Annotation<'static> = crate::Annotation {
+    free_vars: &["a", "b"],
+    typ: function!(A, B),
+    context: &[],
+};
+
 pub const BUILTINS: &[Builtin] = &[
-    builtin!(
-        "addInteger",
-        Plutus("AddInteger"),
-        [],
-        function!(INT, INT, INT)
-    ),
+    builtin!("addInteger", "AddInteger", [], function!(INT, INT, INT)),
     builtin!(
         "subtractInteger",
-        Plutus("SubtractInteger"),
+        "SubtractInteger",
         [],
         function!(INT, INT, INT)
     ),
     builtin!(
         "multiplyInteger",
-        Plutus("MultiplyInteger"),
+        "MultiplyInteger",
         [],
         function!(INT, INT, INT)
     ),
     builtin!(
         "divideInteger",
-        Plutus("DivideInteger"),
+        "DivideInteger",
         [],
         function!(INT, INT, INT)
     ),
     builtin!(
         "quotientInteger",
-        Plutus("QuotientInteger"),
+        "QuotientInteger",
         [],
         function!(INT, INT, INT)
     ),
     builtin!(
         "remainderInteger",
-        Plutus("RemainderInteger"),
+        "RemainderInteger",
         [],
         function!(INT, INT, INT)
     ),
-    builtin!(
-        "modInteger",
-        Plutus("ModInteger"),
-        [],
-        function!(INT, INT, INT)
-    ),
+    builtin!("modInteger", "ModInteger", [], function!(INT, INT, INT)),
     builtin!(
         "equalsInteger",
-        Plutus("EqualsInteger"),
+        "EqualsInteger",
         [],
         function!(INT, INT, BOOL)
     ),
     builtin!(
         "lessThanInteger",
-        Plutus("LessThanInteger"),
+        "LessThanInteger",
         [],
         function!(INT, INT, BOOL)
     ),
     builtin!(
         "lessThanEqualsInteger",
-        Plutus("LessThanEqualsInteger"),
+        "LessThanEqualsInteger",
         [],
         function!(INT, INT, BOOL)
     ),
     builtin!(
         "appendByteString",
-        Plutus("AppendByteString"),
+        "AppendByteString",
         [],
         function!(BYTES, BYTES, BYTES)
     ),
     builtin!(
         "consByteString",
-        Plutus("ConsByteString"),
+        "ConsByteString",
         [],
         function!(INT, BYTES, BYTES)
     ),
     builtin!(
         "sliceByteString",
-        Plutus("SliceByteString"),
+        "SliceByteString",
         [],
         function!(INT, INT, BYTES, BYTES)
     ),
     builtin!(
         "lengthOfByteString",
-        Plutus("LengthOfByteString"),
+        "LengthOfByteString",
         [],
         function!(BYTES, INT)
     ),
     builtin!(
         "indexByteString",
-        Plutus("IndexByteString"),
+        "IndexByteString",
         [],
         function!(BYTES, INT, INT)
     ),
     builtin!(
         "equalsByteString",
-        Plutus("EqualsByteString"),
+        "EqualsByteString",
         [],
         function!(BYTES, BYTES, BOOL)
     ),
     builtin!(
         "lessThanByteString",
-        Plutus("LessThanByteString"),
+        "LessThanByteString",
         [],
         function!(BYTES, BYTES, BOOL)
     ),
     builtin!(
         "lessThanEqualsByteString",
-        Plutus("LessThanEqualsByteString"),
+        "LessThanEqualsByteString",
         [],
         function!(BYTES, BYTES, BOOL)
     ),
-    builtin!("sha2_256", Plutus("Sha2_256"), [], function!(BYTES, BYTES)),
-    builtin!("sha3_256", Plutus("Sha3_256"), [], function!(BYTES, BYTES)),
-    builtin!(
-        "blake2b_256",
-        Plutus("Blake2b_256"),
-        [],
-        function!(BYTES, BYTES)
-    ),
-    builtin!(
-        "blake2b_224",
-        Plutus("Blake2b_224"),
-        [],
-        function!(BYTES, BYTES)
-    ),
-    builtin!(
-        "keccak_256",
-        Plutus("Keccak_256"),
-        [],
-        function!(BYTES, BYTES)
-    ),
-    builtin!(
-        "ripemd_160",
-        Plutus("Ripemd_160"),
-        [],
-        function!(BYTES, BYTES)
-    ),
+    builtin!("sha2_256", "Sha2_256", [], function!(BYTES, BYTES)),
+    builtin!("sha3_256", "Sha3_256", [], function!(BYTES, BYTES)),
+    builtin!("blake2b_256", "Blake2b_256", [], function!(BYTES, BYTES)),
+    builtin!("blake2b_224", "Blake2b_224", [], function!(BYTES, BYTES)),
+    builtin!("keccak_256", "Keccak_256", [], function!(BYTES, BYTES)),
+    builtin!("ripemd_160", "Ripemd_160", [], function!(BYTES, BYTES)),
     builtin!(
         "verifyEd25519Signature",
-        Plutus("VerifyEd25519Signature"),
+        "VerifyEd25519Signature",
         [],
         function!(BYTES, BYTES, BYTES, BOOL)
     ),
     builtin!(
         "verifyEcdsaSecp256k1Signature",
-        Plutus("VerifyEcdsaSecp256k1Signature"),
+        "VerifyEcdsaSecp256k1Signature",
         [],
         function!(BYTES, BYTES, BYTES, BOOL)
     ),
     builtin!(
         "verifySchnorrSecp256k1Signature",
-        Plutus("VerifySchnorrSecp256k1Signature"),
+        "VerifySchnorrSecp256k1Signature",
         [],
         function!(BYTES, BYTES, BYTES, BOOL)
     ),
     builtin!(
         "appendString",
-        Plutus("AppendString"),
+        "AppendString",
         [],
         function!(STRING, STRING, STRING)
     ),
     builtin!(
         "equalsString",
-        Plutus("EqualsString"),
+        "EqualsString",
         [],
         function!(STRING, STRING, BOOL)
     ),
-    builtin!(
-        "encodeUtf8",
-        Plutus("EncodeUtf8"),
-        [],
-        function!(STRING, BYTES)
-    ),
-    builtin!(
-        "decodeUtf8",
-        Plutus("DecodeUtf8"),
-        [],
-        function!(BYTES, STRING)
-    ),
-    builtin!(
-        "ifThenElse",
-        Plutus("IfThenElse"),
-        ["a"],
-        function!(BOOL, A, A, A)
-    ),
-    builtin!(
-        "chooseUnit",
-        Plutus("ChooseUnit"),
-        ["a"],
-        function!(UNIT, A, A)
-    ),
-    builtin!("trace", Plutus("Trace"), ["a"], function!(STRING, A, A)),
+    builtin!("encodeUtf8", "EncodeUtf8", [], function!(STRING, BYTES)),
+    builtin!("decodeUtf8", "DecodeUtf8", [], function!(BYTES, STRING)),
+    builtin!("ifThenElse", "IfThenElse", ["a"], function!(BOOL, A, A, A)),
+    builtin!("chooseUnit", "ChooseUnit", ["a"], function!(UNIT, A, A)),
+    builtin!("trace", "Trace", ["a"], function!(STRING, A, A)),
     builtin!(
         "fstPair",
-        Plutus("FstPair"),
+        "FstPair",
         ["a", "b"],
         function!(&named("pair", &[A, B]), A)
     ),
     builtin!(
         "sndPair",
-        Plutus("SndPair"),
+        "SndPair",
         ["a", "b"],
         function!(&named("pair", &[A, B]), B)
     ),
     builtin!(
         "chooseList",
-        Plutus("ChooseList"),
+        "ChooseList",
         ["a", "b"],
         function!(&named("list", &[A]), B, B, B)
     ),
     builtin!(
         "mkCons",
-        Plutus("MkCons"),
+        "MkCons",
         ["a"],
         function!(A, &named("list", &[A]), &named("list", &[A]))
     ),
     builtin!(
         "headList",
-        Plutus("HeadList"),
+        "HeadList",
         ["a"],
         function!(&named("list", &[A]), A)
     ),
     builtin!(
         "tailList",
-        Plutus("TailList"),
+        "TailList",
         ["a"],
         function!(&named("list", &[A]), &named("list", &[A]))
     ),
     builtin!(
         "nullList",
-        Plutus("NullList"),
+        "NullList",
         ["a"],
         function!(&named("list", &[A]), BOOL)
     ),
     builtin!(
         "dropList",
-        Plutus("DropList"),
+        "DropList",
         ["a"],
         function!(INT, &named("list", &[A]), &named("list", &[A]))
     ),
     builtin!(
         "chooseData",
-        Plutus("ChooseData"),
+        "ChooseData",
         ["a"],
         function!(DATA, A, A, A, A, A, A)
     ),
     builtin!(
         "constrData",
-        Plutus("ConstrData"),
+        "ConstrData",
         [],
         function!(INT, &named("list", &[DATA]), DATA)
     ),
-    builtin!(
-        "mapData",
-        Plutus("MapData"),
-        [],
-        function!(&named("list", &[&named("pair", &[DATA, DATA])]), DATA)
-    ),
+    Builtin {
+        name: "mapData",
+        free_vars: &["a", "b"],
+        typ: function!(
+            &named("list", &[&named("pair", &[A, B])]),
+            &named("Map", &[A, B])
+        ),
+        variant: "MapData",
+        context: &[
+            crate::Pred::Trait {
+                trait_: super::ReprTrait::Big.qualified(),
+                args: &[A],
+            },
+            crate::Pred::Trait {
+                trait_: super::ReprTrait::Big.qualified(),
+                args: &[B],
+            },
+        ],
+    },
     Builtin {
         name: "listData",
         free_vars: &["a"],
-        typ: function!(&named("list", &[A]), DATA),
-        lowering: BuiltinLowering::Plutus("ListData"),
+        typ: function!(&named("list", &[A]), &named("List", &[A])),
+        variant: "ListData",
         context: &[crate::Pred::Trait {
             trait_: super::ReprTrait::Big.qualified(),
             args: &[A],
         }],
     },
-    builtin!("iData", Plutus("IData"), [], function!(INT, DATA)),
-    builtin!("bData", Plutus("BData"), [], function!(BYTES, DATA)),
+    builtin!("iData", "IData", [], function!(INT, &named("Int", &[]))),
+    builtin!("bData", "BData", [], function!(BYTES, &named("Bytes", &[]))),
     builtin!(
         "unConstrData",
-        Plutus("UnConstrData"),
+        "UnConstrData",
         [],
         function!(DATA, &named("pair", &[INT, &named("list", &[DATA])]))
     ),
+    Builtin {
+        name: "unMapData",
+        free_vars: &["a", "b"],
+        typ: function!(
+            &named("Map", &[A, B]),
+            &named("list", &[&named("pair", &[A, B])])
+        ),
+        variant: "UnMapData",
+        context: &[
+            crate::Pred::Trait {
+                trait_: super::ReprTrait::Big.qualified(),
+                args: &[A],
+            },
+            crate::Pred::Trait {
+                trait_: super::ReprTrait::Big.qualified(),
+                args: &[B],
+            },
+        ],
+    },
+    Builtin {
+        name: "unListData",
+        free_vars: &["a"],
+        typ: function!(&named("List", &[A]), &named("list", &[A])),
+        variant: "UnListData",
+        context: &[crate::Pred::Trait {
+            trait_: super::ReprTrait::Big.qualified(),
+            args: &[A],
+        }],
+    },
+    builtin!("unIData", "UnIData", [], function!(&named("Int", &[]), INT)),
     builtin!(
-        "unMapData",
-        Plutus("UnMapData"),
+        "unBData",
+        "UnBData",
         [],
-        function!(DATA, &named("list", &[&named("pair", &[DATA, DATA])]))
+        function!(&named("Bytes", &[]), BYTES)
     ),
-    builtin!(
-        "unListData",
-        Plutus("UnListData"),
-        [],
-        function!(DATA, &named("list", &[DATA]))
-    ),
-    builtin!("unIData", Plutus("UnIData"), [], function!(DATA, INT)),
-    builtin!("unBData", Plutus("UnBData"), [], function!(DATA, BYTES)),
-    builtin!(
-        "equalsData",
-        Plutus("EqualsData"),
-        [],
-        function!(DATA, DATA, BOOL)
-    ),
-    builtin!(
-        "serialiseData",
-        Plutus("SerialiseData"),
-        [],
-        function!(DATA, BYTES)
-    ),
-    builtin!(
-        "mkPairData",
-        Plutus("MkPairData"),
-        [],
-        function!(DATA, DATA, &named("pair", &[DATA, DATA]))
-    ),
+    builtin!("equalsData", "EqualsData", [], function!(DATA, DATA, BOOL)),
+    builtin!("serialiseData", "SerialiseData", [], function!(DATA, BYTES)),
+    Builtin {
+        name: "mkPairData",
+        free_vars: &["a", "b"],
+        typ: function!(A, B, &named("pair", &[A, B])),
+        variant: "MkPairData",
+        context: &[
+            crate::Pred::Trait {
+                trait_: super::ReprTrait::Big.qualified(),
+                args: &[A],
+            },
+            crate::Pred::Trait {
+                trait_: super::ReprTrait::Big.qualified(),
+                args: &[B],
+            },
+        ],
+    },
     builtin!(
         "mkNilData",
-        Plutus("MkNilData"),
+        "MkNilData",
         [],
         function!(UNIT, &named("list", &[DATA]))
     ),
     builtin!(
         "mkNilPairData",
-        Plutus("MkNilPairData"),
+        "MkNilPairData",
         [],
         function!(UNIT, &named("list", &[&named("pair", &[DATA, DATA])]))
     ),
     builtin!(
         "bls12_381_g1_add",
-        Plutus("Bls12_381_G1_Add"),
+        "Bls12_381_G1_Add",
         [],
         function!(BLS_G1, BLS_G1, BLS_G1)
     ),
     builtin!(
         "bls12_381_g1_neg",
-        Plutus("Bls12_381_G1_Neg"),
+        "Bls12_381_G1_Neg",
         [],
         function!(BLS_G1, BLS_G1)
     ),
     builtin!(
         "bls12_381_g1_scalarMul",
-        Plutus("Bls12_381_G1_ScalarMul"),
+        "Bls12_381_G1_ScalarMul",
         [],
         function!(INT, BLS_G1, BLS_G1)
     ),
     builtin!(
         "bls12_381_g1_equal",
-        Plutus("Bls12_381_G1_Equal"),
+        "Bls12_381_G1_Equal",
         [],
         function!(BLS_G1, BLS_G1, BOOL)
     ),
     builtin!(
         "bls12_381_g1_compress",
-        Plutus("Bls12_381_G1_Compress"),
+        "Bls12_381_G1_Compress",
         [],
         function!(BLS_G1, BYTES)
     ),
     builtin!(
         "bls12_381_g1_uncompress",
-        Plutus("Bls12_381_G1_Uncompress"),
+        "Bls12_381_G1_Uncompress",
         [],
         function!(BYTES, BLS_G1)
     ),
     builtin!(
         "bls12_381_g1_hashToGroup",
-        Plutus("Bls12_381_G1_HashToGroup"),
+        "Bls12_381_G1_HashToGroup",
         [],
         function!(BYTES, BYTES, BLS_G1)
     ),
     builtin!(
         "bls12_381_g1_multiScalarMul",
-        Plutus("Bls12_381_G1_MultiScalarMul"),
+        "Bls12_381_G1_MultiScalarMul",
         [],
         function!(&named("list", &[INT]), &named("list", &[BLS_G1]), BLS_G1)
     ),
     builtin!(
         "bls12_381_g2_add",
-        Plutus("Bls12_381_G2_Add"),
+        "Bls12_381_G2_Add",
         [],
         function!(BLS_G2, BLS_G2, BLS_G2)
     ),
     builtin!(
         "bls12_381_g2_neg",
-        Plutus("Bls12_381_G2_Neg"),
+        "Bls12_381_G2_Neg",
         [],
         function!(BLS_G2, BLS_G2)
     ),
     builtin!(
         "bls12_381_g2_scalarMul",
-        Plutus("Bls12_381_G2_ScalarMul"),
+        "Bls12_381_G2_ScalarMul",
         [],
         function!(INT, BLS_G2, BLS_G2)
     ),
     builtin!(
         "bls12_381_g2_equal",
-        Plutus("Bls12_381_G2_Equal"),
+        "Bls12_381_G2_Equal",
         [],
         function!(BLS_G2, BLS_G2, BOOL)
     ),
     builtin!(
         "bls12_381_g2_compress",
-        Plutus("Bls12_381_G2_Compress"),
+        "Bls12_381_G2_Compress",
         [],
         function!(BLS_G2, BYTES)
     ),
     builtin!(
         "bls12_381_g2_uncompress",
-        Plutus("Bls12_381_G2_Uncompress"),
+        "Bls12_381_G2_Uncompress",
         [],
         function!(BYTES, BLS_G2)
     ),
     builtin!(
         "bls12_381_g2_hashToGroup",
-        Plutus("Bls12_381_G2_HashToGroup"),
+        "Bls12_381_G2_HashToGroup",
         [],
         function!(BYTES, BYTES, BLS_G2)
     ),
     builtin!(
         "bls12_381_g2_multiScalarMul",
-        Plutus("Bls12_381_G2_MultiScalarMul"),
+        "Bls12_381_G2_MultiScalarMul",
         [],
         function!(&named("list", &[INT]), &named("list", &[BLS_G2]), BLS_G2)
     ),
     builtin!(
         "bls12_381_millerLoop",
-        Plutus("Bls12_381_MillerLoop"),
+        "Bls12_381_MillerLoop",
         [],
         function!(BLS_G1, BLS_G2, BLS_MLR)
     ),
     builtin!(
         "bls12_381_mulMlResult",
-        Plutus("Bls12_381_MulMlResult"),
+        "Bls12_381_MulMlResult",
         [],
         function!(BLS_MLR, BLS_MLR, BLS_MLR)
     ),
     builtin!(
         "bls12_381_finalVerify",
-        Plutus("Bls12_381_FinalVerify"),
+        "Bls12_381_FinalVerify",
         [],
         function!(BLS_MLR, BLS_MLR, BOOL)
     ),
     builtin!(
         "integerToByteString",
-        Plutus("IntegerToByteString"),
+        "IntegerToByteString",
         [],
         function!(BOOL, INT, INT, BYTES)
     ),
     builtin!(
         "byteStringToInteger",
-        Plutus("ByteStringToInteger"),
+        "ByteStringToInteger",
         [],
         function!(BOOL, BYTES, INT)
     ),
     builtin!(
         "andByteString",
-        Plutus("AndByteString"),
+        "AndByteString",
         [],
         function!(BOOL, BYTES, BYTES, BYTES)
     ),
     builtin!(
         "orByteString",
-        Plutus("OrByteString"),
+        "OrByteString",
         [],
         function!(BOOL, BYTES, BYTES, BYTES)
     ),
     builtin!(
         "xorByteString",
-        Plutus("XorByteString"),
+        "XorByteString",
         [],
         function!(BOOL, BYTES, BYTES, BYTES)
     ),
     builtin!(
         "complementByteString",
-        Plutus("ComplementByteString"),
+        "ComplementByteString",
         [],
         function!(BYTES, BYTES)
     ),
-    builtin!(
-        "readBit",
-        Plutus("ReadBit"),
-        [],
-        function!(BYTES, INT, BOOL)
-    ),
+    builtin!("readBit", "ReadBit", [], function!(BYTES, INT, BOOL)),
     builtin!(
         "writeBits",
-        Plutus("WriteBits"),
+        "WriteBits",
         [],
         function!(BYTES, &named("list", &[INT]), BOOL, BYTES)
     ),
     builtin!(
         "replicateByte",
-        Plutus("ReplicateByte"),
+        "ReplicateByte",
         [],
         function!(INT, INT, BYTES)
     ),
     builtin!(
         "shiftByteString",
-        Plutus("ShiftByteString"),
+        "ShiftByteString",
         [],
         function!(BYTES, INT, BYTES)
     ),
     builtin!(
         "rotateByteString",
-        Plutus("RotateByteString"),
+        "RotateByteString",
         [],
         function!(BYTES, INT, BYTES)
     ),
-    builtin!(
-        "countSetBits",
-        Plutus("CountSetBits"),
-        [],
-        function!(BYTES, INT)
-    ),
+    builtin!("countSetBits", "CountSetBits", [], function!(BYTES, INT)),
     builtin!(
         "findFirstSetBit",
-        Plutus("FindFirstSetBit"),
+        "FindFirstSetBit",
         [],
         function!(BYTES, INT)
     ),
     builtin!(
         "expModInteger",
-        Plutus("ExpModInteger"),
+        "ExpModInteger",
         [],
         function!(INT, INT, INT, INT)
     ),
     builtin!(
         "lengthOfArray",
-        Plutus("LengthOfArray"),
+        "LengthOfArray",
         ["a"],
         function!(&named("array", &[A]), INT)
     ),
     builtin!(
         "listToArray",
-        Plutus("ListToArray"),
+        "ListToArray",
         ["a"],
         function!(&named("list", &[A]), &named("array", &[A]))
     ),
     builtin!(
         "indexArray",
-        Plutus("IndexArray"),
+        "IndexArray",
         ["a"],
         function!(&named("array", &[A]), INT, A)
     ),
     builtin!(
         "insertCoin",
-        Plutus("InsertCoin"),
+        "InsertCoin",
         [],
         function!(BYTES, BYTES, INT, VALUE, VALUE)
     ),
     builtin!(
         "lookupCoin",
-        Plutus("LookupCoin"),
+        "LookupCoin",
         [],
         function!(BYTES, BYTES, VALUE, INT)
     ),
     builtin!(
         "unionValue",
-        Plutus("UnionValue"),
+        "UnionValue",
         [],
         function!(VALUE, VALUE, VALUE)
     ),
     builtin!(
         "valueContains",
-        Plutus("ValueContains"),
+        "ValueContains",
         [],
         function!(VALUE, VALUE, BOOL)
     ),
-    builtin!("valueData", Plutus("ValueData"), [], function!(VALUE, DATA)),
-    builtin!(
-        "unValueData",
-        Plutus("UnValueData"),
-        [],
-        function!(DATA, VALUE)
-    ),
-    builtin!(
-        "scaleValue",
-        Plutus("ScaleValue"),
-        [],
-        function!(INT, VALUE, VALUE)
-    ),
-    builtin!("identity", Identity, ["a"], function!(A, A)),
-    builtin!("error", Error, ["a"], function!(UNIT, A)),
-    builtin!("castToData", CastToData, ["a", "b"], function!(A, B)),
-    builtin!(
-        "castFromDataShallow",
-        CastFromDataShallow,
-        ["a", "b"],
-        function!(A, B)
-    ),
-    builtin!(
-        "castValidateData",
-        CastValidateData,
-        ["a", "b"],
-        function!(A, B)
-    ),
-    builtin!("castLift", CastLift, ["a", "b"], function!(A, B)),
-    builtin!("castLower", CastLower, ["a", "b"], function!(A, B)),
+    builtin!("valueData", "ValueData", [], function!(VALUE, DATA)),
+    builtin!("unValueData", "UnValueData", [], function!(DATA, VALUE)),
+    builtin!("scaleValue", "ScaleValue", [], function!(INT, VALUE, VALUE)),
 ];

@@ -335,6 +335,10 @@ pub enum Pattern<'a> {
         name: &'a Located<&'a str>,
     },
     Unit,
+    Pair {
+        first: &'a Located<Pattern<'a>>,
+        second: &'a Located<Pattern<'a>>,
+    },
     Tuple {
         first: &'a Located<Pattern<'a>>,
         second: &'a Located<Pattern<'a>>,

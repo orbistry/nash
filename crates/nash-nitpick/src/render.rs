@@ -1,7 +1,9 @@
 //! Text form of missing patterns, from Elm's `Reporting/Error/Pattern.hs`
 //! (`patternToDoc`, `delist`).
 
-use crate::pattern::{CONS_NAME, Literal, NIL_NAME, PAIR_NAME, Pattern, TRIPLE_NAME, UNIT_NAME};
+use crate::pattern::{
+    BUILTIN_PAIR_NAME, CONS_NAME, Literal, NIL_NAME, PAIR_NAME, Pattern, TRIPLE_NAME, UNIT_NAME,
+};
 
 /// Elm's `Context` in `Reporting.Error.Pattern`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,6 +26,13 @@ pub fn pattern_to_string(context: RenderContext, pattern: Pattern<'_>) -> String
             ..
         }) => {
             format!("( {} )", join(args, RenderContext::Unambiguous, ", "))
+        }
+        Structure::NonList(Pattern::Ctor {
+            name: BUILTIN_PAIR_NAME,
+            args,
+            ..
+        }) => {
+            format!("pair({})", join(args, RenderContext::Unambiguous, ", "))
         }
         Structure::NonList(Pattern::Ctor { name, args, .. }) => {
             let mut doc = name.to_string();

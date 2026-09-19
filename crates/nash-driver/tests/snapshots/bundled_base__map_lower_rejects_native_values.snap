@@ -1,0 +1,16 @@
+---
+source: crates/nash-driver/tests/bundled_base.rs
+description: "module Main exposing (..)\nbad : Map Data (list Data) -> list (pair Data (list Data))\nbad value = lower value\n"
+info: diagnostic
+---
+nash::names::representation_mismatch
+
+  × This position requires `Big` in the annotation for `bad`:
+   ╭─[/app/src/Main.nash:2:17]
+ 1 │ module Main exposing (..)
+ 2 │ bad : Map Data (list Data) -> list (pair Data (list Data))
+   ·                 ─────────
+ 3 │ bad value = lower value
+   ╰────
+  help: The type has `Const` representation, but `Big` admits only Big types. Change the
+        type or the representation requirement.

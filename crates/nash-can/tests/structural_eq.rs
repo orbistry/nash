@@ -2,7 +2,7 @@ mod snapshot_support;
 use snapshot_support::SnapshotInputs;
 
 use bumpalo::Bump;
-use nash_ast::{PackageName, primitives::CORE};
+use nash_ast::{PackageName, primitives::BASE};
 use nash_can::Context;
 
 #[test]
@@ -10,10 +10,10 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
     let snapshot_inputs = SnapshotInputs::default();
     let mut errors = Vec::new();
     for package in [
-        CORE,
+        BASE,
         PackageName {
             author: "other",
-            project: "core",
+            project: "base",
         },
     ] {
         for head in ["Token", "Box", "(Alias 'a)", "(Applied 'f 'a)"] {
@@ -40,7 +40,7 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                 "Eq",
                 nash_can::from_module(&bump, &canonical.module, &Default::default()),
             );
-            let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = {{ item : Int }}\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq {head} where\n    eq _ _ = Builtin.True\n"));
+            let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Eq exposing (Eq)\nimport Builtin\ntype Token = Token Int\ntype alias Box = {{ item : Int }}\ntype alias Alias 'a = 'a\ntype alias Applied 'f 'a = 'f 'a\nimpl Eq {head} where\n    eq _ _ = Primitive.True\n"));
             let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
                 .module()
                 .unwrap();
@@ -52,7 +52,7 @@ fn structural_eq_rejects_big_overrides_only_for_exact_core_trait() {
                 },
                 &parsed,
             );
-            if package == CORE {
+            if package == BASE {
                 let err = result.unwrap_err();
                 assert!(matches!(
                     err.as_slice(),

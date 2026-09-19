@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\ntype packet = Packet { z : unit, a : unit }\nbuild first second = Packet { a = second, z = first }\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,
@@ -147,10 +148,10 @@ Module {
                                                         package: Some(
                                                             PackageName {
                                                                 author: "nash",
-                                                                project: "core",
+                                                                project: "base",
                                                             },
                                                         ),
-                                                        name: "Builtin",
+                                                        name: "Primitive",
                                                     },
                                                     name: "unit",
                                                 },
@@ -186,10 +187,10 @@ Module {
                                                                 package: Some(
                                                                     PackageName {
                                                                         author: "nash",
-                                                                        project: "core",
+                                                                        project: "base",
                                                                     },
                                                                 ),
-                                                                name: "Builtin",
+                                                                name: "Primitive",
                                                             },
                                                             name: "unit",
                                                         },
@@ -320,10 +321,10 @@ Module {
                                             package: Some(
                                                 PackageName {
                                                     author: "nash",
-                                                    project: "core",
+                                                    project: "base",
                                                 },
                                             ),
-                                            name: "Builtin",
+                                            name: "Primitive",
                                         },
                                         name: "unit",
                                     },
@@ -347,10 +348,10 @@ Module {
                                             package: Some(
                                                 PackageName {
                                                     author: "nash",
-                                                    project: "core",
+                                                    project: "base",
                                                 },
                                             ),
-                                            name: "Builtin",
+                                            name: "Primitive",
                                         },
                                         name: "unit",
                                     },

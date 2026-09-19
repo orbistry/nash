@@ -58,6 +58,8 @@ pub type ImplTable<'a> = BTreeMap<nash_ast::ImplKey<'a>, &'a ImplInfo<'a>>;
 pub struct Tables<'a> {
     /// Field projection is limited to constructors visible in this module.
     pub fields: BTreeMap<nash_ast::QualifiedName<'a>, LabeledUnion<'a>>,
+    /// Additional constructor visibility granted only by tests-block imports.
+    pub test_fields: BTreeMap<nash_ast::QualifiedName<'a>, LabeledUnion<'a>>,
     pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: BTreeMap<nash_ast::QualifiedName<'a>, &'a TraitInfo<'a>>,
     pub impls: ImplTable<'a>,
@@ -179,7 +181,7 @@ pub enum Ctor<'a> {
         options: CtorOpts,
         alternatives: u16,
     },
-    /// Builtin.bool constructor (False or True from nash/core).
+    /// Primitive.bool constructor (False or True from nash/base).
     /// Separated from `Union` so pattern/expression canonicalization can
     /// emit `CanPattern::Bool` / synthesize the annotation without string checks.
     Bool {
@@ -271,6 +273,7 @@ pub struct Binop<'a> {
 
 /// Module information for canonicalization, built from imports and top-level
 /// definitions. Local expression bindings live in Scope and never mutate it.
+#[derive(Clone)]
 pub struct Env<'a> {
     pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: Exposed<'a, &'a TraitInfo<'a>>,

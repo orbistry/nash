@@ -1,0 +1,40 @@
+{"run_id":"1789784939-933223000","line":106,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"literal_domain_needs_wildcard","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":106,"expression":"missing(&[vec![Pattern::Literal(Literal::Int(1))],\nvec![Pattern::Literal(Literal::Int(2))]], 1)"},"snapshot":"_"},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":"_"}}
+{"run_id":"1789784939-933223000","line":67,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"empty_matrix","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":67,"expression":"missing(&[], 2)"},"snapshot":"_ | _"},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":"_ | _"}}
+{"run_id":"1789784939-933223000","line":86,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"nil_and_cons","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":86,"expression":"missing(&[vec![NIL], vec![cons]], 1)"},"snapshot":""},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":""}}
+{"run_id":"1789784939-933223000","line":101,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"nested_cons","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":101,"expression":"missing(&[vec![NIL], vec![singleton]], 1)"},"snapshot":"_ :: _ :: _"},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":"_ :: _ :: _"}}
+{"run_id":"1789784939-933223000","line":91,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"only_nil","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":91,"expression":"missing(&[vec![NIL]], 1)"},"snapshot":"_ :: _"},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":"_ :: _"}}
+{"run_id":"1789784939-933223000","line":116,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"pair_partial","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":116,"expression":"missing(&[vec![pair]], 1)"},"snapshot":"( False, _ )"},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":"( False, _ )"}}
+{"run_id":"1789784939-933223000","line":203,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"recovered_constructor_preserves_remaining_columns","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":203,"expression":"missing(&[vec![pair, T], vec![ANY, F]], 2)"},"snapshot":"( False, _ ) | True"},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":"( False, _ ) | True"}}
+{"run_id":"1789784939-933223000","line":167,"new":{"module_name":"nash_nitpick__matrix_tests","snapshot_name":"overloaded_literal_can_overlap_a_constructor","metadata":{"source":"crates/nash-nitpick/src/matrix_tests.rs","assertion_line":167,"expression":"missing(&[vec![T], vec![literal]], 1)"},"snapshot":"False"},"old":{"module_name":"nash_nitpick__matrix_tests","metadata":{},"snapshot":"False"}}
+{"run_id":"1789784992-709346000","line":106,"new":null,"old":null}
+{"run_id":"1789784992-709346000","line":91,"new":null,"old":null}
+{"run_id":"1789784992-709346000","line":67,"new":null,"old":null}
+{"run_id":"1789784992-709346000","line":86,"new":null,"old":null}
+{"run_id":"1789784992-709346000","line":101,"new":null,"old":null}
+{"run_id":"1789784992-709346000","line":167,"new":null,"old":null}
+{"run_id":"1789784992-709346000","line":116,"new":null,"old":null}
+{"run_id":"1789784992-709346000","line":203,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":91,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":106,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":67,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":203,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":101,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":167,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":86,"new":null,"old":null}
+{"run_id":"1789788056-710879000","line":116,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":67,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":86,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":101,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":91,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":106,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":167,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":116,"new":null,"old":null}
+{"run_id":"1789788179-873339000","line":203,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":67,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":86,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":91,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":101,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":116,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":203,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":106,"new":null,"old":null}
+{"run_id":"1789788219-321293000","line":167,"new":null,"old":null}

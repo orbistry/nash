@@ -1,0 +1,25 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (fromData)\ndecoded : Int\ndecoded = fromData (B #\"aa\")\nmain = unIData decoded\n"
+---
+--- core
+let fromData#3 : Data -> 'erased = \coerce#6 : 'erased -> coerce#6 in
+let fromBytes#5 : bytes -> bytes = \value#7 : bytes -> value#7 in
+let decoded#2 : Int = fromData#3 ((\field#4 : bytes -> bData field#4) (fromBytes#5 (con bytestring #aa))) in
+let main#1 : int = unIData decoded#2 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromData_3
+    [(lam fromBytes_5
+      [(lam decoded_2 [(lam main_1 main_1) [(builtin unIData) decoded_2]])
+        [fromData_3
+          [(lam field_4 [(builtin bData) field_4]) [fromBytes_5 (con bytestring #aa)]]]])
+      (lam value_7 value_7)])
+    (lam coerce_6 coerce_6)])
+--- result
+error: Runtime(MalFormedData(ByteString([170])))
+--- logs
+[]
+--- budget
+cpu: 11283, memory: 132

@@ -1,0 +1,11 @@
+module Main exposing (example, pick, flipped)
+
+import Control exposing (identity, const, applyTwice, choose)
+import Types exposing (Choice(..), makePair, flipChoice)
+import Literal
+
+example = makePair (applyTwice identity 42) (const #"6e617368" 0)
+
+pick condition = choose condition (First 1) (Second 2)
+
+flipped value = flipChoice value

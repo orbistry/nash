@@ -8,15 +8,15 @@ The `nash` binary is `crates/nash-cli`. Every command loads the project from
 
 | Command | Status | Purpose |
 |---|---|---|
-| `nash check [PATH]` | exists | Parse, canonicalize and type check every module. Test blocks remain unsupported until Plan 10. No codegen. |
+| `nash check [PATH]` | exists | Parse, canonicalize and type check every module. Includes test blocks but does not execute them. No codegen. |
 | `nash build [PATH]` | exists | Exclude test blocks, check the frontend, then compile every validator module for its configured target. |
-| `nash test [PATH]` | planned (plans/10) | `check`, then compile and run every `test` and `prop`. |
+| `nash test [PATH]` | exists | Check, compile and run project `test` and `prop` declarations. |
 | `nash fmt [PATH...]` | planned | Format files in place, or `--check` to report unformatted files. |
 | `nash docs [PATH]` | planned | Generate HTML documentation for exposed modules into `docs/`. |
 | `nash lsp` | exists | Language server over stdio. |
 | `nash init NAME` | planned | Create a project skeleton: `nash.jsonc`, `src/`, one validator module with a `tests` block. |
 
-Aliases: `nash c` for `check`, `nash b` for `build`; `nash t` is planned with `test`.
+Aliases: `nash c` for `check`, `nash b` for `build`; `nash t` for `test`.
 
 Version proxying stays as it is: `nash` reads the `compiler` field of
 `nash.jsonc` and re-executes the matching downloaded compiler
@@ -36,7 +36,7 @@ Global flags, accepted before the subcommand:
 
 | Flag | Default | Effect |
 |---|---|---|
-| `--plutus-version v1\|v2\|v3` | config `plutusVersion`, else `v3` | Ledger language target at the Plomin/protocol 10 baseline. |
+| `--plutus-version v1\|v2\|v3` | config `plutusVersion`, else `v3` | Ledger language target at the protocol 11 baseline. |
 | `--trace-level silent\|compact\|verbose` | config `traceLevel`, else `silent` | User `trace` compilation mode. |
 | `--compiler-traces[=true\|false]` | config `compilerTraces`, else false | Independently control compiler traces; the bare flag enables them. |
 | `--out DIR` | `build` | Output directory. |
@@ -45,7 +45,7 @@ CLI options override the owning project's configuration. Builds are unoptimized;
 `--optimize` and the `optimize` config field are rejected while Plan 08 is deferred.
 See [target compatibility](validators.md#target-compatibility).
 
-`nash test` (planned):
+`nash test`:
 
 | Flag | Default | Effect |
 |---|---|---|
@@ -54,7 +54,9 @@ See [target compatibility](validators.md#target-compatibility).
 | `--match PATTERN` | all | Run only tests whose `Module.Name` or name contains `PATTERN`. Repeatable. `--match "Vesting.{claim}"` selects a test by name inside a module. |
 | `--exact` | off | `--match` compares whole strings. |
 | `--trace-level` | config `traceLevel`, else `verbose` | As for `build`, but tests default to `verbose`. |
-| `--jobs N` | number of cores | Worker threads. |
+| `--jobs N` | number of cores | Positive worker count; fixed seeds give the same ordered results across worker counts. |
+| `--plutus-version v1\|v2\|v3` | member config, else `v3` | Target validation and bundled execution cost model. |
+| `--json` | off | Write one structured result document to stdout. |
 | `--coverage labels\|tests` | `labels` | Denominator of the label table: total labels, or total iterations. |
 
 `nash fmt`:
@@ -72,7 +74,7 @@ See [target compatibility](validators.md#target-compatibility).
 | `--report human\|json` | `json` prints nash-report's Elm-shaped JSON document (`{"type":"compile-errors",...}`) instead of the terminal rendering. Default `human`. |
 
 `build` uses human diagnostics and shows warnings. Additional report controls
-for `build` and the future `test` command are not implemented.
+for `build` are not implemented. `test --json` emits structured test outcomes.
 
 ## Exit codes
 
@@ -157,7 +159,7 @@ Rust side (`crates/nash-config/src/config.rs`): `PlutusVersion` and
 ## Open questions
 
 - **`nash init`** needs a template stdlib import list and a default
-  `compiler` pin. Both depend on the first published `nash/core` version.
+  `compiler` pin. Both depend on the first published `nash/base` version.
 - **`--json` shape** for `nash test` is specified in testing.md; compile
   errors from `check`, `build` and `test` use nash-report's Elm-shaped JSON
   (`--report=json`, [diagnostics.md](diagnostics.md)). Whether a stable

@@ -1,0 +1,30 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\napply f x = f x\nidentity x = x\nhidden : Data\nhidden = apply coerce identity\nrecovered : int -> int\nrecovered = coerce hidden\nmain : int\nmain = recovered 42\n"
+---
+--- core
+let apply#7 : ('erased -> 'erased) -> 'erased -> 'erased = \(f#10 : 'erased -> 'erased) x#11 : 'erased -> f#10 x#11 in
+let identity#9 : 'erased -> 'erased = \x#12 : 'erased -> x#12 in
+let hidden#5 : Data = apply#7 (\coerce#8 : 'erased -> coerce#8) identity#9 in
+let recovered#2 : int -> int = (\coerce#4 : 'erased -> coerce#4) hidden#5 in
+let fromInt#3 : int -> int = \value#6 : int -> value#6 in
+let main#1 : int = recovered#2 (fromInt#3 42) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam apply_7
+    [(lam identity_9
+      [(lam hidden_5
+        [(lam recovered_2
+          [(lam fromInt_3 [(lam main_1 main_1) [recovered_2 [fromInt_3 (con integer 42)]]])
+            (lam value_6 value_6)])
+          [(lam coerce_4 coerce_4) hidden_5]])
+        [[apply_7 (lam coerce_8 coerce_8)] identity_9]])
+      (lam x_12 x_12)])
+    (lam f_10 (lam x_11 [f_10 x_11]))])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 592100, memory: 3800

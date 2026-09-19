@@ -10,4 +10,9 @@ nash::names::not_found_ctor
  2 │ value = Name
    ·         ────
    ╰────
-  help: Define or import this name.
+  help: Similar names:
+
+            Primitive.B
+            Primitive.I
+            Primitive.Map
+            Primitive.List

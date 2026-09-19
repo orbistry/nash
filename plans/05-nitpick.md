@@ -176,7 +176,7 @@ Final integration (2026-09-09 UTC):
 | Workspace tests | `cargo test`: 2,209 passed, zero failures; existing ignored doctests unchanged. |
 | Snapshots | `cargo insta test --workspace --check --unreferenced delete`: pass, no unreferenced or pending snapshots. |
 | New regression coverage | 32 nitpick unit tests, 76 driver-hosted source/renderer tests, and nine driver integration tests. Source fixtures parse, canonicalize and solve before checking coverage. |
-| Real core | `cargo run -p nash-cli -- check tests/core`: 23 modules, 215 declarations; no core fixes required. |
+| Real core | `cargo run -p nash-cli -- check tests/base`: 23 modules, 215 declarations; no core fixes required. |
 | Actual CLI | Ten isolated workspaces using the real core: two successes and eight expected diagnostic failures, including defaults, impls, unsafe arguments/destructures, Data and bytes. |
 | Rejected-module isolation | Driver tests verify no returned interface/solved module, no public interface, and an importing dependent fails. |
 | Packaging | `cargo package -p nash-nitpick --list --allow-dirty` confirms the standalone crate has no compiler pipeline test dependencies or external source includes. |

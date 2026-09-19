@@ -10,4 +10,4 @@ nash::names::bad_instance_head
    ·            ──
  2 │     equal x y = True
    ╰────
-  help: Use a named type constructor or a tuple as the outermost type of an impl head.
+  help: A bare-variable impl must be defined in the module that defines its trait.

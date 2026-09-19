@@ -1,0 +1,25 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nidentity value = value\nmain : bool\nmain = if identity True then identity True else False\n"
+---
+--- core
+let identity#2 : 'erased -> 'erased = \value#3 : 'erased -> value#3 in
+let main#1 : bool = case@Bool identity#2 true of
+  True -> identity#2 true
+  False -> false in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam identity_2
+    [(lam main_1 main_1)
+      (case
+        [identity_2 (con bool True)]
+        (con bool False)
+        [identity_2 (con bool True)])])
+    (lam value_3 value_3)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 240100, memory: 1600

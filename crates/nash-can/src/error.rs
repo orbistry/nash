@@ -35,6 +35,11 @@ pub struct PossibleNames<'a> {
 
 #[derive(Clone, Debug)]
 pub enum Error<'a> {
+    DuplicateTest {
+        name: &'a str,
+        first: Region,
+        second: Region,
+    },
     ValidatorMissingMain {
         region: Region,
         module: &'a str,

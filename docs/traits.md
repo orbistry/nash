@@ -60,8 +60,8 @@ impl Functor list where
 
 -- multi-parameter impl
 impl Lift int Int where
-    lift = Builtin.castLift
-    lower = Builtin.castLower
+    lift = Builtin.iData
+    lower = Builtin.unIData
 
 -- contexts in annotations
 member : Eq 'a => 'a -> List 'a -> bool
@@ -121,14 +121,15 @@ both its trait and its head type are visible.
 `impl C => T h1 .. hn where ...`:
 
 - `T` must resolve to a trait of arity `n`.
-- Each head has an outer named constructor, unit, or tuple. Constructor
+- Each head normally has an outer named constructor, unit, or tuple. Constructor
   arguments are recursive type patterns, including concrete types and nested
   applications: `list int`, `list (pair 'k 'v)`, and `List 'a` are legal.
   Variables may recur across patterns; every occurrence denotes the same type.
   Inline annotations add representation prerequisites, for example
   `impl Keep (list ('a : Big))` requires `Big 'a`. They are checked during
   superclass proof and selection; they do not distinguish overlapping heads.
-  Matching must preserve that equality. Bare variable heads and function heads
+  Matching must preserve that equality. A bare variable head is permitted only
+  when the trait is defined in the same module as the impl. Function heads
   remain excluded; reflexive Big Lift remains a compiler-provided rule.
   This rule applies uniformly to user and core impls, with no Map-specific
   exception or enumeration of permitted nested shapes.
@@ -190,20 +191,22 @@ separately by Haskell 98 unification before table insertion.
 
 **Orphan rule.** An impl in module `M` is legal only if the trait `T` is
 defined in `M`, or at least one head constructor is defined in `M`. Unit and
-tuples count as defined in `nash/core`. This is Rust's rule specialized to
-heads that are always constructors. There are no uncovered type parameters
-to worry about because a head is never a bare variable, so Rust's extra
-ordering condition for multi-parameter traits is vacuous.
+tuples count as defined in `nash/base`. Bare variable heads require the trait
+to be defined in `M`; a local constructor in another head does not permit a
+bare variable head for a foreign trait. This allows trait owners to provide
+ordinary blanket impls, such as `impl ToData ('a : Big) where` in `Data`.
 
 **Overlap.** Two impls overlap when their full head patterns can match a
 common well-kinded type assignment. Freshen their variables independently
 before checking this. Trait prerequisites do not establish disjointness merely
 because an impl is currently absent. Thus `SomeTrait (list int)` and
 `SomeTrait (list bytes)` are disjoint, while `SomeTrait (list 'a)` overlaps
-both. Overlap remains an error; declaration order does not select an impl.
+both. A blanket variable head also overlaps concrete heads regardless of
+impl contexts; contexts do not make these ordinary impls disjoint. Overlap
+remains an error; declaration order does not select an impl.
 Check this across
 all build interfaces as well as within a module. In particular, separate
-modules in `nash/core` may both satisfy the orphan rule for unit or tuple
+modules in `nash/base` may both satisfy the orphan rule for unit or tuple
 heads; that ownership does not permit duplicate impls.
 
 Consequence: the impl table is global. Canonicalization builds it from
@@ -232,7 +235,7 @@ when it needs one that is missing.
   instantiated at `P`'s arguments.
 
 After checking givens, resolution recognizes the compiler-owned reflexive
-rule only for package `nash/core`, module `Lift`, trait `Lift`. Both arguments
+rule only for package `nash/base`, module `Lift`, trait `Lift`. Both arguments
 must already be equal and their representation must be proven Big. Resolution must
 not unify unknown arguments or narrow a rigid variable's representation to select
 this rule. A same-named trait elsewhere receives no special behavior.
@@ -372,8 +375,8 @@ definition and list equal requirements once.
 For each ambiguous variable, in order:
 
 - If its predicates include exactly one distinct literal trait from package
-  `nash/core`, module `Literal` (`FromInt`, `FromString`, `FromBytes`), unify
-  it with `Builtin.int`, `Builtin.string`, or `Builtin.bytes` respectively.
+  `nash/base`, module `Literal` (`FromInt`, `FromString`, `FromBytes`), unify
+  it with `Primitive.int`, `Primitive.string`, or `Primitive.bytes` respectively.
   The predicate's sole argument must be that variable, not a type containing
   it. Repeated requirements of the same trait still select one default.
 - Otherwise report an ambiguous type error listing the predicates.
@@ -500,7 +503,7 @@ context, substitutes each recorded use, and selects the resulting impl method
 or requests a callee specialization. No dictionary is passed at runtime.
 
 Specialization identity also includes the runtime layout details demanded by
-native constant construction and casts. `Repr` proofs are erased, but this does
+native constant construction and typed builtins. `Repr` proofs are erased, but this does
 not make native constants independent of their element types. Complete source
 type arguments are substitution metadata, not unconditional key components.
 Opaque pass-through types need no distinct copy. See [codegen.md](codegen.md)
@@ -531,9 +534,9 @@ region supplies diagnostics.
 
 ## Core trait hierarchy
 
-Decision: shipped in `nash/core` as one module per trait (`Eq`, `Ord`,
+Decision: shipped in `nash/base` as one module per trait (`Eq`, `Ord`,
 `Show`, `Num`, `Integral`, `Semigroup`, `Monoid`, `Functor`,
-`Applicative`, `Monad`, `Lift`, `Data` for `ToData`/`FromData`, and
+`Applicative`, `Monad`, `Lift`, `Data` for `ToData`/`FromData`/`Validate`, and
 `Literal` for the three literal traits), all imported implicitly with the
 trait and its methods exposed (like Elm's default imports of `Basics`).
 `Prelude` holds the `infix` declarations that bind operators to methods and
@@ -585,9 +588,17 @@ trait Applicative 'm => Monad 'm where
 trait ToData ('a : Big) where
     toData : 'a -> Data
 
+impl ToData ('a : Big) where
+    toData = Primitive.coerce
+
 trait FromData ('a : Big) where
-    fromData : Data -> 'a                       -- shallow: reinterprets the constant
-    validateData : Data -> 'a                   -- full structural check; traps on bad data
+    fromData : Data -> 'a                       -- unchecked identity
+
+impl FromData ('a : Big) where
+    fromData = Primitive.coerce
+
+trait Validate ('a : Big) where
+    validate : Data -> 'a                   -- required recursive validation; traps on bad data
 
 trait Lift 'small 'big where
     lift : 'small -> 'big
@@ -622,18 +633,22 @@ Notes:
   Interfaces retain the backing method's defining module independently of
   the module that declares the operator. Operator values and sections use
   the same scheme; each operator node owns its solved evidence.
-- Kinds: `ToData`/`FromData` and both `Lift` parameters have kind `Type`.
-  `ToData`/`FromData` require `Big` through their superclass predicates.
+- Kinds: `ToData`/`FromData`/`Validate` and both `Lift` parameters have kind `Type`.
+  `ToData`/`FromData`/`Validate` require `Big` through their superclass predicates.
   `Lift` relates its concrete impl heads, with a compiler-owned reflexive
   rule for Big types. `Functor`/`Applicative`/`Monad` parameters have the
   fixed kind `Type -> Type`; their method formation contexts enforce each
   constructor's representation requirements.
-- `@derive(Eq, Ord, Show, ToData, FromData)` generates impls as macros
+- `@derive(Eq, Ord, Show, Validate)` generates impls as macros
   ([macros.md](macros.md)); the generated impls are ordinary impls subject
   to the orphan rule (always satisfied: the type is local). Each requested
   trait must satisfy the target type's kind restrictions. Eq derivation is
   for little types; Big types already have compiler-owned structural Eq,
   and a generated Big Eq override is rejected like a handwritten one.
+  `ToData` and `FromData` already cover every Big type through ordinary
+  blanket impls, without validation constraints. Deriving concrete impls
+  would overlap those impls and is rejected. Validation is opt-in through
+  the separate `Validate` trait.
 
 ## Interfaces
 
@@ -673,8 +688,13 @@ has a declared scheme, so it is always constrained through its annotation.
   call site as a missing `Storable (option int)`, and the compiler-owned
   `impl Lift 'a 'a` carries `Big 'a`.
 - **Representation** ([representation.md](representation.md)): `Lift`,
-  `ToData`, `FromData` are the only bridges between reprs. Nothing in trait
-  resolution depends on reprs; specialization is by evidence only.
+  `ToData`, `FromData` provide explicit source conversions. The separate
+  `Primitive.coerce : 'a -> 'b` intrinsic is unchecked identity for any two
+  value types, including functions; it has no representation constraints
+  and does not change the runtime representation. `fromData` uses
+  it and checks no shape; `Validate.validate` is a required method of a
+  separate opt-in trait.
+  Specialization is by evidence only.
 - **Macros** ([macros.md](macros.md)): `@derive` expands to `impl` decls
   before canonicalization of the expanded module; `@derive` on a type in
   another module is an orphan error like any hand-written impl.
@@ -844,7 +864,7 @@ for it. `Mode::Strict`, the default, is everything above.
 - **Method-bound operators inside the defining module.** Today a module's
   own `infix` declarations do not enter its env (Elm rule); operators
   bound to local methods therefore need the method called by name in the
-  defining module. `nash/core` is written that way.
+  defining module. `nash/base` is written that way.
 
 Implementation lookup uses the existing `ImplKey` map ordering: start at the
 requested trait with an empty head slice and stop when the trait changes.

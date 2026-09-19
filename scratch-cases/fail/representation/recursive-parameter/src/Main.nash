@@ -1,0 +1,7 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type Box 'a = Box 'a
+type first ('a : Const) = First (second 'a)
+type second 'a = Second (Box 'a) (first 'a)

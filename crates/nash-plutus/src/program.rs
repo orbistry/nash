@@ -11,6 +11,29 @@ use crate::{
     term::Term,
 };
 
+/// Local estimates retain each language's existing costs and cover newly enabled
+/// builtins with the bundled V3 table. Never used by `eval_with_params`.
+#[derive(Default)]
+struct BundledCosts<B> {
+    primary: B,
+    extension: BuiltinCostsV3,
+}
+
+impl<B: BuiltinCostModel> BuiltinCostModel for BundledCosts<B> {
+    fn initialize(cost_map: &crate::machine::cost_model::cost_map::CostMap) -> Self {
+        Self {
+            primary: B::initialize(cost_map),
+            extension: BuiltinCostsV3::default(),
+        }
+    }
+
+    fn get_cost(&self, builtin: crate::builtin::DefaultFunction, args: &[i64]) -> Option<ExBudget> {
+        self.primary
+            .get_cost(builtin, args)
+            .or_else(|| self.extension.get_cost(builtin, args))
+    }
+}
+
 #[derive(Debug)]
 pub struct Program<'a, V> {
     pub version: &'a Version<'a>,
@@ -57,13 +80,13 @@ where
         match plutus_version {
             PlutusVersion::V1 => self.evaluate(
                 arena,
-                CostModel::<BuiltinCostsV1>::default(),
+                CostModel::<BundledCosts<BuiltinCostsV1>>::default(),
                 plutus_version,
                 initial_budget,
             ),
             PlutusVersion::V2 => self.evaluate(
                 arena,
-                CostModel::<BuiltinCostsV2>::default(),
+                CostModel::<BundledCosts<BuiltinCostsV2>>::default(),
                 plutus_version,
                 initial_budget,
             ),

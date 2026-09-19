@@ -1,13 +1,24 @@
 ---
 source: crates/nash-driver/src/compile/nitpick_tests.rs
-description: "module Main exposing (..)\nimport Builtin exposing (type bool(..))\ntrait Choose 'a where\n    choose : 'a -> unit\nimpl Choose bool where\n    choose True = ()\n"
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Builtin\ntrait Choose 'a where\n    choose : 'a -> unit\nimpl Choose bool where\n    choose True = ()\n"
 ---
+nash::warning::unused_import
+
+  ⚠ Unused import `Builtin`.
+   ╭─[/Main.nash:3:8]
+ 2 │ import Primitive exposing (type bool(..))
+ 3 │ import Builtin
+   ·        ───────
+ 4 │ trait Choose 'a where
+   ╰────
+  help: Remove the import.
+
 nash::pattern::incomplete
 
   × Argument pattern is not exhaustive.
-   ╭─[/Main.nash:6:12]
- 5 │ impl Choose bool where
- 6 │     choose True = ()
+   ╭─[/Main.nash:7:12]
+ 6 │ impl Choose bool where
+ 7 │     choose True = ()
    ·            ────
    ╰────
   help: Missing patterns:

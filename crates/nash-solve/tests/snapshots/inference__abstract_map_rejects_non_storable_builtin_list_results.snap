@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ( unit, unit )`.
+  × Unsatisfied representation constraint `Primitive.Storable ( unit, unit )`.
     ╭─[Main.nash:10:7]
   9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
  10 │ bad = map (\x -> (x, x)) [()]
@@ -22,7 +22,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ( unit, unit )`.
+  × Unsatisfied representation constraint `Primitive.Storable ( unit, unit )`.
     ╭─[Main.nash:10:7]
   9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
  10 │ bad = map (\x -> (x, x)) [()]
@@ -38,7 +38,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Storable ( unit, unit )`.
+  × Unsatisfied representation constraint `Primitive.Storable ( unit, unit )`.
     ╭─[Main.nash:10:7]
   9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
  10 │ bad = map (\x -> (x, x)) [()]

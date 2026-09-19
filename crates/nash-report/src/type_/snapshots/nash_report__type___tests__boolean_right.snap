@@ -4,7 +4,7 @@ description: "module Main exposing (..)\nvalue = True || \"hello\"\n"
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `bool`, found `string`.
+  × Type mismatch: expected `Primitive.bool`, found `Primitive.string`.
    ╭─[Main.nash:2:17]
  1 │ module Main exposing (..)
  2 │ value = True || "hello"

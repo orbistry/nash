@@ -232,7 +232,7 @@ async fn roots_use_their_own_target_settings_and_hashes() {
     )
     .await;
     assert_eq!(artifacts.len(), 2);
-    assert!(artifacts[0].uplc.contains("1.0.0"));
+    assert!(artifacts[0].uplc.contains("1.1.0"));
     assert!(artifacts[1].uplc.contains("1.1.0"));
     for (artifact, version) in artifacts.iter().zip([
         nash_plutus::machine::PlutusVersion::V1,

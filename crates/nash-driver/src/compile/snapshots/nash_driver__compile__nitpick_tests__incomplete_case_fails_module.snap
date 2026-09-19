@@ -1,14 +1,25 @@
 ---
 source: crates/nash-driver/src/compile/nitpick_tests.rs
-description: "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nf x =\n    case x of\n        True -> ()\n"
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Builtin\nf x =\n    case x of\n        True -> ()\n"
 ---
+nash::warning::unused_import
+
+  ⚠ Unused import `Builtin`.
+   ╭─[/Main.nash:3:8]
+ 2 │ import Primitive exposing (type bool(..))
+ 3 │ import Builtin
+   ·        ───────
+ 4 │ f x =
+   ╰────
+  help: Remove the import.
+
 nash::pattern::incomplete
 
   × Case expression is not exhaustive.
-   ╭─[/Main.nash:4:5]
- 3 │     f x =
- 4 │ ╭─▶     case x of
- 5 │ ╰─▶         True -> ()
+   ╭─[/Main.nash:5:5]
+ 4 │     f x =
+ 5 │ ╭─▶     case x of
+ 6 │ ╰─▶         True -> ()
    ╰────
   help: Missing patterns:
 

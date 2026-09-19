@@ -1,0 +1,267 @@
+module Main exposing (..)
+
+
+projectedPair = Pair.snd (Builtin.unConstrData (Builtin.constrData 0 [I 1]))
+madePair = Pair.fst (Pair.make (I 1) (B #"ff"))
+arrayValues = Array.fromList [1, 2]
+arrayQueries = (Array.length arrayValues, Array.at arrayValues 1, Array.get arrayValues (-1), Array.get arrayValues 2)
+bigArray : array Packet
+bigArray = Array.fromList [Packet integerLiteral]
+bigArrayResult : option Packet
+bigArrayResult = Array.get bigArray 0
+
+mappedOption = map (\x -> (x, x)) (Some ())
+appliedOption = apply (Some (\x -> (x, x))) (Some ())
+optionDo = do
+    first <- Some ()
+    second <- Some (first, first)
+    pure (first, second)
+
+mappedBuiltinList = map Builtin.iData [1, 2]
+mappedOperator = (\x -> (x, x)) <$> Some ()
+appliedOperator = Some (\x -> (x, x)) <*> Some ()
+boundOperator = Some () >>= (\x -> Some (x, x))
+
+mappedResult : result unit (unit, unit)
+mappedResult = map (\x -> (x, x)) (Ok ())
+
+appliedResult : result unit (unit, unit)
+appliedResult = apply (Ok (\x -> (x, x))) (Ok ())
+
+resultDo : result unit (unit, unit)
+resultDo = do
+    item <- Ok ()
+    pure (item, item)
+
+mappedCons = map (\x -> (x, x)) (Cons.singleton ())
+
+type Packet = Packet Int
+automaticBigEq = (eq (Packet integerLiteral) (Packet bigInteger), neq (Packet integerLiteral) (Packet bigInteger))
+
+ledgerValue = Builtin.unValueData (Map [])
+ledgerValueNegative = Builtin.insertCoin #"" #"" (-1) ledgerValue
+ledgerValueEquality = eq ledgerValueNegative ledgerValueNegative
+
+functions = Cons.singleton (\x -> x)
+appliedFunctions = Cons.map (\f -> f ()) functions
+termPairs = Cons.map (\x -> (x, x)) (Cons.fromList [1, 2])
+consEquality = eq appliedFunctions (Cons.singleton ())
+shownCons = show termPairs
+consIndices = Cons.indexedMap (\index value -> (index, value)) appliedFunctions
+consPaired = Cons.map2 (\a b -> (a, b)) (Cons.fromList [1, 2]) appliedFunctions
+consLength = Cons.length (Cons.append appliedFunctions Nil)
+consLeftFold = Cons.foldl (\item acc -> sub item acc) 0 (Cons.fromList [1, 2])
+consRightFold = Cons.foldr sub 0 (Cons.fromList [1, 2])
+consRoundTrip = Cons.toList (Cons.fromList [1, 2])
+
+emptyBigMap : Map Int Bytes
+emptyBigMap = empty
+leftMap : Map Int Bytes
+leftMap = fromData (Map [Builtin.mkPairData (I 1) (B #"aa"), Builtin.mkPairData (I 2) (B #"bb")])
+rightMap : Map Int Bytes
+rightMap = fromData (Map [Builtin.mkPairData (I 2) (B #"cc"), Builtin.mkPairData (I 2) (B #"dd")])
+combinedMap = append leftMap rightMap
+mapWithEmpty = withEmpty leftMap
+mergeMaps : Eq 'k => Map 'k 'v -> Map 'k 'v -> Map 'k 'v
+mergeMaps = append
+
+emptyBigBytes : Bytes
+emptyBigBytes = empty
+emptyBigList : List Int
+emptyBigList = empty
+appendedBigBytes = append bytesLiteral emptyBigBytes
+appendedBigList = append bigList emptyBigList
+bigListWithEmpty = withEmpty bigList
+
+shownBigPrimitives = (show integerLiteral, show bytesLiteral)
+shownBigContainers = (show bigList, show nestedBigLists, show bigMap)
+
+bigList : List Int
+bigList = lift [1, 2]
+littleList : list int
+littleList = lower bigList
+reflexiveList : List Int
+reflexiveList = lift [integerLiteral]
+nestedBigLists : List (List Int)
+nestedBigLists = lift [[1], [2]]
+nestedLittleLists : list (list int)
+nestedLittleLists = lower nestedBigLists
+bigMap : Map Int Bytes
+bigMap = fromData (Map [])
+listData = toData bigList
+readList : List Int
+readList = fromData listData
+mapData = toData bigMap
+checkedMap : Map Int Bytes
+checkedMap = validate mapData
+
+bigEquality = (eq integerLiteral bigInteger, eq bytesLiteral bigBytes)
+bigOrdering = (compare integerLiteral bigInteger, compare bytesLiteral bigBytes)
+bigOrderDefaults = (lt integerLiteral bigInteger, max bytesLiteral bigBytes)
+bigOrderedEqual = orderedEqual integerLiteral bigInteger
+equalBigLists : List Unit -> List Unit -> bool
+equalBigLists = eq
+equalBigMaps : Map Int Unit -> Map Int Unit -> bool
+equalBigMaps = eq
+
+bigArithmetic : (Int, Int, Int, Int)
+bigArithmetic = (add 7 3, sub 7 3, mul 7 3, -7)
+bigDivision : (Int, Int, Int, Int)
+bigDivision = (div (-7) 3, mod (-7) 3, quot (-7) 3, rem (-7) 3)
+bigSuperclass : Int
+bigSuperclass = twice 21
+
+integerLiteral : Int
+integerLiteral = 42
+bytesLiteral : Bytes
+bytesLiteral = #"ff"
+utf8Literal : bytes
+utf8Literal = "Nash"
+
+bigInteger : Int
+bigInteger = lift 42
+littleInteger : int
+littleInteger = lower bigInteger
+bigBytes : Bytes
+bigBytes = lift #"ff"
+littleBytes : bytes
+littleBytes = lower bigBytes
+textBytes : Bytes
+textBytes = lift "Nash"
+littleText : string
+littleText = lower textBytes
+integerData = toData bigInteger
+bytesData = toData bigBytes
+readInteger : Int
+readInteger = fromData integerData
+checkedBytes : Bytes
+checkedBytes = validate bytesData
+
+wireData = Builtin.constrData 0 [I 1, B #"ff"]
+dataIdentity = toData wireData
+readData : Data
+readData = fromData wireData
+checkedData : Data
+checkedData = validate wireData
+dataTags = (Data.tag wireData, Data.tag (I 1))
+dataFields = (Data.fields wireData, Data.fields (I 1))
+serialisedData = Data.serialise wireData
+
+okResult : result unit bool
+okResult = Ok True
+errResult : result unit bool
+errResult = Err ()
+liftedOk : Result Unit Bool.Bool
+liftedOk = lift okResult
+liftedErr : Result Unit Bool.Bool
+liftedErr = lift errResult
+loweredOk : result unit bool
+loweredOk = lower liftedOk
+loweredErr : result unit bool
+loweredErr = lower liftedErr
+resultDefault = Result.withDefault False errResult
+resultMappedError = Result.mapError (\_ -> True) errResult
+resultEquality = (eq okResult errResult, eq errResult errResult)
+
+optionalEquality = eq (Some True) (Some False)
+optionalDefault = Option.withDefault True None
+liftedOption : Option Bool.Bool
+liftedOption = lift (Some True)
+loweredOption : option bool
+loweredOption = lower liftedOption
+nestedOption : Option (Option Bool.Bool)
+nestedOption = lift (Some (Some True))
+loweredNestedOption : option (option bool)
+loweredNestedOption = lower nestedOption
+emptyOption : Option Unit
+emptyOption = lift emptyLittleOption
+emptyLittleOption : option unit
+emptyLittleOption = None
+loweredEmptyOption : option unit
+loweredEmptyOption = lower emptyOption
+
+liftedBool : Bool.Bool
+liftedBool = lift True
+loweredBool : bool
+loweredBool = lower liftedBool
+liftedUnit : Unit
+liftedUnit = lift ()
+loweredUnit : unit
+loweredUnit = lower liftedUnit
+liftedOrdering : Ordering.Ordering
+liftedOrdering = lift LT
+loweredOrdering : ordering
+loweredOrdering = lower liftedOrdering
+reflexiveBool : Bool.Bool
+reflexiveBool = lift liftedBool
+
+emptyPairs : list (pair Int Bytes)
+emptyPairs = []
+liftedMap : Map Int Bytes
+liftedMap = lift emptyPairs
+loweredMap : list (pair Int Bytes)
+loweredMap = lower liftedMap
+
+integers = eq 1 2
+preludeOps = ((1 + 2) * 3, 1 == 1, [1] ++ [2])
+booleanOps = (not True, xor True False, True && False || True)
+tupleEquality = ((1, True) == (1, True), (1, True, "x") /= (2, False, "y"), (1, True, "x", #"00") == (1, True, "x", #"ff"))
+tupleOrdering = (compare (1, False) (1, True), compare (1, False, "a") (1, False, "b"), compare (1, False, "a", #"00") (1, False, "a", #"ff"))
+shownTuples = (show (1, True), show (1, True, "x"), show (1, True, "x", #"00ff"))
+prepended = 1 :: [2, 3]
+piped = 2 |> ((+) 1)
+composed = ((\x -> x + 1) << (\x -> x * 2)) 3
+strings = neq "one" "two"
+bytes = eq #"cafe" #"cafe"
+booleans = eq True False
+integerOrder = compare 1 2
+byteOrder = compare #"00" #"ff"
+stringOrder = compare "a" "b"
+boolOrder = compare False True
+unitOrder = compare () ()
+listOrder = compare [1, 2] [1, 3]
+orderingEqual = eq (Ordering.invert LT) GT
+orderingThen = Ordering.then_ EQ LT
+shownIntegers = (show 0, show (-123), show 123456789012345678901234567890)
+shownBytes = (show #"", show #"00ff")
+shownString = show "quoted \"text\"\n"
+shownControls = show "\u{0000}\t\r\n\\"
+shownUnicode = show "λ😀"
+shownBool = show True
+shownUnit = show ()
+shownList = (show emptyList, show [1, 2, 3])
+shownPair = show (Builtin.mkPairData (I 1) (B #"ff"))
+shownData = show (Builtin.constrData 0 [I 1, List [B #"ff"], Map [Builtin.mkPairData (I 2) (B #"")]])
+orderDefaults = ((lt 1 2, le 1 2, gt 2 1), (ge 2 1, max 1 2, min 1 2))
+
+orderedEqual : Ord 'a => 'a -> 'a -> bool
+orderedEqual a b = if lt a b then False else eq a b
+units = eq () ()
+lists = eq [1, 2] [1, 2]
+bigElementLists = eq [Packet integerLiteral] [Packet bigInteger]
+mappedBigList : List Packet
+mappedBigList = map Packet bigList
+pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)
+data = eq (I 1) (Builtin.constrData 0 [I 1])
+
+negative = -1
+arithmetic = add (mul 2 3) (sub 5 4)
+division = (div (-7) 3, mod (-7) 3)
+quotient = (quot (-7) 3, rem (-7) 3)
+
+twice : Integral 'a => 'a -> 'a
+twice x = add x x
+
+withEmpty : Monoid 'a => 'a -> 'a
+withEmpty x = append empty x
+
+emptyString : string
+emptyString = empty
+emptyBytes : bytes
+emptyBytes = empty
+emptyList : list int
+emptyList = empty
+emptyUnit : unit
+emptyUnit = empty
+combined = append [1, 2] [3]
+text = withEmpty "text"

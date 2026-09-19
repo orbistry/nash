@@ -22,121 +22,101 @@ fn known_script_hash_vectors() {
     );
 }
 
-fn check(term: &Term<'_, DeBruijn>, version: PlutusVersion) -> Result<(), TargetError> {
-    validate_term(term, version, true)
-}
-
 #[test]
-fn builtin_availability_at_protocol_ten() {
-    use DefaultFunction::*;
-    use PlutusVersion::*;
-    let arena = Arena::new();
-    for (fun, expected) in [
-        (AddInteger, [true, true, true]),
-        (MkNilPairData, [true, true, true]),
-        (SerialiseData, [false, true, true]),
-        (VerifyEcdsaSecp256k1Signature, [false, true, true]),
-        (VerifySchnorrSecp256k1Signature, [false, true, true]),
-        (Bls12_381_G1_Add, [false, false, true]),
-        (IntegerToByteString, [false, true, true]),
-        (ByteStringToInteger, [false, true, true]),
-        (Ripemd_160, [false, false, true]),
-        (ExpModInteger, [false, false, false]),
-    ] {
-        let term = Term::<DeBruijn>::Builtin(&fun);
-        for (version, allowed) in [V1, V2, V3].into_iter().zip(expected) {
-            assert_eq!(
-                check(term.delay(&arena), version).is_ok(),
-                allowed,
+fn builtin_availability_at_protocol_eleven() {
+    for fun in crate::builtin::DefaultFunction::ALL {
+        let term = Term::<DeBruijn>::Builtin(fun);
+        for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
+            assert!(
+                validate_term(&term, version, true).is_ok(),
                 "{version:?} {fun:?}"
             );
         }
     }
+    // Current runtime exposes exactly batches 1–6, not the future batch 7.
+    assert_eq!(crate::builtin::DefaultFunction::ALL.len(), 101);
 }
 
 #[test]
-fn nested_terms_and_constant_types_are_checked() {
-    let arena = Arena::new();
-    let unit = Term::<DeBruijn>::unit(&arena);
-    let terms = [unit];
-    let constr: &Term<DeBruijn> = arena.alloc(Term::Constr {
-        tag: 0,
-        fields: &terms,
-    });
-    let case: &Term<DeBruijn> = arena.alloc(Term::Case {
-        constr,
-        branches: &terms,
-    });
-    for term in [constr, case] {
-        let nested = unit.apply(&arena, term.delay(&arena));
-        assert!(check(nested, PlutusVersion::V1).is_err());
-        assert!(check(nested, PlutusVersion::V2).is_err());
-        assert!(check(nested, PlutusVersion::V3).is_ok());
-    }
+fn nested_unserializable_constant_types_are_rejected() {
     for typ in [
-        Type::Array(&Type::Integer),
-        Type::Value,
         Type::Bls12_381G1Element,
         Type::Bls12_381G2Element,
         Type::Bls12_381MlResult,
     ] {
-        let constant = Constant::ProtoList(&Type::List(&typ), &[]);
-        for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
-            assert!(validate_constant(&constant, version).is_err());
+        for container in [
+            Type::List(&typ),
+            Type::Array(&typ),
+            Type::Pair(&Type::Integer, &typ),
+        ] {
+            let constant = Constant::ProtoList(&container, &[]);
+            for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
+                assert!(validate_constant(&constant, version).is_err());
+            }
         }
     }
-    // Validate values as well as the declared element type.
+    // Inspect contained values even when the declared element type differs.
     let malformed = Constant::ProtoList(
         &Type::Integer,
-        &[&Constant::ProtoArray(&Type::Integer, &[])],
+        &[&Constant::ProtoArray(&Type::Bls12_381G1Element, &[])],
     );
     assert!(validate_constant(&malformed, PlutusVersion::V3).is_err());
 }
+
+#[test]
+fn arrays_and_values_are_serializable_at_protocol_eleven() {
+    let a = Arena::new();
+    let value = Constant::Value(crate::ledger_value::LedgerValue::empty(&a));
+    let items = [&value];
+    for constant in [
+        Constant::ProtoArray(&Type::Value, &items),
+        Constant::Value(crate::ledger_value::LedgerValue::empty(&a)),
+    ] {
+        let term = Term::<DeBruijn>::constant(&a, &constant);
+        let program = Program::new(&a, Version::plutus_v3(&a), term);
+        assert!(crate::flat::encode(program).is_ok());
+        for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
+            assert!(validate_program(program, version).is_ok());
+        }
+    }
+}
+
 #[test]
 fn uplc_version_is_distinct_from_ledger_language() {
     let a = Arena::new();
     let term = Term::<DeBruijn>::unit(&a);
     for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
-        assert!(validate_program(Program::new(&a, Version::plutus_v1(&a), term), version).is_ok());
+        for uplc in [Version::plutus_v1(&a), Version::plutus_v3(&a)] {
+            assert!(validate_program(Program::new(&a, uplc, term), version).is_ok());
+        }
+        assert!(
+            validate_program(Program::new(&a, Version::new(&a, 9, 0, 0), term), version).is_err()
+        );
     }
-    let v3 = Program::new(&a, Version::plutus_v3(&a), term);
-    assert!(validate_program(v3, PlutusVersion::V1).is_err());
-    assert!(validate_program(v3, PlutusVersion::V2).is_err());
-    assert!(validate_program(v3, PlutusVersion::V3).is_ok());
-    assert!(
-        validate_program(
-            Program::new(&a, Version::new(&a, 9, 0, 0), term),
-            PlutusVersion::V3
-        )
-        .is_err()
-    );
 }
 
 #[test]
-fn constructors_require_uplc_110_even_with_v3_ledger_tag() {
+fn native_cases_and_constructors_require_uplc_110_for_every_ledger_language() {
     let a = Arena::new();
-    let constr = a.alloc(Term::<DeBruijn>::Constr {
-        tag: 0,
-        fields: &[],
-    });
-    let program = Program::new(&a, Version::plutus_v1(&a), constr);
-    assert!(validate_program(program, PlutusVersion::V3).is_err());
-}
-
-#[test]
-fn unsupported_builtin_in_v3_constructor_and_case_is_checked() {
-    let a = Arena::new();
-    let forbidden = a.alloc(Term::<DeBruijn>::Builtin(&DefaultFunction::ExpModInteger));
-    let fields = [forbidden as &Term<DeBruijn>];
-    let constr: &Term<DeBruijn> = a.alloc(Term::Constr {
-        tag: 0,
-        fields: &fields,
-    });
-    assert!(check(constr, PlutusVersion::V3).is_err());
-    let unit = Term::unit(&a);
-    let case = Term::Case {
-        constr: unit,
-        branches: &fields,
-    };
-    assert!(check(&case, PlutusVersion::V3).is_err());
+    let unit = Term::<DeBruijn>::unit(&a);
+    let constr = Term::constr(&a, 0, &[]);
+    let boolean = Term::bool(&a, true);
+    let list = Term::constant(&a, a.alloc(Constant::ProtoList(&Type::Integer, &[])));
+    let branches = [unit, unit];
+    let constr_case = Term::case(&a, constr, &branches);
+    let bool_case = Term::case(&a, boolean, &branches);
+    let list_case = Term::case(&a, list, &branches);
+    for term in [constr, constr_case, bool_case, list_case] {
+        // Recurse through ordinary terms; do not only inspect the root.
+        let nested = unit.apply(&a, term.delay(&a));
+        for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
+            assert!(
+                validate_program(Program::new(&a, Version::plutus_v3(&a), nested), version).is_ok()
+            );
+            assert!(
+                validate_program(Program::new(&a, Version::plutus_v1(&a), nested), version)
+                    .is_err()
+            );
+        }
+    }
 }

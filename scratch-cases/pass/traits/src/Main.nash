@@ -1,0 +1,9 @@
+module Main exposing (..)
+
+import Builtin exposing (type bool(..))
+
+trait Eq 'a where
+    eq : 'a -> 'a -> bool
+
+impl Eq int where
+    eq _ _ = True

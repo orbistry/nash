@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nlength xs =\n    case xs of\n        [] -> 0\n        _ :: rest -> addInteger 1 (length rest)\nmain = equalsInteger (length [1, 2, 3]) 3\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nlength xs =\n    case xs of\n        [] -> 0\n        _ :: rest -> addInteger 1 (length rest)\nmain = equalsInteger (length [1, 2, 3]) 3\n"
 ---
 --- core
 let fromInt#3 : int -> int = \value#9 : int -> value#9 in
@@ -26,19 +26,14 @@ main#1
         (lam self_10
           (lam xs_4
             [(lam match_6
-              [(lam generated_11
-                (force
-                  [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_11]]
-                    (delay [fromInt_3 (con integer 0)])]
-                    (delay
-                      [[(lam field_7
-                        (lam field_8
-                          [(lam rest_5
-                            [[(builtin addInteger) [fromInt_3 (con integer 1)]] [[self_10 self_10] rest_5]])
-                            field_8]))
-                        [(force (builtin headList)) generated_11]]
-                        [(force (builtin tailList)) generated_11]])]))
-                match_6])
+              (case
+                match_6
+                (lam field_7
+                  (lam field_8
+                    [(lam rest_5
+                      [[(builtin addInteger) [fromInt_3 (con integer 1)]] [[self_10 self_10] rest_5]])
+                      field_8]))
+                [fromInt_3 (con integer 0)]))
               xs_4]))]])
     (lam value_9 value_9)])
 --- result
@@ -46,4 +41,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 5013510, memory: 21427
+cpu: 2605143, memory: 12903

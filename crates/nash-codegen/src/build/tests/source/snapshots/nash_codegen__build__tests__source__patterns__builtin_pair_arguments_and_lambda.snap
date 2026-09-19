@@ -1,0 +1,51 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nfirst pair(a, _) = a\nmain : int\nmain =\n    let\n        value = Builtin.unConstrData (Builtin.constrData 7 [])\n        pair = first value\n    in\n    (\\pair(a, _) -> Builtin.addInteger pair a) value\n"
+---
+--- core
+let first#9 : pair 'erased 'erased -> 'erased = \arg#11 : pair 'erased 'erased -> let match#13 : pair 'erased 'erased = arg#11 in
+case@Pair match#13 of
+  Pair field#14 field#15 -> let a#12 : 'erased = field#14 in
+  a#12 in
+let fromInt#10 : int -> int = \value#16 : int -> value#16 in
+let evaluated#17 : 'erased = constrData (fromInt#10 7) (con (list data) []) in
+let projection#18 : pair int (list Data) = unConstrData evaluated#17 in
+let value#2 : pair int (list Data) = projection#18 in
+let pair#3 : int = first#9 value#2 in
+let main#1 : int = (\arg#4 : pair int (list Data) -> let match#6 : pair int (list Data) = arg#4 in
+case@Pair match#6 of
+  Pair field#7 field#8 -> let a#5 : int = field#7 in
+  addInteger pair#3 a#5) value#2 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam first_9
+    [(lam fromInt_10
+      [(lam evaluated_17
+        [(lam projection_18
+          [(lam value_2
+            [(lam pair_3
+              [(lam main_1 main_1)
+                [(lam arg_4
+                  [(lam match_6
+                    (case
+                      match_6
+                      (lam field_7
+                        (lam field_8 [(lam a_5 [[(builtin addInteger) pair_3] a_5]) field_7]))))
+                    arg_4])
+                  value_2]])
+              [first_9 value_2]])
+            projection_18])
+          [(builtin unConstrData) evaluated_17]])
+        [[(builtin constrData) [fromInt_10 (con integer 7)]] (con (list data) [])]])
+      (lam value_16 value_16)])
+    (lam arg_11
+      [(lam match_13
+        (case match_13 (lam field_14 (lam field_15 [(lam a_12 a_12) field_14]))))
+        arg_11])])
+--- result
+(con integer 14)
+--- logs
+[]
+--- budget
+cpu: 1124047, memory: 6266

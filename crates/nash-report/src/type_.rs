@@ -221,6 +221,7 @@ fn pattern_label(category: PCategory<'_>) -> String {
     match category {
         PCategory::Record => "record pattern".into(),
         PCategory::Unit => "unit pattern".into(),
+        PCategory::Pair => "pair pattern".into(),
         PCategory::Tuple => "tuple pattern".into(),
         PCategory::List => "list pattern".into(),
         PCategory::Ctor(name) => format!("`{name}` pattern"),
@@ -388,6 +389,8 @@ fn to_expr_report(
                 }
                 Context::RecordField(name, field) => format!("field `{field}` of `{name}`"),
                 Context::Destructure => "destructuring pattern".into(),
+                Context::TestBody => "test body (which must return unit)".into(),
+                Context::TestGenerator => "property generator (which must be a fuzzer)".into(),
             };
             (*surroundings, label, *expected, hint)
         }

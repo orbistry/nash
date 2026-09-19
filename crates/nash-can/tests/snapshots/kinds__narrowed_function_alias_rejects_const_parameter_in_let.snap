@@ -1,16 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias fn ('a : Big) = 'a -> 'a\nf =\n    let\n        g : fn int\n        g x = x\n    in\n    g\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias fn ('a : Big) = 'a -> 'a\nf =\n    let\n        g : fn int\n        g x = x\n    in\n    g\n"
 info: diagnostic
 ---
 nash::names::representation_mismatch
 
   × This position requires `Big` in the annotation for `g`:
-   ╭─[src/Main.nash:8:16]
- 7 │     let
- 8 │         g : fn int
-   ·                ───
- 9 │         g x = x
-   ╰────
+    ╭─[src/Main.nash:9:16]
+  8 │     let
+  9 │         g : fn int
+    ·                ───
+ 10 │         g x = x
+    ╰────
   help: The type has `Const` representation, but `Big` admits only Big types. Change the
         type or the representation requirement.

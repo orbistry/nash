@@ -1,0 +1,20 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (public)\npublic = ()\ntests\n    test \"scope\" = do\n        x <- x\n        ()\n"
+info: diagnostic
+---
+nash::names::not_found_var
+
+  × Unknown variable `x`.
+   ╭─[src/Main.nash:5:14]
+ 4 │     test "scope" = do
+ 5 │         x <- x
+   ·              ─
+ 6 │         ()
+   ╰────
+  help: Similar names:
+
+            public
+            Builtin.bData
+            Builtin.iData
+            Builtin.trace

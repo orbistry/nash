@@ -38,7 +38,7 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-driver` | build graph, caching | done, extend |
 | `nash-cli` | `nash` binary | `check`, `lsp`; add `build test fmt docs` |
 | `nash-language-server` | LSP | live compiler diagnostics with UTF-16 ranges |
-| `core/` | `nash/core` stdlib package (Nash source) | new ([plans/12](plans/12-stdlib.md)) |
+| `crates/nash-driver/base/` | compiler-bundled `nash/base` foundation (Nash source) | implemented; remaining stdlib work ([plans/12](plans/12-stdlib.md)) |
 
 ## Progress
 
@@ -52,22 +52,22 @@ Done:
 - [x] `nash check`
 - [x] UPLC runtime (`nash-plutus`): conformance suite passes
 
-Implementation plans (Plan 08 is deferred; Plan 09 is complete):
+Implementation plans (Plan 08 is deferred; Plans 09 and 10 are complete):
 
 - [x] 01 Syntax: `'a` type vars, little/Big names, `trait`/`impl`, `=>` contexts, representation annotations, `validator module`, `tests` block, `do`, attributes, `name!()`, `comptime`, `assert`/`fail`/`todo`/`trace`; drop `Float`/`Char`/record extension types — [plans/01-syntax.md](plans/01-syntax.md)
 - [x] 02 Kinds: original declaration checking and representation rules (engine replaced by the follow-up) — [plans/02-kinds.md](plans/02-kinds.md)
 - [x] 02 follow-up: Haskell 98 kinds + compiler-owned representation predicates (`Big`/`Const`/`Term`/`Storable`/`Little`), internal `Apply`, inferred datatype contexts; replaces the retained-obligation and value-kind engines — [plans/02-kind-predicates.md](plans/02-kind-predicates.md)
 - [x] 02 rewrite cleanup: remove obsolete hooks, metadata, error paths and test contracts; audit all integration against the Haskell 98 design — [plans/02-kind-rewrite-audit.md](plans/02-kind-rewrite-audit.md)
-- [x] 03 Traits: qualified types, resolution, superclasses, defaults, multi-param, orphan rules, literal traits + defaulting, evidence — [plans/03-traits.md](plans/03-traits.md) (default imports deferred to Plan 12)
+- [x] 03 Traits: qualified types, resolution, superclasses, defaults, multi-param, orphan rules, literal traits + defaulting, evidence — [plans/03-traits.md](plans/03-traits.md) (default imports implemented with bundled Base)
 - [x] 04 Representation: remove row polymorphism and Elm supertypes, builtin type inventory, record encoding — [plans/04-representation.md](plans/04-representation.md)
 - [x] 05 Exhaustiveness (`Nitpick/PatternMatches` port) — [plans/05-nitpick.md](plans/05-nitpick.md)
 - [x] 06 Diagnostics (`nash-report`, concise source labels, stable codes, JSON/LSP) — [plans/06-diagnostics.md](plans/06-diagnostics.md); [concise diagnostics refactor](plans/diagnostics-refactor.md) complete
 - [x] 07 Codegen: Core IR, monomorphization, decision trees, recursion, Data casts, UPLC lowering — [plans/07-codegen.md](plans/07-codegen.md)
 - [ ] 08 Optimizer: inlining, builtin force caching, DCE, case-of-known-ctor/constant folding — [plans/08-optimizer.md](plans/08-optimizer.md) (deferred)
 - [x] 09 Validators + `nash build` — [plans/09-validators-build.md](plans/09-validators-build.md)
-- [ ] 10 Testing: `tests` block, props, fuzzers, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
+- [x] 10 Testing: `tests` block, props, fuzzers, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)
-- [ ] 12 Stdlib `nash/core` — [plans/12-stdlib.md](plans/12-stdlib.md)
+- [ ] 12 Stdlib `nash/base` — [plans/12-stdlib.md](plans/12-stdlib.md)
 - [ ] 13 `nash fmt`, `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md)
 
 Later: LSP features, web playground, package registry (pubgrub), TypeScript codegen.

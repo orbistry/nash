@@ -1,14 +1,14 @@
 ---
 source: crates/nash-driver/src/compile.rs
-description: "module Types exposing (type wrap)\nimport Builtin exposing (..)\ntype wrap 'f 'a = Wrap ('f 'a)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (type wrap)\ntype option 'a = None | Some 'a\ntype use = Use (wrap (pair int) (option int))\n"
+description: "module Types exposing (type wrap)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype wrap 'f 'a = Wrap ('f 'a)\n\nmodule Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (type wrap)\ntype option 'a = None | Some 'a\ntype use = Use (wrap (pair int) (option int))\n"
 ---
 nash::names::representation_mismatch
 
   × This position requires `Storable` in field 1 of little constructor `Use` in
   │ `use`:
-   ╭─[/Main.nash:5:34]
- 4 │ type option 'a = None | Some 'a
- 5 │ type use = Use (wrap (pair int) (option int))
+   ╭─[/Main.nash:6:34]
+ 5 │ type option 'a = None | Some 'a
+ 6 │ type use = Use (wrap (pair int) (option int))
    ·                                  ──────────
    ╰────
   help: The type has `Term` representation, but `Storable` admits Big or Const types.

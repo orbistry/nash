@@ -1,0 +1,9 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+useBig : ('a : Big) -> unit
+useBig x = ()
+useTerm : ('a : Term) -> unit
+useTerm x = ()
+bad x = (useBig x, useTerm x)

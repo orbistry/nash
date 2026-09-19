@@ -1,0 +1,83 @@
+---
+source: crates/nash-parse/src/expression/mod.rs
+description: "outer (inner (\")\"))"
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 20,
+        },
+    },
+    value: Call {
+        function: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 6,
+                },
+            },
+            value: Var {
+                kind: LowVar,
+                name: "outer",
+            },
+        },
+        arguments: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 8,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 19,
+                    },
+                },
+                value: Call {
+                    function: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                        },
+                        value: Var {
+                            kind: LowVar,
+                            name: "inner",
+                        },
+                    },
+                    arguments: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 18,
+                                },
+                            },
+                            value: Str(
+                                ")",
+                            ),
+                        },
+                    ],
+                },
+            },
+        ],
+    },
+}

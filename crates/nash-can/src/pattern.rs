@@ -99,6 +99,13 @@ pub fn canonicalize<'a>(
 
         SourcePattern::Unit => CanPattern::Unit,
 
+        SourcePattern::Pair { first, second } => {
+            let (first, second) = crate::accumulate::accumulate2(
+                canonicalize(bump, env, first, bindings),
+                canonicalize(bump, env, second, bindings),
+            )?;
+            CanPattern::Pair { first, second }
+        }
         SourcePattern::Tuple {
             first,
             second,
@@ -446,7 +453,27 @@ mod tests {
     fn env_with_bool<'a>(bump: &'a Bump) -> Env<'a> {
         let module = nash_parse::Parser::new(
             bump,
-            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\n",
+            "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Builtin\n",
+        )
+        .module()
+        .unwrap();
+        let interfaces = std::collections::BTreeMap::from([(
+            "Builtin",
+            nash_can::kinds::builtin_interface(bump),
+        )]);
+        nash_can::environment::foreign::create_initial_env(
+            bump,
+            empty_env(bump).home,
+            Some(&interfaces),
+            module.imports,
+        )
+        .unwrap()
+    }
+
+    fn env_with_data<'a>(bump: &'a Bump) -> Env<'a> {
+        let module = nash_parse::Parser::new(
+            bump,
+            "module Main exposing (..)\nimport Primitive exposing (Data(..))\nimport Builtin\n",
         )
         .module()
         .unwrap();
@@ -575,6 +602,16 @@ mod tests {
     #[test]
     fn alias_pattern() {
         assert_pattern_snapshot!("(x, y) as pair", empty_env);
+    }
+
+    #[test]
+    fn constr_binds_one_pair() {
+        assert_pattern_snapshot!("Constr payload", env_with_data);
+    }
+
+    #[test]
+    fn constr_rejects_two_fields() {
+        assert_pattern_error_snapshot!("Constr index items", env_with_data);
     }
 
     // === Error tests ===

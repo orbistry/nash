@@ -408,7 +408,7 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
         reference: QualifiedName<'a>,
         args: &'a [&'a Located<CanType<'a>>],
     ) -> Result<Ty<'a>, TypeError<'a>> {
-        let primitive = (reference.home == primitives::builtin_home())
+        let primitive = (reference.home == primitives::primitive_home())
             .then(|| {
                 primitives::PRIMITIVES
                     .iter()
@@ -531,7 +531,7 @@ mod tests {
         named(
             arena,
             QualifiedName {
-                home: primitives::builtin_home(),
+                home: primitives::primitive_home(),
                 name: text,
             },
             args,
@@ -572,16 +572,16 @@ mod tests {
     fn exact_primitive_identity_and_complete_inventory() {
         let arena = Arena::new();
         let user = name("int");
-        let fake_builtin = QualifiedName {
+        let fake_primitive = QualifiedName {
             home: ModuleName {
                 package: None,
-                name: "Builtin",
+                name: "Primitive",
             },
             name: "Int",
         };
         let unions = HashMap::from([
             (user, union(&arena, "int", &[], &Kind::Type, &[])),
-            (fake_builtin, union(&arena, "Int", &[], &Kind::Type, &[])),
+            (fake_primitive, union(&arena, "Int", &[], &Kind::Type, &[])),
         ]);
         let mut env = TypeEnv::new(&arena, &unions);
         let subst = BTreeMap::new();
@@ -594,7 +594,7 @@ mod tests {
             Ty::Term(TermTy::Adt(_))
         ));
         assert!(matches!(
-            env.ty(named(&arena, fake_builtin, &[]), &subst).unwrap(),
+            env.ty(named(&arena, fake_primitive, &[]), &subst).unwrap(),
             Ty::Big(BigTy::Adt(_))
         ));
         for p in primitives::PRIMITIVES {

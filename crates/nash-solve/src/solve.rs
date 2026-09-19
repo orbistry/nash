@@ -108,6 +108,7 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
 
 #[derive(Clone, Copy)]
 struct DeferredField<'a> {
+    test_scope: bool,
     region: nash_region::Region,
     context: type_::FieldContext<'a>,
     record: Variable,
@@ -117,6 +118,7 @@ struct DeferredField<'a> {
 struct Solver<'a, 'tables> {
     bump: &'a Bump,
     tables: &'tables nash_can::environment::Tables<'a>,
+    test_scope: bool,
     pools: Vec<Vec<Variable>>,
     copied: Vec<(Variable, Variable)>,
     predicates: Store<'a>,
@@ -178,6 +180,7 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         }
     }
 
@@ -409,9 +412,12 @@ impl<'a> Solver<'a, '_> {
                     };
                 }
                 Content::Structure(FlatType::App1(home, name, args)) => {
-                    let Some(union) = self
-                        .tables
-                        .fields
+                    let visible = if field.test_scope {
+                        &self.tables.test_fields
+                    } else {
+                        &self.tables.fields
+                    };
+                    let Some(union) = visible
                         .get(&nash_ast::QualifiedName { home, name })
                         .copied()
                     else {
@@ -1336,7 +1342,11 @@ impl<'a> Solver<'a, '_> {
                 self.predicates.solve(uf, id, solution);
                 continue;
             }
+            // A blanket impl can match a rigid argument without narrowing it;
+            // its prerequisites are checked against the enclosing givens below.
+            let selection = crate::resolve::select(self.tables, uf, trait_, &args);
             if report_missing
+                && !matches!(selection, crate::resolve::Selection::Impl { .. })
                 && let Some(binder) = binder
                 && let Some(site) = site
                 && args
@@ -1373,7 +1383,7 @@ impl<'a> Solver<'a, '_> {
                     self.failed_lineages.insert(self.predicates.root(id));
                     continue;
                 }
-                match crate::resolve::select(self.tables, uf, trait_, &args) {
+                match selection {
                     crate::resolve::Selection::Deferred => self.wanted.push((wanted_rank, id)),
                     crate::resolve::Selection::Limit => {
                         state.errors.push(Error::ImplResolutionLimit {
@@ -2653,7 +2663,7 @@ mod copy_tests {
         solver.structure(
             uf,
             OUTERMOST_RANK,
-            FlatType::App1(nash_ast::primitives::builtin_home(), name, Vec::new()),
+            FlatType::App1(nash_ast::primitives::primitive_home(), name, Vec::new()),
         )
     }
 
@@ -2776,7 +2786,11 @@ mod copy_tests {
         let list = solver.structure(
             &mut uf,
             rank,
-            FlatType::App1(nash_ast::primitives::builtin_home(), "list", vec![argument]),
+            FlatType::App1(
+                nash_ast::primitives::primitive_home(),
+                "list",
+                vec![argument],
+            ),
         );
         state = solver.equal(
             &mut uf,
@@ -2973,6 +2987,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let name = bump.alloc(Located::at_zero("value"));
@@ -2982,7 +2997,7 @@ mod copy_tests {
             let variable = solver.structure(
                 &mut uf,
                 OUTERMOST_RANK,
-                FlatType::App1(nash_ast::primitives::builtin_home(), "unit", Vec::new()),
+                FlatType::App1(nash_ast::primitives::primitive_home(), "unit", Vec::new()),
             );
             let id = solver.predicates.push(
                 &mut uf,
@@ -3065,6 +3080,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3136,6 +3152,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3200,6 +3217,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3286,6 +3304,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3422,6 +3441,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3596,6 +3616,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let a = bump.alloc(Located::at_zero(CanType::Var("a")));
@@ -3682,6 +3703,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
+            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let result = uf.fresh(make_descriptor(Content::RigidVar("a")));

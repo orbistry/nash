@@ -148,7 +148,7 @@ unchanged. The Sampo changeset is `kind-settle-termination.md` (nash-can patch).
 The builtin `pair` has two independent Storable component bounds. This admits
 `unConstrData : Data -> pair int (list Data)` and the polymorphic `fstPair` and
 `sndPair` signatures. Only the builtin API restricts construction through
-`mkPairData : Data -> Data -> pair Data Data`; the kind does not encode that API
+`mkPairData : (Big 'a, Big 'b) => 'a -> 'b -> pair 'a 'b`; the kind does not encode that API
 restriction. Snapshots cover Big/Const combinations, Term rejection at either
 argument, and all four signatures. No plan 01 grammar change is needed.
 The correction has its own Sampo changeset: nash-ast minor and nash-can patch.
@@ -172,7 +172,7 @@ The 994 Plutus conformance cases remain intact. No runtime code changed.
 - The 50 source-level kind acceptance tests cover declarations, recursive groups,
   annotations, record fields, imported contracts, and copied interfaces. Driver
   tests cover cross-module builds, kind and bound fingerprints, and cache round trips. Solver tests retain the nested-section
-  regression, verify that Builtin.List annotations match list literals and
+  regression, verify that Primitive.List annotations match list literals and
   patterns, and explicitly reject unsupported higher-kinded value applications.
 - Read-only agent audits found no blocking issue. Each implementation chunk has
   its own verified, described jj change. The six per-chunk changesets cover all five changed
@@ -242,7 +242,7 @@ plans/03 (traits).
   dependents of failed SCCs, continue independent groups, and report every
   alias result unification failure.
 - Implicit List annotations, explicit Builtin imports, list literals, and list
-  patterns all use the same nash/core Builtin.List identity. There is no
+  patterns all use the same nash/base Primitive.List identity. There is no
   alternate List.List kind registration or special import replacement.
 
 ## Design summary
@@ -256,7 +256,7 @@ plans/03 (traits).
 - Kinds of imported types come from `Interface`. Kinds of builtins come from
   a compiler table in `crates/nash-ast/src/primitives.rs`, exported as
   `nash_ast::primitives::{PRIMITIVES, CORE, builtin_home}` and homed in
-  the `nash/core` `Builtin` module.
+  the `nash/base` `Builtin` module.
 - `types.rs` does not kind-check during canonicalization: local recursive
   groups have no kinds yet at that point. All checks live in the pass.
 
@@ -604,7 +604,7 @@ impl<'a> Infer<'a> {
 (`pub mod primitives;`); `crates/nash-can/src/kinds.rs`.
 
 **Change**: a compiler table of builtin type names with their kind schemes,
-homed in the `nash/core` `Builtin` module, and a `KindEnv` keyed by
+homed in the `nash/base` `Builtin` module, and a `KindEnv` keyed by
 `QualifiedName` that later chunks fill from interfaces and local results.
 The table lives in `nash-ast` because `nash-constrain` (plans/04 chunk C1)
 needs the same inventory and has no dependency on `nash-can`.
@@ -612,7 +612,7 @@ needs the same inventory and has no dependency on `nash-can`.
 **Code** (`nash-ast/src/primitives.rs`):
 
 ```rust
-//! Compiler-known types of the `nash/core` `Builtin` module.
+//! Compiler-known types of the `nash/base` `Builtin` module.
 
 use crate::{BaseKind, Kind, KindScheme, KindSet, ModuleName, PackageName};
 
@@ -723,7 +723,7 @@ primitives, and the interface loop is added in chunk 5.
 **Tests**: `primitives_have_declared_arity`: for each primitive, the arrow
 depth of `kind.kind` equals `arity`.
 
-**Done when**: `KindEnv::from_interfaces(None)` resolves `Builtin.list` to
+**Done when**: `KindEnv::from_interfaces(None)` resolves `Primitive.list` to
 a scheme with one `STORABLE` bound.
 
 ---

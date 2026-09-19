@@ -680,6 +680,88 @@ impl<'a> Solver<'a, '_> {
                         self.infer_definition(uf, env, rank, state, &Rtv::new(), definition, false);
                     state = self.close_locals(uf, scope.state, scope.locals);
                 }
+                for test in module.tests {
+                    self.test_scope = true;
+                    let young = self.young_pool(rank);
+                    let start = self.wanted.len();
+                    let errors_before = state.errors.len();
+                    let binder = Binder::Named(test.name);
+                    let unit = self.structure(
+                        uf,
+                        young,
+                        FlatType::App1(nash_ast::primitives::primitive_home(), "unit", vec![]),
+                    );
+                    let definition = Definition {
+                        site: binder,
+                        typ: unit,
+                        context: None,
+                    };
+                    let owners = self.owners.len();
+                    self.owners.push(binder.node());
+                    let mut patterns = Vec::new();
+                    for binder in test.binders {
+                        let element = self.fresh(uf, young);
+                        let fuzzer = self.structure(
+                            uf,
+                            young,
+                            FlatType::App1(
+                                nash_ast::ModuleName {
+                                    package: Some(nash_ast::primitives::BASE),
+                                    name: "Fuzz",
+                                },
+                                "fuzzer",
+                                vec![element],
+                            ),
+                        );
+                        state = self.infer_expr(
+                            uf,
+                            env,
+                            young,
+                            state,
+                            &Rtv::new(),
+                            binder.fuzzer,
+                            Expected::FromContext(
+                                binder.fuzzer.region,
+                                Context::TestGenerator,
+                                fuzzer,
+                            ),
+                        );
+                        patterns.push((binder.pattern, PExpected::NoExpectation(element)));
+                    }
+                    let scope = self.infer_patterns(uf, env, young, state, &patterns);
+                    state = self.infer_expr(
+                        uf,
+                        &scope.env,
+                        young,
+                        scope.state,
+                        &Rtv::new(),
+                        test.body,
+                        Expected::FromContext(test.region, Context::TestBody, unit),
+                    );
+                    self.retry_fields(uf, young, &mut state.errors);
+                    state = self.resolve_wanted(uf, young, state, start, Some(binder), false);
+                    state = self.close_locals(uf, state, scope.locals);
+                    self.owners.truncate(owners);
+                    // Tests own solved metadata and evidence without entering the value environment.
+                    state = self
+                        .finish_bindings(
+                            uf,
+                            env,
+                            rank,
+                            state,
+                            &[definition],
+                            &[],
+                            &[],
+                            Vec::new(),
+                            &BTreeMap::new(),
+                            Some(binder),
+                            &[],
+                            start,
+                            errors_before,
+                        )
+                        .state;
+                }
+                self.test_scope = false;
                 state.env = env.clone();
                 return state;
             }
@@ -1061,7 +1143,7 @@ mod preparation_tests {
             let expression_predicate = &solver.predicates.get(use_.predicates[0]).body;
             let trait_ = expression_predicate.trait_ref().unwrap();
             assert_eq!(trait_.name, trait_name);
-            assert_eq!(trait_.home.package, Some(nash_ast::primitives::CORE));
+            assert_eq!(trait_.home.package, Some(nash_ast::primitives::BASE));
             let value = solver.fresh(&mut uf, 2);
             let mut headers = BTreeMap::new();
             let state = solver.infer_pattern(

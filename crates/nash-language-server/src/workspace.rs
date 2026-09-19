@@ -140,7 +140,8 @@ impl Workspace {
             Err(error) => Err(error),
         };
         let result = async {
-            let modules = modules?;
+            let mut modules = modules?;
+            modules.extend(nash_driver::bundled_base::modules());
             let graph =
                 build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>()).await?;
             Ok::<_, DriverError>(build(db, &graph, &modules).await)
@@ -165,8 +166,10 @@ impl Workspace {
                     }
                 }
                 for module in result.ordered_reports() {
-                    if let Ok(url) = Url::from_file_path(&module.path)
-                        && let Some(uri) = self.client_uri(&url)
+                    if let Ok(url) = Url::parse(&module.path).or_else(|_| {
+                        Url::from_file_path(&module.path)
+                            .map_err(|_| url::ParseError::RelativeUrlWithoutBase)
+                    }) && let Some(uri) = self.client_uri(&url)
                     {
                         let source = Source::new(&module.source);
                         diagnostics.entry(uri.clone()).or_default().extend(

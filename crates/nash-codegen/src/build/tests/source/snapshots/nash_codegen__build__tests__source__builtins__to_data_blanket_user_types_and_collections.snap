@@ -1,0 +1,112 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\ntype Token = Token Int\ntype alias Wrapped = { item : Token }\nwrapped : Wrapped\nwrapped = { item = (Token 42) }\nidentityData : Big 'a => 'a -> Data\nidentityData = toData\nmain =\n    if equalsData (toData wrapped) (List [Builtin.constrData 0 [I 42]]) then\n        check\n    else False\ncheck =\n    if equalsData (identityData (Token 42)) (Builtin.constrData 0 [I 42]) then\n        if equalsData (toData (listData [Token 42])) (List [Builtin.constrData 0 [I 42]]) then\n            equalsData (toData (mapData [mkPairData (Token 1) (Token 2)]))\n                (Map [mkPairData (Builtin.constrData 0 [I 1]) (Builtin.constrData 0 [I 2])])\n        else False\n    else False\n"
+---
+--- core
+let toData#2 : 'erased -> Data = \coerce#8 : 'erased -> coerce#8 in
+let fromInt#10 : int -> Int = iData in
+let wrapped#3 : { _0 : Main.Token } = listData (mkCons ((\field#9 : Int -> constrData 0 (mkCons field#9 (con (list data) []))) (fromInt#10 42)) (con (list data) [])) in
+let fromInt#5 : int -> int = \value#11 : int -> value#11 in
+let identityData#12 : 'erased -> Data = toData#2 in
+let check#7 : bool = case@Bool equalsData (identityData#12 ((\field#13 : Int -> constrData 0 (mkCons field#13 (con (list data) []))) (fromInt#10 42))) (constrData (fromInt#5 0) (mkCons ((\field#14 : int -> iData field#14) (fromInt#5 42)) (con (list data) []))) of
+  True -> case@Bool equalsData (toData#2 (listData (mkCons ((\field#15 : Int -> constrData 0 (mkCons field#15 (con (list data) []))) (fromInt#10 42)) (con (list data) [])))) ((\field#16 : list Data -> listData field#16) (mkCons (constrData (fromInt#5 0) (mkCons ((\field#17 : int -> iData field#17) (fromInt#5 42)) (con (list data) []))) (con (list data) []))) of
+    True -> equalsData (toData#2 (mapData (mkCons (mkPairData ((\field#18 : Int -> constrData 0 (mkCons field#18 (con (list data) []))) (fromInt#10 1)) ((\field#19 : Int -> constrData 0 (mkCons field#19 (con (list data) []))) (fromInt#10 2))) (con (list (pair data data)) [])))) ((\field#20 : list (pair Data Data) -> mapData field#20) (mkCons (mkPairData (constrData (fromInt#5 0) (mkCons ((\field#21 : int -> iData field#21) (fromInt#5 1)) (con (list data) []))) (constrData (fromInt#5 0) (mkCons ((\field#22 : int -> iData field#22) (fromInt#5 2)) (con (list data) [])))) (con (list (pair data data)) [])))
+    False -> false
+  False -> false in
+let main#1 : bool = case@Bool equalsData (toData#2 wrapped#3) ((\field#4 : list Data -> listData field#4) (mkCons (constrData (fromInt#5 0) (mkCons ((\field#6 : int -> iData field#6) (fromInt#5 42)) (con (list data) []))) (con (list data) []))) of
+  True -> check#7
+  False -> false in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam toData_2
+    [(lam fromInt_10
+      [(lam wrapped_3
+        [(lam fromInt_5
+          [(lam identityData_12
+            [(lam check_7
+              [(lam main_1 main_1)
+                (case
+                  [[(builtin equalsData) [toData_2 wrapped_3]]
+                    [(lam field_4 [(builtin listData) field_4])
+                      [[(force (builtin mkCons))
+                        [[(builtin constrData) [fromInt_5 (con integer 0)]]
+                          [[(force (builtin mkCons))
+                            [(lam field_6 [(builtin iData) field_6]) [fromInt_5 (con integer 42)]]]
+                            (con (list data) [])]]]
+                        (con (list data) [])]]]
+                  (con bool False)
+                  check_7)])
+              (case
+                [[(builtin equalsData)
+                  [identityData_12
+                    [(lam field_13
+                      [[(builtin constrData) (con integer 0)]
+                        [[(force (builtin mkCons)) field_13] (con (list data) [])]])
+                      [fromInt_10 (con integer 42)]]]]
+                  [[(builtin constrData) [fromInt_5 (con integer 0)]]
+                    [[(force (builtin mkCons))
+                      [(lam field_14 [(builtin iData) field_14]) [fromInt_5 (con integer 42)]]]
+                      (con (list data) [])]]]
+                (con bool False)
+                (case
+                  [[(builtin equalsData)
+                    [toData_2
+                      [(builtin listData)
+                        [[(force (builtin mkCons))
+                          [(lam field_15
+                            [[(builtin constrData) (con integer 0)]
+                              [[(force (builtin mkCons)) field_15] (con (list data) [])]])
+                            [fromInt_10 (con integer 42)]]]
+                          (con (list data) [])]]]]
+                    [(lam field_16 [(builtin listData) field_16])
+                      [[(force (builtin mkCons))
+                        [[(builtin constrData) [fromInt_5 (con integer 0)]]
+                          [[(force (builtin mkCons))
+                            [(lam field_17 [(builtin iData) field_17]) [fromInt_5 (con integer 42)]]]
+                            (con (list data) [])]]]
+                        (con (list data) [])]]]
+                  (con bool False)
+                  [[(builtin equalsData)
+                    [toData_2
+                      [(builtin mapData)
+                        [[(force (builtin mkCons))
+                          [[(builtin mkPairData)
+                            [(lam field_18
+                              [[(builtin constrData) (con integer 0)]
+                                [[(force (builtin mkCons)) field_18] (con (list data) [])]])
+                              [fromInt_10 (con integer 1)]]]
+                            [(lam field_19
+                              [[(builtin constrData) (con integer 0)]
+                                [[(force (builtin mkCons)) field_19] (con (list data) [])]])
+                              [fromInt_10 (con integer 2)]]]]
+                          (con (list (pair data data)) [])]]]]
+                    [(lam field_20 [(builtin mapData) field_20])
+                      [[(force (builtin mkCons))
+                        [[(builtin mkPairData)
+                          [[(builtin constrData) [fromInt_5 (con integer 0)]]
+                            [[(force (builtin mkCons))
+                              [(lam field_21 [(builtin iData) field_21]) [fromInt_5 (con integer 1)]]]
+                              (con (list data) [])]]]
+                          [[(builtin constrData) [fromInt_5 (con integer 0)]]
+                            [[(force (builtin mkCons))
+                              [(lam field_22 [(builtin iData) field_22]) [fromInt_5 (con integer 2)]]]
+                              (con (list data) [])]]]]
+                        (con (list (pair data data)) [])]]]))])
+            toData_2])
+          (lam value_11 value_11)])
+        [(builtin listData)
+          [[(force (builtin mkCons))
+            [(lam field_9
+              [[(builtin constrData) (con integer 0)]
+                [[(force (builtin mkCons)) field_9] (con (list data) [])]])
+              [fromInt_10 (con integer 42)]]]
+            (con (list data) [])]]])
+      (builtin iData)])
+    (lam coerce_8 coerce_8)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 11534879, memory: 30012

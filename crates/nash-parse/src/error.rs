@@ -415,6 +415,7 @@ pub enum Destruct<'a> {
 #[derive(Debug)]
 pub enum Pattern<'a> {
     Record(&'a PRecord, Row, Col),
+    Pair(&'a PTuple<'a>, Row, Col),
     Tuple(&'a PTuple<'a>, Row, Col),
     List(&'a PList<'a>, Row, Col),
     Start(Row, Col),

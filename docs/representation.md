@@ -21,7 +21,7 @@ A `Const` value is a UPLC constant. Each Nash Const type maps to one
 | `bool` | `Boolean(bool)` | `Bool` | the only type `if` accepts |
 | `unit` | `Unit` | `Unit` | written `()` in types and values |
 | `list 'a` | `ProtoList(&Type, &[&Constant])` | `List(elem)` | `'a : Storable` |
-| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `Pair(a, b)` | `'a 'b : Storable`; `mkPairData` constructs `pair Data Data`, while `unConstrData` returns `pair int (list Data)` |
+| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `pair(a, b)` | `'a 'b : Storable`; `mkPairData` preserves Big component types, while `unConstrData` returns `pair int (list Data)` |
 | `array 'a` | `ProtoArray(&Type, &[&Constant])` | `Array(elem)` | `'a : Storable` |
 | `bls_g1` | `Bls12_381G1Element` | `Bls12_381G1Element` | |
 | `bls_g2` | `Bls12_381G2Element` | `Bls12_381G2Element` | |
@@ -34,15 +34,15 @@ element's Nash type: a `Const` element erases to its own UPLC `Type`; a
 `list Int` and `list Data` and `list (List Int)` are all `List(Data)`, and
 `list (list bytes)` is `List(List(ByteString))`.
 
-All primitive type names are in scope both unqualified and under `Builtin`,
+All primitive type names are in scope both unqualified and under `Primitive`,
 without a value import. Local type declarations can shadow the unqualified
-name. `()` in a source type canonicalizes to the named type `Builtin.unit`;
+name. `()` in a source type canonicalizes to the named type `Primitive.unit`;
 canonical types, inference, instance heads and diagnostics use this same
 identity. Unit expressions and patterns keep their dedicated syntax nodes.
 
 `bool` and `unit` are Const types with constructors: `True`/`False` and
 `()` are the constants `(con bool True)`, `(con bool False)`, `(con unit ())`.
-A `case` on `bool` lowers to `ifThenElse`; a `case` on `unit` has one branch.
+A `case` on `bool` lowers to native UPLC `case`; a `case` on `unit` has one branch.
 
 ## Big types
 
@@ -70,7 +70,7 @@ canonical AST already records (`Ctor.index`, `FieldType.index` in
 lookup, so codegen must sort by `index` before emitting.
 
 `Data` is a Big type with pattern-matchable constructors
-`Constr int (list Data) | Map (list (pair Data Data)) | List (list Data) | I int | B bytes`.
+`Constr (pair int (list Data)) | Map (list (pair Data Data)) | List (list Data) | I int | B bytes`.
 Its fields are exactly what `chooseData`, `unConstrData`, `unMapData`,
 `unListData`, `unIData`, `unBData` return, so matching on `Data` costs one
 `chooseData` plus one unwrap and no conversion. `Data` is exempt from the
@@ -206,10 +206,14 @@ Ordinary types without a twin retain ordinary constructor lookup.
   chains. See [codegen.md](codegen.md) for accessor memoization.
 - `case` on a **little ADT / tuple / little record**: UPLC `case` on the
   `constr` term; each branch is a lambda over the fields.
-- `case` on **`bool`**: `ifThenElse`. On **`unit`**: the single branch.
-- `case` on **`Data`**: `chooseData` with five delayed branches.
-- `case` on **`list 'a`**: `chooseList` for `[]` vs `x :: xs`, then
-  `headList`/`tailList`.
+- `case` on **`bool`**: native `case`, false at branch 0 and true at branch 1.
+  On **`unit`**: the single branch.
+- `case` on **`Data`**: `chooseData` selects one of five delayed shape branches;
+  the selected branch is forced.
+- `case` on **`pair 'a 'b`**: native `case` with one branch receiving both
+  fields, even when one field is a wildcard.
+- `case` on **`list 'a`**: native `case`, with cons at branch 0 and nil at
+  branch 1. The cons branch is a lambda receiving head and tail.
 - `case` on **`List 'a`** (Big): `unListData` then as `list`.
 
 ## Bridging Big and little
@@ -235,7 +239,7 @@ Builtin impls, with their UPLC:
 | `Lift int Int` | `iData` | `unIData` |
 | `Lift bytes Bytes` | `bData` | `unBData` |
 | `Lift string Bytes` | UTF-8 encode, then `bData` | `unBData`, then UTF-8 decode |
-| `Lift bool Bool` | `ifThenElse c (Constr 1 []) (Constr 0 [])` | tag compare |
+| `Lift bool Bool` | `case c [Constr 0 [], Constr 1 []]` | tag compare |
 | `Lift unit Unit` | `Constr 0 []` | `()` |
 | `Lift (list 'a) (List 'b)` given `Lift 'a 'b` | map `lift` over the elements, then `listData` | `unListData` then map `lower` |
 | `Lift (list (pair 'k 'v)) (Map 'k 'v)` with `'k 'v : Big` | `mapData` | `unMapData` |
@@ -247,8 +251,8 @@ Builtin impls, with their UPLC:
 Rules:
 
 - The reflexive impl `impl Big 'a => Lift 'a 'a` is provided by the
-  compiler, not written in Nash: its head is a bare type variable, which
-  the Haskell 98 head rules for user impls reject (see
+  compiler, not written in Nash. Ordinary bare-variable impl heads are
+  permitted only in the module defining the trait (see
   [traits.md](traits.md)). It is restricted to Big types by the representation
   predicate `Big 'a` (see [kinds.md](kinds.md)) and is what makes
   `lift : list Int -> List Int` a single `listData`, because mapping the
@@ -262,7 +266,7 @@ Rules:
 - `lift`/`lower` on tuples and function types do not exist: there is no Big
   tuple and no Big function.
 
-### `ToData` and `FromData`
+### `ToData`, `FromData` and `Validate`
 
 Defined only for Big types:
 
@@ -270,26 +274,48 @@ Defined only for Big types:
 trait ToData ('a : Big) where
     toData : 'a -> Data
 
+impl ToData ('a : Big) where
+    toData = Primitive.coerce
+
 trait FromData ('a : Big) where
     fromData     : Data -> 'a
-    validateData : Data -> 'a
+
+impl FromData ('a : Big) where
+    fromData = Primitive.coerce
+
+trait Validate ('a : Big) where
+    validate : Data -> 'a
 ```
 
-- `toData` is the identity at runtime: a Big value already is a `Data`
-  constant. It exists to forget the static shape.
-- `fromData` is *shallow*: it checks only that the outer shape matches
-  (`Constr` with a tag in range and the right field count for an ADT, `List`
-  for a Big record, `I`/`B` for `Int`/`Bytes`) and then reinterprets. Field
-  contents are not inspected. It traps on a mismatch.
-- `validateData` is *full*: it recursively checks every field against the
-  type's shape and traps on the first mismatch, then reinterprets like
-  `fromData`. Use it once at the validator boundary when the datum comes
-  from an untrusted source; use `fromData` everywhere else. The
-  non-failing path is the `Data.Decode` combinators (see
-  [data.md](data.md)), which return `option`/`result` instead of trapping.
+- `toData` uses `Primitive.coerce`. The ordinary blanket impl covers
+  every Big type, including user ADTs, nominal aliases, lists and maps, without
+  element `ToData` constraints. It preserves the existing runtime Data value
+  and wire encoding without traversal or reconstruction.
+- `fromData` also has an ordinary blanket impl for every Big type, including
+  user ADTs, nominal record aliases and collections, without validation
+  constraints. It uses unchecked `Primitive.coerce` and checks neither the
+  outer shape nor nested fields and preserves the original runtime value.
+  Malformed data fails only when a later operation needs its expected shape.
+- `Validate.validate` is the required method of a separate opt-in trait. Core Int and Bytes impls check
+  the Data shape and then coerce the original value; List and Map impls retain
+  recursive source validation. Non-failing decoding uses `Data.Decode`.
 
-`@derive(ToData, FromData)` generates these for user Big types; the
-builtins have compiler impls. `Data` itself has trivial impls.
+Core provides explicit `Validate` impls for primitive and collection Big types.
+User Big ADTs opt into validation with `Validate` source impls; future
+`@derive(Validate)` macros will generate checked recursive `validate`.
+Neither conversion trait requires derivation: generated concrete impls would
+overlap their blanket impls and be rejected.
+There is no automatic compiler codec synthesis. Real UPLC builtin signatures
+carry nominal types: `iData : int -> Int`, `unIData : Int -> int`, and
+similarly for Bytes, List and Map. Existing universal Data constructors
+and patterns remain unchanged; no new wrapper constructors are introduced.
+
+`Primitive.coerce : 'a -> 'b` is an explicit unchecked compiler intrinsic.
+Both variables independently accept any value type, including functions,
+without representation constraints. It changes no runtime representation
+and performs no validation; a cast between incompatible representations does
+not make those representations compatible. It is not a real Plutus builtin
+and does not change that inventory.
 
 ## Costs
 
@@ -302,7 +328,8 @@ Rough CEK costs, to guide the choice of representation:
 | field i | `sndPair` + i `tailList` + `headList`, plus one `un*Data` if the field is used as a little value | one `case` with a lambda that selects the field |
 | `lift`/`lower` of `int`/`bytes` | one builtin call each way | |
 | `lift`/`lower` of a list | O(n) map unless the element impl is reflexive | |
-| `validateData` | O(size of the Data) | |
+| `toData` / `fromData` / `Primitive.coerce` | identity; no traversal | |
+| `validate` | O(size of the Data) | |
 
 Consequences:
 
@@ -328,7 +355,5 @@ Consequences:
   values (lambdas, `constr`) have no constant form in the flat encoding.
 - **Tests** and **traces** use `string`; on-chain code should use `bytes`.
 
-## Open questions
-
-- Whether `fromData` should verify field *count* for ADTs, or only the tag.
-  This document says both, since both are O(1) for `Constr` data.
+Derived `validate` checks both the constructor tag and exact field count,
+then validates each field recursively.

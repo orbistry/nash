@@ -42,6 +42,11 @@ pub fn byte_string_ex_mem(b: &[u8]) -> i64 {
     }
 }
 
+/// PV11 monomorphic string builtins cost UTF-8 bytes in groups of four.
+pub fn string_utf8_ex_mem(s: &str) -> i64 {
+    (s.len() / 4) as i64
+}
+
 pub fn string_ex_mem(s: &str) -> i64 {
     s.chars().count() as i64
 }
@@ -206,5 +211,24 @@ mod tests {
             ),
             279
         );
+    }
+}
+
+#[cfg(test)]
+mod utf8_tests {
+    use super::string_utf8_ex_mem;
+
+    #[test]
+    fn string_builtin_sizes_count_utf8_bytes_in_groups_of_four() {
+        for (text, size) in [
+            ("", 0),
+            ("abc", 0),
+            ("abcd", 1),
+            ("éé", 1),
+            ("🦀", 1),
+            ("abcdefgh", 2),
+        ] {
+            assert_eq!(string_utf8_ex_mem(text), size);
+        }
     }
 }

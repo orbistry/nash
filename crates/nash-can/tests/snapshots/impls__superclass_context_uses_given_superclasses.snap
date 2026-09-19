@@ -18,10 +18,10 @@ description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a\nt
                         package: Some(
                             PackageName {
                                 author: "nash",
-                                project: "core",
+                                project: "base",
                             },
                         ),
-                        name: "Builtin",
+                        name: "Primitive",
                     },
                     name: "List",
                 },
@@ -48,10 +48,10 @@ description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a\nt
                         package: Some(
                             PackageName {
                                 author: "nash",
-                                project: "core",
+                                project: "base",
                             },
                         ),
-                        name: "Builtin",
+                        name: "Primitive",
                     },
                     name: "List",
                 },

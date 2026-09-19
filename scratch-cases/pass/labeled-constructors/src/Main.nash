@@ -1,0 +1,8 @@
+module Main exposing (..)
+type packet 'a = Packet { z : 'a, callback : unit -> unit }
+make x = Packet { callback = (\y -> y), z = x }
+positional x = Packet x (\y -> y)
+pattern (Packet { z }) = z
+get : packet 'a -> 'a
+get p = p.z
+main = get (make ())

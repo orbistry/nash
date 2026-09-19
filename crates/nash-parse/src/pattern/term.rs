@@ -68,6 +68,9 @@ impl<'a> Parser<'a> {
         start: Position,
     ) -> Result<&'a Located<Pattern<'a>>, error::Pattern<'a>> {
         let name = self.lower_name(error::Pattern::Start)?;
+        if name == "pair" && self.peek() == Some(b'(') {
+            return self.pattern_pair(start);
+        }
         Ok(self.add_end(start, Pattern::Var(name)))
     }
 

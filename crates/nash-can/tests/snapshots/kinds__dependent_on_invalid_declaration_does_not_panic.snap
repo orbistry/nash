@@ -1,16 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Bad = Bad int\ntype Dependent = Dependent Bad\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype Bad = Bad int\ntype Dependent = Dependent Bad\n"
 info: diagnostic
 ---
 nash::names::representation_mismatch
 
   × This position requires `Big` in field 1 of Big constructor `Bad` in `Bad`:
-   ╭─[src/Main.nash:5:16]
- 4 │ 
- 5 │ type Bad = Bad int
+   ╭─[src/Main.nash:6:16]
+ 5 │ 
+ 6 │ type Bad = Bad int
    ·                ───
- 6 │ type Dependent = Dependent Bad
+ 7 │ type Dependent = Dependent Bad
    ╰────
   help: The type has `Const` representation, but `Big` admits only Big types. Change the
         type or the representation requirement.

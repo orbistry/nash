@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap 'a\n    = Wrap 'a\n\nf w = let (Wrap x) = w in x\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,
@@ -111,10 +112,10 @@ Module {
                                                     package: Some(
                                                         PackageName {
                                                             author: "nash",
-                                                            project: "core",
+                                                            project: "base",
                                                         },
                                                     ),
-                                                    name: "Builtin",
+                                                    name: "Primitive",
                                                 },
                                                 name: "Big",
                                             },
@@ -281,10 +282,10 @@ Module {
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "Big",
                         },

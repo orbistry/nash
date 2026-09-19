@@ -13,7 +13,7 @@ fn monad(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
     let canonical = nash_can::canonicalize(
         bump,
         nash_can::Context {
-            package: core.then_some(nash_ast::primitives::CORE),
+            package: core.then_some(nash_ast::primitives::BASE),
             interfaces: None,
         },
         &module,

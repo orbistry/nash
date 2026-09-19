@@ -1,0 +1,18 @@
+module Types exposing (Pair, makePair, swap, Choice(..), flipChoice)
+
+type alias Pair 'a 'b = { first : 'a, second : 'b }
+
+type Choice 'a 'b
+    = First 'a
+    | Second 'b
+
+makePair first second = Pair first second
+
+swap : Pair 'a 'b -> Pair 'b 'a
+swap pair =
+    { first = pair.second, second = pair.first }
+
+flipChoice choice =
+    case choice of
+        First value -> Second value
+        Second value -> First value

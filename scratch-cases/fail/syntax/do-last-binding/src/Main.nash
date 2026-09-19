@@ -1,0 +1,2 @@
+value = do
+    x <- action

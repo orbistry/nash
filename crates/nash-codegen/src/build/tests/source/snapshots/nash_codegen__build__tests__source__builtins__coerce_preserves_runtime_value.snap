@@ -1,0 +1,24 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nclaimed : bytes\nclaimed = coerce original\noriginal : int\noriginal = 42\nmain : int\nmain = coerce claimed\n"
+---
+--- core
+let fromInt#6 : int -> int = \value#7 : int -> value#7 in
+let original#5 : int = fromInt#6 42 in
+let claimed#3 : bytes = (\coerce#4 : 'erased -> coerce#4) original#5 in
+let main#1 : int = (\coerce#2 : 'erased -> coerce#2) claimed#3 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_6
+    [(lam original_5
+      [(lam claimed_3 [(lam main_1 main_1) [(lam coerce_2 coerce_2) claimed_3]])
+        [(lam coerce_4 coerce_4) original_5]])
+      [fromInt_6 (con integer 42)]])
+    (lam value_7 value_7)])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 352100, memory: 2300

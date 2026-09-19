@@ -13,7 +13,7 @@ nash::names::not_found_type
    ╰────
   help: Similar names:
 
-            Builtin.Map
-            Builtin.value
-            Builtin.Bytes
-            Builtin.Data
+            string
+            Primitive.Map
+            Primitive.value
+            Int

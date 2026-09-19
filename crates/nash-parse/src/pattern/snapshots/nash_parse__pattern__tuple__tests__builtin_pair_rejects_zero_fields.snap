@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/pattern/tuple.rs
+description: "Code:\n\npair()"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected an argument pattern.
+   ╭─[src/Main.nash:1:6]
+ 1 │ pair()
+   ·      ─
+   ╰────
+  help: Use a variable, constructor pattern, or `_`.

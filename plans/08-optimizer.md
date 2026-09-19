@@ -14,7 +14,7 @@ Passes:
 2. Builtin force caching (and constant-argument currying).
 3. Dead code elimination and unused-parameter removal.
 4. Case-of-known-constructor and constant folding (via the CEK machine),
-   including cast cancellation and `Force(Delay)` removal.
+   including inverse builtin simplification and `Force(Delay)` removal.
 
 Specification: [docs/codegen.md](../docs/codegen.md), section
 "6. Optimizations".
@@ -145,7 +145,6 @@ pub fn cannot_throw(core: &Core<'_>) -> bool {
         Core::Var(_) | Core::Lit(_) | Core::Lam { .. } | Core::Delay(_) => true,
         Core::Builtin { func, args } => args.len() < func.arity() && args.iter().all(|a| cannot_throw(a)),
         Core::Constr { fields, .. } => fields.iter().all(|f| cannot_throw(f)),
-        Core::Cast { kind: CastKind::ToData, arg, .. } => cannot_throw(arg),
         _ => false,
     }
 }
@@ -164,7 +163,7 @@ pub fn size(core: &Core<'_>) -> usize {
         Core::Constr { fields, .. } => 1 + fields.len(),
         Core::Field { arity, .. } => 1 + *arity as usize,
         Core::Trace { .. } => 3,
-        Core::Cast { .. } | Core::Delay(_) | Core::Force(_) | Core::Error => 1,
+        Core::Delay(_) | Core::Force(_) | Core::Error => 1,
         Core::LetRec { .. } => unreachable!("rewritten before optimization"),
     });
     n
@@ -259,7 +258,7 @@ Benchmarks (`tests/budgets.rs`), each a fixture in `tests/fixtures/`:
 | `list_length_100` | `length` over a 100-element list |
 | `sum_static` | `replicate` / `sumTo` from plan 07 chunk 8 |
 | `data_match` | the four-clause `Data` match from plan 07 chunk 6 |
-| `validate_datum` | `validateData` on a nested record |
+| `validate_datum` | `validate` on a nested record |
 | `decoder_datum` | `Data.Decode` example from docs/data.md |
 
 **Aiken reference**: none; Aiken measures in `aiken-project` benchmarks
@@ -344,8 +343,8 @@ fn is_builtin_wrapper(params: &[Binder<'_>], body: &Core<'_>) -> bool {
 
 The size heuristic is the only tunable. `INLINE_LAMBDA_SIZE = 12` is
 about one builtin call with three arguments plus a `case`; it is chosen so
-that `Field` selectors, `Lift`/`Lower` wrappers and decision-tree leaves
-used twice inline, and a checker function does not.
+that `Field` selectors, Data builtin wrappers and decision-tree leaves
+used twice inline, and a recursive decoder does not.
 
 **Aiken reference**: `lambda_reducer` (1753), `inline_reducer` (2316),
 `is_a_builtin_wrapper` (2797), `substitute_single_var` (1461),
@@ -363,7 +362,7 @@ used twice inline, and a checker function does not.
   unchanged.
 - `beta_reduce_small_lambda`: `let sel = \a b c -> b in sel 1 2 3` -> `2`
   (after chunk 5 removes the dead lets).
-- `keep_large_lambda`: a `validateData#Datum`-sized lambda used twice is
+- `keep_large_lambda`: a `validate#Datum`-sized lambda used twice is
   not inlined.
 - budgets: `vesting_*`, `data_match`, `decoder_datum` must improve;
   update baselines.
@@ -523,7 +522,7 @@ hoisted as lambdas over all their pattern variables.
 
 ---
 
-## Chunk 6 — Case-of-known-constructor, constant folding, cast cancellation, Big-list fast paths
+## Chunk 6 — Case-of-known-constructor, constant folding, inverse builtin simplification, Big-list fast paths
 
 **Files**
 
@@ -553,7 +552,6 @@ One bottom-up pass with these rules:
 | `Case(Data, Lit data, ..)` | the branch for its shape, payload bound to a `Lit` | always |
 | `Field(Constr(_, fs), i)` | `f_i` | every other `f_j` `cannot_throw` |
 | `Builtin(f, lits)` saturated | `Lit(result)` | `is_error_safe(f, lits)` |
-| `Cast(Lower, Cast(Lift, x))` and the reverse | `x` | always |
 | `Builtin(UnIData, [Builtin(IData, [x])])` and the other three pairs | `x` | always |
 | `Force(Delay(x))` | `x` | always |
 | `App(App(f, as), bs)` | `App(f, as ++ bs)` | always |
@@ -607,10 +605,9 @@ pub fn is_error_safe(func: DefaultFunction, args: &[&Core<'_>]) -> bool {
 The `eval` closure in `assemble` is
 `|core| nash_codegen::comptime::eval_closed(arena, &[], core).ok()`.
 
-`lower.rs`: `Case(Bool)` whose two branches both satisfy
-`is_value_binding` (chunk 3) lowers to `ifThenElse c t e` without
-`delay`/`force`. This is a lowering rule, not a `Core` rewrite, because
-`Core` `Case(Bool)` is always lazy by definition.
+Protocol 11 lowering already uses native `case` for `Case(Bool)`, preserving
+lazy branches without `delay`/`force`. The earlier proposed eager
+`ifThenElse` lowering is superseded; Plan 08 remains deferred.
 
 **Aiken reference**: `builtin_eval_reducer` (2674), `is_error_safe`
 (412), `cast_data_reducer` (2522), `force_delay_reducer` (2448),
@@ -627,8 +624,6 @@ The `eval` closure in `assemble` is
 - `fold_add`: `addInteger 40 2` -> `Lit 42`.
 - `no_fold_div_zero`: `divideInteger 1 0` stays.
 - `no_fold_head_nil`: `headList []` stays.
-- `cancel_lift_lower`: plan 07 chunk 6's `castLower (castLift 41)` ->
-  `Lit 41`.
 - `cancel_un_i_data_i_data`.
 - `force_delay`.
 - `flatten_apps`.

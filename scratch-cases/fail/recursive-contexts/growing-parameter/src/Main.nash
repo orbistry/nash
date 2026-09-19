@@ -1,0 +1,5 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type r 'f 'a = R ('f 'a) (r 'f (list 'a))

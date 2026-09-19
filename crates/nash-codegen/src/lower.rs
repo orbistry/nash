@@ -52,12 +52,12 @@ impl<'a> Lower<'a> {
         term
     }
 
-    fn lazy_if(&self, condition: Uplc<'a>, yes: Uplc<'a>, no: Uplc<'a>) -> Uplc<'a> {
-        self.builtin(
-            DefaultFunction::IfThenElse,
-            &[condition, yes.delay(self.arena), no.delay(self.arena)],
+    fn branch(&self, condition: Uplc<'a>, yes: Uplc<'a>, no: Uplc<'a>) -> Uplc<'a> {
+        Term::case(
+            self.arena,
+            condition,
+            self.arena.alloc_slice_copy(&[no, yes]),
         )
-        .force(self.arena)
     }
 
     fn lambda(&self, params: &[Binder<'a>], mut body: Uplc<'a>) -> Uplc<'a> {
@@ -153,7 +153,6 @@ impl<'a> Lower<'a> {
             Core::Delay(t) => self.term(t)?.delay(self.arena),
             Core::Force(t) => self.term(t)?.force(self.arena),
             Core::LetRec { .. } => return Err(Error::Unlowered("recursion")),
-            Core::Cast { .. } => return Err(Error::Unlowered("cast")),
         })
     }
 
@@ -199,14 +198,27 @@ impl<'a> Lower<'a> {
                 self.arena.alloc_slice_copy(&arms),
             ));
         }
-        // A match evaluates its scrutinee exactly once, including default-only matches.
-        let name = self.fresh()?;
-        let value = Term::var(self.arena, name);
+        let scrutinee = self.term(scrutinee)?;
         let fallback = match default {
             Some(c) => self.term(c)?,
             None => Term::error(self.arena),
         };
-        let result = match kind {
+        Ok(match kind {
+            CaseKind::Pair => {
+                let [branch] = branches else {
+                    return Err(Error::InvalidCase("pair case requires one branch"));
+                };
+                if branch.test != Test::Pair || branch.binders.len() != 2 || default.is_some() {
+                    return Err(Error::InvalidCase("pair branch must bind its two fields"));
+                }
+                let body = self.term(branch.body)?;
+                Term::case(
+                    self.arena,
+                    scrutinee,
+                    self.arena
+                        .alloc_slice_copy(&[self.lambda(branch.binders, body)]),
+                )
+            }
             CaseKind::Bool => {
                 let mut yes = None;
                 let mut no = None;
@@ -224,9 +236,11 @@ impl<'a> Lower<'a> {
                     }
                     *slot = Some(self.term(b.body)?);
                 }
-                self.lazy_if(value, yes.unwrap_or(fallback), no.unwrap_or(fallback))
+                self.branch(scrutinee, yes.unwrap_or(fallback), no.unwrap_or(fallback))
             }
             CaseKind::Int | CaseKind::Bytes => {
+                let name = self.fresh()?;
+                let value = Term::var(self.arena, name);
                 let mut rest = fallback;
                 let mut seen = Vec::new();
                 for b in branches.iter().rev() {
@@ -246,9 +260,9 @@ impl<'a> Lower<'a> {
                     };
                     let condition = self.builtin(func, &[value, literal]);
                     let body = self.term(b.body)?;
-                    rest = self.lazy_if(condition, body, rest);
+                    rest = self.branch(condition, body, rest);
                 }
-                rest
+                rest.lambda(self.arena, name).apply(self.arena, scrutinee)
             }
             CaseKind::List => {
                 let mut nil = None;
@@ -259,63 +273,58 @@ impl<'a> Lower<'a> {
                             nil = Some(self.term(b.body)?)
                         }
                         Test::Cons if cons.is_none() && b.binders.len() == 2 => {
-                            let head = self.builtin(DefaultFunction::HeadList, &[value]);
-                            let tail = self.builtin(DefaultFunction::TailList, &[value]);
                             let body = self.term(b.body)?;
-                            cons = Some(
-                                self.lambda(b.binders, body)
-                                    .apply(self.arena, head)
-                                    .apply(self.arena, tail),
-                            );
+                            cons = Some(self.lambda(b.binders, body));
                         }
                         _ => return Err(Error::InvalidCase("invalid list branch")),
                     }
                 }
-                self.lazy_if(
-                    self.builtin(DefaultFunction::NullList, &[value]),
-                    nil.unwrap_or(fallback),
-                    cons.unwrap_or(fallback),
+                let cons = match cons {
+                    Some(cons) => cons,
+                    None => fallback
+                        .lambda(self.arena, self.fresh()?)
+                        .lambda(self.arena, self.fresh()?),
+                };
+                let nil = nil.unwrap_or(fallback);
+                Term::case(
+                    self.arena,
+                    scrutinee,
+                    self.arena.alloc_slice_copy(&[cons, nil]),
                 )
             }
             CaseKind::Data => {
+                let name = self.fresh()?;
+                let value = Term::var(self.arena, name);
                 let mut arms = [None; 5];
                 for b in branches {
-                    let (index, unwrap, arity) = match b.test {
-                        Test::DataConstr => (0, DefaultFunction::UnConstrData, 2),
-                        Test::DataMap => (1, DefaultFunction::UnMapData, 1),
-                        Test::DataList => (2, DefaultFunction::UnListData, 1),
-                        Test::DataI => (3, DefaultFunction::UnIData, 1),
-                        Test::DataB => (4, DefaultFunction::UnBData, 1),
+                    let (index, unwrap) = match b.test {
+                        Test::DataConstr => (0, DefaultFunction::UnConstrData),
+                        Test::DataMap => (1, DefaultFunction::UnMapData),
+                        Test::DataList => (2, DefaultFunction::UnListData),
+                        Test::DataI => (3, DefaultFunction::UnIData),
+                        Test::DataB => (4, DefaultFunction::UnBData),
                         _ => return Err(Error::InvalidCase("non-Data test")),
                     };
-                    if arms[index].is_some() || b.binders.len() != arity {
+                    if arms[index].is_some() || b.binders.len() != 1 {
                         return Err(Error::InvalidCase("invalid Data branch"));
                     }
                     let body = self.term(b.body)?;
                     let function = self.lambda(b.binders, body);
                     let unwrapped = self.builtin(unwrap, &[value]);
-                    arms[index] = Some(if index == 0 {
-                        let pair_name = self.fresh()?;
-                        let pair = Term::var(self.arena, pair_name);
-                        function
-                            .apply(self.arena, self.builtin(DefaultFunction::FstPair, &[pair]))
-                            .apply(self.arena, self.builtin(DefaultFunction::SndPair, &[pair]))
-                            .lambda(self.arena, pair_name)
-                            .apply(self.arena, unwrapped)
-                    } else {
-                        function.apply(self.arena, unwrapped)
-                    });
+                    arms[index] = Some(function.apply(self.arena, unwrapped));
                 }
-                let mut args = vec![value];
-                args.extend(arms.map(|arm| arm.unwrap_or(fallback).delay(self.arena)));
-                self.builtin(DefaultFunction::ChooseData, &args)
-                    .force(self.arena)
+                let [constr, map, list, int, bytes] =
+                    arms.map(|arm| arm.unwrap_or(fallback).delay(self.arena));
+                self.builtin(
+                    DefaultFunction::ChooseData,
+                    &[value, constr, map, list, int, bytes],
+                )
+                .force(self.arena)
+                .lambda(self.arena, name)
+                .apply(self.arena, scrutinee)
             }
             CaseKind::Tag => unreachable!("tag case handled above"),
-        };
-        Ok(result
-            .lambda(self.arena, name)
-            .apply(self.arena, self.term(scrutinee)?))
+        })
     }
 }
 
@@ -373,7 +382,7 @@ fn largest_name(core: &Core<'_>) -> usize {
                 pending.extend(*fields)
             }
             Core::Field { record, .. } => pending.push(record),
-            Core::Cast { arg, .. } | Core::Delay(arg) | Core::Force(arg) => pending.push(arg),
+            Core::Delay(arg) | Core::Force(arg) => pending.push(arg),
             Core::Trace { message, body } => pending.extend([*message, *body]),
             Core::Lit(_) | Core::Error => {}
         }

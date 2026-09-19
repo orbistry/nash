@@ -40,12 +40,6 @@ fn fixture<'a>(b: &Builder<'a>, leaf: &'a Core<'a>) -> &'a Core<'a> {
             b.constr(4, &[leaf]),
             b.field(leaf, 0, 1),
             b.builtin(DefaultFunction::AddInteger, &[leaf, leaf]),
-            b.cast(
-                CastKind::Lift,
-                Ty::Const(&ConstTy::Int),
-                Ty::Big(&crate::ty::BigTy::Int),
-                leaf,
-            ),
             b.trace(leaf, leaf),
             b.error(),
             b.delay(leaf),
@@ -65,7 +59,7 @@ fn every_variant_is_walked_and_noop_map_reuses_root() {
         .iter()
         .map(|node| std::mem::discriminant(*node))
         .collect::<std::collections::HashSet<_>>();
-    assert_eq!(variants.len(), 15);
+    assert_eq!(variants.len(), 14);
     let mut postorder = Vec::new();
     let mapped = root.map(&b, &mut |node| {
         postorder.push(node);

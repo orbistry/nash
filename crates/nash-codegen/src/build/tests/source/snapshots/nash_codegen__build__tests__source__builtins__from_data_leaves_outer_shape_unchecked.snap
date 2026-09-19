@@ -1,0 +1,28 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (fromData)\ndecoded : Int\ndecoded = fromData (B #\"aa\")\nmain = equalsData (coerce decoded) (B #\"aa\")\n"
+---
+--- core
+let fromBytes#5 : bytes -> bytes = \value#8 : bytes -> value#8 in
+let fromData#6 : Data -> 'erased = \coerce#9 : 'erased -> coerce#9 in
+let decoded#3 : Int = fromData#6 ((\field#7 : bytes -> bData field#7) (fromBytes#5 (con bytestring #aa))) in
+let main#1 : bool = equalsData ((\coerce#2 : 'erased -> coerce#2) decoded#3) ((\field#4 : bytes -> bData field#4) (fromBytes#5 (con bytestring #aa))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromBytes_5
+    [(lam fromData_6
+      [(lam decoded_3
+        [(lam main_1 main_1)
+          [[(builtin equalsData) [(lam coerce_2 coerce_2) decoded_3]]
+            [(lam field_4 [(builtin bData) field_4]) [fromBytes_5 (con bytestring #aa)]]]])
+        [fromData_6
+          [(lam field_7 [(builtin bData) field_7]) [fromBytes_5 (con bytestring #aa)]]]])
+      (lam coerce_9 coerce_9)])
+    (lam value_8 value_8)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 1681009, memory: 4065

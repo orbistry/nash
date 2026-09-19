@@ -1,0 +1,8 @@
+module Main exposing (..)
+type alias box 'a = { value : 'a }
+keep : box 'a -> ('a, 'a)
+keep b =
+    let
+        get ignored = b.value
+    in
+    (get (), get ())

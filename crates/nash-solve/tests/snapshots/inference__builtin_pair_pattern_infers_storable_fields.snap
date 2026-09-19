@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nfirst pair(a, _) = a\nsecond pair(_, b) = b\nnested pair(pair(a, _), _) = a\n"
+---
+first : forall a b. (Storable a, Storable b) => pair a b -> a
+nested : forall a b c. (Storable c, Storable a, Storable b) => pair (pair a b) c -> a
+second : forall a b. (Storable a, Storable b) => pair a b -> b

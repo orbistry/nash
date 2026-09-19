@@ -10,7 +10,7 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 7,
+            column: 8,
         },
     },
     value: Call {

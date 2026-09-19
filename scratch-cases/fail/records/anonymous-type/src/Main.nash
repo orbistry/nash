@@ -1,0 +1,3 @@
+module Main exposing (..)
+f : { x : unit } -> unit
+f r = r.x

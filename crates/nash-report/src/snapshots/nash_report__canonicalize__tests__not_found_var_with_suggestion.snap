@@ -15,3 +15,4 @@ nash::names::not_found_var
             name
             other
             result
+            Builtin.bData

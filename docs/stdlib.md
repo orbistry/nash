@@ -1,10 +1,15 @@
-# Standard library: `nash/core`
+# Standard library: `nash/base`
 
-`nash/core` is a normal Nash package that lives in this repository under
-`core/`. It is embedded into the compiler at build time, so `nash check`
-works offline and every compiler version ships exactly one core. The
-compiler special-cases a small, listed set of its names. Everything else
-is ordinary Nash.
+`nash/base` is the compiler-owned foundation library. Its Nash sources live
+in `crates/nash-driver/base/src/` and are embedded in `nash-driver` at build
+time. Applications neither declare a Base dependency nor download it. A new
+Base version ships with a new compiler version; there is no independently
+versioned Base package or separate `nash-base` crate.
+
+The driver reads these sources through stable `nash-base:///Module.nash`
+URIs. Compilation and diagnostics need no installed source directory and do
+not depend on the compiler checkout. Bundled sources are read-only. The
+package identity `nash/base` and its module names are reserved.
 
 Decisions here follow [overview.md](overview.md), the trait hierarchy and
 module split in [traits.md](traits.md), the layouts in
@@ -14,11 +19,12 @@ module split in [traits.md](traits.md), the layouts in
 
 ## Layout
 
+The layout includes planned library modules as well as the current foundation.
+`Primitive` and `Builtin` are synthetic modules with no Nash source file.
+
 ```
-core/
-  nash.jsonc
+crates/nash-driver/base/
   src/
-    Builtin.nash          synthetic; see "Builtin"
     Prelude.nash          infix declarations, basics
     Eq.nash               trait Eq + impls for compiler-known types
     Ord.nash              trait Ord
@@ -31,7 +37,7 @@ core/
     Applicative.nash      trait Applicative
     Monad.nash            trait Monad
     Lift.nash             trait Lift + impls for compiler-known types
-    Data.nash             traits ToData/FromData; functions over Data
+    Data.nash             traits ToData/FromData/Validate; functions over Data
     Literal.nash          traits FromInt, FromString, FromBytes
     Bool.nash             bool functions; Big Bool
     Unit.nash             Big Unit
@@ -65,7 +71,8 @@ Module naming: one module per type pair, named by the uppercase name
 it is not compiler-known (`option`), functions over the **little** type
 (`List.map : ('a -> 'b) -> list 'a -> list 'b`), and the `Lift` impl
 between the two. Big twins get no function set: only the type and
-constructor declarations and their `Lift`/`ToData`/`FromData` impls. Big
+constructor declarations and their `Lift`/`Validate` impls, with `ToData`
+and `FromData` provided by blanket impls in `Data`. Big
 values are `lower`ed, worked on, and `lift`ed back. `Map` is the one
 module whose functions take the Big type, because its little form
 `list (pair 'k 'v)` is not a nominal type. `Data`, `Data.Decode` and
@@ -73,40 +80,16 @@ module whose functions take the Big type, because its little form
 text in Big positions is `Bytes` holding UTF-8, and `String.nash` is the
 little `string` module.
 
-`core/nash.jsonc`:
-
-```jsonc
-{
-    "type": "package",
-    "name": "nash/core",
-    "version": "0.1.0",
-    "summary": "Nash standard library",
-    "license": "Apache-2.0",
-    "exposedModules": {
-        "Prelude": ["Prelude", "Builtin", "Debug"],
-        "Traits": ["Eq", "Ord", "Show", "Num", "Integral", "Semigroup", "Monoid", "Functor", "Applicative", "Monad", "Lift", "Data", "Literal"],
-        "Types": ["Bool", "Unit", "Option", "Result", "Ordering", "Int", "Bytes", "String", "List", "Cons", "Pair", "Array", "Map"],
-        "Data": ["Data.Decode", "Data.Encode"],
-        "Testing": ["Fuzz", "Test"],
-        "Macros": ["Ast", "Derive"],
-        "Cardano": ["Cardano.Tx", "Cardano.Address", "Cardano.Value", "Cardano.Time"]
-    },
-    "dependencies": {}
-}
-```
-
 ## Default imports
 
-Default imports are deferred to Plan 12's stdlib integration. Plan 03 uses
-explicit imports of real core modules; it does not install partial defaults
-or placeholder modules. The list below specifies the eventual behavior.
-
-Every module outside `nash/core` starts with these imports, prepended by
-`nash-can` (Elm's `Elm.Compiler.Imports.defaults`,
-`elm/compiler/src/Elm/Compiler/Imports.hs`). `exposing (Trait)` exposes
-the trait and all its methods (traits.md).
+Every module outside `nash/base` receives the following scope during
+canonicalization. These imports are not inserted into the source AST or
+formatted source. The driver adds dependency edges using the same catalog,
+and diagnostic localization uses the same exposing rules.
+`exposing (Trait)` exposes the trait and all its methods (traits.md).
 
 ```elm
+import Primitive exposing (..)
 import Prelude exposing (..)
 import Eq exposing (Eq)
 import Ord exposing (Ord)
@@ -119,7 +102,7 @@ import Functor exposing (Functor)
 import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Lift exposing (Lift)
-import Data exposing (ToData, FromData)
+import Data exposing (ToData, FromData, Validate)
 import Literal exposing (FromInt, FromString, FromBytes)
 import Bool exposing (Bool, not, and, or, xor)
 import Unit exposing (Unit)
@@ -127,16 +110,9 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Ordering exposing (Ordering, type ordering(..))
 import Cons exposing (type cons(..))
-import Derive exposing (derive)
-import Debug
 import Builtin
-import Int
-import Bytes
-import String
-import List
 import Pair
 import Array
-import Map
 import Fuzz
 import Test
 ```
@@ -154,7 +130,7 @@ Consequences, matching representation.md "Prelude twins":
   (`Option`, `Bool`). No resolution by expected type is involved.
 - Operators come from `Prelude` (the `infix` declarations) and the methods
   they bind to come from the trait modules; both are in scope.
-- Modules inside `nash/core` get no defaults and import explicitly (Elm
+- Modules inside `nash/base` get no defaults and import explicitly (Elm
   does the same for `elm/core`).
 - `Fuzz` and `Test` are default imports so `tests` blocks can use
   `Fuzz.int` and `label`; `Test.label` is additionally exposed unqualified
@@ -166,7 +142,7 @@ Differences from Elm's list: no `Char`, `Tuple`, `Platform`, `Cmd`, `Sub`.
 
 ## Compiler-known types
 
-The `Builtin` module is seeded by the compiler with every builtin type
+The `Primitive` module is seeded by the compiler with every builtin type
 constructor (kinds.md "Datatype contexts", plans/02's
 `nash-ast/src/primitives.rs`). They have no Nash declaration and every
 one is in scope everywhere:
@@ -183,14 +159,14 @@ in `nash-can`). `unit` has `()`. `Data` has `Constr`, `Map`, `List`, `I`,
 
 Impls for compiler-known types live in the trait's module, because the
 orphan rule needs either the trait or the head type to be local and
-`Builtin` has no source.
+`Primitive` has no source.
 
 ## Prelude
 
 `Prelude` holds only the `infix` table, the non-method functions the
 table binds (`|>`, `<|`, `<<`, `>>`, `::` targets, plus
 `identity`/`always`), and the prelude impls: impls for tuples, which
-count as defined in `nash/core` under the orphan rule. Everything else
+count as defined in `nash/base` under the orphan rule. Everything else
 lives in the trait modules or the type modules. `Prelude` imports every
 trait module and `Bool` (for `&&`/`||`); none of those import `Prelude`.
 The `::` target is named `prepend` (not `cons`, which is the `Cons`
@@ -280,8 +256,8 @@ not repeated here. What each module adds beyond its trait:
 | `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
 | `Functor` | `list`, `List`; each applied element must satisfy its constructor's datatype context (`Storable` for `list`, `Big` for `List`). No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
-| `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
-| `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
+| `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `(Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
+| `Data` | Blanket `ToData` and `FromData` for every Big type; `Validate` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
@@ -292,8 +268,8 @@ and `result 'e`, and Applicative/Monad for `option` and `result 'e`.
 Big List mapping uses an explicitly typed little-list helper between Lift
 conversions, keeping the intermediate container unambiguous. Builtin list
 mapping can change element representations within Storable; it cannot produce Term
-elements. Builtin pair has no Functor impl: `mkPairData` constructs only
-`pair Data Data`, not the arbitrary pair needed by `map`. Pair.fst,
+elements. Builtin pair has no Functor impl: `mkPairData` accepts only Big
+components, not arbitrary Storable components needed by `map`. Pair.fst,
 Pair.snd and Pair.make remain the specified projection/construction helpers.
 The `fuzzer` impls require the real Fuzz implementation from plan 10.
 
@@ -311,9 +287,9 @@ coherence is head-only and contexts are not part of an impl's identity
 (kinds.md "Traits and impls"). plans/08 replaces the monomorphized
 elementwise body with the `equalsData` comparison whenever the ground
 element type is Big; the semantics are identical because Big equality is
-structural `equalsData` on each element. `listData : Big 'a => list 'a ->
-Data` accepts those elements directly, since they already have the Data
-representation. Generic `Ord (list 'a)` retains `Ord 'a` in its context
+structural equality on each element. Typed `listData` accepts Big elements
+directly and produces `List 'a`; any rewrite to equalsData must account for
+the concrete runtime representation without introducing source coercions. Generic `Ord (list 'a)` retains `Ord 'a` in its context
 and gets `Eq (list 'a)` through the superclass.
 Map Data equality compares the encoded sequence of entries, including order
 and duplicates. It is not dictionary-style equality.
@@ -342,7 +318,7 @@ validated `unValueData` boundary.
   types. These containers show their typed elements, not erased Data fields.
 - Tuples through four components use `(a, b, ...)`, recursively showing each
   component with a comma and space between components.
-- Data uses `Constr tag [fields]`, `Map [(key, value)]`, `List [values]`,
+- Data uses `Constr payload` with a `pair int (list Data)` payload, `Map [(key, value)]`, `List [values]`,
   `I integer`, or `B bytes`, recursively using the formats above.
 
 These are display formats, not a promise that arbitrary shown values can be
@@ -402,17 +378,17 @@ trait Lift 'small 'big where
     lower : 'big -> 'small
 
 impl Lift int Int where
-    lift = Builtin.castLift
-    lower = Builtin.castLower
+    lift = Builtin.iData
+    lower = Builtin.unIData
 
 impl Lift bytes Bytes where
-    lift = Builtin.castLift
-    lower = Builtin.castLower
+    lift = Builtin.bData
+    lower = Builtin.unBData
 
 -- text: `string` is the little twin of `Bytes` holding UTF-8
 impl Lift string Bytes where
-    lift s = Builtin.castLift (Builtin.encodeUtf8 s)
-    lower b = Builtin.decodeUtf8 (Builtin.castLower b)
+    lift s = Builtin.bData (Builtin.encodeUtf8 s)
+    lower b = Builtin.decodeUtf8 (Builtin.unBData b)
 
 -- The reflexive `impl Big 'a => Lift 'a 'a` (identity both ways) is
 -- compiler-provided (traits.md "Impl declarations"); it is not written here.
@@ -423,17 +399,21 @@ impl Lift 'a 'b => Lift (list 'a) (List 'b) where
     lift xs = wrapList (mapList lift xs)
     lower xs = mapList lower (unwrapList xs)
 
--- Private bridges preserve the element type across the intrinsic boundary.
+-- Typed concrete builtins preserve the element type.
 wrapList : list 'a -> List 'a
-wrapList = Builtin.castLift
+wrapList = Builtin.listData
 
 unwrapList : List 'a -> list 'a
-unwrapList = Builtin.castLower
+unwrapList = Builtin.unListData
 
-impl Lift (list (pair 'k 'v)) (Map 'k 'v) where
-    lift = Builtin.castLift
-    lower = Builtin.castLower
+impl (Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v) where
+    lift = Builtin.mapData
+    lower = Builtin.unMapData
 ```
+
+The map instance wraps entries whose keys and values are already Big. It does
+not recursively lift native components; `pair int (list Data)` cannot be
+wrapped as a map.
 
 This is representation.md's impl table. There is no overlap: `list 'a` is
 never Big, so `Lift (list 'a) (List 'b)` and the reflexive impl have
@@ -441,31 +421,34 @@ disjoint keys. `Lift bytes Bytes` and `Lift string Bytes` differ in the
 first head, so both exist.
 
 ```elm
-module Data exposing (ToData, FromData, serialise, tag, fields)
+module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
 
-import Builtin
+import Primitive exposing (Data(..))
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
 
+impl ToData ('a : Big) where
+    toData = Primitive.coerce
+
 trait FromData ('a : Big) where
     fromData : Data -> 'a
-    validateData : Data -> 'a
 
--- Every Big value is Data at runtime; the impls give the retag a type.
-impl ToData Data where
-    toData = Builtin.identity
+impl FromData ('a : Big) where
+    fromData = Primitive.coerce
 
-impl FromData Data where
-    fromData = Builtin.identity
-    validateData = Builtin.identity
+trait Validate ('a : Big) where
+    validate : Data -> 'a
 
-impl ToData Int where
-    toData = Builtin.castToData
+-- Data itself requires no decoding.
+impl Validate Data where
+    validate value = value
 
-impl FromData Int where
-    fromData = Builtin.castFromDataShallow
-    validateData = Builtin.castValidateData
+impl Validate Int where
+    validate value =
+        case value of
+            I _ -> Primitive.coerce value
+            _ -> fail
 
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
@@ -473,22 +456,29 @@ serialise = Builtin.serialiseData
 tag : Data -> option int
 tag d =
     case d of
-        Constr t _ -> Some t
+        Constr pair(t, _) -> Some t
         _ -> None
 
 fields : Data -> option (list Data)
 fields d =
     case d of
-        Constr _ fs -> Some fs
+        Constr pair(_, fs) -> Some fs
         _ -> None
 ```
 
-`Data` fields in patterns are little (`Constr int (list Data)`), as data.md
+`Data` fields in patterns are little (`Constr (pair int (list Data))`), as data.md
 specifies, so no `lower` is needed on `t` and `fs`.
-The Data identity impl is already well typed. Other Big types remain nominally
-distinct from Data: their impls require the typed casts specified in codegen.md,
-not `Builtin.identity` across different types. `validateData` returns the
-validated value and traps on invalid structure; Data.Decode provides the
+Other Big types remain nominally distinct from Data. `fromData` uses
+unchecked `Primitive.coerce`, with no outer-shape or nested checks. Malformed
+data fails only if a later operation needs its expected shape. Its blanket impl
+also covers user ADTs, nominal record aliases and collections, without any
+validation constraints. The required
+`Validate.validate` method is separate: Int and Bytes check the shape and coerce
+the original value, while List and Map retain recursive source validation.
+`toData` uses `Primitive.coerce` directly in one ordinary blanket impl
+for every Big type. User ADTs, nominal aliases, lists and maps all qualify,
+without element `ToData` constraints or reconstruction. Additional concrete
+impls overlap this blanket impl and are rejected. Data.Decode provides the
 non-failing decoder API.
 
 ## Twin modules
@@ -566,16 +556,17 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 
 | Name | Treatment |
 |---|---|
-| `Builtin.bool`, `False`, `True` | `if` scrutinee type; UPLC `bool` constants; `Ctor::Bool` in `nash-can` (`crates/nash-can/src/environment/foreign.rs`, `make_union_ctor`) |
-| `Builtin.unit`, `()` | UPLC `unit` constant |
-| `Builtin.Data` and its constructors | pattern-matchable Big type (data.md) |
-| `Builtin.list`, `[..]`, `::` patterns | list literals and patterns; element predicate `Storable` |
+| `Primitive.bool`, `False`, `True` | `if` scrutinee type; UPLC `bool` constants; `Ctor::Bool` in `nash-can` (`crates/nash-can/src/environment/foreign.rs`, `make_union_ctor`) |
+| `Primitive.unit`, `()` | UPLC `unit` constant |
+| `Primitive.Data` and its constructors | pattern-matchable Big type (data.md) |
+| `Primitive.list`, `[..]`, `::` patterns | list literals and patterns; element predicate `Storable` |
 | `Bool.and`, `Bool.or` | second argument delayed (`&&`, `||` are lazy) |
 | `Literal.FromInt`, `FromString`, `FromBytes` | literal desugaring and defaulting to `int`, `string`, `bytes` |
 | `Eq.Eq` | literal patterns |
 | `Monad.Monad` | `do` desugaring target |
 | `Show.Show` | power-assert rendering of operands |
-| `Builtin.*` | direct UPLC builtin nodes (below) |
+| Real `Builtin.*` operations | direct UPLC builtin nodes (below) |
+| `Primitive.coerce` | unchecked compiler intrinsic; runtime identity |
 | `Debug.trace`, `Debug.todo`, `Debug.fail` | trace levels, compiler-generated traces switch |
 | `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
 | `Fuzz.fuzzer`, `Fuzz.Prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
@@ -584,42 +575,45 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 
 ## Builtin
 
-`Builtin` is a synthetic module: it has no `.nash` source. Its interface
-is generated from the Rust tables in `crates/nash-ast/src/primitives.rs`:
-`PRIMITIVES` (the compiler-known types, plans/02 chunk 3) and `BUILTINS`,
-which maps each `DefaultFunction` variant by its symbolic Rust name
-(`crates/nash-plutus/src/builtin/default_function.rs`) to a Nash name and
-type, plus the type constructors from plans/02's primitives table. The typed
-value table is in `primitives/builtins.rs`, re-exported by `primitives.rs`.
-The canonicalizer derives representation predicates from those types; the backend
-resolves the symbolic variant without making the AST depend on the runtime.
-The `unit` spelling and `()` both canonicalize to the same unit type,
-including in impl heads.
-`nash-can` resolves `Builtin.foo` to `VarForeign { home: Builtin }` and
+`Builtin` is a synthetic module containing only actual Plutus Core builtin
+functions. Its interface comes from `BUILTINS` in
+`crates/nash-ast/src/primitives/builtins.rs`, re-exported by `primitives.rs`.
+Each entry maps a `DefaultFunction` variant to a Nash name and type.
+The canonicalizer derives representation predicates from those signatures;
+the backend resolves the symbolic variant without making the AST depend on
+the runtime.
+
+`Primitive` separately owns the compiler-known types, their constructors,
+and the representation traits `Const`, `Little`, `Big`, `Term`, and `Storable`.
+The `unit` spelling and `()` canonicalize to the same primitive type.
+
+`nash-can` resolves real `Builtin.foo` operations to `VarForeign { home: Builtin }` and
 `nash-codegen` lowers that to `Core::Builtin` (plans/07 chunk 4),
 applying the variant's `force_count()` forces. `nash docs` renders the
 same table.
 
+`Primitive` exposes `coerce : 'a -> 'b`, an unchecked compiler
+intrinsic separate from the real Plutus builtin inventory. Its type variables
+independently accept any value types, including functions, without
+representation constraints. It returns the original runtime value with no
+validation or representation change.
+
 Rules:
 
 - Every builtin is strict in every argument, including `ifThenElse`,
-  `chooseList`, `chooseData`, and `trace`. `if`, `case`, `&&`, `||` are
-  compiled by the compiler with delays; `Builtin.ifThenElse` is the raw
+  `chooseList`, `chooseData`, and `trace`. `if`, `case`, `&&`, `||` use
+  lazy native case dispatch at protocol 11; `Builtin.ifThenElse` is the raw
   strict builtin.
 - Type variables have representation prerequisites as UPLC requires: elements of
   `list`/`array` and components of `pair` are `Storable`; `'a` in
   `ifThenElse`, `chooseUnit`, `chooseList`, `chooseData`, `trace` has no
   representation restriction. All these value variables have kind `Type`.
-- `Builtin.identity : 'a -> 'a` and `Builtin.error : unit -> 'a` lower to
-  nothing and to the UPLC `error` term.
-- `Builtin.castToData`, `castFromDataShallow`, `castValidateData`, `castLift`,
-  and `castLower` each have scheme `forall a b. a -> b`. Only the exact
-  `nash/core` package can import these intrinsics, through any import route.
-  Their symbolic operations are retained for typed Cast lowering in Plan 07;
-  they are not UPLC DefaultFunction entries. Plan 03 supplies the frontend
-  bindings needed by the core impl bodies; code generation and validation
-  checkers remain Plan 07 work. These bindings do not make distinct nominal
-  types unify.
+- The table contains only actual UPLC DefaultFunction operations. Identity
+  is an ordinary Nash function and failure uses `fail` syntax.
+- Data conversion builtin signatures preserve nominal primitive and collection
+  types. Existing universal Data constructors and patterns provide explicit
+  source codecs between those types and Data. `coerce` is a separate unchecked
+  intrinsic; no compiler-generated checkers are exposed.
 
 | DefaultFunction | Nash name | Type |
 |---|---|---|
@@ -667,18 +661,18 @@ Rules:
 | `DropList` | `dropList` | `int -> list 'a -> list 'a` |
 | `ChooseData` | `chooseData` | `Data -> 'a -> 'a -> 'a -> 'a -> 'a -> 'a` |
 | `ConstrData` | `constrData` | `int -> list Data -> Data` |
-| `MapData` | `mapData` | `list (pair Data Data) -> Data` |
-| `ListData` | `listData` | `list ('a : Big) -> Data` |
-| `IData` | `iData` | `int -> Data` |
-| `BData` | `bData` | `bytes -> Data` |
+| `MapData` | `mapData` | `(Big 'k, Big 'v) => list (pair 'k 'v) -> Map 'k 'v` |
+| `ListData` | `listData` | `list ('a : Big) -> List 'a` |
+| `IData` | `iData` | `int -> Int` |
+| `BData` | `bData` | `bytes -> Bytes` |
 | `UnConstrData` | `unConstrData` | `Data -> pair int (list Data)` |
-| `UnMapData` | `unMapData` | `Data -> list (pair Data Data)` |
-| `UnListData` | `unListData` | `Data -> list Data` |
-| `UnIData` | `unIData` | `Data -> int` |
-| `UnBData` | `unBData` | `Data -> bytes` |
+| `UnMapData` | `unMapData` | `(Big 'k, Big 'v) => Map 'k 'v -> list (pair 'k 'v)` |
+| `UnListData` | `unListData` | `Big 'a => List 'a -> list 'a` |
+| `UnIData` | `unIData` | `Int -> int` |
+| `UnBData` | `unBData` | `Bytes -> bytes` |
 | `EqualsData` | `equalsData` | `Data -> Data -> bool` |
 | `SerialiseData` | `serialiseData` | `Data -> bytes` |
-| `MkPairData` | `mkPairData` | `Data -> Data -> pair Data Data` |
+| `MkPairData` | `mkPairData` | `(Big 'a, Big 'b) => 'a -> 'b -> pair 'a 'b` |
 | `MkNilData` | `mkNilData` | `unit -> list Data` |
 | `MkNilPairData` | `mkNilPairData` | `unit -> list (pair Data Data)` |
 | `Bls12_381_G1_Add` | `bls12_381_g1_add` | `bls_g1 -> bls_g1 -> bls_g1` |
@@ -724,8 +718,6 @@ Rules:
 | `ValueData` | `valueData` | `value -> Data` |
 | `UnValueData` | `unValueData` | `Data -> value` |
 | `ScaleValue` | `scaleValue` | `int -> value -> value` |
-| (none) | `identity` | `'a -> 'a` |
-| (none) | `error` | `unit -> 'a` |
 
 Availability by Plutus version is not modelled in the type; `nash build`
 rejects programs that use builtins newer than the target's version
@@ -743,14 +735,14 @@ import Builtin
 type Bool = False | True
 
 not : bool -> bool
-not b = if b then Builtin.False else Builtin.True
+not b = if b then Primitive.False else Primitive.True
 
 -- special-cased: lazy in the second argument
 and : bool -> bool -> bool
-and a b = if a then b else Builtin.False
+and a b = if a then b else Primitive.False
 
 or : bool -> bool -> bool
-or a b = if a then Builtin.True else b
+or a b = if a then Primitive.True else b
 
 xor : bool -> bool -> bool
 xor a b = if a then not b else b
@@ -888,7 +880,9 @@ using each element's Show impl, so Term elements such as tuples are supported.
 ```elm
 module Pair exposing (..)
 fst : pair 'a 'b -> 'a
+fst pair(first, _) = first
 snd : pair 'a 'b -> 'b
+snd pair(_, second) = second
 make : Data -> Data -> pair Data Data      -- only Data pairs can be built
 
 module Array exposing (..)
@@ -933,8 +927,9 @@ foldl : ('k -> 'v -> 'b -> 'b) -> 'b -> Map 'k 'v -> 'b
 
 ## `Data.Decode`, `Data.Encode`
 
-Structured, failing decoders for untrusted `Data`. `FromData.validateData`
-for derived types is built from these.
+Structured decoders for untrusted `Data` return failure as a value.
+`Validate.validate` is the separate trapping validation path; future
+derivation generates recursive source checks.
 
 ```elm
 module Data.Decode exposing (..)
@@ -969,7 +964,9 @@ andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
 
 ## `Fuzz`
 
-Exactly testing.md "Fuzzers": `Prng` is Big, choices are `Int`s, the
+Plan 10 supplies the executable core subset. `oneOf` uses `Cons.cons` because
+fuzzers contain functions and cannot inhabit the native Storable-only list.
+Further helpers below remain Plan 12 work. See testing.md "Fuzzers": `Prng` is Big, choices are `Int`s, the
 primitive is `choice`.
 
 ```elm
@@ -1039,7 +1036,7 @@ bytesExactly : int -> fuzzer bytes
 option : fuzzer 'a -> fuzzer (option 'a)
 listOf : fuzzer 'a -> fuzzer (list 'a)   -- length 0..20
 listBetween : int -> int -> fuzzer 'a -> fuzzer (list 'a)
-oneOf : list (fuzzer 'a) -> fuzzer 'a
+oneOf : cons (fuzzer 'a) -> fuzzer 'a
 frequency : list (int, fuzzer 'a) -> fuzzer 'a
 suchThat : ('a -> bool) -> fuzzer 'a -> fuzzer 'a       -- gives up after 100 draws
 data : fuzzer Data                        -- arbitrary well-formed Data, depth-bounded
@@ -1074,7 +1071,7 @@ label s = Builtin.trace (Builtin.appendString "\u{0}label\u{0}" s) ()
 assertFailed : list string -> 'a
 assertFailed msgs =
     case msgs of
-        [] -> Builtin.error ()
+        [] -> fail
         m :: rest -> Builtin.trace m (\() -> assertFailed rest) ()
 ```
 
@@ -1157,20 +1154,22 @@ exactly; each is covered by a golden test against a real transaction.
 ## `Debug`
 
 ```elm
-module Debug exposing (trace, todo, fail)
+module Debug exposing (trace, todo, failWith)
 
 trace : string -> 'a -> 'a     -- subject to trace level (silent / compact / verbose)
 trace = Builtin.trace
 
-fail : string -> 'a            -- traces msg and errors
-fail msg = Builtin.trace msg (Builtin.error ())
+failWith : string -> 'a        -- traces msg and errors
+failWith msg =
+    trace msg
+    fail
 
 todo : string -> 'a            -- traces "TODO: msg" and errors; warning at compile time
-todo msg = fail (Builtin.appendString "TODO: " msg)
+todo msg = failWith (Builtin.appendString "TODO: " msg)
 ```
 
-`fail`, `todo`, `trace` are keywords with their own expression nodes
-(syntax.md) that lower to these functions, so they need no import.
+`fail`, `todo`, `trace` have their own expression nodes (syntax.md) and
+need no import. Failure lowers to UPLC error; no fake builtin is involved.
 
 ## Open questions
 

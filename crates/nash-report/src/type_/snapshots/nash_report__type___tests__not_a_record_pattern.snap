@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-description: "module Main exposing (..)\nvalue : Builtin.int -> Builtin.int\nvalue { name } = name\n"
+description: "module Main exposing (..)\nvalue : Primitive.int -> Primitive.int\nvalue { name } = name\n"
 ---
 nash::type::not_a_record
 
-  × Expected a record, found `int`.
+  × Expected a record, found `Primitive.int`.
    ╭─[Main.nash:3:7]
- 2 │ value : Builtin.int -> Builtin.int
+ 2 │ value : Primitive.int -> Primitive.int
  3 │ value { name } = name
    ·       ────┬───
    ·           ╰── field `name` pattern

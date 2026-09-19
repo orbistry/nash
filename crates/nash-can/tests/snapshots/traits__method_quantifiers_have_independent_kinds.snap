@@ -46,10 +46,10 @@ description: "module Main exposing (..)\n\ntrait Carry 'a where\n    ordinary : 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Big",
                     },

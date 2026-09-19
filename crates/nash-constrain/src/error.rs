@@ -192,6 +192,8 @@ pub enum Context<'a> {
     RecordUpdateKeys(&'a str, &'a [FieldUpdate<'a>]),
     RecordUpdateValue(&'a str),
     Destructure,
+    TestBody,
+    TestGenerator,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -249,6 +251,7 @@ pub enum PContext<'a> {
 /// patterns.
 #[derive(Clone, Copy, Debug)]
 pub enum PCategory<'a> {
+    Pair,
     Record,
     Unit,
     Tuple,

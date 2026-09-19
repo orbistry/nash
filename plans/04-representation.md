@@ -8,7 +8,7 @@ Make the type checker speak the representation model of
 - (a) remove row polymorphism; records are nominal aliases only,
 - (b) remove `Float`, `Char` and Elm's magic supertypes,
 - (c) replace Elm's primitive type inventory with the Nash Const/Big
-  inventory homed in `nash/core`'s `Builtin` module,
+  inventory homed in `nash/base`'s `Builtin` module,
 - (d) make record encoding decisions (field order, alias identity)
   available in the canonical AST for codegen.
 
@@ -111,7 +111,7 @@ sketches. In particular:
   B1's magic supertypes are already removed; legitimate superclass evidence
   named `Super` remains. Verify the obsolete variants specifically.
 - C1 uses the primitive inventory for unqualified and qualified type lookup.
-  Unit is the named `Builtin.unit` throughout canonicalization and inference;
+  Unit is the named `Primitive.unit` throughout canonicalization and inference;
   source expressions and patterns keep their syntax variants.
 - A1 must preserve representation annotations and reject nested anonymous
   record types as well as anonymous records in value annotations.
@@ -377,7 +377,7 @@ Existing literal, negation, representation and superclass regressions pass.
 - All `PRIMITIVES` entries are available unqualified and under `Builtin`
   before user imports. Local declarations shadow only the unqualified name.
   Value imports and core-only intrinsic visibility retain their existing rules.
-- `()` in a type canonicalizes to `Type::Named` on `Builtin.unit`.
+- `()` in a type canonicalizes to `Type::Named` on `Primitive.unit`.
   Canonical, constraint, union-find, impl-head and diagnostic unit variants
   are removed. Expression and pattern syntax nodes remain and generate
   `type_::unit()` constraints. Core ownership of unit instances is preserved
@@ -398,7 +398,7 @@ Existing literal, negation, representation and superclass regressions pass.
 **Acceptance**: builtin-qualified lookup without an import, named-unit AST
 identity, unit instance syntax, big builtin types, unqualified user shadowing,
 literal typing and the complete core fixture pass. Primitive type identities
-use `nash/core.Builtin`; real standard-library module identities and imported
+use `nash/base.Builtin`; real standard-library module identities and imported
 fixtures are preserved.
 
 ---
@@ -440,7 +440,7 @@ Final validation of the completed `plan-4` implementation:
 - `cargo clippy --all-targets --all-features -- -D warnings` passes.
 - `cargo insta test --workspace --check --unreferenced delete` passes:
   2,088 tests passed, three ignored; no pending or unreferenced snapshots.
-- `cargo run -p nash-cli -- check tests/core` passes: 23 modules,
+- `cargo run -p nash-cli -- check tests/base` passes: 23 modules,
   215 declarations. `target/debug/nash check core` also passes: 22 modules,
   53 declarations.
 - Focused imported labeled-constructor acceptance passes all six tests,
@@ -462,7 +462,7 @@ cargo/nash-driver: patch
 
 Nominal records (row polymorphism removed), record literals resolved by
 field set, deferred field constraints, removal of Float/Char/supertypes,
-and the Const/Big builtin type inventory homed in nash/core Builtin.
+and the Const/Big builtin type inventory homed in nash/base Builtin.
 ```
 
 Grammar lives only in docs/syntax.md (plans/01 owns it). SPEC.md: tick the

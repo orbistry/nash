@@ -18,10 +18,10 @@ Located {
                 package: Some(
                     PackageName {
                         author: "nash",
-                        project: "core",
+                        project: "base",
                     },
                 ),
-                name: "Builtin",
+                name: "Primitive",
             },
             name: "list",
         },
@@ -43,10 +43,10 @@ Located {
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "unit",
                     },

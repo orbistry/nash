@@ -4,7 +4,7 @@ description: "module Main exposing (..)\nvalue = 1 ++ \"hello\"\n"
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `string`, found `int`.
+  × Type mismatch: expected `Primitive.string`, found `Primitive.int`.
    ╭─[Main.nash:2:9]
  1 │ module Main exposing (..)
  2 │ value = 1 ++ "hello"

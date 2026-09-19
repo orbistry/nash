@@ -1,0 +1,60 @@
+---
+source: crates/nash-solve/tests/testing.rs
+description: "module Fuzz exposing (..)\ntype fuzzer 'a = Fuzzer 'a\nunit = Fuzzer ()\n\nmodule Main exposing (public)\npublic = ()\nprivate = ()\ntests\n    import Fuzz\n    test \"private\" = do\n        x <- private\n        x\n        ()\n    prop \"generated\" =\n        let x via Fuzz.unit in\n        do\n            x\n"
+---
+[
+    Located {
+        region: Region {
+            start: Position {
+                line: 0,
+                column: 0,
+            },
+            end: Position {
+                line: 0,
+                column: 0,
+            },
+        },
+        value: Named {
+            reference: QualifiedName {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "base",
+                        },
+                    ),
+                    name: "Primitive",
+                },
+                name: "unit",
+            },
+            args: [],
+        },
+    },
+    Located {
+        region: Region {
+            start: Position {
+                line: 0,
+                column: 0,
+            },
+            end: Position {
+                line: 0,
+                column: 0,
+            },
+        },
+        value: Named {
+            reference: QualifiedName {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "base",
+                        },
+                    ),
+                    name: "Primitive",
+                },
+                name: "unit",
+            },
+            args: [],
+        },
+    },
+]

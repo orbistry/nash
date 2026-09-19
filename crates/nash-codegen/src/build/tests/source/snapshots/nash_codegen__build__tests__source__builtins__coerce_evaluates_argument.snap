@@ -1,0 +1,17 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nbad : int\nbad = fail\nmain : bytes\nmain = coerce bad\n"
+---
+--- core
+let bad#3 : int = error in
+let main#1 : bytes = (\coerce#2 : 'erased -> coerce#2) bad#3 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam bad_3 [(lam main_1 main_1) [(lam coerce_2 coerce_2) bad_3]]) (error)])
+--- result
+error: ExplicitErrorTerm
+--- logs
+[]
+--- budget
+cpu: 100, memory: 100

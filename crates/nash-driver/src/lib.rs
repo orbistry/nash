@@ -42,6 +42,7 @@
 //! ```
 
 pub mod build;
+pub mod bundled_base;
 pub mod compile;
 pub mod database;
 pub mod error;
@@ -52,7 +53,8 @@ pub mod source;
 
 // Re-export main types
 pub use compile::{
-    BuildResult, ModuleResult, Solved, SolvedModule, build, build_graph, build_with,
+    BuildResult, ModuleResult, Solved, SolvedModule, build, build_graph, build_graph_production,
+    build_graph_with_tests, build_with, test_with,
 };
 pub use database::Database;
 pub use error::DriverError;

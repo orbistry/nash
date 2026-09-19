@@ -1,17 +1,28 @@
 ---
 source: crates/nash-driver/src/compile/finish_tests.rs
-description: "validator module VestingBad exposing (main)\n\nimport Builtin exposing (..)\n\nmain : (Data -> bool) -> Data -> unit\nmain predicate ctx = assert (predicate ctx)\n"
+description: "validator module VestingBad exposing (main)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\nmain : (Data -> bool) -> Data -> unit\nmain predicate ctx = assert (predicate ctx)\n"
 ---
+nash::warning::unused_import
+
+  ⚠ Unused import `Builtin`.
+   ╭─[/project/src/VestingBad.nash:4:8]
+ 3 │ import Primitive exposing (..)
+ 4 │ import Builtin exposing (..)
+   ·        ───────
+ 5 │ 
+   ╰────
+  help: Remove the import.
+
 nash::validator::main_parameter_is_term
 
   × Parameter 1 of main has a Term type:
   │
-  │ Data -> bool
-   ╭─[/project/src/VestingBad.nash:5:9]
- 4 │ 
- 5 │ main : (Data -> bool) -> Data -> unit
+  │ Primitive.Data -> Primitive.bool
+   ╭─[/project/src/VestingBad.nash:6:9]
+ 5 │ 
+ 6 │ main : (Data -> bool) -> Data -> unit
    ·         ────────────
- 6 │ main predicate ctx = assert (predicate ctx)
+ 7 │ main predicate ctx = assert (predicate ctx)
    ╰────
   help: A script can only receive constants. Use Data, a Big type, or a Const type for
         this parameter, and convert it inside main.

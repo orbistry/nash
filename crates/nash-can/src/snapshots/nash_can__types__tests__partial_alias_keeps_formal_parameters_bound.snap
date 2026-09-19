@@ -149,10 +149,10 @@ source: crates/nash-can/src/types.rs
                                     package: Some(
                                         PackageName {
                                             author: "nash",
-                                            project: "core",
+                                            project: "base",
                                         },
                                     ),
-                                    name: "Builtin",
+                                    name: "Primitive",
                                 },
                                 name: "unit",
                             },
@@ -254,10 +254,10 @@ source: crates/nash-can/src/types.rs
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "unit",
                     },

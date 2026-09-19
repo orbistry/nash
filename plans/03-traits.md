@@ -28,7 +28,7 @@ representations wherever the inferred constructor contexts permit it.
 ## Current acceptance
 
 See the final acceptance record in 02-kind-predicates.md. The real core fixture
-is `cargo run -q -p nash-cli -- check tests/core`. The refreshed Sampo audit verifies all 28 internal requirements and publication
+is `cargo run -q -p nash-cli -- check tests/base`. The refreshed Sampo audit verifies all 28 internal requirements and publication
 order; downstream package verification stops at the unpublished source version.
 Historical release versions and test counts below do not establish acceptance
 of the replacement. Nothing is committed, pushed or published by this work.
@@ -74,7 +74,7 @@ Where they mention the removed lattice, kind partitions, `Kinded`,
   [Contract with plans/07](#contract-with-plans07-codegenmd) below.
 
 Crates touched: `nash-ast`, `nash-can`, `nash-constrain`, `nash-solve`,
-`nash-driver`, plus `core/` (Nash source) in chunk 12.
+`nash-driver`, plus `crates/nash-driver/base/` (Nash source) in chunk 12.
 
 Elm references: `elm/compiler/src/Type/Solve.hs` (`solve` on `CLet`,
 `generalize`, `introduce`, `makeCopy`, `makeCopyHelp`, `restore`,
@@ -2033,7 +2033,7 @@ Code:
 
 ```rust
 // type_.rs
-use nash_ast::primitives::CORE;   // PackageName { author: "nash", project: "core" }, plans/02 chunk 3
+use nash_ast::primitives::BASE;   // PackageName { author: "nash", project: "core" }, plans/02 chunk 3
 pub const fn literal_home<'a>() -> ModuleName<'a> { ModuleName { package: Some(CORE), name: "Literal" } }
 pub const fn eq_home<'a>() -> ModuleName<'a> { ModuleName { package: Some(CORE), name: "Eq" } }
 pub const fn monad_home<'a>() -> ModuleName<'a> { ModuleName { package: Some(CORE), name: "Monad" } }
@@ -2058,7 +2058,7 @@ pub fn literal_default<'a>(trait_: QualifiedName<'a>) -> Option<Type<'a>> {
 }
 ```
 
-Default types use the actual `nash/core` `Builtin` identities from Plan 02.
+Default types use the actual `nash/base` `Builtin` identities from Plan 02.
 The old `type_::int()` and `type_::string()` still serve pre-trait literal
 constraints and must be removed or replaced with that path in this chunk.
 
@@ -2315,8 +2315,8 @@ and the CLI accepts identity applied to a record. Reflexive Lift now checks
 exact core identity, existing type equality, and a non-narrowing Big proof at
 the active definition boundary. Solved output retains direct and nested
 reflexive evidence, while Const calls can select ordinary impls. Focused
-tests use an interface with the actual nash/core Lift identity. A real CLI
-workspace with a nash/core package accepts concrete/rigid Big uses and an
+tests use an interface with the actual nash/base Lift identity. A real CLI
+workspace with a nash/base package accepts concrete/rigid Big uses and an
 explicit Const impl, and rejects an unconstrained declaration. This establishes
 the compiler rule, not the shipping core hierarchy (chunk 11).
 
@@ -2455,7 +2455,7 @@ interfaces. The tests above cover these requirements.
 
 Status: complete. Do statements now reuse lambda/let canonicalization for
 scoping and delayed free-variable tracking. Synthetic bind calls look up the
-checked exact nash/core Monad.Monad method independently of local value names
+checked exact nash/base Monad.Monad method independently of local value names
 and import aliases. Refutable patterns and unavailable core methods have
 specific errors; a bind RHS cannot see its new pattern. A single-expression
 block needs no bind method. Canonical snapshots cover mixed statements and
@@ -2539,7 +2539,7 @@ Because each statement scopes the rest of the block, the straightforward
 implementation is recursive front-to-back (`canonicalize_do_from(index,
 env)`), not a reverse fold; the sketch above shows the produced shape.
 `env.method_annotation` searches exposed and qualified trait metadata by the
-exact nash/core Monad.Monad identity (not the value namespace, so shadowing
+exact nash/base Monad.Monad identity (not the value namespace, so shadowing
 `bind` locally does not change `do`). A sequencing statement without that
 method gets `Error::DoWithoutMonad`; a single final expression needs no method.
 
@@ -2592,7 +2592,7 @@ Package identity now flows from discovery through `ModuleOrigins` into
 `nash_can::Context`. Application modules retain `None`. Repeated discovery of
 the same URI and package is deduplicated; conflicting package ownership is
 rejected. Logical source URLs remain the graph/cache keys. A real CLI workspace
-with `nash/core` Literal and an application verifies explicit literal-method
+with `nash/base` Literal and an application verifies explicit literal-method
 defaulting; changing the package name leaves the use ambiguous. Canonical nodes now live in the build arena; owned annotations and solved
 evidence remain together per module until the build ends. A regression checks
 original definition/use NodeIds and evidence binders after a dependent module
@@ -2661,7 +2661,7 @@ reports the right errors.
 
 ---
 
-## Chunk 12: the core trait hierarchy in `core/`
+## Chunk 12: the core trait hierarchy in `crates/nash-driver/base/`
 
 ### Approved scope clarification
 
@@ -2747,9 +2747,8 @@ Status: complete under the approved scope above. The following entries are
 historical implementation steps; their intermediate counts and pending items
 are superseded by the final acceptance audit.
 
-The synthetic Builtin interface now exports all 103
-specified value schemes: 101 symbolic DefaultFunction variants plus identity
-and error. Static canonical type trees preserve the documented signatures;
+The synthetic Builtin interface exports only real DefaultFunction value
+schemes. Identity is ordinary Nash code; failure is language syntax. Static canonical type trees preserve the documented signatures;
 the existing kind checker derives their shared bounds. The table adds no
 runtime dependency to nash-ast. Inference snapshots and real CLI checks cover
 unConstrData projections, Storable list elements, Any choice results, and unit
@@ -2764,7 +2763,7 @@ the specified little field types. A source-defined Basics.Bool remains an
 ordinary union, pattern-only imports count as used, and the CLI rejects I ().
 The first real core sources are now in core/src: Eq for int, bytes, string,
 bool, unit, list, pair, and Data; Literal for the three little literal types.
-Their method bodies use the real builtin interface. The tests/core application
+Their method bodies use the real builtin interface. The tests/base application
 checks those impls, the neq default, recursive list/pair evidence, and literal
 defaulting through the CLI in CI. This exposed and fixed list syntax still
 using Big List: literals and patterns now use little list with Storable
@@ -2816,14 +2815,14 @@ declared in their type modules. Bool and Ordering export their Big constructors
 so closed imports can use them through module qualification. The core CLI
 acceptance checks both conversion directions and exact-core reflexive Lift on
 Bool, compiling 14 modules and 73 declarations. Primitive and container
-conversions still require the documented cast prerequisite; these three impls
-need no casts. Runtime representation and round-trip checks remain Plan 07.
+conversions use typed real Data builtins; these three impls
+use ordinary constructor rebuilding. Runtime representation and round-trip checks remain Plan 07.
 The CLI rejects `Lift bool Unit` at the calling `lift`. Formatting, strict
 Clippy, 1,912 tests and snapshot hygiene pass. This source-only step changes
 no Rust crate.
 Option now declares its little/Big twins and implements withDefault,
 Eq for the little type, and contextual Lift in both directions. The impl
-rebuilds constructors and resolves payload evidence; no primitive casts are
+rebuilds constructors and resolves payload evidence; no special conversion hooks are
 needed. Core CLI acceptance covers simple, nested and empty lifting/lowering,
 compiling 15 modules and 83 declarations. An invalid payload conversion from
 bool to Unit reports MissingImpl at the original outer `lift` call. Option's
@@ -2838,46 +2837,23 @@ the destination payload types reports both missing payload Lift impls at the
 original call. Formatting, strict Clippy, 1,912 tests and snapshot hygiene
 pass. Higher-kinded Result impls remain pending; runtime round trips still
 depend on Plan 07. This source-only step changes no Rust crate.
-Data now defines Big-bounded ToData/FromData traits, their identity impls for
-Data itself, and serialise/tag/fields. The core CLI checks constructor and
-non-constructor helper inputs and all three identity methods, compiling 17
-modules and 104 declarations. Separate CLI checks reject toData on unit and
-on nominal Int without an impl. The stdlib sketch now agrees with the
-representation spec: validateData returns the validated value and traps on
-failure; other Big conversions require typed casts, not polymorphic identity.
-Formatting, strict Clippy, 1,912 tests and snapshot hygiene pass. These are
-source-only changes; runtime helper results await Plan 07.
-The frontend cast prerequisite now follows the existing Plan 07 contract:
-Builtin.castToData, castFromDataShallow, castValidateData, castLift and castLower
-have independent source/target variables and symbolic lowering operations.
-Only exact nash/core may name them, including qualified, aliased, wildcard and
-explicit imports. Canonicalizer snapshots check every route and package-name
-near misses; an inference snapshot preserves all five nominal signatures.
-Core cast generation, validation checkers and execution remain Plan 07.
-The stdlib Lift sketch now uses these bindings instead of assigning Data-valued
-UPLC builtins to nominal Int/Bytes/List/Map conversions. Actual cast-dependent
-core impls are being added below.
-The real CLI compiles a core cast module and application wrapper (two modules,
-six declarations), and rejects an application explicitly importing a cast.
-Existing core acceptance remains 17 modules and 104 declarations. Formatting,
-strict Clippy, 1,914 tests and snapshot hygiene pass (three ignored doctests).
-Lift now supplies int/Int, bytes/Bytes and string/Bytes impls through the
-specified casts; string conversion explicitly encodes/decodes UTF-8. Data
-supplies ToData/FromData for Int and Bytes, using distinct shallow and full
-validation operations. Core acceptance checks both primitive directions and
-nominal Data conversions, compiling 17 modules and 114 declarations. A real
-CLI negative case rejects Lift string Int at the calling lift. Formatting,
-strict Clippy, 1,914 tests and snapshot hygiene pass. These source-only changes
-do not change Rust crates. Runtime round trips, invalid UTF-8 and invalid Data
-checks remain Plan 07 execution requirements.
-Literal now supplies FromInt Int and FromBytes Bytes through castLift, plus
-the specified FromString bytes UTF-8 conversion. Core acceptance compiles 17
-modules and 117 declarations, selecting these impls with explicit annotations;
-the CLI rejects a bytes literal annotated Int. A focused inference snapshot
-preserves generalized exported literals and checks retained evidence for
-discarded literals defaulting to int/bytes/string despite the extra candidates.
-Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. Literal
-conversion execution and compile-time UTF-8 folding remain later-plan checks.
+Data defines Big-bounded ToData, FromData and Validate traits, plus
+serialise/tag/fields. ToData and FromData each have an ordinary blanket Big
+impl defining its method as Primitive.coerce. Both conversions preserve the
+runtime Data value without traversal or shape checks. Every Big type is
+covered, including user ADTs, nominal record aliases and collections, with
+no element conversion or validation prerequisites. Little unit remains
+ineligible; nominal Int is covered automatically.
+Validate is separate and opt-in. Core Data accepts every shape; Int and Bytes
+check shape, while List and Map recursively validate their contents through
+Validate constraints. User ADTs provide source Validate impls until future
+derive macros generate them. validate returns the validated value and traps
+on failure; unchecked fromData cannot serve as validation.
+This architecture supersedes the earlier primitive bridge implementation.
+Real UPLC Data conversion builtins retain nominal Int, Bytes, List and Map
+signatures. Lift and Literal call those operations directly. Primitive.coerce
+is a separate unchecked compiler intrinsic, not a real Plutus builtin.
+
 Num Int and Integral Int now lower operands through Lift, call the matching
 integer builtin, and lift the result. Core acceptance exercises all eight
 methods and Integral's Num superclass, compiling 17 modules and 120
@@ -2894,21 +2870,11 @@ methods and a superclass-constrained helper. Comparing List Int with List Bytes
 is rejected at the incompatible operand. Runtime comparison results remain
 Plan 07 checks. Formatting, strict Clippy, 1,915 tests and snapshot hygiene
 pass. This source-only step changes no Rust crate.
-List Lift now maps contextual element conversions and uses private typed
-wrapList/unwrapList bridges. The raw polymorphic cast sketch lost the element
-relationship and produced MissingConstraint; the bridges preserve the shared
-Big element parameter. Data now supplies ToData/FromData for List and Map.
-Core acceptance covers nested and reflexive list conversions plus nominal
-container Data conversions, compiling 17 modules and 139 declarations. An
-invalid bool-to-Int element conversion reports MissingImpl at the outer lift.
-Runtime conversion/validation remains Plan 07 work.
-Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
-source-only step changes no Rust crate.
+List Lift maps contextual element conversions and calls typed listData and
+unListData. Map Lift calls typed mapData and unMapData, preserving key/value
+parameters. Data codecs recursively map source element codecs and preserve
+existing wire shapes. Nested invalid elements must fail during decoding.
 
-The documented `Lift (list (pair 'k 'v)) (Map 'k 'v)` impl now uses the
-general recursive-head representation and matcher. The core CLI fixture
-type-checks both lift and lower with `Map Int Bytes`; execution and cast
-lowering remain Plan 07 requirements.
 Show now covers Int, Bytes, List and Map. Primitive impls extract little
 representations; typed container bridges preserve contextual Show evidence
 for elements, keys and values. The stdlib spec makes nominal Map's
@@ -2978,7 +2944,7 @@ overlapping after byte truncation.
 Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,
 `core/Integral.nash`, `core/Semigroup.nash`, `core/Monoid.nash`,
 `core/Functor.nash`, `core/Applicative.nash`, `core/Monad.nash`,
-`core/Data.nash` (ToData/FromData), `core/Lift.nash`, `core/Literal.nash`,
+`core/Data.nash` (ToData/FromData/Validate), `core/Lift.nash`, `core/Literal.nash`,
 `core/Prelude.nash` (the `infix` table from docs/stdlib.md and the prelude
 impls), `crates/nash-ast/src/primitives.rs` (synthetic Builtin prerequisite),
 `crates/nash-driver/src/compile.rs` (implicit imports),
@@ -3016,11 +2982,11 @@ local constructors, aliased imports and both pattern forms. Existing core
 acceptance still compiles 12 modules and 66 declarations. Formatting, strict
 Clippy, 1,912 tests (three ignored doctests) and snapshot hygiene pass.
 
-Tests: a driver test compiling `core/` plus a `Main.nash` using `==`, `<`,
+Tests: a driver test compiling `crates/nash-driver/base/` plus a `Main.nash` using `==`, `<`,
 `+`, `show`, a `do` block over `option`, and literal defaulting, with no
 trait declarations in `Main`.
 
-Done when: `nash check tests/core` type-checks the shipping core hierarchy
+Done when: `nash check tests/base` type-checks the shipping core hierarchy
 with explicit imports, including operators, literal defaulting and option/result
 do, and the focused cross-module and rejection checks pass. Default imports
 and the complete overview validator example remain later integration work.

@@ -4,7 +4,8 @@ description: "module Ledger exposing (settle)\n\ntype alias Account = { owner : 
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `list int`, found `list Int`.
+  × Type mismatch: expected `Primitive.list Primitive.int`,
+  │ found `Primitive.list Primitive.Int`.
     ╭─[src/Ledger.nash:10:5]
   7 │ 
   8 │ settle : list Account -> list int

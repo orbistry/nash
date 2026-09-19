@@ -1,0 +1,81 @@
+---
+source: crates/nash-parse/src/expression/mod.rs
+description: outer (inner ())
+---
+Located {
+    region: Region {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 17,
+        },
+    },
+    value: Call {
+        function: Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 6,
+                },
+            },
+            value: Var {
+                kind: LowVar,
+                name: "outer",
+            },
+        },
+        arguments: [
+            Located {
+                region: Region {
+                    start: Position {
+                        line: 1,
+                        column: 8,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 16,
+                    },
+                },
+                value: Call {
+                    function: Located {
+                        region: Region {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                        },
+                        value: Var {
+                            kind: LowVar,
+                            name: "inner",
+                        },
+                    },
+                    arguments: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 14,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                            },
+                            value: Unit,
+                        },
+                    ],
+                },
+            },
+        ],
+    },
+}

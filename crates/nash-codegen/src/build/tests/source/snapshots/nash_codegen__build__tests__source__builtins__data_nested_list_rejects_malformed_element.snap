@@ -1,0 +1,143 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validate)\ndecoded : List (List Int)\ndecoded = validate (List [List [I 1, B #\"aa\"]])\nmain = nullList (unListData decoded)\n"
+---
+--- core
+let mapList#12 : ('erased -> Data) -> list 'erased -> list Data = \(f#28 : 'erased -> Data) values#29 : list 'erased -> (\self#15 : 'erased -> self#15 self#15) (\self#15 : 'erased values#29 : list 'erased -> let match#32 : list 'erased = values#29 in
+case@List match#32 of
+  Nil -> (con (list data) [])
+  Cons field#33 field#34 -> let first#30 : 'erased = field#33 in
+  let rest#31 : list 'erased = field#34 in
+  mkCons (f#28 first#30) (self#15 self#15 rest#31)) values#29 in
+let validate#37 : Data -> Int = \value#50 : Data -> let match#52 : Data = value#50 in
+let leaf#58 : 'erased = delay error in
+case@Data match#52 of
+  DataConstr field#59 -> force leaf#58
+  DataMap field#60 -> force leaf#58
+  DataList field#61 -> force leaf#58
+  DataI field#62 -> (\coerce#51 : 'erased -> coerce#51) value#50
+  DataB field#63 -> force leaf#58 in
+let validate#13 : Data -> List Data = \value#35 : Data -> let match#38 : Data = value#35 in
+let leaf#44 : 'erased = delay error in
+case@Data match#38 of
+  DataConstr field#45 -> force leaf#44
+  DataMap field#46 -> force leaf#44
+  DataList field#47 -> let values#36 : list Data = field#47 in
+  listData (mapList#12 validate#37 values#36)
+  DataI field#48 -> force leaf#44
+  DataB field#49 -> force leaf#44 in
+let validate#3 : Data -> List Data = \value#10 : Data -> let match#14 : Data = value#10 in
+let leaf#20 : 'erased = delay error in
+case@Data match#14 of
+  DataConstr field#21 -> force leaf#20
+  DataMap field#22 -> force leaf#20
+  DataList field#23 -> let values#11 : list Data = field#23 in
+  listData (mapList#12 validate#13 values#11)
+  DataI field#24 -> force leaf#20
+  DataB field#25 -> force leaf#20 in
+let fromInt#7 : int -> int = \value#26 : int -> value#26 in
+let fromBytes#9 : bytes -> bytes = \value#27 : bytes -> value#27 in
+let decoded#2 : List (List Int) = validate#3 ((\field#4 : list Data -> listData field#4) (mkCons ((\field#5 : list Data -> listData field#5) (mkCons ((\field#6 : int -> iData field#6) (fromInt#7 1)) (mkCons ((\field#8 : bytes -> bData field#8) (fromBytes#9 (con bytestring #aa))) (con (list data) [])))) (con (list data) []))) in
+let projection#64 : list Data = unListData decoded#2 in
+let main#1 : bool = nullList projection#64 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam mapList_12
+    [(lam validate_37
+      [(lam validate_13
+        [(lam validate_3
+          [(lam fromInt_7
+            [(lam fromBytes_9
+              [(lam decoded_2
+                [(lam projection_64
+                  [(lam main_1 main_1) [(force (builtin nullList)) projection_64]])
+                  [(builtin unListData) decoded_2]])
+                [validate_3
+                  [(lam field_4 [(builtin listData) field_4])
+                    [[(force (builtin mkCons))
+                      [(lam field_5 [(builtin listData) field_5])
+                        [[(force (builtin mkCons))
+                          [(lam field_6 [(builtin iData) field_6]) [fromInt_7 (con integer 1)]]]
+                          [[(force (builtin mkCons))
+                            [(lam field_8 [(builtin bData) field_8]) [fromBytes_9 (con bytestring #aa)]]]
+                            (con (list data) [])]]]]
+                      (con (list data) [])]]]])
+              (lam value_27 value_27)])
+            (lam value_26 value_26)])
+          (lam value_10
+            [(lam match_14
+              [(lam leaf_20
+                [(lam generated_65
+                  (force
+                    [[[[[[(force (builtin chooseData)) generated_65]
+                      (delay [(lam field_21 (force leaf_20)) [(builtin unConstrData) generated_65]])]
+                      (delay [(lam field_22 (force leaf_20)) [(builtin unMapData) generated_65]])]
+                      (delay
+                        [(lam field_23
+                          [(lam values_11 [(builtin listData) [[mapList_12 validate_13] values_11]])
+                            field_23])
+                          [(builtin unListData) generated_65]])]
+                      (delay [(lam field_24 (force leaf_20)) [(builtin unIData) generated_65]])]
+                      (delay [(lam field_25 (force leaf_20)) [(builtin unBData) generated_65]])]))
+                  match_14])
+                (delay (error))])
+              value_10])])
+        (lam value_35
+          [(lam match_38
+            [(lam leaf_44
+              [(lam generated_66
+                (force
+                  [[[[[[(force (builtin chooseData)) generated_66]
+                    (delay [(lam field_45 (force leaf_44)) [(builtin unConstrData) generated_66]])]
+                    (delay [(lam field_46 (force leaf_44)) [(builtin unMapData) generated_66]])]
+                    (delay
+                      [(lam field_47
+                        [(lam values_36 [(builtin listData) [[mapList_12 validate_37] values_36]])
+                          field_47])
+                        [(builtin unListData) generated_66]])]
+                    (delay [(lam field_48 (force leaf_44)) [(builtin unIData) generated_66]])]
+                    (delay [(lam field_49 (force leaf_44)) [(builtin unBData) generated_66]])]))
+                match_38])
+              (delay (error))])
+            value_35])])
+      (lam value_50
+        [(lam match_52
+          [(lam leaf_58
+            [(lam generated_67
+              (force
+                [[[[[[(force (builtin chooseData)) generated_67]
+                  (delay [(lam field_59 (force leaf_58)) [(builtin unConstrData) generated_67]])]
+                  (delay [(lam field_60 (force leaf_58)) [(builtin unMapData) generated_67]])]
+                  (delay [(lam field_61 (force leaf_58)) [(builtin unListData) generated_67]])]
+                  (delay
+                    [(lam field_62 [(lam coerce_51 coerce_51) value_50])
+                      [(builtin unIData) generated_67]])]
+                  (delay [(lam field_63 (force leaf_58)) [(builtin unBData) generated_67]])]))
+              match_52])
+            (delay (error))])
+          value_50])])
+    (lam f_28
+      (lam values_29
+        [[(lam self_15 [self_15 self_15])
+          (lam self_15
+            (lam values_29
+              [(lam match_32
+                (case
+                  match_32
+                  (lam field_33
+                    (lam field_34
+                      [(lam first_30
+                        [(lam rest_31
+                          [[(force (builtin mkCons)) [f_28 first_30]] [[self_15 self_15] rest_31]])
+                          field_34])
+                        field_33]))
+                  (con (list data) [])))
+                values_29]))]
+          values_29]))])
+--- result
+error: ExplicitErrorTerm
+--- logs
+[]
+--- budget
+cpu: 3981624, memory: 20580

@@ -13,5 +13,7 @@ nash::names::not_found_var
    ╰────
   help: Similar names:
 
+            Builtin.listData
             Foo.bar
-            x
+            Builtin.bData
+            Builtin.fstPair

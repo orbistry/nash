@@ -1,0 +1,60 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Option exposing (type option(..))\nimport Monad exposing (Monad)\nresult =\n    do\n        pair(tag, _) <- Some (Builtin.unConstrData (Builtin.constrData 42 []))\n        Some tag\nmain : int\nmain =\n    case result of\n        Some tag -> tag\n        None -> fail\n"
+---
+--- core
+let bind#6 : nash/base:Option.option 'erased -> ('erased -> nash/base:Option.option 'erased) -> nash/base:Option.option 'erased = \value#15 : nash/base:Option.option 'erased (f#16 : 'erased -> nash/base:Option.option 'erased) -> let match#18 : nash/base:Option.option 'erased = value#15 in
+case@Tag match#18 of
+  0 field#19 -> let item#17 : 'erased = field#19 in
+  f#16 item#17
+  1 -> constr 1 in
+let fromInt#8 : int -> int = \value#20 : int -> value#20 in
+let evaluated#21 : 'erased = constrData (fromInt#8 42) (con (list data) []) in
+let projection#22 : pair int (list Data) = unConstrData evaluated#21 in
+let result#2 : nash/base:Option.option int = bind#6 ((\field#7 : pair int (list Data) -> constr 0 field#7) projection#22) (\arg#9 : pair int (list Data) -> let match#12 : pair int (list Data) = arg#9 in
+case@Pair match#12 of
+  Pair field#13 field#14 -> let tag#10 : int = field#13 in
+  (\field#11 : int -> constr 0 field#11) tag#10) in
+let match#4 : nash/base:Option.option int = result#2 in
+let main#1 : int = case@Tag match#4 of
+  0 field#5 -> let tag#3 : int = field#5 in
+  tag#3
+  1 -> error in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam bind_6
+    [(lam fromInt_8
+      [(lam evaluated_21
+        [(lam projection_22
+          [(lam result_2
+            [(lam match_4
+              [(lam main_1 main_1)
+                (case match_4 (lam field_5 [(lam tag_3 tag_3) field_5]) (error))])
+              result_2])
+            [[bind_6 [(lam field_7 (constr 0 field_7)) projection_22]]
+              (lam arg_9
+                [(lam match_12
+                  (case
+                    match_12
+                    (lam field_13
+                      (lam field_14
+                        [(lam tag_10 [(lam field_11 (constr 0 field_11)) tag_10]) field_13]))))
+                  arg_9])]])
+          [(builtin unConstrData) evaluated_21]])
+        [[(builtin constrData) [fromInt_8 (con integer 42)]] (con (list data) [])]])
+      (lam value_20 value_20)])
+    (lam value_15
+      (lam f_16
+        [(lam match_18
+          (case
+            match_18
+            (lam field_19 [(lam item_17 [f_16 item_17]) field_19])
+            (constr 1)))
+          value_15]))])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 1214839, memory: 7464

@@ -61,6 +61,7 @@ struct Subject<'a> {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Shape {
+    Pair,
     Tag(u16),
     False,
     True,
@@ -398,11 +399,7 @@ impl<'a> Matrix<'a, '_, '_, '_> {
             return Ok(self.build.case(
                 CaseKind::Data,
                 value,
-                &[Branch {
-                    test: Test::DataConstr,
-                    binders: self.build.arena.alloc_slice_copy(&[tag, list]),
-                    body,
-                }],
+                &[self.data_constructor_branch(&[tag, list], body)],
                 Some(self.fallback),
             ));
         }
@@ -423,6 +420,7 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 let (k, test) = match shape {
                     Shape::Tag(index) => (CaseKind::Tag, Test::Tag(index)),
                     Shape::Product => (CaseKind::Tag, Test::Tag(0)),
+                    Shape::Pair => (CaseKind::Pair, Test::Pair),
                     Shape::False => (CaseKind::Bool, Test::False),
                     Shape::True => (CaseKind::Bool, Test::True),
                     Shape::Nil => (CaseKind::List, Test::Nil),
@@ -445,6 +443,30 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         Ok(self
             .build
             .case(kind.ok_or(Error::PatternType)?, value, &arms, None))
+    }
+    fn data_constructor_branch(&self, fields: &[Binder<'a>], body: &'a Core<'a>) -> Branch<'a> {
+        let pair = Binder {
+            name: self.build.fresh("pair"),
+            ty: Ty::Const(
+                self.build
+                    .arena
+                    .alloc(ConstTy::Pair(fields[0].ty, fields[1].ty)),
+            ),
+        };
+        Branch {
+            test: Test::DataConstr,
+            binders: self.build.arena.alloc_slice_copy(&[pair]),
+            body: self.build.case(
+                CaseKind::Pair,
+                self.build.var(pair.name),
+                &[Branch {
+                    test: Test::Pair,
+                    binders: self.build.arena.alloc_slice_copy(fields),
+                    body,
+                }],
+                None,
+            ),
+        }
     }
     fn list_fields(
         &self,
@@ -485,6 +507,7 @@ fn shape(pattern: Pat<'_>) -> Option<Shape> {
         }),
         Pat::Node(p) => match &p.value {
             Pattern::Bool { value, .. } => Some(if *value { Shape::True } else { Shape::False }),
+            Pattern::Pair { .. } => Some(Shape::Pair),
             Pattern::Tuple { .. } | Pattern::Record(_) => Some(Shape::Product),
             Pattern::List(xs) => Some(if xs.is_empty() {
                 Shape::Nil
@@ -493,11 +516,11 @@ fn shape(pattern: Pat<'_>) -> Option<Shape> {
             }),
             Pattern::Cons { .. } => Some(Shape::Cons),
             Pattern::Constructor(c) => Some(
-                if c.reference.home == nash_ast::primitives::builtin_home()
+                if c.reference.home == nash_ast::primitives::primitive_home()
                     && c.reference.union == "Data"
                 {
                     Shape::Data(c.index)
-                } else if c.reference.home == nash_ast::primitives::builtin_home()
+                } else if c.reference.home == nash_ast::primitives::primitive_home()
                     && c.reference.union == "bool"
                 {
                     if c.index == 0 {
@@ -534,6 +557,10 @@ fn signatures<'a>(
             shape: Shape::Product,
             fields: fields.to_vec(),
         }],
+        Ty::Const(ConstTy::Pair(first, second)) => vec![Signature {
+            shape: Shape::Pair,
+            fields: vec![*first, *second],
+        }],
         Ty::Const(ConstTy::Bool) => vec![
             Signature {
                 shape: Shape::False,
@@ -557,10 +584,10 @@ fn signatures<'a>(
         Ty::Big(BigTy::Data) => vec![
             Signature {
                 shape: Shape::Data(0),
-                fields: vec![
+                fields: vec![Ty::Const(&ConstTy::Pair(
                     Ty::Const(&ConstTy::Int),
                     Ty::Const(&ConstTy::List(Ty::Big(&BigTy::Data))),
-                ],
+                ))],
             },
             Signature {
                 shape: Shape::Data(1),
@@ -615,6 +642,7 @@ fn children<'a>(
             }
             Pattern::Cons { head, tail } => vec![Pat::Node(head), Pat::Node(tail)],
             Pattern::Bool { .. } => vec![],
+            Pattern::Pair { first, second } => vec![Pat::Node(first), Pat::Node(second)],
             Pattern::Tuple {
                 first,
                 second,

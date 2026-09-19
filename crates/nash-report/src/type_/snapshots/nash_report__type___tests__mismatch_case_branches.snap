@@ -4,7 +4,7 @@ description: "module Main exposing (..)\nvalue flag =\n    case flag of\n       
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `int`, found `string`.
+  × Type mismatch: expected `Primitive.int`, found `Primitive.string`.
    ╭─[Main.nash:5:18]
  4 │         True -> 1
  5 │         False -> "hello"

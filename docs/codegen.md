@@ -18,15 +18,14 @@ user type to `Data`. Nash does three things differently:
 1. **One tree IR.** `Core` is a specialized, explicitly-typed lambda
    calculus. Every pass is `Core -> Core` until the last one, which is
    `Core -> Term<Name>`. There is no linearized instruction stream.
-2. **Explicit representations.** Binders and casts carry a `Ty` tagged `Big`,
+2. **Explicit representations.** Binders carry a `Ty` tagged `Big`,
    `Const` or `Term` (see [kinds.md](kinds.md)); representation-independent
    parameters may instead be `Erased`. Codegen demands concrete types only
    where an operation needs them. Haskell 98 kinds have already been checked.
 3. **No `Data` by default.** A little type is never represented as `Data`.
-   Conversions between representations are explicit `Cast` nodes that the
-   front end inserted for `toData` / `fromData` / `validateData` / `lift` /
-   `lower`. The optimizer can cancel adjacent inverse casts; it never inserts
-   or removes a representation change on its own.
+   Conversions between representations are explicit Nash functions using
+   typed UPLC builtins and Data patterns. The optimizer may simplify inverse
+   builtin pairs when it preserves shape checks and evaluation behavior.
 
 ## The Core IR
 
@@ -41,7 +40,6 @@ Core ::= Var(name)
        | Constr(tag, fields)                    -- UPLC `constr`
        | Field(record, index)                   -- projection out of a `constr`
        | Builtin(fn, args)                      -- saturated or partial builtin call
-       | Cast(kind, from_ty, to_ty, arg)
        | Trace(msg, body)
        | Error
        | Delay(body) | Force(body)
@@ -62,8 +60,8 @@ pub enum Ty<'a> {
 ```
 
 `Ty::repr()` returns no representation for `Erased`. Constant construction
-and casts must require concrete layout metadata instead of assuming `Data`. `BigTy` records enough
-structure to generate `validateData` for the type (constructor count and
+must require concrete layout metadata instead of assuming `Data`. `BigTy` records enough
+structure to construct and destruct its Data layout (constructor count and
 field types); `TermTy` records constructor arities so `Case` and `Field` can
 be lowered; `ConstTy` maps one-to-one onto nash-plutus `typ::Type` so
 literals can be built (`crates/nash-plutus/src/typ.rs`).
@@ -79,22 +77,23 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 | `Let(b, v, e)` | strict binding | `(\b -> e) v` |
 | `LetRec` | recursive function group | self-application, see Recursion |
 | `Case(Tag, s, bs, d)` | match on a `Term` constr tag; branch `i` binds the fields | `Term::Case` |
-| `Case(Bool, s, [t, e], _)` | `if` | `force (ifThenElse s (delay t) (delay e))` |
-| `Case(Int, s, bs, d)` | switch on integer literals | chain of `equalsInteger` + `ifThenElse` |
-| `Case(Bytes, s, bs, d)` | switch on bytestring literals | chain of `equalsByteString` |
-| `Case(List, s, [nil, cons], _)` | match on a `Const` list; `cons` binds head and tail | `chooseList` + `headList`/`tailList` |
-| `Case(Data, s, bs, d)` | match on the `Data` tag; five branches `Constr\|Map\|List\|I\|B` | `chooseData` with delayed branches |
+| `Case(Bool, s, [t, e], _)` | `if` | `case s [e, t]` (false tag 0, true tag 1) |
+| `Case(Int, s, bs, d)` | switch on integer literals | chain of `equalsInteger` + boolean `Term::Case` |
+| `Case(Bytes, s, bs, d)` | switch on bytestring literals | chain of `equalsByteString` + boolean `Term::Case` |
+| `Case(List, s, [nil, cons], _)` | match on a `Const` list; `cons` binds head and tail | `case s [\head tail -> cons, nil]` |
+| `Case(Pair, s, [branch], _)` | destructure a builtin pair | `case s [\first second -> branch]`, including wildcard fields |
+| `Case(Data, s, bs, d)` | match on the `Data` tag; five branches `Constr\|Map\|List\|I\|B` | `force (chooseData s (delay constr) (delay map) (delay list) (delay int) (delay bytes))` |
 | `Constr(i, fs)` | build a UPLC constr | `Term::Constr` |
 | `Field(r, i)` | project field `i` of a constr | `case r [\f0 .. fn -> fi]` |
 | `Builtin(f, as)` | call builtin `f`; `as.len() <= f.arity()` | `force^k (builtin f)` applied to `as` |
-| `Cast` | representation change | see Casts |
 | `Trace(m, b)` | log `m` then evaluate `b` | `force (trace m (delay b))` |
 | `Error` | abort | `Term::Error` |
 | `Delay`/`Force` | explicit laziness | `Term::Delay` / `Term::Force` |
 
 `Case` branch binders come from the node, not from nested lambdas: a `Tag`
 branch is `(tag, &[Binder], body)`, a `List` cons branch binds `(head, tail)`,
-a `Data` `Constr` branch binds `(tag: int, fields: list Data)`. Keeping the
+a `Data` `Constr` branch binds the decoded `pair int (list Data)`. An explicit
+pair pattern adds a nested `Case(Pair, ...)` that binds its tag and fields. Keeping the
 binders in the node lets the decision-tree compiler and the optimizer treat
 them uniformly without pattern-matching on lambda shapes.
 
@@ -106,29 +105,31 @@ lowers to the same term; a `Builtin` with zero arguments is the (forced)
 builtin value itself. `Builtin` never has more arguments than its arity: the
 front end wraps excess arguments in an outer `App`.
 
-### Casts
+### Data conversions
 
-```rust
-pub enum CastKind {
-    ToData,           // Big -> Data: identity at runtime
-    FromDataShallow,  // Data -> Big: check the outermost node, then identity
-    ValidateData,     // Data -> Big: full recursive check, then identity
-    Lift,             // Const -> Big  (iData, bData, listData, mapData)
-    Lower,            // Big -> Const  (unIData, unBData, unListData, unMapData)
-}
-```
+The real UPLC builtin inventory preserves nominal primitive types:
+`iData : int -> Int`, `unIData : Int -> int`, `bData : bytes -> Bytes`,
+and `unBData : Bytes -> bytes`. Collection constructors and destructors
+similarly preserve their Big element types. Existing `Data` constructors
+and patterns expose universal Data shapes.
 
-`ToData` is erased during lowering. `FromDataShallow` and `ValidateData`
-lower to a call of a compiler-generated checker function for the target
-type (one per Big type and check depth, hoisted as top-level `LetRec`
-bindings named `fromData#T` and `validateData#T`, see
-[data.md](data.md)), followed by the value itself. `Lift`/`Lower` lower to the
-single builtin that converts between the two representations (`iData`,
-`bData`, `listData`, `mapData` and their inverses), or to nothing for the
-built-in reflexive `Lift 'a 'a` on Big types. Only those `core/` impls
-become `Cast` nodes; the other stdlib impls (`list` with element
-conversion, `option`, `result`, `ordering`, see [data.md](data.md)) and
-user-written impls are ordinary functions.
+`Primitive.coerce : 'a -> 'b` is a separate compiler intrinsic, not a real
+Plutus builtin. It accepts any value types independently, including
+functions, without representation constraints. Applied coercions lower to
+runtime identity with no validation, traversal, or representation change;
+the first-class intrinsic behaves as an identity function. It does not add
+an entry to the real builtin inventory.
+
+`FromData.fromData` is implemented as this unchecked identity through an ordinary
+blanket impl for every Big type, without validation constraints. It does not check
+even the outer Data shape; malformed data fails only if a later operation
+needs that shape. `Validate.validate` is a required source method on a separate opt-in trait.
+Int and Bytes validation matches the Data shape then coerces the original
+value; List and Map retain recursive source validation. `ToData.toData` also
+uses `Primitive.coerce`: its ordinary blanket impl covers every Big type
+and preserves the runtime value without reconstruction or traversal. There are no generated
+validation checkers. Ordinary identity remains a Nash function; `fail` is
+language syntax, not an entry in the builtin table.
 
 ## Pipeline
 
@@ -176,7 +177,7 @@ The worklist identifies a specialization by:
    but do not all participate in key equality or hashing.
 
 Layout demand propagates through calls to a fixed point. It includes native
-constant construction and representation-dependent casts. In particular an
+constant construction and representation-dependent builtins. In particular an
 empty builtin list requires its complete UPLC element type: `list int` and
 `list Int` cannot share the same empty-list constant. A mere `Const`/`Big` tag
 is not enough for nested native lists and pairs. Little constructor tags and
@@ -250,11 +251,11 @@ The `Switch` node lowers to the `Case` kind matching the scrutinee's `Ty`:
 | Scrutinee representation / type | `Case` kind | Test |
 |---|---|---|
 | little ADT (`Term`) | `Tag` | UPLC `case` on the constr |
-| `bool` | `Bool` | `ifThenElse` |
+| `bool` | `Bool` | native `case` (false 0, true 1) |
 | `int`, `bytes` literals | `Int`, `Bytes` | equality chain |
-| `list 'a` | `List` | `chooseList` |
+| `list 'a` | `List` | native `case` (cons 0, nil 1) |
 | Big ADT | `Int` on `fstPair (unConstrData s)` | equality chain on the tag |
-| `Data` | `Data` | `chooseData` |
+| `Data` | `Data` | `chooseData` with delayed branches |
 | Big record, `List 'a`, `Map 'k 'v` | none (irrefutable) | projection only |
 
 Exhaustiveness is checked earlier by `nash-nitpick` (Elm's
@@ -344,7 +345,7 @@ Specified in `plans/08-optimizer.md`:
   are all `Lit` is evaluated on the nash-plutus CEK machine
   (`Program::eval`, `crates/nash-plutus/src/program.rs:38`) and replaced by
   the resulting constant when the builtin is error-safe on those arguments
-  (Aiken `builtin_eval_reducer`, `is_error_safe`). Adjacent inverse casts
+  (Aiken `builtin_eval_reducer`, `is_error_safe`). Adjacent inverse builtin calls
   (`unIData (iData x)`) cancel (Aiken `cast_data_reducer`).
 
 The passes run to a fixed point on node count (Aiken
@@ -370,13 +371,13 @@ pass has usually already replaced the head with a variable.
 | Nash type | Representation | Runtime value | Build | Take apart |
 |---|---|---|---|---|
 | `int` `bytes` `string` `bool` `unit` | Const | constant | `Lit` | builtins |
-| `list 'a` (`'a` Storable) | Const | `list t` constant | `mkCons` / `Lit []` | `chooseList` `headList` `tailList` |
-| `pair 'a 'b` (Storable components) | Const | `pair t1 t2` (each Big component becomes `data`; each Const component keeps its builtin type) | `mkPairData` constructs `pair Data Data`; `unConstrData` returns `pair int (list Data)` | `fstPair` `sndPair` |
+| `list 'a` (`'a` Storable) | Const | `list t` constant | `mkCons` / `Lit []` | native `case` (cons 0, nil 1) |
+| `pair 'a 'b` (Storable components) | Const | `pair t1 t2` (each Big component becomes `data`; each Const component keeps its builtin type) | `mkPairData` constructs pairs with Big components; `unConstrData` returns `pair int (list Data)` | `fstPair` `sndPair` |
 | `array 'a` | Const | `array t` | `listToArray` | `indexArray` `lengthOfArray` |
 | `bls_g1` `bls_g2` `bls_mlr` `value` | Const | constant | builtins | builtins |
 | `Int` | Big | `data (I n)` | `iData` | `unIData` |
 | `Bytes` | Big | `data (B bs)` | `bData` | `unBData` |
-| `Data` | Big | `data` | any | `chooseData` |
+| `Data` | Big | `data` | any | `chooseData` with delayed branches |
 | `List 'a` | Big | `data (List xs)` | `listData` | `unListData` |
 | `Map 'k 'v` | Big | `data (Map kvs)` | `mapData` | `unMapData` |
 | Big ADT `type Foo = A .. \| B ..` | Big | `data (Constr i fields)` | `constrData i fields` | `unConstrData`, `fstPair`, `sndPair`, list indexing |
@@ -450,10 +451,11 @@ and is what tuple projection and little-record access compile to.
 
 ## `if` on `bool`
 
-`Case(Bool, c, [t, e])` lowers to `force (ifThenElse c (delay t) (delay e))`.
-The optimizer removes the `delay`/`force` pair around a branch that is a
-variable, literal, lambda or builtin (it cannot fail and is cheap to
-evaluate eagerly), which is the shape Aiken's shrinker also targets.
+`Case(Bool, c, [t, e])` lowers to native `case c [e, t]`: false selects
+branch 0 and true selects branch 1. Native case evaluates only the selected
+branch, so no branch delays or forces are needed. Sparse integer and bytestring
+literal patterns still use equality tests, dispatching on each boolean result;
+arbitrary integer values are not used as branch-array indexes.
 
 ## Records
 
@@ -495,10 +497,10 @@ Trace levels are a build setting (`--trace-level`, config `traceLevel`;
 - `verbose`: the message is kept verbatim.
 
 Explicit `trace`, `fail`, `todo`, and `assert` messages follow this user trace
-level. Failed cast validation and implicit match failures use compiler traces.
+level. Implicit match failures use compiler traces; explicit codec failures
+follow ordinary Nash failure behavior.
 
-Compiler-generated traces ("validateData: field 1 of Datum",
-"incomplete pattern match") are controlled by a
+Compiler-generated traces (such as "incomplete pattern match") are controlled by a
 separate boolean switch, `compilerTraces`, so a user can ship verbose user
 traces without the compiler's, or the reverse. In Aiken both are one
 `TraceLevel` (`crates/aiken-lang/src/ast.rs:2305`, used in
@@ -525,7 +527,7 @@ No boundary conversion is inserted for either representation: a Big value *is* i
 `Data`, and a Const value is the constant itself.
 `main : Datum -> Redeemer -> Data -> unit` lowers to
 `\datum redeemer ctx -> body`. Pattern matches inside `body` are what check
-the shape; a `validateData` call is the user's choice.
+the shape; a `validate` call is the user's choice.
 
 The result type is free. Success is "evaluation did not error", so a `bool`
 result is **not** checked; `assert` is the idiom for a condition. (Aiken
@@ -574,9 +576,10 @@ tree and reads the output `Ast` from the result `Value`, never through
 - **Representations** ([kinds.md](kinds.md)): `Ty::repr()` decides every
   representation choice; codegen never inspects casing.
 - **Traits** ([traits.md](traits.md)): evidence drives phase 2; literal
-  traits (`FromInt` ...) resolve to `Lit` or to a `Lift` cast.
-- **Data** ([data.md](data.md)): `Cast` lowering and the checker
-  functions.
+  traits (`FromInt` ...) resolve to ordinary Nash impl bodies, including
+  direct Data builtin calls for Big literals.
+- **Data** ([data.md](data.md)): ordinary source codecs and typed Data
+  builtin signatures.
 - **Nitpick**: exhaustiveness is assumed; decision trees have no
   fallthrough of their own.
 - **Testing** ([testing.md](testing.md)): power-assert messages are built by
@@ -608,7 +611,7 @@ local bindings also retain strict evaluation.
 ## Build targets
 
 Production assembly accepts a ledger target and validates generated UPLC against
-the Plomin/protocol 10 compatibility baseline described in [validators.md](validators.md#target-compatibility).
+the protocol 11 compatibility baseline described in [validators.md](validators.md#target-compatibility).
 `assemble_core` remains the default V3 entrypoint; `assemble_core_for_version`
-selects V1/V2 UPLC 1.0.0 or V3 UPLC 1.1.0 and checks the complete program.
+emits UPLC 1.1.0 for V1, V2, and V3 and checks the complete program.
 No optimizer passes run while Plan 08 is deferred.

@@ -1,5 +1,6 @@
 validator module VestingBad exposing (main)
 
+import Primitive exposing (..)
 import Builtin exposing (..)
 
 main : (Data -> bool) -> Data -> unit

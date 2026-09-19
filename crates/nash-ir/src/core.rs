@@ -58,12 +58,6 @@ pub enum Core<'a> {
         func: DefaultFunction,
         args: &'a [&'a Core<'a>],
     },
-    Cast {
-        kind: CastKind,
-        from: Ty<'a>,
-        to: Ty<'a>,
-        arg: &'a Core<'a>,
-    },
     Trace {
         message: &'a Core<'a>,
         body: &'a Core<'a>,
@@ -84,6 +78,7 @@ pub struct RecBinder<'a> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CaseKind {
+    Pair,
     Tag,
     Bool,
     Int,
@@ -96,7 +91,8 @@ pub enum CaseKind {
 pub struct Branch<'a> {
     pub test: Test<'a>,
     /// Fields bound by the test: constructor fields for `Tag`, `[head, tail]`
-    /// for `Cons`, `[tag, fields]` for `DataConstr`, one binder for the
+    /// for `Cons`, `[first, second]` for `Pair`, one decoded pair for
+    /// `DataConstr`, one binder for the
     /// other `Data` shapes, none for literals.
     pub binders: &'a [Binder<'a>],
     pub body: &'a Core<'a>,
@@ -104,6 +100,7 @@ pub struct Branch<'a> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Test<'a> {
+    Pair,
     Tag(u16),
     True,
     False,
@@ -116,15 +113,6 @@ pub enum Test<'a> {
     DataList,
     DataI,
     DataB,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CastKind {
-    ToData,
-    FromDataShallow,
-    ValidateData,
-    Lift,
-    Lower,
 }
 
 /// A whole program: top-level bindings in dependency order plus the root.
@@ -186,7 +174,6 @@ impl<'a> Core<'a> {
                 }
             }
             Core::Field { record, .. } => record.walk(f),
-            Core::Cast { arg, .. } => arg.walk(f),
             Core::Trace { message, body } => {
                 message.walk(f);
                 body.walk(f);

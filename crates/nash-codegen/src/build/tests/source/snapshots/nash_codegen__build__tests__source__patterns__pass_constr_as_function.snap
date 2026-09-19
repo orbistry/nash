@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype make = Make { a : int, b : subMake }\ntype subMake = SubMake { c : int }\nimpl Eq subMake where\n    eq (SubMake a) (SubMake b) = equalsInteger a b\nimpl Eq make where\n    eq (Make a b) (Make c d) = if equalsInteger a c then eq b d else False\nhi sm toMake = toMake 3 sm\nmain = eq (Make 3 (SubMake 1)) (hi (SubMake 1) Make)\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype make = Make { a : int, b : subMake }\ntype subMake = SubMake { c : int }\nimpl Eq subMake where\n    eq (SubMake a) (SubMake b) = equalsInteger a b\nimpl Eq make where\n    eq (Make a b) (Make c d) = if equalsInteger a c then eq b d else False\nhi sm toMake = toMake 3 sm\nmain = eq (Make 3 (SubMake 1)) (hi (SubMake 1) Make)\n"
 ---
 --- core
 let eq#17 : Main.subMake -> Main.subMake -> bool = \arg#27 : Main.subMake arg#29 : Main.subMake -> let match#33 : Main.subMake = arg#27 in
@@ -56,11 +56,10 @@ main#1
                             (lam field_20
                               [(lam c_15
                                 [(lam d_16
-                                  [(lam generated_35
-                                    (force
-                                      [[[(force (builtin ifThenElse)) generated_35] (delay [[eq_17 b_13] d_16])]
-                                        (delay (con bool False))]))
-                                    [[(builtin equalsInteger) a_12] c_15]])
+                                  (case
+                                    [[(builtin equalsInteger) a_12] c_15]
+                                    (con bool False)
+                                    [[eq_17 b_13] d_16]))
                                   field_20])
                                 field_19]))))
                         arg_14])
@@ -86,4 +85,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2324815, memory: 13503
+cpu: 2088766, memory: 12502

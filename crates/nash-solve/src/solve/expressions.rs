@@ -135,7 +135,11 @@ impl<'a> Solver<'a, '_> {
                 let list = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "list", vec![element]),
+                    FlatType::App1(
+                        nash_ast::primitives::primitive_home(),
+                        "list",
+                        vec![element],
+                    ),
                 );
                 self.equal(uf, rank, state, region, Category::List, list, expected)
             }
@@ -285,7 +289,7 @@ impl<'a> Solver<'a, '_> {
                     let boolean = self.structure(
                         uf,
                         rank,
-                        FlatType::App1(nash_ast::primitives::builtin_home(), "bool", vec![]),
+                        FlatType::App1(nash_ast::primitives::primitive_home(), "bool", vec![]),
                     );
                     state = self.infer_expr(
                         uf,
@@ -396,6 +400,7 @@ impl<'a> Solver<'a, '_> {
                     rank,
                     state,
                     DeferredField {
+                        test_scope: self.test_scope,
                         region,
                         context: type_::FieldContext::Accessor,
                         record,
@@ -430,6 +435,7 @@ impl<'a> Solver<'a, '_> {
                     rank,
                     state,
                     DeferredField {
+                        test_scope: self.test_scope,
                         region,
                         context: type_::FieldContext::Access {
                             record_region: record.region,
@@ -475,6 +481,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region,
                             context: type_::FieldContext::Update { record },
                             record: record_var,
@@ -501,6 +508,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region: field.field.region,
                             context: type_::FieldContext::Update { record },
                             record: record_var,
@@ -559,7 +567,7 @@ impl<'a> Solver<'a, '_> {
                 let boolean = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "bool", vec![]),
+                    FlatType::App1(nash_ast::primitives::primitive_home(), "bool", vec![]),
                 );
                 state = self.infer_expr(
                     uf,
@@ -573,7 +581,7 @@ impl<'a> Solver<'a, '_> {
                 let unit = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "unit", vec![]),
+                    FlatType::App1(nash_ast::primitives::primitive_home(), "unit", vec![]),
                 );
                 self.equal(uf, rank, state, region, Category::Unit, unit, expected)
             }
@@ -582,7 +590,7 @@ impl<'a> Solver<'a, '_> {
                     let string = self.structure(
                         uf,
                         rank,
-                        FlatType::App1(nash_ast::primitives::builtin_home(), "string", vec![]),
+                        FlatType::App1(nash_ast::primitives::primitive_home(), "string", vec![]),
                     );
                     state = self.infer_expr(
                         uf,
@@ -600,7 +608,7 @@ impl<'a> Solver<'a, '_> {
                 let string = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "string", vec![]),
+                    FlatType::App1(nash_ast::primitives::primitive_home(), "string", vec![]),
                 );
                 state = self.infer_expr(
                     uf,
@@ -618,7 +626,7 @@ impl<'a> Solver<'a, '_> {
                 let unit = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "unit", vec![]),
+                    FlatType::App1(nash_ast::primitives::primitive_home(), "unit", vec![]),
                 );
                 self.equal(uf, rank, state, region, Category::Unit, unit, expected)
             }
@@ -733,7 +741,7 @@ impl<'a> Solver<'a, '_> {
                 let string = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "string", vec![]),
+                    FlatType::App1(nash_ast::primitives::primitive_home(), "string", vec![]),
                 );
                 state = self.infer_expr(
                     uf,
@@ -757,7 +765,7 @@ impl<'a> Solver<'a, '_> {
                     let boolean = self.structure(
                         uf,
                         rank,
-                        FlatType::App1(nash_ast::primitives::builtin_home(), "bool", Vec::new()),
+                        FlatType::App1(nash_ast::primitives::primitive_home(), "bool", Vec::new()),
                     );
                     state = self.infer_expr(
                         uf,

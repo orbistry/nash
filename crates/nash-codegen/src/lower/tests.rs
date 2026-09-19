@@ -43,6 +43,7 @@ fn boolean_case_does_not_evaluate_unselected_failure() {
     let arena = Arena::new();
     let b = Builder::new(&arena);
     let core = b.if_(b.lit(Constant::bool(&arena, true)), b.int(42), b.error());
+    assert!(matches!(lower(&arena, core).unwrap(), Term::Case { .. }));
     assert_eq!(
         evaluate(&arena, core).term.unwrap(),
         Term::integer_from(&arena, 42)
@@ -153,6 +154,7 @@ fn list_case_only_unpacks_a_nonempty_list() {
     let list = b.builtin(DefaultFunction::MkCons, &[b.int(42), nil]);
     for (value, expected) in [(nil, 7), (list, 42)] {
         let core = b.case(CaseKind::List, value, branches, None);
+        assert!(matches!(lower(&arena, core).unwrap(), Term::Case { .. }));
         assert_eq!(
             evaluate(&arena, core).term.unwrap(),
             Term::integer_from(&arena, expected)
@@ -185,4 +187,71 @@ fn data_case_default_does_not_unpack_wrong_shape() {
         evaluate(&arena, core).term.unwrap(),
         Term::integer_from(&arena, 3)
     );
+}
+
+#[test]
+fn data_shapes_evaluate_once_and_only_unpack_the_selected_branch() {
+    use nash_plutus::data::PlutusData;
+    let arena = Arena::new();
+    let b = Builder::new(&arena);
+    let field = Binder {
+        name: b.fresh("field"),
+        ty: Ty::Erased,
+    };
+    let fields = Binder {
+        name: b.fresh("fields"),
+        ty: Ty::Erased,
+    };
+    let cases = [
+        (Test::DataConstr, PlutusData::constr(&arena, 17, &[]), 2),
+        (Test::DataMap, PlutusData::map(&arena, &[]), 1),
+        (Test::DataList, PlutusData::list(&arena, &[]), 1),
+        (Test::DataI, PlutusData::integer_from(&arena, 17), 1),
+        (Test::DataB, PlutusData::byte_string(&arena, b"bytes"), 1),
+    ];
+    for (selected, data, _) in cases {
+        let pair = Binder {
+            name: b.fresh("pair"),
+            ty: Ty::Erased,
+        };
+        let branches = arena.alloc_slice_fill_iter(cases.iter().map(|(test, _, arity)| {
+            let body = if *test == selected {
+                b.trace(
+                    b.lit(Constant::string(&arena, "branch")),
+                    if matches!(selected, Test::DataConstr | Test::DataI) {
+                        b.var(field.name)
+                    } else {
+                        b.int(17)
+                    },
+                )
+            } else {
+                b.error()
+            };
+            Branch {
+                test: *test,
+                binders: arena.alloc_slice_copy(&[if *arity == 2 { pair } else { field }]),
+                body: if *arity == 2 {
+                    b.case(
+                        CaseKind::Pair,
+                        b.var(pair.name),
+                        &[Branch {
+                            test: Test::Pair,
+                            binders: arena.alloc_slice_copy(&[field, fields]),
+                            body,
+                        }],
+                        None,
+                    )
+                } else {
+                    body
+                },
+            }
+        }));
+        let scrutinee = b.trace(
+            b.lit(Constant::string(&arena, "scrutinee")),
+            b.lit(Constant::data(&arena, data)),
+        );
+        let result = evaluate(&arena, b.case(CaseKind::Data, scrutinee, branches, None));
+        assert_eq!(result.term.unwrap(), Term::integer_from(&arena, 17));
+        assert_eq!(result.info.logs, ["scrutinee", "branch"]);
+    }
 }

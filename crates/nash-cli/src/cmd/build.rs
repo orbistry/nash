@@ -1,5 +1,5 @@
 use miette::{IntoDiagnostic, Result};
-use nash_driver::{Database, FileSystemSource, Project, build_graph, build_with};
+use nash_driver::{Database, FileSystemSource, Project, build_graph_production, build_with};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -14,7 +14,7 @@ pub struct Args {
     /// Include user traces in the script.
     #[arg(long, value_enum)]
     pub trace_level: Option<TraceLevelArg>,
-    /// Ledger language target (Plomin/protocol 10 compatibility).
+    /// Ledger language target (protocol 11 compatibility).
     #[arg(long, value_enum)]
     pub plutus_version: Option<PlutusVersionArg>,
     /// Include compiler traces for failed casts and pattern checks.
@@ -41,12 +41,13 @@ impl Args {
         let project = Project::load(&self.path).await.into_diagnostic()?;
         let db = Arc::new(Mutex::new(Database::new(FileSystemSource::new())));
         let modules = project
-            .discover_modules(&*db.lock().await)
+            .discover_modules_production(&*db.lock().await)
             .await
             .into_diagnostic()?;
-        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
-            .await
-            .into_diagnostic()?;
+        let graph =
+            build_graph_production(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
+                .await
+                .into_diagnostic()?;
         let member_settings: Vec<_> = project
             .members
             .iter()
@@ -61,7 +62,11 @@ impl Args {
                 })
             })
             .collect();
-        let configs: std::collections::BTreeMap<_, _> = modules
+        let roots = project
+            .discover_own_modules(&*db.lock().await)
+            .await
+            .into_diagnostic()?;
+        let configs: std::collections::BTreeMap<_, _> = roots
             .keys()
             .map(|uri| {
                 let path = uri
@@ -94,7 +99,9 @@ impl Args {
             })
             .collect();
         let (report, output) = build_with(db, &graph, &modules, move |solved| {
-            nash_driver::build::build_validators_with(solved, |uri| configs[uri])
+            nash_driver::build::build_validators_matching_with(solved, |uri| {
+                configs.get(uri).copied()
+            })
         })
         .await;
         super::check::Args {

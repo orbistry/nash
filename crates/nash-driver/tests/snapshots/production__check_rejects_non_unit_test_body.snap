@@ -1,0 +1,25 @@
+---
+source: crates/nash-driver/tests/production.rs
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Builtin\ntests\n    test \"must return unit\" = do\n        True\n"
+---
+nash::warning::unused_import
+
+  ⚠ Unused import `Builtin`.
+   ╭─[/project/src/Main.nash:3:8]
+ 2 │ import Primitive exposing (type bool(..))
+ 3 │ import Builtin
+   ·        ───────
+ 4 │ tests
+   ╰────
+  help: Remove the import.
+
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `bool`.
+   ╭─[/project/src/Main.nash:6:9]
+ 4 │ tests
+ 5 │     test "must return unit" = do
+ 6 │         True
+   ·         ──┬─
+   ·           ╰── test body (which must return unit)
+   ╰────

@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias point = { x : int, y : int }\nf = { x = 1, y = 2 }\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,
@@ -101,10 +102,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "int",
                                         },
@@ -140,10 +141,10 @@ Module {
                                                         package: Some(
                                                             PackageName {
                                                                 author: "nash",
-                                                                project: "core",
+                                                                project: "base",
                                                             },
                                                         ),
-                                                        name: "Builtin",
+                                                        name: "Primitive",
                                                     },
                                                     name: "int",
                                                 },
@@ -205,10 +206,10 @@ Module {
                                                                                     package: Some(
                                                                                         PackageName {
                                                                                             author: "nash",
-                                                                                            project: "core",
+                                                                                            project: "base",
                                                                                         },
                                                                                     ),
-                                                                                    name: "Builtin",
+                                                                                    name: "Primitive",
                                                                                 },
                                                                                 name: "int",
                                                                             },
@@ -236,10 +237,10 @@ Module {
                                                                                     package: Some(
                                                                                         PackageName {
                                                                                             author: "nash",
-                                                                                            project: "core",
+                                                                                            project: "base",
                                                                                         },
                                                                                     ),
-                                                                                    name: "Builtin",
+                                                                                    name: "Primitive",
                                                                                 },
                                                                                 name: "int",
                                                                             },
@@ -388,10 +389,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "int",
                                         },
@@ -419,10 +420,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "int",
                                         },

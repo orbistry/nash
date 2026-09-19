@@ -2,14 +2,9 @@
 use nash_ast::{primitives, *};
 use nash_region::Located;
 use nash_solve::SolvedTypes;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeSet, HashMap};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum DemandKind {
-    Native,
-    Deep,
-}
-pub type Demands<'a> = HashMap<NodeId, BTreeMap<&'a str, DemandKind>>;
+pub type Demands<'a> = HashMap<NodeId, BTreeSet<&'a str>>;
 type Scope<'a> = HashMap<&'a str, Option<NodeId>>;
 
 #[cfg(test)]
@@ -21,7 +16,7 @@ mod tests {
         let args = [&a];
         let list = Located::at_zero(Type::Named {
             reference: QualifiedName {
-                home: primitives::builtin_home(),
+                home: primitives::primitive_home(),
                 name: "list",
             },
             args: &args,
@@ -33,13 +28,11 @@ mod tests {
             },
             args: &args,
         });
-        let mut out = BTreeMap::new();
-        variables(&data, DemandKind::Native, &mut out);
+        let mut out = BTreeSet::new();
+        variables(&data, &mut out);
         assert!(out.is_empty());
-        variables(&list, DemandKind::Native, &mut out);
-        assert_eq!(out, BTreeMap::from([("a", DemandKind::Native)]));
-        variables(&data, DemandKind::Deep, &mut out);
-        assert_eq!(out["a"], DemandKind::Deep);
+        variables(&list, &mut out);
+        assert_eq!(out, BTreeSet::from(["a"]));
     }
 }
 
@@ -138,6 +131,16 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
                 a.def(def, None, &env, solved);
             }
         }
+        for test in module.tests {
+            let owner = NodeId::expr(test.body);
+            a.owner(owner, None, solved);
+            let mut scope = env.clone();
+            for binder in test.binders {
+                a.expr(binder.fuzzer, owner, &scope, solved);
+                bind(binder.pattern, None, &mut scope);
+            }
+            a.expr(test.body, owner, &scope, solved);
+        }
     }
     loop {
         let previous = a.demands.clone();
@@ -145,36 +148,33 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
             let Some(owner) = a.owners.get(&call.target) else {
                 continue;
             };
-            for (&name, &kind) in &previous[&call.target] {
+            for &name in &previous[&call.target] {
                 if let Some(index) = owner.free.iter().position(|v| *v == name)
                     && let Some(typ) = call.args.get(index)
                 {
-                    variables(typ, kind, a.demands.entry(call.caller).or_default());
+                    variables(typ, a.demands.entry(call.caller).or_default());
                 }
             }
         }
         for call in &a.method_calls {
             // A Given can select any applicable implementation at specialization.
             // Demand arguments only when a real method body inspects a layout.
-            if let Some(kind) = a
-                .methods
+            if a.methods
                 .get(&(call.trait_, call.method))
                 .into_iter()
                 .flatten()
-                .flat_map(|id| previous[id].values())
-                .max()
-                .copied()
+                .any(|id| !previous[id].is_empty())
             {
                 for typ in call.args {
-                    variables(typ, kind, a.demands.entry(call.caller).or_default());
+                    variables(typ, a.demands.entry(call.caller).or_default());
                 }
             }
         }
         for (id, owner) in &a.owners {
             if let Some(parent) = owner.parent {
-                for (&name, &kind) in &previous[id] {
+                for &name in &previous[id] {
                     if !owner.free.contains(&name) {
-                        insert(a.demands.entry(parent).or_default(), name, kind);
+                        a.demands.entry(parent).or_default().insert(name);
                     }
                 }
             }
@@ -210,69 +210,41 @@ fn declarations<'a>(mut decls: &'a Decls<'a>) -> Vec<&'a Def<'a>> {
         }
     }
 }
-fn insert<'a>(out: &mut BTreeMap<&'a str, DemandKind>, name: &'a str, kind: DemandKind) {
-    out.entry(name)
-        .and_modify(|old| *old = (*old).max(kind))
-        .or_insert(kind);
-}
-fn variables<'a>(
-    typ: &'a Located<Type<'a>>,
-    kind: DemandKind,
-    out: &mut BTreeMap<&'a str, DemandKind>,
-) {
+fn variables<'a>(typ: &'a Located<Type<'a>>, out: &mut BTreeSet<&'a str>) {
     match &typ.value {
-        Type::Var(name) => insert(out, name, kind),
+        Type::Var(name) => {
+            out.insert(name);
+        }
         Type::Named { reference, args }
-            if kind == DemandKind::Deep
-                || (reference.home == primitives::builtin_home()
-                    && matches!(reference.name, "list" | "pair" | "array")) =>
+            if reference.home == primitives::primitive_home()
+                && matches!(reference.name, "list" | "pair" | "array") =>
         {
             for t in *args {
-                variables(t, kind, out);
+                variables(t, out);
             }
         }
         Type::App { head, args } => {
-            variables(head, kind, out);
+            variables(head, out);
             for t in *args {
-                variables(t, kind, out);
-            }
-        }
-        Type::Lambda { from, to } if kind == DemandKind::Deep => {
-            variables(from, kind, out);
-            variables(to, kind, out);
-        }
-        Type::Record { fields } if kind == DemandKind::Deep => {
-            for f in *fields {
-                variables(f.typ, kind, out);
-            }
-        }
-        Type::Tuple {
-            first,
-            second,
-            rest,
-        } if kind == DemandKind::Deep => {
-            variables(first, kind, out);
-            variables(second, kind, out);
-            for t in *rest {
-                variables(t, kind, out);
+                variables(t, out);
             }
         }
         Type::Alias {
             target: AliasType::Filled { typ, .. },
             ..
-        } => variables(typ, kind, out),
+        } => variables(typ, out),
         Type::Alias {
             target: AliasType::Open(body),
             arguments,
             ..
         } => {
-            let mut names = BTreeMap::new();
-            variables(body, kind, &mut names);
-            for (name, demand) in names {
+            let mut names = BTreeSet::new();
+            variables(body, &mut names);
+            for name in names {
                 if let Some(arg) = arguments.iter().find(|a| a.name == name) {
-                    variables(arg.typ, demand, out);
+                    variables(arg.typ, out);
                 } else {
-                    insert(out, name, demand);
+                    out.insert(name);
                 }
             }
         }
@@ -292,6 +264,10 @@ fn bind<'a>(p: &'a Located<Pattern<'a>>, target: Option<NodeId>, env: &mut Scope
         Pattern::Alias { pattern, name } => {
             bind(pattern, target, env);
             env.insert(name, target);
+        }
+        Pattern::Pair { first, second } => {
+            bind(first, target, env);
+            bind(second, target, env);
         }
         Pattern::Tuple {
             first,
@@ -368,27 +344,7 @@ impl<'a> Analysis<'a> {
         owner: NodeId,
         solved: &SolvedTypes<'a>,
     ) {
-        if reference.home == primitives::builtin_home()
-            && primitives::BUILTINS
-                .iter()
-                .any(|b| b.name == reference.name && b.lowering.is_core_only())
-        {
-            let kind = if reference.name == "castToData" {
-                // The checked Big value already is Data. Its nominal layout
-                // cannot change this identity operation or its binder shape.
-                DemandKind::Native
-            } else {
-                DemandKind::Deep
-            };
-            if let Some(instance) = solved.instances.get(&node) {
-                for t in instance.type_args {
-                    variables(t, kind, self.demands.entry(owner).or_default());
-                }
-            }
-            if let Some(t) = solved.exprs.get(&node) {
-                variables(t, kind, self.demands.entry(owner).or_default());
-            }
-        } else if let Some(&target) = self.top.get(&reference) {
+        if let Some(&target) = self.top.get(&reference) {
             self.call(target, node, owner, solved);
         } else {
             let traits: Vec<_> = self
@@ -465,11 +421,7 @@ impl<'a> Analysis<'a> {
             }
             Expr::List(items) => {
                 if let Some(typ) = solved.exprs.get(&node) {
-                    variables(
-                        typ,
-                        DemandKind::Native,
-                        self.demands.entry(owner).or_default(),
-                    );
+                    variables(typ, self.demands.entry(owner).or_default());
                 }
                 for item in *items {
                     self.expr(item, owner, env, solved);
@@ -651,6 +603,7 @@ mod graph_tests {
             });
         }
         Module {
+            tests: &[],
             traits: &[],
             impls: &[],
             kind: ModuleKind::Normal,
@@ -680,20 +633,12 @@ mod graph_tests {
             },
         );
     }
-    fn cast<'a>(
-        b: &'a Bump,
-        s: &mut SolvedTypes<'a>,
-        home: ModuleName<'a>,
-        typ: &'a Located<Type<'a>>,
-    ) -> &'a Located<Expr<'a>> {
-        let e = expr(
-            b,
-            Expr::VarTopLevel(QualifiedName {
-                home,
-                name: "castToData",
-            }),
+    fn nil<'a>(b: &'a Bump, s: &mut SolvedTypes<'a>, element: &'a str) -> &'a Located<Expr<'a>> {
+        let e = expr(b, Expr::List(&[]));
+        s.exprs.insert(
+            NodeId::expr(e),
+            named(b, primitives::primitive_home(), "list", var(b, element)),
         );
-        instance(b, s, e, typ);
         e
     }
     #[test]
@@ -714,7 +659,7 @@ mod graph_tests {
         let nil = expr(&b, Expr::List(&[]));
         s.exprs.insert(
             NodeId::expr(nil),
-            named(&b, primitives::builtin_home(), "list", var(&b, "element")),
+            named(&b, primitives::primitive_home(), "list", var(&b, "element")),
         );
         let helper = def(&b, &mut s, "helper", &["element"], nil);
         let call = expr(&b, Expr::VarLocal("helper"));
@@ -722,7 +667,7 @@ mod graph_tests {
             &b,
             &mut s,
             call,
-            named(&b, primitives::builtin_home(), "pair", var(&b, "caller")),
+            named(&b, primitives::primitive_home(), "pair", var(&b, "caller")),
         );
         let caller = def(&b, &mut s, "caller", &["caller"], call);
         let opaque = expr(&b, Expr::VarLocal("caller"));
@@ -737,11 +682,11 @@ mod graph_tests {
         let demands = analyze(&[(&m, &s)]);
         assert_eq!(
             demands[&NodeId::def(definition(helper).0)],
-            BTreeMap::from([("element", DemandKind::Native)])
+            BTreeSet::from(["element"])
         );
         assert_eq!(
             demands[&NodeId::def(definition(caller).0)],
-            BTreeMap::from([("caller", DemandKind::Native)])
+            BTreeSet::from(["caller"])
         );
         assert!(demands[&NodeId::def(definition(outer).0)].is_empty());
     }
@@ -749,7 +694,7 @@ mod graph_tests {
     fn captured_demands_reach_parent_without_leaking_quantified_names() {
         let b = Bump::new();
         let mut s = SolvedTypes::default();
-        let c = cast(&b, &mut s, primitives::builtin_home(), var(&b, "captured"));
+        let c = nil(&b, &mut s, "captured");
         let inner = def(&b, &mut s, "inner", &["own"], c);
         let body = expr(
             &b,
@@ -763,25 +708,8 @@ mod graph_tests {
         let demands = analyze(&[(&m, &s)]);
         assert_eq!(
             demands[&NodeId::def(definition(outer).0)],
-            BTreeMap::from([("captured", DemandKind::Native)])
+            BTreeSet::from(["captured"])
         );
-    }
-    #[test]
-    fn user_builtin_homonym_is_not_a_cast() {
-        let b = Bump::new();
-        let mut s = SolvedTypes::default();
-        let c = cast(
-            &b,
-            &mut s,
-            ModuleName {
-                package: None,
-                name: "Builtin",
-            },
-            var(&b, "a"),
-        );
-        let d = def(&b, &mut s, "plain", &["a"], c);
-        let m = module(&b, &[d]);
-        assert!(analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)].is_empty());
     }
     #[test]
     fn representation_evidence_alone_does_not_demand_a_layout() {
@@ -791,8 +719,8 @@ mod graph_tests {
         let call = expr(
             &b,
             Expr::VarTopLevel(QualifiedName {
-                home: primitives::builtin_home(),
-                name: "identity",
+                home: primitives::primitive_home(),
+                name: "headList",
             }),
         );
         s.instances.insert(
@@ -811,10 +739,10 @@ mod graph_tests {
     }
 
     #[test]
-    fn method_and_implicit_literal_calls_follow_casting_impls() {
+    fn method_and_implicit_literal_calls_follow_layout_demands() {
         let b = Bump::new();
         let mut s = SolvedTypes::default();
-        let c = cast(&b, &mut s, primitives::builtin_home(), var(&b, "implArg"));
+        let c = nil(&b, &mut s, "implArg");
         let method = def(&b, &mut s, "fromInt", &["implArg"], c);
         let literal = expr(&b, Expr::Int(4));
         instance(&b, &mut s, literal, var(&b, "a"));
@@ -833,7 +761,7 @@ mod graph_tests {
         m.impls = b.alloc_slice_copy(&[&*impl_]);
         assert_eq!(
             analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)],
-            BTreeMap::from([("a", DemandKind::Native)])
+            BTreeSet::from(["a"])
         );
     }
 }

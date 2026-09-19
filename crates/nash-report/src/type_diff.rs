@@ -160,7 +160,7 @@ fn apply_diff<'a>(
     }
 }
 fn builtin(home: ModuleName<'_>, name: &str, want: &str) -> bool {
-    home == primitives::builtin_home() && name == want
+    home == primitives::primitive_home() && name == want
 }
 pub fn is_bool(h: ModuleName<'_>, n: &str) -> bool {
     builtin(h, n, "bool")
@@ -176,7 +176,7 @@ pub fn is_list(h: ModuleName<'_>, n: &str) -> bool {
 }
 /// `option` is a library type, not a compiler primitive.
 pub fn is_option(h: ModuleName<'_>, n: &str) -> bool {
-    h.package == Some(primitives::CORE) && h.name == "Option" && n == "option"
+    h.package == Some(primitives::BASE) && h.name == "Option" && n == "option"
 }
 fn named<'a>(t: &'a ErrorType<'a>) -> Option<(ModuleName<'a>, &'a str, Vec<&'a ErrorType<'a>>)> {
     match t {
@@ -203,10 +203,10 @@ fn name_clash(l: &Localizer, c: Ctx, h: ModuleName<'_>, n: &str, args: &[&ErrorT
     )
 }
 fn is_map(t: &ErrorType<'_>) -> bool {
-    matches!(t,ErrorType::Type{home,name:"Map",args} if *home==primitives::builtin_home()&&args.len()==2)
+    matches!(t,ErrorType::Type{home,name:"Map",args} if *home==primitives::primitive_home()&&args.len()==2)
 }
 fn is_map_little(t: &ErrorType<'_>) -> bool {
-    matches!(t,ErrorType::Type{home,name:"list",args:[ErrorType::Type{home:pair_home,name:"pair",args}]} if *home==primitives::builtin_home()&&*pair_home==primitives::builtin_home()&&args.len()==2)
+    matches!(t,ErrorType::Type{home,name:"list",args:[ErrorType::Type{home:pair_home,name:"pair",args}]} if *home==primitives::primitive_home()&&*pair_home==primitives::primitive_home()&&args.len()==2)
 }
 /// The producer retains transparent alias chains. The alias directly around
 /// the record owns its nominal identity and representation (kinds::record_repr).
@@ -289,7 +289,7 @@ pub fn to_diff<'a>(
                 vec![],
             );
         }
-        if h == primitives::builtin_home()
+        if h == primitives::primitive_home()
             && j == h
             && matches!(
                 (n, m),
@@ -479,7 +479,7 @@ mod tests {
     use super::*;
     fn typ(n: &str) -> ErrorType<'_> {
         ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: n,
             args: &[],
         }
@@ -491,16 +491,16 @@ mod tests {
         let aa = [&a];
         let bb = [&b];
         let x = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "list",
             args: &aa,
         };
         let y = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "list",
             args: &bb,
         };
-        let (a, b, p) = to_comparison(&Localizer::from_names(["Builtin"]), &x, &y);
+        let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &x, &y);
         insta::assert_snapshot!(a.render(80,true), @"list \u{1b}[33mInt\u{1b}[0m");
         insta::assert_snapshot!(b.render(80,false), @"list int");
         assert!(matches!(
@@ -517,7 +517,7 @@ mod tests {
         let a = ErrorType::Record { fields: &[] };
         let fs = [("x", &t)];
         let b = ErrorType::Record { fields: &fs };
-        let (_, b, p) = to_comparison(&Localizer::from_names(["Builtin"]), &a, &b);
+        let (_, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &a, &b);
         insta::assert_snapshot!(b.render(80,false), @"{ x : int }");
         assert!(matches!(p.as_slice(),[Problem::FieldsMissing(f)] if f==&["x"]));
     }
@@ -537,12 +537,12 @@ mod tests {
         let t = typ("int");
         let xs = [&t];
         let a = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "list",
             args: &xs,
         };
         let b = typ("list");
-        let d = to_diff(&Localizer::from_names(["Builtin"]), Ctx::None, &a, &b);
+        let d = to_diff(&Localizer::from_names(["Primitive"]), Ctx::None, &a, &b);
         assert!(!is_similar(&d));
         insta::assert_snapshot!(d.left.render(80,false), @"list int");
     }
@@ -589,7 +589,7 @@ mod tests {
         let rest = [&t, &t];
         let a = ErrorType::Tuple(&t, &t, &rest);
         let b = ErrorType::Tuple(&t, &t, &[]);
-        let d = to_diff(&Localizer::from_names(["Builtin"]), Ctx::None, &a, &b);
+        let d = to_diff(&Localizer::from_names(["Primitive"]), Ctx::None, &a, &b);
         insta::assert_snapshot!(d.left.render(80,false), @"( int, int, int, int )");
         assert!(!is_similar(&d));
     }
@@ -601,7 +601,7 @@ mod tests {
         let ys = [("name", &b), ("z", &b)];
         let x = ErrorType::Record { fields: &xs };
         let y = ErrorType::Record { fields: &ys };
-        let (a, b, p) = to_comparison(&Localizer::from_names(["Builtin"]), &x, &y);
+        let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &x, &y);
         insta::assert_snapshot!(a.render(80,false), @"{ naem : Int, z : Int }");
         insta::assert_snapshot!(b.render(80,false), @"{ name : int, z : int }");
         assert!(matches!(
@@ -638,12 +638,12 @@ mod tests {
         let a = ErrorType::Record { fields: &[] };
         let b = ErrorType::Record { fields: &fs };
         let alias = ErrorType::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "Empty",
             args: &[],
             real: &a,
         };
-        let (a, _, p) = to_comparison(&Localizer::from_names(["Builtin"]), &alias, &b);
+        let (a, _, p) = to_comparison(&Localizer::from_names(["Primitive"]), &alias, &b);
         insta::assert_snapshot!(a.render(80,false), @"Empty");
         assert!(matches!(p.as_slice(), [Problem::FieldsMissing(_)]));
     }
@@ -656,7 +656,7 @@ mod tests {
         let ys = [&b];
         let x = ErrorType::VarApp(&f, &xs);
         let y = ErrorType::VarApp(&f, &ys);
-        let (a, _, p) = to_comparison(&Localizer::from_names(["Builtin"]), &x, &y);
+        let (a, _, p) = to_comparison(&Localizer::from_names(["Primitive"]), &x, &y);
         insta::assert_snapshot!(a.render(80,false), @"'f Int");
         assert!(matches!(p.as_slice(), [Problem::BigLittle { .. }]));
     }
@@ -671,18 +671,18 @@ mod tests {
         let t = typ("Data");
         let args = [&t, &t];
         let map = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "Map",
             args: &args,
         };
         let pair = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "pair",
             args: &args,
         };
         let list_args = [&pair];
         let list = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "list",
             args: &list_args,
         };
@@ -708,13 +708,13 @@ mod tests {
         let args = [&t];
         let option = ErrorType::Type {
             home: ModuleName {
-                package: Some(primitives::CORE),
+                package: Some(primitives::BASE),
                 name: "Option",
             },
             name: "option",
             args: &args,
         };
-        let (a, b, p) = to_comparison(&Localizer::from_names(["Builtin", "Option"]), &option, &t);
+        let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive", "Option"]), &option, &t);
         insta::assert_snapshot!(a.render(80,false), @"option int");
         insta::assert_snapshot!(b.render(80,false), @"int");
         assert!(matches!(p.as_slice(), [Problem::AnythingFromOption]));
@@ -723,12 +723,12 @@ mod tests {
     fn different_alias_names_do_not_unfold_nonrecords() {
         let t = typ("int");
         let alias = ErrorType::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "Count",
             args: &[],
             real: &t,
         };
-        let d = to_diff(&Localizer::from_names(["Builtin"]), Ctx::None, &alias, &t);
+        let d = to_diff(&Localizer::from_names(["Primitive"]), Ctx::None, &alias, &t);
         insta::assert_snapshot!(d.left.render(80,false), @"Count");
         assert!(!is_similar(&d));
     }
@@ -737,29 +737,29 @@ mod tests {
         let t = typ("Data");
         let args = [&t];
         let a = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "List",
             args: &args,
         };
         let b = ErrorType::Type {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "list",
             args: &args,
         };
-        let (a, _, _) = to_comparison(&Localizer::from_names(["Builtin"]), &a, &b);
+        let (a, _, _) = to_comparison(&Localizer::from_names(["Primitive"]), &a, &b);
         insta::assert_snapshot!(a.render(80,true), @"\u{1b}[33mList\u{1b}[0m Data");
     }
     #[test]
     fn distinct_nominal_records_are_not_similar() {
         let real = ErrorType::Record { fields: &[] };
         let a = ErrorType::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "One",
             args: &[],
             real: &real,
         };
         let b = ErrorType::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "Two",
             args: &[],
             real: &real,
@@ -775,24 +775,24 @@ mod tests {
     fn record_representation_uses_defining_alias_not_transparent_name() {
         let real = ErrorType::Record { fields: &[] };
         let big = ErrorType::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "BigRecord",
             args: &[],
             real: &real,
         };
         let little = ErrorType::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "littleRecord",
             args: &[],
             real: &real,
         };
         let outer = ErrorType::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "MisleadingUppercase",
             args: &[],
             real: &little,
         };
-        let (a, b, p) = to_comparison(&Localizer::from_names(["Builtin"]), &big, &outer);
+        let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &big, &outer);
         insta::assert_snapshot!(a.render(80,false), @"BigRecord");
         insta::assert_snapshot!(b.render(80,false), @"MisleadingUppercase");
         assert!(matches!(
@@ -821,7 +821,7 @@ mod tests {
             BTreeMap::new(),
         ))));
         let little = uf.fresh(make_descriptor(Content::Alias {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "littleRecord",
             args: vec![],
             real,
@@ -830,7 +830,7 @@ mod tests {
         let produced = nash_solve::to_error_type(&arena, &mut uf, little);
         assert_eq!(
             nominal_record(produced),
-            Some((primitives::builtin_home(), "littleRecord"))
+            Some((primitives::primitive_home(), "littleRecord"))
         );
     }
 }

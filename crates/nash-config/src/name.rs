@@ -8,7 +8,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 /// A package name in `author/project` format.
 ///
 /// Both author and project must be lowercase with optional hyphens.
-/// Examples: `nash/core`, `alice/json-parser`, `bob/my-lib`
+/// Examples: `nash/base`, `alice/json-parser`, `bob/my-lib`
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PackageName {
     author: String,
@@ -145,8 +145,8 @@ mod tests {
     #[test]
     fn parse_valid_names() {
         assert_eq!(
-            "nash/core".parse::<PackageName>().unwrap(),
-            PackageName::new("nash", "core").unwrap()
+            "nash/base".parse::<PackageName>().unwrap(),
+            PackageName::new("nash", "base").unwrap()
         );
         assert_eq!(
             "alice/json-parser".parse::<PackageName>().unwrap(),
@@ -168,7 +168,7 @@ mod tests {
         assert!("nash/Core".parse::<PackageName>().is_err());
 
         // Starting with digit not allowed
-        assert!("123nash/core".parse::<PackageName>().is_err());
+        assert!("123nash/base".parse::<PackageName>().is_err());
 
         // Ending with hyphen not allowed
         assert!("nash-/core".parse::<PackageName>().is_err());

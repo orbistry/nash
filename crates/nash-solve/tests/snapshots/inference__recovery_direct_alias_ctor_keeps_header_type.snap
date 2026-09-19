@@ -1,24 +1,24 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nimport Builtin exposing (..)\ntype box = Box bool\nf : box -> ()\nf (Box (() as whole)) = whole ()\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype box = Box bool\nf : box -> ()\nf (Box (() as whole)) = whole ()\n"
 info: diagnostic
 ---
 nash::type::mismatch
 
   × `whole` is not a function; received 1 argument.
-   ╭─[Main.nash:5:25]
- 4 │ f : box -> ()
- 5 │ f (Box (() as whole)) = whole ()
+   ╭─[Main.nash:6:25]
+ 5 │ f : box -> ()
+ 6 │ f (Box (() as whole)) = whole ()
    ·                         ─────
    ╰────
 
 
 nash::type::pattern_mismatch
 
-  × Type mismatch: expected `bool`, found `unit`.
-   ╭─[Main.nash:5:9]
- 4 │ f : box -> ()
- 5 │ f (Box (() as whole)) = whole ()
+  × Type mismatch: expected `Primitive.bool`, found `Primitive.unit`.
+   ╭─[Main.nash:6:9]
+ 5 │ f : box -> ()
+ 6 │ f (Box (() as whole)) = whole ()
    ·         ─┬
    ·          ╰── argument 1 of `Box`
    ╰────

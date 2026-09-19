@@ -289,7 +289,7 @@ impl<'a> KindEnv<'a> {
                 .map(|p| {
                     (
                         QualifiedName {
-                            home: primitives::builtin_home(),
+                            home: primitives::primitive_home(),
                             name: p.name,
                         },
                         TypeInfo::Builtin(p),
@@ -1085,7 +1085,7 @@ mod formation_tests {
     }
     fn name(name: &str) -> QualifiedName<'_> {
         QualifiedName {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name,
         }
     }
@@ -1981,11 +1981,11 @@ pub(crate) fn check_impl<'a>(
 
 /// The compiler-owned interface is built from the same constructor inventory
 /// used by formation checks. Data's foreign constructor fields bypass casing.
-pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
+pub fn primitive_interface(bump: &Bump) -> crate::Interface<'_> {
     use crate::interface::{InterfaceTrait, InterfaceUnion, InterfaceValue, UnionVisibility};
     let env = KindEnv::default();
     crate::Interface {
-        home: primitives::builtin_home(),
+        home: primitives::primitive_home(),
         impls: &[],
         aliases: &[],
         binops: &[],
@@ -2022,8 +2022,25 @@ pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
                 visibility: UnionVisibility::Open,
             }
         })),
+        values: bump.alloc_slice_copy(&[InterfaceValue {
+            name: "coerce",
+            annotation: check_annotation(bump, &env, "coerce", bump.alloc(primitives::COERCE))
+                .expect("compiler-owned coerce signature is well formed"),
+        }]),
+    }
+}
+
+pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
+    let env = KindEnv::default();
+    crate::Interface {
+        home: primitives::builtin_home(),
+        impls: &[],
+        aliases: &[],
+        binops: &[],
+        traits: &[],
+        unions: &[],
         values: bump.alloc_slice_fill_iter(primitives::BUILTINS.iter().map(|builtin| {
-            InterfaceValue {
+            crate::InterfaceValue {
                 name: builtin.name,
                 annotation: check_annotation(
                     bump,

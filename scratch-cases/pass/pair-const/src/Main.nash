@@ -1,0 +1,13 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type alias p = pair int Int
+
+type alias decomposed = pair int (list Data)
+
+tag : (Data -> decomposed) -> (decomposed -> int) -> Data -> int
+tag unConstrData fstPair datum = fstPair (unConstrData datum)
+
+fields : (Data -> decomposed) -> (decomposed -> list Data) -> Data -> list Data
+fields unConstrData sndPair datum = sndPair (unConstrData datum)

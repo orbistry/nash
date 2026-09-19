@@ -13,7 +13,7 @@ use nash_region::Located;
 use nash_solve::{SolvedTypes, solved::Scheme};
 
 use crate::{
-    demand::{DemandKind, Demands},
+    demand::Demands,
     evidence::{self, ExecutableEvidence},
     ty_of::{Substitution, TypeEnv},
 };
@@ -61,7 +61,7 @@ pub struct Specialization<'a> {
     pub evidence: Vec<ExecutableEvidence<'a>>,
 }
 pub struct Compiled<'a> {
-    /// Casts are expanded. Recursion rewriting and final lowering follow this phase.
+    /// Recursion rewriting and final lowering follow this phase.
     pub core: &'a Core<'a>,
     pub root_type: Ty<'a>,
     pub specializations: Vec<Specialization<'a>>,
@@ -114,8 +114,6 @@ pub enum Error<'a> {
     Evidence(evidence::Error<'a>),
     #[error("{0}")]
     Pattern(crate::decision_tree::Error<'a>),
-    #[error("{0}")]
-    Cast(crate::casts::Error<'a>),
 }
 
 impl<'a> From<crate::ty_of::TypeError<'a>> for Error<'a> {
@@ -133,12 +131,6 @@ impl<'a> From<crate::decision_tree::Error<'a>> for Error<'a> {
         Self::Pattern(e)
     }
 }
-impl<'a> From<crate::casts::Error<'a>> for Error<'a> {
-    fn from(e: crate::casts::Error<'a>) -> Self {
-        Self::Cast(e)
-    }
-}
-
 pub struct Build<'a, 's> {
     pub(crate) inputs: Vec<Input<'a, 's>>,
     pub(crate) unions: HashMap<QualifiedName<'a>, &'a Union<'a>>,
@@ -228,8 +220,6 @@ impl<'a, 's> Build<'a, 's> {
         let binder = engine.request(template, substitution, evidence)?;
         engine.drain(0)?;
         let core = engine.emit_group(0, engine.ir.var(binder.name), false)?;
-        let core =
-            crate::casts::expand_with_traces(&engine.ir, &mut engine.types, core, trace.compiler)?;
         let core = accessors::share(&engine.ir, core);
         let core = hoist_strings(&engine.ir, core);
         let specializations = engine
@@ -260,6 +250,7 @@ pub(crate) enum Binding<'a> {
 }
 #[derive(Clone)]
 pub(crate) struct Context<'a> {
+    pub test: bool,
     pub input: usize,
     pub env: BTreeMap<&'a str, Binding<'a>>,
     pub subst: Substitution<'a>,
@@ -316,6 +307,8 @@ struct Group {
 }
 
 pub(crate) struct Engine<'a, 'b, 's> {
+    pub asserts: Vec<nash_test::AssertSite>,
+    pub replacements: HashMap<NodeId, &'a Core<'a>>,
     pub build: &'b Build<'a, 's>,
     pub ir: Builder<'a>,
     pub types: TypeEnv<'a, 'b>,
@@ -329,12 +322,14 @@ pub(crate) struct Engine<'a, 'b, 's> {
 }
 
 impl<'a, 'b, 's> Engine<'a, 'b, 's> {
-    fn new(build: &'b Build<'a, 's>, arena: &'a Arena, trace: TraceConfig) -> Self {
+    pub(crate) fn new(build: &'b Build<'a, 's>, arena: &'a Arena, trace: TraceConfig) -> Self {
         let mut types = TypeEnv::new(arena, &build.unions);
         for (name, alias) in &build.aliases {
             types.insert_alias(*name, alias);
         }
         let mut engine = Self {
+            asserts: Vec::new(),
+            replacements: HashMap::new(),
             build,
             ir: Builder::new(arena),
             types,
@@ -348,6 +343,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         };
         for (input, unit) in build.inputs.iter().enumerate() {
             let ctx = Context {
+                test: false,
                 input,
                 env: BTreeMap::new(),
                 subst: Substitution::new(),
@@ -431,6 +427,38 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
                 .collect();
         }
         engine
+    }
+
+    pub(crate) fn test_context(&self, input: usize) -> Context<'a> {
+        let home = self.build.inputs[input].module.name;
+        Context {
+            test: true,
+            input,
+            env: self
+                .top
+                .iter()
+                .filter(|(name, _)| name.home == home)
+                .map(|(name, id)| {
+                    (
+                        name.name,
+                        Binding::Template {
+                            id: *id,
+                            projection: None,
+                        },
+                    )
+                })
+                .collect(),
+            subst: Substitution::new(),
+            runtime_subst: Substitution::new(),
+            givens: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn finish_root(&mut self, root: &'a Core<'a>) -> Result<&'a Core<'a>, Error<'a>> {
+        self.drain(0)?;
+        let core = self.emit_group(0, root, false)?;
+        let core = accessors::share(&self.ir, core);
+        Ok(hoist_strings(&self.ir, core))
     }
 
     pub fn add_group(&mut self) -> usize {
@@ -587,16 +615,13 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         let t = &self.templates[template];
         let mut layouts = Vec::new();
         if let Some(demands) = self.build.demands.get(&t.id()) {
-            for (name, demand) in demands {
+            for name in demands {
                 let Some(typ) = subst.get(name) else {
                     return Err(Error::RuntimeLayout(Ty::Erased));
                 };
                 check_type(typ, &Substitution::new())?;
                 let ty = self.types.ty(typ, &Substitution::new())?;
-                layouts.push(match demand {
-                    DemandKind::Deep => ty,
-                    DemandKind::Native => native(self.ir.arena, ty)?,
-                });
+                layouts.push(native(self.ir.arena, ty)?);
             }
         }
         let evidence_key = evidence
@@ -623,14 +648,9 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
             runtime_subst.remove(name);
         }
         if let Some(demands) = self.build.demands.get(&t.id()) {
-            for (name, kind) in demands {
+            for name in demands {
                 let typ = *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?;
-                let typ = match kind {
-                    DemandKind::Deep => typ,
-                    DemandKind::Native => {
-                        native_type(self.ir.arena, self.types.ty(typ, &Substitution::new())?)?
-                    }
-                };
+                let typ = native_type(self.ir.arena, self.types.ty(typ, &Substitution::new())?)?;
                 runtime_subst.insert(name, typ);
             }
         }
@@ -674,8 +694,11 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         node: NodeId,
         ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
+        if reference.home == primitives::primitive_home() && reference.name == "coerce" {
+            return Ok(self.coerce());
+        }
         if reference.home == primitives::builtin_home() {
-            return self.builtin(reference.name, node, ctx);
+            return self.builtin(reference.name);
         }
         if let Some(&template) = self.top.get(&reference) {
             let binder = self.use_template(template, node, ctx)?;
@@ -761,7 +784,7 @@ fn native_type<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<&'a Located<Type<'a>>
     };
     Ok(arena.alloc(Located::at_zero(Type::Named {
         reference: QualifiedName {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name,
         },
         args: arena.alloc_slice_copy(&children),

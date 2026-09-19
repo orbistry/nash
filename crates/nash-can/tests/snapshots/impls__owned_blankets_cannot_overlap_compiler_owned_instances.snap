@@ -1,0 +1,28 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Eq exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> ()\nimpl Eq 'a where\n    eq a b = ()\n\n\nmodule Lift exposing (..)\ntrait Lift 'a 'b where\n    lift : 'a -> 'b\n    lower : 'b -> 'a\nimpl Lift 'a 'a where\n    lift x = x\n    lower x = x\n"
+info: diagnostic
+---
+nash::names::structural_eq_override
+
+  × This impl would replace structural equality:
+   ╭─[src/Eq.nash:4:9]
+ 3 │     eq : 'a -> 'a -> ()
+ 4 │ impl Eq 'a where
+   ·         ──
+ 5 │     eq a b = ()
+   ╰────
+  help: Equality for this type is supplied by the compiler. Remove the explicit `Eq`
+        impl.
+
+nash::names::reflexive_lift_overlap
+
+  × This impl overlaps the reflexive `Lift` rule:
+   ╭─[src/Lift.nash:5:11]
+ 4 │     lower : 'b -> 'a
+ 5 │ impl Lift 'a 'a where
+   ·           ──
+ 6 │     lift x = x
+   ╰────
+  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
+        overlap that built-in rule.

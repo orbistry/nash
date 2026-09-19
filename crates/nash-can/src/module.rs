@@ -41,21 +41,17 @@ pub fn canonicalize<'a>(
     context: Context<'a, '_>,
     module: &SourceModule<'a>,
 ) -> Result<CanResult<'a>, Vec<Error<'a>>> {
-    if let Some(tests) = module.tests {
-        let region = tests.tests.first().map_or_else(
-            || {
-                tests
-                    .imports
-                    .first()
-                    .map_or(Region::zero(), |import| import.import.region)
-            },
-            |test| test.region,
-        );
-        return Err(vec![Error::Unsupported {
-            feature: "tests block",
-            region,
-        }]);
-    }
+    let mut interfaces = context.interfaces.cloned().unwrap_or_default();
+    interfaces
+        .entry("Primitive")
+        .or_insert_with(|| kinds::primitive_interface(bump));
+    interfaces
+        .entry("Builtin")
+        .or_insert_with(|| kinds::builtin_interface(bump));
+    let context = Context {
+        package: context.package,
+        interfaces: Some(&interfaces),
+    };
     let name = module
         .name
         .ok_or_else(|| vec![Error::MissingModuleHeader])?;
@@ -124,6 +120,42 @@ pub fn canonicalize<'a>(
     environment::local::check_binops(&env, module.binops)?;
     let impls = crate::impls::canonicalize(bump, &env, &kind_env, module.impls, &mut warnings)?;
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
+    let mut test_env = env.clone();
+    if let Some(tests) = module.tests {
+        let defaults = crate::defaults::test_imports(bump, home, context.interfaces);
+        environment::foreign::add_imports(bump, &mut test_env, context.interfaces, &defaults)?;
+        environment::foreign::add_imports(bump, &mut test_env, context.interfaces, tests.imports)?;
+        // Local declarations take precedence over imported unqualified names,
+        // just as they do when the enclosing module's environment is built.
+        for (name, info) in &env.types {
+            if matches!(info, environment::Info::Specific(owner, _) if *owner == home) {
+                test_env.types.insert(name, info.clone());
+            }
+        }
+        for (name, info) in &env.ctors {
+            if matches!(info, environment::Info::Specific(owner, _) if *owner == home) {
+                test_env.ctors.insert(name, info.clone());
+            }
+        }
+        for (name, info) in &env.traits {
+            if matches!(info, environment::Info::Specific(owner, _) if *owner == home) {
+                test_env.traits.insert(name, info.clone());
+            }
+        }
+        for (name, var) in &env.vars {
+            if matches!(
+                var,
+                environment::Var::TopLevel(_)
+                    | environment::Var::Method {
+                        local_region: Some(_),
+                        ..
+                    }
+            ) {
+                test_env.vars.insert(name, var.clone());
+            }
+        }
+    }
+    let tests = canonicalize_tests(bump, &test_env, module.tests, &mut warnings)?;
     let binops = canonicalize_binops(bump, &env, module.binops);
     let exports = canonicalize_exports(bump, module)?;
     if matches!(module.kind, nash_ast::ModuleKind::Validator(_))
@@ -136,6 +168,7 @@ pub fn canonicalize<'a>(
     }
 
     let can_module = CanModule {
+        tests,
         traits,
         impls,
         kind: module.kind,
@@ -149,7 +182,11 @@ pub fn canonicalize<'a>(
     };
 
     let used_modules = collect_used_modules(&can_module);
-    for import in module.imports {
+    for import in module
+        .imports
+        .iter()
+        .chain(module.tests.into_iter().flat_map(|t| t.imports.iter()))
+    {
         let module_name = import.import.value;
         if !used_modules.contains(module_name) {
             warnings.push(Warning::UnusedImport {
@@ -161,11 +198,77 @@ pub fn canonicalize<'a>(
 
     let mut tables = crate::impls::tables(bump, context.interfaces, &can_module, &kind_env)?;
     tables.fields = environment::visible_fields(bump, &env);
+    tables.test_fields = environment::visible_fields(bump, &test_env);
     Ok(CanResult {
         tables,
         module: can_module,
         warnings,
     })
+}
+
+fn canonicalize_tests<'a>(
+    bump: &'a Bump,
+    env: &Env<'a>,
+    tests: Option<&nash_source::Tests<'a>>,
+    warnings: &mut Vec<Warning<'a>>,
+) -> Result<&'a [nash_ast::Test<'a>], Vec<Error<'a>>> {
+    let Some(tests) = tests else {
+        return Ok(&[]);
+    };
+    dups::detect(
+        tests
+            .tests
+            .iter()
+            .map(|t| (t.value.name.value, t.value.name.region)),
+        |name, first, second| Error::DuplicateTest {
+            name,
+            first,
+            second,
+        },
+    )?;
+    let empty = BTreeMap::new();
+    let base = environment::Scope::new(env, None, &empty)?;
+    let mut result = Vec::new();
+    for test in tests.tests {
+        let (binders, block) = match test.value.body {
+            nash_source::TestBody::Unit(body) => (&[][..], body),
+            nash_source::TestBody::Prop { binders, body } => (binders, body),
+        };
+        let patterns: Vec<_> = binders.iter().map(|b| b.value.pattern).collect();
+        let (patterns, bindings) =
+            pattern::verify_all(bump, env, DuplicatePatternContext::Destruct, &patterns)?;
+        let mut can_binders = Vec::new();
+        for (binder, pattern) in binders.iter().zip(patterns) {
+            let fuzzer = expression::canonicalize_expr(
+                bump,
+                &base,
+                binder.value.fuzzer,
+                &mut expression::FreeLocals::new(),
+                warnings,
+            )?;
+            can_binders.push(nash_ast::ViaBinder { pattern, fuzzer });
+        }
+        let scope = base.add_locals(&bindings)?;
+        let mut free = expression::FreeLocals::new();
+        let body = expression::canonicalize_test_block(
+            bump,
+            &scope,
+            block.stmts,
+            block.last,
+            &mut free,
+            warnings,
+        )?;
+        expression::verify_bindings(WarningContext::Def, &bindings, free, warnings);
+        result.push(nash_ast::Test {
+            region: test.region,
+            name: test.value.name,
+            expect: test.value.expect,
+            budget: test.value.budget,
+            binders: bump.alloc_slice_fill_iter(can_binders),
+            body,
+        });
+    }
+    Ok(bump.alloc_slice_fill_iter(result))
 }
 
 fn canonicalize_decls<'a>(
@@ -1065,6 +1168,13 @@ fn canonicalize_binops<'a>(
 fn collect_used_modules<'a>(module: &CanModule<'a>) -> BTreeSet<&'a str> {
     let mut used = BTreeSet::new();
     let home = module.name;
+    for test in module.tests {
+        collect_from_expr(&test.body.value, home, &mut used);
+        for binder in test.binders {
+            collect_from_expr(&binder.fuzzer.value, home, &mut used);
+            collect_from_pattern(&binder.pattern.value, home, &mut used);
+        }
+    }
     for binop in module.binops {
         add_if_foreign(home, binop.value.function.home, &mut used);
     }
@@ -1330,7 +1440,7 @@ fn collect_from_pattern<'a>(
             add_if_foreign(
                 home,
                 nash_ast::ModuleName {
-                    package: Some(nash_ast::primitives::CORE),
+                    package: Some(nash_ast::primitives::BASE),
                     name: "Eq",
                 },
                 used,
@@ -1338,7 +1448,7 @@ fn collect_from_pattern<'a>(
         }
         // Only the exact builtin bool type produces this pattern form.
         Bool { .. } => {
-            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            add_if_foreign(home, nash_ast::primitives::primitive_home(), used);
         }
         Constructor(ctor) => {
             add_if_foreign(home, ctor.reference.home, used);
@@ -1348,6 +1458,10 @@ fn collect_from_pattern<'a>(
             }
         }
         Alias { pattern, .. } => collect_from_pattern(&pattern.value, home, used),
+        Pair { first, second } => {
+            collect_from_pattern(&first.value, home, used);
+            collect_from_pattern(&second.value, home, used);
+        }
         Tuple {
             first,
             second,
@@ -2331,7 +2445,7 @@ mod tests {
         let bump = Bump::new();
         let module = nash_parse::Parser::new(
             &bump,
-            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
+            "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
         ).module().unwrap();
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let result = canonicalize(
@@ -4625,7 +4739,7 @@ mod tests {
     #[test]
     fn keyword_children_retain_import_uses_and_local_dependencies() {
         let bump = Bump::new();
-        let source = bump.alloc_str("module Main exposing (..)\nimport Builtin exposing (..)\nf message x = trace message (comptime (addInteger x x))\ncheck = assert True\nstop message = fail message\nlater message = todo message\nrecur x = comptime (recur x)\n");
+        let source = bump.alloc_str("module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nf message x = trace message (comptime (addInteger x x))\ncheck = assert True\nstop message = fail message\nlater message = todo message\nrecur x = comptime (recur x)\n");
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let interfaces = std::collections::BTreeMap::from([(
             "Builtin",
@@ -4788,15 +4902,9 @@ mod tests {
     }
 
     #[test]
-    fn tests_block_unsupported() {
-        assert_module_error_snapshot!(
-            "module Main exposing (..)\n\ntests\n    test \"truth\" = do\n        assert True\n"
-        );
-    }
-    #[test]
     fn builtin_types_resolve_qualified_without_import() {
         assert_module_snapshot!(
-            "module Main exposing (..)\n\nidentity : Builtin.list Builtin.unit -> list unit\nidentity x = x\n"
+            "module Main exposing (..)\n\nidentity : Primitive.list Primitive.unit -> list unit\nidentity x = x\n"
         );
     }
 
@@ -4825,7 +4933,7 @@ mod tests {
         };
         for typ in [from, to] {
             assert!(
-                matches!(typ.value, nash_ast::Type::Named { reference, args } if reference.home == nash_ast::primitives::builtin_home() && reference.name == "unit" && args.is_empty())
+                matches!(typ.value, nash_ast::Type::Named { reference, args } if reference.home == nash_ast::primitives::primitive_home() && reference.name == "unit" && args.is_empty())
             );
         }
     }

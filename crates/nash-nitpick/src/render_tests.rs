@@ -113,7 +113,7 @@ fn synthetic_list_uses_builtin_type() {
     let nash_ast::Type::Named { reference, args } = LIST.ctors[1].arguments[1].value else {
         panic!("expected builtin list")
     };
-    assert_eq!(reference.home, primitives::builtin_home());
+    assert_eq!(reference.home, primitives::primitive_home());
     assert_eq!(reference.name, "list");
     assert_eq!(args.len(), 1);
 }

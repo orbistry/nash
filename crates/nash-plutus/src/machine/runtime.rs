@@ -990,8 +990,8 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                     .get_cost(
                         DefaultFunction::AppendString,
                         &[
-                            cost_model::string_ex_mem(arg1),
-                            cost_model::string_ex_mem(arg2),
+                            cost_model::string_utf8_ex_mem(arg1),
+                            cost_model::string_utf8_ex_mem(arg2),
                         ],
                     )
                     .ok_or(MachineError::NoCostForBuiltin(
@@ -1021,8 +1021,8 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                     .get_cost(
                         DefaultFunction::EqualsString,
                         &[
-                            cost_model::string_ex_mem(arg1),
-                            cost_model::string_ex_mem(arg2),
+                            cost_model::string_utf8_ex_mem(arg1),
+                            cost_model::string_utf8_ex_mem(arg2),
                         ],
                     )
                     .ok_or(MachineError::NoCostForBuiltin(
@@ -1043,7 +1043,7 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                     .builtin_costs
                     .get_cost(
                         DefaultFunction::EncodeUtf8,
-                        &[cost_model::string_ex_mem(arg1)],
+                        &[cost_model::string_utf8_ex_mem(arg1)],
                     )
                     .ok_or(MachineError::NoCostForBuiltin(DefaultFunction::EncodeUtf8))?;
 
@@ -1108,7 +1108,7 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                     .get_cost(
                         DefaultFunction::Trace,
                         &[
-                            cost_model::string_ex_mem(arg1),
+                            cost_model::string_utf8_ex_mem(arg1),
                             cost_model::value_ex_mem(arg2),
                         ],
                     )

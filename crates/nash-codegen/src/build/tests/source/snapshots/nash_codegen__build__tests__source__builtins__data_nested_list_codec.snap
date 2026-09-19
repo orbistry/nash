@@ -1,0 +1,41 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData, fromData)\ninput = List [List [I 1, I 2], List []]\ndecoded : List (List Int)\ndecoded = fromData input\nmain = equalsData (toData decoded) input\n"
+---
+--- core
+let toData#2 : 'erased -> Data = \coerce#5 : 'erased -> coerce#5 in
+let fromInt#10 : int -> int = \value#14 : int -> value#14 in
+let input#4 : Data = (\field#7 : list Data -> listData field#7) (mkCons ((\field#8 : list Data -> listData field#8) (mkCons ((\field#9 : int -> iData field#9) (fromInt#10 1)) (mkCons ((\field#11 : int -> iData field#11) (fromInt#10 2)) (con (list data) [])))) (mkCons ((\field#12 : list Data -> listData field#12) (con (list data) [])) (con (list data) []))) in
+let fromData#6 : Data -> 'erased = \coerce#13 : 'erased -> coerce#13 in
+let decoded#3 : List (List Int) = fromData#6 input#4 in
+let main#1 : bool = equalsData (toData#2 decoded#3) input#4 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam toData_2
+    [(lam fromInt_10
+      [(lam input_4
+        [(lam fromData_6
+          [(lam decoded_3
+            [(lam main_1 main_1) [[(builtin equalsData) [toData_2 decoded_3]] input_4]])
+            [fromData_6 input_4]])
+          (lam coerce_13 coerce_13)])
+        [(lam field_7 [(builtin listData) field_7])
+          [[(force (builtin mkCons))
+            [(lam field_8 [(builtin listData) field_8])
+              [[(force (builtin mkCons))
+                [(lam field_9 [(builtin iData) field_9]) [fromInt_10 (con integer 1)]]]
+                [[(force (builtin mkCons))
+                  [(lam field_11 [(builtin iData) field_11]) [fromInt_10 (con integer 2)]]]
+                  (con (list data) [])]]]]
+            [[(force (builtin mkCons))
+              [(lam field_12 [(builtin listData) field_12]) (con (list data) [])]]
+              (con (list data) [])]]]])
+      (lam value_14 value_14)])
+    (lam coerce_5 coerce_5)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 3199988, memory: 8389

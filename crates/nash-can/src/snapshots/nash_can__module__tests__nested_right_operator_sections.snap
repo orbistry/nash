@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "module Main exposing (..)\n\nimport Basics exposing (..)\n\nsection = (+ ((+ 1) 2))\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,
@@ -87,7 +88,7 @@ Module {
                             },
                             end: Position {
                                 line: 5,
-                                column: 22,
+                                column: 24,
                             },
                         },
                         value: Binop {
@@ -188,7 +189,7 @@ Module {
                                                     },
                                                     end: Position {
                                                         line: 5,
-                                                        column: 19,
+                                                        column: 20,
                                                     },
                                                 },
                                                 value: Binop {

@@ -1,0 +1,15 @@
+---
+source: crates/nash-solve/tests/testing.rs
+description: "module Aux exposing (..)\ntype box = Box { value : () }\nboxed = Box { value = () }\n\nmodule Bridge exposing (boxed)\nimport Aux\nboxed = Aux.boxed\n\nmodule Main exposing (..)\nimport Bridge\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n\nmodule Main exposing (..)\nimport Bridge\nleak = Bridge.boxed.value\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n"
+info: diagnostic
+---
+nash::type::not_a_record
+
+  × Expected a record, found `Aux.box`.
+   ╭─[Main.nash:3:8]
+ 2 │ import Bridge
+ 3 │ leak = Bridge.boxed.value
+   ·        ─────────┬────────
+   ·                 ╰── field `value` of `boxed`
+ 4 │ tests
+   ╰────

@@ -1,5 +1,5 @@
 //! Mapping from the compiler-owned value inventory to runtime operations.
-use nash_ast::primitives::{BUILTINS, Builtin, BuiltinLowering};
+use nash_ast::primitives::{BUILTINS, Builtin};
 use nash_plutus::builtin::DefaultFunction;
 
 pub fn definition(name: &str) -> Option<&'static Builtin> {
@@ -7,10 +7,7 @@ pub fn definition(name: &str) -> Option<&'static Builtin> {
 }
 
 pub fn by_name(name: &str) -> Option<DefaultFunction> {
-    let BuiltinLowering::Plutus(variant) = definition(name)?.lowering else {
-        return None;
-    };
-    by_variant(variant)
+    by_variant(definition(name)?.variant)
 }
 
 fn by_variant(variant: &str) -> Option<DefaultFunction> {
@@ -140,11 +137,9 @@ mod tests {
             assert_eq!(arity, func.arity(), "{func:?}");
         }
         for builtin in BUILTINS {
-            if let BuiltinLowering::Plutus(variant) = builtin.lowering {
-                assert!(by_variant(variant).is_some(), "{}", builtin.name);
-            }
+            assert!(by_variant(builtin.variant).is_some(), "{}", builtin.name);
         }
-        assert_eq!(by_name("identity"), None);
+        assert_eq!(BUILTINS.len(), DefaultFunction::ALL.len());
         assert_eq!(by_name("nonexistent"), None);
     }
 }

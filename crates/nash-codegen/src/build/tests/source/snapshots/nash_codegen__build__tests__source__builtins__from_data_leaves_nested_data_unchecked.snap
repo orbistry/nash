@@ -1,0 +1,35 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (fromData)\ndecoded : List (List Int)\ndecoded = fromData (List [List [B #\"aa\"]])\nmain = nullList (unListData decoded)\n"
+---
+--- core
+let fromData#3 : Data -> 'erased = \coerce#8 : 'erased -> coerce#8 in
+let fromBytes#7 : bytes -> bytes = \value#9 : bytes -> value#9 in
+let decoded#2 : List (List Int) = fromData#3 ((\field#4 : list Data -> listData field#4) (mkCons ((\field#5 : list Data -> listData field#5) (mkCons ((\field#6 : bytes -> bData field#6) (fromBytes#7 (con bytestring #aa))) (con (list data) []))) (con (list data) []))) in
+let projection#10 : list Data = unListData decoded#2 in
+let main#1 : bool = nullList projection#10 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromData_3
+    [(lam fromBytes_7
+      [(lam decoded_2
+        [(lam projection_10
+          [(lam main_1 main_1) [(force (builtin nullList)) projection_10]])
+          [(builtin unListData) decoded_2]])
+        [fromData_3
+          [(lam field_4 [(builtin listData) field_4])
+            [[(force (builtin mkCons))
+              [(lam field_5 [(builtin listData) field_5])
+                [[(force (builtin mkCons))
+                  [(lam field_6 [(builtin bData) field_6]) [fromBytes_7 (con bytestring #aa)]]]
+                  (con (list data) [])]]]
+              (con (list data) [])]]]])
+      (lam value_9 value_9)])
+    (lam coerce_8 coerce_8)])
+--- result
+(con bool False)
+--- logs
+[]
+--- budget
+cpu: 1156077, memory: 5524

@@ -35,6 +35,9 @@ impl<'a> Engine<'a, '_, '_> {
         ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
         let node = NodeId::expr(expr);
+        if let Some(value) = self.replacements.get(&node) {
+            return Ok(value);
+        }
         Ok(match &expr.value {
             Expr::Unit => self.ir.lit(Constant::unit(self.ir.arena)),
             Expr::Int(n) => {
@@ -82,6 +85,16 @@ impl<'a> Engine<'a, '_, '_> {
                 right,
                 ..
             } => {
+                if let Some(conjunction) = short_circuit(*reference) {
+                    let left = self.expr(left, ctx)?;
+                    let right = self.expr(right, ctx)?;
+                    let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
+                    return Ok(if conjunction {
+                        self.ir.if_(left, right, constant)
+                    } else {
+                        self.ir.if_(left, constant, right)
+                    });
+                }
                 let func = self.reference(*reference, node, ctx)?;
                 let left = self.expr(left, ctx)?;
                 let right = self.expr(right, ctx)?;
@@ -211,7 +224,13 @@ impl<'a> Engine<'a, '_, '_> {
             }
             Expr::Trace { message, body } => {
                 let body = self.expr(body, ctx)?;
-                self.user_trace(Some(message), None, expr.region, body, ctx)?
+                let home = self.build.inputs[ctx.input].module.name;
+                if home.package == Some(primitives::BASE) && home.name == "Test" {
+                    let message = self.expr(message, ctx)?;
+                    self.ir.trace(message, body)
+                } else {
+                    self.user_trace(Some(message), None, expr.region, body, ctx)?
+                }
             }
             Expr::Fail(message) | Expr::Todo(message) => {
                 let todo = matches!(expr.value, Expr::Todo(_));
@@ -224,6 +243,9 @@ impl<'a> Engine<'a, '_, '_> {
                 )?
             }
             Expr::Assert(condition) => {
+                if ctx.test {
+                    return self.power_assert(condition, ctx);
+                }
                 let value = self.expr(condition, ctx)?;
                 let failed = self.user_trace(
                     None,
@@ -238,12 +260,6 @@ impl<'a> Engine<'a, '_, '_> {
             Expr::Comptime(value) => {
                 let body = self.expr(value, ctx)?;
                 let body = self.closed_dependencies(body)?;
-                let body = crate::casts::expand_with_traces(
-                    &self.ir,
-                    &mut self.types,
-                    body,
-                    self.trace.compiler,
-                )?;
                 let constant = crate::comptime::eval_closed(self.ir.arena, &[], body)
                     .map_err(|error| Error::ComptimeAssembly(error.to_string()))?;
                 self.ir.lit(constant)
@@ -310,12 +326,12 @@ impl<'a> Engine<'a, '_, '_> {
             .iter()
             .map(|p| self.ir.var(p.name))
             .collect::<Vec<_>>();
-        let value = if reference.home == primitives::builtin_home() && reference.union == "bool" {
+        let value = if reference.home == primitives::primitive_home() && reference.union == "bool" {
             if !params.is_empty() || tag > 1 {
                 return Err(Error::InvalidConstructor);
             }
             self.ir.lit(Constant::bool(self.ir.arena, tag == 1))
-        } else if reference.home == primitives::builtin_home() && reference.union == "Data" {
+        } else if reference.home == primitives::primitive_home() && reference.union == "Data" {
             let func = match tag {
                 0 => F::ConstrData,
                 1 => F::MapData,
@@ -324,7 +340,34 @@ impl<'a> Engine<'a, '_, '_> {
                 4 => F::BData,
                 _ => return Err(Error::InvalidConstructor),
             };
-            self.ir.builtin(func, &fields)
+            if tag == 0 {
+                let pair = params.first().ok_or(Error::InvalidConstructor)?;
+                let Ty::Const(ConstTy::Pair(first, second)) = pair.ty else {
+                    return Err(Error::InvalidConstructor);
+                };
+                let tag = Binder {
+                    name: self.ir.fresh("tag"),
+                    ty: *first,
+                };
+                let items = Binder {
+                    name: self.ir.fresh("fields"),
+                    ty: *second,
+                };
+                self.ir.case(
+                    CaseKind::Pair,
+                    self.ir.var(pair.name),
+                    &[Branch {
+                        test: nash_ir::core::Test::Pair,
+                        binders: self.ir.arena.alloc_slice_copy(&[tag, items]),
+                        body: self
+                            .ir
+                            .builtin(func, &[self.ir.var(tag.name), self.ir.var(items.name)]),
+                    }],
+                    None,
+                )
+            } else {
+                self.ir.builtin(func, &fields)
+            }
         } else {
             match result {
                 Ty::Big(BigTy::Adt(_)) => self.big_constructor(tag, &fields)?,
@@ -366,7 +409,11 @@ impl<'a> Engine<'a, '_, '_> {
             &[self.ir.int(i128::from(tag)), self.list(DATA, fields)?],
         ))
     }
-    fn product(&self, ty: Ty<'a>, fields: &[&'a Core<'a>]) -> Result<&'a Core<'a>, Error<'a>> {
+    pub(crate) fn product(
+        &self,
+        ty: Ty<'a>,
+        fields: &[&'a Core<'a>],
+    ) -> Result<&'a Core<'a>, Error<'a>> {
         Ok(match ty {
             Ty::Big(BigTy::Record(_)) => self.ir.builtin(F::ListData, &[self.list(DATA, fields)?]),
             Ty::Term(TermTy::Record(_) | TermTy::Tuple(_) | TermTy::Adt(_)) => {
@@ -375,7 +422,7 @@ impl<'a> Engine<'a, '_, '_> {
             _ => return Err(Error::RuntimeLayout(ty)),
         })
     }
-    fn field(
+    pub(crate) fn field(
         &self,
         ty: Ty<'a>,
         value: &'a Core<'a>,
@@ -384,9 +431,26 @@ impl<'a> Engine<'a, '_, '_> {
     ) -> Result<&'a Core<'a>, Error<'a>> {
         let mut list = match ty {
             Ty::Big(BigTy::Record(_)) => self.ir.builtin(F::UnListData, &[value]),
-            Ty::Big(BigTy::Adt(_)) => self
-                .ir
-                .builtin(F::SndPair, &[self.ir.builtin(F::UnConstrData, &[value])]),
+            Ty::Big(BigTy::Adt(_)) => {
+                let tag = Binder {
+                    name: self.ir.fresh("tag"),
+                    ty: Ty::Const(&ConstTy::Int),
+                };
+                let fields = Binder {
+                    name: self.ir.fresh("fields"),
+                    ty: Ty::Const(&ConstTy::List(DATA)),
+                };
+                self.ir.case(
+                    CaseKind::Pair,
+                    self.ir.builtin(F::UnConstrData, &[value]),
+                    &[Branch {
+                        test: nash_ir::core::Test::Pair,
+                        binders: self.ir.arena.alloc_slice_copy(&[tag, fields]),
+                        body: self.ir.var(fields.name),
+                    }],
+                    None,
+                )
+            }
             Ty::Term(TermTy::Record(_) | TermTy::Tuple(_) | TermTy::Adt(_)) => {
                 return Ok(self.ir.field(
                     value,
@@ -402,7 +466,7 @@ impl<'a> Engine<'a, '_, '_> {
         Ok(self.ir.builtin(F::HeadList, &[list]))
     }
 
-    fn user_trace(
+    pub(crate) fn user_trace(
         &mut self,
         message: Option<&'a Located<Expr<'a>>>,
         prefix: Option<&str>,
@@ -456,5 +520,19 @@ impl<'a> Engine<'a, '_, '_> {
         } else {
             self.ir.error()
         }
+    }
+}
+
+/// Logical operators are identified by their resolved standard-library target.
+/// An unrelated user operator with the same spelling keeps normal call rules.
+pub(crate) fn short_circuit(reference: QualifiedName<'_>) -> Option<bool> {
+    if reference.home.package == Some(primitives::BASE) && reference.home.name == "Bool" {
+        match reference.name {
+            "and" => Some(true),
+            "or" => Some(false),
+            _ => None,
+        }
+    } else {
+        None
     }
 }

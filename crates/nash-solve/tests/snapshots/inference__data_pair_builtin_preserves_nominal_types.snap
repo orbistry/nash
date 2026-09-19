@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin\nmake n bytes = Builtin.mkPairData (Builtin.iData n) (Builtin.bData bytes)\nroundtrip n bytes = Builtin.unMapData (Builtin.mapData [make n bytes])\n"
+---
+make : int -> bytes -> pair Int Bytes
+roundtrip : int -> bytes -> list (pair Int Bytes)

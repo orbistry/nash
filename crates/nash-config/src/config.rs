@@ -40,15 +40,56 @@ pub enum TraceLevel {
 
 /// Project build settings, stored at the top level of `nash.jsonc`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
+#[serde(from = "BuildFields", into = "BuildFields")]
 pub struct Build {
-    #[serde(default)]
     pub plutus_version: PlutusVersion,
-    #[serde(default)]
     pub trace_level: TraceLevel,
-    /// Include compiler-generated runtime failure traces.
-    #[serde(default)]
+    /// Distinguishes an explicit silent setting from the command-specific default.
+    pub trace_level_explicit: bool,
     pub compiler_traces: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BuildFields {
+    #[serde(default)]
+    plutus_version: PlutusVersion,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    trace_level: Option<TraceLevel>,
+    #[serde(default)]
+    compiler_traces: bool,
+}
+
+impl From<BuildFields> for Build {
+    fn from(fields: BuildFields) -> Self {
+        Self {
+            plutus_version: fields.plutus_version,
+            trace_level: fields.trace_level.unwrap_or_default(),
+            trace_level_explicit: fields.trace_level.is_some(),
+            compiler_traces: fields.compiler_traces,
+        }
+    }
+}
+
+impl From<Build> for BuildFields {
+    fn from(build: Build) -> Self {
+        Self {
+            plutus_version: build.plutus_version,
+            trace_level: (build.trace_level_explicit || build.trace_level != TraceLevel::Silent)
+                .then_some(build.trace_level),
+            compiler_traces: build.compiler_traces,
+        }
+    }
+}
+
+impl Build {
+    pub fn for_tests(mut self) -> Self {
+        if !self.trace_level_explicit {
+            self.trace_level = TraceLevel::Verbose;
+        }
+        self.compiler_traces = true;
+        self
+    }
 }
 
 /// An application project configuration.
@@ -258,6 +299,36 @@ impl Dependency {
         match self {
             Dependency::Constraint(s) => Some(s),
             _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_defaults {
+    use super::*;
+
+    #[test]
+    fn tests_distinguish_absent_trace_setting_from_explicit_silent() {
+        for source in [
+            r#"{"type":"application"}"#,
+            r#"{"type":"application","traceLevel":"silent"}"#,
+        ] {
+            let config = crate::parse(source, "nash.jsonc").unwrap();
+            let explicit = source.contains("traceLevel");
+            let build = config.build();
+            assert_eq!(build.trace_level, TraceLevel::Silent);
+            assert_eq!(
+                build.for_tests().trace_level,
+                if explicit {
+                    TraceLevel::Silent
+                } else {
+                    TraceLevel::Verbose
+                }
+            );
+            assert!(build.for_tests().compiler_traces);
+            let encoded = serde_json::to_string(&config).unwrap();
+            assert_eq!(crate::parse(&encoded, "nash.jsonc").unwrap(), config);
+            assert_eq!(serde_json::from_str::<Config>(&encoded).unwrap(), config);
         }
     }
 }

@@ -11,6 +11,8 @@ use crate::error::DriverError;
 /// A dependency graph of modules.
 #[derive(Debug, Default)]
 pub struct DepGraph {
+    /// Modules whose tests are checked; None permits all (manually built graphs).
+    pub test_modules: Option<HashSet<Url>>,
     /// Modules in topological order (dependencies before dependents).
     pub order: Vec<Url>,
 

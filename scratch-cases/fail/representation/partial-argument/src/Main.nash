@@ -1,0 +1,7 @@
+module Main exposing (..)
+
+import Builtin exposing (..)
+
+type use 'f = Use ('f int)
+type option 'a = None | Some 'a
+type bad = Bad (use (pair (option int)))

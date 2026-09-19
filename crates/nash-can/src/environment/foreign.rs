@@ -46,6 +46,14 @@ pub fn create_initial_env<'a>(
     interfaces: Option<&BTreeMap<&'a str, Interface<'a>>>,
     imports: &'a [&'a SourceImport<'a>],
 ) -> Result<Env<'a>, Vec<Error<'a>>> {
+    let mut compiler_interfaces = interfaces.cloned().unwrap_or_default();
+    compiler_interfaces
+        .entry("Primitive")
+        .or_insert_with(|| crate::kinds::primitive_interface(bump));
+    compiler_interfaces
+        .entry("Builtin")
+        .or_insert_with(|| crate::kinds::builtin_interface(bump));
+    let interfaces = Some(&compiler_interfaces);
     let mut env = Env {
         kinds: crate::kinds::KindEnv::from_interfaces(interfaces),
         traits: BTreeMap::new(),
@@ -61,7 +69,7 @@ pub fn create_initial_env<'a>(
     };
 
     // Compiler-known types are always in scope, independently of value imports.
-    let builtin_home = nash_ast::primitives::builtin_home();
+    let builtin_home = nash_ast::primitives::primitive_home();
     for primitive in nash_ast::primitives::PRIMITIVES {
         env.types.insert(
             primitive.name,
@@ -75,8 +83,28 @@ pub fn create_initial_env<'a>(
         );
     }
 
-    env.q_types.insert("Builtin", env.types.clone());
+    env.q_types.insert("Primitive", env.types.clone());
 
+    for name in ["Primitive", "Builtin"] {
+        let import = bump.alloc(SourceImport {
+            import: bump.alloc(Located::at_zero(name)),
+            alias: None,
+            exposing: bump.alloc(Exposing::Explicit(&[])),
+        });
+        add_imports(bump, &mut env, interfaces, &[import])?;
+    }
+    let defaults = crate::defaults::imports(bump, home, interfaces);
+    add_imports(bump, &mut env, interfaces, &defaults)?;
+    add_imports(bump, &mut env, interfaces, imports)?;
+    Ok(env)
+}
+
+pub fn add_imports<'a>(
+    bump: &'a Bump,
+    env: &mut Env<'a>,
+    interfaces: Option<&BTreeMap<&'a str, Interface<'a>>>,
+    imports: &[&'a SourceImport<'a>],
+) -> Result<(), Vec<Error<'a>>> {
     let mut errors = Vec::new();
 
     for import in imports {
@@ -87,30 +115,6 @@ pub fn create_initial_env<'a>(
                 continue;
             }
         };
-        // Filter the synthetic interface before every import route, including
-        // explicit exposure and diagnostics. Only exact nash/core may name casts.
-        let restricted_interface;
-        let interface =
-            if interface.home == builtin_home && home.package != Some(nash_ast::primitives::CORE) {
-                restricted_interface = Interface {
-                    values: bump.alloc_slice_fill_iter(
-                        interface
-                            .values
-                            .iter()
-                            .filter(|value| {
-                                !nash_ast::primitives::BUILTINS.iter().any(|builtin| {
-                                    builtin.name == value.name && builtin.lowering.is_core_only()
-                                })
-                            })
-                            .copied()
-                            .collect::<Vec<_>>(),
-                    ),
-                    ..*interface
-                };
-                &restricted_interface
-            } else {
-                interface
-            };
         let prefix = import.alias.unwrap_or(import.import.value);
 
         let raw_type_info = build_raw_type_info(bump, interface);
@@ -161,7 +165,7 @@ pub fn create_initial_env<'a>(
         match &import.exposing {
             Exposing::Open => {
                 for trait_ in interface.traits.iter().filter(|t| t.exported) {
-                    expose_trait(&mut env, trait_info(bump, interface.home, trait_));
+                    expose_trait(env, trait_info(bump, interface.home, trait_));
                 }
                 for (name, (typ, ctors)) in &raw_type_info {
                     merge_exposed(&mut env.types, name, interface.home, *typ);
@@ -172,7 +176,7 @@ pub fn create_initial_env<'a>(
                     }
                 }
                 for value in interface.values {
-                    add_single_value(&mut env, interface.home, value.name, value.annotation);
+                    add_single_value(env, interface.home, value.name, value.annotation);
                 }
                 for binop in interface.binops {
                     let info = to_env_binop(interface.home, binop);
@@ -181,7 +185,7 @@ pub fn create_initial_env<'a>(
             }
             Exposing::Explicit(exposed) => {
                 if let Err(errs) =
-                    add_explicit_exposing(bump, &mut env, interface, &raw_type_info, exposed)
+                    add_explicit_exposing(bump, env, interface, &raw_type_info, exposed)
                 {
                     errors.extend(errs);
                 }
@@ -190,7 +194,7 @@ pub fn create_initial_env<'a>(
     }
 
     if errors.is_empty() {
-        Ok(env)
+        Ok(())
     } else {
         Err(errors)
     }
@@ -511,7 +515,7 @@ fn make_union_ctor<'a>(
     can_union: &'a nash_ast::Union<'a>,
     ctor: &nash_ast::Ctor<'a>,
 ) -> Ctor<'a> {
-    if home == nash_ast::primitives::builtin_home() && union_name == "bool" {
+    if home == nash_ast::primitives::primitive_home() && union_name == "bool" {
         return Ctor::Bool {
             home,
             union: can_union,
@@ -598,7 +602,7 @@ mod tests {
         for primitive in nash_ast::primitives::PRIMITIVES {
             match env.types.get(primitive.name) {
                 Some(Info::Specific(module, Type::Union { arity, .. })) => {
-                    assert_eq!(*module, nash_ast::primitives::builtin_home());
+                    assert_eq!(*module, nash_ast::primitives::primitive_home());
                     assert_eq!(*arity, primitive.kind.arity());
                 }
                 other => panic!("Expected primitive {}, got {other:?}", primitive.name),

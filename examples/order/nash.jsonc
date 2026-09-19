@@ -1,0 +1,6 @@
+{
+  "type": "application",
+  "dependencies": {
+    "nash/base": { "path": }
+  }
+}

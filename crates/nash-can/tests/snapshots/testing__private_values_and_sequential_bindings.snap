@@ -1,0 +1,144 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (public)\npublic = ()\nprivate = ()\ntests\n    test \"sequence\" within (cpu 12, mem 4) = do\n        x <- private\n        x\n        ()\n"
+---
+[
+    Test {
+        region: Region {
+            start: Position {
+                line: 5,
+                column: 5,
+            },
+            end: Position {
+                line: 8,
+                column: 11,
+            },
+        },
+        name: Located {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 10,
+                },
+                end: Position {
+                    line: 5,
+                    column: 20,
+                },
+            },
+            value: "sequence",
+        },
+        expect: Pass,
+        budget: Some(
+            Both {
+                cpu: 12,
+                mem: 4,
+            },
+        ),
+        binders: [],
+        body: Located {
+            region: Region {
+                start: Position {
+                    line: 6,
+                    column: 9,
+                },
+                end: Position {
+                    line: 6,
+                    column: 21,
+                },
+            },
+            value: LetDestruct {
+                pattern: Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 10,
+                        },
+                    },
+                    value: Var(
+                        "x",
+                    ),
+                },
+                value: Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 14,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 21,
+                        },
+                    },
+                    value: VarTopLevel(
+                        QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "private",
+                        },
+                    ),
+                },
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 10,
+                        },
+                    },
+                    value: LetDestruct {
+                        pattern: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 10,
+                                },
+                            },
+                            value: Unit,
+                        },
+                        value: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 10,
+                                },
+                            },
+                            value: VarLocal(
+                                "x",
+                            ),
+                        },
+                        body: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 8,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 8,
+                                    column: 11,
+                                },
+                            },
+                            value: Unit,
+                        },
+                    },
+                },
+            },
+        },
+    },
+]

@@ -99,7 +99,7 @@ type alias count = int                                  -- ok
 
 ## Representation predicates
 
-Five compiler-owned traits live in `Builtin` and are re-exposed by the
+Five compiler-owned traits live in `Primitive` and are re-exposed by the
 prelude. They have no user impls; the compiler resolves them structurally
 from the head constructor:
 
@@ -156,7 +156,7 @@ from the declaration body and never written by the user.
 | `List 'a` | `Big 'a` |
 | `Map 'k 'v` | `Big 'k, Big 'v` |
 | `list 'a`, `array 'a` | `Storable 'a` |
-| `pair 'a 'b` | `Storable 'a, Storable 'b` (only `mkPairData : Data -> Data -> pair Data Data` constructs one; `unConstrData` yields `pair int (list Data)`) |
+| `pair 'a 'b` | `Storable 'a, Storable 'b` (only `mkPairData : (Big 'a, Big 'b) => 'a -> 'b -> pair 'a 'b` constructs one; `unConstrData` yields `pair int (list Data)`) |
 | `type Box 'a = Box 'a` | `Big 'a` |
 | `type Tag 'a = Tag Int` | none (phantom) |
 | `type option 'a = None \| Some 'a` | none |
@@ -257,7 +257,7 @@ rendered signatures. They are still stored and still instantiated.
 
 ### Contexts and `Data`
 
-`Data`'s constructors (`Constr int (list Data)`, `Map (list (pair Data
+`Data`'s constructors (`Constr (pair int (list Data))`, `Map (list (pair Data
 Data))`, `List (list Data)`, `I int`, `B bytes`) are compiler-known and
 exempt from the Big-field rule: they mirror `chooseData`.
 
@@ -315,7 +315,7 @@ type is ground; `repr` of a ground type is computed from its head
 - the UPLC `Type` of `list`/`array`/`pair` element constants (`Big`
   elements are `Type::Data`),
 - which `Lift` implementation applies,
-- whether `if` may use `ifThenElse` (the condition must be `bool`).
+- whether `if` may use boolean native `case` (the condition must be `bool`).
 
 Representation predicates produce no runtime evidence.
 

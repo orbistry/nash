@@ -1,5 +1,6 @@
 validator module Vesting exposing (main)
 
+import Primitive exposing (..)
 import Builtin exposing (..)
 import Lift exposing (lower)
 import Cardano.Tx exposing (currentSlot, signedBy)

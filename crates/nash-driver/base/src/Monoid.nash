@@ -1,0 +1,30 @@
+module Monoid exposing (Monoid)
+
+import Literal
+import Builtin
+import Eq exposing (Eq)
+import Semigroup exposing (Semigroup)
+
+trait Semigroup 'a => Monoid 'a where
+    empty : 'a
+
+impl Monoid bytes where
+    empty = #""
+
+impl Monoid string where
+    empty = ""
+
+impl Monoid (list 'a) where
+    empty = []
+
+impl Monoid unit where
+    empty = ()
+
+impl Monoid Bytes where
+    empty = #""
+
+impl Monoid (List 'a) where
+    empty = Builtin.listData []
+
+impl Eq 'k => Monoid (Map 'k 'v) where
+    empty = Builtin.mapData []

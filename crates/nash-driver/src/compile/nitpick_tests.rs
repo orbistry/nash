@@ -30,7 +30,8 @@ fn incomplete_case_fails_module() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         f x =
             case x of
                 True -> ()
@@ -49,7 +50,8 @@ fn redundant_case_fails_module() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         f x =
             case x of
                 _ -> ()
@@ -100,7 +102,8 @@ fn trait_default_without_top_level_definitions_fails_module() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         trait Choose 'a where
             choose : 'a -> bool -> unit
             choose _ flag =
@@ -121,7 +124,8 @@ fn impl_method_fails_module() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         trait Choose 'a where
             choose : 'a -> unit
         impl Choose bool where
@@ -142,7 +146,8 @@ fn type_errors_precede_nitpick() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         f : bool -> unit
         f True = True
     "#
@@ -160,7 +165,7 @@ fn rejected_module_publishes_no_interface_to_dependents() {
             url("Base"),
             None,
             Ok(
-                "module Base exposing (..)\nimport Builtin exposing (type bool(..))\nf True = ()\n"
+                "module Base exposing (..)\nimport Primitive exposing (type bool(..))\nimport Builtin\nf True = ()\n"
                     .to_owned(),
             ),
         ),

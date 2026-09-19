@@ -1940,7 +1940,7 @@ Nash edits:
 Problem::BigLittle { big, little, direction } => vec![Doc::to_simple_hint(&format!(
     "`{big}` is the Big (Data) type and `{little}` is the little builtin one. They never convert \
      implicitly. Use `lower` to go from `{big}` to `{little}`, or `lift` to go the other way.{}",
-    match direction { Direction::Have => "", Direction::Need => " If this value comes from a validator argument, decode it with `fromData` first." }
+    match direction { Direction::Have => "", Direction::Need => " If this value comes from a validator argument, validate it with `validate` first." }
 ))],
 Problem::AnythingFromOption => vec![Doc::to_fancy_hint([
     "Use", GREEN("Option.withDefault"), "to", "handle", "possible", "errors.", "Longer", "term,", "it",
@@ -2420,7 +2420,7 @@ Error::MissingImpl { region, name, trait_, args, available } => {
 (`==` for example 2); `available_hint` lists up to four heads that do have
 impls ("`Eq` is implemented for `int`, `bytes`, `option 'a`, ..."), and
 `derive_hint` suggests `@derive(Trait)` when the trait is derivable
-(`Eq`, `Ord`, `Show`, `ToData`, `FromData`) and the head is a local ADT,
+(`Eq`, `Ord`, `Show`, `Validate`) and the head is a local ADT,
 otherwise an `impl` skeleton.
 
 **Tests** — `missing_impl_eq_on_little_adt` (example 2),

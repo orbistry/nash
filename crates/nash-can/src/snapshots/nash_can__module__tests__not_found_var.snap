@@ -11,4 +11,9 @@ nash::names::not_found_var
  3 │ f = nonexistent
    ·     ───────────
    ╰────
-  help: Try f instead.
+  help: Similar names:
+
+            f
+            Builtin.bData
+            Builtin.iData
+            Builtin.listData

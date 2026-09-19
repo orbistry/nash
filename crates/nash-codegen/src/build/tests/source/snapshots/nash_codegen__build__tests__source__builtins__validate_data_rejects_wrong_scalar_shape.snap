@@ -1,0 +1,47 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validate)\ndecoded : Int\ndecoded = validate (B #\"aa\")\nmain = unIData decoded\n"
+---
+--- core
+let validate#3 : Data -> Int = \value#6 : Data -> let match#8 : Data = value#6 in
+let leaf#14 : 'erased = delay error in
+case@Data match#8 of
+  DataConstr field#15 -> force leaf#14
+  DataMap field#16 -> force leaf#14
+  DataList field#17 -> force leaf#14
+  DataI field#18 -> (\coerce#7 : 'erased -> coerce#7) value#6
+  DataB field#19 -> force leaf#14 in
+let fromBytes#5 : bytes -> bytes = \value#20 : bytes -> value#20 in
+let decoded#2 : Int = validate#3 ((\field#4 : bytes -> bData field#4) (fromBytes#5 (con bytestring #aa))) in
+let main#1 : int = unIData decoded#2 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam validate_3
+    [(lam fromBytes_5
+      [(lam decoded_2 [(lam main_1 main_1) [(builtin unIData) decoded_2]])
+        [validate_3
+          [(lam field_4 [(builtin bData) field_4]) [fromBytes_5 (con bytestring #aa)]]]])
+      (lam value_20 value_20)])
+    (lam value_6
+      [(lam match_8
+        [(lam leaf_14
+          [(lam generated_21
+            (force
+              [[[[[[(force (builtin chooseData)) generated_21]
+                (delay [(lam field_15 (force leaf_14)) [(builtin unConstrData) generated_21]])]
+                (delay [(lam field_16 (force leaf_14)) [(builtin unMapData) generated_21]])]
+                (delay [(lam field_17 (force leaf_14)) [(builtin unListData) generated_21]])]
+                (delay
+                  [(lam field_18 [(lam coerce_7 coerce_7) value_6])
+                    [(builtin unIData) generated_21]])]
+                (delay [(lam field_19 (force leaf_14)) [(builtin unBData) generated_21]])]))
+            match_8])
+          (delay (error))])
+        value_6])])
+--- result
+error: ExplicitErrorTerm
+--- logs
+[]
+--- budget
+cpu: 125800, memory: 196

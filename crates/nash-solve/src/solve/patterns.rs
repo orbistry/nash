@@ -15,7 +15,8 @@ pub(super) fn pattern_owns_vars(pattern: &Located<nash_ast::Pattern<'_>>) -> boo
                     .iter()
                     .any(|arg| pattern_owns_vars(arg.pattern))
         }
-        Pattern::Tuple { .. }
+        Pattern::Pair { .. }
+        | Pattern::Tuple { .. }
         | Pattern::List(_)
         | Pattern::Cons { .. }
         | Pattern::Record(_)
@@ -69,12 +70,43 @@ impl<'a> Solver<'a, '_> {
                     uf,
                     rank,
                     Content::Structure(FlatType::App1(
-                        nash_ast::primitives::builtin_home(),
+                        nash_ast::primitives::primitive_home(),
                         name,
                         Vec::new(),
                     )),
                 );
                 self.pattern_equal(uf, rank, state, region, category, actual, expected)
+            }
+            Pattern::Pair { first, second } => {
+                let first_var = self.register(uf, rank, Content::FlexVar(None));
+                let second_var = self.register(uf, rank, Content::FlexVar(None));
+                let actual = self.register(
+                    uf,
+                    rank,
+                    Content::Structure(FlatType::App1(
+                        nash_ast::primitives::primitive_home(),
+                        "pair",
+                        vec![first_var, second_var],
+                    )),
+                );
+                state =
+                    self.pattern_equal(uf, rank, state, region, PCategory::Pair, actual, expected);
+                state = self.infer_pattern(
+                    uf,
+                    rank,
+                    state,
+                    second,
+                    PExpected::NoExpectation(second_var),
+                    headers,
+                );
+                self.infer_pattern(
+                    uf,
+                    rank,
+                    state,
+                    first,
+                    PExpected::NoExpectation(first_var),
+                    headers,
+                )
             }
             Pattern::Tuple {
                 first,
@@ -170,7 +202,7 @@ impl<'a> Solver<'a, '_> {
                     uf,
                     rank,
                     Content::Structure(FlatType::App1(
-                        nash_ast::primitives::builtin_home(),
+                        nash_ast::primitives::primitive_home(),
                         "list",
                         vec![entry],
                     )),
@@ -195,7 +227,7 @@ impl<'a> Solver<'a, '_> {
                     uf,
                     rank,
                     Content::Structure(FlatType::App1(
-                        nash_ast::primitives::builtin_home(),
+                        nash_ast::primitives::primitive_home(),
                         "list",
                         vec![entry],
                     )),
@@ -215,7 +247,7 @@ impl<'a> Solver<'a, '_> {
                 let list = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "list", vec![entry]),
+                    FlatType::App1(nash_ast::primitives::primitive_home(), "list", vec![entry]),
                 );
                 self.infer_pattern(
                     uf,
@@ -246,6 +278,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region,
                             context: type_::FieldContext::Pattern,
                             record,
@@ -259,6 +292,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region,
                             context: type_::FieldContext::Pattern,
                             record,

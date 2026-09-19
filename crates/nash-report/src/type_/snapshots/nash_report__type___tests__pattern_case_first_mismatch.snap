@@ -4,7 +4,7 @@ description: "module Main exposing (..)\nvalue number =\n    case number of\n   
 ---
 nash::type::pattern_mismatch
 
-  × Type mismatch: expected `int`, found `string`.
+  × Type mismatch: expected `Primitive.int`, found `Primitive.string`.
    ╭─[Main.nash:4:9]
  3 │     case number of
  4 │         "hello" -> 1

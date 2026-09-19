@@ -10,7 +10,7 @@ fn fixture<'a>(bump: &'a Bump, source: &str) -> (Tables<'a>, Annotations<'a>) {
     let canonical = nash_can::canonicalize(
         bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: None,
         },
         &parsed,
@@ -451,7 +451,7 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
     };
     let narrowed = bump.alloc(Located::at_zero(Type::Named {
         reference: QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "List",
         },
         args: bump.alloc_slice_copy(&[*carrier]),
@@ -565,7 +565,7 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
     for _ in 0..140 {
         deep = bump.alloc(Located::at_zero(Type::Named {
             reference: QualifiedName {
-                home: nash_ast::primitives::builtin_home(),
+                home: nash_ast::primitives::primitive_home(),
                 name: "list",
             },
             args: bump.alloc_slice_copy(&[deep]),

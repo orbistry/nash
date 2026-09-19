@@ -33,7 +33,7 @@ impl Database {
     /// Create a new database with the given file source.
     pub fn new(source: impl FileSource + 'static) -> Self {
         Database {
-            source: Box::new(source),
+            source: Box::new(crate::bundled_base::BundledSource(source)),
             files: HashMap::new(),
             imports: HashMap::new(),
             reverse_deps: HashMap::new(),

@@ -126,7 +126,7 @@ Declare {
                                     package: Some(
                                         PackageName {
                                             author: "nash",
-                                            project: "core",
+                                            project: "base",
                                         },
                                     ),
                                     name: "Monad",
@@ -142,7 +142,7 @@ Declare {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
                                                 name: "Monad",
@@ -616,7 +616,7 @@ Declare {
                                                                 package: Some(
                                                                     PackageName {
                                                                         author: "nash",
-                                                                        project: "core",
+                                                                        project: "base",
                                                                     },
                                                                 ),
                                                                 name: "Monad",
@@ -632,7 +632,7 @@ Declare {
                                                                             package: Some(
                                                                                 PackageName {
                                                                                     author: "nash",
-                                                                                    project: "core",
+                                                                                    project: "base",
                                                                                 },
                                                                             ),
                                                                             name: "Monad",

@@ -1,0 +1,37 @@
+---
+source: crates/nash-test/tests/runtime.rs
+description: "  assert (identity \"界\" == identity \"é\" ++ z\n      && identity \"名\" == value)"
+---
+{
+  "column": 11,
+  "file": "Example.nash",
+  "line": 1,
+  "source": "identity \"界\" == identity \"é\" ++ z\n      && identity \"名\" == value",
+  "values": [
+    {
+      "column": 0,
+      "row": 0,
+      "value": "left\ncontinued"
+    },
+    {
+      "column": 17,
+      "row": 0,
+      "value": "right"
+    },
+    {
+      "column": 9,
+      "row": 1,
+      "value": "name"
+    },
+    {
+      "column": 26,
+      "row": 1,
+      "value": "first\nsecond"
+    },
+    {
+      "column": 33,
+      "row": 0,
+      "value": "zero"
+    }
+  ]
+}

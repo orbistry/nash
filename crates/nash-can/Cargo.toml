@@ -20,3 +20,4 @@ nash-parse = { path = "../nash-parse" }
 nash-report = { path = "../nash-report" }
 # Reporter tests need the normal library types, not the separate unit-test crate.
 nash-can = { path = "." }
+nash-nitpick = { path = "../nash-nitpick" }

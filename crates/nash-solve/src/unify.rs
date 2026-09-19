@@ -693,7 +693,7 @@ mod predicate_tests {
         let shared = type_::mk_flex_var(&mut uf);
         let unit = |uf: &mut UnionFind<'_>| {
             uf.fresh(type_::make_descriptor(Content::Structure(FlatType::App1(
-                nash_ast::primitives::builtin_home(),
+                nash_ast::primitives::primitive_home(),
                 "unit",
                 vec![],
             ))))
@@ -797,7 +797,7 @@ mod predicate_tests {
             &mut uf,
             &context,
             Content::Structure(FlatType::App1(
-                nash_ast::primitives::builtin_home(),
+                nash_ast::primitives::primitive_home(),
                 "unit",
                 Vec::new(),
             )),
