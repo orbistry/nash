@@ -21,7 +21,7 @@ pub enum ComptimeError<'a> {
 }
 
 /// Include only dependencies reachable from `core`, then use the normal finite
-/// CEK budget. The caller must first expand representation casts.
+/// CEK budget.
 pub fn eval_closed<'a>(
     arena: &'a Arena,
     bindings: &[(Binder<'a>, &'a Core<'a>)],

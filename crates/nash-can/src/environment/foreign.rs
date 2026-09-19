@@ -87,8 +87,6 @@ pub fn add_imports<'a>(
     interfaces: Option<&BTreeMap<&'a str, Interface<'a>>>,
     imports: &[&'a SourceImport<'a>],
 ) -> Result<(), Vec<Error<'a>>> {
-    let home = env.home;
-    let builtin_home = nash_ast::primitives::builtin_home();
     let mut errors = Vec::new();
 
     for import in imports {
@@ -99,30 +97,6 @@ pub fn add_imports<'a>(
                 continue;
             }
         };
-        // Filter the synthetic interface before every import route, including
-        // explicit exposure and diagnostics. Only exact nash/core may name casts.
-        let restricted_interface;
-        let interface =
-            if interface.home == builtin_home && home.package != Some(nash_ast::primitives::CORE) {
-                restricted_interface = Interface {
-                    values: bump.alloc_slice_fill_iter(
-                        interface
-                            .values
-                            .iter()
-                            .filter(|value| {
-                                !nash_ast::primitives::BUILTINS.iter().any(|builtin| {
-                                    builtin.name == value.name && builtin.lowering.is_core_only()
-                                })
-                            })
-                            .copied()
-                            .collect::<Vec<_>>(),
-                    ),
-                    ..*interface
-                };
-                &restricted_interface
-            } else {
-                interface
-            };
         let prefix = import.alias.unwrap_or(import.import.value);
 
         let raw_type_info = build_raw_type_info(bump, interface);

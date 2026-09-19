@@ -56,7 +56,7 @@ pub fn assemble<'a>(arena: &'a Arena, module: &Module<'a>) -> Result<Compiled<'a
     assemble_core(arena, body)
 }
 
-/// Assemble an already wrapped Core root. Expand casts before calling this;
+/// Assemble an already wrapped Core root;
 /// recursion is rewritten here. Optimization is deferred to Plan 08.
 pub fn assemble_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Compiled<'a>, Error<'a>> {
     assemble_core_for_version(arena, core, PlutusVersion::V3)
@@ -188,7 +188,6 @@ fn free<'a>(
             }
         }
         Core::Field { record, .. } => free(record, scope, seen, out),
-        Core::Cast { arg, .. } => free(arg, scope, seen, out),
         Core::Trace { message, body } => {
             free(message, scope, seen, out);
             free(body, scope, seen, out);

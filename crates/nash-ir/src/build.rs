@@ -1,5 +1,5 @@
 //! Arena constructors. Use one builder per program to keep names unique.
-use crate::{core::*, ty::Ty};
+use crate::core::*;
 use nash_plutus::{arena::Arena, builtin::DefaultFunction, constant::Constant};
 use std::cell::Cell;
 
@@ -120,20 +120,6 @@ impl<'a> Builder<'a> {
         self.arena.alloc(Core::Builtin {
             func,
             args: self.arena.alloc_slice_copy(args),
-        })
-    }
-    pub fn cast(
-        &self,
-        kind: CastKind,
-        from: Ty<'a>,
-        to: Ty<'a>,
-        arg: &'a Core<'a>,
-    ) -> &'a Core<'a> {
-        self.arena.alloc(Core::Cast {
-            kind,
-            from,
-            to,
-            arg,
         })
     }
     pub fn trace(&self, message: &'a Core<'a>, body: &'a Core<'a>) -> &'a Core<'a> {

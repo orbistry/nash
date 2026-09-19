@@ -9,8 +9,8 @@ description: "module Main exposing (..)\nimport Prelude exposing (..)\nimport Li
     {
       "assert": null,
       "budget": {
-        "cpu": 13042342,
-        "mem": 54187
+        "cpu": 12754342,
+        "mem": 52387
       },
       "counterexample": null,
       "expectedFailure": false,

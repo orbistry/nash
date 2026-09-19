@@ -78,14 +78,14 @@ fn logs(source: &str) -> Vec<String> {
     let named = syn::parse_program(&arena, source).unwrap();
     let program = named.apply(
         &arena,
-        Term::data(&arena, PlutusData::constr(&arena, 0, &[])),
+        Term::data(&arena, PlutusData::constr(&arena, 2, &[])),
     );
     program.eval(&arena).info.logs
 }
 const UNIT: &str = "validator module Main exposing (main)\nmain : Data -> unit\nmain _ = ()\n";
 const LITERAL: &str = include_str!("../../../core/src/Literal.nash");
-const CHECK: &str = "module Check exposing (validate)\nimport Builtin\nvalidate : Data -> Int\nvalidate = Builtin.castValidateData\n";
-const TRACED: &str = "validator module Main exposing (main)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Check\nmain : Data -> Int\nmain d = trace \"user trace\" (Check.validate d)\n";
+const CHECK: &str = "module Check exposing (Expected, validate)\nimport Builtin\nimport Literal exposing (..)\ntype Expected = First | Second\nvalidate : Expected -> Int\nvalidate value =\n    case value of\n        First -> Builtin.iData 0\n        Second -> Builtin.iData 1\n";
+const TRACED: &str = "validator module Main exposing (main)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Check\nmain : Check.Expected -> Int\nmain d = trace \"user trace\" (Check.validate d)\n";
 
 #[test]
 fn configuration_and_cli_overrides_are_independent() {

@@ -1,7 +1,7 @@
 //! Compiler-owned types and representation predicates of `nash/core.Builtin`.
 
 mod builtins;
-pub use builtins::{BUILTINS, Builtin, BuiltinLowering};
+pub use builtins::{BUILTINS, Builtin};
 
 use crate::{Kind, ModuleName, PackageName, QualifiedName};
 

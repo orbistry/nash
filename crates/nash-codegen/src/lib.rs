@@ -9,7 +9,6 @@ pub mod builtins;
 
 pub mod ty_of;
 
-pub mod casts;
 pub mod demand;
 
 pub mod decision_tree;

@@ -72,7 +72,6 @@ impl<'a> Scope<'a> {
             Core::Lit(Constant::Boolean(_)) => Ty::Const(&ConstTy::Bool),
             Core::Lit(Constant::Unit) => Ty::Const(&ConstTy::Unit),
             Core::Lit(Constant::Data(_)) => DATA,
-            Core::Cast { to, .. } => *to,
             _ => Ty::Erased,
         }
     }
@@ -376,18 +375,6 @@ impl<'a> Share<'a, '_> {
                 Parts {
                     bindings: scrutinee.bindings,
                     value: self.build.case(*kind, scrutinee.value, &branches, default),
-                }
-            }
-            Core::Cast {
-                kind,
-                from,
-                to,
-                arg,
-            } => {
-                let arg = self.term(arg, scope);
-                Parts {
-                    bindings: arg.bindings,
-                    value: self.build.cast(*kind, *from, *to, arg.value),
                 }
             }
             Core::Trace { message, body } => {

@@ -177,9 +177,10 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     empty : list Data
     empty = []
-    same a b = if equalsData (fstPair a) (fstPair b) then equalsData (sndPair a) (sndPair b) else False
+    same a b = if equalsData (toData (fstPair a)) (toData (fstPair b)) then equalsData (toData (sndPair a)) (toData (sndPair b)) else False
     main = same (mkPairData (iData 1) (listData empty)) (mkPairData (iData 1) (listData empty))
     "#,
     Ok("(con bool True)")
@@ -228,12 +229,11 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    empty : list Data
-    empty = []
-    unzip : list (pair Data Data) -> pair Data Data
+    import Data exposing (toData)
+    unzip : list (pair Int Bytes) -> pair (List Int) (List Bytes)
     unzip xs =
         case xs of
-            [] -> mkPairData (listData empty) (listData empty)
+            [] -> mkPairData (listData []) (listData [])
             entry :: rest ->
                 let
                     tails = unzip rest
@@ -241,10 +241,10 @@ case!(
                 mkPairData
                     (listData (mkCons (fstPair entry) (unListData (fstPair tails))))
                     (listData (mkCons (sndPair entry) (unListData (sndPair tails))))
-    same : pair Data Data -> pair Data Data -> bool
+    same : pair (List Int) (List Bytes) -> pair (List Int) (List Bytes) -> bool
     same a b =
-        if equalsData (fstPair a) (fstPair b) then
-            equalsData (sndPair a) (sndPair b)
+        if equalsData (toData (fstPair a)) (toData (fstPair b)) then
+            equalsData (toData (sndPair a)) (toData (sndPair b))
         else False
     main =
         let
@@ -401,9 +401,10 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     type pairs = Pairs { inner : list (pair Data Data) }
     new () = Pairs { inner = [] }
-    same (Pairs a) (Pairs b) = equalsData (mapData a) (mapData b)
+    same (Pairs a) (Pairs b) = equalsData (toData (mapData a)) (toData (mapData b))
     main = same (new ()) (Pairs { inner = [] })
     "#,
     Ok("(con bool True)")

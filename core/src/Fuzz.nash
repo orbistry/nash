@@ -26,13 +26,13 @@ choice bound =
             case prng of
                 Seeded seed choices ->
                     let
-                        seed2 = Builtin.blake2b_256 (Builtin.castLower seed)
+                        seed2 = Builtin.blake2b_256 (Builtin.unBData seed)
                         n = Builtin.byteStringToInteger True seed2 % (bound + 1)
                     in
-                    Some (Seeded (Builtin.castLift seed2) (wrapChoices (Builtin.mkCons (Builtin.castLift n) (unwrapChoices choices))), n)
+                    Some (Seeded (Builtin.bData seed2) (wrapChoices (Builtin.mkCons (Builtin.iData n) (unwrapChoices choices))), n)
                 Replayed remaining choices ->
                     let
-                        count = Builtin.unIData (Builtin.castToData remaining)
+                        count = Builtin.unIData remaining
                         rest = unwrapChoices choices
                     in
                     if count <= 0 then None
@@ -40,9 +40,9 @@ choice bound =
                         case rest of
                             [] -> None
                             c :: cs ->
-                                let n = Builtin.unIData (Builtin.castToData c) in
+                                let n = Builtin.unIData c in
                                 if n < 0 || n > bound then None
-                                else Some (Replayed (Builtin.castLift (count - 1)) (wrapChoices cs), n))
+                                else Some (Replayed (Builtin.iData (count - 1)) (wrapChoices cs), n))
 
 map : ('a -> 'b) -> fuzzer 'a -> fuzzer 'b
 map f (Fuzzer g) =
@@ -137,7 +137,7 @@ packBytes values =
         x :: xs -> Builtin.consByteString x (packBytes xs)
 
 wrapChoices : list Int -> List Int
-wrapChoices = Builtin.castLift
+wrapChoices = Builtin.listData
 
 unwrapChoices : List Int -> list Int
-unwrapChoices = Builtin.castLower
+unwrapChoices = Builtin.unListData

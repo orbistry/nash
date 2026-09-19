@@ -270,7 +270,6 @@ pub(crate) fn names(core: &Core<'_>) -> HashSet<u32> {
                 }
             }
             Core::Field { record, .. } => pending.push((record, bound)),
-            Core::Cast { arg, .. } => pending.push((arg, bound)),
             Core::Trace { message, body } => {
                 pending.push((message, bound.clone()));
                 pending.push((body, bound));
@@ -420,15 +419,6 @@ pub(super) fn hoist_strings<'a>(build: &Builder<'a>, core: &'a Core<'a>) -> &'a 
                 Core::Builtin { func, args } => {
                     let args = args.iter().map(|a| self.term(a)).collect::<Vec<_>>();
                     self.build.builtin(*func, &args)
-                }
-                Core::Cast {
-                    kind,
-                    from,
-                    to,
-                    arg,
-                } => {
-                    let arg = self.term(arg);
-                    self.build.cast(*kind, *from, *to, arg)
                 }
                 Core::Trace { message, body } => {
                     let message = self.term(message);

@@ -260,12 +260,6 @@ impl<'a> Engine<'a, '_, '_> {
             Expr::Comptime(value) => {
                 let body = self.expr(value, ctx)?;
                 let body = self.closed_dependencies(body)?;
-                let body = crate::casts::expand_with_traces(
-                    &self.ir,
-                    &mut self.types,
-                    body,
-                    self.trace.compiler,
-                )?;
                 let constant = crate::comptime::eval_closed(self.ir.arena, &[], body)
                     .map_err(|error| Error::ComptimeAssembly(error.to_string()))?;
                 self.ir.lit(constant)

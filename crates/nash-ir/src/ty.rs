@@ -1,6 +1,6 @@
 //! Runtime types with explicit representations. Erased types only annotate
 //! representation-independent, unconstrained pass-through binders; constant
-//! construction and casts require concrete metadata.
+//! construction requires concrete metadata.
 
 use nash_ast::{QualifiedName, primitives::Repr};
 

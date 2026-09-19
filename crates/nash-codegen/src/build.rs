@@ -13,7 +13,7 @@ use nash_region::Located;
 use nash_solve::{SolvedTypes, solved::Scheme};
 
 use crate::{
-    demand::{DemandKind, Demands},
+    demand::Demands,
     evidence::{self, ExecutableEvidence},
     ty_of::{Substitution, TypeEnv},
 };
@@ -61,7 +61,7 @@ pub struct Specialization<'a> {
     pub evidence: Vec<ExecutableEvidence<'a>>,
 }
 pub struct Compiled<'a> {
-    /// Casts are expanded. Recursion rewriting and final lowering follow this phase.
+    /// Recursion rewriting and final lowering follow this phase.
     pub core: &'a Core<'a>,
     pub root_type: Ty<'a>,
     pub specializations: Vec<Specialization<'a>>,
@@ -114,8 +114,6 @@ pub enum Error<'a> {
     Evidence(evidence::Error<'a>),
     #[error("{0}")]
     Pattern(crate::decision_tree::Error<'a>),
-    #[error("{0}")]
-    Cast(crate::casts::Error<'a>),
 }
 
 impl<'a> From<crate::ty_of::TypeError<'a>> for Error<'a> {
@@ -133,12 +131,6 @@ impl<'a> From<crate::decision_tree::Error<'a>> for Error<'a> {
         Self::Pattern(e)
     }
 }
-impl<'a> From<crate::casts::Error<'a>> for Error<'a> {
-    fn from(e: crate::casts::Error<'a>) -> Self {
-        Self::Cast(e)
-    }
-}
-
 pub struct Build<'a, 's> {
     pub(crate) inputs: Vec<Input<'a, 's>>,
     pub(crate) unions: HashMap<QualifiedName<'a>, &'a Union<'a>>,
@@ -228,8 +220,6 @@ impl<'a, 's> Build<'a, 's> {
         let binder = engine.request(template, substitution, evidence)?;
         engine.drain(0)?;
         let core = engine.emit_group(0, engine.ir.var(binder.name), false)?;
-        let core =
-            crate::casts::expand_with_traces(&engine.ir, &mut engine.types, core, trace.compiler)?;
         let core = accessors::share(&engine.ir, core);
         let core = hoist_strings(&engine.ir, core);
         let specializations = engine
@@ -467,8 +457,6 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
     pub(crate) fn finish_root(&mut self, root: &'a Core<'a>) -> Result<&'a Core<'a>, Error<'a>> {
         self.drain(0)?;
         let core = self.emit_group(0, root, false)?;
-        let core =
-            crate::casts::expand_with_traces(&self.ir, &mut self.types, core, self.trace.compiler)?;
         let core = accessors::share(&self.ir, core);
         Ok(hoist_strings(&self.ir, core))
     }
@@ -627,16 +615,13 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         let t = &self.templates[template];
         let mut layouts = Vec::new();
         if let Some(demands) = self.build.demands.get(&t.id()) {
-            for (name, demand) in demands {
+            for name in demands {
                 let Some(typ) = subst.get(name) else {
                     return Err(Error::RuntimeLayout(Ty::Erased));
                 };
                 check_type(typ, &Substitution::new())?;
                 let ty = self.types.ty(typ, &Substitution::new())?;
-                layouts.push(match demand {
-                    DemandKind::Deep => ty,
-                    DemandKind::Native => native(self.ir.arena, ty)?,
-                });
+                layouts.push(native(self.ir.arena, ty)?);
             }
         }
         let evidence_key = evidence
@@ -663,14 +648,9 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
             runtime_subst.remove(name);
         }
         if let Some(demands) = self.build.demands.get(&t.id()) {
-            for (name, kind) in demands {
+            for name in demands {
                 let typ = *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?;
-                let typ = match kind {
-                    DemandKind::Deep => typ,
-                    DemandKind::Native => {
-                        native_type(self.ir.arena, self.types.ty(typ, &Substitution::new())?)?
-                    }
-                };
+                let typ = native_type(self.ir.arena, self.types.ty(typ, &Substitution::new())?)?;
                 runtime_subst.insert(name, typ);
             }
         }
@@ -715,7 +695,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
         if reference.home == primitives::builtin_home() {
-            return self.builtin(reference.name, node, ctx);
+            return self.builtin(reference.name);
         }
         if let Some(&template) = self.top.get(&reference) {
             let binder = self.use_template(template, node, ctx)?;

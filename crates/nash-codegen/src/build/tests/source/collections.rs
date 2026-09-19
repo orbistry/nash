@@ -107,6 +107,7 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     import Literal exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -123,7 +124,7 @@ case!(
                     None -> None
                     Some b -> Some (f a b)
     main = optionEq pairEq (map2 (Some 14) (Some 42) (\a b -> mkPairData (iData a) (iData b))) (Some (mkPairData (iData 14) (iData 42)))
-    pairEq a b = if equalsData (fstPair a) (fstPair b) then equalsData (sndPair a) (sndPair b) else False
+    pairEq a b = if equalsData (toData (fstPair a)) (toData (fstPair b)) then equalsData (toData (sndPair a)) (toData (sndPair b)) else False
     "#,
     Ok("(con bool True)")
 );
@@ -259,13 +260,14 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     import Literal exposing (..)
     import Eq exposing (..)
-    type assocList = AssocList { inner : list (pair Data Data) }
+    type assocList = AssocList { inner : list (pair Bytes Int) }
     impl Eq assocList where
-        eq left right = equalsData (mapData left.inner) (mapData right.inner)
+        eq left right = equalsData (toData (mapData left.inner)) (toData (mapData right.inner))
     new = AssocList { inner = [] }
-    toList : assocList -> list (pair Data Data)
+    toList : assocList -> list (pair Bytes Int)
     toList m = m.inner
     insert : assocList -> bytes -> int -> assocList
     insert m k v = AssocList { inner = (doInsert m.inner k v) }
@@ -280,7 +282,7 @@ case!(
                 if eq k k2 then mkCons (mkPairData (bData k) (iData v)) rest
                 else mkCons (mkPairData (bData k2) (iData v2)) (doInsert rest k v)
     fixture1 = insert (insert new "foo" 42) "bar" 14
-    main = equalsData (mapData (toList fixture1)) (mapData [mkPairData (bData "foo") (iData 42), mkPairData (bData "bar") (iData 14)])
+    main = equalsData (toData (mapData (toList fixture1))) (toData (mapData [mkPairData (bData "foo") (iData 42), mkPairData (bData "bar") (iData 14)]))
     "#,
     Ok("(con bool True)")
 );
@@ -290,13 +292,14 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     import Literal exposing (..)
     import Eq exposing (..)
-    type assocList = AssocList { inner : list (pair Data Data) }
+    type assocList = AssocList { inner : list (pair Bytes Int) }
     impl Eq assocList where
-        eq left right = equalsData (mapData left.inner) (mapData right.inner)
+        eq left right = equalsData (toData (mapData left.inner)) (toData (mapData right.inner))
     new = AssocList { inner = [] }
-    toList : assocList -> list (pair Data Data)
+    toList : assocList -> list (pair Bytes Int)
     toList m = m.inner
     insert : assocList -> bytes -> int -> assocList
     insert m k v = AssocList { inner = (doInsert m.inner k v) }
@@ -312,7 +315,7 @@ case!(
                 else mkCons (mkPairData (bData k2) (iData v2)) (doInsert rest k v)
     fixture1 = insert (insert new "foo" 42) "bar" 14
     fromList xs = AssocList { inner = (doFromList xs) }
-    doFromList : list (pair Data Data) -> list (pair Data Data)
+    doFromList : list (pair Bytes Int) -> list (pair Bytes Int)
     doFromList xs =
         case xs of
             [] -> []

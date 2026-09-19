@@ -1,42 +1,38 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt = Builtin.identity\n\nimpl FromString string where\n    fromString = Builtin.identity\n\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\n\nimpl FromInt Int where\n    fromInt = Builtin.castLift\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Bool exposing (Bool(..), not, and, or, xor)\n\nimport Builtin\n\ntype Bool = False | True\n\nnot : bool -> bool\nnot value = if value then Builtin.False else Builtin.True\n\nand : bool -> bool -> bool\nand a b = if a then b else Builtin.False\n\nor : bool -> bool -> bool\nor a b = if a then Builtin.True else b\n\nxor : bool -> bool -> bool\nxor a b = if a then not b else b\n\nmodule Unit exposing (Unit(..))\n\ntype Unit = Unit\n\nmodule Ordering exposing (Ordering(..), type ordering(..), invert, then_)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\n\ntype ordering = LT | EQ | GT\n\ntype Ordering = LT | EQ | GT\n\ninvert : ordering -> ordering\ninvert order =\n    case order of\n        LT -> GT\n        EQ -> EQ\n        GT -> LT\n\nthen_ : ordering -> ordering -> ordering\nthen_ first second =\n    case first of\n        EQ -> second\n        _ -> first\n\nimpl Eq ordering where\n    eq a b =\n        case (a, b) of\n            (LT, LT) -> True\n            (EQ, EQ) -> True\n            (GT, GT) -> True\n            _ -> False\n\nmodule Lift exposing (Lift)\n\nimport Builtin exposing (type bool(..))\nimport Bool exposing (Bool)\nimport Unit exposing (Unit)\nimport Ordering exposing (Ordering, type ordering(..))\n\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\nimpl Lift int Int where\n    lift = Builtin.castLift\n    lower = Builtin.castLower\n\nimpl Lift bytes Bytes where\n    lift = Builtin.castLift\n    lower = Builtin.castLower\n\nimpl Lift string Bytes where\n    lift value = Builtin.castLift (Builtin.encodeUtf8 value)\n    lower value = Builtin.decodeUtf8 (Builtin.castLower value)\n\nimpl Lift bool Bool where\n    lift value = if value then Bool.True else Bool.False\n    lower value =\n        case value of\n            Bool.True -> True\n            Bool.False -> False\n\nimpl Lift unit Unit where\n    lift _ = Unit.Unit\n    lower _ = ()\n\nimpl Lift ordering Ordering where\n    lift value =\n        case value of\n            LT -> Ordering.LT\n            EQ -> Ordering.EQ\n            GT -> Ordering.GT\n    lower value =\n        case value of\n            Ordering.LT -> LT\n            Ordering.EQ -> EQ\n            Ordering.GT -> GT\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Lift 'a 'b => Lift (list 'a) (List 'b) where\n    lift values = wrapList (mapList lift values)\n    lower values = mapList lower (unwrapList values)\n\nimpl Lift (list (pair 'k 'v)) (Map 'k 'v) where\n    lift = Builtin.castLift\n    lower = Builtin.castLower\n\nwrapList : list 'a -> List 'a\nwrapList = Builtin.castLift\n\nunwrapList : List 'a -> list 'a\nunwrapList = Builtin.castLower\n\nmodule Functor exposing (Functor)\n\nimport Builtin\nimport Lift exposing (Lift)\n\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n\nimpl Functor list where\n    map = mapList\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Functor List where\n    map f values = lift (mapList f (lower values))\n\nmodule Applicative exposing (Applicative)\n\nimport Functor exposing (Functor)\n\ntrait Functor 'f => Applicative 'f where\n    pure : 'a -> 'f 'a\n    apply : 'f ('a -> 'b) -> 'f 'a -> 'f 'b\n\nmodule Monad exposing (Monad)\n\nimport Applicative exposing (Applicative)\n\ntrait Applicative 'm => Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n\nmodule Option exposing (Option(..), type option(..), withDefault)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\nimport Lift exposing (Lift)\nimport Functor exposing (Functor)\nimport Applicative exposing (Applicative)\nimport Monad exposing (Monad)\n\ntype option 'a = Some 'a | None\ntype Option 'a = Some 'a | None\n\nimpl Functor option where\n    map f value =\n        case value of\n            Some item -> Some (f item)\n            None -> None\n\nimpl Applicative option where\n    pure = Some\n    apply functions value =\n        case functions of\n            Some f -> map f value\n            None -> None\n\nimpl Monad option where\n    bind value f =\n        case value of\n            Some item -> f item\n            None -> None\n\nwithDefault : 'a -> option 'a -> 'a\nwithDefault fallback value =\n    case value of\n        Some item -> item\n        None -> fallback\n\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (Some x, Some y) -> eq x y\n            (None, None) -> True\n            _ -> False\n\nimpl Lift 'a 'b => Lift (option 'a) (Option 'b) where\n    lift value =\n        case value of\n            Some item -> Option.Some (lift item)\n            None -> Option.None\n    lower value =\n        case value of\n            Option.Some item -> Some (lower item)\n            Option.None -> None\n\nmodule Data exposing (ToData, FromData, serialise, tag, fields)\n\nimport Builtin exposing (Data(..))\nimport Option exposing (type option(..))\n\ntrait ToData ('a : Big) where\n    toData : 'a -> Data\n\ntrait FromData ('a : Big) where\n    fromData : Data -> 'a\n    validateData : Data -> 'a\n\nimpl ToData Data where\n    toData value = value\n\nimpl FromData Data where\n    fromData value = value\n    validateData value = value\n\nimpl ToData Int where\n    toData = Builtin.castToData\n\nimpl FromData Int where\n    fromData = Builtin.castFromDataShallow\n    validateData = Builtin.castValidateData\n\nimpl ToData Bytes where\n    toData = Builtin.castToData\n\nimpl FromData Bytes where\n    fromData = Builtin.castFromDataShallow\n    validateData = Builtin.castValidateData\n\nserialise : Data -> bytes\nserialise = Builtin.serialiseData\n\ntag : Data -> option int\ntag value =\n    case value of\n        Constr index _ -> Some index\n        _ -> None\n\nfields : Data -> option (list Data)\nfields value =\n    case value of\n        Constr _ items -> Some items\n        _ -> None\n\nimpl ToData (List 'a) where\n    toData = Builtin.castToData\n\nimpl FromData (List 'a) where\n    fromData = Builtin.castFromDataShallow\n    validateData = Builtin.castValidateData\n\nimpl ToData (Map 'k 'v) where\n    toData = Builtin.castToData\n\nimpl FromData (Map 'k 'v) where\n    fromData = Builtin.castFromDataShallow\n    validateData = Builtin.castValidateData\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lift, lower)\ntype Pair 'v = Pair Bytes 'v\ntype Dict 'v = Dict { inner : List (Pair 'v) }\ntype Value = Value { inner : Dict (Dict Int) }\ntype Dat = Dat { c : Int, a : Value }\ndat : Dat\ndat =\n    let\n        innerEntries : list (Pair Int)\n        innerEntries = [Pair #\"aa\" 4]\n        innerDict : Dict Int\n        innerDict = Dict { inner = (lift innerEntries) }\n        v = Value { inner = (Dict { inner = (lift [Pair #\"\" innerDict]) }) }\n    in\n    Dat { c = 0, a = v }\nmain =\n    let\n        val = dat.a\n        entries : list (Pair (Dict Int))\n        entries = lower val.inner.inner\n        finalEntries : list (Pair Int)\n        finalEntries = [Pair #\"AA\" 4]\n        finalAmount : Dict Int\n        finalAmount = Dict { inner = (lift finalEntries) }\n    in\n    case entries of\n        [Pair _ amount] -> eq finalAmount amount\n        _ -> fail\n"
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt value = value\n\nimpl FromString string where\n    fromString value = value\n\nimpl FromBytes bytes where\n    fromBytes value = value\n\nimpl FromInt Int where\n    fromInt = Builtin.iData\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.bData\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Bool exposing (Bool(..), not, and, or, xor)\n\nimport Builtin\n\ntype Bool = False | True\n\nnot : bool -> bool\nnot value = if value then Builtin.False else Builtin.True\n\nand : bool -> bool -> bool\nand a b = if a then b else Builtin.False\n\nor : bool -> bool -> bool\nor a b = if a then Builtin.True else b\n\nxor : bool -> bool -> bool\nxor a b = if a then not b else b\n\nmodule Unit exposing (Unit(..))\n\ntype Unit = Unit\n\nmodule Ordering exposing (Ordering(..), type ordering(..), invert, then_)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\n\ntype ordering = LT | EQ | GT\n\ntype Ordering = LT | EQ | GT\n\ninvert : ordering -> ordering\ninvert order =\n    case order of\n        LT -> GT\n        EQ -> EQ\n        GT -> LT\n\nthen_ : ordering -> ordering -> ordering\nthen_ first second =\n    case first of\n        EQ -> second\n        _ -> first\n\nimpl Eq ordering where\n    eq a b =\n        case (a, b) of\n            (LT, LT) -> True\n            (EQ, EQ) -> True\n            (GT, GT) -> True\n            _ -> False\n\nmodule Lift exposing (Lift)\n\nimport Builtin exposing (type bool(..))\nimport Bool exposing (Bool)\nimport Unit exposing (Unit)\nimport Ordering exposing (Ordering, type ordering(..))\n\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\nimpl Lift int Int where\n    lift = Builtin.iData\n    lower = Builtin.unIData\n\nimpl Lift bytes Bytes where\n    lift = Builtin.bData\n    lower = Builtin.unBData\n\nimpl Lift string Bytes where\n    lift value = Builtin.bData (Builtin.encodeUtf8 value)\n    lower value = Builtin.decodeUtf8 (Builtin.unBData value)\n\nimpl Lift bool Bool where\n    lift value = if value then Bool.True else Bool.False\n    lower value =\n        case value of\n            Bool.True -> True\n            Bool.False -> False\n\nimpl Lift unit Unit where\n    lift _ = Unit.Unit\n    lower _ = ()\n\nimpl Lift ordering Ordering where\n    lift value =\n        case value of\n            LT -> Ordering.LT\n            EQ -> Ordering.EQ\n            GT -> Ordering.GT\n    lower value =\n        case value of\n            Ordering.LT -> LT\n            Ordering.EQ -> EQ\n            Ordering.GT -> GT\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Lift 'a 'b => Lift (list 'a) (List 'b) where\n    lift values = Builtin.listData (mapList lift values)\n    lower values = mapList lower (Builtin.unListData values)\n\nimpl Lift (list (pair 'k 'v)) (Map 'k 'v) where\n    lift = Builtin.mapData\n    lower = Builtin.unMapData\n\nmodule Functor exposing (Functor)\n\nimport Builtin\nimport Lift exposing (Lift)\n\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n\nimpl Functor list where\n    map = mapList\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Functor List where\n    map f values = lift (mapList f (lower values))\n\nmodule Applicative exposing (Applicative)\n\nimport Functor exposing (Functor)\n\ntrait Functor 'f => Applicative 'f where\n    pure : 'a -> 'f 'a\n    apply : 'f ('a -> 'b) -> 'f 'a -> 'f 'b\n\nmodule Monad exposing (Monad)\n\nimport Applicative exposing (Applicative)\n\ntrait Applicative 'm => Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n\nmodule Option exposing (Option(..), type option(..), withDefault)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\nimport Lift exposing (Lift)\nimport Functor exposing (Functor)\nimport Applicative exposing (Applicative)\nimport Monad exposing (Monad)\n\ntype option 'a = Some 'a | None\ntype Option 'a = Some 'a | None\n\nimpl Functor option where\n    map f value =\n        case value of\n            Some item -> Some (f item)\n            None -> None\n\nimpl Applicative option where\n    pure = Some\n    apply functions value =\n        case functions of\n            Some f -> map f value\n            None -> None\n\nimpl Monad option where\n    bind value f =\n        case value of\n            Some item -> f item\n            None -> None\n\nwithDefault : 'a -> option 'a -> 'a\nwithDefault fallback value =\n    case value of\n        Some item -> item\n        None -> fallback\n\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (Some x, Some y) -> eq x y\n            (None, None) -> True\n            _ -> False\n\nimpl Lift 'a 'b => Lift (option 'a) (Option 'b) where\n    lift value =\n        case value of\n            Some item -> Option.Some (lift item)\n            None -> Option.None\n    lower value =\n        case value of\n            Option.Some item -> Some (lower item)\n            Option.None -> None\n\nmodule Data exposing (ToData, FromData, serialise, tag, fields)\n\nimport Builtin exposing (Data(..))\nimport Option exposing (type option(..))\n\ntrait ToData ('a : Big) where\n    toData : 'a -> Data\n\ntrait FromData ('a : Big) where\n    fromData : Data -> 'a\n    validateData : Data -> 'a\n    validateData = fromData\n\nimpl ToData Data where\n    toData value = value\n\nimpl FromData Data where\n    fromData value = value\n\nimpl ToData Int where\n    toData value = I (Builtin.unIData value)\n\nimpl FromData Int where\n    fromData value =\n        case value of\n            I number -> Builtin.iData number\n            _ -> fail\n\nimpl ToData Bytes where\n    toData value = B (Builtin.unBData value)\n\nimpl FromData Bytes where\n    fromData value =\n        case value of\n            B bytes -> Builtin.bData bytes\n            _ -> fail\n\nserialise : Data -> bytes\nserialise = Builtin.serialiseData\n\ntag : Data -> option int\ntag value =\n    case value of\n        Constr index _ -> Some index\n        _ -> None\n\nfields : Data -> option (list Data)\nfields value =\n    case value of\n        Constr _ items -> Some items\n        _ -> None\n\nimpl ToData 'a => ToData (List 'a) where\n    toData values = List (mapList toData (Builtin.unListData values))\n\nimpl FromData 'a => FromData (List 'a) where\n    fromData value =\n        case value of\n            List values -> Builtin.listData (mapList fromData values)\n            _ -> fail\n    validateData value =\n        case value of\n            List values -> Builtin.listData (mapList validateData values)\n            _ -> fail\n\nimpl (ToData 'k, ToData 'v) => ToData (Map 'k 'v) where\n    toData values = Map (mapList pairToData (Builtin.unMapData values))\n\nimpl (FromData 'k, FromData 'v) => FromData (Map 'k 'v) where\n    fromData value =\n        case value of\n            Map values -> Builtin.mapData (mapList pairFromData values)\n            _ -> fail\n    validateData value =\n        case value of\n            Map values -> Builtin.mapData (mapList pairValidateData values)\n            _ -> fail\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        first :: rest -> Builtin.mkCons (f first) (mapList f rest)\n\npairToData : (ToData 'k, ToData 'v) => pair 'k 'v -> pair Data Data\npairToData value = Builtin.mkPairData (toData (Builtin.fstPair value)) (toData (Builtin.sndPair value))\n\npairFromData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v\npairFromData value = Builtin.mkPairData (fromData (Builtin.fstPair value)) (fromData (Builtin.sndPair value))\n\npairValidateData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v\npairValidateData value = Builtin.mkPairData (validateData (Builtin.fstPair value)) (validateData (Builtin.sndPair value))\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lift, lower)\ntype Pair 'v = Pair Bytes 'v\ntype Dict 'v = Dict { inner : List (Pair 'v) }\ntype Value = Value { inner : Dict (Dict Int) }\ntype Dat = Dat { c : Int, a : Value }\ndat : Dat\ndat =\n    let\n        innerEntries : list (Pair Int)\n        innerEntries = [Pair #\"aa\" 4]\n        innerDict : Dict Int\n        innerDict = Dict { inner = (lift innerEntries) }\n        v = Value { inner = (Dict { inner = (lift [Pair #\"\" innerDict]) }) }\n    in\n    Dat { c = 0, a = v }\nmain =\n    let\n        val = dat.a\n        entries : list (Pair (Dict Int))\n        entries = lower val.inner.inner\n        finalEntries : list (Pair Int)\n        finalEntries = [Pair #\"AA\" 4]\n        finalAmount : Dict Int\n        finalAmount = Dict { inner = (lift finalEntries) }\n    in\n    case entries of\n        [Pair _ amount] -> eq finalAmount amount\n        _ -> fail\n"
 ---
 --- core
-let message#86 : string = "incomplete pattern match" in
-let mapList#38 : ('erased -> Data) -> list 'erased -> list Data = \(f#59 : 'erased -> Data) values#60 : list 'erased -> (\self#8 : 'erased -> self#8 self#8) (\self#8 : 'erased values#60 : list 'erased -> let match#63 : list 'erased = values#60 in
-case@List match#63 of
+let message#75 : string = "incomplete pattern match" in
+let mapList#38 : ('erased -> Data) -> list 'erased -> list Data = \(f#54 : 'erased -> Data) values#55 : list 'erased -> (\self#8 : 'erased -> self#8 self#8) (\self#8 : 'erased values#55 : list 'erased -> let match#58 : list 'erased = values#55 in
+case@List match#58 of
   Nil -> (con (list data) [])
-  Cons field#64 field#65 -> let x#61 : 'erased = field#64 in
-  let xs#62 : list 'erased = field#65 in
-  mkCons (f#59 x#61) (self#8 self#8 xs#62)) values#60 in
-let unwrapList#40 : List (Main.Pair (Main.Dict Int)) -> list (Main.Pair (Main.Dict Int)) = \value#66 : List (Main.Pair (Main.Dict Int)) -> let projection#72 : list Data = unListData value#66 in
-projection#72 in
-let lower#29 : List (Main.Pair (Main.Dict Int)) -> list (Main.Pair (Main.Dict Int)) = \values#37 : List (Main.Pair (Main.Dict Int)) -> mapList#38 (\identity#39 : 'erased -> identity#39) (unwrapList#40 values#37) in
-let wrapList#42 : list (Main.Pair Int) -> List (Main.Pair Int) = \value#67 : list (Main.Pair Int) -> listData value#67 in
-let lift#31 : list (Main.Pair Int) -> List (Main.Pair Int) = \values#41 : list (Main.Pair Int) -> wrapList#42 (mapList#38 (\identity#43 : 'erased -> identity#43) values#41) in
-let fromBytes#34 : bytes -> Bytes = \value#44 : bytes -> bData value#44 in
-let fromInt#35 : int -> Int = \value#45 : int -> iData value#45 in
-let wrapList#69 : list (Main.Pair (Main.Dict Int)) -> List (Main.Pair (Main.Dict Int)) = \value#71 : list (Main.Pair (Main.Dict Int)) -> listData value#71 in
-let lift#53 : list (Main.Pair (Main.Dict Int)) -> List (Main.Pair (Main.Dict Int)) = \values#68 : list (Main.Pair (Main.Dict Int)) -> wrapList#69 (mapList#38 (\identity#70 : 'erased -> identity#70) values#68) in
-let innerEntries#46 : list (Main.Pair Int) = mkCons ((\field#57 : Bytes field#58 : Int -> constrData 0 (mkCons field#57 (mkCons field#58 (con (list data) [])))) (fromBytes#34 (con bytestring #aa)) (fromInt#35 4)) (con (list data) []) in
-let innerDict#47 : Main.Dict Int = (\field#56 : List (Main.Pair Int) -> constrData 0 (mkCons field#56 (con (list data) []))) (lift#31 innerEntries#46) in
-let v#48 : Main.Value = (\field#51 : Main.Dict (Main.Dict Int) -> constrData 0 (mkCons field#51 (con (list data) []))) ((\field#52 : List (Main.Pair (Main.Dict Int)) -> constrData 0 (mkCons field#52 (con (list data) []))) (lift#53 (mkCons ((\field#54 : Bytes field#55 : Main.Dict Int -> constrData 0 (mkCons field#54 (mkCons field#55 (con (list data) [])))) (fromBytes#34 (con bytestring #)) innerDict#47) (con (list data) [])))) in
-let dat#36 : Main.Dat = (\field#49 : Int field#50 : Main.Value -> constrData 0 (mkCons field#49 (mkCons field#50 (con (list data) [])))) (fromInt#35 0) v#48 in
-let projection#73 : pair int (list Data) = unConstrData dat#36 in
-let projection#74 : list Data = sndPair projection#73 in
-let projection#75 : list Data = tailList projection#74 in
-let projection#76 : Data = headList projection#75 in
-let val#2 : Main.Value = projection#76 in
+  Cons field#59 field#60 -> let x#56 : 'erased = field#59 in
+  let xs#57 : list 'erased = field#60 in
+  mkCons (f#54 x#56) (self#8 self#8 xs#57)) values#55 in
+let lower#29 : List Data -> list Data = \values#37 : List Data -> let projection#61 : list Data = unListData values#37 in
+mapList#38 (\identity#39 : 'erased -> identity#39) projection#61 in
+let lift#31 : list Data -> List Data = \values#40 : list Data -> listData (mapList#38 (\identity#41 : 'erased -> identity#41) values#40) in
+let fromBytes#34 : bytes -> Bytes = bData in
+let fromInt#35 : int -> Int = iData in
+let innerEntries#42 : list (Main.Pair Int) = mkCons ((\field#52 : Bytes field#53 : Int -> constrData 0 (mkCons field#52 (mkCons field#53 (con (list data) [])))) (fromBytes#34 (con bytestring #aa)) (fromInt#35 4)) (con (list data) []) in
+let innerDict#43 : Main.Dict Int = (\field#51 : List (Main.Pair Int) -> constrData 0 (mkCons field#51 (con (list data) []))) (lift#31 innerEntries#42) in
+let v#44 : Main.Value = (\field#47 : Main.Dict (Main.Dict Int) -> constrData 0 (mkCons field#47 (con (list data) []))) ((\field#48 : List (Main.Pair (Main.Dict Int)) -> constrData 0 (mkCons field#48 (con (list data) []))) (lift#31 (mkCons ((\field#49 : Bytes field#50 : Main.Dict Int -> constrData 0 (mkCons field#49 (mkCons field#50 (con (list data) [])))) (fromBytes#34 (con bytestring #)) innerDict#43) (con (list data) [])))) in
+let dat#36 : Main.Dat = (\field#45 : Int field#46 : Main.Value -> constrData 0 (mkCons field#45 (mkCons field#46 (con (list data) [])))) (fromInt#35 0) v#44 in
+let projection#62 : pair int (list Data) = unConstrData dat#36 in
+let projection#63 : list Data = sndPair projection#62 in
+let projection#64 : list Data = tailList projection#63 in
+let projection#65 : Data = headList projection#64 in
+let val#2 : Main.Value = projection#65 in
 let finalEntries#3 : list (Main.Pair Int) = mkCons ((\field#32 : Bytes field#33 : Int -> constrData 0 (mkCons field#32 (mkCons field#33 (con (list data) [])))) (fromBytes#34 (con bytestring #aa)) (fromInt#35 4)) (con (list data) []) in
 let finalAmount#4 : Main.Dict Int = (\field#30 : List (Main.Pair Int) -> constrData 0 (mkCons field#30 (con (list data) []))) (lift#31 finalEntries#3) in
-let projection#77 : pair int (list Data) = unConstrData val#2 in
-let projection#78 : list Data = sndPair projection#77 in
-let projection#79 : Data = headList projection#78 in
-let projection#80 : pair int (list Data) = unConstrData projection#79 in
-let projection#81 : list Data = sndPair projection#80 in
-let projection#82 : Data = headList projection#81 in
-let entries#5 : list (Main.Pair (Main.Dict Int)) = lower#29 projection#82 in
+let projection#66 : pair int (list Data) = unConstrData val#2 in
+let projection#67 : list Data = sndPair projection#66 in
+let projection#68 : Data = headList projection#67 in
+let projection#69 : pair int (list Data) = unConstrData projection#68 in
+let projection#70 : list Data = sndPair projection#69 in
+let projection#71 : Data = headList projection#70 in
+let entries#5 : list (Main.Pair (Main.Dict Int)) = lower#29 projection#71 in
 let match#7 : list (Main.Pair (Main.Dict Int)) = entries#5 in
 let leaf#18 : 'erased = delay error in
 let main#1 : bool = case@List match#7 of
@@ -44,209 +40,200 @@ let main#1 : bool = case@List match#7 of
   Cons field#19 field#20 -> case@Data field#19 of
     DataConstr tag#25 fields#26 -> case@Int tag#25 of
       0 -> let fieldList#27 : list Data = fields#26 in
-      let projection#83 : Data = headList fieldList#27 in
-      let field#21 : Bytes = projection#83 in
-      let projection#84 : list Data = tailList fieldList#27 in
-      let fieldList#28 : list Data = projection#84 in
-      let projection#85 : Data = headList fieldList#28 in
-      let field#22 : Main.Dict Int = projection#85 in
+      let projection#72 : Data = headList fieldList#27 in
+      let field#21 : Bytes = projection#72 in
+      let projection#73 : list Data = tailList fieldList#27 in
+      let fieldList#28 : list Data = projection#73 in
+      let projection#74 : Data = headList fieldList#28 in
+      let field#22 : Main.Dict Int = projection#74 in
       case@List field#20 of
         Nil -> let amount#6 : Main.Dict Int = field#22 in
         equalsData finalAmount#4 amount#6
         Cons field#23 field#24 -> force leaf#18
-      _ -> trace message#86 in error
-    _ -> trace message#86 in error in
+      _ -> trace message#75 in error
+    _ -> trace message#75 in error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_86
+  [(lam message_75
     [(lam mapList_38
-      [(lam unwrapList_40
-        [(lam lower_29
-          [(lam wrapList_42
-            [(lam lift_31
-              [(lam fromBytes_34
-                [(lam fromInt_35
-                  [(lam wrapList_69
-                    [(lam lift_53
-                      [(lam innerEntries_46
-                        [(lam innerDict_47
-                          [(lam v_48
-                            [(lam dat_36
-                              [(lam projection_73
-                                [(lam projection_74
-                                  [(lam projection_75
-                                    [(lam projection_76
-                                      [(lam val_2
-                                        [(lam finalEntries_3
-                                          [(lam finalAmount_4
-                                            [(lam projection_77
-                                              [(lam projection_78
-                                                [(lam projection_79
-                                                  [(lam projection_80
-                                                    [(lam projection_81
-                                                      [(lam projection_82
-                                                        [(lam entries_5
-                                                          [(lam match_7
-                                                            [(lam leaf_18
-                                                              [(lam main_1 main_1)
-                                                                [(lam generated_87
-                                                                  (force
-                                                                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_87]]
-                                                                      (delay (force leaf_18))]
-                                                                      (delay
-                                                                        [[(lam field_19
-                                                                          (lam field_20
-                                                                            [(lam generated_88
-                                                                              (force
-                                                                                [[[[[[(force (builtin chooseData)) generated_88]
-                                                                                  (delay
-                                                                                    [(lam generated_91
-                                                                                      [[(lam tag_25
-                                                                                        (lam fields_26
-                                                                                          [(lam generated_89
-                                                                                            (force
-                                                                                              [[[(force (builtin ifThenElse))
-                                                                                                [[(builtin equalsInteger) generated_89] (con integer 0)]]
-                                                                                                (delay
-                                                                                                  [(lam fieldList_27
-                                                                                                    [(lam projection_83
-                                                                                                      [(lam field_21
-                                                                                                        [(lam projection_84
-                                                                                                          [(lam fieldList_28
-                                                                                                            [(lam projection_85
-                                                                                                              [(lam field_22
-                                                                                                                [(lam generated_90
-                                                                                                                  (force
-                                                                                                                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_90]]
-                                                                                                                      (delay
-                                                                                                                        [(lam amount_6 [[(builtin equalsData) finalAmount_4] amount_6]) field_22])]
-                                                                                                                      (delay
-                                                                                                                        [[(lam field_23 (lam field_24 (force leaf_18)))
-                                                                                                                          [(force (builtin headList)) generated_90]]
-                                                                                                                          [(force (builtin tailList)) generated_90]])]))
-                                                                                                                  field_20])
-                                                                                                                projection_85])
-                                                                                                              [(force (builtin headList)) fieldList_28]])
-                                                                                                            projection_84])
-                                                                                                          [(force (builtin tailList)) fieldList_27]])
-                                                                                                        projection_83])
-                                                                                                      [(force (builtin headList)) fieldList_27]])
-                                                                                                    fields_26])]
-                                                                                                (delay (force [[(force (builtin trace)) message_86] (delay (error))]))]))
-                                                                                            tag_25]))
-                                                                                        [(force (force (builtin fstPair))) generated_91]]
-                                                                                        [(force (force (builtin sndPair))) generated_91]])
-                                                                                      [(builtin unConstrData) generated_88]])]
-                                                                                  (delay (force [[(force (builtin trace)) message_86] (delay (error))]))]
-                                                                                  (delay (force [[(force (builtin trace)) message_86] (delay (error))]))]
-                                                                                  (delay (force [[(force (builtin trace)) message_86] (delay (error))]))]
-                                                                                  (delay (force [[(force (builtin trace)) message_86] (delay (error))]))]))
-                                                                              field_19]))
-                                                                          [(force (builtin headList)) generated_87]]
-                                                                          [(force (builtin tailList)) generated_87]])]))
-                                                                  match_7]])
-                                                              (delay (error))])
-                                                            entries_5])
-                                                          [lower_29 projection_82]])
-                                                        [(force (builtin headList)) projection_81]])
-                                                      [(force (force (builtin sndPair))) projection_80]])
-                                                    [(builtin unConstrData) projection_79]])
-                                                  [(force (builtin headList)) projection_78]])
-                                                [(force (force (builtin sndPair))) projection_77]])
-                                              [(builtin unConstrData) val_2]])
-                                            [(lam field_30
-                                              [[(builtin constrData) (con integer 0)]
-                                                [[(force (builtin mkCons)) field_30] (con (list data) [])]])
-                                              [lift_31 finalEntries_3]]])
-                                          [[(force (builtin mkCons))
-                                            [[(lam field_32
-                                              (lam field_33
-                                                [[(builtin constrData) (con integer 0)]
-                                                  [[(force (builtin mkCons)) field_32]
-                                                    [[(force (builtin mkCons)) field_33] (con (list data) [])]]]))
-                                              [fromBytes_34 (con bytestring #aa)]]
-                                              [fromInt_35 (con integer 4)]]]
-                                            (con (list data) [])]])
-                                        projection_76])
-                                      [(force (builtin headList)) projection_75]])
-                                    [(force (builtin tailList)) projection_74]])
-                                  [(force (force (builtin sndPair))) projection_73]])
-                                [(builtin unConstrData) dat_36]])
-                              [[(lam field_49
-                                (lam field_50
-                                  [[(builtin constrData) (con integer 0)]
-                                    [[(force (builtin mkCons)) field_49]
-                                      [[(force (builtin mkCons)) field_50] (con (list data) [])]]]))
-                                [fromInt_35 (con integer 0)]]
-                                v_48]])
-                            [(lam field_51
-                              [[(builtin constrData) (con integer 0)]
-                                [[(force (builtin mkCons)) field_51] (con (list data) [])]])
-                              [(lam field_52
-                                [[(builtin constrData) (con integer 0)]
-                                  [[(force (builtin mkCons)) field_52] (con (list data) [])]])
-                                [lift_53
+      [(lam lower_29
+        [(lam lift_31
+          [(lam fromBytes_34
+            [(lam fromInt_35
+              [(lam innerEntries_42
+                [(lam innerDict_43
+                  [(lam v_44
+                    [(lam dat_36
+                      [(lam projection_62
+                        [(lam projection_63
+                          [(lam projection_64
+                            [(lam projection_65
+                              [(lam val_2
+                                [(lam finalEntries_3
+                                  [(lam finalAmount_4
+                                    [(lam projection_66
+                                      [(lam projection_67
+                                        [(lam projection_68
+                                          [(lam projection_69
+                                            [(lam projection_70
+                                              [(lam projection_71
+                                                [(lam entries_5
+                                                  [(lam match_7
+                                                    [(lam leaf_18
+                                                      [(lam main_1 main_1)
+                                                        [(lam generated_76
+                                                          (force
+                                                            [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_76]]
+                                                              (delay (force leaf_18))]
+                                                              (delay
+                                                                [[(lam field_19
+                                                                  (lam field_20
+                                                                    [(lam generated_77
+                                                                      (force
+                                                                        [[[[[[(force (builtin chooseData)) generated_77]
+                                                                          (delay
+                                                                            [(lam generated_80
+                                                                              [[(lam tag_25
+                                                                                (lam fields_26
+                                                                                  [(lam generated_78
+                                                                                    (force
+                                                                                      [[[(force (builtin ifThenElse))
+                                                                                        [[(builtin equalsInteger) generated_78] (con integer 0)]]
+                                                                                        (delay
+                                                                                          [(lam fieldList_27
+                                                                                            [(lam projection_72
+                                                                                              [(lam field_21
+                                                                                                [(lam projection_73
+                                                                                                  [(lam fieldList_28
+                                                                                                    [(lam projection_74
+                                                                                                      [(lam field_22
+                                                                                                        [(lam generated_79
+                                                                                                          (force
+                                                                                                            [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_79]]
+                                                                                                              (delay
+                                                                                                                [(lam amount_6 [[(builtin equalsData) finalAmount_4] amount_6]) field_22])]
+                                                                                                              (delay
+                                                                                                                [[(lam field_23 (lam field_24 (force leaf_18)))
+                                                                                                                  [(force (builtin headList)) generated_79]]
+                                                                                                                  [(force (builtin tailList)) generated_79]])]))
+                                                                                                          field_20])
+                                                                                                        projection_74])
+                                                                                                      [(force (builtin headList)) fieldList_28]])
+                                                                                                    projection_73])
+                                                                                                  [(force (builtin tailList)) fieldList_27]])
+                                                                                                projection_72])
+                                                                                              [(force (builtin headList)) fieldList_27]])
+                                                                                            fields_26])]
+                                                                                        (delay (force [[(force (builtin trace)) message_75] (delay (error))]))]))
+                                                                                    tag_25]))
+                                                                                [(force (force (builtin fstPair))) generated_80]]
+                                                                                [(force (force (builtin sndPair))) generated_80]])
+                                                                              [(builtin unConstrData) generated_77]])]
+                                                                          (delay (force [[(force (builtin trace)) message_75] (delay (error))]))]
+                                                                          (delay (force [[(force (builtin trace)) message_75] (delay (error))]))]
+                                                                          (delay (force [[(force (builtin trace)) message_75] (delay (error))]))]
+                                                                          (delay (force [[(force (builtin trace)) message_75] (delay (error))]))]))
+                                                                      field_19]))
+                                                                  [(force (builtin headList)) generated_76]]
+                                                                  [(force (builtin tailList)) generated_76]])]))
+                                                          match_7]])
+                                                      (delay (error))])
+                                                    entries_5])
+                                                  [lower_29 projection_71]])
+                                                [(force (builtin headList)) projection_70]])
+                                              [(force (force (builtin sndPair))) projection_69]])
+                                            [(builtin unConstrData) projection_68]])
+                                          [(force (builtin headList)) projection_67]])
+                                        [(force (force (builtin sndPair))) projection_66]])
+                                      [(builtin unConstrData) val_2]])
+                                    [(lam field_30
+                                      [[(builtin constrData) (con integer 0)]
+                                        [[(force (builtin mkCons)) field_30] (con (list data) [])]])
+                                      [lift_31 finalEntries_3]]])
                                   [[(force (builtin mkCons))
-                                    [[(lam field_54
-                                      (lam field_55
+                                    [[(lam field_32
+                                      (lam field_33
                                         [[(builtin constrData) (con integer 0)]
-                                          [[(force (builtin mkCons)) field_54]
-                                            [[(force (builtin mkCons)) field_55] (con (list data) [])]]]))
-                                      [fromBytes_34 (con bytestring #)]]
-                                      innerDict_47]]
-                                    (con (list data) [])]]]]])
-                          [(lam field_56
-                            [[(builtin constrData) (con integer 0)]
-                              [[(force (builtin mkCons)) field_56] (con (list data) [])]])
-                            [lift_31 innerEntries_46]]])
-                        [[(force (builtin mkCons))
-                          [[(lam field_57
-                            (lam field_58
-                              [[(builtin constrData) (con integer 0)]
-                                [[(force (builtin mkCons)) field_57]
-                                  [[(force (builtin mkCons)) field_58] (con (list data) [])]]]))
-                            [fromBytes_34 (con bytestring #aa)]]
-                            [fromInt_35 (con integer 4)]]]
-                          (con (list data) [])]])
-                      (lam values_68
-                        [wrapList_69 [[mapList_38 (lam identity_70 identity_70)] values_68]])])
-                    (lam value_71 [(builtin listData) value_71])])
-                  (lam value_45 [(builtin iData) value_45])])
-                (lam value_44 [(builtin bData) value_44])])
-              (lam values_41
-                [wrapList_42 [[mapList_38 (lam identity_43 identity_43)] values_41]])])
-            (lam value_67 [(builtin listData) value_67])])
-          (lam values_37
-            [[mapList_38 (lam identity_39 identity_39)] [unwrapList_40 values_37]])])
-        (lam value_66
-          [(lam projection_72 projection_72) [(builtin unListData) value_66]])])
-      (lam f_59
-        (lam values_60
+                                          [[(force (builtin mkCons)) field_32]
+                                            [[(force (builtin mkCons)) field_33] (con (list data) [])]]]))
+                                      [fromBytes_34 (con bytestring #aa)]]
+                                      [fromInt_35 (con integer 4)]]]
+                                    (con (list data) [])]])
+                                projection_65])
+                              [(force (builtin headList)) projection_64]])
+                            [(force (builtin tailList)) projection_63]])
+                          [(force (force (builtin sndPair))) projection_62]])
+                        [(builtin unConstrData) dat_36]])
+                      [[(lam field_45
+                        (lam field_46
+                          [[(builtin constrData) (con integer 0)]
+                            [[(force (builtin mkCons)) field_45]
+                              [[(force (builtin mkCons)) field_46] (con (list data) [])]]]))
+                        [fromInt_35 (con integer 0)]]
+                        v_44]])
+                    [(lam field_47
+                      [[(builtin constrData) (con integer 0)]
+                        [[(force (builtin mkCons)) field_47] (con (list data) [])]])
+                      [(lam field_48
+                        [[(builtin constrData) (con integer 0)]
+                          [[(force (builtin mkCons)) field_48] (con (list data) [])]])
+                        [lift_31
+                          [[(force (builtin mkCons))
+                            [[(lam field_49
+                              (lam field_50
+                                [[(builtin constrData) (con integer 0)]
+                                  [[(force (builtin mkCons)) field_49]
+                                    [[(force (builtin mkCons)) field_50] (con (list data) [])]]]))
+                              [fromBytes_34 (con bytestring #)]]
+                              innerDict_43]]
+                            (con (list data) [])]]]]])
+                  [(lam field_51
+                    [[(builtin constrData) (con integer 0)]
+                      [[(force (builtin mkCons)) field_51] (con (list data) [])]])
+                    [lift_31 innerEntries_42]]])
+                [[(force (builtin mkCons))
+                  [[(lam field_52
+                    (lam field_53
+                      [[(builtin constrData) (con integer 0)]
+                        [[(force (builtin mkCons)) field_52]
+                          [[(force (builtin mkCons)) field_53] (con (list data) [])]]]))
+                    [fromBytes_34 (con bytestring #aa)]]
+                    [fromInt_35 (con integer 4)]]]
+                  (con (list data) [])]])
+              (builtin iData)])
+            (builtin bData)])
+          (lam values_40
+            [(builtin listData) [[mapList_38 (lam identity_41 identity_41)] values_40]])])
+        (lam values_37
+          [(lam projection_61 [[mapList_38 (lam identity_39 identity_39)] projection_61])
+            [(builtin unListData) values_37]])])
+      (lam f_54
+        (lam values_55
           [[(lam self_8 [self_8 self_8])
             (lam self_8
-              (lam values_60
-                [(lam match_63
-                  [(lam generated_92
+              (lam values_55
+                [(lam match_58
+                  [(lam generated_81
                     (force
-                      [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_92]]
+                      [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_81]]
                         (delay (con (list data) []))]
                         (delay
-                          [[(lam field_64
-                            (lam field_65
-                              [(lam x_61
-                                [(lam xs_62 [[(force (builtin mkCons)) [f_59 x_61]] [[self_8 self_8] xs_62]])
-                                  field_65])
-                                field_64]))
-                            [(force (builtin headList)) generated_92]]
-                            [(force (builtin tailList)) generated_92]])]))
-                    match_63])
-                  values_60]))]
-            values_60]))])
+                          [[(lam field_59
+                            (lam field_60
+                              [(lam x_56
+                                [(lam xs_57 [[(force (builtin mkCons)) [f_54 x_56]] [[self_8 self_8] xs_57]])
+                                  field_60])
+                                field_59]))
+                            [(force (builtin headList)) generated_81]]
+                            [(force (builtin tailList)) generated_81]])]))
+                    match_58])
+                  values_55]))]
+            values_55]))])
     (con string "incomplete pattern match")])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 19932340, memory: 82081
+cpu: 19260340, memory: 77881

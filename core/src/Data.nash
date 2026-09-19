@@ -9,27 +9,31 @@ trait ToData ('a : Big) where
 trait FromData ('a : Big) where
     fromData : Data -> 'a
     validateData : Data -> 'a
+    validateData = fromData
 
 impl ToData Data where
     toData value = value
 
 impl FromData Data where
     fromData value = value
-    validateData value = value
 
 impl ToData Int where
-    toData = Builtin.castToData
+    toData value = I (Builtin.unIData value)
 
 impl FromData Int where
-    fromData = Builtin.castFromDataShallow
-    validateData = Builtin.castValidateData
+    fromData value =
+        case value of
+            I number -> Builtin.iData number
+            _ -> fail
 
 impl ToData Bytes where
-    toData = Builtin.castToData
+    toData value = B (Builtin.unBData value)
 
 impl FromData Bytes where
-    fromData = Builtin.castFromDataShallow
-    validateData = Builtin.castValidateData
+    fromData value =
+        case value of
+            B bytes -> Builtin.bData bytes
+            _ -> fail
 
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
@@ -46,16 +50,43 @@ fields value =
         Constr _ items -> Some items
         _ -> None
 
-impl ToData (List 'a) where
-    toData = Builtin.castToData
+impl ToData 'a => ToData (List 'a) where
+    toData values = List (mapList toData (Builtin.unListData values))
 
-impl FromData (List 'a) where
-    fromData = Builtin.castFromDataShallow
-    validateData = Builtin.castValidateData
+impl FromData 'a => FromData (List 'a) where
+    fromData value =
+        case value of
+            List values -> Builtin.listData (mapList fromData values)
+            _ -> fail
+    validateData value =
+        case value of
+            List values -> Builtin.listData (mapList validateData values)
+            _ -> fail
 
-impl ToData (Map 'k 'v) where
-    toData = Builtin.castToData
+impl (ToData 'k, ToData 'v) => ToData (Map 'k 'v) where
+    toData values = Map (mapList pairToData (Builtin.unMapData values))
 
-impl FromData (Map 'k 'v) where
-    fromData = Builtin.castFromDataShallow
-    validateData = Builtin.castValidateData
+impl (FromData 'k, FromData 'v) => FromData (Map 'k 'v) where
+    fromData value =
+        case value of
+            Map values -> Builtin.mapData (mapList pairFromData values)
+            _ -> fail
+    validateData value =
+        case value of
+            Map values -> Builtin.mapData (mapList pairValidateData values)
+            _ -> fail
+
+mapList : ('a -> 'b) -> list 'a -> list 'b
+mapList f values =
+    case values of
+        [] -> []
+        first :: rest -> Builtin.mkCons (f first) (mapList f rest)
+
+pairToData : (ToData 'k, ToData 'v) => pair 'k 'v -> pair Data Data
+pairToData value = Builtin.mkPairData (toData (Builtin.fstPair value)) (toData (Builtin.sndPair value))
+
+pairFromData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v
+pairFromData value = Builtin.mkPairData (fromData (Builtin.fstPair value)) (fromData (Builtin.sndPair value))
+
+pairValidateData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v
+pairValidateData value = Builtin.mkPairData (validateData (Builtin.fstPair value)) (validateData (Builtin.sndPair value))

@@ -153,7 +153,6 @@ impl<'a> Lower<'a> {
             Core::Delay(t) => self.term(t)?.delay(self.arena),
             Core::Force(t) => self.term(t)?.force(self.arena),
             Core::LetRec { .. } => return Err(Error::Unlowered("recursion")),
-            Core::Cast { .. } => return Err(Error::Unlowered("cast")),
         })
     }
 
@@ -373,7 +372,7 @@ fn largest_name(core: &Core<'_>) -> usize {
                 pending.extend(*fields)
             }
             Core::Field { record, .. } => pending.push(record),
-            Core::Cast { arg, .. } | Core::Delay(arg) | Core::Force(arg) => pending.push(arg),
+            Core::Delay(arg) | Core::Force(arg) => pending.push(arg),
             Core::Trace { message, body } => pending.extend([*message, *body]),
             Core::Lit(_) | Core::Error => {}
         }

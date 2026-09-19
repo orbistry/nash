@@ -1,0 +1,2 @@
+{"run_id":"1789784940-127160000","line":263,"new":{"module_name":"textual","snapshot_name":"pretty_short_and_multiline_layout","metadata":{"source":"crates/nash-plutus/tests/textual.rs","assertion_line":263,"expression":"pretty::term(term)"},"snapshot":"(lam i0 (lam i1 [i0 i1]))"},"old":{"module_name":"textual","metadata":{},"snapshot":"(lam i0 (lam i1 [i0 i1]))"}}
+{"run_id":"1789784992-904607000","line":263,"new":null,"old":null}

@@ -2,55 +2,13 @@ use super::*;
 use crate::{evidence, ty_of::Substitution};
 
 impl<'a> Engine<'a, '_, '_> {
-    pub(crate) fn builtin(
-        &mut self,
-        name: &'a str,
-        node: NodeId,
-        ctx: &Context<'a>,
-    ) -> Result<&'a Core<'a>, Error<'a>> {
-        use primitives::BuiltinLowering as B;
-        let declaration =
-            crate::builtins::definition(name).ok_or(Error::UnknownDefinition(QualifiedName {
+    pub(crate) fn builtin(&self, name: &'a str) -> Result<&'a Core<'a>, Error<'a>> {
+        let func =
+            crate::builtins::by_name(name).ok_or(Error::UnknownDefinition(QualifiedName {
                 home: primitives::builtin_home(),
                 name,
             }))?;
-        if let Some(func) = crate::builtins::by_name(name) {
-            return Ok(self.ir.builtin(func, &[]));
-        }
-        let instance = self
-            .solved(ctx)
-            .instances
-            .get(&node)
-            .ok_or(Error::InvalidInstance(node))?;
-        if instance.type_args.len() != declaration.free_vars.len() {
-            return Err(Error::InvalidInstance(node));
-        }
-        let mut subst = Substitution::new();
-        for (name, typ) in declaration.free_vars.iter().zip(instance.type_args) {
-            subst.insert(*name, self.substitute(typ, &ctx.runtime_subst)?);
-        }
-        let typ = self.substitute(declaration.typ, &subst)?;
-        let Type::Lambda { from, to } = typ.value else {
-            return Err(Error::InvalidInstance(node));
-        };
-        let from = self.types.ty(from, &Substitution::new())?;
-        let to = self.types.ty(to, &Substitution::new())?;
-        let binder = Binder {
-            name: self.ir.fresh("value"),
-            ty: from,
-        };
-        let value = self.ir.var(binder.name);
-        let body = match declaration.lowering {
-            B::Identity => value,
-            B::Error => self.ir.error(),
-            B::CastToData => self.ir.cast(CastKind::ToData, from, to, value),
-            B::CastFromDataShallow => self.ir.cast(CastKind::FromDataShallow, from, to, value),
-            B::CastValidateData => self.ir.cast(CastKind::ValidateData, from, to, value),
-            B::CastLift => self.ir.cast(CastKind::Lift, from, to, value),
-            B::CastLower => self.ir.cast(CastKind::Lower, from, to, value),
-            B::Plutus(_) => return Err(Error::InvalidInstance(node)),
-        };
-        Ok(self.ir.lam(&[binder], body))
+        Ok(self.ir.builtin(func, &[]))
     }
 
     pub(crate) fn method(

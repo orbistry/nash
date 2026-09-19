@@ -1,0 +1,17 @@
+{"run_id":"1789784940-157250000","line":187,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":178,"new":{"module_name":"nash_report__localizer__tests","snapshot_name":"explicit_types_and_alias","metadata":{"source":"crates/nash-report/src/localizer.rs","assertion_line":178,"expression":"localizer.to_string(home,\"little\")"},"snapshot":"little"},"old":{"module_name":"nash_report__localizer__tests","metadata":{},"snapshot":"little"}}
+{"run_id":"1789784940-157250000","line":187,"new":{"module_name":"nash_report__localizer__tests","snapshot_name":"names","metadata":{"source":"crates/nash-report/src/localizer.rs","assertion_line":187,"expression":"Localizer::from_names([\"Other\"]).to_string(home,\"Thing\")"},"snapshot":"Thing"},"old":{"module_name":"nash_report__localizer__tests","metadata":{},"snapshot":"Thing"}}
+{"run_id":"1789784940-157250000","line":179,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":188,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":197,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":179,"new":{"module_name":"nash_report__localizer__tests","snapshot_name":"explicit_types_and_alias-2","metadata":{"source":"crates/nash-report/src/localizer.rs","assertion_line":179,"expression":"localizer.to_string(home,\"Thing\")"},"snapshot":"O.Thing"},"old":{"module_name":"nash_report__localizer__tests","metadata":{},"snapshot":"O.Thing"}}
+{"run_id":"1789784940-157250000","line":188,"new":{"module_name":"nash_report__localizer__tests","snapshot_name":"names-2","metadata":{"source":"crates/nash-report/src/localizer.rs","assertion_line":188,"expression":"Localizer::default().to_string(home,\"Thing\")"},"snapshot":"Other.Thing"},"old":{"module_name":"nash_report__localizer__tests","metadata":{},"snapshot":"Other.Thing"}}
+{"run_id":"1789784940-157250000","line":197,"new":{"module_name":"nash_report__localizer__tests","snapshot_name":"source_module_does_not_invent_default_imports","metadata":{"source":"crates/nash-report/src/localizer.rs","assertion_line":197,"expression":"localizer.to_string(ModuleName{package:None,name:\"Local\"},\"Own\")"},"snapshot":"Own"},"old":{"module_name":"nash_report__localizer__tests","metadata":{},"snapshot":"Own"}}
+{"run_id":"1789784940-157250000","line":198,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":198,"new":{"module_name":"nash_report__localizer__tests","snapshot_name":"source_module_does_not_invent_default_imports-2","metadata":{"source":"crates/nash-report/src/localizer.rs","assertion_line":198,"expression":"localizer.to_string(nash_ast::primitives::builtin_home(),\"Int\")"},"snapshot":"Int"},"old":{"module_name":"nash_report__localizer__tests","metadata":{},"snapshot":"Int"}}
+{"run_id":"1789784992-933746000","line":178,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":187,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":179,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":188,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":197,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":198,"new":null,"old":null}

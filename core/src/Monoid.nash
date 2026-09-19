@@ -24,7 +24,7 @@ impl Monoid Bytes where
     empty = #""
 
 impl Monoid (List 'a) where
-    empty = Builtin.castLift (Builtin.mkNilData ())
+    empty = Builtin.listData []
 
 impl Eq 'k => Monoid (Map 'k 'v) where
-    empty = Builtin.castLift (Builtin.mkNilPairData ())
+    empty = Builtin.mapData []

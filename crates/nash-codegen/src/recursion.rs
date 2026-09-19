@@ -179,12 +179,6 @@ impl<'a> Rewriter<'_, 'a> {
                     args: b.arena.alloc_slice_copy(&args),
                 })
             }
-            Core::Cast {
-                kind,
-                from,
-                to,
-                arg,
-            } => b.cast(*kind, *from, *to, self.term(arg, env)?),
             Core::Trace { message, body } => {
                 b.trace(self.term(message, env)?, self.term(body, env)?)
             }
@@ -395,7 +389,6 @@ fn visit<'a>(
             }
         }
         Core::Field { record, .. } => visit(record, scope, f),
-        Core::Cast { arg, .. } => visit(arg, scope, f),
         Core::Trace { message, body } => {
             visit(message, scope, f);
             visit(body, scope, f);

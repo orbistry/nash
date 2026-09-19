@@ -29,7 +29,6 @@ fn write_core(out: &mut String, core: &Core<'_>, indent: usize, context: u8) {
         | Core::Builtin { .. }
         | Core::Constr { .. }
         | Core::Field { .. }
-        | Core::Cast { .. }
         | Core::Delay(_)
         | Core::Force(_) => 1,
         _ => 0,
@@ -144,15 +143,6 @@ fn write_core(out: &mut String, core: &Core<'_>, indent: usize, context: u8) {
         Core::Builtin { func, args } => {
             out.push_str(nash_plutus::pretty::builtin(*func));
             arguments(out, args, indent);
-        }
-        Core::Cast {
-            kind,
-            from,
-            to,
-            arg,
-        } => {
-            write!(out, "cast@{kind:?}[{from} => {to}] ").unwrap();
-            write_core(out, arg, indent, 2);
         }
         Core::Trace { message, body } => {
             out.push_str("trace ");

@@ -12,19 +12,19 @@ trait FromBytes 'a where
     fromBytes : bytes -> 'a
 
 impl FromInt int where
-    fromInt = Builtin.identity
+    fromInt value = value
 
 impl FromString string where
-    fromString = Builtin.identity
+    fromString value = value
 
 impl FromBytes bytes where
-    fromBytes = Builtin.identity
+    fromBytes value = value
 
 impl FromInt Int where
-    fromInt = Builtin.castLift
+    fromInt = Builtin.iData
 
 impl FromBytes Bytes where
-    fromBytes = Builtin.castLift
+    fromBytes = Builtin.bData
 
 impl FromString bytes where
     fromString = Builtin.encodeUtf8

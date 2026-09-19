@@ -6,16 +6,9 @@ use nash_ast::{PackageName, primitives::CORE};
 use nash_can::Context;
 
 #[test]
-fn casts_require_exact_core_package_for_every_import_route() {
+fn real_builtins_are_available_through_every_import_route() {
     let snapshot_inputs = SnapshotInputs::default();
-    let mut diagnostics = Vec::new();
-    for cast in [
-        "castLift",
-        "castLower",
-        "castToData",
-        "castFromDataShallow",
-        "castValidateData",
-    ] {
+    for builtin in ["iData", "unIData", "bData", "unBData"] {
         for package in [
             Some(CORE),
             None,
@@ -29,16 +22,16 @@ fn casts_require_exact_core_package_for_every_import_route() {
             }),
         ] {
             for (import, reference) in [
-                ("import Builtin", "Builtin.castLift"),
-                ("import Builtin as B", "B.castLift"),
-                ("import Builtin exposing (..)", "castLift"),
-                ("import Builtin exposing (castLift)", "castLift"),
+                ("import Builtin", "Builtin.iData"),
+                ("import Builtin as B", "B.iData"),
+                ("import Builtin exposing (..)", "iData"),
+                ("import Builtin exposing (iData)", "iData"),
             ] {
-                let import = import.replace("castLift", cast);
-                let reference = reference.replace("castLift", cast);
+                let import = import.replace("iData", builtin);
+                let reference = reference.replace("iData", builtin);
                 let bump = Bump::new();
                 let source = bump.alloc_str(&format!(
-                    "module Main exposing (..)\n{import}\nlift : int -> Int\nlift = {reference}\n"
+                    "module Main exposing (..)\n{import}\noperation = {reference}\n"
                 ));
                 let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
                     .module()
@@ -55,18 +48,8 @@ fn casts_require_exact_core_package_for_every_import_route() {
                     },
                     &parsed,
                 );
-                assert_eq!(
-                    result.is_ok(),
-                    package == Some(CORE),
-                    "{package:?}: {import}: {result:?}"
-                );
-                if package.is_none() && cast == "castLift" {
-                    diagnostics.push(snapshot_support::errors(source, &result.unwrap_err()));
-                }
+                assert!(result.is_ok(), "{package:?}: {import}: {result:?}");
             }
         }
     }
-    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
-        insta::assert_snapshot!(diagnostics.join("\n"));
-    });
 }

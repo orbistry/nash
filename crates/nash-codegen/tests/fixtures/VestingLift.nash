@@ -7,9 +7,9 @@ trait Lift 'a 'b where
     lower : 'b -> 'a
 
 impl Lift int Int where
-    lift value = Builtin.castLift value
-    lower value = Builtin.castLower value
+    lift value = Builtin.iData value
+    lower value = Builtin.unIData value
 
 impl Lift bytes Bytes where
-    lift value = Builtin.castLift value
-    lower value = Builtin.castLower value
+    lift value = Builtin.bData value
+    lower value = Builtin.unBData value

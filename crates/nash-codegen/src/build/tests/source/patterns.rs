@@ -272,12 +272,13 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     main =
         let
             x = [mkPairData (I 1) (B #""), mkPairData (I 2) (B #"aa")]
             first = headList x
         in
-        equalsData (mapData [first]) (mapData [mkPairData (I 1) (B #"")])
+        equalsData (toData (mapData [first])) (toData (mapData [mkPairData (I 1) (B #"")]))
 "#,
     Ok("(con bool True)")
 );

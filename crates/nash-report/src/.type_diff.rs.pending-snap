@@ -1,0 +1,57 @@
+{"run_id":"1789784940-157250000","line":547,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"application_arity_not_truncated","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":547,"expression":"d.left.render(80,false)"},"snapshot":"list int"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"list int"}}
+{"run_id":"1789784940-157250000","line":647,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"alias_record_keeps_alias_and_field_hint","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":647,"expression":"a.render(80,false)"},"snapshot":"Empty"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"Empty"}}
+{"run_id":"1789784940-157250000","line":750,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"big_little_container_highlights_only_changed_head","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":750,"expression":"a.render(80,true)"},"snapshot":"\u001b[33mList\u001b[0m Data"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"\u001b[33mList\u001b[0m Data"}}
+{"run_id":"1789784940-157250000","line":732,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":732,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"different_alias_names_do_not_unfold_nonrecords","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":732,"expression":"d.left.render(80,false)"},"snapshot":"Count"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"Count"}}
+{"run_id":"1789784940-157250000","line":660,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":521,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":605,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":660,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"higher_kinded_application_diff","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":660,"expression":"a.render(80,false)"},"snapshot":"'f Int"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"'f Int"}}
+{"run_id":"1789784940-157250000","line":631,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":521,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"missing_field","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":521,"expression":"b.render(80,false)"},"snapshot":"{ x : int }"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"{ x : int }"}}
+{"run_id":"1789784940-157250000","line":605,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"field_typo_and_overlapping_type_diff","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":605,"expression":"a.render(80,false)"},"snapshot":"{ naem : Int, z : Int }"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"{ naem : Int, z : Int }"}}
+{"run_id":"1789784940-157250000","line":796,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":718,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":504,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":631,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"name_clash_qualifies_modules","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":631,"expression":"a.render(80,false)"},"snapshot":"A.Thing"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"A.Thing"}}
+{"run_id":"1789784940-157250000","line":718,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"option_hint_preserves_inner_type","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":718,"expression":"a.render(80,false)"},"snapshot":"option int"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"option int"}}
+{"run_id":"1789784940-157250000","line":796,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"record_representation_uses_defining_alias_not_transparent_name","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":796,"expression":"a.render(80,false)"},"snapshot":"BigRecord"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"BigRecord"}}
+{"run_id":"1789784940-157250000","line":606,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":719,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":554,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":504,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"nested_big_little","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":504,"expression":"a.render(80,true)"},"snapshot":"list \u001b[33mInt\u001b[0m"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"list \u001b[33mInt\u001b[0m"}}
+{"run_id":"1789784940-157250000","line":606,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"field_typo_and_overlapping_type_diff-2","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":606,"expression":"b.render(80,false)"},"snapshot":"{ name : int, z : int }"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"{ name : int, z : int }"}}
+{"run_id":"1789784940-157250000","line":719,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"option_hint_preserves_inner_type-2","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":719,"expression":"b.render(80,false)"},"snapshot":"int"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"int"}}
+{"run_id":"1789784940-157250000","line":666,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":554,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"rigid_variable_hint","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":554,"expression":"doc.render(80,false)"},"snapshot":"'a"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"'a"}}
+{"run_id":"1789784940-157250000","line":632,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":593,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":666,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"sentinels_render_explicitly","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":666,"expression":"to_doc(&l,Ctx::None,&ErrorType::Infinite).render(80,false)"},"snapshot":"∞"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"∞"}}
+{"run_id":"1789784940-157250000","line":797,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":505,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":593,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"tuple_arity_is_preserved","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":593,"expression":"d.left.render(80,false)"},"snapshot":"( int, int, int, int )"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"( int, int, int, int )"}}
+{"run_id":"1789784940-157250000","line":632,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"name_clash_qualifies_modules-2","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":632,"expression":"b.render(80,false)"},"snapshot":"B.Thing"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"B.Thing"}}
+{"run_id":"1789784940-157250000","line":505,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"nested_big_little-2","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":505,"expression":"b.render(80,false)"},"snapshot":"list int"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"list int"}}
+{"run_id":"1789784940-157250000","line":797,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"record_representation_uses_defining_alias_not_transparent_name-2","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":797,"expression":"b.render(80,false)"},"snapshot":"MisleadingUppercase"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"MisleadingUppercase"}}
+{"run_id":"1789784940-157250000","line":667,"new":null,"old":null}
+{"run_id":"1789784940-157250000","line":667,"new":{"module_name":"nash_report__type_diff__tests","snapshot_name":"sentinels_render_explicitly-2","metadata":{"source":"crates/nash-report/src/type_diff.rs","assertion_line":667,"expression":"to_doc(&l,Ctx::None,&ErrorType::Error).render(80,false)"},"snapshot":"?"},"old":{"module_name":"nash_report__type_diff__tests","metadata":{},"snapshot":"?"}}
+{"run_id":"1789784992-933746000","line":647,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":750,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":605,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":547,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":732,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":606,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":660,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":521,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":631,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":504,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":718,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":554,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":796,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":666,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":505,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":632,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":593,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":719,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":797,"new":null,"old":null}
+{"run_id":"1789784992-933746000","line":667,"new":null,"old":null}

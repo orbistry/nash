@@ -702,13 +702,14 @@ fn source_trait_specialization_core() {
 }
 
 #[test]
-fn builtin_identity_accepts_a_function_and_overapplication() {
+fn source_identity_accepts_a_function_and_overapplication() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
         import Builtin exposing (..)
+        identity value = value
         main : int
-        main = Builtin.identity Builtin.addInteger 20 22
+        main = identity Builtin.addInteger 20 22
     "#
     ));
     assert_eq!(result.result, "(con integer 42)");
@@ -880,58 +881,25 @@ fn higher_kinded_default_method_accepts_a_nominal_record_alias() {
 }
 
 #[test]
-fn to_data_identity_shares_big_nominal_instances() {
-    let arena = Arena::new();
-    let (module, solved) = fixture_in(
-        &arena,
-        indoc::indoc!(
-            r#"
+fn source_data_encoding_preserves_nominal_constructors() {
+    let result = core_eval(indoc::indoc!(
+        r#"
         module Main exposing (..)
         import Builtin exposing (..)
         type First = First
         type Second = Second
-        toData : Big 'a => 'a -> Data
-        toData = Builtin.castToData
-        main = (toData First, toData Second)
+        encodeFirst : First -> Data
+        encodeFirst value =
+            case value of
+                First -> Builtin.constrData 0 []
+        encodeSecond : Second -> Data
+        encodeSecond value =
+            case value of
+                Second -> Builtin.constrData 1 []
+        main = Builtin.equalsData (encodeFirst First) (encodeSecond Second)
     "#
-        ),
-        Some(primitives::CORE),
-    );
-    let build = Build::new([Input {
-        module: &module.module,
-        types: &solved,
-        tables: &module.tables,
-    }]);
-    let compiled = build
-        .compile(
-            &arena,
-            QualifiedName {
-                home: module.module.name,
-                name: "main",
-            },
-            None,
-            TraceConfig::default(),
-        )
-        .unwrap();
-    assert_eq!(
-        compiled
-            .specializations
-            .iter()
-            .filter(|s| s.name.text == "toData")
-            .count(),
-        1
-    );
-    let pretty = nash_ir::pretty::pretty(compiled.core);
-    assert!(pretty.contains(": Data -> Data"), "{pretty}");
-    let core =
-        crate::recursion::rewrite(&nash_ir::build::Builder::new(&arena), compiled.core).unwrap();
-    assert_eq!(
-        crate::harness::eval_core(&arena, core)
-            .result
-            .matches("con data")
-            .count(),
-        2
-    );
+    ));
+    assert_eq!(result.result, "(con bool False)");
 }
 
 #[test]

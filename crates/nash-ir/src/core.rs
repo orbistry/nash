@@ -58,12 +58,6 @@ pub enum Core<'a> {
         func: DefaultFunction,
         args: &'a [&'a Core<'a>],
     },
-    Cast {
-        kind: CastKind,
-        from: Ty<'a>,
-        to: Ty<'a>,
-        arg: &'a Core<'a>,
-    },
     Trace {
         message: &'a Core<'a>,
         body: &'a Core<'a>,
@@ -116,15 +110,6 @@ pub enum Test<'a> {
     DataList,
     DataI,
     DataB,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CastKind {
-    ToData,
-    FromDataShallow,
-    ValidateData,
-    Lift,
-    Lower,
 }
 
 /// A whole program: top-level bindings in dependency order plus the root.
@@ -186,7 +171,6 @@ impl<'a> Core<'a> {
                 }
             }
             Core::Field { record, .. } => record.walk(f),
-            Core::Cast { arg, .. } => arg.walk(f),
             Core::Trace { message, body } => {
                 message.walk(f);
                 body.walk(f);

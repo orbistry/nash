@@ -110,12 +110,13 @@ traced_case!(
 );
 
 case!(
-    qualified_prelude_functions,
+    source_identity,
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    identity value = value
     main : bool
-    main = if Builtin.identity True then identity True else False
+    main = if identity True then identity True else False
 "#,
     Ok("(con bool True)")
 );
@@ -139,11 +140,17 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (ToData)
     type Option = Some Int | None
+    impl ToData Option where
+        toData value =
+            case value of
+                Some n -> Constr 0 [toData n]
+                None -> Constr 1 []
     main : bool
-    main = Builtin.equalsData
-        (Builtin.listData (Builtin.mkCons (Some 42) [None]))
-        (Builtin.listData [Some 42, None])
+    main = equalsData
+        (toData (Builtin.listData (Builtin.mkCons (Some 42) [None])))
+        (toData (Builtin.listData [Some 42, None]))
 "#,
     Ok("(con bool True)")
 );
@@ -153,10 +160,11 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     main : bool
-    main = Builtin.equalsData
-        (Builtin.mapData (Builtin.mkCons (Builtin.mkPairData (Builtin.iData 1) (Builtin.iData 1)) (Builtin.mkNilPairData ())))
-        (Builtin.mapData [Builtin.mkPairData (Builtin.iData 1) (Builtin.iData 1)])
+    main = equalsData
+        (toData (Builtin.mapData (Builtin.mkCons (Builtin.mkPairData (I 1) (I 1)) (Builtin.mkNilPairData ()))))
+        (toData (Builtin.mapData [Builtin.mkPairData (I 1) (I 1)]))
 "#,
     Ok("(con bool True)")
 );
@@ -166,10 +174,11 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     main : bool
-    main = Builtin.equalsData
-        (Builtin.mapData (Builtin.mkNilPairData ()))
-        (Builtin.mapData (Builtin.mkNilPairData ()))
+    main = equalsData
+        (toData (Builtin.mapData (Builtin.mkNilPairData ())))
+        (toData (Builtin.mapData (Builtin.mkNilPairData ())))
 "#,
     Ok("(con bool True)")
 );
@@ -179,10 +188,11 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     main : bool
-    main = Builtin.equalsData
-        (Builtin.listData (Builtin.mkNilData ()))
-        (Builtin.listData (Builtin.mkNilData ()))
+    main = equalsData
+        (toData (Builtin.listData (Builtin.mkNilData ())))
+        (toData (Builtin.listData (Builtin.mkNilData ())))
 "#,
     Ok("(con bool True)")
 );
@@ -192,10 +202,11 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
+    import Data exposing (toData)
     main : bool
-    main = Builtin.equalsData
-        (Builtin.fstPair (Builtin.mkPairData (Builtin.iData 1) (Builtin.iData 2)))
-        (Builtin.iData 1)
+    main = equalsData
+        (toData (Builtin.fstPair (Builtin.mkPairData (Builtin.iData 1) (Builtin.iData 2))))
+        (toData (Builtin.iData 1))
 "#,
     Ok("(con bool True)")
 );
@@ -295,5 +306,79 @@ traced_case!(
         in
         eq x x
 "#,
+    Err(())
+);
+
+case!(
+    data_scalar_codecs,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (toData, fromData)
+    decodedInt : Int
+    decodedInt = fromData (I 42)
+    decodedBytes : Bytes
+    decodedBytes = fromData (B #"abcd")
+    main =
+        if equalsInteger (unIData decodedInt) 42 then
+            if equalsByteString (unBData decodedBytes) #"abcd" then
+                equalsData (toData decodedInt) (I 42)
+            else False
+        else False
+    "#,
+    Ok("(con bool True)")
+);
+
+case!(
+    data_nested_list_codec,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (toData, fromData)
+    input = List [List [I 1, I 2], List []]
+    decoded : List (List Int)
+    decoded = fromData input
+    main = equalsData (toData decoded) input
+    "#,
+    Ok("(con bool True)")
+);
+
+case!(
+    data_map_codec,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (toData, fromData)
+    input = Map [mkPairData (B #"aa") (List [I 42])]
+    decoded : Map Bytes (List Int)
+    decoded = fromData input
+    main = equalsData (toData decoded) input
+    "#,
+    Ok("(con bool True)")
+);
+
+case!(
+    data_nested_list_rejects_malformed_element,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (fromData)
+    decoded : List (List Int)
+    decoded = fromData (List [List [I 1, B #"aa"]])
+    main = nullList (unListData decoded)
+    "#,
+    Err(())
+);
+
+case!(
+    data_map_rejects_malformed_value,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (validateData)
+    decoded : Map Bytes (List Int)
+    decoded = validateData (Map [mkPairData (B #"aa") (List [B #"bb"])])
+    main = nullList (unMapData decoded)
+    "#,
     Err(())
 );
