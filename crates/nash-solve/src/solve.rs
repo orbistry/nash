@@ -1342,7 +1342,11 @@ impl<'a> Solver<'a, '_> {
                 self.predicates.solve(uf, id, solution);
                 continue;
             }
+            // A blanket impl can match a rigid argument without narrowing it;
+            // its prerequisites are checked against the enclosing givens below.
+            let selection = crate::resolve::select(self.tables, uf, trait_, &args);
             if report_missing
+                && !matches!(selection, crate::resolve::Selection::Impl { .. })
                 && let Some(binder) = binder
                 && let Some(site) = site
                 && args
@@ -1379,7 +1383,7 @@ impl<'a> Solver<'a, '_> {
                     self.failed_lineages.insert(self.predicates.root(id));
                     continue;
                 }
-                match crate::resolve::select(self.tables, uf, trait_, &args) {
+                match selection {
                     crate::resolve::Selection::Deferred => self.wanted.push((wanted_rank, id)),
                     crate::resolve::Selection::Limit => {
                         state.errors.push(Error::ImplResolutionLimit {

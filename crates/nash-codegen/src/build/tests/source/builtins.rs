@@ -46,11 +46,6 @@ case!(
     import Builtin exposing (..)
     import Data exposing (ToData)
     type Option = Some Int | None
-    impl ToData Option where
-        toData value =
-            case value of
-                Some n -> Constr 0 [toData n]
-                None -> Constr 1 []
     type never = Never
     decodeNever : Data -> never
     decodeNever value =
@@ -142,11 +137,6 @@ case!(
     import Builtin exposing (..)
     import Data exposing (ToData)
     type Option = Some Int | None
-    impl ToData Option where
-        toData value =
-            case value of
-                Some n -> Constr 0 [toData n]
-                None -> Constr 1 []
     main : bool
     main = equalsData
         (toData (Builtin.listData (Builtin.mkCons (Some 42) [None])))
@@ -275,10 +265,6 @@ case!(
     import Data exposing (ToData)
     type Foo = Foo Int
     type Bar = Bar Int
-    impl ToData Foo where
-        toData (Foo n) = Constr 0 [toData n]
-    impl ToData Bar where
-        toData (Bar n) = Constr 0 [toData n]
     main : bool
     main =
         if Builtin.nullList [toData (Foo 14), toData (Bar 42)] then False
@@ -513,4 +499,31 @@ case!(
     main = unIData decoded
     "#,
     Err(())
+);
+
+case!(
+    to_data_blanket_user_types_and_collections,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (toData)
+    type Token = Token Int
+    type alias Wrapped = { item : Token }
+    wrapped : Wrapped
+    wrapped = { item = (Token 42) }
+    identityData : Big 'a => 'a -> Data
+    identityData = toData
+    main =
+        if equalsData (toData wrapped) (List [Constr 0 [I 42]]) then
+            check
+        else False
+    check =
+        if equalsData (identityData (Token 42)) (Constr 0 [I 42]) then
+            if equalsData (toData (listData [Token 42])) (List [Constr 0 [I 42]]) then
+                equalsData (toData (mapData [mkPairData (Token 1) (Token 2)]))
+                    (Map [mkPairData (Constr 0 [I 1]) (Constr 0 [I 2])])
+            else False
+        else False
+    "#,
+    Ok("(con bool True)")
 );

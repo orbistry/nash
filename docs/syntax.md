@@ -102,7 +102,7 @@ of attributes, each on its own line at column 1:
 
 ```elm
 {-| A redeemer. -}
-@derive(Eq, Show, ToData, FromData)
+@derive(Show, FromData)
 type Redeemer = Claim | Cancel
 ```
 

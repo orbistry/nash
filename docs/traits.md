@@ -121,14 +121,15 @@ both its trait and its head type are visible.
 `impl C => T h1 .. hn where ...`:
 
 - `T` must resolve to a trait of arity `n`.
-- Each head has an outer named constructor, unit, or tuple. Constructor
+- Each head normally has an outer named constructor, unit, or tuple. Constructor
   arguments are recursive type patterns, including concrete types and nested
   applications: `list int`, `list (pair 'k 'v)`, and `List 'a` are legal.
   Variables may recur across patterns; every occurrence denotes the same type.
   Inline annotations add representation prerequisites, for example
   `impl Keep (list ('a : Big))` requires `Big 'a`. They are checked during
   superclass proof and selection; they do not distinguish overlapping heads.
-  Matching must preserve that equality. Bare variable heads and function heads
+  Matching must preserve that equality. A bare variable head is permitted only
+  when the trait is defined in the same module as the impl. Function heads
   remain excluded; reflexive Big Lift remains a compiler-provided rule.
   This rule applies uniformly to user and core impls, with no Map-specific
   exception or enumeration of permitted nested shapes.
@@ -190,17 +191,19 @@ separately by Haskell 98 unification before table insertion.
 
 **Orphan rule.** An impl in module `M` is legal only if the trait `T` is
 defined in `M`, or at least one head constructor is defined in `M`. Unit and
-tuples count as defined in `nash/core`. This is Rust's rule specialized to
-heads that are always constructors. There are no uncovered type parameters
-to worry about because a head is never a bare variable, so Rust's extra
-ordering condition for multi-parameter traits is vacuous.
+tuples count as defined in `nash/core`. Bare variable heads require the trait
+to be defined in `M`; a local constructor in another head does not permit a
+bare variable head for a foreign trait. This allows trait owners to provide
+ordinary blanket impls, such as `impl Big 'a => ToData 'a where` in `Data`.
 
 **Overlap.** Two impls overlap when their full head patterns can match a
 common well-kinded type assignment. Freshen their variables independently
 before checking this. Trait prerequisites do not establish disjointness merely
 because an impl is currently absent. Thus `SomeTrait (list int)` and
 `SomeTrait (list bytes)` are disjoint, while `SomeTrait (list 'a)` overlaps
-both. Overlap remains an error; declaration order does not select an impl.
+both. A blanket variable head also overlaps concrete heads regardless of
+impl contexts; contexts do not make these ordinary impls disjoint. Overlap
+remains an error; declaration order does not select an impl.
 Check this across
 all build interfaces as well as within a module. In particular, separate
 modules in `nash/core` may both satisfy the orphan rule for unit or tuple
@@ -584,6 +587,9 @@ trait Applicative 'm => Monad 'm where
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
+    toData = Builtin.coerce
+
+impl Big 'a => ToData 'a where
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a                       -- unchecked identity
@@ -629,12 +635,14 @@ Notes:
   rule for Big types. `Functor`/`Applicative`/`Monad` parameters have the
   fixed kind `Type -> Type`; their method formation contexts enforce each
   constructor's representation requirements.
-- `@derive(Eq, Ord, Show, ToData, FromData)` generates impls as macros
+- `@derive(Eq, Ord, Show, FromData)` generates impls as macros
   ([macros.md](macros.md)); the generated impls are ordinary impls subject
   to the orphan rule (always satisfied: the type is local). Each requested
   trait must satisfy the target type's kind restrictions. Eq derivation is
   for little types; Big types already have compiler-owned structural Eq,
   and a generated Big Eq override is rejected like a handwritten one.
+  `ToData` already covers every Big type through its ordinary blanket impl;
+  deriving a concrete impl would overlap it and is rejected.
 
 ## Interfaces
 

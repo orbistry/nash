@@ -249,8 +249,8 @@ Builtin impls, with their UPLC:
 Rules:
 
 - The reflexive impl `impl Big 'a => Lift 'a 'a` is provided by the
-  compiler, not written in Nash: its head is a bare type variable, which
-  the Haskell 98 head rules for user impls reject (see
+  compiler, not written in Nash. Ordinary bare-variable impl heads are
+  permitted only in the module defining the trait (see
   [traits.md](traits.md)). It is restricted to Big types by the representation
   predicate `Big 'a` (see [kinds.md](kinds.md)) and is what makes
   `lift : list Int -> List Int` a single `listData`, because mapping the
@@ -271,6 +271,9 @@ Defined only for Big types:
 ```elm
 trait ToData ('a : Big) where
     toData : 'a -> Data
+    toData = Builtin.coerce
+
+impl Big 'a => ToData 'a where
 
 trait FromData ('a : Big) where
     fromData     : Data -> 'a
@@ -278,8 +281,10 @@ trait FromData ('a : Big) where
     validateData : Data -> 'a
 ```
 
-- `toData` reconstructs universal Data in ordinary Nash source while
-  preserving the declared wire encoding.
+- `toData` defaults to `Builtin.coerce`. The ordinary blanket impl covers
+  every Big type, including user ADTs, nominal aliases, lists and maps, without
+  element `ToData` constraints. It preserves the existing runtime Data value
+  and wire encoding without traversal or reconstruction.
 - `fromData` defaults to unchecked `Builtin.coerce`. It checks neither the
   outer shape nor nested fields and preserves the original runtime value.
   Malformed data fails only when a later operation needs its expected shape.
@@ -287,9 +292,11 @@ trait FromData ('a : Big) where
   the Data shape and then coerce the original value; List and Map impls retain
   recursive source validation. Non-failing decoding uses `Data.Decode`.
 
-Core provides explicit codecs for primitive and collection Big types.
-User Big ADTs need source impls; future `@derive(ToData, FromData)` macros
-will generate unchecked `fromData` and checked recursive `validateData`.
+Core provides explicit `FromData` impls for primitive and collection Big types.
+User Big ADTs need `FromData` source impls; future `@derive(FromData)` macros
+will generate checked recursive `validateData` and use the unchecked
+`fromData` default. `ToData` requires no derivation: a generated concrete impl
+would overlap the blanket impl and be rejected.
 There is no automatic compiler codec synthesis. Real UPLC builtin signatures
 carry nominal types: `iData : int -> Int`, `unIData : Int -> int`, and
 similarly for Bytes, List and Map. Existing universal Data constructors

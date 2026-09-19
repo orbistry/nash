@@ -1,33 +1,27 @@
 module Data exposing (ToData, FromData, serialise, tag, fields)
 
-import Builtin exposing (Data(..))
+import Builtin exposing (Data(..), Big)
 import Option exposing (type option(..))
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
+    toData = Builtin.coerce
+
+impl Big 'a => ToData 'a where
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a
     fromData = Builtin.coerce
     validateData : Data -> 'a
 
-impl ToData Data where
-    toData value = value
-
 impl FromData Data where
     validateData value = value
-
-impl ToData Int where
-    toData value = I (Builtin.unIData value)
 
 impl FromData Int where
     validateData value =
         case value of
             I _ -> Builtin.coerce value
             _ -> fail
-
-impl ToData Bytes where
-    toData value = B (Builtin.unBData value)
 
 impl FromData Bytes where
     validateData value =
@@ -50,17 +44,11 @@ fields value =
         Constr _ items -> Some items
         _ -> None
 
-impl ToData 'a => ToData (List 'a) where
-    toData values = List (mapList toData (Builtin.unListData values))
-
 impl FromData 'a => FromData (List 'a) where
     validateData value =
         case value of
             List values -> Builtin.listData (mapList validateData values)
             _ -> fail
-
-impl (ToData 'k, ToData 'v) => ToData (Map 'k 'v) where
-    toData values = Map (mapList pairToData (Builtin.unMapData values))
 
 impl (FromData 'k, FromData 'v) => FromData (Map 'k 'v) where
     validateData value =
@@ -73,9 +61,6 @@ mapList f values =
     case values of
         [] -> []
         first :: rest -> Builtin.mkCons (f first) (mapList f rest)
-
-pairToData : (ToData 'k, ToData 'v) => pair 'k 'v -> pair Data Data
-pairToData value = Builtin.mkPairData (toData (Builtin.fstPair value)) (toData (Builtin.sndPair value))
 
 pairValidateData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v
 pairValidateData value = Builtin.mkPairData (validateData (Builtin.fstPair value)) (validateData (Builtin.sndPair value))

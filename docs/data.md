@@ -101,6 +101,9 @@ usually inspected when a full `validateData` is too expensive.
 ```elm
 trait ToData ('a : Big) where
     toData : 'a -> Data
+    toData = Builtin.coerce
+
+impl Big 'a => ToData 'a where
 
 trait FromData ('a : Big) where
     fromData     : Data -> 'a     -- unchecked identity
@@ -112,9 +115,12 @@ trait Lift 'small 'big where
     lower : 'big -> 'small
 ```
 
-`ToData` and `FromData` apply to Big types. Core supplies ordinary Nash
-impls for `Int`, `Bytes`, `Data`, `List 'a` and `Map 'k 'v`. Other types
-need explicit source impls; `@derive` remains future macro work.
+`ToData` and `FromData` apply to Big types. Core supplies one ordinary Nash
+blanket `ToData` impl for every Big type, including user ADTs, nominal aliases,
+lists and maps. Its empty body uses the default method; collection elements
+need no `ToData` constraints. Core supplies `FromData` impls for `Int`, `Bytes`,
+`Data`, `List 'a` and `Map 'k 'v`. Other types need explicit `FromData` impls;
+`@derive` remains future macro work.
 
 `fromData` defaults to `Builtin.coerce`, an unchecked identity. It checks
 neither the outer Data shape nor nested fields. Malformed data fails only
@@ -124,15 +130,14 @@ core impls check the shape and recursively validate collection elements.
 `Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
 result-based decoding.
 
-`toData` is unchanged: it reconstructs universal Data using the matching
-concrete builtin and Data constructor, preserving wire encoding.
+`toData` defaults to `Builtin.coerce`: every Big value already has its Data
+representation. Conversion preserves that value and its wire encoding without
+traversing or rebuilding it. Concrete `ToData` impls would overlap the blanket
+impl and are rejected.
 
-For example, these are ordinary source impls:
+For example, validation is an ordinary source impl:
 
 ```elm
-impl ToData Int where
-    toData value = I (Builtin.unIData value)
-
 impl FromData Int where
     validateData value =
         case value of
@@ -184,7 +189,7 @@ on actual builtin applications and preserve errors and evaluation order.
 ## Encoding: `Data.Encode`
 
 Encoders are plain functions to `Data`. The module is small because
-each supported type supplies its own `ToData` impl:
+every Big type already has `ToData` through the blanket impl:
 
 ```elm
 module Data.Encode exposing (int, bytes, list, map, constr, bool)
@@ -375,6 +380,6 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 - **Validators** ([validators.md](validators.md)): `main` arguments are Big
   or Const; for the Big ones, `Data` patterns and `validateData` are how their
   shape is checked.
-- **Macros** ([macros.md](macros.md)): `@derive(ToData, FromData)`.
+- **Macros** ([macros.md](macros.md)): `@derive(FromData)`; `ToData` needs no derivation.
   A `field "owner"` form of `Data.Decode.field` that resolves the label
   through an alias in scope would be a macro, not a library function.

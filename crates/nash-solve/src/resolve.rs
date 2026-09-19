@@ -187,12 +187,6 @@ pub(crate) fn select<'a>(
 ) -> Selection<'a> {
     use nash_ast::head::{Match, matches};
     let mut types = InferenceTypes(uf);
-    if args
-        .iter()
-        .any(|arg| matches!(types.view(*arg).0, View::Record(_) | View::Function))
-    {
-        return Selection::Missing;
-    }
     let unknown_outer = args.iter().any(|arg| {
         matches!(
             types.view(*arg).0,

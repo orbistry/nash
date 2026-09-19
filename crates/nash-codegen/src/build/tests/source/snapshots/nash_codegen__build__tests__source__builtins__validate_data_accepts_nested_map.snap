@@ -1,267 +1,236 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt value = value\n\nimpl FromString string where\n    fromString value = value\n\nimpl FromBytes bytes where\n    fromBytes value = value\n\nimpl FromInt Int where\n    fromInt = Builtin.iData\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.bData\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Bool exposing (Bool(..), not, and, or, xor)\n\nimport Builtin\n\ntype Bool = False | True\n\nnot : bool -> bool\nnot value = if value then Builtin.False else Builtin.True\n\nand : bool -> bool -> bool\nand a b = if a then b else Builtin.False\n\nor : bool -> bool -> bool\nor a b = if a then Builtin.True else b\n\nxor : bool -> bool -> bool\nxor a b = if a then not b else b\n\nmodule Unit exposing (Unit(..))\n\ntype Unit = Unit\n\nmodule Ordering exposing (Ordering(..), type ordering(..), invert, then_)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\n\ntype ordering = LT | EQ | GT\n\ntype Ordering = LT | EQ | GT\n\ninvert : ordering -> ordering\ninvert order =\n    case order of\n        LT -> GT\n        EQ -> EQ\n        GT -> LT\n\nthen_ : ordering -> ordering -> ordering\nthen_ first second =\n    case first of\n        EQ -> second\n        _ -> first\n\nimpl Eq ordering where\n    eq a b =\n        case (a, b) of\n            (LT, LT) -> True\n            (EQ, EQ) -> True\n            (GT, GT) -> True\n            _ -> False\n\nmodule Lift exposing (Lift)\n\nimport Builtin exposing (type bool(..))\nimport Bool exposing (Bool)\nimport Unit exposing (Unit)\nimport Ordering exposing (Ordering, type ordering(..))\n\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\nimpl Lift int Int where\n    lift = Builtin.iData\n    lower = Builtin.unIData\n\nimpl Lift bytes Bytes where\n    lift = Builtin.bData\n    lower = Builtin.unBData\n\nimpl Lift string Bytes where\n    lift value = Builtin.bData (Builtin.encodeUtf8 value)\n    lower value = Builtin.decodeUtf8 (Builtin.unBData value)\n\nimpl Lift bool Bool where\n    lift value = if value then Bool.True else Bool.False\n    lower value =\n        case value of\n            Bool.True -> True\n            Bool.False -> False\n\nimpl Lift unit Unit where\n    lift _ = Unit.Unit\n    lower _ = ()\n\nimpl Lift ordering Ordering where\n    lift value =\n        case value of\n            LT -> Ordering.LT\n            EQ -> Ordering.EQ\n            GT -> Ordering.GT\n    lower value =\n        case value of\n            Ordering.LT -> LT\n            Ordering.EQ -> EQ\n            Ordering.GT -> GT\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Lift 'a 'b => Lift (list 'a) (List 'b) where\n    lift values = Builtin.listData (mapList lift values)\n    lower values = mapList lower (Builtin.unListData values)\n\nimpl Lift (list (pair 'k 'v)) (Map 'k 'v) where\n    lift = Builtin.mapData\n    lower = Builtin.unMapData\n\nmodule Functor exposing (Functor)\n\nimport Builtin\nimport Lift exposing (Lift)\n\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n\nimpl Functor list where\n    map = mapList\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Functor List where\n    map f values = lift (mapList f (lower values))\n\nmodule Applicative exposing (Applicative)\n\nimport Functor exposing (Functor)\n\ntrait Functor 'f => Applicative 'f where\n    pure : 'a -> 'f 'a\n    apply : 'f ('a -> 'b) -> 'f 'a -> 'f 'b\n\nmodule Monad exposing (Monad)\n\nimport Applicative exposing (Applicative)\n\ntrait Applicative 'm => Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n\nmodule Option exposing (Option(..), type option(..), withDefault)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\nimport Lift exposing (Lift)\nimport Functor exposing (Functor)\nimport Applicative exposing (Applicative)\nimport Monad exposing (Monad)\n\ntype option 'a = Some 'a | None\ntype Option 'a = Some 'a | None\n\nimpl Functor option where\n    map f value =\n        case value of\n            Some item -> Some (f item)\n            None -> None\n\nimpl Applicative option where\n    pure = Some\n    apply functions value =\n        case functions of\n            Some f -> map f value\n            None -> None\n\nimpl Monad option where\n    bind value f =\n        case value of\n            Some item -> f item\n            None -> None\n\nwithDefault : 'a -> option 'a -> 'a\nwithDefault fallback value =\n    case value of\n        Some item -> item\n        None -> fallback\n\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (Some x, Some y) -> eq x y\n            (None, None) -> True\n            _ -> False\n\nimpl Lift 'a 'b => Lift (option 'a) (Option 'b) where\n    lift value =\n        case value of\n            Some item -> Option.Some (lift item)\n            None -> Option.None\n    lower value =\n        case value of\n            Option.Some item -> Some (lower item)\n            Option.None -> None\n\nmodule Data exposing (ToData, FromData, serialise, tag, fields)\n\nimport Builtin exposing (Data(..))\nimport Option exposing (type option(..))\n\ntrait ToData ('a : Big) where\n    toData : 'a -> Data\n\ntrait FromData ('a : Big) where\n    fromData : Data -> 'a\n    fromData = Builtin.coerce\n    validateData : Data -> 'a\n\nimpl ToData Data where\n    toData value = value\n\nimpl FromData Data where\n    validateData value = value\n\nimpl ToData Int where\n    toData value = I (Builtin.unIData value)\n\nimpl FromData Int where\n    validateData value =\n        case value of\n            I _ -> Builtin.coerce value\n            _ -> fail\n\nimpl ToData Bytes where\n    toData value = B (Builtin.unBData value)\n\nimpl FromData Bytes where\n    validateData value =\n        case value of\n            B _ -> Builtin.coerce value\n            _ -> fail\n\nserialise : Data -> bytes\nserialise = Builtin.serialiseData\n\ntag : Data -> option int\ntag value =\n    case value of\n        Constr index _ -> Some index\n        _ -> None\n\nfields : Data -> option (list Data)\nfields value =\n    case value of\n        Constr _ items -> Some items\n        _ -> None\n\nimpl ToData 'a => ToData (List 'a) where\n    toData values = List (mapList toData (Builtin.unListData values))\n\nimpl FromData 'a => FromData (List 'a) where\n    validateData value =\n        case value of\n            List values -> Builtin.listData (mapList validateData values)\n            _ -> fail\n\nimpl (ToData 'k, ToData 'v) => ToData (Map 'k 'v) where\n    toData values = Map (mapList pairToData (Builtin.unMapData values))\n\nimpl (FromData 'k, FromData 'v) => FromData (Map 'k 'v) where\n    validateData value =\n        case value of\n            Map values -> Builtin.mapData (mapList pairValidateData values)\n            _ -> fail\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        first :: rest -> Builtin.mkCons (f first) (mapList f rest)\n\npairToData : (ToData 'k, ToData 'v) => pair 'k 'v -> pair Data Data\npairToData value = Builtin.mkPairData (toData (Builtin.fstPair value)) (toData (Builtin.sndPair value))\n\npairValidateData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v\npairValidateData value = Builtin.mkPairData (validateData (Builtin.fstPair value)) (validateData (Builtin.sndPair value))\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validateData, toData)\ninput = Map [mkPairData (B #\"aa\") (List [I 42])]\ndecoded : Map Bytes (List Int)\ndecoded = validateData input\nmain = equalsData (toData decoded) input\n"
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt value = value\n\nimpl FromString string where\n    fromString value = value\n\nimpl FromBytes bytes where\n    fromBytes value = value\n\nimpl FromInt Int where\n    fromInt = Builtin.iData\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.bData\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Bool exposing (Bool(..), not, and, or, xor)\n\nimport Builtin\n\ntype Bool = False | True\n\nnot : bool -> bool\nnot value = if value then Builtin.False else Builtin.True\n\nand : bool -> bool -> bool\nand a b = if a then b else Builtin.False\n\nor : bool -> bool -> bool\nor a b = if a then Builtin.True else b\n\nxor : bool -> bool -> bool\nxor a b = if a then not b else b\n\nmodule Unit exposing (Unit(..))\n\ntype Unit = Unit\n\nmodule Ordering exposing (Ordering(..), type ordering(..), invert, then_)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\n\ntype ordering = LT | EQ | GT\n\ntype Ordering = LT | EQ | GT\n\ninvert : ordering -> ordering\ninvert order =\n    case order of\n        LT -> GT\n        EQ -> EQ\n        GT -> LT\n\nthen_ : ordering -> ordering -> ordering\nthen_ first second =\n    case first of\n        EQ -> second\n        _ -> first\n\nimpl Eq ordering where\n    eq a b =\n        case (a, b) of\n            (LT, LT) -> True\n            (EQ, EQ) -> True\n            (GT, GT) -> True\n            _ -> False\n\nmodule Lift exposing (Lift)\n\nimport Builtin exposing (type bool(..))\nimport Bool exposing (Bool)\nimport Unit exposing (Unit)\nimport Ordering exposing (Ordering, type ordering(..))\n\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\nimpl Lift int Int where\n    lift = Builtin.iData\n    lower = Builtin.unIData\n\nimpl Lift bytes Bytes where\n    lift = Builtin.bData\n    lower = Builtin.unBData\n\nimpl Lift string Bytes where\n    lift value = Builtin.bData (Builtin.encodeUtf8 value)\n    lower value = Builtin.decodeUtf8 (Builtin.unBData value)\n\nimpl Lift bool Bool where\n    lift value = if value then Bool.True else Bool.False\n    lower value =\n        case value of\n            Bool.True -> True\n            Bool.False -> False\n\nimpl Lift unit Unit where\n    lift _ = Unit.Unit\n    lower _ = ()\n\nimpl Lift ordering Ordering where\n    lift value =\n        case value of\n            LT -> Ordering.LT\n            EQ -> Ordering.EQ\n            GT -> Ordering.GT\n    lower value =\n        case value of\n            Ordering.LT -> LT\n            Ordering.EQ -> EQ\n            Ordering.GT -> GT\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Lift 'a 'b => Lift (list 'a) (List 'b) where\n    lift values = Builtin.listData (mapList lift values)\n    lower values = mapList lower (Builtin.unListData values)\n\nimpl Lift (list (pair 'k 'v)) (Map 'k 'v) where\n    lift = Builtin.mapData\n    lower = Builtin.unMapData\n\nmodule Functor exposing (Functor)\n\nimport Builtin\nimport Lift exposing (Lift)\n\ntrait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n\nimpl Functor list where\n    map = mapList\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        x :: xs -> Builtin.mkCons (f x) (mapList f xs)\n\nimpl Functor List where\n    map f values = lift (mapList f (lower values))\n\nmodule Applicative exposing (Applicative)\n\nimport Functor exposing (Functor)\n\ntrait Functor 'f => Applicative 'f where\n    pure : 'a -> 'f 'a\n    apply : 'f ('a -> 'b) -> 'f 'a -> 'f 'b\n\nmodule Monad exposing (Monad)\n\nimport Applicative exposing (Applicative)\n\ntrait Applicative 'm => Monad 'm where\n    bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b\n\nmodule Option exposing (Option(..), type option(..), withDefault)\n\nimport Builtin exposing (type bool(..))\nimport Eq exposing (Eq)\nimport Lift exposing (Lift)\nimport Functor exposing (Functor)\nimport Applicative exposing (Applicative)\nimport Monad exposing (Monad)\n\ntype option 'a = Some 'a | None\ntype Option 'a = Some 'a | None\n\nimpl Functor option where\n    map f value =\n        case value of\n            Some item -> Some (f item)\n            None -> None\n\nimpl Applicative option where\n    pure = Some\n    apply functions value =\n        case functions of\n            Some f -> map f value\n            None -> None\n\nimpl Monad option where\n    bind value f =\n        case value of\n            Some item -> f item\n            None -> None\n\nwithDefault : 'a -> option 'a -> 'a\nwithDefault fallback value =\n    case value of\n        Some item -> item\n        None -> fallback\n\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (Some x, Some y) -> eq x y\n            (None, None) -> True\n            _ -> False\n\nimpl Lift 'a 'b => Lift (option 'a) (Option 'b) where\n    lift value =\n        case value of\n            Some item -> Option.Some (lift item)\n            None -> Option.None\n    lower value =\n        case value of\n            Option.Some item -> Some (lower item)\n            Option.None -> None\n\nmodule Data exposing (ToData, FromData, serialise, tag, fields)\n\nimport Builtin exposing (Data(..), Big)\nimport Option exposing (type option(..))\n\ntrait ToData ('a : Big) where\n    toData : 'a -> Data\n    toData = Builtin.coerce\n\nimpl Big 'a => ToData 'a where\n\ntrait FromData ('a : Big) where\n    fromData : Data -> 'a\n    fromData = Builtin.coerce\n    validateData : Data -> 'a\n\nimpl FromData Data where\n    validateData value = value\n\nimpl FromData Int where\n    validateData value =\n        case value of\n            I _ -> Builtin.coerce value\n            _ -> fail\n\nimpl FromData Bytes where\n    validateData value =\n        case value of\n            B _ -> Builtin.coerce value\n            _ -> fail\n\nserialise : Data -> bytes\nserialise = Builtin.serialiseData\n\ntag : Data -> option int\ntag value =\n    case value of\n        Constr index _ -> Some index\n        _ -> None\n\nfields : Data -> option (list Data)\nfields value =\n    case value of\n        Constr _ items -> Some items\n        _ -> None\n\nimpl FromData 'a => FromData (List 'a) where\n    validateData value =\n        case value of\n            List values -> Builtin.listData (mapList validateData values)\n            _ -> fail\n\nimpl (FromData 'k, FromData 'v) => FromData (Map 'k 'v) where\n    validateData value =\n        case value of\n            Map values -> Builtin.mapData (mapList pairValidateData values)\n            _ -> fail\n\nmapList : ('a -> 'b) -> list 'a -> list 'b\nmapList f values =\n    case values of\n        [] -> []\n        first :: rest -> Builtin.mkCons (f first) (mapList f rest)\n\npairValidateData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v\npairValidateData value = Builtin.mkPairData (validateData (Builtin.fstPair value)) (validateData (Builtin.sndPair value))\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validateData, toData)\ninput = Map [mkPairData (B #\"aa\") (List [I 42])]\ndecoded : Map Bytes (List Int)\ndecoded = validateData input\nmain = equalsData (toData decoded) input\n"
 ---
 --- core
-let mapList#7 : ('erased -> pair Data Data) -> list 'erased -> list (pair Data Data) = \(f#16 : 'erased -> pair Data Data) values#17 : list 'erased -> (\self#31 : 'erased -> self#31 self#31) (\self#31 : 'erased values#17 : list 'erased -> let match#20 : list 'erased = values#17 in
-case@List match#20 of
+let toData#2 : 'erased -> Data = \coerce#5 : 'erased -> coerce#5 in
+let fromBytes#9 : bytes -> bytes = \value#31 : bytes -> value#31 in
+let fromInt#12 : int -> int = \value#32 : int -> value#32 in
+let input#4 : Data = (\field#7 : list (pair Data Data) -> mapData field#7) (mkCons (mkPairData ((\field#8 : bytes -> bData field#8) (fromBytes#9 (con bytestring #aa))) ((\field#10 : list Data -> listData field#10) (mkCons ((\field#11 : int -> iData field#11) (fromInt#12 42)) (con (list data) [])))) (con (list (pair data data)) [])) in
+let mapList#15 : ('erased -> pair Data Data) -> list 'erased -> list (pair Data Data) = \(f#33 : 'erased -> pair Data Data) values#34 : list 'erased -> (\self#19 : 'erased -> self#19 self#19) (\self#19 : 'erased values#34 : list 'erased -> let match#37 : list 'erased = values#34 in
+case@List match#37 of
   Nil -> (con (list (pair data data)) [])
-  Cons field#21 field#22 -> let first#18 : 'erased = field#21 in
-  let rest#19 : list 'erased = field#22 in
-  mkCons (f#16 first#18) (self#31 self#31 rest#19)) values#17 in
-let toData#24 : Bytes -> Data = \value#45 : Bytes -> (\field#46 : bytes -> bData field#46) (unBData value#45) in
-let mapList#49 : ('erased -> Data) -> list 'erased -> list Data = \(f#54 : 'erased -> Data) values#55 : list 'erased -> (\self#30 : 'erased -> self#30 self#30) (\self#30 : 'erased values#55 : list 'erased -> let match#58 : list 'erased = values#55 in
-case@List match#58 of
+  Cons field#38 field#39 -> let first#35 : 'erased = field#38 in
+  let rest#36 : list 'erased = field#39 in
+  mkCons (f#33 first#35) (self#19 self#19 rest#36)) values#34 in
+let validateData#41 : Data -> Bytes = \value#43 : Data -> let match#45 : Data = value#43 in
+let leaf#52 : 'erased = delay error in
+case@Data match#45 of
+  DataConstr field#53 field#54 -> force leaf#52
+  DataMap field#55 -> force leaf#52
+  DataList field#56 -> force leaf#52
+  DataI field#57 -> force leaf#52
+  DataB field#58 -> (\coerce#44 : 'erased -> coerce#44) value#43 in
+let mapList#61 : ('erased -> Data) -> list 'erased -> list Data = \(f#77 : 'erased -> Data) values#78 : list 'erased -> (\self#18 : 'erased -> self#18 self#18) (\self#18 : 'erased values#78 : list 'erased -> let match#81 : list 'erased = values#78 in
+case@List match#81 of
   Nil -> (con (list data) [])
-  Cons field#59 field#60 -> let first#56 : 'erased = field#59 in
-  let rest#57 : list 'erased = field#60 in
-  mkCons (f#54 first#56) (self#30 self#30 rest#57)) values#55 in
-let toData#50 : Int -> Data = \value#61 : Int -> (\field#62 : int -> iData field#62) (unIData value#61) in
-let toData#25 : List 'erased -> Data = \values#47 : List 'erased -> let projection#112 : list Data = unListData values#47 in
-(\field#48 : list Data -> listData field#48) (mapList#49 toData#50 projection#112) in
-let pairToData#8 : pair 'erased 'erased -> pair Data Data = \value#23 : pair 'erased 'erased -> let projection#113 : 'erased = fstPair value#23 in
-let evaluated#115 : 'erased = toData#24 projection#113 in
-let projection#114 : 'erased = sndPair value#23 in
-mkPairData evaluated#115 (toData#25 projection#114) in
-let toData#2 : Map 'erased 'erased -> Data = \values#5 : Map 'erased 'erased -> (\field#6 : list (pair Data Data) -> mapData field#6) (mapList#7 pairToData#8 (unMapData values#5)) in
-let fromBytes#12 : bytes -> bytes = \value#43 : bytes -> value#43 in
-let fromInt#15 : int -> int = \value#44 : int -> value#44 in
-let input#4 : Data = (\field#10 : list (pair Data Data) -> mapData field#10) (mkCons (mkPairData ((\field#11 : bytes -> bData field#11) (fromBytes#12 (con bytestring #aa))) ((\field#13 : list Data -> listData field#13) (mkCons ((\field#14 : int -> iData field#14) (fromInt#15 42)) (con (list data) [])))) (con (list (pair data data)) [])) in
-let validateData#52 : Data -> Bytes = \value#63 : Data -> let match#65 : Data = value#63 in
-let leaf#72 : 'erased = delay error in
-case@Data match#65 of
-  DataConstr field#73 field#74 -> force leaf#72
-  DataMap field#75 -> force leaf#72
-  DataList field#76 -> force leaf#72
-  DataI field#77 -> force leaf#72
-  DataB field#78 -> (\coerce#64 : 'erased -> coerce#64) value#63 in
-let validateData#81 : Data -> Int = \value#96 : Data -> let match#98 : Data = value#96 in
-let leaf#105 : 'erased = delay error in
-case@Data match#98 of
-  DataConstr field#106 field#107 -> force leaf#105
-  DataMap field#108 -> force leaf#105
-  DataList field#109 -> force leaf#105
-  DataI field#110 -> (\coerce#97 : 'erased -> coerce#97) value#96
-  DataB field#111 -> force leaf#105 in
-let validateData#53 : Data -> List Data = \value#79 : Data -> let match#82 : Data = value#79 in
-let leaf#89 : 'erased = delay error in
-case@Data match#82 of
-  DataConstr field#90 field#91 -> force leaf#89
-  DataMap field#92 -> force leaf#89
-  DataList field#93 -> let values#80 : list Data = field#93 in
-  listData (mapList#49 validateData#81 values#80)
-  DataI field#94 -> force leaf#89
-  DataB field#95 -> force leaf#89 in
-let pairValidateData#28 : pair Data Data -> pair Data Data = \value#51 : pair Data Data -> let projection#116 : Data = fstPair value#51 in
-let evaluated#118 : 'erased = validateData#52 projection#116 in
-let projection#117 : Data = sndPair value#51 in
-mkPairData evaluated#118 (validateData#53 projection#117) in
-let validateData#9 : Data -> Map Data Data = \value#26 : Data -> let match#29 : Data = value#26 in
-let leaf#36 : 'erased = delay error in
-case@Data match#29 of
-  DataConstr field#37 field#38 -> force leaf#36
-  DataMap field#39 -> let values#27 : list (pair Data Data) = field#39 in
-  mapData (mapList#7 pairValidateData#28 values#27)
-  DataList field#40 -> force leaf#36
-  DataI field#41 -> force leaf#36
-  DataB field#42 -> force leaf#36 in
-let decoded#3 : Map Bytes (List Int) = validateData#9 input#4 in
+  Cons field#82 field#83 -> let first#79 : 'erased = field#82 in
+  let rest#80 : list 'erased = field#83 in
+  mkCons (f#77 first#79) (self#18 self#18 rest#80)) values#78 in
+let validateData#62 : Data -> Int = \value#84 : Data -> let match#86 : Data = value#84 in
+let leaf#93 : 'erased = delay error in
+case@Data match#86 of
+  DataConstr field#94 field#95 -> force leaf#93
+  DataMap field#96 -> force leaf#93
+  DataList field#97 -> force leaf#93
+  DataI field#98 -> (\coerce#85 : 'erased -> coerce#85) value#84
+  DataB field#99 -> force leaf#93 in
+let validateData#42 : Data -> List Data = \value#59 : Data -> let match#63 : Data = value#59 in
+let leaf#70 : 'erased = delay error in
+case@Data match#63 of
+  DataConstr field#71 field#72 -> force leaf#70
+  DataMap field#73 -> force leaf#70
+  DataList field#74 -> let values#60 : list Data = field#74 in
+  listData (mapList#61 validateData#62 values#60)
+  DataI field#75 -> force leaf#70
+  DataB field#76 -> force leaf#70 in
+let pairValidateData#16 : pair Data Data -> pair Data Data = \value#40 : pair Data Data -> let projection#100 : Data = fstPair value#40 in
+let evaluated#102 : 'erased = validateData#41 projection#100 in
+let projection#101 : Data = sndPair value#40 in
+mkPairData evaluated#102 (validateData#42 projection#101) in
+let validateData#6 : Data -> Map Data Data = \value#13 : Data -> let match#17 : Data = value#13 in
+let leaf#24 : 'erased = delay error in
+case@Data match#17 of
+  DataConstr field#25 field#26 -> force leaf#24
+  DataMap field#27 -> let values#14 : list (pair Data Data) = field#27 in
+  mapData (mapList#15 pairValidateData#16 values#14)
+  DataList field#28 -> force leaf#24
+  DataI field#29 -> force leaf#24
+  DataB field#30 -> force leaf#24 in
+let decoded#3 : Map Bytes (List Int) = validateData#6 input#4 in
 let main#1 : bool = equalsData (toData#2 decoded#3) input#4 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam mapList_7
-    [(lam toData_24
-      [(lam mapList_49
-        [(lam toData_50
-          [(lam toData_25
-            [(lam pairToData_8
-              [(lam toData_2
-                [(lam fromBytes_12
-                  [(lam fromInt_15
-                    [(lam input_4
-                      [(lam validateData_52
-                        [(lam validateData_81
-                          [(lam validateData_53
-                            [(lam pairValidateData_28
-                              [(lam validateData_9
-                                [(lam decoded_3
-                                  [(lam main_1 main_1) [[(builtin equalsData) [toData_2 decoded_3]] input_4]])
-                                  [validateData_9 input_4]])
-                                (lam value_26
-                                  [(lam match_29
-                                    [(lam leaf_36
-                                      [(lam generated_119
-                                        (case
-                                          [[[[[[(force (builtin chooseData)) generated_119] (con integer 0)] (con integer 1)]
-                                            (con integer 2)]
-                                            (con integer 3)]
-                                            (con integer 4)]
-                                          [(lam generated_120
-                                            [[(lam field_37 (lam field_38 (force leaf_36)))
-                                              [(force (force (builtin fstPair))) generated_120]]
-                                              [(force (force (builtin sndPair))) generated_120]])
-                                            [(builtin unConstrData) generated_119]]
-                                          [(lam field_39
-                                            [(lam values_27 [(builtin mapData) [[mapList_7 pairValidateData_28] values_27]])
-                                              field_39])
-                                            [(builtin unMapData) generated_119]]
-                                          [(lam field_40 (force leaf_36)) [(builtin unListData) generated_119]]
-                                          [(lam field_41 (force leaf_36)) [(builtin unIData) generated_119]]
-                                          [(lam field_42 (force leaf_36)) [(builtin unBData) generated_119]]))
-                                        match_29])
-                                      (delay (error))])
-                                    value_26])])
-                              (lam value_51
-                                [(lam projection_116
-                                  [(lam evaluated_118
-                                    [(lam projection_117
-                                      [[(builtin mkPairData) evaluated_118] [validateData_53 projection_117]])
-                                      [(force (force (builtin sndPair))) value_51]])
-                                    [validateData_52 projection_116]])
-                                  [(force (force (builtin fstPair))) value_51]])])
-                            (lam value_79
-                              [(lam match_82
-                                [(lam leaf_89
-                                  [(lam generated_121
-                                    (case
-                                      [[[[[[(force (builtin chooseData)) generated_121] (con integer 0)] (con integer 1)]
-                                        (con integer 2)]
-                                        (con integer 3)]
-                                        (con integer 4)]
-                                      [(lam generated_122
-                                        [[(lam field_90 (lam field_91 (force leaf_89)))
-                                          [(force (force (builtin fstPair))) generated_122]]
-                                          [(force (force (builtin sndPair))) generated_122]])
-                                        [(builtin unConstrData) generated_121]]
-                                      [(lam field_92 (force leaf_89)) [(builtin unMapData) generated_121]]
-                                      [(lam field_93
-                                        [(lam values_80 [(builtin listData) [[mapList_49 validateData_81] values_80]])
-                                          field_93])
-                                        [(builtin unListData) generated_121]]
-                                      [(lam field_94 (force leaf_89)) [(builtin unIData) generated_121]]
-                                      [(lam field_95 (force leaf_89)) [(builtin unBData) generated_121]]))
-                                    match_82])
-                                  (delay (error))])
-                                value_79])])
-                          (lam value_96
-                            [(lam match_98
-                              [(lam leaf_105
-                                [(lam generated_123
-                                  (case
-                                    [[[[[[(force (builtin chooseData)) generated_123] (con integer 0)] (con integer 1)]
-                                      (con integer 2)]
-                                      (con integer 3)]
-                                      (con integer 4)]
-                                    [(lam generated_124
-                                      [[(lam field_106 (lam field_107 (force leaf_105)))
-                                        [(force (force (builtin fstPair))) generated_124]]
-                                        [(force (force (builtin sndPair))) generated_124]])
-                                      [(builtin unConstrData) generated_123]]
-                                    [(lam field_108 (force leaf_105)) [(builtin unMapData) generated_123]]
-                                    [(lam field_109 (force leaf_105)) [(builtin unListData) generated_123]]
-                                    [(lam field_110 [(lam coerce_97 coerce_97) value_96])
-                                      [(builtin unIData) generated_123]]
-                                    [(lam field_111 (force leaf_105)) [(builtin unBData) generated_123]]))
-                                  match_98])
-                                (delay (error))])
-                              value_96])])
-                        (lam value_63
-                          [(lam match_65
-                            [(lam leaf_72
-                              [(lam generated_125
+  [(lam toData_2
+    [(lam fromBytes_9
+      [(lam fromInt_12
+        [(lam input_4
+          [(lam mapList_15
+            [(lam validateData_41
+              [(lam mapList_61
+                [(lam validateData_62
+                  [(lam validateData_42
+                    [(lam pairValidateData_16
+                      [(lam validateData_6
+                        [(lam decoded_3
+                          [(lam main_1 main_1) [[(builtin equalsData) [toData_2 decoded_3]] input_4]])
+                          [validateData_6 input_4]])
+                        (lam value_13
+                          [(lam match_17
+                            [(lam leaf_24
+                              [(lam generated_103
                                 (case
-                                  [[[[[[(force (builtin chooseData)) generated_125] (con integer 0)] (con integer 1)]
+                                  [[[[[[(force (builtin chooseData)) generated_103] (con integer 0)] (con integer 1)]
                                     (con integer 2)]
                                     (con integer 3)]
                                     (con integer 4)]
-                                  [(lam generated_126
-                                    [[(lam field_73 (lam field_74 (force leaf_72)))
-                                      [(force (force (builtin fstPair))) generated_126]]
-                                      [(force (force (builtin sndPair))) generated_126]])
-                                    [(builtin unConstrData) generated_125]]
-                                  [(lam field_75 (force leaf_72)) [(builtin unMapData) generated_125]]
-                                  [(lam field_76 (force leaf_72)) [(builtin unListData) generated_125]]
-                                  [(lam field_77 (force leaf_72)) [(builtin unIData) generated_125]]
-                                  [(lam field_78 [(lam coerce_64 coerce_64) value_63])
-                                    [(builtin unBData) generated_125]]))
-                                match_65])
+                                  [(lam generated_104
+                                    [[(lam field_25 (lam field_26 (force leaf_24)))
+                                      [(force (force (builtin fstPair))) generated_104]]
+                                      [(force (force (builtin sndPair))) generated_104]])
+                                    [(builtin unConstrData) generated_103]]
+                                  [(lam field_27
+                                    [(lam values_14 [(builtin mapData) [[mapList_15 pairValidateData_16] values_14]])
+                                      field_27])
+                                    [(builtin unMapData) generated_103]]
+                                  [(lam field_28 (force leaf_24)) [(builtin unListData) generated_103]]
+                                  [(lam field_29 (force leaf_24)) [(builtin unIData) generated_103]]
+                                  [(lam field_30 (force leaf_24)) [(builtin unBData) generated_103]]))
+                                match_17])
                               (delay (error))])
-                            value_63])])
-                      [(lam field_10 [(builtin mapData) field_10])
-                        [[(force (builtin mkCons))
-                          [[(builtin mkPairData)
-                            [(lam field_11 [(builtin bData) field_11]) [fromBytes_12 (con bytestring #aa)]]]
-                            [(lam field_13 [(builtin listData) field_13])
-                              [[(force (builtin mkCons))
-                                [(lam field_14 [(builtin iData) field_14]) [fromInt_15 (con integer 42)]]]
-                                (con (list data) [])]]]]
-                          (con (list (pair data data)) [])]]])
-                    (lam value_44 value_44)])
-                  (lam value_43 value_43)])
-                (lam values_5
-                  [(lam field_6 [(builtin mapData) field_6])
-                    [[mapList_7 pairToData_8] [(builtin unMapData) values_5]]])])
-              (lam value_23
-                [(lam projection_113
-                  [(lam evaluated_115
-                    [(lam projection_114
-                      [[(builtin mkPairData) evaluated_115] [toData_25 projection_114]])
-                      [(force (force (builtin sndPair))) value_23]])
-                    [toData_24 projection_113]])
-                  [(force (force (builtin fstPair))) value_23]])])
-            (lam values_47
-              [(lam projection_112
-                [(lam field_48 [(builtin listData) field_48])
-                  [[mapList_49 toData_50] projection_112]])
-                [(builtin unListData) values_47]])])
-          (lam value_61
-            [(lam field_62 [(builtin iData) field_62]) [(builtin unIData) value_61]])])
-        (lam f_54
-          (lam values_55
-            [[(lam self_30 [self_30 self_30])
-              (lam self_30
-                (lam values_55
-                  [(lam match_58
-                    [(lam generated_127
+                            value_13])])
+                      (lam value_40
+                        [(lam projection_100
+                          [(lam evaluated_102
+                            [(lam projection_101
+                              [[(builtin mkPairData) evaluated_102] [validateData_42 projection_101]])
+                              [(force (force (builtin sndPair))) value_40]])
+                            [validateData_41 projection_100]])
+                          [(force (force (builtin fstPair))) value_40]])])
+                    (lam value_59
+                      [(lam match_63
+                        [(lam leaf_70
+                          [(lam generated_105
+                            (case
+                              [[[[[[(force (builtin chooseData)) generated_105] (con integer 0)] (con integer 1)]
+                                (con integer 2)]
+                                (con integer 3)]
+                                (con integer 4)]
+                              [(lam generated_106
+                                [[(lam field_71 (lam field_72 (force leaf_70)))
+                                  [(force (force (builtin fstPair))) generated_106]]
+                                  [(force (force (builtin sndPair))) generated_106]])
+                                [(builtin unConstrData) generated_105]]
+                              [(lam field_73 (force leaf_70)) [(builtin unMapData) generated_105]]
+                              [(lam field_74
+                                [(lam values_60 [(builtin listData) [[mapList_61 validateData_62] values_60]])
+                                  field_74])
+                                [(builtin unListData) generated_105]]
+                              [(lam field_75 (force leaf_70)) [(builtin unIData) generated_105]]
+                              [(lam field_76 (force leaf_70)) [(builtin unBData) generated_105]]))
+                            match_63])
+                          (delay (error))])
+                        value_59])])
+                  (lam value_84
+                    [(lam match_86
+                      [(lam leaf_93
+                        [(lam generated_107
+                          (case
+                            [[[[[[(force (builtin chooseData)) generated_107] (con integer 0)] (con integer 1)]
+                              (con integer 2)]
+                              (con integer 3)]
+                              (con integer 4)]
+                            [(lam generated_108
+                              [[(lam field_94 (lam field_95 (force leaf_93)))
+                                [(force (force (builtin fstPair))) generated_108]]
+                                [(force (force (builtin sndPair))) generated_108]])
+                              [(builtin unConstrData) generated_107]]
+                            [(lam field_96 (force leaf_93)) [(builtin unMapData) generated_107]]
+                            [(lam field_97 (force leaf_93)) [(builtin unListData) generated_107]]
+                            [(lam field_98 [(lam coerce_85 coerce_85) value_84])
+                              [(builtin unIData) generated_107]]
+                            [(lam field_99 (force leaf_93)) [(builtin unBData) generated_107]]))
+                          match_86])
+                        (delay (error))])
+                      value_84])])
+                (lam f_77
+                  (lam values_78
+                    [[(lam self_18 [self_18 self_18])
+                      (lam self_18
+                        (lam values_78
+                          [(lam match_81
+                            [(lam generated_109
+                              (case
+                                generated_109
+                                (lam field_82
+                                  (lam field_83
+                                    [(lam first_79
+                                      [(lam rest_80
+                                        [[(force (builtin mkCons)) [f_77 first_79]] [[self_18 self_18] rest_80]])
+                                        field_83])
+                                      field_82]))
+                                (con (list data) [])))
+                              match_81])
+                            values_78]))]
+                      values_78]))])
+              (lam value_43
+                [(lam match_45
+                  [(lam leaf_52
+                    [(lam generated_110
                       (case
-                        generated_127
-                        (lam field_59
-                          (lam field_60
-                            [(lam first_56
-                              [(lam rest_57
-                                [[(force (builtin mkCons)) [f_54 first_56]] [[self_30 self_30] rest_57]])
-                                field_60])
-                              field_59]))
-                        (con (list data) [])))
-                      match_58])
-                    values_55]))]
-              values_55]))])
-      (lam value_45
-        [(lam field_46 [(builtin bData) field_46]) [(builtin unBData) value_45]])])
-    (lam f_16
-      (lam values_17
-        [[(lam self_31 [self_31 self_31])
-          (lam self_31
-            (lam values_17
-              [(lam match_20
-                [(lam generated_128
-                  (case
-                    generated_128
-                    (lam field_21
-                      (lam field_22
-                        [(lam first_18
-                          [(lam rest_19
-                            [[(force (builtin mkCons)) [f_16 first_18]] [[self_31 self_31] rest_19]])
-                            field_22])
-                          field_21]))
-                    (con (list (pair data data)) [])))
-                  match_20])
-                values_17]))]
-          values_17]))])
+                        [[[[[[(force (builtin chooseData)) generated_110] (con integer 0)] (con integer 1)]
+                          (con integer 2)]
+                          (con integer 3)]
+                          (con integer 4)]
+                        [(lam generated_111
+                          [[(lam field_53 (lam field_54 (force leaf_52)))
+                            [(force (force (builtin fstPair))) generated_111]]
+                            [(force (force (builtin sndPair))) generated_111]])
+                          [(builtin unConstrData) generated_110]]
+                        [(lam field_55 (force leaf_52)) [(builtin unMapData) generated_110]]
+                        [(lam field_56 (force leaf_52)) [(builtin unListData) generated_110]]
+                        [(lam field_57 (force leaf_52)) [(builtin unIData) generated_110]]
+                        [(lam field_58 [(lam coerce_44 coerce_44) value_43])
+                          [(builtin unBData) generated_110]]))
+                      match_45])
+                    (delay (error))])
+                  value_43])])
+            (lam f_33
+              (lam values_34
+                [[(lam self_19 [self_19 self_19])
+                  (lam self_19
+                    (lam values_34
+                      [(lam match_37
+                        [(lam generated_112
+                          (case
+                            generated_112
+                            (lam field_38
+                              (lam field_39
+                                [(lam first_35
+                                  [(lam rest_36
+                                    [[(force (builtin mkCons)) [f_33 first_35]] [[self_19 self_19] rest_36]])
+                                    field_39])
+                                  field_38]))
+                            (con (list (pair data data)) [])))
+                          match_37])
+                        values_34]))]
+                  values_34]))])
+          [(lam field_7 [(builtin mapData) field_7])
+            [[(force (builtin mkCons))
+              [[(builtin mkPairData)
+                [(lam field_8 [(builtin bData) field_8]) [fromBytes_9 (con bytestring #aa)]]]
+                [(lam field_10 [(builtin listData) field_10])
+                  [[(force (builtin mkCons))
+                    [(lam field_11 [(builtin iData) field_11]) [fromInt_12 (con integer 42)]]]
+                    (con (list data) [])]]]]
+              (con (list (pair data data)) [])]]])
+        (lam value_32 value_32)])
+      (lam value_31 value_31)])
+    (lam coerce_5 coerce_5)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 11841496, memory: 54321
+cpu: 8365317, memory: 36305

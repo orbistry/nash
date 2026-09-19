@@ -681,6 +681,11 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         ),
         Error::BadInstanceHead { region, reason } => {
             use nash_can::BadHead;
+            let hint = if matches!(reason, BadHead::BareVariable) {
+                "A bare-variable impl must be defined in the module that defines its trait."
+            } else {
+                "Use a named type constructor or a tuple as the outermost type of an impl head."
+            };
             let reason = match reason {
                 BadHead::BareVariable => "a bare type variable",
                 BadHead::Function => "a function type",
@@ -691,7 +696,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 "BAD IMPL HEAD",
                 *region,
                 &format!("This impl head is {reason}:"),
-                "Use a named type constructor or a tuple as the outermost type of an impl head.",
+                hint,
             )
         }
         Error::OrphanImpl {

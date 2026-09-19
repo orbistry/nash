@@ -122,8 +122,9 @@ an entry to the real builtin inventory.
 even the outer Data shape; malformed data fails only if a later operation
 needs that shape. `validateData` is a separate required source method.
 Int and Bytes validation matches the Data shape then coerces the original
-value; List and Map retain recursive source validation. `toData` is unchanged:
-for Int it constructs `I (Builtin.unIData value)`. There are no generated
+value; List and Map retain recursive source validation. `ToData.toData` also
+defaults to `Builtin.coerce`: its ordinary blanket impl covers every Big type
+and preserves the runtime value without reconstruction or traversal. There are no generated
 validation checkers. Ordinary identity remains a Nash function; `fail` is
 language syntax, not an entry in the builtin table.
 

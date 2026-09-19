@@ -1,0 +1,15 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n\n\nmodule Main exposing (..)\nimport Lift exposing (Lift)\nimpl Lift 'a 'a where\n    lift x = x\n    lower x = x\n"
+info: diagnostic
+---
+nash::names::bad_instance_head
+
+  × This impl head is a bare type variable:
+   ╭─[src/Main.nash:3:11]
+ 2 │ import Lift exposing (Lift)
+ 3 │ impl Lift 'a 'a where
+   ·           ──
+ 4 │     lift x = x
+   ╰────
+  help: A bare-variable impl must be defined in the module that defines its trait.

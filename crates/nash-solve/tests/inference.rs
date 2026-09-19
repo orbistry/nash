@@ -5006,3 +5006,54 @@ fn keyword_wrappers_preserve_annotated_branch_error_recovery() {
         );
     }
 }
+
+#[test]
+fn owned_blanket_impl_resolves_functions_and_records() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep 'a where
+            keep x = x
+        function : () -> ()
+        function = keep (\x -> x)
+        type alias record = { value : () }
+        record = keep { value = () }
+    "#
+    );
+}
+
+#[test]
+fn owned_blanket_impl_discharges_big_context() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        type Box = Wrap
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Big 'a => Keep 'a where
+            keep x = x
+        concrete = keep Wrap
+        generic : Big 'a => 'a -> 'a
+        generic x = keep x
+    "#
+    );
+}
+
+#[test]
+fn owned_blanket_impl_rejects_const_context() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Big 'a => Keep 'a where
+            keep x = x
+        generic : Const 'a => 'a -> 'a
+        generic x = keep x
+    "#
+    );
+}

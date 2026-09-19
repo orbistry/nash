@@ -114,8 +114,6 @@ fn impl_heads_reject_non_constructor_shapes() {
     let bump = Bump::new();
     let mut errors = Vec::new();
     for head in [
-        "'a",
-        "('a : Big)",
         "('a -> 'b)",
         "(('a -> 'b) : Term)",
         "{ value : 'a }",
@@ -1058,5 +1056,90 @@ fn impl_head_kind_mismatch() {
     );
     insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
+    });
+}
+
+#[test]
+fn owned_blanket_impls_preserve_bounds_and_overlap() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let mut results = Vec::new();
+    for suffix in ["", "impl Keep () where\n    keep x = x\n"] {
+        let source = format!(
+            "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\n{suffix}"
+        );
+        let result = canonicalize(&bump, snapshot_inputs.record(&source));
+        if suffix.is_empty() {
+            let module = result.as_ref().unwrap();
+            let info = module.tables.impls.values().next().unwrap();
+            assert!(matches!(info.heads[0].value, nash_ast::Head::Var(0)));
+            assert_eq!(info.context.len(), 1);
+        } else {
+            assert!(matches!(
+                result.as_ref().unwrap_err().as_slice(),
+                [nash_can::Error::OverlappingImpls { .. }]
+            ));
+        }
+        results.push(result.map(|_| ()));
+    }
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
+    });
+}
+
+#[test]
+fn foreign_bare_impl_heads_remain_rejected() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let interfaces = std::collections::BTreeMap::from([("Lift", core_lift(&bump))]);
+    snapshot_inputs.record(LIFT_SOURCE);
+    let source = snapshot_inputs.record("module Main exposing (..)\nimport Lift exposing (Lift)\nimpl Lift 'a 'a where\n    lift x = x\n    lower x = x\n");
+    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+    let result = nash_can::canonicalize(
+        &bump,
+        nash_can::Context {
+            package: None,
+            interfaces: Some(&interfaces),
+        },
+        &module,
+    );
+    assert!(matches!(
+        result.as_ref().unwrap_err().as_slice(),
+        [nash_can::Error::BadInstanceHead { .. }]
+    ));
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
+    });
+}
+
+#[test]
+fn owned_blankets_cannot_overlap_compiler_owned_instances() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let mut results = Vec::new();
+    for source in [
+        "module Eq exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> ()\nimpl Eq 'a where\n    eq a b = ()\n",
+        "module Lift exposing (..)\ntrait Lift 'a 'b where\n    lift : 'a -> 'b\n    lower : 'b -> 'a\nimpl Lift 'a 'a where\n    lift x = x\n    lower x = x\n",
+    ] {
+        let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
+        let result = nash_can::canonicalize(
+            &bump,
+            nash_can::Context {
+                package: Some(nash_ast::primitives::CORE),
+                interfaces: None,
+            },
+            &module,
+        );
+        assert!(matches!(
+            result.as_ref().unwrap_err().as_slice(),
+            [nash_can::Error::StructuralEqOverride { .. }]
+                | [nash_can::Error::ReflexiveLiftOverlap { .. }]
+        ));
+        results.push(result.map(|_| ()));
+    }
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
     });
 }

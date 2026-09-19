@@ -65,7 +65,8 @@ Module naming: one module per type pair, named by the uppercase name
 it is not compiler-known (`option`), functions over the **little** type
 (`List.map : ('a -> 'b) -> list 'a -> list 'b`), and the `Lift` impl
 between the two. Big twins get no function set: only the type and
-constructor declarations and their `Lift`/`ToData`/`FromData` impls. Big
+constructor declarations and their `Lift`/`FromData` impls, with `ToData`
+provided by the blanket impl in `Data`. Big
 values are `lower`ed, worked on, and `lift`ed back. `Map` is the one
 module whose functions take the Big type, because its little form
 `list (pair 'k 'v)` is not a nominal type. `Data`, `Data.Decode` and
@@ -281,7 +282,7 @@ not repeated here. What each module adds beyond its trait:
 | `Functor` | `list`, `List`; each applied element must satisfy its constructor's datatype context (`Storable` for `list`, `Big` for `List`). No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
-| `Data` | `ToData`/`FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
+| `Data` | Blanket `ToData` for every Big type; `FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
@@ -443,10 +444,13 @@ first head, so both exist.
 ```elm
 module Data exposing (ToData, FromData, serialise, tag, fields)
 
-import Builtin
+import Builtin exposing (Data(..), Big)
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
+    toData = Builtin.coerce
+
+impl Big 'a => ToData 'a where
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a
@@ -454,14 +458,8 @@ trait FromData ('a : Big) where
     validateData : Data -> 'a
 
 -- Data itself requires no decoding.
-impl ToData Data where
-    toData value = value
-
 impl FromData Data where
     validateData value = value
-
-impl ToData Int where
-    toData value = I (Builtin.unIData value)
 
 impl FromData Int where
     validateData value =
@@ -492,7 +490,10 @@ unchecked `Builtin.coerce`, with no outer-shape or nested checks. Malformed
 data fails only if a later operation needs its expected shape. The required
 `validateData` method is separate: Int and Bytes check the shape and coerce
 the original value, while List and Map retain recursive source validation.
-`toData` keeps its existing source encoding. Data.Decode provides the
+`toData` uses its `Builtin.coerce` default through one ordinary blanket impl
+for every Big type. User ADTs, nominal aliases, lists and maps all qualify,
+without element `ToData` constraints or reconstruction. Additional concrete
+impls overlap this blanket impl and are rejected. Data.Decode provides the
 non-failing decoder API.
 
 ## Twin modules
