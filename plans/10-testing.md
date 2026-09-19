@@ -90,7 +90,8 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
   can be constructed from multiple primitive choices.
 - [x] Encode/decode losslessly; reset choice history separately between seeded
   iterations. Reject malformed protocol results without panicking.
-- [x] Evaluate using the chosen ledger cost model and machine maximum budget.
+- [x] Evaluate using the chosen ledger language's bundled cost model and machine maximum budget.
+  Bundled costs are not live mainnet protocol parameters.
   Check requested CPU/memory limits separately from body success/failure.
 
 ## 6. Choice-sequence shrinking
@@ -169,6 +170,6 @@ The `examples/order` seed-1 acceptance command exits 1 with three passing tests
 and one intentionally failing property, reduced to `a = 0`, `b = 1`; CI checks
 that exit status and counterexample output.
 
-Native property programs require Plutus V3; V1/V2 requests receive target errors.
+Native property programs support Plutus V1, V2, and V3 at protocol 11.
 Local path and workspace test dependencies are supported; registry/git fetching
 remains outside the existing dependency resolver. Plan 08 stays deferred.

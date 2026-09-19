@@ -42,7 +42,7 @@ identity. Unit expressions and patterns keep their dedicated syntax nodes.
 
 `bool` and `unit` are Const types with constructors: `True`/`False` and
 `()` are the constants `(con bool True)`, `(con bool False)`, `(con unit ())`.
-A `case` on `bool` lowers to `ifThenElse`; a `case` on `unit` has one branch.
+A `case` on `bool` lowers to native UPLC `case`; a `case` on `unit` has one branch.
 
 ## Big types
 
@@ -206,10 +206,12 @@ Ordinary types without a twin retain ordinary constructor lookup.
   chains. See [codegen.md](codegen.md) for accessor memoization.
 - `case` on a **little ADT / tuple / little record**: UPLC `case` on the
   `constr` term; each branch is a lambda over the fields.
-- `case` on **`bool`**: `ifThenElse`. On **`unit`**: the single branch.
-- `case` on **`Data`**: `chooseData` with five delayed branches.
-- `case` on **`list 'a`**: `chooseList` for `[]` vs `x :: xs`, then
-  `headList`/`tailList`.
+- `case` on **`bool`**: native `case`, false at branch 0 and true at branch 1.
+  On **`unit`**: the single branch.
+- `case` on **`Data`**: `chooseData` returns a tag from 0 to 4, followed by
+  integer native `case`. Native `case` does not accept `Data` directly.
+- `case` on **`list 'a`**: native `case`, with cons at branch 0 and nil at
+  branch 1. The cons branch is a lambda receiving head and tail.
 - `case` on **`List 'a`** (Big): `unListData` then as `list`.
 
 ## Bridging Big and little
@@ -235,7 +237,7 @@ Builtin impls, with their UPLC:
 | `Lift int Int` | `iData` | `unIData` |
 | `Lift bytes Bytes` | `bData` | `unBData` |
 | `Lift string Bytes` | UTF-8 encode, then `bData` | `unBData`, then UTF-8 decode |
-| `Lift bool Bool` | `ifThenElse c (Constr 1 []) (Constr 0 [])` | tag compare |
+| `Lift bool Bool` | `case c [Constr 0 [], Constr 1 []]` | tag compare |
 | `Lift unit Unit` | `Constr 0 []` | `()` |
 | `Lift (list 'a) (List 'b)` given `Lift 'a 'b` | map `lift` over the elements, then `listData` | `unListData` then map `lower` |
 | `Lift (list (pair 'k 'v)) (Map 'k 'v)` with `'k 'v : Big` | `mapData` | `unMapData` |

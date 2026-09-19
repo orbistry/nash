@@ -36,7 +36,7 @@ Global flags, accepted before the subcommand:
 
 | Flag | Default | Effect |
 |---|---|---|
-| `--plutus-version v1\|v2\|v3` | config `plutusVersion`, else `v3` | Ledger language target at the Plomin/protocol 10 baseline. |
+| `--plutus-version v1\|v2\|v3` | config `plutusVersion`, else `v3` | Ledger language target at the protocol 11 baseline. |
 | `--trace-level silent\|compact\|verbose` | config `traceLevel`, else `silent` | User `trace` compilation mode. |
 | `--compiler-traces[=true\|false]` | config `compilerTraces`, else false | Independently control compiler traces; the bare flag enables them. |
 | `--out DIR` | `build` | Output directory. |
@@ -55,7 +55,7 @@ See [target compatibility](validators.md#target-compatibility).
 | `--exact` | off | `--match` compares whole strings. |
 | `--trace-level` | config `traceLevel`, else `verbose` | As for `build`, but tests default to `verbose`. |
 | `--jobs N` | number of cores | Positive worker count; fixed seeds give the same ordered results across worker counts. |
-| `--plutus-version v1\|v2\|v3` | member config, else `v3` | Target validation and execution cost model. |
+| `--plutus-version v1\|v2\|v3` | member config, else `v3` | Target validation and bundled execution cost model. |
 | `--json` | off | Write one structured result document to stdout. |
 | `--coverage labels\|tests` | `labels` | Denominator of the label table: total labels, or total iterations. |
 

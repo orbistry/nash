@@ -67,22 +67,21 @@ A match on a `Data` scrutinee produces a `Core` `Case(Data, ...)` node with
 up to five branches, one per constructor, and a default. It lowers to
 
 ```
-force (chooseData d (delay constrBranch)
-                    (delay mapBranch)
-                    (delay listBranch)
-                    (delay iBranch)
-                    (delay bBranch))
+case (chooseData d 0 1 2 3 4)
+     [constrBranch, mapBranch, listBranch, iBranch, bBranch]
 ```
 
-Constructors that no clause mentions share the default branch. Inside a
+Native `case` cannot inspect `Data` directly; `chooseData` supplies its tag.
+Only the selected case branch is evaluated. Constructors that no clause
+mentions share the default branch. Inside a
 branch the fields are bound with the matching `un*Data` builtin and the
 rest of the pattern is an ordinary `Const` match:
 
 - `Constr tag fields`: `let p = unConstrData d`, `tag = fstPair p`,
   `fields = sndPair p`. A literal tag becomes an `int` switch
   (`equalsInteger`); a list pattern on `fields` is a `list Data` match
-  (`chooseList` / `headList` / `tailList`, with `nullList` for the exact
-  length of a `[a, b]` pattern).
+  (native `case`, with cons at branch 0 receiving head and tail, and nil
+  at branch 1).
 - `List xs`: `xs = unListData d`, then a `list Data` match.
 - `Map kvs`: `kvs = unMapData d`, elements are `pair Data Data`
   (`fstPair`/`sndPair`).
@@ -156,7 +155,7 @@ content. The impls shipped in `core/` are the table of
 |---|---|---|---|
 | `int` | `Int` | `iData` | `unIData` |
 | `bytes` | `Bytes` | `bData` | `unBData` |
-| `bool` | `Bool` | `ifThenElse c (Constr 1 []) (Constr 0 [])` | tag compare |
+| `bool` | `Bool` | `case c [Constr 0 [], Constr 1 []]` | tag compare |
 | `unit` | `Unit` | `Constr 0 []` | `()` |
 | `list 'a` given `Lift 'a 'b` | `List 'b` | map `lift` over the elements, then `listData` | `unListData`, then map `lower` |
 | `list (pair 'k 'v)` with `'k 'v : Big` | `Map 'k 'v` | `mapData` | `unMapData` |

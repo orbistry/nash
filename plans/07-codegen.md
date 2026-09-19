@@ -1300,10 +1300,10 @@ directly instead of applying the eta-expanded lambda.
 `lower.rs` additions:
 
 - `Case(Int)`: fold branches from the default:
-  `force (ifThenElse (equalsInteger s (con k)) (delay b_k) (delay rest))`
+  `case (equalsInteger s (con k)) [rest, b_k]`
   with `s` let-bound once by the decision tree.
 - `Case(Bytes)`: same with `equalsByteString`.
-- `Case(List)`: `force (chooseList s (delay nil) (delay (let h = headList s; t = tailList s in cons)))`.
+- `Case(List)`: `case s [\h t -> cons, nil]`.
 
 **Elm/Aiken reference**: `decision_tree.rs` `build_tree` (626),
 `do_build_tree` (730), `map_pattern_to_row` (1174), `highest_occurrence`

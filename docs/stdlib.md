@@ -606,8 +606,8 @@ same table.
 Rules:
 
 - Every builtin is strict in every argument, including `ifThenElse`,
-  `chooseList`, `chooseData`, and `trace`. `if`, `case`, `&&`, `||` are
-  compiled by the compiler with delays; `Builtin.ifThenElse` is the raw
+  `chooseList`, `chooseData`, and `trace`. `if`, `case`, `&&`, `||` use
+  lazy native case dispatch at protocol 11; `Builtin.ifThenElse` is the raw
   strict builtin.
 - Type variables have representation prerequisites as UPLC requires: elements of
   `list`/`array` and components of `pair` are `Storable`; `'a` in

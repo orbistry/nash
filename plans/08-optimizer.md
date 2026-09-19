@@ -605,10 +605,9 @@ pub fn is_error_safe(func: DefaultFunction, args: &[&Core<'_>]) -> bool {
 The `eval` closure in `assemble` is
 `|core| nash_codegen::comptime::eval_closed(arena, &[], core).ok()`.
 
-`lower.rs`: `Case(Bool)` whose two branches both satisfy
-`is_value_binding` (chunk 3) lowers to `ifThenElse c t e` without
-`delay`/`force`. This is a lowering rule, not a `Core` rewrite, because
-`Core` `Case(Bool)` is always lazy by definition.
+Protocol 11 lowering already uses native `case` for `Case(Bool)`, preserving
+lazy branches without `delay`/`force`. The earlier proposed eager
+`ifThenElse` lowering is superseded; Plan 08 remains deferred.
 
 **Aiken reference**: `builtin_eval_reducer` (2674), `is_error_safe`
 (412), `cast_data_reducer` (2522), `force_delay_reducer` (2448),

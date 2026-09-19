@@ -77,11 +77,11 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 | `Let(b, v, e)` | strict binding | `(\b -> e) v` |
 | `LetRec` | recursive function group | self-application, see Recursion |
 | `Case(Tag, s, bs, d)` | match on a `Term` constr tag; branch `i` binds the fields | `Term::Case` |
-| `Case(Bool, s, [t, e], _)` | `if` | `force (ifThenElse s (delay t) (delay e))` |
-| `Case(Int, s, bs, d)` | switch on integer literals | chain of `equalsInteger` + `ifThenElse` |
-| `Case(Bytes, s, bs, d)` | switch on bytestring literals | chain of `equalsByteString` |
-| `Case(List, s, [nil, cons], _)` | match on a `Const` list; `cons` binds head and tail | `chooseList` + `headList`/`tailList` |
-| `Case(Data, s, bs, d)` | match on the `Data` tag; five branches `Constr\|Map\|List\|I\|B` | `chooseData` with delayed branches |
+| `Case(Bool, s, [t, e], _)` | `if` | `case s [e, t]` (false tag 0, true tag 1) |
+| `Case(Int, s, bs, d)` | switch on integer literals | chain of `equalsInteger` + boolean `Term::Case` |
+| `Case(Bytes, s, bs, d)` | switch on bytestring literals | chain of `equalsByteString` + boolean `Term::Case` |
+| `Case(List, s, [nil, cons], _)` | match on a `Const` list; `cons` binds head and tail | `case s [\head tail -> cons, nil]` |
+| `Case(Data, s, bs, d)` | match on the `Data` tag; five branches `Constr\|Map\|List\|I\|B` | `chooseData` selects tag 0–4, then integer `Term::Case` |
 | `Constr(i, fs)` | build a UPLC constr | `Term::Constr` |
 | `Field(r, i)` | project field `i` of a constr | `case r [\f0 .. fn -> fi]` |
 | `Builtin(f, as)` | call builtin `f`; `as.len() <= f.arity()` | `force^k (builtin f)` applied to `as` |
@@ -240,11 +240,11 @@ The `Switch` node lowers to the `Case` kind matching the scrutinee's `Ty`:
 | Scrutinee representation / type | `Case` kind | Test |
 |---|---|---|
 | little ADT (`Term`) | `Tag` | UPLC `case` on the constr |
-| `bool` | `Bool` | `ifThenElse` |
+| `bool` | `Bool` | native `case` (false 0, true 1) |
 | `int`, `bytes` literals | `Int`, `Bytes` | equality chain |
-| `list 'a` | `List` | `chooseList` |
+| `list 'a` | `List` | native `case` (cons 0, nil 1) |
 | Big ADT | `Int` on `fstPair (unConstrData s)` | equality chain on the tag |
-| `Data` | `Data` | `chooseData` |
+| `Data` | `Data` | `chooseData` tag followed by integer `case` |
 | Big record, `List 'a`, `Map 'k 'v` | none (irrefutable) | projection only |
 
 Exhaustiveness is checked earlier by `nash-nitpick` (Elm's
@@ -360,13 +360,13 @@ pass has usually already replaced the head with a variable.
 | Nash type | Representation | Runtime value | Build | Take apart |
 |---|---|---|---|---|
 | `int` `bytes` `string` `bool` `unit` | Const | constant | `Lit` | builtins |
-| `list 'a` (`'a` Storable) | Const | `list t` constant | `mkCons` / `Lit []` | `chooseList` `headList` `tailList` |
+| `list 'a` (`'a` Storable) | Const | `list t` constant | `mkCons` / `Lit []` | native `case` (cons 0, nil 1) |
 | `pair 'a 'b` (Storable components) | Const | `pair t1 t2` (each Big component becomes `data`; each Const component keeps its builtin type) | `mkPairData` constructs pairs with Big components; `unConstrData` returns `pair int (list Data)` | `fstPair` `sndPair` |
 | `array 'a` | Const | `array t` | `listToArray` | `indexArray` `lengthOfArray` |
 | `bls_g1` `bls_g2` `bls_mlr` `value` | Const | constant | builtins | builtins |
 | `Int` | Big | `data (I n)` | `iData` | `unIData` |
 | `Bytes` | Big | `data (B bs)` | `bData` | `unBData` |
-| `Data` | Big | `data` | any | `chooseData` |
+| `Data` | Big | `data` | any | `chooseData` tag + integer `case` |
 | `List 'a` | Big | `data (List xs)` | `listData` | `unListData` |
 | `Map 'k 'v` | Big | `data (Map kvs)` | `mapData` | `unMapData` |
 | Big ADT `type Foo = A .. \| B ..` | Big | `data (Constr i fields)` | `constrData i fields` | `unConstrData`, `fstPair`, `sndPair`, list indexing |
@@ -440,10 +440,11 @@ and is what tuple projection and little-record access compile to.
 
 ## `if` on `bool`
 
-`Case(Bool, c, [t, e])` lowers to `force (ifThenElse c (delay t) (delay e))`.
-The optimizer removes the `delay`/`force` pair around a branch that is a
-variable, literal, lambda or builtin (it cannot fail and is cheap to
-evaluate eagerly), which is the shape Aiken's shrinker also targets.
+`Case(Bool, c, [t, e])` lowers to native `case c [e, t]`: false selects
+branch 0 and true selects branch 1. Native case evaluates only the selected
+branch, so no branch delays or forces are needed. Sparse integer and bytestring
+literal patterns still use equality tests, dispatching on each boolean result;
+arbitrary integer values are not used as branch-array indexes.
 
 ## Records
 
@@ -600,7 +601,7 @@ local bindings also retain strict evaluation.
 ## Build targets
 
 Production assembly accepts a ledger target and validates generated UPLC against
-the Plomin/protocol 10 compatibility baseline described in [validators.md](validators.md#target-compatibility).
+the protocol 11 compatibility baseline described in [validators.md](validators.md#target-compatibility).
 `assemble_core` remains the default V3 entrypoint; `assemble_core_for_version`
-selects V1/V2 UPLC 1.0.0 or V3 UPLC 1.1.0 and checks the complete program.
+emits UPLC 1.1.0 for V1, V2, and V3 and checks the complete program.
 No optimizer passes run while Plan 08 is deferred.

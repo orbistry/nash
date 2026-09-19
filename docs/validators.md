@@ -147,24 +147,22 @@ Each validator uses its owning application's or package's `plutusVersion`
 (default `"v3"`), overridden by `--plutus-version`. Workspace members retain
 their own settings; dependency settings do not change the caller's script.
 
-Compatibility is pinned to **Plomin, protocol version 10**. Ledger language
-versions and UPLC versions are distinct:
+Compatibility targets **protocol version 11**. Ledger language versions and
+UPLC versions are distinct. V1, V2, and V3 all emit UPLC 1.1.0 and permit the
+builtins supported by this compiler at this protocol baseline; the selected
+ledger language still determines the script hash tag and evaluator semantics.
 
-| Target | UPLC output | Permitted builtin tags |
-|---|---|---|
-| V1 | 1.0.0 | 0–50 |
-| V2 | 1.0.0 | 0–53 and integer/bytes conversions (73, 74) |
-| V3 | 1.1.0 | 0–86 |
+The entire generated program is validated, including nested terms and empty
+typed containers. Native `constr`/`case` terms are available for all three ledger
+languages. Protocol 11 also permits `case` on boolean, integer, list, pair,
+and unit constants. `Data` is not directly supported by native `case`: Nash
+uses `chooseData` to select an integer tag, then native `case` to dispatch.
+BLS runtime constants cannot be serialized as script literals; BLS builtins can
+construct values at runtime.
 
-The entire generated program is validated. `constr` and `case` require V3;
-unsupported builtins and constant types are errors, including inside nested
-terms or empty typed containers. Array/Value features requiring protocol 11
-are not accepted, and BLS runtime constants cannot be serialized as script
-literals. BLS builtins can construct values at runtime on V3.
-
-This deliberately does not adopt protocol 11's expanded V1/V2 capabilities.
-The compatibility table follows `PlutusLedgerApi/Common/Versions.hs` at
-Plutus revision `7d6eead0f0fba7958125a03a5123acef9f0e9c69`.
+The built-in evaluator uses bundled cost models. These are not live protocol
+parameters queried from mainnet, so reported budgets do not establish current
+mainnet execution costs.
 
 Generated files are tracked in `.nash-artifacts` in the output directory.
 Successful builds remove only stale tracked files, including when no validators

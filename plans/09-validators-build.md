@@ -63,8 +63,8 @@ are obsolete. Extend the actual APIs; do not recreate those sketches.
   script hash language tag.
 - [x] Validate every generated term, constant type, and builtin against an
   explicit supported ledger/protocol compatibility baseline. Reject unsupported
-  features, including `constr`/`case` on the V1/V2 baseline, rather than merely
-  changing a version field or hash tag. State that baseline in diagnostics/docs.
+  features rather than merely changing a version field or hash tag. Native
+  `constr`/`case` is supported for V1/V2/V3 at the protocol 11 baseline. State that baseline in diagnostics/docs.
 - [x] Preserve `assemble_core` as the default V3 API for existing callers.
 - [x] Compute script hashes from the correct language tag and single-wrapped
   CBOR bytes using Blake2b-224. Verify against independent known Cardano vectors,
@@ -97,4 +97,4 @@ are obsolete. Extend the actual APIs; do not recreate those sketches.
 
 Acceptance verified with `cargo fmt --all`, strict workspace Clippy, and
 `cargo test`: 3,305 passed, 3 ignored, 0 failed. Target compatibility uses the
-Plomin/protocol 10 baseline. Plan 08 remains deferred.
+protocol 11 baseline. Plan 08 remains deferred.

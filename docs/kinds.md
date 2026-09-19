@@ -315,7 +315,7 @@ type is ground; `repr` of a ground type is computed from its head
 - the UPLC `Type` of `list`/`array`/`pair` element constants (`Big`
   elements are `Type::Data`),
 - which `Lift` implementation applies,
-- whether `if` may use `ifThenElse` (the condition must be `bool`).
+- whether `if` may use boolean native `case` (the condition must be `bool`).
 
 Representation predicates produce no runtime evidence.
 
