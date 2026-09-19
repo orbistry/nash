@@ -2091,7 +2091,6 @@ dependencies = [
  "nash-nitpick",
  "nash-parse",
  "nash-region",
- "nash-solve",
  "nash-source",
  "serde",
  "serde_json",

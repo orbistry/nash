@@ -3,7 +3,6 @@
 //! Wrapping a sub-parser error in the enclosing declaration shape lets each
 //! parser entry point render through the same module report path.
 
-
 /// Indent every non-empty line of a fragment by four spaces, so multiline
 /// layout tests exercise the fragment as it would appear inside a
 /// definition. A token at column 1 always starts a new top-level

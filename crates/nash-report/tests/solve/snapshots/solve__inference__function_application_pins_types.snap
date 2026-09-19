@@ -1,7 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 2090
-description: "Code:\n\nmodule Main exposing (id, main)\n\nid x = x\n\nmain = id 42\n"
----
-id : forall a. a -> a
-main : forall a. FromInt a => a

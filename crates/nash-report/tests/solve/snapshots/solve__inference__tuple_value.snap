@@ -1,6 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 1912
-description: "Code:\n\nmodule Main exposing (pair)\n\npair = ( 1, \"two\" )\n"
----
-pair : forall a a1. (FromInt a1, FromString a) => ( a1, a )

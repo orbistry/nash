@@ -1,6 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 2847
-description: "Code:\n\nmodule Basics exposing (..)\ntype Bool = False | True\ninvert flag =\n    case flag of\n        False -> True\n        True -> False\n"
----
-invert : Bool -> Bool

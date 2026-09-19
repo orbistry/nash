@@ -1,0 +1,20 @@
+---
+source: crates/nash-driver/tests/solve/inference.rs
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nouter : 'a -> 'a\nouter x =\n    let\n        helper ignored = keep x\n    in\n    helper ()\n"
+info: diagnostic
+---
+nash::type::missing_constraint
+
+  × `keep` requires undeclared constraint `Keep 'a`.
+   ╭─[Main.nash:7:26]
+ 4 │ outer : 'a -> 'a
+ 5 │ outer x =
+   · ──┬──
+   ·   ╰── annotation for `outer`
+ 6 │     let
+ 7 │         helper ignored = keep x
+   ·                          ──┬─
+   ·                            ╰── constraint required here
+ 8 │     in
+   ╰────
+  help: Add `Keep 'a` to the annotation for `outer`.

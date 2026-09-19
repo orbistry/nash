@@ -810,27 +810,4 @@ mod tests {
             &little
         )));
     }
-    #[test]
-    fn solver_error_producer_retains_record_identity() {
-        use nash_constrain::type_::make_descriptor;
-        use nash_constrain::{Content, FlatType, UnionFind};
-        let arena = bumpalo::Bump::new();
-        let mut uf = UnionFind::new();
-        let body = nash_region::Located::at_zero(nash_ast::Type::Record { fields: &[] });
-        let real = uf.fresh(make_descriptor(Content::Structure(FlatType::Record1(
-            BTreeMap::new(),
-        ))));
-        let little = uf.fresh(make_descriptor(Content::Alias {
-            home: primitives::builtin_home(),
-            name: "littleRecord",
-            args: vec![],
-            real,
-            body: &body,
-        }));
-        let produced = nash_solve::to_error_type(&arena, &mut uf, little);
-        assert_eq!(
-            nominal_record(produced),
-            Some((primitives::builtin_home(), "littleRecord"))
-        );
-    }
 }

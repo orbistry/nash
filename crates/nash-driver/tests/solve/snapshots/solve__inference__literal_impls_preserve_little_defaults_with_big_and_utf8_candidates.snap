@@ -1,0 +1,13 @@
+---
+source: crates/nash-driver/tests/solve/inference.rs
+description: "module Literal exposing (..)\nimport Builtin\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\nimpl FromInt int where\n    fromInt = Builtin.identity\nimpl FromInt Int where\n    fromInt = Builtin.castLift\nimpl FromBytes bytes where\n    fromBytes = Builtin.identity\nimpl FromBytes Bytes where\n    fromBytes = Builtin.castLift\nimpl FromString string where\n    fromString = Builtin.identity\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\n\nmodule Main exposing (..)\nimport Literal\ninteger = 42\nbytes = #\"ff\"\nstring = \"Nash\"\ndiscardedInteger = (\\_ -> ()) 42\ndiscardedBytes = (\\_ -> ()) #\"ff\"\ndiscardedString = (\\_ -> ()) \"Nash\"\nbigInteger : Int\nbigInteger = 42\nbigBytes : Bytes\nbigBytes = #\"ff\"\nutf8 : bytes\nutf8 = \"Nash\"\n"
+---
+bigBytes : Bytes
+bigInteger : Int
+bytes : forall a. FromBytes a => a
+discardedBytes : unit
+discardedInteger : unit
+discardedString : unit
+integer : forall a. FromInt a => a
+string : forall a. FromString a => a
+utf8 : bytes

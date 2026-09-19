@@ -1,0 +1,19 @@
+---
+source: crates/nash-driver/tests/report/pattern.rs
+assertion_line: 60
+description: "Code:\n\nmodule Main exposing (..)\nfirst xs =\n    case xs of\n        [] -> 0\n        [] :: _ -> 1\n"
+---
+nash::pattern::incomplete
+
+  × Case expression is not exhaustive.
+   ╭─[src/Main.nash:3:5]
+ 2 │     first xs =
+ 3 │ ╭─▶     case xs of
+ 4 │ │           [] -> 0
+ 5 │ ╰─▶         [] :: _ -> 1
+   ╰────
+  help: Missing patterns:
+
+            (_ :: _) :: _
+
+        Add the missing branches; use `todo` for unfinished bodies.

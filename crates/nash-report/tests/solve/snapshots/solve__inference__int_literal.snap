@@ -1,6 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 1677
-description: "Code:\n\nmodule Main exposing (main)\n\nmain = 42\n"
----
-main : forall a. FromInt a => a

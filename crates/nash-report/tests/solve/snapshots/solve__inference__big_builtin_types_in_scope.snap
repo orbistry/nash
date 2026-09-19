@@ -1,6 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 4189
-description: "Code:\n\nmodule Main exposing (..)\nf : Builtin.List Builtin.Int -> List Int\nf x = x\n"
----
-f : List Int -> List Int

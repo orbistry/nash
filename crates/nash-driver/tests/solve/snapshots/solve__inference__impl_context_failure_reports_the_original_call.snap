@@ -1,0 +1,24 @@
+---
+source: crates/nash-driver/tests/solve/inference.rs
+description: "module Main exposing (..)\ntype Color = Red\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep () where\n    keep x = x\nimpl Keep 'a => Keep (list 'a) where\n    keep xs = xs\nvalue = keep [Red]\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Keep Color`.
+   ╭─[Main.nash:9:9]
+ 8 │     keep xs = xs
+ 9 │ value = keep [Red]
+   ·         ──┬─
+   ·           ╰── required by `keep`
+   ╰────
+  help: Available impl heads:
+
+            (list 'a0)
+            unit
+
+        Requirement chain:
+
+            Keep (list Color)
+
+        Import or define an impl for `Keep Color`.

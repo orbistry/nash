@@ -1,0 +1,14 @@
+---
+source: crates/nash-driver/tests/report/type_.rs
+assertion_line: 53
+description: "module Main exposing (..)\ntype A = A\ntype B = B\nf : A -> A\nf x = x\ng = f B\n"
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `A`, found `B`.
+   ╭─[Main.nash:6:7]
+ 5 │ f x = x
+ 6 │ g = f B
+   ·       ┬
+   ·       ╰── argument 1 of `f`
+   ╰────

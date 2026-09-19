@@ -1,6 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 2342
-description: "Code:\n\nmodule Main exposing (id)\n\nid : 'a -> 'a\nid x = x\n"
----
-id : forall a. a -> a

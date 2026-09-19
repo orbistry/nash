@@ -1,6 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 1801
-description: "Code:\n\nmodule Main exposing (greeting)\n\ngreeting = \"hello\"\n"
----
-greeting : forall a. FromString a => a

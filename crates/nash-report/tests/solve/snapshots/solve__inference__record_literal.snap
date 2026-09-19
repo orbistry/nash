@@ -1,7 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 2031
-description: "Code:\n\nmodule Main exposing (point)\n\ntype alias point = { x : int, y : int }\nkeep value = value\npoint = keep { x = 1, y = 2 }\n"
----
-keep : forall a. a -> a
-point : point

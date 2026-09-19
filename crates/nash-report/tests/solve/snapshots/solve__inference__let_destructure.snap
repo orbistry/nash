@@ -1,6 +1,0 @@
----
-source: crates/nash-report/tests/solve/inference.rs
-assertion_line: 2135
-description: "Code:\n\nmodule Main exposing (main)\n\nmain =\n    let\n        ( a, b ) = ( 1, \"two\" )\n    in\n    b\n"
----
-main : forall a. FromString a => a
