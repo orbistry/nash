@@ -352,13 +352,13 @@ constructor has labeled fields and the names are a subset of the labels.
 Unchanged from Elm minus char and float literals, plus bytes literals:
 
 ```elm
-Constr 0 [I n, B bs]       -- Data constructors are ordinary constructors
+Builtin.constrData 0 [I n, B bs] -- build from a tag and field list
 #"deadbeef"                -- bytes literal pattern
 x :: rest as all
 { owner, deadline }        -- record pattern (field punning)
 ```
 
-`Data` is a prelude Big type `Constr int (list Data) | Map (list (pair Data
+`Data` is a prelude Big type `Constr (pair int (list Data)) | Map (list (pair Data
 Data)) | List (list Data) | I int | B bytes`; its constructors need no
 special grammar.
 

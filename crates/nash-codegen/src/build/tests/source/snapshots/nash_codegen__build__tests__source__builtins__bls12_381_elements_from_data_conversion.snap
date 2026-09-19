@@ -1,136 +1,132 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias proof = { piA : bls_g1, piB : bls_g2 }\nencode : proof -> Data\nencode p = Constr 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]\npk : proof\npk =\n    { piA = (bls12_381_g1_uncompress #\"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce\")\n    , piB = (bls12_381_g2_uncompress #\"b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423\")\n    }\nmain : bool\nmain =\n    case encode pk of\n        Constr 0 [B point, _] -> bls12_381_g1_equal (bls12_381_g1_uncompress point) pk.piA\n        _ -> fail\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias proof = { piA : bls_g1, piB : bls_g2 }\nencode : proof -> Data\nencode p = Builtin.constrData 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]\npk : proof\npk =\n    { piA = (bls12_381_g1_uncompress #\"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce\")\n    , piB = (bls12_381_g2_uncompress #\"b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423\")\n    }\nmain : bool\nmain =\n    case encode pk of\n        Constr pair(0, [B point, _]) -> bls12_381_g1_equal (bls12_381_g1_uncompress point) pk.piA\n        _ -> fail\n"
 ---
 --- core
-let fromInt#4 : int -> int = \value#56 : int -> value#56 in
-let encode#2 : { _0 : bls_g1, _1 : bls_g2 } -> Data = \p#50 : { _0 : bls_g1, _1 : bls_g2 } -> let evaluated#61 : 'erased = fromInt#4 0 in
-let projection#58 : bls_g1 = field@0/2 p#50 in
-let evaluated#60 : 'erased = (\field#53 : bytes -> bData field#53) (bls12_381_G1_compress projection#58) in
-let projection#59 : bls_g2 = field@1/2 p#50 in
-(\field#51 : int field#52 : list Data -> constrData field#51 field#52) evaluated#61 (mkCons evaluated#60 (mkCons ((\field#54 : bytes -> bData field#54) (bls12_381_G2_compress projection#59)) (con (list data) []))) in
-let fromBytes#55 : bytes -> bytes = \value#57 : bytes -> value#57 in
-let pk#3 : { _0 : bls_g1, _1 : bls_g2 } = constr 0 (bls12_381_G1_uncompress (fromBytes#55 (con bytestring #b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce))) (bls12_381_G2_uncompress (fromBytes#55 (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423))) in
+let fromInt#4 : int -> int = \value#50 : int -> value#50 in
+let encode#2 : { _0 : bls_g1, _1 : bls_g2 } -> Data = \p#46 : { _0 : bls_g1, _1 : bls_g2 } -> let evaluated#55 : 'erased = fromInt#4 0 in
+let projection#52 : bls_g1 = field@0/2 p#46 in
+let evaluated#54 : 'erased = (\field#47 : bytes -> bData field#47) (bls12_381_G1_compress projection#52) in
+let projection#53 : bls_g2 = field@1/2 p#46 in
+constrData evaluated#55 (mkCons evaluated#54 (mkCons ((\field#48 : bytes -> bData field#48) (bls12_381_G2_compress projection#53)) (con (list data) []))) in
+let fromBytes#49 : bytes -> bytes = \value#51 : bytes -> value#51 in
+let pk#3 : { _0 : bls_g1, _1 : bls_g2 } = constr 0 (bls12_381_G1_uncompress (fromBytes#49 (con bytestring #b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce))) (bls12_381_G2_uncompress (fromBytes#49 (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423))) in
 let eq#5 : int -> int -> bool = equalsInteger in
 let match#8 : Data = encode#2 pk#3 in
-let leaf#29 : 'erased = delay error in
+let leaf#27 : 'erased = delay error in
 let main#1 : bool = case@Data match#8 of
-  DataConstr pair#49 -> case@Pair pair#49 of
-    Pair field#30 field#31 -> case@Bool (\literal#6 : int -> eq#5 literal#6 (fromInt#4 0)) field#30 of
-      True -> case@List field#31 of
-        Nil -> force leaf#29
-        Cons field#32 field#33 -> case@Data field#32 of
-          DataConstr pair#44 -> case@Pair pair#44 of
-            Pair field#34 field#35 -> force leaf#29
-          DataMap field#36 -> force leaf#29
-          DataList field#37 -> force leaf#29
-          DataI field#38 -> force leaf#29
-          DataB field#39 -> case@List field#33 of
-            Nil -> force leaf#29
-            Cons field#40 field#41 -> case@List field#41 of
-              Nil -> let point#7 : bytes = field#39 in
-              let evaluated#63 : 'erased = bls12_381_G1_uncompress point#7 in
-              let projection#62 : bls_g1 = field@0/2 pk#3 in
-              bls12_381_G1_equal evaluated#63 projection#62
-              Cons field#42 field#43 -> force leaf#29
-      False -> force leaf#29
-  DataMap field#45 -> force leaf#29
-  DataList field#46 -> force leaf#29
-  DataI field#47 -> force leaf#29
-  DataB field#48 -> force leaf#29 in
+  DataConstr field#28 -> case@Pair field#28 of
+    Pair field#29 field#30 -> case@Bool (\literal#6 : int -> eq#5 literal#6 (fromInt#4 0)) field#29 of
+      True -> case@List field#30 of
+        Nil -> force leaf#27
+        Cons field#31 field#32 -> case@Data field#31 of
+          DataConstr field#33 -> force leaf#27
+          DataMap field#34 -> force leaf#27
+          DataList field#35 -> force leaf#27
+          DataI field#36 -> force leaf#27
+          DataB field#37 -> case@List field#32 of
+            Nil -> force leaf#27
+            Cons field#38 field#39 -> case@List field#39 of
+              Nil -> let point#7 : bytes = field#37 in
+              let evaluated#57 : 'erased = bls12_381_G1_uncompress point#7 in
+              let projection#56 : bls_g1 = field@0/2 pk#3 in
+              bls12_381_G1_equal evaluated#57 projection#56
+              Cons field#40 field#41 -> force leaf#27
+      False -> force leaf#27
+  DataMap field#42 -> force leaf#27
+  DataList field#43 -> force leaf#27
+  DataI field#44 -> force leaf#27
+  DataB field#45 -> force leaf#27 in
 main#1
 --- uplc
 (program 1.1.0
   [(lam fromInt_4
     [(lam encode_2
-      [(lam fromBytes_55
+      [(lam fromBytes_49
         [(lam pk_3
           [(lam eq_5
             [(lam match_8
-              [(lam leaf_29
+              [(lam leaf_27
                 [(lam main_1 main_1)
-                  [(lam generated_64
+                  [(lam generated_58
                     (force
-                      [[[[[[(force (builtin chooseData)) generated_64]
+                      [[[[[[(force (builtin chooseData)) generated_58]
                         (delay
-                          [(lam pair_49
+                          [(lam field_28
                             (case
-                              pair_49
-                              (lam field_30
-                                (lam field_31
+                              field_28
+                              (lam field_29
+                                (lam field_30
                                   (case
-                                    [(lam literal_6 [[eq_5 literal_6] [fromInt_4 (con integer 0)]]) field_30]
-                                    (force leaf_29)
+                                    [(lam literal_6 [[eq_5 literal_6] [fromInt_4 (con integer 0)]]) field_29]
+                                    (force leaf_27)
                                     (case
-                                      field_31
-                                      (lam field_32
-                                        (lam field_33
-                                          [(lam generated_65
+                                      field_30
+                                      (lam field_31
+                                        (lam field_32
+                                          [(lam generated_59
                                             (force
-                                              [[[[[[(force (builtin chooseData)) generated_65]
+                                              [[[[[[(force (builtin chooseData)) generated_59]
+                                                (delay [(lam field_33 (force leaf_27)) [(builtin unConstrData) generated_59]])]
+                                                (delay [(lam field_34 (force leaf_27)) [(builtin unMapData) generated_59]])]
+                                                (delay [(lam field_35 (force leaf_27)) [(builtin unListData) generated_59]])]
+                                                (delay [(lam field_36 (force leaf_27)) [(builtin unIData) generated_59]])]
                                                 (delay
-                                                  [(lam pair_44 (case pair_44 (lam field_34 (lam field_35 (force leaf_29)))))
-                                                    [(builtin unConstrData) generated_65]])]
-                                                (delay [(lam field_36 (force leaf_29)) [(builtin unMapData) generated_65]])]
-                                                (delay [(lam field_37 (force leaf_29)) [(builtin unListData) generated_65]])]
-                                                (delay [(lam field_38 (force leaf_29)) [(builtin unIData) generated_65]])]
-                                                (delay
-                                                  [(lam field_39
+                                                  [(lam field_37
                                                     (case
-                                                      field_33
-                                                      (lam field_40
-                                                        (lam field_41
+                                                      field_32
+                                                      (lam field_38
+                                                        (lam field_39
                                                           (case
-                                                            field_41
-                                                            (lam field_42 (lam field_43 (force leaf_29)))
+                                                            field_39
+                                                            (lam field_40 (lam field_41 (force leaf_27)))
                                                             [(lam point_7
-                                                              [(lam evaluated_63
-                                                                [(lam projection_62 [[(builtin bls12_381_G1_equal) evaluated_63] projection_62])
-                                                                  (case pk_3 (lam generated_66 (lam generated_67 generated_66)))])
+                                                              [(lam evaluated_57
+                                                                [(lam projection_56 [[(builtin bls12_381_G1_equal) evaluated_57] projection_56])
+                                                                  (case pk_3 (lam generated_60 (lam generated_61 generated_60)))])
                                                                 [(builtin bls12_381_G1_uncompress) point_7]])
-                                                              field_39])))
-                                                      (force leaf_29)))
-                                                    [(builtin unBData) generated_65]])]))
-                                            field_32]))
-                                      (force leaf_29)))))))
-                            [(builtin unConstrData) generated_64]])]
-                        (delay [(lam field_45 (force leaf_29)) [(builtin unMapData) generated_64]])]
-                        (delay [(lam field_46 (force leaf_29)) [(builtin unListData) generated_64]])]
-                        (delay [(lam field_47 (force leaf_29)) [(builtin unIData) generated_64]])]
-                        (delay [(lam field_48 (force leaf_29)) [(builtin unBData) generated_64]])]))
+                                                              field_37])))
+                                                      (force leaf_27)))
+                                                    [(builtin unBData) generated_59]])]))
+                                            field_31]))
+                                      (force leaf_27)))))))
+                            [(builtin unConstrData) generated_58]])]
+                        (delay [(lam field_42 (force leaf_27)) [(builtin unMapData) generated_58]])]
+                        (delay [(lam field_43 (force leaf_27)) [(builtin unListData) generated_58]])]
+                        (delay [(lam field_44 (force leaf_27)) [(builtin unIData) generated_58]])]
+                        (delay [(lam field_45 (force leaf_27)) [(builtin unBData) generated_58]])]))
                     match_8]])
                 (delay (error))])
               [encode_2 pk_3]])
             (builtin equalsInteger)])
           (constr 0
             [(builtin bls12_381_G1_uncompress)
-              [fromBytes_55
+              [fromBytes_49
                 (con bytestring #b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce)]]
             [(builtin bls12_381_G2_uncompress)
-              [fromBytes_55
+              [fromBytes_49
                 (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423)]])])
-        (lam value_57 value_57)])
-      (lam p_50
-        [(lam evaluated_61
-          [(lam projection_58
-            [(lam evaluated_60
-              [(lam projection_59
-                [[(lam field_51 (lam field_52 [[(builtin constrData) field_51] field_52]))
-                  evaluated_61]
-                  [[(force (builtin mkCons)) evaluated_60]
+        (lam value_51 value_51)])
+      (lam p_46
+        [(lam evaluated_55
+          [(lam projection_52
+            [(lam evaluated_54
+              [(lam projection_53
+                [[(builtin constrData) evaluated_55]
+                  [[(force (builtin mkCons)) evaluated_54]
                     [[(force (builtin mkCons))
-                      [(lam field_54 [(builtin bData) field_54])
-                        [(builtin bls12_381_G2_compress) projection_59]]]
+                      [(lam field_48 [(builtin bData) field_48])
+                        [(builtin bls12_381_G2_compress) projection_53]]]
                       (con (list data) [])]]])
-                (case p_50 (lam generated_68 (lam generated_69 generated_69)))])
-              [(lam field_53 [(builtin bData) field_53])
-                [(builtin bls12_381_G1_compress) projection_58]]])
-            (case p_50 (lam generated_70 (lam generated_71 generated_70)))])
+                (case p_46 (lam generated_62 (lam generated_63 generated_63)))])
+              [(lam field_47 [(builtin bData) field_47])
+                [(builtin bls12_381_G1_compress) projection_52]]])
+            (case p_46 (lam generated_64 (lam generated_65 generated_64)))])
           [fromInt_4 (con integer 0)]])])
-    (lam value_56 value_56)])
+    (lam value_50 value_50)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 190528475, memory: 19280
+cpu: 190432475, memory: 18680

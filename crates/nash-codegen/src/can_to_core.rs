@@ -340,7 +340,34 @@ impl<'a> Engine<'a, '_, '_> {
                 4 => F::BData,
                 _ => return Err(Error::InvalidConstructor),
             };
-            self.ir.builtin(func, &fields)
+            if tag == 0 {
+                let pair = params.first().ok_or(Error::InvalidConstructor)?;
+                let Ty::Const(ConstTy::Pair(first, second)) = pair.ty else {
+                    return Err(Error::InvalidConstructor);
+                };
+                let tag = Binder {
+                    name: self.ir.fresh("tag"),
+                    ty: *first,
+                };
+                let items = Binder {
+                    name: self.ir.fresh("fields"),
+                    ty: *second,
+                };
+                self.ir.case(
+                    CaseKind::Pair,
+                    self.ir.var(pair.name),
+                    &[Branch {
+                        test: nash_ir::core::Test::Pair,
+                        binders: self.ir.arena.alloc_slice_copy(&[tag, items]),
+                        body: self
+                            .ir
+                            .builtin(func, &[self.ir.var(tag.name), self.ir.var(items.name)]),
+                    }],
+                    None,
+                )
+            } else {
+                self.ir.builtin(func, &fields)
+            }
         } else {
             match result {
                 Ty::Big(BigTy::Adt(_)) => self.big_constructor(tag, &fields)?,

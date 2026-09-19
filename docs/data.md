@@ -12,7 +12,7 @@ and a stdlib decoder library on top. Decisions follow
 
 ```elm
 type Data
-    = Constr int (list Data)
+    = Constr (pair int (list Data))
     | Map (list (pair Data Data))
     | List (list Data)
     | I int
@@ -21,7 +21,7 @@ type Data
 
 `Data` is Big (it *is* a `Data` constant at runtime) and is special-cased by
 the compiler: its constructors are not `Constr i [...]` nodes but the five
-Data node shapes themselves, and its fields are `Const` types (`int`,
+Data node shapes themselves, and its fields are `Const` types (`pair int (list Data)`, `int`,
 `bytes`, `list Data`, `list (pair Data Data)`) rather than Big ones, which
 is what the builtins `unConstrData`, `unMapData`, `unListData`, `unIData`,
 `unBData` return. This is the one Big ADT whose fields are not Big. Every
@@ -32,7 +32,7 @@ Mapping to nash-plutus (`crates/nash-plutus/src/data.rs:10`):
 
 | Nash constructor | `PlutusData` | build | take apart |
 |---|---|---|---|
-| `Constr tag fields` | `Constr { tag, fields }` | `constrData` | `unConstrData` then `fstPair` / `sndPair` |
+| `Constr payload` | `Constr { tag, fields }` | `constrData` | `unConstrData`; explicit pair pattern uses native `case` |
 | `Map kvs` | `Map(..)` | `mapData` | `unMapData` |
 | `List xs` | `List(..)` | `listData` | `unListData` |
 | `I n` | `Integer(..)` | `iData` | `unIData` |
@@ -44,10 +44,11 @@ There is no `data` little type.
 
 ```elm
 d : Data
-d = Constr 0 [ I 1, B #"cafe" ]
+d = Builtin.constrData 0 [ I 1, B #"cafe" ]
 ```
 
-The constructor application lowers to
+`Constr : pair int (list Data) -> Data` rewraps a decoded pair. To build
+from a separate tag and field list, call `Builtin.constrData`. The call lowers to
 `constrData 0 (mkCons (iData 1) (mkCons (bData #"cafe") []))`; when every
 argument is a literal the optimizer folds the whole thing to one `Data`
 constant. `I`, `B`, `List`, `Map` lower to `iData`, `bData`, `listData`,
@@ -57,8 +58,8 @@ constant. `I`, `B`, `List`, `Map` lower to `iData`, `bData`, `listData`,
 
 ```elm
 case d of
-    Constr 0 [ owner, deadline ] -> ...
-    Constr _ _                   -> ...
+    Constr pair(0, [ owner, deadline ]) -> ...
+    Constr pair(_, _)                   -> ...
     I n                          -> ...
     _                            -> ...
 ```
@@ -78,8 +79,9 @@ mentions share the default branch. Inside a
 branch the fields are bound with the matching `un*Data` builtin and the
 rest of the pattern is an ordinary `Const` match:
 
-- `Constr tag fields`: `let p = unConstrData d`, `tag = fstPair p`,
-  `fields = sndPair p`. A literal tag becomes an `int` switch
+- `Constr payload`: `payload = unConstrData d`. An explicit
+  `Constr pair(tag, fields)` pattern destructures it with native `case`.
+  A literal tag becomes an `int` switch
   (`equalsInteger`); a list pattern on `fields` is a `list Data` match
   (native `case`, with cons at branch 0 receiving head and tail, and nil
   at branch 1).
@@ -214,10 +216,10 @@ map : list (pair Data Data) -> Data
 map = Map
 
 constr : int -> list Data -> Data
-constr = Constr
+constr = Builtin.constrData
 
 bool : bool -> Data
-bool b = Constr (if b then 1 else 0) []
+bool b = Builtin.constrData (if b then 1 else 0) []
 ```
 
 A little ADT is encoded by writing its `toData`-like function by hand or
@@ -293,13 +295,13 @@ field i item = Decoder (\d -> case d of
 
 index : int -> decoder 'a -> decoder 'a          -- i-th field of a Constr
 index i item = Decoder (\d -> case d of
-    Constr _ fs -> at i (run item) fs
+    Constr pair(_, fs) -> at i (run item) fs
     _ -> Err (Failure "expected Constr"))
 
 tag : decoder int                                -- the Constr tag
 constr : int -> decoder 'a -> decoder 'a         -- require tag, decode fields as List
 constr t item = Decoder (\d -> case d of
-    Constr t' fs -> if t == t' then run item (List fs)
+    Constr pair(t', fs) -> if t == t' then run item (List fs)
                     else Err (Failure "wrong tag")
     _ -> Err (Failure "expected Constr"))
 
@@ -368,7 +370,7 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 | Situation | Where reported |
 |---|---|
 | `impl ToData` / `impl FromData` / `impl Validate` for a non-Big type | representation superclass check |
-| `Constr` pattern with a Big field type (e.g. `Constr 0 [x : Int]`) | type check (fields of `Data` are `Const`) |
+| `Constr` pattern with a Big field type (e.g. `Constr pair(0, [x : Int])`) | type check (fields of `Data` are `Const`) |
 | `fromData d` where the node shape is wrong | no check; a later operation requiring that shape can fail |
 | `validate d` where the node shape is wrong | runtime failure in source validation |
 | `validate d` on a recursive type with a cycle in the data | cannot happen; `Data` is a finite tree |

@@ -471,7 +471,7 @@ fn big_constructor_fields_and_data_builtin_shapes_decode() {
     });
     let patterns = (0..5)
         .map(|i| {
-            let args = vec![pat(&arena, Pattern::Anything); if i == 0 { 2 } else { 1 }];
+            let args = [pat(&arena, Pattern::Anything)];
             (
                 ctor(
                     &arena,

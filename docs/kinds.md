@@ -257,7 +257,7 @@ rendered signatures. They are still stored and still instantiated.
 
 ### Contexts and `Data`
 
-`Data`'s constructors (`Constr int (list Data)`, `Map (list (pair Data
+`Data`'s constructors (`Constr (pair int (list Data))`, `Map (list (pair Data
 Data))`, `List (list Data)`, `I int`, `B bytes`) are compiler-known and
 exempt from the Big-field rule: they mirror `chooseData`.
 

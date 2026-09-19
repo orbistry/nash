@@ -3,26 +3,24 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\ninspect value =\n    case value of\n        pair(I a, B bytes) -> Builtin.addInteger a (Builtin.lengthOfByteString bytes)\n        _ -> 0\nmain : int\nmain = Builtin.addInteger (inspect (Builtin.mkPairData (I 40) (B #\"aabb\"))) (inspect (Builtin.mkPairData (B #\"\") (I 2)))\n"
 ---
 --- core
-let fromInt#4 : int -> int = \value#46 : int -> value#46 in
+let fromInt#4 : int -> int = \value#38 : int -> value#38 in
 let inspect#2 : pair Data Data -> int = \value#9 : pair Data Data -> let match#12 : pair Data Data = value#9 in
-let leaf#29 : 'erased = delay (fromInt#4 0) in
+let leaf#25 : 'erased = delay (fromInt#4 0) in
 case@Pair match#12 of
-  Pair field#30 field#31 -> case@Data field#30 of
-    DataConstr pair#45 -> case@Pair pair#45 of
-      Pair field#32 field#33 -> force leaf#29
-    DataMap field#34 -> force leaf#29
-    DataList field#35 -> force leaf#29
-    DataI field#36 -> case@Data field#31 of
-      DataConstr pair#43 -> case@Pair pair#43 of
-        Pair field#37 field#38 -> force leaf#29
-      DataMap field#39 -> force leaf#29
-      DataList field#40 -> force leaf#29
-      DataI field#41 -> force leaf#29
-      DataB field#42 -> let a#10 : int = field#36 in
-      let bytes#11 : bytes = field#42 in
+  Pair field#26 field#27 -> case@Data field#26 of
+    DataConstr field#28 -> force leaf#25
+    DataMap field#29 -> force leaf#25
+    DataList field#30 -> force leaf#25
+    DataI field#31 -> case@Data field#27 of
+      DataConstr field#32 -> force leaf#25
+      DataMap field#33 -> force leaf#25
+      DataList field#34 -> force leaf#25
+      DataI field#35 -> force leaf#25
+      DataB field#36 -> let a#10 : int = field#31 in
+      let bytes#11 : bytes = field#36 in
       addInteger a#10 (lengthOfByteString bytes#11)
-    DataB field#44 -> force leaf#29 in
-let fromBytes#6 : bytes -> bytes = \value#47 : bytes -> value#47 in
+    DataB field#37 -> force leaf#25 in
+let fromBytes#6 : bytes -> bytes = \value#39 : bytes -> value#39 in
 let main#1 : int = addInteger (inspect#2 (mkPairData ((\field#3 : int -> iData field#3) (fromInt#4 40)) ((\field#5 : bytes -> bData field#5) (fromBytes#6 (con bytestring #aabb))))) (inspect#2 (mkPairData ((\field#7 : bytes -> bData field#7) (fromBytes#6 (con bytestring #))) ((\field#8 : int -> iData field#8) (fromInt#4 2)))) in
 main#1
 --- uplc
@@ -40,48 +38,44 @@ main#1
               [[(builtin mkPairData)
                 [(lam field_7 [(builtin bData) field_7]) [fromBytes_6 (con bytestring #)]]]
                 [(lam field_8 [(builtin iData) field_8]) [fromInt_4 (con integer 2)]]]]]])
-        (lam value_47 value_47)])
+        (lam value_39 value_39)])
       (lam value_9
         [(lam match_12
-          [(lam leaf_29
+          [(lam leaf_25
             (case
               match_12
-              (lam field_30
-                (lam field_31
-                  [(lam generated_48
+              (lam field_26
+                (lam field_27
+                  [(lam generated_40
                     (force
-                      [[[[[[(force (builtin chooseData)) generated_48]
+                      [[[[[[(force (builtin chooseData)) generated_40]
+                        (delay [(lam field_28 (force leaf_25)) [(builtin unConstrData) generated_40]])]
+                        (delay [(lam field_29 (force leaf_25)) [(builtin unMapData) generated_40]])]
+                        (delay [(lam field_30 (force leaf_25)) [(builtin unListData) generated_40]])]
                         (delay
-                          [(lam pair_45 (case pair_45 (lam field_32 (lam field_33 (force leaf_29)))))
-                            [(builtin unConstrData) generated_48]])]
-                        (delay [(lam field_34 (force leaf_29)) [(builtin unMapData) generated_48]])]
-                        (delay [(lam field_35 (force leaf_29)) [(builtin unListData) generated_48]])]
-                        (delay
-                          [(lam field_36
-                            [(lam generated_49
+                          [(lam field_31
+                            [(lam generated_41
                               (force
-                                [[[[[[(force (builtin chooseData)) generated_49]
+                                [[[[[[(force (builtin chooseData)) generated_41]
+                                  (delay [(lam field_32 (force leaf_25)) [(builtin unConstrData) generated_41]])]
+                                  (delay [(lam field_33 (force leaf_25)) [(builtin unMapData) generated_41]])]
+                                  (delay [(lam field_34 (force leaf_25)) [(builtin unListData) generated_41]])]
+                                  (delay [(lam field_35 (force leaf_25)) [(builtin unIData) generated_41]])]
                                   (delay
-                                    [(lam pair_43 (case pair_43 (lam field_37 (lam field_38 (force leaf_29)))))
-                                      [(builtin unConstrData) generated_49]])]
-                                  (delay [(lam field_39 (force leaf_29)) [(builtin unMapData) generated_49]])]
-                                  (delay [(lam field_40 (force leaf_29)) [(builtin unListData) generated_49]])]
-                                  (delay [(lam field_41 (force leaf_29)) [(builtin unIData) generated_49]])]
-                                  (delay
-                                    [(lam field_42
+                                    [(lam field_36
                                       [(lam a_10
                                         [(lam bytes_11
                                           [[(builtin addInteger) a_10] [(builtin lengthOfByteString) bytes_11]])
-                                          field_42])
-                                        field_36])
-                                      [(builtin unBData) generated_49]])]))
-                              field_31])
-                            [(builtin unIData) generated_48]])]
-                        (delay [(lam field_44 (force leaf_29)) [(builtin unBData) generated_48]])]))
-                    field_30]))))
+                                          field_36])
+                                        field_31])
+                                      [(builtin unBData) generated_41]])]))
+                              field_27])
+                            [(builtin unIData) generated_40]])]
+                        (delay [(lam field_37 (force leaf_25)) [(builtin unBData) generated_40]])]))
+                    field_26]))))
             (delay [fromInt_4 (con integer 0)])])
           value_9])])
-    (lam value_46 value_46)])
+    (lam value_38 value_38)])
 --- result
 (con integer 42)
 --- logs

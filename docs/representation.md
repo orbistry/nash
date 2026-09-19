@@ -70,7 +70,7 @@ canonical AST already records (`Ctor.index`, `FieldType.index` in
 lookup, so codegen must sort by `index` before emitting.
 
 `Data` is a Big type with pattern-matchable constructors
-`Constr int (list Data) | Map (list (pair Data Data)) | List (list Data) | I int | B bytes`.
+`Constr (pair int (list Data)) | Map (list (pair Data Data)) | List (list Data) | I int | B bytes`.
 Its fields are exactly what `chooseData`, `unConstrData`, `unMapData`,
 `unListData`, `unIData`, `unBData` return, so matching on `Data` costs one
 `chooseData` plus one unwrap and no conversion. `Data` is exempt from the

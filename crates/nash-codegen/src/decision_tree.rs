@@ -433,14 +433,10 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                     _ => return Err(Error::PatternType),
                 };
                 kind = Some(k);
-                Ok(if test == Test::DataConstr {
-                    self.data_constructor_branch(&fields, body)
-                } else {
-                    Branch {
-                        test,
-                        binders: self.build.arena.alloc_slice_copy(&fields),
-                        body,
-                    }
+                Ok(Branch {
+                    test,
+                    binders: self.build.arena.alloc_slice_copy(&fields),
+                    body,
                 })
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -588,10 +584,10 @@ fn signatures<'a>(
         Ty::Big(BigTy::Data) => vec![
             Signature {
                 shape: Shape::Data(0),
-                fields: vec![
+                fields: vec![Ty::Const(&ConstTy::Pair(
                     Ty::Const(&ConstTy::Int),
                     Ty::Const(&ConstTy::List(Ty::Big(&BigTy::Data))),
-                ],
+                ))],
             },
             Signature {
                 shape: Shape::Data(1),

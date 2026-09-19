@@ -6,7 +6,7 @@ case!(
     import Builtin exposing (..)
     type alias proof = { piA : bls_g1, piB : bls_g2 }
     encode : proof -> Data
-    encode p = Constr 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]
+    encode p = Builtin.constrData 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]
     pk : proof
     pk =
         { piA = (bls12_381_g1_uncompress #"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce")
@@ -26,7 +26,7 @@ case!(
     import Builtin exposing (..)
     type alias proof = { piA : bls_g1, piB : bls_g2 }
     encode : proof -> Data
-    encode p = Constr 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]
+    encode p = Builtin.constrData 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]
     pk : proof
     pk =
         { piA = (bls12_381_g1_uncompress #"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce")
@@ -35,7 +35,7 @@ case!(
     main : bool
     main =
         case encode pk of
-            Constr 0 [B point, _] -> bls12_381_g1_equal (bls12_381_g1_uncompress point) pk.piA
+            Constr pair(0, [B point, _]) -> bls12_381_g1_equal (bls12_381_g1_uncompress point) pk.piA
             _ -> fail
 "#,
     Ok("(con bool True)")
@@ -53,7 +53,7 @@ case!(
     decodeNever : Data -> never
     decodeNever value =
         case value of
-            Constr 1 [] -> Never
+            Constr pair(1, []) -> Never
             _ -> fail
     main : unit
     main =
@@ -75,13 +75,13 @@ traced_case!(
     toData : foo -> Data
     toData value =
         case value of
-            Bar -> Constr 0 []
-            Bax -> Constr 1 []
+            Bar -> Builtin.constrData 0 []
+            Bax -> Builtin.constrData 1 []
     decode : Data -> option foo
     decode value =
         case value of
-            Constr 0 [] -> Some Bar
-            Constr 1 [] -> Some Bax
+            Constr pair(0, []) -> Some Bar
+            Constr pair(1, []) -> Some Bax
             _ -> None
     hardCast value =
         case decode value of
@@ -505,7 +505,7 @@ case!(
     import Data exposing (FromData)
     type Datum = Datum Int
     decoded : Datum
-    decoded = fromData (Constr 0 [I 42])
+    decoded = fromData (Builtin.constrData 0 [I 42])
     main =
         case decoded of
             Datum number -> unIData number
@@ -541,14 +541,14 @@ case!(
     identityData : Big 'a => 'a -> Data
     identityData = toData
     main =
-        if equalsData (toData wrapped) (List [Constr 0 [I 42]]) then
+        if equalsData (toData wrapped) (List [Builtin.constrData 0 [I 42]]) then
             check
         else False
     check =
-        if equalsData (identityData (Token 42)) (Constr 0 [I 42]) then
-            if equalsData (toData (listData [Token 42])) (List [Constr 0 [I 42]]) then
+        if equalsData (identityData (Token 42)) (Builtin.constrData 0 [I 42]) then
+            if equalsData (toData (listData [Token 42])) (List [Builtin.constrData 0 [I 42]]) then
                 equalsData (toData (mapData [mkPairData (Token 1) (Token 2)]))
-                    (Map [mkPairData (Constr 0 [I 1]) (Constr 0 [I 2])])
+                    (Map [mkPairData (Builtin.constrData 0 [I 1]) (Builtin.constrData 0 [I 2])])
             else False
         else False
     "#,
@@ -567,13 +567,13 @@ case!(
     unchecked : Big 'a => Data -> 'a
     unchecked = fromData
     wrapped : Wrapped
-    wrapped = unchecked (List [Constr 0 [I 42]])
+    wrapped = unchecked (List [Builtin.constrData 0 [I 42]])
     tokens : List Token
     tokens = unchecked (List [B #"aa"])
     mapping : Map Token Token
     mapping = fromData (Map [mkPairData (B #"aa") (I 7)])
     main =
-        if equalsData (toData wrapped) (List [Constr 0 [I 42]]) then
+        if equalsData (toData wrapped) (List [Builtin.constrData 0 [I 42]]) then
             if equalsData (toData tokens) (List [B #"aa"]) then
                 equalsData (toData mapping) (Map [mkPairData (B #"aa") (I 7)])
             else False
@@ -593,10 +593,10 @@ case!(
     impl Validate Datum where
         validate value =
             case value of
-                Constr 0 [I _] -> coerce value
+                Constr pair(0, [I _]) -> coerce value
                 _ -> fail
     decoded : Datum
-    decoded = validate (Constr 0 [B #"aa"])
+    decoded = validate (Builtin.constrData 0 [B #"aa"])
     main =
         case decoded of
             Datum number -> unIData number

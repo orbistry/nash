@@ -8,7 +8,7 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
     [(lam first_2
       [(lam decode_4
         [(lam fromBytes_7
-          [(lam eq_35
+          [(lam eq_31
             [(lam select_8
               [(lam main_1 main_1)
                 (constr 0
@@ -24,32 +24,30 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                   [select_8
                     [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
                       [fromInt_3 (con integer 7)]]])])
-              (lam n_34
-                [(lam match_38
+              (lam n_30
+                [(lam match_34
                   (case
-                    [(lam literal_36 [[eq_35 literal_36] [fromInt_3 (con integer 7)]]) match_38]
+                    [(lam literal_32 [[eq_31 literal_32] [fromInt_3 (con integer 7)]]) match_34]
                     (case
-                      [(lam literal_37 [[eq_35 literal_37] [fromInt_3 (con integer 100)]]) match_38]
+                      [(lam literal_33 [[eq_31 literal_33] [fromInt_3 (con integer 100)]]) match_34]
                       [fromInt_3 (con integer 30)]
                       [fromInt_3 (con integer 20)])
                     [fromInt_3 (con integer 10)]))
-                  n_34])])
+                  n_30])])
             (builtin equalsInteger)])
-          (lam value_33 value_33)])
+          (lam value_29 value_29)])
         (lam data_15
           [(lam match_17
-            [(lam leaf_25
-              [(lam generated_39
+            [(lam leaf_23
+              [(lam generated_35
                 (force
-                  [[[[[[(force (builtin chooseData)) generated_39]
+                  [[[[[[(force (builtin chooseData)) generated_35]
+                    (delay [(lam field_24 (force leaf_23)) [(builtin unConstrData) generated_35]])]
+                    (delay [(lam field_25 (force leaf_23)) [(builtin unMapData) generated_35]])]
+                    (delay [(lam field_26 (force leaf_23)) [(builtin unListData) generated_35]])]
                     (delay
-                      [(lam pair_32 (case pair_32 (lam field_26 (lam field_27 (force leaf_25)))))
-                        [(builtin unConstrData) generated_39]])]
-                    (delay [(lam field_28 (force leaf_25)) [(builtin unMapData) generated_39]])]
-                    (delay [(lam field_29 (force leaf_25)) [(builtin unListData) generated_39]])]
-                    (delay
-                      [(lam field_30 [(lam n_16 n_16) field_30]) [(builtin unIData) generated_39]])]
-                    (delay [(lam field_31 (force leaf_25)) [(builtin unBData) generated_39]])]))
+                      [(lam field_27 [(lam n_16 n_16) field_27]) [(builtin unIData) generated_35]])]
+                    (delay [(lam field_28 (force leaf_23)) [(builtin unBData) generated_35]])]))
                 match_17])
               (delay
                 [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]

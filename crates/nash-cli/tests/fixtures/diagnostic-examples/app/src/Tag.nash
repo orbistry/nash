@@ -5,5 +5,5 @@ import Literal exposing (FromInt)
 tag : Data -> int
 tag d =
     case d of
-        Constr n _ -> n
+        Constr pair(n, _) -> n
         List _ -> 0

@@ -2862,7 +2862,7 @@ fn builtin_constructors_match_conditions_and_data_fields() {
                 True -> False
         rewrap data =
             case data of
-                Constr tag fields -> Constr tag fields
+                Constr pair(tag, fields) -> Builtin.constrData tag fields
                 Map pairs -> Map pairs
                 List values -> List values
                 I n -> I n

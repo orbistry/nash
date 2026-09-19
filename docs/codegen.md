@@ -92,8 +92,8 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 
 `Case` branch binders come from the node, not from nested lambdas: a `Tag`
 branch is `(tag, &[Binder], body)`, a `List` cons branch binds `(head, tail)`,
-a `Data` `Constr` branch binds the decoded `pair int (list Data)`; a nested
-`Case(Pair, ...)` binds its tag and fields. Keeping the
+a `Data` `Constr` branch binds the decoded `pair int (list Data)`. An explicit
+pair pattern adds a nested `Case(Pair, ...)` that binds its tag and fields. Keeping the
 binders in the node lets the decision-tree compiler and the optimizer treat
 them uniformly without pattern-matching on lambda shapes.
 

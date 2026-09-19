@@ -370,7 +370,7 @@ case!(
     import Lift exposing (lift)
     import Data exposing (toData)
     type MyDatum = MyDatum { a : Int }
-    encodeMyDatum (MyDatum n) = Constr 0 [toData n]
+    encodeMyDatum (MyDatum n) = Builtin.constrData 0 [toData n]
     type Address = Address { thing : Bytes }
     type Datum = NoDatum | InlineDatum Data
     type Option 'a = None | Some 'a
@@ -408,7 +408,7 @@ case!(
     import Lift exposing (lift)
     import Data exposing (toData)
     type MyDatum = MyDatum { a : Int }
-    encodeMyDatum (MyDatum n) = Constr 0 [toData n]
+    encodeMyDatum (MyDatum n) = Builtin.constrData 0 [toData n]
     type Address = Address { thing : Bytes }
     type Datum = NoDatum | InlineDatum Data
     type Option 'a = None | Some 'a
@@ -446,7 +446,7 @@ case!(
     import Lift exposing (lift)
     import Data exposing (toData)
     type MyDatum = MyDatum { a : Int }
-    encodeMyDatum (MyDatum n) = Constr 0 [toData n]
+    encodeMyDatum (MyDatum n) = Builtin.constrData 0 [toData n]
     type Address = Address { thing : Bytes }
     type Datum = NoDatum | InlineDatum Data
     type Option 'a = None | Some 'a
@@ -627,7 +627,7 @@ case!(
     main : int
     main =
         let
-            pair(tag, fields) = Builtin.unConstrData (Constr 7 [I 42])
+            pair(tag, fields) = Builtin.unConstrData (Builtin.constrData 7 [I 42])
         in
         case fields of
             [I number] -> Builtin.addInteger tag number
@@ -645,7 +645,7 @@ case!(
     main : int
     main =
         let
-            value = Builtin.unConstrData (Constr 7 [])
+            value = Builtin.unConstrData (Builtin.constrData 7 [])
             pair = first value
         in
         (\pair(a, _) -> Builtin.addInteger pair a) value
@@ -677,7 +677,7 @@ case!(
     import Monad exposing (Monad)
     result =
         do
-            pair(tag, _) <- Some (Builtin.unConstrData (Constr 42 []))
+            pair(tag, _) <- Some (Builtin.unConstrData (Builtin.constrData 42 []))
             Some tag
     main : int
     main =
@@ -686,4 +686,41 @@ case!(
             None -> fail
     "#,
     Ok("(con integer 42)")
+);
+
+case!(
+    data_constr_pair_payload,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    rewrap value =
+        case value of
+            Constr payload -> Constr payload
+            _ -> fail
+    main : int
+    main =
+        case rewrap (Builtin.constrData 7 [I 42]) of
+            Constr pair(index, [I number]) -> Builtin.addInteger index number
+            _ -> fail
+    "#,
+    Ok("(con integer 49)")
+);
+
+case!(
+    data_constr_pair_base_helpers,
+    r#"
+    module Main exposing (..)
+    import Data
+    import Primitive exposing (..)
+    import Option exposing (type option(..))
+    main : int
+    main =
+        case Data.tag (Builtin.constrData 7 [I 42]) of
+            Some index ->
+                case Data.fields (Builtin.constrData 7 [I 42]) of
+                    Some [I number] -> Builtin.addInteger index number
+                    _ -> fail
+            _ -> fail
+    "#,
+    Ok("(con integer 49)")
 );

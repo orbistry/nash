@@ -1,54 +1,53 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias proof = { piA : bls_g1, piB : bls_g2 }\nencode : proof -> Data\nencode p = Constr 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]\npk : proof\npk =\n    { piA = (bls12_381_g1_uncompress #\"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce\")\n    , piB = (bls12_381_g2_uncompress #\"b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423\")\n    }\nmain : bool\nmain = equalsData (encode pk) (encode pk)\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias proof = { piA : bls_g1, piB : bls_g2 }\nencode : proof -> Data\nencode p = Builtin.constrData 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]\npk : proof\npk =\n    { piA = (bls12_381_g1_uncompress #\"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce\")\n    , piB = (bls12_381_g2_uncompress #\"b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423\")\n    }\nmain : bool\nmain = equalsData (encode pk) (encode pk)\n"
 ---
 --- core
-let fromInt#7 : int -> int = \value#11 : int -> value#11 in
-let encode#2 : { _0 : bls_g1, _1 : bls_g2 } -> Data = \p#4 : { _0 : bls_g1, _1 : bls_g2 } -> let evaluated#16 : 'erased = fromInt#7 0 in
-let projection#13 : bls_g1 = field@0/2 p#4 in
-let evaluated#15 : 'erased = (\field#8 : bytes -> bData field#8) (bls12_381_G1_compress projection#13) in
-let projection#14 : bls_g2 = field@1/2 p#4 in
-(\field#5 : int field#6 : list Data -> constrData field#5 field#6) evaluated#16 (mkCons evaluated#15 (mkCons ((\field#9 : bytes -> bData field#9) (bls12_381_G2_compress projection#14)) (con (list data) []))) in
-let fromBytes#10 : bytes -> bytes = \value#12 : bytes -> value#12 in
-let pk#3 : { _0 : bls_g1, _1 : bls_g2 } = constr 0 (bls12_381_G1_uncompress (fromBytes#10 (con bytestring #b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce))) (bls12_381_G2_uncompress (fromBytes#10 (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423))) in
+let fromInt#5 : int -> int = \value#9 : int -> value#9 in
+let encode#2 : { _0 : bls_g1, _1 : bls_g2 } -> Data = \p#4 : { _0 : bls_g1, _1 : bls_g2 } -> let evaluated#14 : 'erased = fromInt#5 0 in
+let projection#11 : bls_g1 = field@0/2 p#4 in
+let evaluated#13 : 'erased = (\field#6 : bytes -> bData field#6) (bls12_381_G1_compress projection#11) in
+let projection#12 : bls_g2 = field@1/2 p#4 in
+constrData evaluated#14 (mkCons evaluated#13 (mkCons ((\field#7 : bytes -> bData field#7) (bls12_381_G2_compress projection#12)) (con (list data) []))) in
+let fromBytes#8 : bytes -> bytes = \value#10 : bytes -> value#10 in
+let pk#3 : { _0 : bls_g1, _1 : bls_g2 } = constr 0 (bls12_381_G1_uncompress (fromBytes#8 (con bytestring #b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce))) (bls12_381_G2_uncompress (fromBytes#8 (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423))) in
 let main#1 : bool = equalsData (encode#2 pk#3) (encode#2 pk#3) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_7
+  [(lam fromInt_5
     [(lam encode_2
-      [(lam fromBytes_10
+      [(lam fromBytes_8
         [(lam pk_3
           [(lam main_1 main_1) [[(builtin equalsData) [encode_2 pk_3]] [encode_2 pk_3]]])
           (constr 0
             [(builtin bls12_381_G1_uncompress)
-              [fromBytes_10
+              [fromBytes_8
                 (con bytestring #b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce)]]
             [(builtin bls12_381_G2_uncompress)
-              [fromBytes_10
+              [fromBytes_8
                 (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423)]])])
-        (lam value_12 value_12)])
+        (lam value_10 value_10)])
       (lam p_4
-        [(lam evaluated_16
-          [(lam projection_13
-            [(lam evaluated_15
-              [(lam projection_14
-                [[(lam field_5 (lam field_6 [[(builtin constrData) field_5] field_6]))
-                  evaluated_16]
-                  [[(force (builtin mkCons)) evaluated_15]
+        [(lam evaluated_14
+          [(lam projection_11
+            [(lam evaluated_13
+              [(lam projection_12
+                [[(builtin constrData) evaluated_14]
+                  [[(force (builtin mkCons)) evaluated_13]
                     [[(force (builtin mkCons))
-                      [(lam field_9 [(builtin bData) field_9])
-                        [(builtin bls12_381_G2_compress) projection_14]]]
+                      [(lam field_7 [(builtin bData) field_7])
+                        [(builtin bls12_381_G2_compress) projection_12]]]
                       (con (list data) [])]]])
-                (case p_4 (lam generated_17 (lam generated_18 generated_18)))])
-              [(lam field_8 [(builtin bData) field_8])
-                [(builtin bls12_381_G1_compress) projection_13]]])
-            (case p_4 (lam generated_19 (lam generated_20 generated_19)))])
-          [fromInt_7 (con integer 0)]])])
-    (lam value_11 value_11)])
+                (case p_4 (lam generated_15 (lam generated_16 generated_16)))])
+              [(lam field_6 [(builtin bData) field_6])
+                [(builtin bls12_381_G1_compress) projection_11]]])
+            (case p_4 (lam generated_17 (lam generated_18 generated_17)))])
+          [fromInt_5 (con integer 0)]])])
+    (lam value_9 value_9)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 144190888, memory: 15711
+cpu: 143998888, memory: 14511

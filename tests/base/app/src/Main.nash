@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 
-projectedPair = Pair.snd (Builtin.unConstrData (Constr 0 [I 1]))
+projectedPair = Pair.snd (Builtin.unConstrData (Builtin.constrData 0 [I 1]))
 madePair = Pair.fst (Pair.make (I 1) (B #"ff"))
 arrayValues = Array.fromList [1, 2]
 arrayQueries = (Array.length arrayValues, Array.at arrayValues 1, Array.get arrayValues (-1), Array.get arrayValues 2)
@@ -137,7 +137,7 @@ readInteger = fromData integerData
 checkedBytes : Bytes
 checkedBytes = validate bytesData
 
-wireData = Constr 0 [I 1, B #"ff"]
+wireData = Builtin.constrData 0 [I 1, B #"ff"]
 dataIdentity = toData wireData
 readData : Data
 readData = fromData wireData
@@ -231,7 +231,7 @@ shownBool = show True
 shownUnit = show ()
 shownList = (show emptyList, show [1, 2, 3])
 shownPair = show (Builtin.mkPairData (I 1) (B #"ff"))
-shownData = show (Constr 0 [I 1, List [B #"ff"], Map [Builtin.mkPairData (I 2) (B #"")]])
+shownData = show (Builtin.constrData 0 [I 1, List [B #"ff"], Map [Builtin.mkPairData (I 2) (B #"")]])
 orderDefaults = ((lt 1 2, le 1 2, gt 2 1), (ge 2 1, max 1 2, min 1 2))
 
 orderedEqual : Ord 'a => 'a -> 'a -> bool
@@ -242,7 +242,7 @@ bigElementLists = eq [Packet integerLiteral] [Packet bigInteger]
 mappedBigList : List Packet
 mappedBigList = map Packet bigList
 pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)
-data = eq (I 1) (Constr 0 [I 1])
+data = eq (I 1) (Builtin.constrData 0 [I 1])
 
 negative = -1
 arithmetic = add (mul 2 3) (sub 5 4)

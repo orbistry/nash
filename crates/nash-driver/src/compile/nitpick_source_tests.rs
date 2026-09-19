@@ -792,7 +792,7 @@ fn data_missing_constructors() {
         f : Data -> unit
         f d =
             case d of
-                Constr _ _ -> ()
+                Constr pair(_, _) -> ()
                 List _ -> ()
     "###
     );
@@ -810,8 +810,8 @@ fn data_tag_literals_need_wildcard() {
         f : Data -> unit
         f d =
             case d of
-                Constr 0 _ -> ()
-                Constr 1 _ -> ()
+                Constr pair(0, _) -> ()
+                Constr pair(1, _) -> ()
                 Map _ -> ()
                 List _ -> ()
                 I _ -> ()
@@ -832,8 +832,8 @@ fn data_fields_list_complete() {
         f : Data -> unit
         f d =
             case d of
-                Constr _ [] -> ()
-                Constr _ (_ :: _) -> ()
+                Constr pair(_, []) -> ()
+                Constr pair(_, (_ :: _)) -> ()
                 _ -> ()
     "###
     );
@@ -851,8 +851,8 @@ fn data_tag_redundant() {
         f : Data -> unit
         f d =
             case d of
-                Constr _ _ -> ()
-                Constr 0 _ -> ()
+                Constr pair(_, _) -> ()
+                Constr pair(0, _) -> ()
                 _ -> ()
     "###
     );
@@ -1306,7 +1306,7 @@ fn data_fields_list_missing_nonempty() {
         f : Data -> unit
         f d =
             case d of
-                Constr _ [] -> ()
+                Constr pair(_, []) -> ()
                 Map _ -> ()
                 List _ -> ()
                 I _ -> ()

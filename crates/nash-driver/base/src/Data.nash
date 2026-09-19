@@ -41,13 +41,13 @@ serialise = Builtin.serialiseData
 tag : Data -> option int
 tag value =
     case value of
-        Constr index _ -> Some index
+        Constr pair(index, _) -> Some index
         _ -> None
 
 fields : Data -> option (list Data)
 fields value =
     case value of
-        Constr _ items -> Some items
+        Constr pair(_, items) -> Some items
         _ -> None
 
 impl Validate 'a => Validate (List 'a) where

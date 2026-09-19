@@ -128,7 +128,7 @@ mod tests {
             import Builtin
             tag d =
                 case d of
-                    Constr _ _ -> ()
+                    Constr pair(_, _) -> ()
                     List _ -> ()
         "#});
     }

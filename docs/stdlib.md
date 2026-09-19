@@ -318,7 +318,7 @@ validated `unValueData` boundary.
   types. These containers show their typed elements, not erased Data fields.
 - Tuples through four components use `(a, b, ...)`, recursively showing each
   component with a comma and space between components.
-- Data uses `Constr tag [fields]`, `Map [(key, value)]`, `List [values]`,
+- Data uses `Constr payload` with a `pair int (list Data)` payload, `Map [(key, value)]`, `List [values]`,
   `I integer`, or `B bytes`, recursively using the formats above.
 
 These are display formats, not a promise that arbitrary shown values can be
@@ -452,17 +452,17 @@ serialise = Builtin.serialiseData
 tag : Data -> option int
 tag d =
     case d of
-        Constr t _ -> Some t
+        Constr pair(t, _) -> Some t
         _ -> None
 
 fields : Data -> option (list Data)
 fields d =
     case d of
-        Constr _ fs -> Some fs
+        Constr pair(_, fs) -> Some fs
         _ -> None
 ```
 
-`Data` fields in patterns are little (`Constr int (list Data)`), as data.md
+`Data` fields in patterns are little (`Constr (pair int (list Data))`), as data.md
 specifies, so no `lower` is needed on `t` and `fs`.
 Other Big types remain nominally distinct from Data. `fromData` uses
 unchecked `Primitive.coerce`, with no outer-shape or nested checks. Malformed

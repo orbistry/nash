@@ -307,7 +307,7 @@ import Literal exposing (FromInt)
 tag : Data -> int
 tag d =
     case d of
-        Constr n _ -> n
+        Constr pair(n, _) -> n
         List _ -> 0
 ```
 
@@ -318,7 +318,7 @@ nash::pattern::incomplete
    ╭─[app/src/Tag.nash:7:5]
  6 │     tag d =
  7 │ ╭─▶     case d of
- 8 │ │           Constr n _ -> n
+ 8 │ │           Constr pair(n, _) -> n
  9 │ ╰─▶         List _ -> 0
    ╰────
   help: Missing patterns:

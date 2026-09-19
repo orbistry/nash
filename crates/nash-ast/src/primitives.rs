@@ -171,8 +171,11 @@ const DATA_CTORS: &[&crate::Ctor<'static>] = &[
         labels: None,
         name: "Constr",
         index: 0,
-        arity: 2,
-        arguments: &[&builtins::named("int", &[]), DATA_LIST],
+        arity: 1,
+        arguments: &[&builtins::named(
+            "pair",
+            &[&builtins::named("int", &[]), DATA_LIST],
+        )],
     },
     &crate::Ctor {
         labels: None,
@@ -268,7 +271,7 @@ mod tests {
         assert_eq!(names.len(), 17);
         assert_eq!(
             DATA_CTORS.iter().map(|ctor| ctor.arity).collect::<Vec<_>>(),
-            [2, 1, 1, 1, 1]
+            [1, 1, 1, 1, 1]
         );
     }
 }
