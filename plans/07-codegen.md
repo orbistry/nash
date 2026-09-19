@@ -1382,8 +1382,7 @@ Actual UPLC conversion builtins have nominal Nash signatures:
   with inverse `unMapData`
 
 Lift and Literal use those builtins directly in Nash. ToData and FromData
-have ordinary blanket Big impls, both using their default Builtin.coerce
-method. This separate compiler intrinsic lowers to unchecked runtime identity,
+have ordinary blanket Big impls, both defining their methods as Builtin.coerce. This separate compiler intrinsic lowers to unchecked runtime identity,
 with no shape checks, traversal or reconstruction, for every Big type.
 Collections impose no element conversion or validation constraints.
 Validate is a separate opt-in trait. Its ordinary core impls check Data shape

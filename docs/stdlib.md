@@ -444,19 +444,19 @@ first head, so both exist.
 ```elm
 module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
 
-import Builtin exposing (Data(..), Big)
+import Builtin exposing (Data(..))
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
-    toData = Builtin.coerce
 
-impl Big 'a => ToData 'a where
+impl ToData ('a : Big) where
+    toData = Builtin.coerce
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a
-    fromData = Builtin.coerce
 
-impl Big 'a => FromData 'a where
+impl FromData ('a : Big) where
+    fromData = Builtin.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a
@@ -489,14 +489,14 @@ fields d =
 
 `Data` fields in patterns are little (`Constr int (list Data)`), as data.md
 specifies, so no `lower` is needed on `t` and `fs`.
-Other Big types remain nominally distinct from Data. `fromData` defaults to
+Other Big types remain nominally distinct from Data. `fromData` uses
 unchecked `Builtin.coerce`, with no outer-shape or nested checks. Malformed
 data fails only if a later operation needs its expected shape. Its blanket impl
 also covers user ADTs, nominal record aliases and collections, without any
 validation constraints. The required
 `Validate.validate` method is separate: Int and Bytes check the shape and coerce
 the original value, while List and Map retain recursive source validation.
-`toData` uses its `Builtin.coerce` default through one ordinary blanket impl
+`toData` uses `Builtin.coerce` directly in one ordinary blanket impl
 for every Big type. User ADTs, nominal aliases, lists and maps all qualify,
 without element `ToData` constraints or reconstruction. Additional concrete
 impls overlap this blanket impl and are rejected. Data.Decode provides the

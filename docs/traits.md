@@ -194,7 +194,7 @@ defined in `M`, or at least one head constructor is defined in `M`. Unit and
 tuples count as defined in `nash/core`. Bare variable heads require the trait
 to be defined in `M`; a local constructor in another head does not permit a
 bare variable head for a foreign trait. This allows trait owners to provide
-ordinary blanket impls, such as `impl Big 'a => ToData 'a where` in `Data`.
+ordinary blanket impls, such as `impl ToData ('a : Big) where` in `Data`.
 
 **Overlap.** Two impls overlap when their full head patterns can match a
 common well-kinded type assignment. Freshen their variables independently
@@ -587,15 +587,15 @@ trait Applicative 'm => Monad 'm where
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
-    toData = Builtin.coerce
 
-impl Big 'a => ToData 'a where
+impl ToData ('a : Big) where
+    toData = Builtin.coerce
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a                       -- unchecked identity
-    fromData = Builtin.coerce
 
-impl Big 'a => FromData 'a where
+impl FromData ('a : Big) where
+    fromData = Builtin.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a                   -- required recursive validation; traps on bad data
@@ -691,7 +691,7 @@ has a declared scheme, so it is always constrained through its annotation.
   `ToData`, `FromData` provide explicit source conversions. The separate
   `Builtin.coerce : 'a -> 'b` intrinsic is unchecked identity for any two
   value types, including functions; it has no representation constraints
-  and does not change the runtime representation. `fromData` defaults to
+  and does not change the runtime representation. `fromData` uses
   it and checks no shape; `Validate.validate` is a required method of a
   separate opt-in trait.
   Specialization is by evidence only.

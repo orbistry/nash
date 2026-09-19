@@ -101,15 +101,15 @@ usually inspected when a full `validate` is too expensive.
 ```elm
 trait ToData ('a : Big) where
     toData : 'a -> Data
-    toData = Builtin.coerce
 
-impl Big 'a => ToData 'a where
+impl ToData ('a : Big) where
+    toData = Builtin.coerce
 
 trait FromData ('a : Big) where
     fromData     : Data -> 'a     -- unchecked identity
-    fromData = Builtin.coerce
 
-impl Big 'a => FromData 'a where
+impl FromData ('a : Big) where
+    fromData = Builtin.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a     -- required recursive validation
@@ -121,14 +121,14 @@ trait Lift 'small 'big where
 
 `ToData` and `FromData` apply to Big types. Core supplies an ordinary blanket
 impl for each trait, covering every Big type, including user ADTs, nominal
-record aliases, lists and maps. The empty bodies use the default methods;
+record aliases, lists and maps. The impl bodies define the coercion methods directly;
 collection elements need no conversion or validation constraints. Neither
 conversion trait needs derivation, and concrete impls would overlap the
 blanket impls. `Validate` is separate and opt-in: core provides impls for
 `Int`, `Bytes`, `Data`, `List 'a` and `Map 'k 'v`; user types need a source
 `Validate` impl. `@derive(Validate)` remains future macro work.
 
-`fromData` defaults to `Builtin.coerce`, an unchecked identity. It checks
+`fromData` uses `Builtin.coerce`, an unchecked identity. It checks
 neither the outer Data shape nor nested fields. Malformed data fails only
 if a later operation needs the expected shape; a value that is never inspected
 can pass through unchanged. `Validate.validate` is the required method of a separate trait:
@@ -136,7 +136,7 @@ core impls check the shape and recursively validate collection elements.
 `Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
 result-based decoding.
 
-`toData` defaults to `Builtin.coerce`: every Big value already has its Data
+`toData` uses `Builtin.coerce`: every Big value already has its Data
 representation. Conversion preserves that value and its wire encoding without
 traversing or rebuilding it. Concrete `ToData` impls would overlap the blanket
 impl and are rejected.

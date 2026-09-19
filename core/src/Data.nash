@@ -1,19 +1,19 @@
 module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
 
-import Builtin exposing (Data(..), Big)
+import Builtin exposing (Data(..))
 import Option exposing (type option(..))
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
-    toData = Builtin.coerce
 
-impl Big 'a => ToData 'a where
+impl ToData ('a : Big) where
+    toData = Builtin.coerce
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a
-    fromData = Builtin.coerce
 
-impl Big 'a => FromData 'a where
+impl FromData ('a : Big) where
+    fromData = Builtin.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a

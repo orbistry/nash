@@ -2839,7 +2839,7 @@ pass. Higher-kinded Result impls remain pending; runtime round trips still
 depend on Plan 07. This source-only step changes no Rust crate.
 Data defines Big-bounded ToData, FromData and Validate traits, plus
 serialise/tag/fields. ToData and FromData each have an ordinary blanket Big
-impl using the default Builtin.coerce method. Both conversions preserve the
+impl defining its method as Builtin.coerce. Both conversions preserve the
 runtime Data value without traversal or shape checks. Every Big type is
 covered, including user ADTs, nominal record aliases and collections, with
 no element conversion or validation prerequisites. Little unit remains

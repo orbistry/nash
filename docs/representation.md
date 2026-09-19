@@ -271,27 +271,27 @@ Defined only for Big types:
 ```elm
 trait ToData ('a : Big) where
     toData : 'a -> Data
-    toData = Builtin.coerce
 
-impl Big 'a => ToData 'a where
+impl ToData ('a : Big) where
+    toData = Builtin.coerce
 
 trait FromData ('a : Big) where
     fromData     : Data -> 'a
-    fromData = Builtin.coerce
 
-impl Big 'a => FromData 'a where
+impl FromData ('a : Big) where
+    fromData = Builtin.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a
 ```
 
-- `toData` defaults to `Builtin.coerce`. The ordinary blanket impl covers
+- `toData` uses `Builtin.coerce`. The ordinary blanket impl covers
   every Big type, including user ADTs, nominal aliases, lists and maps, without
   element `ToData` constraints. It preserves the existing runtime Data value
   and wire encoding without traversal or reconstruction.
 - `fromData` also has an ordinary blanket impl for every Big type, including
   user ADTs, nominal record aliases and collections, without validation
-  constraints. It defaults to unchecked `Builtin.coerce` and checks neither the
+  constraints. It uses unchecked `Builtin.coerce` and checks neither the
   outer shape nor nested fields and preserves the original runtime value.
   Malformed data fails only when a later operation needs its expected shape.
 - `Validate.validate` is the required method of a separate opt-in trait. Core Int and Bytes impls check
