@@ -2,7 +2,7 @@ mod snapshot_support;
 use snapshot_support::SnapshotInputs;
 
 use bumpalo::Bump;
-use nash_ast::{PackageName, primitives::CORE};
+use nash_ast::{PackageName, primitives::BASE};
 use nash_can::Context;
 
 #[test]
@@ -10,11 +10,11 @@ fn real_builtins_are_available_through_every_import_route() {
     let snapshot_inputs = SnapshotInputs::default();
     for builtin in ["iData", "unIData", "bData", "unBData"] {
         for package in [
-            Some(CORE),
+            Some(BASE),
             None,
             Some(PackageName {
                 author: "other",
-                project: "core",
+                project: "base",
             }),
             Some(PackageName {
                 author: "nash",

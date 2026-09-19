@@ -18,7 +18,7 @@ fn superclass_and_default_method() {
         snapshot_inputs.record(indoc!(
             "
         module Main exposing (Same)
-        import Builtin exposing (..)
+        import Primitive exposing (..)
 
         trait Eq 'a where
             eq : 'a -> 'a -> bool
@@ -130,6 +130,7 @@ fn method_predicate_checks_argument_kind() {
         snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
 
         trait BigOnly ('a : Big) where
@@ -166,6 +167,7 @@ fn default_body_checks_nested_annotation_kinds() {
         snapshot_inputs.record(indoc!(
             "
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
 
         trait Keep 'a where

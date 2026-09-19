@@ -1,30 +1,30 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nwrapper x xs = first x xs\nbad xs = wrapper (Some ()) xs\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nfirst : 'a -> list 'a -> 'a\nfirst x xs = x\nwrapper x xs = first x xs\nbad xs = wrapper (Some ()) xs\n"
 info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Storable (option unit)`.
-   ╭─[Main.nash:7:10]
- 6 │ wrapper x xs = first x xs
- 7 │ bad xs = wrapper (Some ()) xs
+  × Unsatisfied representation constraint `Storable (option Primitive.unit)`.
+   ╭─[Main.nash:8:10]
+ 7 │ wrapper x xs = first x xs
+ 8 │ bad xs = wrapper (Some ()) xs
    ·          ───┬───
    ·             ╰── required by `type application`
    ╰────
   help: Requirement chain:
 
-            forming list (option unit)
+            forming Primitive.list (option Primitive.unit)
 
         Use a type with Big or Const representation; an impl cannot change representation.
 
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Storable (option unit)`.
-   ╭─[Main.nash:7:10]
- 6 │ wrapper x xs = first x xs
- 7 │ bad xs = wrapper (Some ()) xs
+  × Unsatisfied representation constraint `Storable (option Primitive.unit)`.
+   ╭─[Main.nash:8:10]
+ 7 │ wrapper x xs = first x xs
+ 8 │ bad xs = wrapper (Some ()) xs
    ·          ───┬───
    ·             ╰── required by `wrapper`
    ╰────

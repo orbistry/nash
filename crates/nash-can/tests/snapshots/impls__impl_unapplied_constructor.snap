@@ -20,10 +20,10 @@ description: "module Main exposing (..)\n\ntrait Functor 'f where\n    map : ('a
                     package: Some(
                         PackageName {
                             author: "nash",
-                            project: "core",
+                            project: "base",
                         },
                     ),
-                    name: "Builtin",
+                    name: "Primitive",
                 },
                 name: "List",
             },

@@ -176,7 +176,11 @@ where
         .await
         .into_iter()
         .map(|(uri, source)| {
-            let package = origins[&uri].clone();
+            let package = crate::bundled_base::modules()
+                .get(&uri)
+                .cloned()
+                .or_else(|| origins.get(&uri).cloned())
+                .flatten();
             (uri, package, source)
         })
         .collect();
@@ -238,7 +242,10 @@ fn build_sync_with_policy<R>(
     finish: impl for<'a> FnOnce(Solved<'a>) -> R,
 ) -> (BuildResult, Option<R>) {
     let store = Bump::new();
-    let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&store))]);
+    let mut interfaces = BTreeMap::from([
+        ("Primitive", nash_can::kinds::primitive_interface(&store)),
+        ("Builtin", nash_can::kinds::builtin_interface(&store)),
+    ]);
     let mut public_interfaces = HashMap::new();
     let mut solved = BTreeMap::new();
 
@@ -378,7 +385,7 @@ fn compile_module<'s>(
         }
     };
     let path = uri.to_file_path().map_or_else(
-        |_| uri.path().to_owned(),
+        |_| uri.to_string(),
         |path| path.to_string_lossy().into_owned(),
     );
     let expected_name = std::path::Path::new(&path)
@@ -430,14 +437,23 @@ fn compile_module<'s>(
         module.tests = None;
     }
     let name = module.name.map_or(expected_name, |name| name.value);
-    // Default imports belong to Plan 12; localize exactly the imports in use.
-    let localizer =
-        nash_report::Localizer::from_module(&module, &[]).with_package(package.map(|package| {
-            nash_ast::PackageName {
-                author: bump.alloc_str(package.author()),
-                project: bump.alloc_str(package.project()),
-            }
-        }));
+    let defaults = nash_can::defaults::imports(
+        bump,
+        nash_ast::ModuleName {
+            package: package.map(|p| nash_ast::PackageName {
+                author: bump.alloc_str(p.author()),
+                project: bump.alloc_str(p.project()),
+            }),
+            name,
+        },
+        Some(interfaces),
+    );
+    let localizer = nash_report::Localizer::from_module(&module, &defaults).with_package(
+        package.map(|package| nash_ast::PackageName {
+            author: bump.alloc_str(package.author()),
+            project: bump.alloc_str(package.project()),
+        }),
+    );
     let context = nash_can::Context {
         package: package.map(|package| nash_ast::PackageName {
             author: bump.alloc_str(package.author()),
@@ -553,6 +569,34 @@ pub async fn build_graph_with_tests(
             db.source(uri).await.map(str::to_owned)
         };
 
+        if crate::bundled_base::source(uri).is_none()
+            && modules.contains(&crate::bundled_base::uri("Prelude"))
+            && let Ok(source) = &source
+        {
+            let bump = Bump::new();
+            if let Ok(module) = nash_parse::Parser::new(&bump, source).module() {
+                let name = module.name.map_or_else(
+                    || {
+                        std::path::Path::new(uri.path())
+                            .file_stem()
+                            .and_then(|name| name.to_str())
+                            .unwrap_or("Main")
+                    },
+                    |name| name.value,
+                );
+                if matches!(name, "Primitive" | "Builtin")
+                    || crate::bundled_base::SOURCES
+                        .iter()
+                        .any(|(reserved, _)| *reserved == name)
+                {
+                    return Err(DriverError::ReservedModule {
+                        name: name.into(),
+                        uri: Box::new(uri.clone()),
+                    });
+                }
+            }
+        }
+
         // Retain unreadable nodes: the build reports their I/O failure and
         // blocks dependents while continuing independent modules.
         let imports = source.as_ref().map_or_else(
@@ -601,6 +645,16 @@ fn extract_imports(
         }
     }
 
+    if crate::bundled_base::source(current).is_none()
+        && known_modules.contains(&crate::bundled_base::uri("Prelude"))
+    {
+        for (name, _) in nash_can::defaults::MODULES {
+            let uri = crate::bundled_base::uri(name);
+            if known_modules.contains(&uri) && !imports.contains(&uri) {
+                imports.push(uri);
+            }
+        }
+    }
     imports
 }
 
@@ -611,9 +665,13 @@ fn extract_imports(
 /// - Source directory structure
 /// - Module naming conventions
 fn resolve_import(name: &str, _current: &Url, known_modules: &[Url]) -> Option<Url> {
+    let bundled = crate::bundled_base::uri(name);
+    if known_modules.contains(&bundled) {
+        return Some(bundled);
+    }
     // Convert module name to file path pattern
     // e.g., "Json.Decode" -> "Json/Decode.nash"
-    let path_pattern = format!("{}.nash", name.replace('.', "/"));
+    let path_pattern = format!("/{}.nash", name.replace('.', "/"));
 
     // Find matching module
     known_modules
@@ -1161,7 +1219,7 @@ mod kind_tests {
 
     #[tokio::test]
     async fn imported_partial_heads_enforce_supplied_and_remaining_contexts() {
-        let producer = "module Types exposing (type wrap)\nimport Builtin exposing (..)\ntype wrap 'f 'a = Wrap ('f 'a)\n";
+        let producer = "module Types exposing (type wrap)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype wrap 'f 'a = Wrap ('f 'a)\n";
         for (field, succeeds) in [
             ("wrap (pair int) bytes", true),
             ("wrap (pair (option int)) bytes", false),
@@ -1169,7 +1227,7 @@ mod kind_tests {
         ] {
             let result = compile_pair(
                 producer,
-                &format!("module Main exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (type wrap)\ntype option 'a = None | Some 'a\ntype use = Use ({field})\n"),
+                &format!("module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (type wrap)\ntype option 'a = None | Some 'a\ntype use = Use ({field})\n"),
             ).await;
             assert_eq!(result.success, if succeeds { 2 } else { 1 }, "{result:?}");
             assert_eq!(result.failed, usize::from(!succeeds), "{result:?}");
@@ -1192,8 +1250,8 @@ mod kind_tests {
     #[tokio::test]
     async fn imported_big_alias_is_a_valid_list_element() {
         let result = compile_pair(
-            "module Types exposing (Item)\n\nimport Builtin exposing (..)\n\ntype alias Item = Int\n",
-            "module Main exposing (..)\n\nimport Builtin exposing (..)\nimport Types\n\ntype alias items = list Types.Item\n",
+            "module Types exposing (Item)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias Item = Int\n",
+            "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Types\n\ntype alias items = list Types.Item\n",
         ).await;
         assert_eq!(result.success, 2, "{result:?}");
     }
@@ -1201,8 +1259,8 @@ mod kind_tests {
     #[tokio::test]
     async fn imported_term_alias_is_rejected_as_a_list_element() {
         let result = compile_pair(
-            "module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n",
-            "module Main exposing (..)\n\nimport Builtin exposing (..)\nimport Types exposing (type item)\n\ntype alias items = list item\n",
+            "module Types exposing (type item)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n",
+            "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (type item)\n\ntype alias items = list item\n",
         ).await;
         assert_eq!(result.success, 1, "{result:?}");
         let ModuleResult::Failed(reports) =
@@ -1243,8 +1301,8 @@ mod kind_tests {
 
     #[tokio::test]
     async fn exported_alias_representation_changes_the_interface_fingerprint() {
-        let big = compile_pair("module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = int\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
-        let term = compile_pair("module Types exposing (type item)\n\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
+        let big = compile_pair("module Types exposing (type item)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias item = int\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
+        let term = compile_pair("module Types exposing (type item)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias item = unit -> unit\n", "module Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n").await;
         assert_eq!(big.success, 2, "{big:?}");
         assert_eq!(term.success, 2, "{term:?}");
         let uri = Url::parse("file:///Types.nash").unwrap();
@@ -1253,8 +1311,8 @@ mod kind_tests {
     #[tokio::test]
     async fn exported_datatype_context_changes_the_interface_fingerprint() {
         let consumer = "module Main exposing (..)\n\nimport Types exposing (type box)\n";
-        let any = compile_pair("module Types exposing (type box)\n\nimport Builtin exposing (..)\n\ntype box 'a = Box 'a\n", consumer).await;
-        let storable = compile_pair("module Types exposing (type box)\n\nimport Builtin exposing (..)\n\ntype box 'a = Box (list 'a)\n", consumer).await;
+        let any = compile_pair("module Types exposing (type box)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype box 'a = Box 'a\n", consumer).await;
+        let storable = compile_pair("module Types exposing (type box)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype box 'a = Box (list 'a)\n", consumer).await;
         assert_eq!(any.success, 2, "{any:?}");
         assert_eq!(storable.success, 2, "{storable:?}");
         let uri = Url::parse("file:///Types.nash").unwrap();

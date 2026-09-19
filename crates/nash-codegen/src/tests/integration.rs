@@ -31,28 +31,29 @@ fn compile_selected(
     for (text, package) in [
         (
             include_str!("../../tests/fixtures/VestingLiteral.nash"),
-            Some(primitives::CORE),
+            Some(primitives::BASE),
         ),
         (
-            include_str!("../../../../core/src/Show.nash"),
-            Some(primitives::CORE),
+            include_str!("../../../nash-driver/base/src/Show.nash"),
+            Some(primitives::BASE),
         ),
         (
-            include_str!("../../../../core/src/Bool.nash"),
-            Some(primitives::CORE),
+            include_str!("../../../nash-driver/base/src/Bool.nash"),
+            Some(primitives::BASE),
         ),
         (
             "module Logic exposing ((&&), (||), (==))\nimport Bool exposing (and, or)\nimport Builtin\ninfix right 2 (||) = or\ninfix right 3 (&&) = and\ninfix non 4 (==) = equal\nequal : int -> int -> bool\nequal = Builtin.equalsInteger\n",
-            Some(primitives::CORE),
+            Some(primitives::BASE),
         ),
         (
             "module Option exposing (type option(..))\ntype option 'a = Some 'a | None\n",
-            Some(primitives::CORE),
+            Some(primitives::BASE),
         ),
         (
             indoc::indoc!(
                 r#"
             module Fuzz exposing (Prng(..), type fuzzer(..), constant, reject)
+            import Primitive exposing (..)
             import Builtin exposing (..)
             import Option exposing (type option(..))
             type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
@@ -63,7 +64,7 @@ fn compile_selected(
             reject = Fuzzer (\_ -> None)
         "#
             ),
-            Some(primitives::CORE),
+            Some(primitives::BASE),
         ),
         (source, None),
     ] {
@@ -128,6 +129,7 @@ fn unit_roots_and_power_assert_payloads() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal
         privateValue : int
@@ -160,6 +162,7 @@ fn captures_preserve_partial_application_order_and_lazy_branches() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal
         import Logic exposing (..)
@@ -199,6 +202,7 @@ fn custom_show_runs_only_on_failure_and_test_local_native_layouts_specialize() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal
         import Show exposing (Show)
@@ -248,6 +252,7 @@ fn assertion_json_preserves_nested_call_delimiters_and_string_parentheses() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal
         import Logic exposing ((==))
@@ -288,6 +293,7 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal
         import Fuzz exposing (constant)
@@ -331,6 +337,7 @@ fn rejected_fuzzer_skips_body_and_selected_target_is_enforced() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Fuzz exposing (reject)
         tests

@@ -10,4 +10,9 @@ nash::names::not_found_var
  2 │ main = unknown
    ·        ───────
    ╰────
-  help: Try main instead.
+  help: Similar names:
+
+            main
+            Builtin.mkCons
+            Builtin.bData
+            Builtin.iData

@@ -13,7 +13,7 @@ pub(super) fn hint(
                 home,
                 name: "list",
                 args: [element],
-            } if *home == nash_ast::primitives::builtin_home() => Some(element),
+            } if *home == nash_ast::primitives::primitive_home() => Some(element),
             _ => None,
         }
     }

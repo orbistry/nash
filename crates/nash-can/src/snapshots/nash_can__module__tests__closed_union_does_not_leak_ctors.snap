@@ -11,4 +11,9 @@ nash::names::not_found_ctor
  5 │ x = Just
    ·     ────
    ╰────
-  help: Define or import this name.
+  help: Similar names:
+
+            Primitive.B
+            Primitive.I
+            Primitive.List
+            Primitive.Map

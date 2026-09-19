@@ -1,14 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Bad = Bad int\ntype Wrong = Wrong bytes\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype Bad = Bad int\ntype Wrong = Wrong bytes\n"
 info: diagnostic
 ---
 nash::names::representation_mismatch
 
   × This position requires `Big` in field 1 of Big constructor `Wrong` in `Wrong`:
-   ╭─[src/Main.nash:6:20]
- 5 │ type Bad = Bad int
- 6 │ type Wrong = Wrong bytes
+   ╭─[src/Main.nash:7:20]
+ 6 │ type Bad = Bad int
+ 7 │ type Wrong = Wrong bytes
    ·                    ─────
    ╰────
   help: The type has `Const` representation, but `Big` admits only Big types. Change the
@@ -17,11 +17,11 @@ nash::names::representation_mismatch
 nash::names::representation_mismatch
 
   × This position requires `Big` in field 1 of Big constructor `Bad` in `Bad`:
-   ╭─[src/Main.nash:5:16]
- 4 │ 
- 5 │ type Bad = Bad int
+   ╭─[src/Main.nash:6:16]
+ 5 │ 
+ 6 │ type Bad = Bad int
    ·                ───
- 6 │ type Wrong = Wrong bytes
+ 7 │ type Wrong = Wrong bytes
    ╰────
   help: The type has `Const` representation, but `Big` admits only Big types. Change the
         type or the representation requirement.

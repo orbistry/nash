@@ -493,11 +493,11 @@ fn shape(pattern: Pat<'_>) -> Option<Shape> {
             }),
             Pattern::Cons { .. } => Some(Shape::Cons),
             Pattern::Constructor(c) => Some(
-                if c.reference.home == nash_ast::primitives::builtin_home()
+                if c.reference.home == nash_ast::primitives::primitive_home()
                     && c.reference.union == "Data"
                 {
                     Shape::Data(c.index)
-                } else if c.reference.home == nash_ast::primitives::builtin_home()
+                } else if c.reference.home == nash_ast::primitives::primitive_home()
                     && c.reference.union == "bool"
                 {
                     if c.index == 0 {

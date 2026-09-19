@@ -4,7 +4,7 @@ description: "module Main exposing (..)\nvalue = \"hello\"\nresult = value.name\
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `int`, found `string`.
+  × Type mismatch: expected `Primitive.int`, found `Primitive.string`.
    ╭─[Main.nash:3:10]
  2 │ value = "hello"
  3 │ result = value.name

@@ -1,5 +1,6 @@
 module Literal exposing (..)
 
+import Primitive exposing (..)
 import Builtin exposing (..)
 
 trait FromInt 'a where

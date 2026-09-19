@@ -18,6 +18,66 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
             },
             name: "Keep",
         },
+        QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "base",
+                    },
+                ),
+                name: "Primitive",
+            },
+            name: "Big",
+        },
+        QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "base",
+                    },
+                ),
+                name: "Primitive",
+            },
+            name: "Const",
+        },
+        QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "base",
+                    },
+                ),
+                name: "Primitive",
+            },
+            name: "Little",
+        },
+        QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "base",
+                    },
+                ),
+                name: "Primitive",
+            },
+            name: "Storable",
+        },
+        QualifiedName {
+            home: ModuleName {
+                package: Some(
+                    PackageName {
+                        author: "nash",
+                        project: "base",
+                    },
+                ),
+                name: "Primitive",
+            },
+            name: "Term",
+        },
     ],
     {
         ImplKey {
@@ -35,10 +95,10 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "List",
                     },
@@ -107,10 +167,10 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Big",
                     },
@@ -151,10 +211,10 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "List",
                         },

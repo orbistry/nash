@@ -4,7 +4,8 @@ description: "module Main exposing (..)\nvalue =\n    let\n        (first, secon
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `( int, int )`, found `string`.
+  × Type mismatch: expected `( Primitive.int, Primitive.int )`,
+  │ found `Primitive.string`.
    ╭─[Main.nash:4:27]
  3 │     let
  4 │         (first, second) = "hello"

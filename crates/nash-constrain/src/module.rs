@@ -270,7 +270,7 @@ mod tests {
         for name in ["int", "Data", "unit"] {
             let typ = b.alloc(Located::at_zero(Type::Named {
                 reference: QualifiedName {
-                    home: primitives::builtin_home(),
+                    home: primitives::primitive_home(),
                     name,
                 },
                 args: &[],

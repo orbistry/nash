@@ -16,3 +16,5 @@ nash::names::not_found_var
 
             leak
             public
+            Builtin.trace
+            Builtin.bData

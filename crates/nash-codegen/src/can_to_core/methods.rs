@@ -2,14 +2,15 @@ use super::*;
 use crate::{evidence, ty_of::Substitution};
 
 impl<'a> Engine<'a, '_, '_> {
+    pub(crate) fn coerce(&self) -> &'a Core<'a> {
+        let binder = Binder {
+            name: self.ir.fresh("coerce"),
+            ty: Ty::Erased,
+        };
+        self.ir.lam(&[binder], self.ir.var(binder.name))
+    }
+
     pub(crate) fn builtin(&self, name: &'a str) -> Result<&'a Core<'a>, Error<'a>> {
-        if name == "coerce" {
-            let binder = Binder {
-                name: self.ir.fresh("coerce"),
-                ty: Ty::Erased,
-            };
-            return Ok(self.ir.lam(&[binder], self.ir.var(binder.name)));
-        }
         let func =
             crate::builtins::by_name(name).ok_or(Error::UnknownDefinition(QualifiedName {
                 home: primitives::builtin_home(),

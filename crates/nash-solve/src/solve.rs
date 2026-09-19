@@ -2663,7 +2663,7 @@ mod copy_tests {
         solver.structure(
             uf,
             OUTERMOST_RANK,
-            FlatType::App1(nash_ast::primitives::builtin_home(), name, Vec::new()),
+            FlatType::App1(nash_ast::primitives::primitive_home(), name, Vec::new()),
         )
     }
 
@@ -2786,7 +2786,11 @@ mod copy_tests {
         let list = solver.structure(
             &mut uf,
             rank,
-            FlatType::App1(nash_ast::primitives::builtin_home(), "list", vec![argument]),
+            FlatType::App1(
+                nash_ast::primitives::primitive_home(),
+                "list",
+                vec![argument],
+            ),
         );
         state = solver.equal(
             &mut uf,
@@ -2993,7 +2997,7 @@ mod copy_tests {
             let variable = solver.structure(
                 &mut uf,
                 OUTERMOST_RANK,
-                FlatType::App1(nash_ast::primitives::builtin_home(), "unit", Vec::new()),
+                FlatType::App1(nash_ast::primitives::primitive_home(), "unit", Vec::new()),
             );
             let id = solver.predicates.push(
                 &mut uf,

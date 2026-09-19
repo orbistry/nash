@@ -65,7 +65,7 @@ fn test_imports_are_scoped() {
     let aux = canonicalize(&bump, Context::default(), &parse(&bump, aux)).unwrap();
     let unit = bump.alloc(nash_region::Located::at_zero(nash_ast::Type::Named {
         reference: nash_ast::QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "unit",
         },
         args: &[],

@@ -32,7 +32,13 @@ impl Localizer {
                 .collect(),
             ..Self::default()
         };
-        for import in defaults.iter().chain(module.imports.iter()) {
+        let primitives = this.bare_primitives.clone();
+        for import in defaults {
+            this.add_import(import);
+        }
+        // The compiler's default catalog does not shadow primitive types.
+        this.bare_primitives = primitives;
+        for import in module.imports {
             this.add_import(import);
         }
         for name in module
@@ -103,7 +109,7 @@ impl Localizer {
                     .collect(),
             ),
         };
-        if import.import.value != "Builtin" {
+        if import.import.value != "Primitive" {
             match &exposing {
                 None => self.bare_primitives.clear(),
                 Some(names) => self.bare_primitives.retain(|name| !names.contains(name)),
@@ -118,7 +124,7 @@ impl Localizer {
         );
     }
     pub fn to_string(&self, home: ModuleName<'_>, name: &str) -> String {
-        if home == nash_ast::primitives::builtin_home()
+        if home == nash_ast::primitives::primitive_home()
             && nash_ast::primitives::PRIMITIVES
                 .iter()
                 .any(|primitive| primitive.name == name)
@@ -127,7 +133,7 @@ impl Localizer {
             return if self.bare_primitives.contains(name) {
                 name.to_owned()
             } else {
-                format!("Builtin.{name}")
+                format!("Primitive.{name}")
             };
         }
         match self.imports.get(home.name) {
@@ -195,7 +201,7 @@ mod tests {
             .unwrap();
         let localizer = Localizer::from_module(&module, &[]);
         insta::assert_snapshot!(localizer.to_string(ModuleName{package:None,name:"Local"},"Own"), @"Own");
-        insta::assert_snapshot!(localizer.to_string(nash_ast::primitives::builtin_home(),"Int"), @"Int");
+        insta::assert_snapshot!(localizer.to_string(nash_ast::primitives::primitive_home(),"Int"), @"Int");
     }
     #[test]
     fn local_unions_are_not_imported_aliases_or_other_packages() {
@@ -222,7 +228,7 @@ mod tests {
         ));
         assert!(!localizer.is_local_union(
             ModuleName {
-                package: Some(nash_ast::primitives::CORE),
+                package: Some(nash_ast::primitives::BASE),
                 ..home
             },
             "Token"
@@ -230,7 +236,7 @@ mod tests {
     }
 
     #[test]
-    fn shadowed_primitive_keeps_qualified_builtin_identity() {
+    fn shadowed_primitive_keeps_qualified_primitive_identity() {
         let bump = bumpalo::Bump::new();
         let module =
             nash_parse::Parser::new(&bump, "module Local exposing (..)\ntype Int = Custom\n")
@@ -238,11 +244,11 @@ mod tests {
                 .unwrap();
         let localizer = Localizer::from_module(&module, &[]);
         assert_eq!(
-            localizer.to_string(nash_ast::primitives::builtin_home(), "Int"),
-            "Builtin.Int"
+            localizer.to_string(nash_ast::primitives::primitive_home(), "Int"),
+            "Primitive.Int"
         );
         assert_eq!(
-            localizer.to_string(nash_ast::primitives::builtin_home(), "unit"),
+            localizer.to_string(nash_ast::primitives::primitive_home(), "unit"),
             "unit"
         );
         assert_eq!(

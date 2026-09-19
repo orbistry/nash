@@ -4,7 +4,7 @@ description: "module Main exposing (..)\nvalue flag = if flag then 1 else \"hell
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `int`, found `string`.
+  × Type mismatch: expected `Primitive.int`, found `Primitive.string`.
    ╭─[Main.nash:2:34]
  1 │ module Main exposing (..)
  2 │ value flag = if flag then 1 else "hello"

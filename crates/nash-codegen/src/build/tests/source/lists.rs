@@ -2,6 +2,7 @@ case!(
     acceptance_test_1_length,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     length xs =
@@ -17,6 +18,7 @@ case!(
     acceptance_test_2_repeat,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     repeat x n =
@@ -31,6 +33,7 @@ case!(
     acceptance_test_3_concat,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     foldr xs f zero =
@@ -47,6 +50,7 @@ case!(
     acceptance_test_4_concat_no_anon_func,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     foldr xs f zero =
@@ -64,6 +68,7 @@ case!(
     acceptance_test_5_direct_head,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -89,6 +94,7 @@ case!(
     acceptance_test_5_direct_2_heads,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -115,6 +121,7 @@ case!(
     acceptance_test_5_head_not_empty,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -138,6 +145,7 @@ case!(
     acceptance_test_5_head_empty,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -161,6 +169,7 @@ case!(
     acceptance_test_6_if_else,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     main =
@@ -176,6 +185,7 @@ case!(
     acceptance_test_6_equals_pair,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     empty : list Data
@@ -190,6 +200,7 @@ case!(
     acceptance_test_6_equals_tuple,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     same : (int, list int) -> (int, list int) -> bool
@@ -203,6 +214,7 @@ case!(
     acceptance_test_7_unzip_tuple,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type sequence 'a = Nil | Cons 'a (sequence 'a)
@@ -228,6 +240,7 @@ case!(
     acceptance_test_7_unzip_pair,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     unzip : list (pair Int Bytes) -> pair (List Int) (List Bytes)
@@ -260,6 +273,7 @@ case!(
     acceptance_test_8_is_empty,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     isEmpty bytes = equalsInteger (Builtin.lengthOfByteString bytes) 0
@@ -272,6 +286,7 @@ case!(
     acceptance_test_8_is_not_empty,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     isEmpty bytes = equalsInteger (Builtin.lengthOfByteString bytes) 0
@@ -284,6 +299,7 @@ case!(
     acceptance_test_9_is_empty,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     isEmpty bytes = equalsInteger (lengthOfByteString bytes) 0
@@ -296,6 +312,7 @@ case!(
     acceptance_test_10_map_none,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -319,6 +336,7 @@ case!(
     acceptance_test_10_map_some,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -342,6 +360,7 @@ case!(
     acceptance_test_11_map_empty,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     map xs f =
@@ -357,6 +376,7 @@ case!(
     acceptance_test_11_map_filled,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     map xs f =
@@ -372,6 +392,7 @@ case!(
     acceptance_test_12_filter_even,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     filter xs f =
@@ -389,6 +410,7 @@ case!(
     acceptance_test_14_list_creation,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     main = [subtractInteger 0 2, subtractInteger 0 1, 0]
@@ -400,6 +422,7 @@ case!(
     acceptance_test_15_zero_arg,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     type pairs = Pairs { inner : list (pair Data Data) }
@@ -414,6 +437,7 @@ case!(
     acceptance_test_16_drop,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     slice bytes start end = sliceByteString start end bytes
@@ -432,6 +456,7 @@ case!(
     acceptance_test_17_take,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     slice bytes start end = sliceByteString start end bytes
@@ -445,6 +470,7 @@ case!(
     acceptance_test_18_or_else,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a

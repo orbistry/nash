@@ -42,6 +42,7 @@
 //! ```
 
 pub mod build;
+pub mod bundled_base;
 pub mod compile;
 pub mod database;
 pub mod error;

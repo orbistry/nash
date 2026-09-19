@@ -6,7 +6,7 @@ info: diagnostic
 nash::names::overlapping_impls
 
   × These `Keep.Keep` impls can both match the same trait arguments. The overlapping
-  │ head is ((Builtin.list Builtin.int), (Builtin.list Builtin.int)):
+  │ head is ((Primitive.list Primitive.int), (Primitive.list Primitive.int)):
    ╭─[src/Main.nash:2:1]
  1 │ module Main exposing (..)
  2 │ 

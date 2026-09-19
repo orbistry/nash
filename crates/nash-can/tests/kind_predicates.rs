@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 
 fn check<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, Vec<Error<'a>>> {
     let source = bump.alloc_str(&format!(
-        "module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{body}\n"
+        "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\n{body}\n"
     ));
     let module = nash_parse::Parser::new(bump, source)
         .module()
@@ -33,7 +33,7 @@ fn declaration_kinds_and_contexts_are_separate() {
         let body =
             "type Box 'a = Box 'a\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)";
         snapshot_inputs.record(&format!(
-            "module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{body}\n"
+            "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\n{body}\n"
         ));
         body
     })
@@ -97,7 +97,7 @@ fn bad_big_field_is_a_representation_error() {
     let errors = check(&bump, {
         let body = "type Bad 'a = Bad (list 'a)";
         snapshot_inputs.record(&format!(
-            "module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{body}\n"
+            "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\n{body}\n"
         ));
         body
     })
@@ -240,7 +240,7 @@ fn late_applied_relevance_rechecks_existing_recursive_references() {
 fn imported<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, Vec<Error<'a>>> {
     let builtin = nash_can::kinds::builtin_interface(bump);
     let interfaces = BTreeMap::from([("Builtin", builtin)]);
-    let source = bump.alloc_str("module Types exposing (..)\nimport Builtin exposing (..)\ntype Box 'a = Box 'a\ntype wrap 'f 'a = Wrap ('f 'a)\ntype option 'a = None | Some 'a\ntype alias count = int\n");
+    let source = bump.alloc_str("module Types exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Box 'a = Box 'a\ntype wrap 'f 'a = Wrap ('f 'a)\ntype option 'a = None | Some 'a\ntype alias count = int\n");
     let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     let checked = nash_can::canonicalize(
         bump,
@@ -253,7 +253,7 @@ fn imported<'a>(bump: &'a Bump, body: &str) -> Result<nash_can::CanResult<'a>, V
     .unwrap();
     let interface = nash_can::from_module(bump, &checked.module, &BTreeMap::new());
     let interfaces = BTreeMap::from([("Builtin", builtin), ("Types", interface)]);
-    let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (..)\n{body}\n"));
+    let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Types exposing (..)\n{body}\n"));
     let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     nash_can::canonicalize(
         bump,

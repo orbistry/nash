@@ -363,7 +363,7 @@ mod tests {
             2,
             &mut variables,
             Content::Structure(FlatType::App1(
-                nash_ast::primitives::builtin_home(),
+                nash_ast::primitives::primitive_home(),
                 "unit",
                 Vec::new(),
             )),

@@ -4,7 +4,7 @@ description: "module Main exposing (..)\nf : 'a\nf = 1\n"
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `'a`, found `int`.
+  × Type mismatch: expected `'a`, found `Primitive.int`.
    ╭─[Main.nash:3:5]
  1 │ module Main exposing (..)
  2 │ f : 'a

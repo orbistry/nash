@@ -42,9 +42,12 @@ async fn path_test_dependencies_are_scoped_and_dependency_tests_are_not_discover
     let project = Project::load(fixture.root().join("app")).await.unwrap();
     let db = Database::new(FileSystemSource::new());
     let production = project.discover_modules_production(&db).await.unwrap();
-    assert_eq!(production.len(), 1);
+    assert_eq!(
+        production.len(),
+        1 + nash_driver::bundled_base::SOURCES.len()
+    );
     let testing = project.discover_modules(&db).await.unwrap();
-    assert_eq!(testing.len(), 2);
+    assert_eq!(testing.len(), 2 + nash_driver::bundled_base::SOURCES.len());
     assert_eq!(
         testing
             .values()
@@ -88,9 +91,12 @@ async fn workspace_test_dependency_paths_are_relative_to_workspace_root() {
             .await
             .unwrap()
             .len(),
-        1
+        1 + nash_driver::bundled_base::SOURCES.len()
     );
-    assert_eq!(project.discover_modules(&db).await.unwrap().len(), 2);
+    assert_eq!(
+        project.discover_modules(&db).await.unwrap().len(),
+        2 + nash_driver::bundled_base::SOURCES.len()
+    );
 }
 
 #[tokio::test]
@@ -109,7 +115,7 @@ async fn unavailable_test_dependency_reports_resolution_error_only_for_checks() 
             .await
             .unwrap()
             .len(),
-        1
+        1 + nash_driver::bundled_base::SOURCES.len()
     );
     let error = project.discover_modules(&db).await.unwrap_err().to_string();
     assert!(

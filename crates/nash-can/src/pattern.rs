@@ -446,7 +446,7 @@ mod tests {
     fn env_with_bool<'a>(bump: &'a Bump) -> Env<'a> {
         let module = nash_parse::Parser::new(
             bump,
-            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\n",
+            "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Builtin\n",
         )
         .module()
         .unwrap();

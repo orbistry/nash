@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Big bytes`.
+  × Unsatisfied representation constraint `Primitive.Big bytes`.
    ╭─[Main.nash:4:7]
  3 │ bad : int -> bytes -> pair int bytes
  4 │ bad = Builtin.mkPairData
@@ -17,7 +17,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Big int`.
+  × Unsatisfied representation constraint `Primitive.Big int`.
    ╭─[Main.nash:4:7]
  3 │ bad : int -> bytes -> pair int bytes
  4 │ bad = Builtin.mkPairData

@@ -1,9 +1,0 @@
-{
-    "type": "package",
-    "name": "nash/core",
-    "version": "0.1.0",
-    "summary": "Nash standard library",
-    "license": "Apache-2.0",
-    "exposedModules": ["Eq", "Literal", "Num", "Integral", "Semigroup", "Monoid", "Ordering", "Ord", "Show", "Bool", "Prelude", "Unit", "Lift", "Option", "Result", "Data", "Cons", "Functor", "Applicative", "Monad", "Pair", "Array", "Fuzz", "Test"],
-    "dependencies": {}
-}

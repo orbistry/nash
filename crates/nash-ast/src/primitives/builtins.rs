@@ -1,6 +1,6 @@
 //! Typed value schemes for the synthetic Builtin module.
 
-use super::builtin_home;
+use super::primitive_home;
 use crate::{QualifiedName, Type};
 use nash_region::Located;
 
@@ -18,7 +18,7 @@ pub(super) const fn named(
 ) -> Located<Type<'static>> {
     Located::at_zero(Type::Named {
         reference: QualifiedName {
-            home: builtin_home(),
+            home: primitive_home(),
             name,
         },
         args,

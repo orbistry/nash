@@ -7,7 +7,7 @@ Case 1: accepted
 nash::names::overlapping_impls
 
   × These `Main.Keep` impls can both match the same trait arguments. The overlapping
-  │ head is Builtin.unit:
+  │ head is Primitive.unit:
    ╭─[src/Main.nash:6:1]
  3 │         keep : 'a -> 'a
  4 │ ╭─▶ impl Keep ('a : Big) where

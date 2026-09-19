@@ -1,5 +1,5 @@
 module Tag exposing (tag)
-import Builtin exposing (Data(..))
+import Primitive exposing (Data(..))
 import Literal exposing (FromInt)
 
 tag : Data -> int

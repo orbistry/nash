@@ -36,7 +36,7 @@ impl<'a> Engine<'a, '_, '_> {
     ) -> Result<Option<&'a Core<'a>>, Error<'a>> {
         let trait_ = QualifiedName {
             home: ModuleName {
-                package: Some(primitives::CORE),
+                package: Some(primitives::BASE),
                 name: "Show",
             },
             name: "Show",
@@ -163,7 +163,7 @@ impl<'a> Engine<'a, '_, '_> {
         let value = match &expression.value {
             Expr::Trace { message, body } => {
                 let home = self.build.inputs[ctx.input].module.name;
-                let reserved = home.package == Some(primitives::CORE) && home.name == "Test";
+                let reserved = home.package == Some(primitives::BASE) && home.name == "Test";
                 if reserved || self.trace.user == TraceLevel::Verbose {
                     self.assert_expression(message, ctx, true, bindings, captures)?;
                 }

@@ -11,10 +11,10 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                         package: Some(
                             PackageName {
                                 author: "nash",
-                                project: "core",
+                                project: "base",
                             },
                         ),
-                        name: "Builtin",
+                        name: "Primitive",
                     },
                     name: "Big",
                 },
@@ -66,10 +66,10 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "List",
                         },
@@ -109,10 +109,10 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "List",
                         },
@@ -187,10 +187,10 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "List",
                         },
@@ -362,10 +362,10 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                         package: Some(
                             PackageName {
                                 author: "nash",
-                                project: "core",
+                                project: "base",
                             },
                         ),
-                        name: "Builtin",
+                        name: "Primitive",
                     },
                     name: "List",
                 },

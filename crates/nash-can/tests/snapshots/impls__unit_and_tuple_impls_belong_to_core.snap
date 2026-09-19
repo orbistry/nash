@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::names::orphan_impl
 
-  × This module cannot define an impl of `Keep.Keep` for Builtin.unit:
+  × This module cannot define an impl of `Keep.Keep` for Primitive.unit:
    ╭─[src/Instances.nash:3:1]
  2 │     import Keep exposing (Keep)
  3 │ ╭─▶ impl Keep () where
@@ -35,10 +35,10 @@ Core impl heads:
                         package: Some(
                             PackageName {
                                 author: "nash",
-                                project: "core",
+                                project: "base",
                             },
                         ),
-                        name: "Builtin",
+                        name: "Primitive",
                     },
                     name: "unit",
                 },

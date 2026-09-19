@@ -233,7 +233,7 @@ mod tests {
         use nash_ast::head::{Match, Types};
         let mut uf = UnionFind::new();
         let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
-            nash_ast::primitives::builtin_home(),
+            nash_ast::primitives::primitive_home(),
             "unit",
             Vec::new(),
         ))));
@@ -276,7 +276,7 @@ mod tests {
         assert!(has_outer_flex(&mut uf, &[outer], 3));
         uf.modify(child, |desc| {
             desc.content = Content::Structure(FlatType::App1(
-                nash_ast::primitives::builtin_home(),
+                nash_ast::primitives::primitive_home(),
                 "unit",
                 Vec::new(),
             ))

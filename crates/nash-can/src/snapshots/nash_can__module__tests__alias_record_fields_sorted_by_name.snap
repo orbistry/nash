@@ -99,10 +99,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "int",
                                         },
@@ -130,10 +130,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "int",
                                         },

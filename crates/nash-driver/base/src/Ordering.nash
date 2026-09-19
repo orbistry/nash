@@ -1,0 +1,29 @@
+module Ordering exposing (Ordering(..), type ordering(..), invert, then_)
+
+import Primitive exposing (type bool(..))
+import Eq exposing (Eq)
+
+type ordering = LT | EQ | GT
+
+type Ordering = LT | EQ | GT
+
+invert : ordering -> ordering
+invert order =
+    case order of
+        LT -> GT
+        EQ -> EQ
+        GT -> LT
+
+then_ : ordering -> ordering -> ordering
+then_ first second =
+    case first of
+        EQ -> second
+        _ -> first
+
+impl Eq ordering where
+    eq a b =
+        case (a, b) of
+            (LT, LT) -> True
+            (EQ, EQ) -> True
+            (GT, GT) -> True
+            _ -> False

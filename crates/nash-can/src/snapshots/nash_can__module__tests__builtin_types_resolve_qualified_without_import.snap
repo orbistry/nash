@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (..)\n\nidentity : Builtin.list Builtin.unit -> list unit\nidentity x = x\n"
+description: "Code:\n\nmodule Main exposing (..)\n\nidentity : Primitive.list Primitive.unit -> list unit\nidentity x = x\n"
 ---
 Module {
     tests: [],
@@ -46,7 +46,7 @@ Module {
                     },
                     end: Position {
                         line: 3,
-                        column: 50,
+                        column: 54,
                     },
                 },
                 value: Lambda {
@@ -58,7 +58,7 @@ Module {
                             },
                             end: Position {
                                 line: 3,
-                                column: 37,
+                                column: 41,
                             },
                         },
                         value: Named {
@@ -67,10 +67,10 @@ Module {
                                     package: Some(
                                         PackageName {
                                             author: "nash",
-                                            project: "core",
+                                            project: "base",
                                         },
                                     ),
-                                    name: "Builtin",
+                                    name: "Primitive",
                                 },
                                 name: "list",
                             },
@@ -79,11 +79,11 @@ Module {
                                     region: Region {
                                         start: Position {
                                             line: 3,
-                                            column: 25,
+                                            column: 27,
                                         },
                                         end: Position {
                                             line: 3,
-                                            column: 37,
+                                            column: 41,
                                         },
                                     },
                                     value: Named {
@@ -92,10 +92,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "unit",
                                         },
@@ -109,11 +109,11 @@ Module {
                         region: Region {
                             start: Position {
                                 line: 3,
-                                column: 41,
+                                column: 45,
                             },
                             end: Position {
                                 line: 3,
-                                column: 50,
+                                column: 54,
                             },
                         },
                         value: Named {
@@ -122,10 +122,10 @@ Module {
                                     package: Some(
                                         PackageName {
                                             author: "nash",
-                                            project: "core",
+                                            project: "base",
                                         },
                                     ),
-                                    name: "Builtin",
+                                    name: "Primitive",
                                 },
                                 name: "list",
                             },
@@ -134,11 +134,11 @@ Module {
                                     region: Region {
                                         start: Position {
                                             line: 3,
-                                            column: 46,
+                                            column: 50,
                                         },
                                         end: Position {
                                             line: 3,
-                                            column: 50,
+                                            column: 54,
                                         },
                                     },
                                     value: Named {
@@ -147,10 +147,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "unit",
                                         },
@@ -201,7 +201,7 @@ Module {
                             },
                             end: Position {
                                 line: 3,
-                                column: 37,
+                                column: 41,
                             },
                         },
                         value: Named {
@@ -210,10 +210,10 @@ Module {
                                     package: Some(
                                         PackageName {
                                             author: "nash",
-                                            project: "core",
+                                            project: "base",
                                         },
                                     ),
-                                    name: "Builtin",
+                                    name: "Primitive",
                                 },
                                 name: "list",
                             },
@@ -222,11 +222,11 @@ Module {
                                     region: Region {
                                         start: Position {
                                             line: 3,
-                                            column: 25,
+                                            column: 27,
                                         },
                                         end: Position {
                                             line: 3,
-                                            column: 37,
+                                            column: 41,
                                         },
                                     },
                                     value: Named {
@@ -235,10 +235,10 @@ Module {
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "unit",
                                         },
@@ -269,11 +269,11 @@ Module {
                 region: Region {
                     start: Position {
                         line: 3,
-                        column: 41,
+                        column: 45,
                     },
                     end: Position {
                         line: 3,
-                        column: 50,
+                        column: 54,
                     },
                 },
                 value: Named {
@@ -282,10 +282,10 @@ Module {
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "list",
                     },
@@ -294,11 +294,11 @@ Module {
                             region: Region {
                                 start: Position {
                                     line: 3,
-                                    column: 46,
+                                    column: 50,
                                 },
                                 end: Position {
                                     line: 3,
-                                    column: 50,
+                                    column: 54,
                                 },
                             },
                             value: Named {
@@ -307,10 +307,10 @@ Module {
                                         package: Some(
                                             PackageName {
                                                 author: "nash",
-                                                project: "core",
+                                                project: "base",
                                             },
                                         ),
-                                        name: "Builtin",
+                                        name: "Primitive",
                                     },
                                     name: "unit",
                                 },

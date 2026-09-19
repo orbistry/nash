@@ -46,6 +46,14 @@ pub fn create_initial_env<'a>(
     interfaces: Option<&BTreeMap<&'a str, Interface<'a>>>,
     imports: &'a [&'a SourceImport<'a>],
 ) -> Result<Env<'a>, Vec<Error<'a>>> {
+    let mut compiler_interfaces = interfaces.cloned().unwrap_or_default();
+    compiler_interfaces
+        .entry("Primitive")
+        .or_insert_with(|| crate::kinds::primitive_interface(bump));
+    compiler_interfaces
+        .entry("Builtin")
+        .or_insert_with(|| crate::kinds::builtin_interface(bump));
+    let interfaces = Some(&compiler_interfaces);
     let mut env = Env {
         kinds: crate::kinds::KindEnv::from_interfaces(interfaces),
         traits: BTreeMap::new(),
@@ -61,7 +69,7 @@ pub fn create_initial_env<'a>(
     };
 
     // Compiler-known types are always in scope, independently of value imports.
-    let builtin_home = nash_ast::primitives::builtin_home();
+    let builtin_home = nash_ast::primitives::primitive_home();
     for primitive in nash_ast::primitives::PRIMITIVES {
         env.types.insert(
             primitive.name,
@@ -75,8 +83,18 @@ pub fn create_initial_env<'a>(
         );
     }
 
-    env.q_types.insert("Builtin", env.types.clone());
+    env.q_types.insert("Primitive", env.types.clone());
 
+    for name in ["Primitive", "Builtin"] {
+        let import = bump.alloc(SourceImport {
+            import: bump.alloc(Located::at_zero(name)),
+            alias: None,
+            exposing: bump.alloc(Exposing::Explicit(&[])),
+        });
+        add_imports(bump, &mut env, interfaces, &[import])?;
+    }
+    let defaults = crate::defaults::imports(bump, home, interfaces);
+    add_imports(bump, &mut env, interfaces, &defaults)?;
     add_imports(bump, &mut env, interfaces, imports)?;
     Ok(env)
 }
@@ -497,7 +515,7 @@ fn make_union_ctor<'a>(
     can_union: &'a nash_ast::Union<'a>,
     ctor: &nash_ast::Ctor<'a>,
 ) -> Ctor<'a> {
-    if home == nash_ast::primitives::builtin_home() && union_name == "bool" {
+    if home == nash_ast::primitives::primitive_home() && union_name == "bool" {
         return Ctor::Bool {
             home,
             union: can_union,
@@ -584,7 +602,7 @@ mod tests {
         for primitive in nash_ast::primitives::PRIMITIVES {
             match env.types.get(primitive.name) {
                 Some(Info::Specific(module, Type::Union { arity, .. })) => {
-                    assert_eq!(*module, nash_ast::primitives::builtin_home());
+                    assert_eq!(*module, nash_ast::primitives::primitive_home());
                     assert_eq!(*arity, primitive.kind.arity());
                 }
                 other => panic!("Expected primitive {}, got {other:?}", primitive.name),

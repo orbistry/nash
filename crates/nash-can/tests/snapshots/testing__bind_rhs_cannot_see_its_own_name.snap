@@ -12,4 +12,9 @@ nash::names::not_found_var
    ·              ─
  6 │         ()
    ╰────
-  help: Try public instead.
+  help: Similar names:
+
+            public
+            Builtin.bData
+            Builtin.iData
+            Builtin.trace

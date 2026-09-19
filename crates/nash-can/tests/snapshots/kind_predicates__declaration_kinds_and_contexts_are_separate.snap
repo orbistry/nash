@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kind_predicates.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype Box 'a = Box 'a\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype Box 'a = Box 'a\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)\n"
 ---
 [
     (
@@ -16,10 +16,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         package: Some(
                             PackageName {
                                 author: "nash",
-                                project: "core",
+                                project: "base",
                             },
                         ),
-                        name: "Builtin",
+                        name: "Primitive",
                     },
                     name: "Big",
                 },
@@ -27,11 +27,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                     Located {
                         region: Region {
                             start: Position {
-                                line: 5,
+                                line: 6,
                                 column: 19,
                             },
                             end: Position {
-                                line: 5,
+                                line: 6,
                                 column: 21,
                             },
                         },
@@ -68,11 +68,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                 head: Located {
                     region: Region {
                         start: Position {
-                            line: 7,
+                            line: 8,
                             column: 25,
                         },
                         end: Position {
-                            line: 7,
+                            line: 8,
                             column: 27,
                         },
                     },
@@ -84,11 +84,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                     Located {
                         region: Region {
                             start: Position {
-                                line: 7,
+                                line: 8,
                                 column: 28,
                             },
                             end: Position {
-                                line: 7,
+                                line: 8,
                                 column: 30,
                             },
                         },

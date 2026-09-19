@@ -427,7 +427,7 @@ impl Type<'_> {
     pub const fn unit() -> Self {
         Self::Named {
             reference: QualifiedName {
-                home: primitives::builtin_home(),
+                home: primitives::primitive_home(),
                 name: "unit",
             },
             args: &[],
@@ -876,7 +876,7 @@ mod record_tests {
     fn alias_record_fields_in_wire_order() {
         let unit = Located::at_zero(Type::Named {
             reference: QualifiedName {
-                home: primitives::builtin_home(),
+                home: primitives::primitive_home(),
                 name: "unit",
             },
             args: &[],

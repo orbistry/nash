@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias unConstrData = Data -> pair int (list Data)\ntype alias fstPair 'a 'b = pair 'a 'b -> 'a\ntype alias sndPair 'a 'b = pair 'a 'b -> 'b\ntype alias mkPairData = Data -> Data -> pair Data Data\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias unConstrData = Data -> pair int (list Data)\ntype alias fstPair 'a 'b = pair 'a 'b -> 'a\ntype alias sndPair 'a 'b = pair 'a 'b -> 'b\ntype alias mkPairData = Data -> Data -> pair Data Data\n"
 ---
 (
     [],
@@ -26,10 +26,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Storable",
                     },
@@ -37,11 +37,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 6,
+                                    line: 7,
                                     column: 33,
                                 },
                                 end: Position {
-                                    line: 6,
+                                    line: 7,
                                     column: 35,
                                 },
                             },
@@ -57,10 +57,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Storable",
                     },
@@ -68,11 +68,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 6,
+                                    line: 7,
                                     column: 36,
                                 },
                                 end: Position {
-                                    line: 6,
+                                    line: 7,
                                     column: 38,
                                 },
                             },
@@ -100,10 +100,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Storable",
                     },
@@ -111,11 +111,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 7,
+                                    line: 8,
                                     column: 33,
                                 },
                                 end: Position {
-                                    line: 7,
+                                    line: 8,
                                     column: 35,
                                 },
                             },
@@ -131,10 +131,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Storable",
                     },
@@ -142,11 +142,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 7,
+                                    line: 8,
                                     column: 36,
                                 },
                                 end: Position {
-                                    line: 7,
+                                    line: 8,
                                     column: 38,
                                 },
                             },

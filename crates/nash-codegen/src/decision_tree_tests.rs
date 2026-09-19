@@ -302,7 +302,7 @@ fn constructors_share_head_test_before_nested_bool() {
     let b = Builder::new(&arena);
     let boolean_type = arena.alloc(Located::at_zero(CanType::Named {
         reference: QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "bool",
         },
         args: &[],
@@ -413,7 +413,7 @@ fn big_constructor_fields_and_data_builtin_shapes_decode() {
     let b = Builder::new(&arena);
     let field = arena.alloc(Located::at_zero(CanType::Named {
         reference: QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "Int",
         },
         args: &[],
@@ -476,7 +476,7 @@ fn big_constructor_fields_and_data_builtin_shapes_decode() {
                 ctor(
                     &arena,
                     data_union,
-                    nash_ast::primitives::builtin_home(),
+                    nash_ast::primitives::primitive_home(),
                     i,
                     &args,
                 ),
@@ -510,7 +510,7 @@ fn constructor_argument_indices_restore_named_field_order() {
     let b = Builder::new(&arena);
     let int_type = arena.alloc(Located::at_zero(CanType::Named {
         reference: QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "int",
         },
         args: &[],
@@ -690,7 +690,7 @@ fn nested_constructors_share_tests_and_preserve_fallback() {
     let b = Builder::new(&arena);
     let bool_type = arena.alloc(Located::at_zero(CanType::Named {
         reference: QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "bool",
         },
         args: &[],

@@ -64,10 +64,10 @@ description: "module Shapes exposing (type wrap(..), type applied)\n\ntype wrap 
                                 package: Some(
                                     PackageName {
                                         author: "nash",
-                                        project: "core",
+                                        project: "base",
                                     },
                                 ),
-                                name: "Builtin",
+                                name: "Primitive",
                             },
                             name: "Little",
                         },

@@ -13,7 +13,7 @@
 //! {
 //!     "type": "application",
 //!     "dependencies": {
-//!         "nash/core": "1.0.0 <= v < 2.0.0"
+//!         "example/math": "1.0.0 <= v < 2.0.0"
 //!     }
 //! }
 //! ```
@@ -29,7 +29,7 @@
 //!     "license": "MIT",
 //!     "exposedModules": ["MyModule"],
 //!     "dependencies": {
-//!         "nash/core": "1.0.0 <= v < 2.0.0"
+//!         "example/math": "1.0.0 <= v < 2.0.0"
 //!     }
 //! }
 //! ```
@@ -41,7 +41,7 @@
 //!     "type": "workspace",
 //!     "members": ["packages/*", "apps/my-app"],
 //!     "dependencies": {
-//!         "nash/core": "1.0.0 <= v < 2.0.0"
+//!         "example/math": "1.0.0 <= v < 2.0.0"
 //!     }
 //! }
 //! ```

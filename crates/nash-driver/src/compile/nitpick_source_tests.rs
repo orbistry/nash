@@ -146,7 +146,8 @@ fn case_bool_complete() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -162,7 +163,8 @@ fn case_bool_missing() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -177,7 +179,8 @@ fn wildcard_case() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f x =
@@ -192,7 +195,8 @@ fn redundant_after_wildcard() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -208,7 +212,8 @@ fn redundant_after_all_constructors() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -225,7 +230,8 @@ fn redundancy_precedes_incompleteness() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -241,7 +247,8 @@ fn first_redundant_branch_only() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -258,7 +265,8 @@ fn untyped_arg_unsafe() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f (x :: _) = x
@@ -271,7 +279,8 @@ fn typed_arg_unsafe() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f : bool -> unit
@@ -285,7 +294,8 @@ fn arguments_irrefutable() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type box 'a = Box 'a
@@ -301,7 +311,8 @@ fn lambda_arg_unsafe() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f = \True -> ()
@@ -314,7 +325,8 @@ fn let_destructure_unsafe() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f xs =
@@ -331,7 +343,8 @@ fn let_destructure_safe() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f pair =
@@ -348,7 +361,8 @@ fn nested_scrutinee_before_outer_case() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -364,7 +378,8 @@ fn branch_body_checked_after_redundancy() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -382,7 +397,8 @@ fn let_def_body_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -401,7 +417,8 @@ fn recursive_definitions_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag = g flag
@@ -415,7 +432,8 @@ fn local_recursive_definitions_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -433,7 +451,8 @@ fn trait_default_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         trait Choose 'a where
@@ -450,7 +469,8 @@ fn impl_argument_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         trait Choose 'a where
@@ -466,7 +486,8 @@ fn impl_body_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         trait Choose 'a where
@@ -484,7 +505,8 @@ fn trait_and_impl_complete() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         trait Choose 'a where
@@ -507,7 +529,8 @@ fn list_complete() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f xs =
@@ -523,7 +546,8 @@ fn nested_list_missing() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f xs =
@@ -539,7 +563,8 @@ fn alias_pattern_preserves_hole() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f xs =
@@ -554,7 +579,8 @@ fn tuple_correlation_missing() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f pair =
@@ -570,7 +596,8 @@ fn triple_missing() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f triple =
@@ -585,7 +612,8 @@ fn record_pattern_irrefutable() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type alias point = { x : unit }
@@ -602,7 +630,8 @@ fn labeled_subset_irrefutable() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type packet = Packet { left : bool, right : unit }
@@ -618,7 +647,8 @@ fn labeled_multi_constructor_missing() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type packet = Packet { left : bool, right : unit } | Empty
@@ -634,7 +664,8 @@ fn labeled_omitted_fields_cover_positional_patterns() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type packet = Packet { left : bool, right : unit }
@@ -651,7 +682,8 @@ fn labeled_positional_field_order() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type packet = Packet { z : bool, a : bool }
@@ -668,7 +700,8 @@ fn bytes_need_wildcard() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f bytes =
@@ -684,7 +717,8 @@ fn bytes_duplicate() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f bytes =
@@ -700,7 +734,8 @@ fn bytes_with_wildcard() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f bytes =
@@ -716,7 +751,8 @@ fn int_need_wildcard() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f n =
@@ -732,7 +768,8 @@ fn string_need_wildcard() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f s =
@@ -748,7 +785,8 @@ fn data_missing_constructors() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f : Data -> unit
@@ -765,7 +803,8 @@ fn data_tag_literals_need_wildcard() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f : Data -> unit
@@ -786,7 +825,8 @@ fn data_fields_list_complete() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f : Data -> unit
@@ -804,7 +844,8 @@ fn data_tag_redundant() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f : Data -> unit
@@ -822,7 +863,8 @@ fn big_and_little_adt_coverage() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type Redeemer = Claim | Cancel
@@ -841,7 +883,8 @@ fn transparent_alias_coverage() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type step = Go | Stop
@@ -868,7 +911,7 @@ fn core_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can::In
             &interfaces,
             Some(nash_ast::PackageName {
                 author: "nash",
-                project: "core",
+                project: "base",
             }),
         );
         check(bump, module).expect("core provider must pass nitpick");
@@ -918,7 +961,8 @@ fn call_function_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -933,7 +977,8 @@ fn call_argument_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         identity x = x
@@ -948,7 +993,8 @@ fn if_condition_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -963,7 +1009,8 @@ fn if_then_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -980,7 +1027,8 @@ fn if_else_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -996,7 +1044,8 @@ fn list_entry_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -1011,7 +1060,8 @@ fn tuple_first_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -1026,7 +1076,8 @@ fn tuple_second_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -1041,7 +1092,8 @@ fn tuple_third_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -1056,7 +1108,8 @@ fn access_receiver_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type alias point = { x : unit }
@@ -1072,7 +1125,8 @@ fn record_fields_source_order() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type alias point = { z : unit, a : unit }
@@ -1091,7 +1145,8 @@ fn update_fields_source_order() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type alias point = { z : unit, a : unit }
@@ -1111,7 +1166,8 @@ fn labeled_call_arguments_source_order() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type packet = Packet { z : unit, a : unit }
@@ -1130,7 +1186,8 @@ fn declarations_source_order() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f True = g True
@@ -1146,7 +1203,8 @@ fn method_roots_source_order() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f True = ()
@@ -1167,7 +1225,8 @@ fn let_definitions_source_order() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -1185,7 +1244,8 @@ fn let_destructure_value_and_body_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag =
@@ -1204,7 +1264,8 @@ fn multiple_arguments_before_body() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f True False =
@@ -1219,7 +1280,8 @@ fn nested_branch_body_checked() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f flag other =
@@ -1237,7 +1299,8 @@ fn data_fields_list_missing_nonempty() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         f : Data -> unit
@@ -1257,7 +1320,8 @@ fn big_labeled_constructor_fields() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type Packet = Packet { z : Int, a : Bytes } | Empty
@@ -1273,7 +1337,8 @@ fn mixed_literal_does_not_prove_constructor_coverage() {
     assert_nitpick_error_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type Token = A | B
@@ -1292,7 +1357,8 @@ fn literal_before_constructors_is_opaque() {
     assert_nitpick_snapshot!(
         r###"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         import Eq exposing (Eq)
         import Literal exposing (FromInt, FromString, FromBytes)
         type Token = A | B
@@ -1317,7 +1383,8 @@ fn binop_operands_checked() {
         indoc::indoc!(
             r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         import Ops exposing ((<+>))
         f flag =
             (case flag of
@@ -1406,7 +1473,7 @@ fn do_binding_rhs_before_continuation() {
     let errors = run(indoc::indoc!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
         import Monad exposing (Monad)
         f flag value =
             do
@@ -1429,7 +1496,8 @@ fn trait_default_argument_checked() {
     assert_nitpick_error_snapshot!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         trait Choose 'a where
             choose : bool -> 'a -> unit
             choose True _ = ()
@@ -1442,7 +1510,8 @@ fn mixed_let_bindings_source_order() {
     assert_nitpick_error_snapshot!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         f flag =
             let
                 a True = if later then () else ()
@@ -1491,7 +1560,7 @@ fn keyword_children_keep_pattern_coverage_checks() {
         "trace \"message\" (case x of True -> ())",
     ] {
         let source = format!(
-            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nf x = {wrapper}\n"
+            "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Builtin\nf x = {wrapper}\n"
         );
         let errors = run(&source).expect_err("keyword child contains an incomplete match");
         assert_eq!(errors.summaries.len(), 1, "{wrapper}: {errors:?}");

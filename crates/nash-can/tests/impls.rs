@@ -81,7 +81,8 @@ fn impl_cannot_own_an_imported_trait_and_imported_heads() {
         "
         module Main exposing (..)
         import Lift exposing (Lift)
-        import Builtin exposing (List)
+        import Primitive exposing (List)
+        import Builtin
         impl Lift (List 'a) (List 'b) where
             lift x = x
             lower x = x
@@ -191,7 +192,7 @@ fn core_lift<'a>(bump: &'a Bump) -> nash_can::Interface<'a> {
     let result = nash_can::canonicalize(
         bump,
         nash_can::Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: None,
         },
         &module,
@@ -272,14 +273,14 @@ fn reflexive_lift_requires_the_exact_core_trait_identity() {
     let bump = Bump::new();
     let mut enabled = Vec::new();
     for (module_name, package) in [
-        ("Lift", Some(nash_ast::primitives::CORE)),
+        ("Lift", Some(nash_ast::primitives::BASE)),
         ("Lift", None),
-        ("Other", Some(nash_ast::primitives::CORE)),
+        ("Other", Some(nash_ast::primitives::BASE)),
         (
             "Lift",
             Some(nash_ast::PackageName {
                 author: "someone",
-                project: "core",
+                project: "base",
             }),
         ),
     ] {
@@ -594,7 +595,7 @@ fn global_overlap_between_core_modules() {
         let result = nash_can::canonicalize(
             &bump,
             nash_can::Context {
-                package: Some(nash_ast::primitives::CORE),
+                package: Some(nash_ast::primitives::BASE),
                 interfaces: Some(&interfaces),
             },
             &module,
@@ -711,7 +712,7 @@ fn unit_and_tuple_impls_belong_to_core() {
     let core = nash_can::canonicalize(
         &bump,
         nash_can::Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: Some(&interfaces),
         },
         &module,
@@ -1127,7 +1128,7 @@ fn owned_blankets_cannot_overlap_compiler_owned_instances() {
         let result = nash_can::canonicalize(
             &bump,
             nash_can::Context {
-                package: Some(nash_ast::primitives::CORE),
+                package: Some(nash_ast::primitives::BASE),
                 interfaces: None,
             },
             &module,

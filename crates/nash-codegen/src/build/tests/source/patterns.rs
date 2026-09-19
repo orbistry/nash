@@ -2,6 +2,7 @@ case!(
     expect_empty_list_on_filled_list,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : bool
     main =
@@ -20,6 +21,7 @@ case!(
     expect_empty_list_on_new_list,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : bool
     main =
@@ -38,6 +40,7 @@ case!(
     when_bool_is_true,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main =
         case True of
@@ -51,6 +54,7 @@ case!(
     when_bool_is_true_switched_cases,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main =
         case True of
@@ -64,6 +68,7 @@ case!(
     when_bool_is_false,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main =
         case False of
@@ -77,6 +82,7 @@ case!(
     when_tuple_deconstruction,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     type thing = Thing { idx : int }
     type datum = A thing | B
@@ -95,6 +101,7 @@ case!(
     when_tuple_empty_lists,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main =
         let
@@ -117,6 +124,7 @@ case!(
     pass_constr_as_function,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type make = Make { a : int, b : subMake }
@@ -135,6 +143,7 @@ case!(
     list_fields_unwrap,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Lift exposing (lower)
     type Fields = Fields { a : Bytes, b : Int }
@@ -152,6 +161,7 @@ case!(
     expect_head_discard_tail,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main =
         let
@@ -169,6 +179,7 @@ case!(
     expect_head_no_tail,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main =
         let
@@ -186,6 +197,7 @@ case!(
     expect_head3_no_tail,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main =
         let
@@ -206,6 +218,7 @@ case!(
     test_init_3,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type option 'a = None | Some 'a
@@ -235,6 +248,7 @@ case!(
     list_clause_with_assign,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type Option = Some Int | None
@@ -254,6 +268,7 @@ case!(
     expect_none,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     type option = Some int | None
     main =
@@ -271,6 +286,7 @@ case!(
     head_list_on_map,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     main =
@@ -287,6 +303,7 @@ case!(
     tuple_2_match,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     type curveInt = ECI { ec : (int, int) } | Infinity
     equivalence ec1 ec2 =
@@ -310,6 +327,7 @@ case!(
     foldl_type_mismatch,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     import Lift exposing (lower, lift)
@@ -346,6 +364,7 @@ case!(
     record_update_output_2_vals,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     import Lift exposing (lift)
@@ -383,6 +402,7 @@ case!(
     record_update_output_1_val,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     import Lift exposing (lift)
@@ -420,6 +440,7 @@ case!(
     record_update_output_first_last_val,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     import Lift exposing (lift)
@@ -457,6 +478,7 @@ case!(
     expect_head3_cast_data_no_tail,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (validate)
     import Lift exposing (lower)
@@ -482,6 +504,7 @@ case!(
     expect_head_cast_data_no_tail,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (validate)
     import Lift exposing (lower)
@@ -505,6 +528,7 @@ case!(
     expect_head_cast_data_with_tail,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (validate)
     import Lift exposing (lower)
@@ -528,6 +552,7 @@ validator_case!(
     always_true_validator,
     r#"
     validator module Main exposing (main)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : Data -> Bytes -> Data -> unit
     main redeemer policyId transaction = assert True
@@ -538,6 +563,7 @@ validator_case!(
     generic_validator_type_test,
     r#"
     validator module Main exposing (main)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     type Void = Void
@@ -558,6 +584,7 @@ case!(
     opaque_value_in_test,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     import Lift exposing (lift, lower)

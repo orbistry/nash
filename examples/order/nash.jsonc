@@ -1,6 +1,6 @@
 {
   "type": "application",
   "dependencies": {
-    "nash/core": { "path": "../../core" }
+    "nash/base": { "path": }
   }
 }

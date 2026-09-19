@@ -10,7 +10,7 @@ fn canonicalize<'a>(bump: &'a Bump, source: &'a str) -> nash_can::CanResult<'a> 
     let fuzz = nash_can::canonicalize(
         bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: None,
         },
         &fuzz,

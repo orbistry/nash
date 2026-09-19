@@ -17,6 +17,7 @@ nash::names::not_found_var
             first
             f
             outer
+            Builtin.bData
 
 nash::names::not_found_var
 
@@ -31,3 +32,4 @@ nash::names::not_found_var
             f
             outer
             second
+            Builtin.bData

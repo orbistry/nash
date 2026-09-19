@@ -357,7 +357,7 @@ mod predicate_tests {
     ) -> &'a Located<Type<'a>> {
         bump.alloc(Located::at_zero(Type::Named {
             reference: QualifiedName {
-                home: primitives::builtin_home(),
+                home: primitives::primitive_home(),
                 name,
             },
             args,

@@ -4,7 +4,7 @@ description: impl Storable Int where
 ---
 nash::names::impl_of_builtin_trait
 
-  × The `Builtin.Storable` trait is owned by the compiler:
+  × The `Primitive.Storable` trait is owned by the compiler:
    ╭─[Main.nash:1:1]
  1 │ impl Storable Int where
    · ───────────────────────

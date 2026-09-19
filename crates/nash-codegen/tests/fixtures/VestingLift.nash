@@ -1,5 +1,6 @@
 module Lift exposing (..)
 
+import Primitive exposing (..)
 import Builtin exposing (..)
 
 trait Lift 'a 'b where

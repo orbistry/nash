@@ -2,6 +2,7 @@ case!(
     bls12_381_elements_to_data_conversion,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     type alias proof = { piA : bls_g1, piB : bls_g2 }
     encode : proof -> Data
@@ -21,6 +22,7 @@ case!(
     bls12_381_elements_from_data_conversion,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     type alias proof = { piA : bls_g1, piB : bls_g2 }
     encode : proof -> Data
@@ -43,6 +45,7 @@ case!(
     cast_never,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (ToData)
     type Option = Some Int | None
@@ -65,6 +68,7 @@ traced_case!(
     hard_soft_cast_silent,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Option exposing (type option(..))
     type foo = Bar | Bax
@@ -108,6 +112,7 @@ case!(
     source_identity,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     identity value = value
     main : bool
@@ -120,6 +125,7 @@ case!(
     mk_cons_direct_invoke_1,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     expected : list int
@@ -134,6 +140,7 @@ case!(
     mk_cons_direct_invoke_2,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (ToData)
     type Option = Some Int | None
@@ -149,6 +156,7 @@ case!(
     mk_cons_direct_invoke_3,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     main : bool
@@ -163,6 +171,7 @@ case!(
     mk_nil_pair_data,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     main : bool
@@ -177,6 +186,7 @@ case!(
     mk_nil_list_data,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     main : bool
@@ -191,6 +201,7 @@ case!(
     mk_pair_data,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     main : bool
@@ -205,6 +216,7 @@ case!(
     pattern_bytearray,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : bool
     main =
@@ -224,6 +236,7 @@ case!(
     dangling_trace_expect_standalone,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : unit
     main = trace "foo" (assert True)
@@ -235,6 +248,7 @@ case!(
     dangling_trace_expect_in_sequence,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : unit
     main =
@@ -250,6 +264,7 @@ case!(
     dangling_trace_expect_in_trace,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : unit
     main = trace "foo" (trace "bar" (assert True))
@@ -261,6 +276,7 @@ case!(
     as_data,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (ToData)
     type Foo = Foo Int
@@ -278,6 +294,7 @@ traced_case!(
     expect_non_empty_list_with_as_binding_fails_silent,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
     fromAssetList : list int -> list int
@@ -299,6 +316,7 @@ case!(
     data_scalar_codecs,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData, fromData)
     decodedInt : Int
@@ -319,6 +337,7 @@ case!(
     data_nested_list_codec,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData, fromData)
     input = List [List [I 1, I 2], List []]
@@ -333,6 +352,7 @@ case!(
     data_map_codec,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData, fromData)
     input = Map [mkPairData (B #"aa") (List [I 42])]
@@ -347,6 +367,7 @@ case!(
     data_nested_list_rejects_malformed_element,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (validate)
     decoded : List (List Int)
@@ -360,6 +381,7 @@ case!(
     data_map_rejects_malformed_value,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (validate)
     decoded : Map Bytes (List Int)
@@ -373,6 +395,7 @@ case!(
     coerce_preserves_runtime_value,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     claimed : bytes
     claimed = coerce original
@@ -388,6 +411,7 @@ case!(
     coerce_first_class_function,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     apply f x = f x
     identity x = x
@@ -405,6 +429,7 @@ case!(
     coerce_evaluates_argument,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     bad : int
     bad = fail
@@ -418,6 +443,7 @@ case!(
     from_data_leaves_nested_data_unchecked,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (fromData)
     decoded : List (List Int)
@@ -431,6 +457,7 @@ case!(
     from_data_leaves_outer_shape_unchecked,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (fromData)
     decoded : Int
@@ -444,6 +471,7 @@ case!(
     validate_data_rejects_wrong_scalar_shape,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (validate)
     decoded : Int
@@ -457,6 +485,7 @@ case!(
     validate_data_accepts_nested_map,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (validate, toData)
     input = Map [mkPairData (B #"aa") (List [I 42])]
@@ -471,6 +500,7 @@ case!(
     from_data_default_for_user_type,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (FromData)
     type Datum = Datum Int
@@ -487,6 +517,7 @@ case!(
     from_data_malformed_value_fails_on_use,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (fromData)
     decoded : Int
@@ -500,6 +531,7 @@ case!(
     to_data_blanket_user_types_and_collections,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     type Token = Token Int
@@ -527,6 +559,7 @@ case!(
     from_data_blanket_without_validation_instances,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (fromData, toData)
     type Token = Token Int
@@ -553,6 +586,7 @@ case!(
     custom_validate_rejects_wrong_shape,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (Validate)
     type Datum = Datum Int

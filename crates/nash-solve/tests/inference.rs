@@ -16,6 +16,7 @@ use nash_region::Located;
 const LITERAL_SOURCE: &str = indoc!(
     "
         module Literal exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         trait FromInt 'a where
             fromInt : int -> 'a
@@ -40,7 +41,7 @@ fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can:
     let can = nash_can::canonicalize(
         bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: Some(&interfaces),
         },
         &module,
@@ -199,7 +200,7 @@ fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
     ] {
         let bump = Bump::new();
         let source = format!(
-            "module Main exposing (..)\nimport Builtin exposing (..)\n{broken}first : ()\nfirst = broken\nsecond : ()\nsecond = broken\nsibling : ()\nsibling = \\x -> x\n"
+            "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n{broken}first : ()\nfirst = broken\nsecond : ()\nsecond = broken\nsibling : ()\nsibling = \\x -> x\n"
         );
         let errors = infer(&bump, &source).expect_err("failed dependencies stay blocked");
         assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
@@ -585,7 +586,8 @@ fn builtin_list_annotations_match_literals_and_patterns() {
         r#"
         module Main exposing (..)
 
-        import Builtin exposing (type list)
+        import Primitive exposing (type list)
+        import Builtin
 
         empty : list 'a
         empty = []
@@ -817,7 +819,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
     ] {
         for trusted in [true, false] {
             let package = if trusted {
-                nash_ast::primitives::CORE
+                nash_ast::primitives::BASE
             } else {
                 nash_ast::PackageName {
                     author: "example",
@@ -832,6 +834,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             let literal = indoc!(
                 r#"
         module Literal exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         trait FromInt 'a where
             fromInt : int -> 'a
@@ -868,6 +871,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             let main = indoc!(
                 r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal exposing (FromInt, fromInt)
         type Box 'a = Box 'a
@@ -941,7 +945,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
             );
             assert!(solved.instances.values().flat_map(|instance| instance.evidence).any(|evidence| {
         matches!(evidence, nash_ast::Evidence::Impl { impl_, .. }
-            if impl_.home.package == Some(nash_ast::primitives::CORE) && impl_.key.trait_.name == trait_name)
+            if impl_.home.package == Some(nash_ast::primitives::BASE) && impl_.key.trait_.name == trait_name)
     }));
             assert!(annotations["chain"].context.is_empty());
             insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
@@ -1448,7 +1452,7 @@ fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
         vec![result],
     ))));
     let unit = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
-        nash_ast::primitives::builtin_home(),
+        nash_ast::primitives::primitive_home(),
         "unit",
         Vec::new(),
     ))));
@@ -1722,7 +1726,7 @@ fn negation_retains_num_evidence() {
     let num = nash_can::canonicalize(
         &bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: None,
         },
         &num,
@@ -1753,7 +1757,7 @@ fn negation_retains_num_evidence() {
     };
     assert_eq!(
         predicate.trait_ref().unwrap().home.package,
-        Some(nash_ast::primitives::CORE)
+        Some(nash_ast::primitives::BASE)
     );
     assert_eq!(predicate.trait_ref().unwrap().home.name, "Num");
     assert_eq!(predicate.trait_ref().unwrap().name, "Num");
@@ -1814,14 +1818,14 @@ fn literal_syntax_records_impls_and_pattern_givens() {
     snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
-    let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where eq : 'a -> 'a -> bool\n");
+    let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where eq : 'a -> 'a -> bool\n");
     let eq_module = nash_parse::Parser::new(&bump, snapshot_inputs.record(eq_source))
         .module()
         .unwrap();
     let eq = nash_can::canonicalize(
         &bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: Some(&interfaces),
         },
         &eq_module,
@@ -1836,7 +1840,7 @@ fn literal_syntax_records_impls_and_pattern_givens() {
         ("string", "\"nash\"", "FromString"),
         ("bytes", "#\"00ff\"", "FromBytes"),
     ] {
-        let input = bump.alloc_str(&format!("module Main exposing (..)\nimport Builtin exposing (..)\nfixed : {primitive}\nfixed = {literal}\nmatch value =\n    case value of\n        {literal} -> ()\n        _ -> ()\n"));
+        let input = bump.alloc_str(&format!("module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nfixed : {primitive}\nfixed = {literal}\nmatch value =\n    case value of\n        {literal} -> ()\n        _ -> ()\n"));
         let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(input))
             .module()
             .unwrap();
@@ -1860,7 +1864,7 @@ fn literal_syntax_records_impls_and_pattern_givens() {
                     let [nash_ast::Evidence::Impl { impl_, .. }] = instance.evidence else {
                         panic!("literal impl evidence")
                     };
-                    assert_eq!(impl_.home.package, Some(nash_ast::primitives::CORE));
+                    assert_eq!(impl_.home.package, Some(nash_ast::primitives::BASE));
                     assert_eq!(impl_.key.trait_.name, trait_name);
                 }
                 nash_ast::Def::Def { name, body, .. } => {
@@ -2670,7 +2674,8 @@ fn builtin_value_schemes_preserve_container_contexts() {
     assert_inference_snapshot!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type unit)
+        import Primitive exposing (type unit)
+        import Builtin
         tag data = Builtin.fstPair (Builtin.unConstrData data)
         fields data = Builtin.sndPair (Builtin.unConstrData data)
         cons x xs = Builtin.mkCons x xs
@@ -2848,7 +2853,8 @@ fn builtin_constructors_match_conditions_and_data_fields() {
     assert_inference_snapshot!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..), Data(..))
+        import Primitive exposing (type bool(..), Data(..))
+        import Builtin
         choice flag = if flag then True else False
         invert flag =
             case flag of
@@ -3122,6 +3128,7 @@ fn datatype_context_is_enforced_at_an_inferred_call_site() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type option 'a = None | Some 'a
         first : 'a -> list 'a -> 'a
@@ -3136,6 +3143,7 @@ fn inferred_wrapper_preserves_the_callees_representation_requirement() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type option 'a = None | Some 'a
         first : 'a -> list 'a -> 'a
@@ -3155,6 +3163,7 @@ fn imported_values_retain_declared_and_inferred_representation_contexts() {
     let source = bump.alloc_str(indoc!(
         "
         module Source exposing (first, wrapper)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         first : 'a -> list 'a -> 'a
         first x xs = wrapper x xs
@@ -3264,7 +3273,7 @@ fn do_infers_monad() {
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: None,
         },
         &module,
@@ -3353,6 +3362,7 @@ fn nested_use_requires_owners_storable_constraint() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         first : 'a -> list 'a -> 'a
         first x xs = x
@@ -3374,7 +3384,7 @@ fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
     let canonical = nash_can::canonicalize(
         bump,
         Context {
-            package: core.then_some(nash_ast::primitives::CORE),
+            package: core.then_some(nash_ast::primitives::BASE),
             interfaces: None,
         },
         &module,
@@ -3763,11 +3773,11 @@ fn data_builtins_preserve_nominal_source_and_target_types() {
         lower : Int -> int
         lower = Builtin.unIData
         erase : Int -> Data
-        erase value = Builtin.I (Builtin.unIData value)
+        erase value = Primitive.I (Builtin.unIData value)
         decode : Data -> Int
         decode value =
             case value of
-                Builtin.I n -> Builtin.iData n
+                Primitive.I n -> Builtin.iData n
                 _ -> fail
         validate : Data -> Int
         validate = decode
@@ -3780,7 +3790,7 @@ fn data_builtins_preserve_nominal_source_and_target_types() {
     let canonical = nash_can::canonicalize(
         &bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: Some(&interfaces),
         },
         &parsed,
@@ -3828,7 +3838,7 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
                 fromString = Builtin.encodeUtf8
         "
             ),
-            Some(nash_ast::primitives::CORE),
+            Some(nash_ast::primitives::BASE),
         ),
         (
             "Main",
@@ -3879,7 +3889,7 @@ fn literal_impls_preserve_little_defaults_with_big_and_utf8_candidates() {
                     matches!(evidence, nash_ast::Evidence::Impl { impl_, .. }
                         if impl_.key.trait_.name == trait_name
                         && matches!(impl_.key.heads, [nash_ast::Head::Named { reference: head, .. }]
-                            if head.home == nash_ast::primitives::builtin_home() && head.name == primitive))
+                            if head.home == nash_ast::primitives::primitive_home() && head.name == primitive))
                 }), "discarded literal must default to {primitive}");
             }
             insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
@@ -3909,7 +3919,7 @@ fn big_equality_is_automatic_and_retains_structural_evidence() {
                 eq : 'a -> 'a -> bool
         "
             ),
-            Some(nash_ast::primitives::CORE),
+            Some(nash_ast::primitives::BASE),
         ),
         (
             "Main",
@@ -4215,14 +4225,14 @@ fn deferred_captured_field_preserves_trait_evidence() {
 #[test]
 fn big_builtin_types_in_scope() {
     assert_inference_snapshot!(
-        "module Main exposing (..)\nf : Builtin.List Builtin.Int -> List Int\nf x = x\n"
+        "module Main exposing (..)\nf : Primitive.List Primitive.Int -> List Int\nf x = x\n"
     );
 }
 
 #[test]
 fn user_type_shadows_builtin_unqualified() {
     let bump = Bump::new();
-    let annotations = infer(&bump, "module Main exposing (..)\ntype int = Mine\nmain = Mine\nidentity : Builtin.int -> Builtin.int\nidentity x = x\n").unwrap();
+    let annotations = infer(&bump, "module Main exposing (..)\ntype int = Mine\nmain = Mine\nidentity : Primitive.int -> Primitive.int\nidentity x = x\n").unwrap();
     assert!(
         matches!(annotations["main"].typ.value, CanType::Named { reference, .. } if reference.home.name == "Main" && reference.name == "int")
     );
@@ -4231,7 +4241,7 @@ fn user_type_shadows_builtin_unqualified() {
     };
     for typ in [from, to] {
         assert!(
-            matches!(typ.value, CanType::Named { reference, .. } if reference.home == nash_ast::primitives::builtin_home() && reference.name == "int")
+            matches!(typ.value, CanType::Named { reference, .. } if reference.home == nash_ast::primitives::primitive_home() && reference.name == "int")
         );
     }
 }
@@ -4245,7 +4255,7 @@ fn unit_impl_syntax_matches_named_builtin() {
             keep : 'a -> 'a
         impl Keep () where
             keep x = x
-        main : Builtin.unit
+        main : Primitive.unit
         main = keep ()
     "#
     );
@@ -4465,6 +4475,7 @@ bad = \x -> x
 fn recovery_direct_annotated_if_keeps_both_mismatches() {
     assert_inference_error_snapshot!(
         r#"module Main exposing (..)
+import Primitive exposing (..)
 import Builtin exposing (..)
 f : ()
 f = if True then (\x -> x) else (\y -> y)
@@ -4476,6 +4487,7 @@ f = if True then (\x -> x) else (\y -> y)
 fn recovery_direct_annotated_case_keeps_both_mismatches() {
     assert_inference_error_snapshot!(
         r#"module Main exposing (..)
+import Primitive exposing (..)
 import Builtin exposing (..)
 f : ()
 f = case True of
@@ -4489,6 +4501,7 @@ f = case True of
 fn recovery_direct_cons_tail_keeps_independent_mismatch() {
     assert_inference_error_snapshot!(
         r#"module Main exposing (..)
+import Primitive exposing (..)
 import Builtin exposing (..)
 f : () -> ()
 f (x :: ()) = ()
@@ -4500,6 +4513,7 @@ f (x :: ()) = ()
 fn recovery_direct_alias_bool_keeps_header_type() {
     assert_inference_error_snapshot!(
         r#"module Main exposing (..)
+import Primitive exposing (..)
 import Builtin exposing (..)
 f : () -> ()
 f (True as whole) = whole ()
@@ -4511,6 +4525,7 @@ f (True as whole) = whole ()
 fn recovery_direct_alias_nested_keeps_header_type() {
     assert_inference_error_snapshot!(
         r#"module Main exposing (..)
+import Primitive exposing (..)
 import Builtin exposing (..)
 f : ((), ()) -> ()
 f (((True as a), (() as b)) as whole) = whole ()
@@ -4522,6 +4537,7 @@ f (((True as a), (() as b)) as whole) = whole ()
 fn recovery_direct_alias_ctor_keeps_header_type() {
     assert_inference_error_snapshot!(
         r#"module Main exposing (..)
+import Primitive exposing (..)
 import Builtin exposing (..)
 type box = Box bool
 f : box -> ()
@@ -4707,12 +4723,12 @@ fn metadata_fixture<'a>(
     let source = bump.alloc_str(source);
     let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
     let mut interfaces = literal_interfaces(bump);
-    let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\nimpl Eq int where\n    eq a b = True\n");
+    let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\nimpl Eq int where\n    eq a b = True\n");
     let eq_parsed = nash_parse::Parser::new(bump, eq_source).module().unwrap();
     let eq_can = nash_can::canonicalize(
         bump,
         Context {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             interfaces: Some(&interfaces),
         },
         &eq_parsed,
@@ -4781,6 +4797,7 @@ fn solved_metadata_covers_original_nodes_in_recursive_and_annotated_bodies() {
         indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type option 'a = None | Some 'a
         trait Keep 'a where
@@ -4928,6 +4945,7 @@ fn keyword_expressions_infer_messages_and_preserve_result_types() {
         indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         check flag = assert flag
         stop = fail
@@ -4993,7 +5011,7 @@ fn keyword_wrappers_preserve_annotated_branch_error_recovery() {
     for wrapper in ["comptime", "trace \"message\""] {
         let bump = Bump::new();
         let source = format!(
-            "module Main exposing (..)\nimport Builtin exposing (..)\nvalue : ()\nvalue = {wrapper} (if True then (\\x -> x) else [])\n"
+            "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nvalue : ()\nvalue = {wrapper} (if True then (\\x -> x) else [])\n"
         );
         let errors = infer(&bump, &source).expect_err("each branch disagrees with unit");
         assert_eq!(
@@ -5029,6 +5047,7 @@ fn owned_blanket_impl_discharges_big_context() {
     assert_inference_snapshot!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type Box = Wrap
         trait Keep 'a where
@@ -5047,6 +5066,7 @@ fn owned_blanket_impl_rejects_const_context() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/traits.rs
-description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\ntrait Eq 'a => Same 'a where\n    same : 'a -> 'a -> bool\n    same x y = eq x y\n"
+description: "module Main exposing (Same)\nimport Primitive exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\ntrait Eq 'a => Same 'a where\n    same : 'a -> 'a -> bool\n    same x y = eq x y\n"
 ---
 (
     [
@@ -154,10 +154,10 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                             package: Some(
                                                                 PackageName {
                                                                     author: "nash",
-                                                                    project: "core",
+                                                                    project: "base",
                                                                 },
                                                             ),
-                                                            name: "Builtin",
+                                                            name: "Primitive",
                                                         },
                                                         name: "bool",
                                                     },
@@ -351,10 +351,10 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                             package: Some(
                                                                 PackageName {
                                                                     author: "nash",
-                                                                    project: "core",
+                                                                    project: "base",
                                                                 },
                                                             ),
-                                                            name: "Builtin",
+                                                            name: "Primitive",
                                                         },
                                                         name: "bool",
                                                     },
@@ -467,10 +467,10 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                                 package: Some(
                                                                     PackageName {
                                                                         author: "nash",
-                                                                        project: "core",
+                                                                        project: "base",
                                                                     },
                                                                 ),
-                                                                name: "Builtin",
+                                                                name: "Primitive",
                                                             },
                                                             name: "bool",
                                                         },
@@ -698,10 +698,10 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                                                     package: Some(
                                                                                         PackageName {
                                                                                             author: "nash",
-                                                                                            project: "core",
+                                                                                            project: "base",
                                                                                         },
                                                                                     ),
-                                                                                    name: "Builtin",
+                                                                                    name: "Primitive",
                                                                                 },
                                                                                 name: "bool",
                                                                             },
@@ -766,10 +766,10 @@ description: "module Main exposing (Same)\nimport Builtin exposing (..)\n\ntrait
                                                 package: Some(
                                                     PackageName {
                                                         author: "nash",
-                                                        project: "core",
+                                                        project: "base",
                                                     },
                                                 ),
-                                                name: "Builtin",
+                                                name: "Primitive",
                                             },
                                             name: "bool",
                                         },

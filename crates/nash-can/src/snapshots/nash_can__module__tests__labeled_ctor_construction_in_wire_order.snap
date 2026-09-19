@@ -148,10 +148,10 @@ Module {
                                                         package: Some(
                                                             PackageName {
                                                                 author: "nash",
-                                                                project: "core",
+                                                                project: "base",
                                                             },
                                                         ),
-                                                        name: "Builtin",
+                                                        name: "Primitive",
                                                     },
                                                     name: "unit",
                                                 },
@@ -187,10 +187,10 @@ Module {
                                                                 package: Some(
                                                                     PackageName {
                                                                         author: "nash",
-                                                                        project: "core",
+                                                                        project: "base",
                                                                     },
                                                                 ),
-                                                                name: "Builtin",
+                                                                name: "Primitive",
                                                             },
                                                             name: "unit",
                                                         },
@@ -321,10 +321,10 @@ Module {
                                             package: Some(
                                                 PackageName {
                                                     author: "nash",
-                                                    project: "core",
+                                                    project: "base",
                                                 },
                                             ),
-                                            name: "Builtin",
+                                            name: "Primitive",
                                         },
                                         name: "unit",
                                     },
@@ -348,10 +348,10 @@ Module {
                                             package: Some(
                                                 PackageName {
                                                     author: "nash",
-                                                    project: "core",
+                                                    project: "base",
                                                 },
                                             ),
-                                            name: "Builtin",
+                                            name: "Primitive",
                                         },
                                         name: "unit",
                                     },

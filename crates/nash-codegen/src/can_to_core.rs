@@ -225,7 +225,7 @@ impl<'a> Engine<'a, '_, '_> {
             Expr::Trace { message, body } => {
                 let body = self.expr(body, ctx)?;
                 let home = self.build.inputs[ctx.input].module.name;
-                if home.package == Some(primitives::CORE) && home.name == "Test" {
+                if home.package == Some(primitives::BASE) && home.name == "Test" {
                     let message = self.expr(message, ctx)?;
                     self.ir.trace(message, body)
                 } else {
@@ -326,12 +326,12 @@ impl<'a> Engine<'a, '_, '_> {
             .iter()
             .map(|p| self.ir.var(p.name))
             .collect::<Vec<_>>();
-        let value = if reference.home == primitives::builtin_home() && reference.union == "bool" {
+        let value = if reference.home == primitives::primitive_home() && reference.union == "bool" {
             if !params.is_empty() || tag > 1 {
                 return Err(Error::InvalidConstructor);
             }
             self.ir.lit(Constant::bool(self.ir.arena, tag == 1))
-        } else if reference.home == primitives::builtin_home() && reference.union == "Data" {
+        } else if reference.home == primitives::primitive_home() && reference.union == "Data" {
             let func = match tag {
                 0 => F::ConstrData,
                 1 => F::MapData,
@@ -482,7 +482,7 @@ impl<'a> Engine<'a, '_, '_> {
 /// Logical operators are identified by their resolved standard-library target.
 /// An unrelated user operator with the same spelling keeps normal call rules.
 pub(crate) fn short_circuit(reference: QualifiedName<'_>) -> Option<bool> {
-    if reference.home.package == Some(primitives::CORE) && reference.home.name == "Bool" {
+    if reference.home.package == Some(primitives::BASE) && reference.home.name == "Bool" {
         match reference.name {
             "and" => Some(true),
             "or" => Some(false),

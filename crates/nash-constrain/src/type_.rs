@@ -170,7 +170,7 @@ pub const fn literal_trait(name: &str) -> QualifiedName<'_> {
 pub const fn eq_trait<'a>() -> QualifiedName<'a> {
     QualifiedName {
         home: ModuleName {
-            package: Some(nash_ast::primitives::CORE),
+            package: Some(nash_ast::primitives::BASE),
             name: "Eq",
         },
         name: "Eq",
@@ -196,7 +196,7 @@ pub fn literal_annotation<'a>(
 
 /// Only the compiler-known literal traits select a little default type.
 pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<FlatType<'static>> {
-    if trait_.home.package != Some(nash_ast::primitives::CORE) || trait_.home.name != "Literal" {
+    if trait_.home.package != Some(nash_ast::primitives::BASE) || trait_.home.name != "Literal" {
         return None;
     }
     let name = match trait_.name {
@@ -206,7 +206,7 @@ pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<FlatType<'
         _ => return None,
     };
     Some(FlatType::App1(
-        nash_ast::primitives::builtin_home(),
+        nash_ast::primitives::primitive_home(),
         name,
         Vec::new(),
     ))

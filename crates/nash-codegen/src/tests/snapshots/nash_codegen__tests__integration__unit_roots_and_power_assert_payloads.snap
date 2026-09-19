@@ -1,17 +1,17 @@
 ---
 source: crates/nash-codegen/src/tests/integration.rs
-description: "module Main exposing (..)\nimport Builtin exposing (..)\nimport Literal\nprivateValue : int\nprivateValue = 1\ntests\n    test \"passes\" = do\n        assert True\n    test \"fails without captures\" = do\n        assert False\n    test \"captures private value\" = do\n        assert (Builtin.equalsInteger privateValue 2)\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nprivateValue : int\nprivateValue = 1\ntests\n    test \"passes\" = do\n        assert True\n    test \"fails without captures\" = do\n        assert False\n    test \"captures private value\" = do\n        assert (Builtin.equalsInteger privateValue 2)\n"
 ---
 [
     AssertSite {
         id: 0,
         region: Region {
             start: Position {
-                line: 12,
+                line: 13,
                 column: 17,
             },
             end: Position {
-                line: 12,
+                line: 13,
                 column: 53,
             },
         },
@@ -20,11 +20,11 @@ description: "module Main exposing (..)\nimport Builtin exposing (..)\nimport Li
                 index: 0,
                 region: Region {
                     start: Position {
-                        line: 12,
+                        line: 13,
                         column: 17,
                     },
                     end: Position {
-                        line: 12,
+                        line: 13,
                         column: 38,
                     },
                 },
@@ -34,11 +34,11 @@ description: "module Main exposing (..)\nimport Builtin exposing (..)\nimport Li
                 index: 1,
                 region: Region {
                     start: Position {
-                        line: 12,
+                        line: 13,
                         column: 39,
                     },
                     end: Position {
-                        line: 12,
+                        line: 13,
                         column: 51,
                     },
                 },

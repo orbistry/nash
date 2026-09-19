@@ -9,7 +9,7 @@ use nash_can::{Context, Error, canonicalize};
 macro_rules! assert_kinds_snapshot {
     ($source:expr) => {{
         let bump = Bump::new();
-        let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{}\n", $source));
+        let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\n{}\n", $source));
         let module = nash_parse::Parser::new(&bump, source).module().expect("source parses");
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let result = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect("kind checking succeeds");
@@ -24,7 +24,7 @@ macro_rules! assert_kinds_snapshot {
 macro_rules! assert_kind_error_snapshot {
     ($source:expr, $expected:pat) => {{
         let bump = Bump::new();
-        let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Builtin exposing (..)\n\n{}\n", $source));
+        let source = bump.alloc_str(&format!("module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\n{}\n", $source));
         let module = nash_parse::Parser::new(&bump, source).module().expect("source parses");
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let errors = canonicalize(&bump, Context { package: None, interfaces: Some(&interfaces) }, &module).expect_err("declaration or annotation checking fails");
@@ -49,7 +49,7 @@ fn ground_representation_does_not_bypass_formation_contexts() {
     use nash_region::Located;
     let bump = Bump::new();
     let mut env = nash_can::kinds::KindEnv::default();
-    let home = nash_ast::primitives::builtin_home();
+    let home = nash_ast::primitives::primitive_home();
     let named = |name, args| {
         &*bump.alloc(Located::at_zero(Type::Named {
             reference: QualifiedName { home, name },
@@ -264,7 +264,7 @@ fn named_constructor_arity_remains_a_canonicalization_error() {
     let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
     let source = bump.alloc_str(
-        "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias x = int Int\n",
+        "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias x = int Int\n",
     );
     let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
         .module()
@@ -298,7 +298,7 @@ fn alias_substitution_preserves_application_head_and_argument() {
     }));
     let list = bump.alloc(Located::at_zero(Type::Named {
         reference: nash_ast::QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "list",
         },
         args: &[],
@@ -318,7 +318,7 @@ fn alias_substitution_preserves_application_head_and_argument() {
     let Type::Named { reference, args } = &substituted.value else {
         panic!("known application was not normalized");
     };
-    assert_eq!(reference.home, nash_ast::primitives::builtin_home());
+    assert_eq!(reference.home, nash_ast::primitives::primitive_home());
     assert_eq!(reference.name, "list");
     assert!(std::ptr::eq(args[0], unit));
     insta::with_settings!({omit_expression => true}, {
@@ -348,7 +348,7 @@ fn applied_head_is_a_free_variable() {
 fn annotation_storable_parameter() {
     assert_kinds_snapshot!("f : 'a -> list 'a -> list 'a\nf x xs = xs");
     let bump = Bump::new();
-    let source = "module Main exposing (..)\nimport Builtin exposing (..)\nf : 'a -> list 'a -> list 'a\nf x xs = xs\n";
+    let source = "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nf : 'a -> list 'a -> list 'a\nf x xs = xs\n";
     let module = nash_parse::Parser::new(&bump, source).module().unwrap();
     let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
     let result = canonicalize(
@@ -531,7 +531,7 @@ fn annotation_retains_one_storable_predicate() {
     let a = bump.alloc(nash_region::Located::at_zero(nash_ast::Type::Var("a")));
     let list = bump.alloc(nash_region::Located::at_zero(nash_ast::Type::Named {
         reference: nash_ast::QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "list",
         },
         args: bump.alloc_slice_copy(&[&*a]),

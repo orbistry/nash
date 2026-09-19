@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype apply2 'f ('a : Storable) ('b : Storable) = Apply2 (('f 'a 'b) : Term)\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype apply2 'f ('a : Storable) ('b : Storable) = Apply2 (('f 'a 'b) : Term)\n"
 ---
 (
     [
@@ -27,11 +27,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                     head: Located {
                         region: Region {
                             start: Position {
-                                line: 5,
+                                line: 6,
                                 column: 59,
                             },
                             end: Position {
-                                line: 5,
+                                line: 6,
                                 column: 61,
                             },
                         },
@@ -43,11 +43,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 62,
                                 },
                                 end: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 64,
                                 },
                             },
@@ -58,11 +58,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 65,
                                 },
                                 end: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 67,
                                 },
                             },
@@ -78,10 +78,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Storable",
                     },
@@ -89,11 +89,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 17,
                                 },
                                 end: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 19,
                                 },
                             },
@@ -109,10 +109,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Storable",
                     },
@@ -120,11 +120,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 33,
                                 },
                                 end: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 35,
                                 },
                             },
@@ -140,10 +140,10 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                             package: Some(
                                 PackageName {
                                     author: "nash",
-                                    project: "core",
+                                    project: "base",
                                 },
                             ),
-                            name: "Builtin",
+                            name: "Primitive",
                         },
                         name: "Term",
                     },
@@ -151,11 +151,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                         Located {
                             region: Region {
                                 start: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 59,
                                 },
                                 end: Position {
-                                    line: 5,
+                                    line: 6,
                                     column: 67,
                                 },
                             },
@@ -163,11 +163,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                                 head: Located {
                                     region: Region {
                                         start: Position {
-                                            line: 5,
+                                            line: 6,
                                             column: 59,
                                         },
                                         end: Position {
-                                            line: 5,
+                                            line: 6,
                                             column: 61,
                                         },
                                     },
@@ -179,11 +179,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                                     Located {
                                         region: Region {
                                             start: Position {
-                                                line: 5,
+                                                line: 6,
                                                 column: 62,
                                             },
                                             end: Position {
-                                                line: 5,
+                                                line: 6,
                                                 column: 64,
                                             },
                                         },
@@ -194,11 +194,11 @@ description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype 
                                     Located {
                                         region: Region {
                                             start: Position {
-                                                line: 5,
+                                                line: 6,
                                                 column: 65,
                                             },
                                             end: Position {
-                                                line: 5,
+                                                line: 6,
                                                 column: 67,
                                             },
                                         },

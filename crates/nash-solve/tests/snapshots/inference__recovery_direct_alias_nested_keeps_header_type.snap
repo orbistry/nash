@@ -1,24 +1,24 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nimport Builtin exposing (..)\nf : ((), ()) -> ()\nf (((True as a), (() as b)) as whole) = whole ()\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nf : ((), ()) -> ()\nf (((True as a), (() as b)) as whole) = whole ()\n"
 info: diagnostic
 ---
 nash::type::mismatch
 
   × `whole` is not a function; received 1 argument.
-   ╭─[Main.nash:4:41]
- 3 │ f : ((), ()) -> ()
- 4 │ f (((True as a), (() as b)) as whole) = whole ()
+   ╭─[Main.nash:5:41]
+ 4 │ f : ((), ()) -> ()
+ 5 │ f (((True as a), (() as b)) as whole) = whole ()
    ·                                         ─────
    ╰────
 
 
 nash::type::pattern_mismatch
 
-  × Type mismatch: expected `unit`, found `bool`.
-   ╭─[Main.nash:4:6]
- 3 │ f : ((), ()) -> ()
- 4 │ f (((True as a), (() as b)) as whole) = whole ()
+  × Type mismatch: expected `Primitive.unit`, found `Primitive.bool`.
+   ╭─[Main.nash:5:6]
+ 4 │ f : ((), ()) -> ()
+ 5 │ f (((True as a), (() as b)) as whole) = whole ()
    ·      ──┬──
    ·        ╰── boolean pattern
    ╰────

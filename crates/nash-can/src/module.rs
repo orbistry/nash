@@ -41,6 +41,17 @@ pub fn canonicalize<'a>(
     context: Context<'a, '_>,
     module: &SourceModule<'a>,
 ) -> Result<CanResult<'a>, Vec<Error<'a>>> {
+    let mut interfaces = context.interfaces.cloned().unwrap_or_default();
+    interfaces
+        .entry("Primitive")
+        .or_insert_with(|| kinds::primitive_interface(bump));
+    interfaces
+        .entry("Builtin")
+        .or_insert_with(|| kinds::builtin_interface(bump));
+    let context = Context {
+        package: context.package,
+        interfaces: Some(&interfaces),
+    };
     let name = module
         .name
         .ok_or_else(|| vec![Error::MissingModuleHeader])?;
@@ -111,6 +122,8 @@ pub fn canonicalize<'a>(
     let decls = canonicalize_decls(bump, &env, module.values, &mut warnings)?;
     let mut test_env = env.clone();
     if let Some(tests) = module.tests {
+        let defaults = crate::defaults::test_imports(bump, home, context.interfaces);
+        environment::foreign::add_imports(bump, &mut test_env, context.interfaces, &defaults)?;
         environment::foreign::add_imports(bump, &mut test_env, context.interfaces, tests.imports)?;
         // Local declarations take precedence over imported unqualified names,
         // just as they do when the enclosing module's environment is built.
@@ -1427,7 +1440,7 @@ fn collect_from_pattern<'a>(
             add_if_foreign(
                 home,
                 nash_ast::ModuleName {
-                    package: Some(nash_ast::primitives::CORE),
+                    package: Some(nash_ast::primitives::BASE),
                     name: "Eq",
                 },
                 used,
@@ -1435,7 +1448,7 @@ fn collect_from_pattern<'a>(
         }
         // Only the exact builtin bool type produces this pattern form.
         Bool { .. } => {
-            add_if_foreign(home, nash_ast::primitives::builtin_home(), used);
+            add_if_foreign(home, nash_ast::primitives::primitive_home(), used);
         }
         Constructor(ctor) => {
             add_if_foreign(home, ctor.reference.home, used);
@@ -2428,7 +2441,7 @@ mod tests {
         let bump = Bump::new();
         let module = nash_parse::Parser::new(
             &bump,
-            "module Main exposing (..)\nimport Builtin exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
+            "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nignore flag =\n    case flag of\n        False -> ()\n        True -> ()\n",
         ).module().unwrap();
         let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
         let result = canonicalize(
@@ -4722,7 +4735,7 @@ mod tests {
     #[test]
     fn keyword_children_retain_import_uses_and_local_dependencies() {
         let bump = Bump::new();
-        let source = bump.alloc_str("module Main exposing (..)\nimport Builtin exposing (..)\nf message x = trace message (comptime (addInteger x x))\ncheck = assert True\nstop message = fail message\nlater message = todo message\nrecur x = comptime (recur x)\n");
+        let source = bump.alloc_str("module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nf message x = trace message (comptime (addInteger x x))\ncheck = assert True\nstop message = fail message\nlater message = todo message\nrecur x = comptime (recur x)\n");
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let interfaces = std::collections::BTreeMap::from([(
             "Builtin",
@@ -4887,7 +4900,7 @@ mod tests {
     #[test]
     fn builtin_types_resolve_qualified_without_import() {
         assert_module_snapshot!(
-            "module Main exposing (..)\n\nidentity : Builtin.list Builtin.unit -> list unit\nidentity x = x\n"
+            "module Main exposing (..)\n\nidentity : Primitive.list Primitive.unit -> list unit\nidentity x = x\n"
         );
     }
 
@@ -4916,7 +4929,7 @@ mod tests {
         };
         for typ in [from, to] {
             assert!(
-                matches!(typ.value, nash_ast::Type::Named { reference, args } if reference.home == nash_ast::primitives::builtin_home() && reference.name == "unit" && args.is_empty())
+                matches!(typ.value, nash_ast::Type::Named { reference, args } if reference.home == nash_ast::primitives::primitive_home() && reference.name == "unit" && args.is_empty())
             );
         }
     }

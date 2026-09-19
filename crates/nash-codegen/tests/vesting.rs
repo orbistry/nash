@@ -61,11 +61,11 @@ fn fixture_modules<'a>(arena: &'a Arena, source: &str) -> Vec<SourceModule<'a>> 
     for (source, package) in [
         (
             include_str!("fixtures/VestingLiteral.nash"),
-            Some(primitives::CORE),
+            Some(primitives::BASE),
         ),
         (
             include_str!("fixtures/VestingLift.nash"),
-            Some(primitives::CORE),
+            Some(primitives::BASE),
         ),
         (include_str!("fixtures/VestingTx.nash"), None),
         (source, None),

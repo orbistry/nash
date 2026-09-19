@@ -694,6 +694,9 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         node: NodeId,
         ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
+        if reference.home == primitives::primitive_home() && reference.name == "coerce" {
+            return Ok(self.coerce());
+        }
         if reference.home == primitives::builtin_home() {
             return self.builtin(reference.name);
         }
@@ -781,7 +784,7 @@ fn native_type<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<&'a Located<Type<'a>>
     };
     Ok(arena.alloc(Located::at_zero(Type::Named {
         reference: QualifiedName {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name,
         },
         args: arena.alloc_slice_copy(&children),

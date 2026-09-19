@@ -1,30 +1,36 @@
-//! Compiler-owned types and representation predicates of `nash/core.Builtin`.
+//! Compiler-owned types and representation predicates of `nash/base.Primitive`.
 
 mod builtins;
 pub use builtins::{BUILTINS, Builtin, COERCE};
 
 use crate::{Kind, ModuleName, PackageName, QualifiedName};
 
-pub const CORE: PackageName<'static> = PackageName {
+pub const BASE: PackageName<'static> = PackageName {
     author: "nash",
-    project: "core",
+    project: "base",
 };
 pub const fn builtin_home() -> ModuleName<'static> {
     ModuleName {
-        package: Some(CORE),
+        package: Some(BASE),
         name: "Builtin",
+    }
+}
+pub const fn primitive_home() -> ModuleName<'static> {
+    ModuleName {
+        package: Some(BASE),
+        name: "Primitive",
     }
 }
 pub const fn literal_home() -> ModuleName<'static> {
     ModuleName {
-        package: Some(CORE),
+        package: Some(BASE),
         name: "Literal",
     }
 }
 const fn core_trait(module: &'static str, name: &'static str) -> QualifiedName<'static> {
     QualifiedName {
         home: ModuleName {
-            package: Some(CORE),
+            package: Some(BASE),
             name: module,
         },
         name,
@@ -78,12 +84,12 @@ impl ReprTrait {
     }
     pub const fn qualified(self) -> QualifiedName<'static> {
         QualifiedName {
-            home: builtin_home(),
+            home: primitive_home(),
             name: self.name(),
         }
     }
     pub fn of(name: QualifiedName<'_>) -> Option<Self> {
-        if name.home != builtin_home() {
+        if name.home != primitive_home() {
             return None;
         }
         Self::ALL.into_iter().find(|repr| repr.name() == name.name)

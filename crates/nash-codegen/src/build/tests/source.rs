@@ -1,13 +1,13 @@
-const CORE_MODULES: &[&str] = &[
-    include_str!("../../../../../core/src/Bool.nash"),
-    include_str!("../../../../../core/src/Unit.nash"),
-    include_str!("../../../../../core/src/Ordering.nash"),
-    include_str!("../../../../../core/src/Lift.nash"),
-    include_str!("../../../../../core/src/Functor.nash"),
-    include_str!("../../../../../core/src/Applicative.nash"),
-    include_str!("../../../../../core/src/Monad.nash"),
-    include_str!("../../../../../core/src/Option.nash"),
-    include_str!("../../../../../core/src/Data.nash"),
+const BASE_MODULES: &[&str] = &[
+    include_str!("../../../../nash-driver/base/src/Bool.nash"),
+    include_str!("../../../../nash-driver/base/src/Unit.nash"),
+    include_str!("../../../../nash-driver/base/src/Ordering.nash"),
+    include_str!("../../../../nash-driver/base/src/Lift.nash"),
+    include_str!("../../../../nash-driver/base/src/Functor.nash"),
+    include_str!("../../../../nash-driver/base/src/Applicative.nash"),
+    include_str!("../../../../nash-driver/base/src/Monad.nash"),
+    include_str!("../../../../nash-driver/base/src/Option.nash"),
+    include_str!("../../../../nash-driver/base/src/Data.nash"),
 ];
 
 macro_rules! case {
@@ -22,9 +22,9 @@ macro_rules! case {
     ($name:ident, $source:literal, $expected:expr, $trace:expr) => {
         #[test]
         fn $name() {
-            crate::build::tests::with_core_modules(
+            crate::build::tests::with_base_modules(
                 indoc::indoc!($source),
-                crate::build::tests::source::CORE_MODULES,
+                crate::build::tests::source::BASE_MODULES,
                 |arena, build, root| {
                     let compiled = build
                         .compile(arena, root, None, $trace)
@@ -58,9 +58,9 @@ macro_rules! validator_case {
     ($name:ident, $source:literal) => {
         #[test]
         fn $name() {
-            crate::build::tests::with_core_modules(
+            crate::build::tests::with_base_modules(
                 indoc::indoc!($source),
-                crate::build::tests::source::CORE_MODULES,
+                crate::build::tests::source::BASE_MODULES,
                 |arena, build, root| {
                     let compiled = build
                         .compile(arena, root, None, crate::build::TraceConfig::default())

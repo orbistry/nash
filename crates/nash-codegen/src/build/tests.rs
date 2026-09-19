@@ -65,6 +65,7 @@ fn source_identity_and_strict_local_capture() {
     let evaluation = evaluate(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         identity x = x
         main : unit
@@ -84,6 +85,7 @@ fn source_little_constructor_patterns_and_tuples() {
     let evaluation = evaluate(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type option 'a = None | Some 'a
         unwrap fallback opt =
@@ -101,7 +103,7 @@ fn native_list_root_requires_an_explicit_element_instance() {
     let arena = Arena::new();
     let (module, solved) = fixture(
         &arena,
-        "module Main exposing (..)\nimport Builtin exposing (..)\nmain = []\n",
+        "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain = []\n",
     );
     let build = Build::new([Input {
         module: &module.module,
@@ -118,7 +120,7 @@ fn native_list_root_requires_an_explicit_element_instance() {
     ));
     let unit = arena.alloc(Located::at_zero(Type::Named {
         reference: QualifiedName {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name: "unit",
         },
         args: &[],
@@ -137,32 +139,26 @@ struct Unit<'a> {
     canonical: nash_can::CanResult<'a>,
     solved: SolvedTypes<'a>,
 }
-fn with_core(source: &str, check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedName<'_>)) {
-    with_core_modules(source, &[], check);
+fn with_base(source: &str, check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedName<'_>)) {
+    with_base_modules(source, &[], check);
 }
 
-fn with_core_modules(
+fn with_base_modules(
     source: &str,
     extra_modules: &[&str],
     check: impl FnOnce(&Arena, &Build<'_, '_>, QualifiedName<'_>),
 ) {
     let modules: Vec<_> = [
-        include_str!("../../../../core/src/Literal.nash"),
-        include_str!("../../../../core/src/Eq.nash"),
+        include_str!("../../../nash-driver/base/src/Literal.nash"),
+        include_str!("../../../nash-driver/base/src/Eq.nash"),
     ]
     .into_iter()
     .chain(extra_modules.iter().copied())
-    .map(|source| (source, Some(primitives::CORE)))
+    .map(|source| (source, Some(primitives::BASE)))
     .chain(std::iter::once((source, None)))
     .collect();
     let mut settings = insta::Settings::clone_current();
-    settings.set_description(
-        modules
-            .iter()
-            .map(|(source, _)| *source)
-            .collect::<Vec<_>>()
-            .join("\n"),
-    );
+    settings.set_description(source);
     settings.set_omit_expression(true);
     let _guard = settings.bind_to_scope();
     let arena = Arena::new();
@@ -207,7 +203,7 @@ fn with_core_modules(
 }
 fn core_eval(source: &str) -> crate::harness::Evaluated {
     let mut evaluated = None;
-    with_core(source, |arena, build, root| {
+    with_base(source, |arena, build, root| {
         let compiled = build
             .compile(arena, root, None, TraceConfig::default())
             .unwrap();
@@ -223,6 +219,7 @@ fn native_literal_implementations_and_default_methods_execute() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Eq exposing (..)
         same : int -> int -> bool
@@ -238,6 +235,7 @@ fn literal_patterns_use_the_selected_conversion_and_eq_body() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal exposing (..)
         import Eq exposing (..)
@@ -262,6 +260,7 @@ fn constrained_functions_are_first_class_specializations() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Eq exposing (..)
         pass f x = f x
@@ -273,10 +272,11 @@ fn constrained_functions_are_first_class_specializations() {
 
 #[test]
 fn trait_free_polymorphic_recursion_reuses_the_opaque_body() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type option 'a = None | Some 'a
         plain : 'a -> unit
@@ -306,6 +306,7 @@ fn aggregate_destructuring_preserves_generalized_components() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         main =
             let
@@ -323,6 +324,7 @@ fn local_recursive_closure_keeps_its_capture() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         run captured =
             let
@@ -369,7 +371,7 @@ fn unused_polymorphic_bottom_is_still_strict() {
 
 #[test]
 fn comptime_rejects_runtime_captures() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
@@ -392,10 +394,11 @@ fn comptime_rejects_runtime_captures() {
 
 #[test]
 fn source_recursive_static_arguments_are_marked() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         repeat : int -> int -> int
         repeat item n = if Builtin.equalsInteger n 0 then item else repeat item (Builtin.subtractInteger n 1)
@@ -427,6 +430,7 @@ fn generic_impl_context_default_and_superclass_evidence_are_closed() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Eq exposing (..)
         trait Eq 'a => Same 'a where
@@ -447,6 +451,7 @@ fn implementation_method_only_type_variables_match_by_type() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         trait Keep 'a where
             keep : 'a -> 'b -> 'b
@@ -463,6 +468,7 @@ fn record_wire_order_access_update_and_accessor_execute() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type alias person = { age : int, active : bool }
         read : person -> int
@@ -481,6 +487,7 @@ fn big_record_and_labeled_constructor_keep_distinct_layouts() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Eq exposing (..)
         type alias Record = { owner : Bytes, count : Int }
@@ -497,10 +504,11 @@ fn big_record_and_labeled_constructor_keep_distinct_layouts() {
 
 #[test]
 fn all_trace_configs_keep_compiler_and_user_messages_independent() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         main : unit
         main = trace "hello" (assert False)
@@ -537,7 +545,7 @@ fn all_trace_configs_keep_compiler_and_user_messages_independent() {
 
 #[test]
 fn repeated_trace_strings_are_hoisted_once() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
@@ -576,13 +584,14 @@ fn comptime_evaluates_arithmetic_and_rejects_nonconstants() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         main : int
         main = comptime (Builtin.addInteger 20 22)
     "#
     ));
     assert_eq!(result.result, "(con integer 42)");
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
@@ -604,6 +613,7 @@ fn recursive_function_rhs_preserves_strict_captures_once() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         loop : bool -> unit
         loop =
@@ -620,10 +630,11 @@ fn recursive_function_rhs_preserves_strict_captures_once() {
 
 #[test]
 fn growing_native_layouts_stop_at_an_explicit_resource_limit() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         grow : list 'a -> unit
         grow xs = grow [xs]
@@ -641,10 +652,11 @@ fn growing_native_layouts_stop_at_an_explicit_resource_limit() {
 
 #[test]
 fn empty_lists_key_the_native_element_layout_and_erase_big_nominal_names() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         empty _ = []
         ints : unit -> list int
@@ -680,10 +692,11 @@ fn empty_lists_key_the_native_element_layout_and_erase_big_nominal_names() {
 
 #[test]
 fn source_trait_specialization_core() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Eq exposing (..)
         main = neq () ()
@@ -706,6 +719,7 @@ fn source_identity_accepts_a_function_and_overapplication() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         identity value = value
         main : int
@@ -720,6 +734,7 @@ fn transparent_alias_method_variables_are_matched_after_expansion() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type alias identity 'b = 'b
         trait Keep 'a where
@@ -737,6 +752,7 @@ fn method_context_follows_the_renamed_method_only_variable() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Eq exposing (..)
         trait Keep 'a where
@@ -754,6 +770,7 @@ fn captured_generic_evidence_is_local_to_each_outer_specialization() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         import Eq exposing (..)
         outer : Eq 'a => 'a -> bool
@@ -773,6 +790,7 @@ fn polymorphic_constants_evaluate_once_per_requested_evidence() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         value = trace "instance" 42
         small : int
@@ -790,6 +808,7 @@ fn generalized_destructuring_evaluates_its_aggregate_once() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         main =
             let
@@ -806,6 +825,7 @@ fn separate_lexical_helpers_with_the_same_name_do_not_collide() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         first x =
             let
@@ -826,10 +846,11 @@ fn separate_lexical_helpers_with_the_same_name_do_not_collide() {
 
 #[test]
 fn shared_identity_binders_erase_the_first_instance_type() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         ident x = x
         main : (int, bytes)
@@ -864,6 +885,7 @@ fn higher_kinded_default_method_accepts_a_nominal_record_alias() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type alias box 'a = { value : 'a }
         trait Pass 'f where
@@ -885,6 +907,7 @@ fn source_data_encoding_preserves_nominal_constructors() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type First = First
         type Second = Second
@@ -907,6 +930,7 @@ fn conditional_recursive_function_initializes_only_the_selected_branch_once() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         loop : bool -> unit
         loop =
@@ -926,6 +950,7 @@ fn case_recursive_function_retains_branch_captures() {
     let result = core_eval(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type choice = First unit | Second
         loop : bool -> unit
@@ -942,10 +967,11 @@ fn case_recursive_function_retains_branch_captures() {
 
 #[test]
 fn repeated_big_record_fields_share_the_list_decoder() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type alias Record = { first : Int, second : Int }
         main : Record -> (Int, Int)
@@ -964,10 +990,11 @@ fn repeated_big_record_fields_share_the_list_decoder() {
 
 #[test]
 fn big_constructor_pattern_and_access_share_the_constructor_decoder() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type Datum = Datum { owner : Bytes, deadline : Int }
         main : Datum -> (Bytes, Int)
@@ -991,10 +1018,11 @@ fn big_constructor_pattern_and_access_share_the_constructor_decoder() {
 
 #[test]
 fn accessor_sharing_retains_trace_before_a_malformed_record_failure() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type alias Record = { first : Int, second : Int }
         main : Record -> (unit, Int)
@@ -1019,10 +1047,11 @@ fn accessor_sharing_retains_trace_before_a_malformed_record_failure() {
 
 #[test]
 fn accessor_sharing_keeps_unselected_branch_decoding_lazy() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         type alias Record = { first : Int, second : Int }
         main : Record -> unit
@@ -1051,7 +1080,7 @@ macro_rules! source_codegen_snapshot {
     ($name:ident, $source:literal, $expected:literal) => {
         #[test]
         fn $name() {
-            with_core(indoc::indoc!($source), |arena, build, root| {
+            with_base(indoc::indoc!($source), |arena, build, root| {
                 let compiled = build
                     .compile(arena, root, None, TraceConfig::default())
                     .unwrap();
@@ -1076,6 +1105,7 @@ source_codegen_snapshot!(
     source_let_application,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : int
     main =
@@ -1091,6 +1121,7 @@ source_codegen_snapshot!(
     source_lazy_boolean_branch,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : int
     main = if True then 42 else fail
@@ -1102,6 +1133,7 @@ source_codegen_snapshot!(
     source_reachable_binding_chain,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     x : int
     x = 40
@@ -1119,6 +1151,7 @@ source_codegen_snapshot!(
     source_static_second_parameter,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     count : int -> int -> int
     count n step =
@@ -1134,6 +1167,7 @@ source_codegen_snapshot!(
     source_shared_default_leaf,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     main : bool
     main =
@@ -1146,7 +1180,7 @@ source_codegen_snapshot!(
 
 #[test]
 fn source_trace_precedes_failure() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
@@ -1168,10 +1202,11 @@ fn source_trace_precedes_failure() {
 
 #[test]
 fn native_case_branches_evaluate_scrutinee_once_and_remain_lazy() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         choose : bool -> int
         choose flag =
@@ -1198,10 +1233,11 @@ fn native_case_branches_evaluate_scrutinee_once_and_remain_lazy() {
 
 #[test]
 fn native_case_dispatches_lists_data_and_sparse_literals() {
-    with_core(
+    with_base(
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         first : list int -> int
         first xs =

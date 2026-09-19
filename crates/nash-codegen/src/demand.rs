@@ -16,7 +16,7 @@ mod tests {
         let args = [&a];
         let list = Located::at_zero(Type::Named {
             reference: QualifiedName {
-                home: primitives::builtin_home(),
+                home: primitives::primitive_home(),
                 name: "list",
             },
             args: &args,
@@ -216,7 +216,7 @@ fn variables<'a>(typ: &'a Located<Type<'a>>, out: &mut BTreeSet<&'a str>) {
             out.insert(name);
         }
         Type::Named { reference, args }
-            if reference.home == primitives::builtin_home()
+            if reference.home == primitives::primitive_home()
                 && matches!(reference.name, "list" | "pair" | "array") =>
         {
             for t in *args {
@@ -633,7 +633,7 @@ mod graph_tests {
         let e = expr(b, Expr::List(&[]));
         s.exprs.insert(
             NodeId::expr(e),
-            named(b, primitives::builtin_home(), "list", var(b, element)),
+            named(b, primitives::primitive_home(), "list", var(b, element)),
         );
         e
     }
@@ -655,7 +655,7 @@ mod graph_tests {
         let nil = expr(&b, Expr::List(&[]));
         s.exprs.insert(
             NodeId::expr(nil),
-            named(&b, primitives::builtin_home(), "list", var(&b, "element")),
+            named(&b, primitives::primitive_home(), "list", var(&b, "element")),
         );
         let helper = def(&b, &mut s, "helper", &["element"], nil);
         let call = expr(&b, Expr::VarLocal("helper"));
@@ -663,7 +663,7 @@ mod graph_tests {
             &b,
             &mut s,
             call,
-            named(&b, primitives::builtin_home(), "pair", var(&b, "caller")),
+            named(&b, primitives::primitive_home(), "pair", var(&b, "caller")),
         );
         let caller = def(&b, &mut s, "caller", &["caller"], call);
         let opaque = expr(&b, Expr::VarLocal("caller"));
@@ -715,7 +715,7 @@ mod graph_tests {
         let call = expr(
             &b,
             Expr::VarTopLevel(QualifiedName {
-                home: primitives::builtin_home(),
+                home: primitives::primitive_home(),
                 name: "headList",
             }),
         );

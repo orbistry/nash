@@ -83,7 +83,7 @@ pub fn build_validators_matching_with(
         // Data; ordinary program roots still require an explicit instance.
         let data = arena.alloc(nash_region::Located::at_zero(nash_ast::Type::Named {
             reference: QualifiedName {
-                home: nash_ast::primitives::builtin_home(),
+                home: nash_ast::primitives::primitive_home(),
                 name: "Data",
             },
             args: &[],

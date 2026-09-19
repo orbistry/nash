@@ -69,7 +69,7 @@ impl<'a> Solver<'a, '_> {
                     uf,
                     rank,
                     Content::Structure(FlatType::App1(
-                        nash_ast::primitives::builtin_home(),
+                        nash_ast::primitives::primitive_home(),
                         name,
                         Vec::new(),
                     )),
@@ -170,7 +170,7 @@ impl<'a> Solver<'a, '_> {
                     uf,
                     rank,
                     Content::Structure(FlatType::App1(
-                        nash_ast::primitives::builtin_home(),
+                        nash_ast::primitives::primitive_home(),
                         "list",
                         vec![entry],
                     )),
@@ -195,7 +195,7 @@ impl<'a> Solver<'a, '_> {
                     uf,
                     rank,
                     Content::Structure(FlatType::App1(
-                        nash_ast::primitives::builtin_home(),
+                        nash_ast::primitives::primitive_home(),
                         "list",
                         vec![entry],
                     )),
@@ -215,7 +215,7 @@ impl<'a> Solver<'a, '_> {
                 let list = self.structure(
                     uf,
                     rank,
-                    FlatType::App1(nash_ast::primitives::builtin_home(), "list", vec![entry]),
+                    FlatType::App1(nash_ast::primitives::primitive_home(), "list", vec![entry]),
                 );
                 self.infer_pattern(
                     uf,

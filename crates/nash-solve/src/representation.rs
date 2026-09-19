@@ -191,7 +191,7 @@ mod tests {
         let mut allocated = Vec::new();
         assert_eq!(known(&mut uf, &env, partial, &mut allocated), None);
         let int = uf.fresh(make_descriptor(Content::Structure(FlatType::App1(
-            nash_ast::primitives::builtin_home(),
+            nash_ast::primitives::primitive_home(),
             "int",
             vec![],
         ))));

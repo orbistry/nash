@@ -304,7 +304,7 @@ impl<'a> Engine<'a, '_, '_> {
         let Ty::Term(TermTy::Adt(adt)) = ty else {
             return Err(E::RuntimeLayout(ty));
         };
-        if adt.name.home.package != Some(primitives::CORE)
+        if adt.name.home.package != Some(primitives::BASE)
             || adt.name.home.name != "Fuzz"
             || adt.name.name != "fuzzer"
         {

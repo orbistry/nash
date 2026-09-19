@@ -62,7 +62,7 @@ static LIST_A: Located<Type<'static>> = Located::at(
     Region::zero(),
     Type::Named {
         reference: QualifiedName {
-            home: nash_ast::primitives::builtin_home(),
+            home: nash_ast::primitives::primitive_home(),
             name: "list",
         },
         args: &[&VAR_A],

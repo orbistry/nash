@@ -13,6 +13,6 @@ nash::type::mismatch
    ╰────
   help: Did you mean `name`?
 
-        Available fields: { name : string
-        , age : int
+        Available fields: { name : Primitive.string
+        , age : Primitive.int
         }

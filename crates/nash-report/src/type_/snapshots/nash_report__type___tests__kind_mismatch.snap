@@ -1,16 +1,16 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-description: "module Main exposing (..)\nf : 'f Builtin.int -> 'f\nf x = x\n"
+description: "module Main exposing (..)\nf : 'f Primitive.int -> 'f\nf x = x\n"
 ---
 nash::type::bad_kind
 
   × Kind mismatch in `f`: expected `Type -> Type`, found `Type`.
    ╭─[Main.nash:2:5]
  1 │ module Main exposing (..)
- 2 │ f : 'f Builtin.int -> 'f
-   ·     ──────────────
+ 2 │ f : 'f Primitive.int -> 'f
+   ·     ────────────────
  3 │ f x = x
    ╰────
-  help: Type arguments: int
+  help: Type arguments: Primitive.int
 
         Check type-constructor arguments and the annotation's quantified kinds.

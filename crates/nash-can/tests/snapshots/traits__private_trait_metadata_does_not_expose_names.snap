@@ -25,6 +25,6 @@ nash::names::not_found_var
   help: Similar names:
 
             Identity.keep
-            keep
-            f
-            x
+            Builtin.iData
+            Builtin.bData
+            Builtin.trace

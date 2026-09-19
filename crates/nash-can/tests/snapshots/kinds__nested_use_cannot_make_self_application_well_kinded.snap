@@ -1,16 +1,16 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (self (self tag))\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype self 'f = Self ('f 'f)\ntype tag 'a = Tag unit\ntype w = W (self (self tag))\n"
 info: diagnostic
 ---
 nash::names::kind_infinite
 
   × This application in field 1 of little constructor `Self` in `self` would require
   │ an infinite kind:
-   ╭─[src/Main.nash:5:25]
- 4 │ 
- 5 │ type self 'f = Self ('f 'f)
+   ╭─[src/Main.nash:6:25]
+ 5 │ 
+ 6 │ type self 'f = Self ('f 'f)
    ·                         ──
- 6 │ type tag 'a = Tag unit
+ 7 │ type tag 'a = Tag unit
    ╰────
   help: Check the type application and the kinds of its arguments.

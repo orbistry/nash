@@ -137,6 +137,12 @@ impl Project {
             if !seen.insert((root.clone(), include_tests)) {
                 continue;
             }
+            if matches!(&config, Config::Package(pkg) if pkg.name.to_string() == "nash/base") {
+                return Err(DriverError::Dependency {
+                    package: "nash/base".into(),
+                    message: "this package name is reserved for the compiler-bundled Base".into(),
+                });
+            }
             let (normal, testing) = match &config {
                 Config::Application(app) => (&app.dependencies, &app.test_dependencies),
                 Config::Package(pkg) => (&pkg.dependencies, &pkg.test_dependencies),
@@ -146,6 +152,13 @@ impl Project {
                 .iter()
                 .chain(testing.iter().filter(|_| include_tests))
             {
+                if name.to_string() == "nash/base" {
+                    return Err(DriverError::Dependency {
+                        package: name.to_string(),
+                        message: "Base ships with the compiler; remove this explicit dependency"
+                            .into(),
+                    });
+                }
                 let (dependency, base) = match dependency {
                     nash_config::Dependency::Source(nash_config::DependencySource::Workspace(
                         _,
@@ -234,6 +247,7 @@ impl Project {
                 }
             }
         }
+        modules.extend(crate::bundled_base::modules());
         Ok(modules)
     }
 
@@ -360,7 +374,7 @@ mod tests {
     async fn workspace_literal_defaults_use_discovered_package_ownership() {
         let core = nash_config::parse(
             r#"{
-            "type": "package", "name": "nash/core", "version": "1.0.0",
+            "type": "package", "name": "nash/base", "version": "1.0.0",
             "summary": "Core", "license": "MIT", "exposedModules": ["Literal"]
         }"#,
             "/work/core/nash.jsonc",
@@ -387,6 +401,7 @@ mod tests {
             indoc::indoc!(
                 r#"
             module Literal exposing (..)
+            import Primitive exposing (..)
             import Builtin exposing (..)
             trait FromInt 'a where
                 fromInt : int -> 'a
@@ -401,6 +416,7 @@ mod tests {
             indoc::indoc!(
                 r#"
             module Main exposing (..)
+            import Primitive exposing (..)
             import Builtin exposing (..)
             import Literal exposing (fromInt)
             trait Drop 'a where
@@ -417,9 +433,12 @@ mod tests {
         project
             .members
             .push(make_member(Path::new("/work/core"), core));
-        let mut modules = project.discover_modules(&*db.lock().await).await.unwrap();
+        let mut modules = project
+            .discover_own_modules(&*db.lock().await)
+            .await
+            .unwrap();
         assert_eq!(modules.len(), 2);
-        assert_eq!(modules[&literal].as_ref().unwrap().to_string(), "nash/core");
+        assert_eq!(modules[&literal].as_ref().unwrap().to_string(), "nash/base");
         assert_eq!(modules[&main], None);
         let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
             .await
@@ -441,7 +460,9 @@ mod tests {
         project
             .members
             .push(make_member(Path::new("/work/app"), overlap));
-        assert!(matches!(project.discover_modules(&*db.lock().await).await,
-            Err(DriverError::ConflictingModuleOwners { uri, .. }) if *uri == literal));
+        assert!(
+            matches!(project.discover_own_modules(&*db.lock().await).await,
+            Err(DriverError::ConflictingModuleOwners { uri, .. }) if *uri == literal)
+        );
     }
 }

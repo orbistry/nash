@@ -1,15 +1,15 @@
 ---
 source: crates/nash-report/src/pattern.rs
-description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (Data(..))\ntag d =\n    case d of\n        Constr _ _ -> ()\n        List _ -> ()\n"
+description: "Code:\n\nmodule Main exposing (..)\nimport Primitive exposing (Data(..))\nimport Builtin\ntag d =\n    case d of\n        Constr _ _ -> ()\n        List _ -> ()\n"
 ---
 nash::pattern::incomplete
 
   × Case expression is not exhaustive.
-   ╭─[src/Main.nash:4:5]
- 3 │     tag d =
- 4 │ ╭─▶     case d of
- 5 │ │           Constr _ _ -> ()
- 6 │ ╰─▶         List _ -> ()
+   ╭─[src/Main.nash:5:5]
+ 4 │     tag d =
+ 5 │ ╭─▶     case d of
+ 6 │ │           Constr _ _ -> ()
+ 7 │ ╰─▶         List _ -> ()
    ╰────
   help: Missing patterns:
 

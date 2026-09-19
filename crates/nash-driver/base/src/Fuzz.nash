@@ -1,0 +1,145 @@
+module Fuzz exposing (Prng(..), type fuzzer(..), run, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, map, bind)
+
+import Builtin
+
+import Prelude exposing (..)
+import Primitive exposing (type bool(..))
+import Literal
+import Num exposing (Num)
+import Option exposing (type option(..))
+import Functor exposing (Functor)
+import Applicative exposing (Applicative)
+import Monad exposing (Monad)
+import Cons exposing (type cons(..))
+
+type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
+type fuzzer 'a = Fuzzer (Prng -> option (Prng, 'a))
+
+run : fuzzer 'a -> Prng -> option (Prng, 'a)
+run (Fuzzer f) = f
+
+-- The runner stores each primitive choice in a u64.
+choice : int -> fuzzer int
+choice bound =
+    if bound < 0 || bound > 18446744073709551615 then
+        (fail "Fuzz.choice bound must be in 0..18446744073709551615")
+    else
+        Fuzzer (\prng ->
+            case prng of
+                Seeded seed choices ->
+                    let
+                        seed2 = Builtin.blake2b_256 (Builtin.unBData seed)
+                        n = Builtin.byteStringToInteger True seed2 % (bound + 1)
+                    in
+                    Some (Seeded (Builtin.bData seed2) (wrapChoices (Builtin.mkCons (Builtin.iData n) (unwrapChoices choices))), n)
+                Replayed remaining choices ->
+                    let
+                        count = Builtin.unIData remaining
+                        rest = unwrapChoices choices
+                    in
+                    if count <= 0 then None
+                    else
+                        case rest of
+                            [] -> None
+                            c :: cs ->
+                                let n = Builtin.unIData c in
+                                if n < 0 || n > bound then None
+                                else Some (Replayed (Builtin.iData (count - 1)) (wrapChoices cs), n))
+
+map : ('a -> 'b) -> fuzzer 'a -> fuzzer 'b
+map f (Fuzzer g) =
+    Fuzzer (\prng ->
+        case g prng of
+            None -> None
+            Some (p, a) -> Some (p, f a))
+
+bind : fuzzer 'a -> ('a -> fuzzer 'b) -> fuzzer 'b
+bind (Fuzzer g) k =
+    Fuzzer (\prng ->
+        case g prng of
+            None -> None
+            Some (p, a) -> run (k a) p)
+
+impl Functor fuzzer where
+    map = mapFuzzer
+
+mapFuzzer : ('a -> 'b) -> fuzzer 'a -> fuzzer 'b
+mapFuzzer = map
+
+impl Applicative fuzzer where
+    pure = constant
+    apply ff fa = bind ff (\f -> map f fa)
+
+impl Monad fuzzer where
+    bind = bindFuzzer
+
+bindFuzzer : fuzzer 'a -> ('a -> fuzzer 'b) -> fuzzer 'b
+bindFuzzer = bind
+
+constant : 'a -> fuzzer 'a
+constant a = Fuzzer (\prng -> Some (prng, a))
+
+intBetween : int -> int -> fuzzer int
+intBetween lo hi =
+    if hi < lo then (fail "Fuzz.intBetween has reversed bounds")
+    else if hi == lo then constant lo
+    else map (\n -> lo + n) (choice (hi - lo))
+
+-- Signed 64-bit values, with small-width draws favored.
+int : fuzzer int
+int =
+    bind (choice 2) (\width ->
+        case width of
+            0 -> choice 255
+            1 -> intBetween -32768 32767
+            _ -> intBetween -9223372036854775808 9223372036854775807)
+
+listOf : fuzzer 'a -> fuzzer (list 'a)
+listOf = listBetween 0 20
+
+listBetween : int -> int -> fuzzer 'a -> fuzzer (list 'a)
+listBetween lo hi item =
+    if lo < 0 || hi < lo then (fail "Fuzz.listBetween has invalid bounds")
+    else listFrom 0 lo hi item
+
+listFrom : int -> int -> int -> fuzzer 'a -> fuzzer (list 'a)
+listFrom n lo hi item =
+    if n >= hi then constant []
+    else if n < lo then listMore n lo hi item
+    else bind (choice 1) (\continue ->
+        if continue == 0 then constant [] else listMore n lo hi item)
+
+listMore : int -> int -> int -> fuzzer 'a -> fuzzer (list 'a)
+listMore n lo hi item =
+    bind item (\x -> map (\xs -> Builtin.mkCons x xs) (listFrom (n + 1) lo hi item))
+
+tuple2 : fuzzer 'a -> fuzzer 'b -> fuzzer ('a, 'b)
+tuple2 first second = bind first (\a -> map (\b -> (a, b)) second)
+
+-- Fuzzers contain functions, so use the Term-representation Cons list.
+oneOf : cons (fuzzer 'a) -> fuzzer 'a
+oneOf generators =
+    case generators of
+        Nil -> (fail "Fuzz.oneOf requires a generator")
+        Cons _ _ -> bind (choice (Cons.length generators - 1)) (\n -> pick n generators)
+
+pick : int -> cons (fuzzer 'a) -> fuzzer 'a
+pick index generators =
+    case generators of
+        Nil -> (fail "Fuzz.oneOf index out of range")
+        Cons first rest -> if index == 0 then first else pick (index - 1) rest
+
+bytes : fuzzer bytes
+bytes = map packBytes (listBetween 0 32 (choice 255))
+
+packBytes : list int -> bytes
+packBytes values =
+    case values of
+        [] -> #""
+        x :: xs -> Builtin.consByteString x (packBytes xs)
+
+wrapChoices : list Int -> List Int
+wrapChoices = Builtin.listData
+
+unwrapChoices : List Int -> list Int
+unwrapChoices = Builtin.unListData

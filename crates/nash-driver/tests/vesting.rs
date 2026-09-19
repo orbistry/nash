@@ -1,4 +1,4 @@
-//! Execute serialized validator artifacts built from the real core workspace.
+//! Execute serialized validator artifacts built from the bundled Base.
 use std::{path::Path, sync::Arc};
 
 use nash_driver::{
@@ -8,7 +8,7 @@ use nash_plutus::{arena::Arena, data::PlutusData, flat, syn, term::Term};
 use tokio::sync::Mutex;
 
 #[tokio::test]
-async fn real_core_vesting_artifacts_execute_all_ledger_cases() {
+async fn bundled_base_vesting_artifacts_execute_all_ledger_cases() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/vesting");
     let project = Project::load(root)
         .await
@@ -17,16 +17,16 @@ async fn real_core_vesting_artifacts_execute_all_ledger_cases() {
     let origins = project
         .discover_modules(&*db.lock().await)
         .await
-        .expect("discover core and app sources");
+        .expect("discover Base and app sources");
     for module in ["Lift", "Literal"] {
         assert!(
             origins.iter().any(|(uri, owner)| {
-                uri.path().ends_with(&format!("/core/src/{module}.nash"))
+                *uri == nash_driver::bundled_base::uri(module)
                     && owner
                         .as_ref()
-                        .is_some_and(|owner| owner.to_string() == "nash/core")
+                        .is_some_and(|owner| owner.to_string() == "nash/base")
             }),
-            "{module} must come from the actual nash/core package"
+            "{module} must come from the actual nash/base package"
         );
     }
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())

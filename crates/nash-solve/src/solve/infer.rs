@@ -689,7 +689,7 @@ impl<'a> Solver<'a, '_> {
                     let unit = self.structure(
                         uf,
                         young,
-                        FlatType::App1(nash_ast::primitives::builtin_home(), "unit", vec![]),
+                        FlatType::App1(nash_ast::primitives::primitive_home(), "unit", vec![]),
                     );
                     let definition = Definition {
                         site: binder,
@@ -706,7 +706,7 @@ impl<'a> Solver<'a, '_> {
                             young,
                             FlatType::App1(
                                 nash_ast::ModuleName {
-                                    package: Some(nash_ast::primitives::CORE),
+                                    package: Some(nash_ast::primitives::BASE),
                                     name: "Fuzz",
                                 },
                                 "fuzzer",
@@ -1143,7 +1143,7 @@ mod preparation_tests {
             let expression_predicate = &solver.predicates.get(use_.predicates[0]).body;
             let trait_ = expression_predicate.trait_ref().unwrap();
             assert_eq!(trait_.name, trait_name);
-            assert_eq!(trait_.home.package, Some(nash_ast::primitives::CORE));
+            assert_eq!(trait_.home.package, Some(nash_ast::primitives::BASE));
             let value = solver.fresh(&mut uf, 2);
             let mut headers = BTreeMap::new();
             let state = solver.infer_pattern(

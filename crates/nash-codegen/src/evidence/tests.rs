@@ -9,7 +9,7 @@ fn named<'a>(
 ) -> &'a Located<Type<'a>> {
     arena.alloc(Located::at_zero(Type::Named {
         reference: QualifiedName {
-            home: primitives::builtin_home(),
+            home: primitives::primitive_home(),
             name,
         },
         args,
@@ -21,6 +21,7 @@ fn fixture(arena: &Arena) -> Tables<'_> {
     let source = bump.alloc_str(indoc::indoc!(
         r#"
         module Main exposing (..)
+        import Primitive exposing (..)
         import Builtin exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a

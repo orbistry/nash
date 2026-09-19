@@ -4,7 +4,8 @@ description: "module Main exposing (..)\nvalues = [\\x -> x + 1]\n"
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Storable (int -> int)`.
+  × Unsatisfied representation constraint `Primitive.Storable (Primitive.int
+  │                                                            -> Primitive.int)`.
    ╭─[Main.nash:2:10]
  1 │ module Main exposing (..)
  2 │ values = [\x -> x + 1]
@@ -13,6 +14,6 @@ nash::type::missing_impl
    ╰────
   help: Requirement chain:
 
-            forming list (int -> int)
+            forming Primitive.list (Primitive.int -> Primitive.int)
 
         Use a type with Big or Const representation; an impl cannot change representation.

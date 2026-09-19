@@ -1,5 +1,6 @@
 module Cardano.Tx exposing (currentSlot, signedBy)
 
+import Primitive exposing (..)
 import Builtin exposing (..)
 import Lift exposing (lower)
 

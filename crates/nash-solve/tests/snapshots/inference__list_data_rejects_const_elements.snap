@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Big unit`.
+  × Unsatisfied representation constraint `Primitive.Big unit`.
    ╭─[Main.nash:3:11]
  2 │ import Builtin
  3 │ badList = Builtin.listData [()]
@@ -21,7 +21,7 @@ nash::type::missing_impl
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Builtin.Big unit`.
+  × Unsatisfied representation constraint `Primitive.Big unit`.
    ╭─[Main.nash:3:11]
  2 │ import Builtin
  3 │ badList = Builtin.listData [()]

@@ -16,7 +16,7 @@ orphan: nash::names::orphan_impl
 overlap: nash::names::overlapping_impls
 
   × These `Bad.Keep` impls can both match the same trait arguments. The overlapping
-  │ head is Builtin.unit:
+  │ head is Primitive.unit:
    ╭─[/Bad.nash:6:1]
  3 │         keep : 'a -> 'a
  4 │ ╭─▶ impl Keep () where

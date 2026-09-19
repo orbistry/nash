@@ -2,6 +2,7 @@ case!(
     acceptance_test_19_map_none_wrap_int,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -27,6 +28,7 @@ case!(
     acceptance_test_19_map_wrap_void,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -52,6 +54,7 @@ case!(
     acceptance_test_20_map_some,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -75,6 +78,7 @@ case!(
     acceptance_test_22_filter_map,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -106,6 +110,7 @@ case!(
     acceptance_test_24_map_pair,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     import Literal exposing (..)
@@ -133,6 +138,7 @@ case!(
     acceptance_test_24_map2,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -159,6 +165,7 @@ case!(
     acceptance_test_25_void_equal,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -171,6 +178,7 @@ case!(
     acceptance_test_26_foldr,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -192,6 +200,7 @@ case!(
     acceptance_test_27_flat_map,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -213,6 +222,7 @@ case!(
     acceptance_test_28_unique_empty_list,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -237,6 +247,7 @@ case!(
     acceptance_test_28_unique_list,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -259,6 +270,7 @@ case!(
     acceptance_test_23_to_list,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     import Literal exposing (..)
@@ -291,6 +303,7 @@ case!(
     acceptance_test_29_union_pair,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Data exposing (toData)
     import Literal exposing (..)
@@ -335,6 +348,7 @@ case!(
     acceptance_test_29_union_tuple,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)
@@ -380,6 +394,7 @@ case!(
     acceptance_test_30_abs,
     r#"
     module Main exposing (..)
+    import Primitive exposing (..)
     import Builtin exposing (..)
     import Literal exposing (..)
     import Eq exposing (..)

@@ -1,10 +1,11 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-description: "module Main exposing (..)\nf : Builtin.string -> Builtin.string\nf x = x\nvalue = 1 |> f\n"
+description: "module Main exposing (..)\nf : Primitive.string -> Primitive.string\nf x = x\nvalue = 1 |> f\n"
 ---
 nash::type::mismatch
 
-  × Type mismatch: expected `int -> string`, found `string -> string`.
+  × Type mismatch: expected `Primitive.int -> Primitive.string`,
+  │ found `Primitive.string -> Primitive.string`.
    ╭─[Main.nash:4:14]
  3 │ f x = x
  4 │ value = 1 |> f

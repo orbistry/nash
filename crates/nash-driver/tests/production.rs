@@ -135,7 +135,8 @@ async fn check_rejects_non_unit_test_body() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
-        import Builtin exposing (type bool(..))
+        import Primitive exposing (type bool(..))
+        import Builtin
         tests
             test "must return unit" = do
                 True

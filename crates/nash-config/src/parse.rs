@@ -508,7 +508,7 @@ mod tests {
             {
                 "type": "application",
                 "dependencies": {
-                    "nash/core": "1.0.0 <= v < 2.0.0"
+                    "nash/base": "1.0.0 <= v < 2.0.0"
                 }
             }
         "#};
@@ -519,7 +519,7 @@ mod tests {
             Config::Application(app) => {
                 assert_eq!(app.source_directories, vec!["src"]);
                 assert_eq!(app.dependencies.len(), 1);
-                let dep = app.dependencies.get(&"nash/core".parse().unwrap()).unwrap();
+                let dep = app.dependencies.get(&"nash/base".parse().unwrap()).unwrap();
                 assert_eq!(dep.as_constraint(), Some("1.0.0 <= v < 2.0.0"));
             }
             _ => panic!("expected application config"),
@@ -532,7 +532,7 @@ mod tests {
             {
                 "type": "application",
                 "dependencies": {
-                    "nash/core": { "workspace": true }
+                    "nash/base": { "workspace": true }
                 }
             }
         "#};
@@ -541,7 +541,7 @@ mod tests {
 
         match config {
             Config::Application(app) => {
-                let dep = app.dependencies.get(&"nash/core".parse().unwrap()).unwrap();
+                let dep = app.dependencies.get(&"nash/base".parse().unwrap()).unwrap();
                 assert!(dep.is_workspace());
             }
             _ => panic!("expected application config"),
@@ -608,7 +608,7 @@ mod tests {
                 "type": "workspace",
                 "members": ["packages/*", "apps/my-app"],
                 "dependencies": {
-                    "nash/core": "1.0.0 <= v < 2.0.0",
+                    "nash/base": "1.0.0 <= v < 2.0.0",
                     "alice/json": { "path": "../json" }
                 }
             }
@@ -620,7 +620,7 @@ mod tests {
             Config::Workspace(ws) => {
                 assert_eq!(ws.members, vec!["packages/*", "apps/my-app"]);
                 assert_eq!(ws.dependencies.len(), 2);
-                let dep = ws.dependencies.get(&"nash/core".parse().unwrap()).unwrap();
+                let dep = ws.dependencies.get(&"nash/base".parse().unwrap()).unwrap();
                 assert_eq!(dep.as_constraint(), Some("1.0.0 <= v < 2.0.0"));
                 let json_dep = ws.dependencies.get(&"alice/json".parse().unwrap()).unwrap();
                 assert!(json_dep.is_path());
@@ -636,7 +636,7 @@ mod tests {
                 "type": "workspace",
                 "members": ["packages/*"],
                 "dependencies": {
-                    "nash/core": { "workspace": true }
+                    "nash/base": { "workspace": true }
                 }
             }
         "#};
@@ -658,7 +658,7 @@ mod tests {
                 "license": "MIT",
                 "exposedModules": ["Json", "Json.Decode", "Json.Encode"],
                 "dependencies": {
-                    "nash/core": "1.0.0 <= v < 2.0.0"
+                    "nash/base": "1.0.0 <= v < 2.0.0"
                 }
             }
         "#};
@@ -721,7 +721,7 @@ mod tests {
                 "dependencies": {
                     /* Multi-line
                        comment */
-                    "nash/core": "1.0.0"
+                    "nash/base": "1.0.0"
                 }
             }
         "#};
@@ -736,7 +736,7 @@ mod tests {
             {
                 "type": "application",
                 "dependencies": {
-                    "nash/core": { "workspace": false }
+                    "nash/base": { "workspace": false }
                 }
             }
         "#};
@@ -754,7 +754,7 @@ mod tests {
                 "type": "application",
                 "compiler": "0.2.0",
                 "dependencies": {
-                    "nash/core": "1.0.0 <= v < 2.0.0"
+                    "nash/base": "1.0.0 <= v < 2.0.0"
                 }
             }
         "#};

@@ -1,14 +1,14 @@
 ---
 source: crates/nash-can/tests/kinds.rs
-description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype option 'a = None | Some 'a\ntype alias p = pair Int (option int)\n"
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype option 'a = None | Some 'a\ntype alias p = pair Int (option int)\n"
 info: diagnostic
 ---
 nash::names::representation_mismatch
 
   × This position requires `Storable` in the lowercase name of alias `p`:
-   ╭─[src/Main.nash:6:26]
- 5 │ type option 'a = None | Some 'a
- 6 │ type alias p = pair Int (option int)
+   ╭─[src/Main.nash:7:26]
+ 6 │ type option 'a = None | Some 'a
+ 7 │ type alias p = pair Int (option int)
    ·                          ──────────
    ╰────
   help: The type has `Term` representation, but `Storable` admits Big or Const types.

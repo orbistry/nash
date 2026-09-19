@@ -20,10 +20,10 @@ description: "module Fuzz exposing (..)\ntype fuzzer 'a = Fuzzer 'a\nunit = Fuzz
                     package: Some(
                         PackageName {
                             author: "nash",
-                            project: "core",
+                            project: "base",
                         },
                     ),
-                    name: "Builtin",
+                    name: "Primitive",
                 },
                 name: "unit",
             },
@@ -47,10 +47,10 @@ description: "module Fuzz exposing (..)\ntype fuzzer 'a = Fuzzer 'a\nunit = Fuzz
                     package: Some(
                         PackageName {
                             author: "nash",
-                            project: "core",
+                            project: "base",
                         },
                     ),
-                    name: "Builtin",
+                    name: "Primitive",
                 },
                 name: "unit",
             },

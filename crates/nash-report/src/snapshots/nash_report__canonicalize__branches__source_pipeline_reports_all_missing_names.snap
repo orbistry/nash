@@ -15,6 +15,8 @@ nash::names::not_found_var
 
             first
             second
+            Builtin.bData
+            Builtin.iData
 
 nash::names::not_found_var
 
@@ -28,3 +30,5 @@ nash::names::not_found_var
 
             first
             second
+            Builtin.bData
+            Builtin.iData

@@ -188,11 +188,11 @@ pub(crate) fn canonicalize<'a>(
             && !heads.iter().any(|h| match &h.value {
                 Head::Named { reference, .. } => {
                     reference.home == env.home
-                        || (reference.home == nash_ast::primitives::builtin_home()
+                        || (reference.home == nash_ast::primitives::primitive_home()
                             && reference.name == "unit"
-                            && env.home.package == Some(nash_ast::primitives::CORE))
+                            && env.home.package == Some(nash_ast::primitives::BASE))
                 }
-                Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::CORE),
+                Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::BASE),
                 Head::Var(_) | Head::Function(..) => false,
             })
         {
