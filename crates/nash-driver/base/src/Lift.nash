@@ -2,7 +2,7 @@ module Lift exposing (Lift)
 
 import Builtin
 
-import Primitive exposing (type bool(..))
+import Primitive exposing (type bool(..), Big)
 import Bool exposing (Bool)
 import Unit exposing (Unit)
 import Ordering exposing (Ordering, type ordering(..))
@@ -56,6 +56,6 @@ impl Lift 'a 'b => Lift (list 'a) (List 'b) where
     lift values = Builtin.listData (mapList lift values)
     lower values = mapList lower (Builtin.unListData values)
 
-impl Lift (list (pair 'k 'v)) (Map 'k 'v) where
+impl (Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v) where
     lift = Builtin.mapData
     lower = Builtin.unMapData

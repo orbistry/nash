@@ -256,7 +256,7 @@ not repeated here. What each module adds beyond its trait:
 | `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
 | `Functor` | `list`, `List`; each applied element must satisfy its constructor's datatype context (`Storable` for `list`, `Big` for `List`). No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
-| `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
+| `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `(Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
 | `Data` | Blanket `ToData` and `FromData` for every Big type; `Validate` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
 
@@ -406,10 +406,14 @@ wrapList = Builtin.listData
 unwrapList : List 'a -> list 'a
 unwrapList = Builtin.unListData
 
-impl Lift (list (pair 'k 'v)) (Map 'k 'v) where
+impl (Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v) where
     lift = Builtin.mapData
     lower = Builtin.unMapData
 ```
+
+The map instance wraps entries whose keys and values are already Big. It does
+not recursively lift native components; `pair int (list Data)` cannot be
+wrapped as a map.
 
 This is representation.md's impl table. There is no overlap: `list 'a` is
 never Big, so `Lift (list 'a) (List 'b)` and the reflexive impl have

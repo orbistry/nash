@@ -137,3 +137,75 @@ async fn projects_cannot_declare_or_replace_the_bundled_package() {
         );
     }
 }
+
+macro_rules! assert_base_type_error_snapshot {
+    ($source:literal) => {{
+        let source = indoc::indoc!($source);
+        let main = Url::parse("file:///app/src/Main.nash").unwrap();
+        let memory = InMemorySource::new();
+        memory.insert(main.clone(), source.into());
+        let db = Arc::new(Mutex::new(Database::new(memory)));
+        let mut modules = bundled_base::modules();
+        modules.insert(main.clone(), None);
+        let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
+            .await
+            .unwrap();
+        let result = build(db, &graph, &modules).await;
+        let nash_driver::ModuleResult::Failed(reports) = &result.modules[&main] else {
+            panic!("invalid source passed: {result:?}");
+        };
+        assert!(!reports.reports.is_empty());
+        let view = nash_report::Source::new(&reports.source);
+        let rendered = reports.reports.iter().map(|report| {
+            nash_report::render_plain(report, &view, &reports.path)
+        }).collect::<Vec<_>>().join("\n");
+        insta::with_settings!({description => source, omit_expression => true, info => &"diagnostic"}, {
+            insta::assert_snapshot!(rendered);
+        });
+    }};
+}
+
+#[tokio::test]
+async fn map_lift_rejects_native_pair_components() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : Data -> Map int (list Data)
+        bad value = lift [Builtin.unConstrData value]
+    "#
+    );
+}
+
+#[tokio::test]
+async fn map_lift_rejects_native_keys() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : list (pair int Data) -> Map int Data
+        bad entries = lift entries
+    "#
+    );
+}
+
+#[tokio::test]
+async fn map_lower_rejects_native_values() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : Map Data (list Data) -> list (pair Data (list Data))
+        bad value = lower value
+    "#
+    );
+}
+
+#[tokio::test]
+async fn map_lift_rejects_inferred_native_pair_components() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        asMap : Map Int (List Data) -> Map Int (List Data)
+        asMap value = value
+        bad value = asMap (lift [Builtin.unConstrData value])
+    "#
+    );
+}

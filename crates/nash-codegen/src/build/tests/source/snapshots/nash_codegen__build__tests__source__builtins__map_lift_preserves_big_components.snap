@@ -1,0 +1,109 @@
+---
+source: crates/nash-codegen/src/build/tests/source/builtins.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Lift exposing (Lift)\nentries : list (pair Int (List Data))\nentries = [Builtin.mkPairData (Builtin.iData 7) (Builtin.listData [I 42])]\nwrapped : Map Int (List Data)\nwrapped = lift entries\ndecoded : list (pair Int (List Data))\ndecoded = lower wrapped\nmain : int\nmain =\n    case decoded of\n        [pair(key, values)] ->\n            case Builtin.unListData values of\n                [I number] -> Builtin.addInteger (Builtin.unIData key) number\n                _ -> fail\n        _ -> fail\n"
+---
+--- core
+let lower#40 : Map 'erased 'erased -> list (pair 'erased 'erased) = unMapData in
+let lift#42 : list (pair 'erased 'erased) -> Map 'erased 'erased = mapData in
+let fromInt#44 : int -> int = \value#46 : int -> value#46 in
+let entries#43 : list (pair Int (List Data)) = mkCons (mkPairData (iData (fromInt#44 7)) (listData (mkCons ((\field#45 : int -> iData field#45) (fromInt#44 42)) (con (list data) [])))) (con (list (pair data data)) []) in
+let wrapped#41 : Map Int (List Data) = lift#42 entries#43 in
+let decoded#2 : list (pair Int (List Data)) = lower#40 wrapped#41 in
+let match#26 : list (pair Int (List Data)) = decoded#2 in
+let leaf#33 : 'erased = delay error in
+let main#1 : int = case@List match#26 of
+  Nil -> force leaf#33
+  Cons field#34 field#35 -> case@Pair field#34 of
+    Pair field#36 field#37 -> case@List field#35 of
+      Nil -> let key#3 : Int = field#36 in
+      let values#4 : List Data = field#37 in
+      let projection#47 : list Data = unListData values#4 in
+      let match#6 : list Data = projection#47 in
+      let leaf#16 : 'erased = delay error in
+      case@List match#6 of
+        Nil -> force leaf#16
+        Cons field#17 field#18 -> case@Data field#17 of
+          DataConstr field#19 -> force leaf#16
+          DataMap field#20 -> force leaf#16
+          DataList field#21 -> force leaf#16
+          DataI field#22 -> case@List field#18 of
+            Nil -> let number#5 : int = field#22 in
+            addInteger (unIData key#3) number#5
+            Cons field#23 field#24 -> force leaf#16
+          DataB field#25 -> force leaf#16
+      Cons field#38 field#39 -> force leaf#33 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam lower_40
+    [(lam lift_42
+      [(lam fromInt_44
+        [(lam entries_43
+          [(lam wrapped_41
+            [(lam decoded_2
+              [(lam match_26
+                [(lam leaf_33
+                  [(lam main_1 main_1)
+                    (case
+                      match_26
+                      (lam field_34
+                        (lam field_35
+                          (case
+                            field_34
+                            (lam field_36
+                              (lam field_37
+                                (case
+                                  field_35
+                                  (lam field_38 (lam field_39 (force leaf_33)))
+                                  [(lam key_3
+                                    [(lam values_4
+                                      [(lam projection_47
+                                        [(lam match_6
+                                          [(lam leaf_16
+                                            (case
+                                              match_6
+                                              (lam field_17
+                                                (lam field_18
+                                                  [(lam generated_48
+                                                    (force
+                                                      [[[[[[(force (builtin chooseData)) generated_48]
+                                                        (delay [(lam field_19 (force leaf_16)) [(builtin unConstrData) generated_48]])]
+                                                        (delay [(lam field_20 (force leaf_16)) [(builtin unMapData) generated_48]])]
+                                                        (delay [(lam field_21 (force leaf_16)) [(builtin unListData) generated_48]])]
+                                                        (delay
+                                                          [(lam field_22
+                                                            (case
+                                                              field_18
+                                                              (lam field_23 (lam field_24 (force leaf_16)))
+                                                              [(lam number_5 [[(builtin addInteger) [(builtin unIData) key_3]] number_5])
+                                                                field_22]))
+                                                            [(builtin unIData) generated_48]])]
+                                                        (delay [(lam field_25 (force leaf_16)) [(builtin unBData) generated_48]])]))
+                                                    field_17]))
+                                              (force leaf_16)))
+                                            (delay (error))])
+                                          projection_47])
+                                        [(builtin unListData) values_4]])
+                                      field_37])
+                                    field_36]))))))
+                      (force leaf_33))])
+                  (delay (error))])
+                decoded_2])
+              [lower_40 wrapped_41]])
+            [lift_42 entries_43]])
+          [[(force (builtin mkCons))
+            [[(builtin mkPairData) [(builtin iData) [fromInt_44 (con integer 7)]]]
+              [(builtin listData)
+                [[(force (builtin mkCons))
+                  [(lam field_45 [(builtin iData) field_45]) [fromInt_44 (con integer 42)]]]
+                  (con (list data) [])]]]]
+            (con (list (pair data data)) [])]])
+        (lam value_46 value_46)])
+      (builtin mapData)])
+    (builtin unMapData)])
+--- result
+(con integer 49)
+--- logs
+[]
+--- budget
+cpu: 2592693, memory: 13086
