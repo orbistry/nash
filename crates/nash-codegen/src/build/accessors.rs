@@ -20,6 +20,7 @@ const CONSTR_PAIR: Ty<'static> = Ty::Const(&ConstTy::Pair(Ty::Const(&ConstTy::In
 enum Projection {
     Builtin(F),
     Field(u16, u16),
+    DropList(u16),
 }
 impl Eq for Projection {}
 impl std::hash::Hash for Projection {
@@ -28,6 +29,10 @@ impl std::hash::Hash for Projection {
             Self::Builtin(func) => {
                 0u8.hash(state);
                 (*func as usize).hash(state);
+            }
+            Self::DropList(count) => {
+                2u8.hash(state);
+                count.hash(state);
             }
             Self::Field(index, arity) => {
                 1u8.hash(state);
@@ -81,6 +86,15 @@ impl<'a> Scope<'a> {
             Core::Builtin { func, args: [arg] } => {
                 let (mut path, name) = self.path(arg)?;
                 path.push(Projection::Builtin(*func));
+                Some((path, name))
+            }
+            Core::Builtin {
+                func: F::DropList,
+                args: [Core::Lit(Constant::Integer(count)), list],
+            } => {
+                let count = u16::try_from(*count).ok()?;
+                let (mut path, name) = self.path(list)?;
+                path.push(Projection::DropList(count));
                 Some((path, name))
             }
             Core::Field {
@@ -220,7 +234,10 @@ impl<'a> Share<'a, '_> {
             (Projection::Builtin(F::FstPair), Ty::Const(ConstTy::Pair(a, _))) => *a,
             (Projection::Builtin(F::SndPair), Ty::Const(ConstTy::Pair(_, b))) => *b,
             (Projection::Builtin(F::HeadList), Ty::Const(ConstTy::List(element))) => *element,
-            (Projection::Builtin(F::TailList), Ty::Const(ConstTy::List(_))) => input,
+            (
+                Projection::Builtin(F::TailList) | Projection::DropList(_),
+                Ty::Const(ConstTy::List(_)),
+            ) => input,
             (
                 Projection::Field(index, _),
                 Ty::Term(TermTy::Record(fields) | TermTy::Tuple(fields)),
@@ -232,6 +249,10 @@ impl<'a> Share<'a, '_> {
         };
         let value = match projection {
             Projection::Builtin(func) => self.build.builtin(func, &[parts.value]),
+            Projection::DropList(count) => self.build.builtin(
+                F::DropList,
+                &[self.build.int(i128::from(count)), parts.value],
+            ),
             Projection::Field(index, arity) => self.build.field(parts.value, index, arity),
         };
         let binder = Binder {
@@ -312,6 +333,17 @@ impl<'a> Share<'a, '_> {
                     bindings,
                     value: self.build.app(values[0], &values[1..]),
                 }
+            }
+            Core::Builtin {
+                func: F::DropList,
+                args: [Core::Lit(Constant::Integer(count)), list],
+            } if u16::try_from(*count).is_ok() => {
+                let parts = self.term(list, scope);
+                self.projection(
+                    Projection::DropList(u16::try_from(*count).unwrap()),
+                    parts,
+                    scope,
+                )
             }
             Core::Builtin { func, args: [arg] }
                 if matches!(

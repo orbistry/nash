@@ -615,3 +615,12 @@ the protocol 11 compatibility baseline described in [validators.md](validators.m
 `assemble_core` remains the default V3 entrypoint; `assemble_core_for_version`
 emits UPLC 1.1.0 for V1, V2, and V3 and checks the complete program.
 No optimizer passes run while Plan 08 is deferred.
+
+### Field offset extraction
+
+Big record and constructor field access uses `headList fields` at offset zero,
+`headList (tailList fields)` at offset one, and
+`headList (dropList offset fields)` at offsets two or greater. Repeated
+constant-offset projections are shared within their evaluation scope.
+Sequential destructuring that consumes each field still advances one tail
+at a time; it does not skip a multi-field prefix.

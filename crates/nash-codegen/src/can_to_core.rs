@@ -460,9 +460,13 @@ impl<'a> Engine<'a, '_, '_> {
             }
             _ => return Err(Error::RuntimeLayout(ty)),
         };
-        for _ in 0..index {
-            list = self.ir.builtin(F::TailList, &[list]);
-        }
+        list = match index {
+            0 => list,
+            1 => self.ir.builtin(F::TailList, &[list]),
+            _ => self
+                .ir
+                .builtin(F::DropList, &[self.ir.int(i128::from(index)), list]),
+        };
         Ok(self.ir.builtin(F::HeadList, &[list]))
     }
 

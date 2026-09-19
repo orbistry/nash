@@ -27,9 +27,9 @@ let projection#26 : list Data = unListData base#5 in
 let projection#27 : Data = headList projection#26 in
 let projection#28 : list Data = tailList projection#26 in
 let projection#29 : Data = headList projection#28 in
-let projection#30 : list Data = tailList projection#28 in
+let projection#30 : list Data = dropList 2 projection#26 in
 let projection#31 : Data = headList projection#30 in
-let projection#32 : list Data = tailList projection#30 in
+let projection#32 : list Data = dropList 3 projection#26 in
 let projection#33 : Data = headList projection#32 in
 let nextOutput#4 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = listData (mkCons projection#27 (mkCons projection#29 (mkCons projection#31 (mkCons projection#33 (con (list data) []))))) in
 let main#1 : bool = equalsData prevOutput#3 nextOutput#4 in
@@ -62,9 +62,9 @@ main#1
                                               [[(force (builtin mkCons)) projection_31]
                                                 [[(force (builtin mkCons)) projection_33] (con (list data) [])]]]]]])
                                       [(force (builtin headList)) projection_32]])
-                                    [(force (builtin tailList)) projection_30]])
+                                    [[(force (builtin dropList)) (con integer 3)] projection_26]])
                                   [(force (builtin headList)) projection_30]])
-                                [(force (builtin tailList)) projection_28]])
+                                [[(force (builtin dropList)) (con integer 2)] projection_26]])
                               [(force (builtin headList)) projection_28]])
                             [(force (builtin tailList)) projection_26]])
                           [(force (builtin headList)) projection_26]])
@@ -134,4 +134,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 7852512, memory: 26158
+cpu: 7996393, memory: 26502

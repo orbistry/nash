@@ -724,3 +724,28 @@ case!(
     "#,
     Ok("(con integer 49)")
 );
+
+case!(
+    big_constructor_field_skip,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    type Datum = Datum { a : Int, b : Int, c : Int, d : Int }
+    main : int
+    main = Builtin.unIData ((Datum { a = 10, b = 20, c = 30, d = 40 }).d)
+    "#,
+    Ok("(con integer 40)")
+);
+
+case!(
+    big_field_skip_rejects_short_payload,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    type alias Record = { a : Int, b : Int, c : Int }
+    malformed : Record
+    malformed = coerce (List [I 1])
+    main = malformed.c
+    "#,
+    Err(())
+);

@@ -1300,3 +1300,34 @@ fn pair_wildcard_uses_native_case_without_projection_builtins() {
         },
     );
 }
+
+#[test]
+fn big_field_offsets_use_drop_list_from_two() {
+    with_base(
+        indoc::indoc!(
+            r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        type alias Record = { a : Int, b : Int, c : Int, d : Int }
+        select : Record -> (Int, Int, Int, Int, Int)
+        select record = (record.a, record.b, record.c, record.d, record.c)
+        main = select { a = 10, b = 20, c = 30, d = 40 }
+        "#
+        ),
+        |arena, build, root| {
+            let compiled = build
+                .compile(arena, root, None, TraceConfig::default())
+                .unwrap();
+            let pretty = nash_ir::pretty::pretty(compiled.core);
+            assert_eq!(pretty.matches("tailList").count(), 1, "{pretty}");
+            assert_eq!(pretty.matches("dropList 2").count(), 1, "{pretty}");
+            assert_eq!(pretty.matches("dropList 3").count(), 1, "{pretty}");
+            let result = crate::harness::eval_core(arena, compiled.core);
+            assert_eq!(
+                result.result,
+                "(constr 0\n  (con data (I 10))\n  (con data (I 20))\n  (con data (I 30))\n  (con data (I 40))\n  (con data (I 30)))"
+            );
+            insta::assert_snapshot!(format!("--- core\n{pretty}\n{result}"));
+        },
+    );
+}

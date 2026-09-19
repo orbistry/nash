@@ -1,0 +1,46 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\ntype Datum = Datum { a : Int, b : Int, c : Int, d : Int }\nmain : int\nmain = Builtin.unIData ((Datum { a = 10, b = 20, c = 30, d = 40 }).d)\n"
+---
+--- core
+let fromInt#6 : int -> Int = iData in
+let evaluated#9 : 'erased = (\field#2 : Int field#3 : Int field#4 : Int field#5 : Int -> constrData 0 (mkCons field#2 (mkCons field#3 (mkCons field#4 (mkCons field#5 (con (list data) [])))))) (fromInt#6 10) (fromInt#6 20) (fromInt#6 30) (fromInt#6 40) in
+let projection#10 : pair int (list Data) = unConstrData evaluated#9 in
+let evaluated#11 : 'erased = case@Pair projection#10 of
+  Pair tag#7 fields#8 -> fields#8 in
+let projection#12 : 'erased = dropList 3 evaluated#11 in
+let projection#13 : 'erased = headList projection#12 in
+let main#1 : int = unIData projection#13 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_6
+    [(lam evaluated_9
+      [(lam projection_10
+        [(lam evaluated_11
+          [(lam projection_12
+            [(lam projection_13 [(lam main_1 main_1) [(builtin unIData) projection_13]])
+              [(force (builtin headList)) projection_12]])
+            [[(force (builtin dropList)) (con integer 3)] evaluated_11]])
+          (case projection_10 (lam tag_7 (lam fields_8 fields_8)))])
+        [(builtin unConstrData) evaluated_9]])
+      [[[[(lam field_2
+        (lam field_3
+          (lam field_4
+            (lam field_5
+              [[(builtin constrData) (con integer 0)]
+                [[(force (builtin mkCons)) field_2]
+                  [[(force (builtin mkCons)) field_3]
+                    [[(force (builtin mkCons)) field_4]
+                      [[(force (builtin mkCons)) field_5] (con (list data) [])]]]]]))))
+        [fromInt_6 (con integer 10)]]
+        [fromInt_6 (con integer 20)]]
+        [fromInt_6 (con integer 30)]]
+        [fromInt_6 (con integer 40)]]])
+    (builtin iData)])
+--- result
+(con integer 40)
+--- logs
+[]
+--- budget
+cpu: 1935959, memory: 8688
