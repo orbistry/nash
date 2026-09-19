@@ -1165,3 +1165,77 @@ fn source_trace_precedes_failure() {
         },
     );
 }
+
+#[test]
+fn native_case_branches_evaluate_scrutinee_once_and_remain_lazy() {
+    with_core(
+        indoc::indoc!(
+            r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        choose : bool -> int
+        choose flag =
+            if trace "condition" flag then trace "true" 42
+            else trace "false" 7
+        main = (choose True, choose False)
+        "#
+        ),
+        |arena, build, root| {
+            let compiled = build
+                .compile(arena, root, None, TraceConfig::default())
+                .unwrap();
+            let core =
+                crate::recursion::rewrite(&nash_ir::build::Builder::new(arena), compiled.core)
+                    .unwrap();
+            let result = crate::harness::eval_core(arena, core);
+            assert_eq!(result.logs, ["condition", "true", "condition", "false"]);
+            assert!(result.uplc.contains("(case"));
+            assert!(!result.uplc.contains("ifThenElse"));
+            insta::assert_snapshot!(result.to_string());
+        },
+    );
+}
+
+#[test]
+fn native_case_dispatches_lists_data_and_sparse_literals() {
+    with_core(
+        indoc::indoc!(
+            r#"
+        module Main exposing (..)
+        import Builtin exposing (..)
+        first : list int -> int
+        first xs =
+            case xs of
+                [] -> Builtin.subtractInteger 0 1
+                x :: _ -> x
+        decode : Data -> int
+        decode data =
+            case data of
+                I n -> n
+                _ -> Builtin.subtractInteger 0 2
+        select : int -> int
+        select n =
+            case n of
+                7 -> 10
+                100 -> 20
+                _ -> 30
+        main = (first [], first [42], decode (I 9), decode (B #""), select 7, select 100, select (Builtin.subtractInteger 0 7))
+        "#
+        ),
+        |arena, build, root| {
+            let compiled = build
+                .compile(arena, root, None, TraceConfig::default())
+                .unwrap();
+            let core =
+                crate::recursion::rewrite(&nash_ir::build::Builder::new(arena), compiled.core)
+                    .unwrap();
+            let result = crate::harness::eval_core(arena, core);
+            assert!(!result.result.starts_with("error:"), "{}", result.result);
+            assert!(result.uplc.contains("(case"));
+            assert!(result.uplc.contains("chooseData"));
+            assert!(!result.uplc.contains("ifThenElse"));
+            assert!(!result.uplc.contains("chooseList"));
+            insta::assert_snapshot!(result.to_string());
+        },
+    );
+}

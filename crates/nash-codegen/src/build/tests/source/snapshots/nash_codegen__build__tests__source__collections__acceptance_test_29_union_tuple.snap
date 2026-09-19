@@ -148,16 +148,14 @@ main#1
                                               [(lam k2_78
                                                 [(lam v2_79
                                                   [(lam generated_100
-                                                    (force
-                                                      [[[(force (builtin ifThenElse)) generated_100]
-                                                        (delay
-                                                          [[(lam field_83 (lam field_84 (constr 1 field_83 field_84)))
-                                                            (constr 0 k_74 v_75)]
-                                                            rest_80])]
-                                                        (delay
-                                                          [[(lam field_81 (lam field_82 (constr 1 field_81 field_82)))
-                                                            (constr 0 k2_78 v2_79)]
-                                                            [[self_29 self_29] rest_80]])]))
+                                                    (case
+                                                      generated_100
+                                                      [[(lam field_81 (lam field_82 (constr 1 field_81 field_82)))
+                                                        (constr 0 k2_78 v2_79)]
+                                                        [[self_29 self_29] rest_80]]
+                                                      [[(lam field_83 (lam field_84 (constr 1 field_83 field_84)))
+                                                        (constr 0 k_74 v_75)]
+                                                        rest_80]))
                                                     [[eq_49 k_74] k2_78]])
                                                   field_89])
                                                 field_88])
@@ -186,10 +184,7 @@ main#1
                                     (lam field_53
                                       [(lam c_47
                                         [(lam d_48
-                                          [(lam generated_103
-                                            (force
-                                              [[[(force (builtin ifThenElse)) generated_103] (delay [[eq_50 b_45] d_48])]
-                                                (delay (con bool False))]))
+                                          [(lam generated_103 (case generated_103 (con bool False) [[eq_50 b_45] d_48]))
                                             [[eq_49 a_44] c_47]])
                                           field_53])
                                         field_52]))))
@@ -227,10 +222,7 @@ main#1
                                                 [(lam y_23
                                                   [(lam ys_24
                                                     [(lam generated_104
-                                                      (force
-                                                        [[[(force (builtin ifThenElse)) generated_104]
-                                                          (delay [[[self_30 self_30] xs_22] ys_24])]
-                                                          (delay (con bool False))]))
+                                                      (case generated_104 (con bool False) [[[self_30 self_30] xs_22] ys_24]))
                                                       [[same_18 x_21] y_23]])
                                                     field_42])
                                                   field_41])
@@ -247,4 +239,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 12122730, memory: 70032
+cpu: 10736910, memory: 65814

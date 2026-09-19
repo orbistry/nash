@@ -13,10 +13,7 @@ main#1
   [(lam identity_2
     [(lam main_1 main_1)
       [(lam generated_4
-        (force
-          [[[(force (builtin ifThenElse)) generated_4]
-            (delay [identity_2 (con bool True)])]
-            (delay (con bool False))]))
+        (case generated_4 (con bool False) [identity_2 (con bool True)]))
         [identity_2 (con bool True)]]])
     (lam value_3 value_3)])
 --- result
@@ -24,4 +21,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 476149, memory: 2601
+cpu: 288100, memory: 1900

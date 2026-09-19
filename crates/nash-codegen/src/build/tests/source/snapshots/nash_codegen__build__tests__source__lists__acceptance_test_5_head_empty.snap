@@ -31,13 +31,10 @@ main#1
         (lam xs_21
           [(lam match_23
             [(lam generated_26
-              (force
-                [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_26]]
-                  (delay (constr 0))]
-                  (delay
-                    [[(lam field_24 (lam field_25 [(lam field_22 (constr 1 field_22)) field_24]))
-                      [(force (builtin headList)) generated_26]]
-                      [(force (builtin tailList)) generated_26]])]))
+              (case
+                generated_26
+                (lam field_24 (lam field_25 [(lam field_22 (constr 1 field_22)) field_24]))
+                (constr 0)))
               match_23])
             xs_21])])
       (lam a_4
@@ -64,4 +61,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1046582, memory: 5733
+cpu: 736100, memory: 4700

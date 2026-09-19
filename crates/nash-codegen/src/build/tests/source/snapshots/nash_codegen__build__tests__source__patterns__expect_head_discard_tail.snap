@@ -18,14 +18,11 @@ main#1
       [(lam match_4
         [(lam main_1 main_1)
           [(lam generated_9
-            (force
-              [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_9]]
-                (delay (error))]
-                (delay
-                  [[(lam field_5
-                    (lam field_6 [(lam h_3 [[(builtin equalsInteger) h_3] h_3]) field_5]))
-                    [(force (builtin headList)) generated_9]]
-                    [(force (builtin tailList)) generated_9]])]))
+            (case
+              generated_9
+              (lam field_5
+                (lam field_6 [(lam h_3 [[(builtin equalsInteger) h_3] h_3]) field_5]))
+              (error)))
             match_4]])
         a_2])
       [[(force (builtin mkCons)) [fromInt_7 (con integer 1)]]
@@ -37,4 +34,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1720814, memory: 7394
+cpu: 1085519, memory: 5297

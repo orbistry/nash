@@ -22,9 +22,10 @@ main#1
               [[(force (builtin trace)) [fromString_3 message_5]]
                 (delay
                   [(lam generated_7
-                    (force
-                      [[[(force (builtin ifThenElse)) generated_7] (delay (con unit ()))]
-                        (delay (force [[(force (builtin trace)) message_6] (delay (error))]))]))
+                    (case
+                      generated_7
+                      (force [[(force (builtin trace)) message_6] (delay (error))])
+                      (con unit ())))
                     predicate_2])])])
           (con bool True)])
         (lam value_4 value_4)])
@@ -35,4 +36,4 @@ main#1
 --- logs
 ["foo"]
 --- budget
-cpu: 743647, memory: 3933
+cpu: 555598, memory: 3232

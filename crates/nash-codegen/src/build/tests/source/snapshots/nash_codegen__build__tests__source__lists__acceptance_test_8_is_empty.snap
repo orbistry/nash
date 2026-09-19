@@ -29,18 +29,14 @@ main#1
     (lam a_5
       (lam b_6
         [(lam generated_11
-          (force
-            [[[(force (builtin ifThenElse)) generated_11] (delay b_6)]
-              (delay
-                [(lam generated_12
-                  (force
-                    [[[(force (builtin ifThenElse)) generated_12] (delay (con bool False))]
-                      (delay (con bool True))]))
-                  b_6])]))
+          (case
+            generated_11
+            [(lam generated_12 (case generated_12 (con bool True) (con bool False))) b_6]
+            b_6))
           a_5]))])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 934582, memory: 5012
+cpu: 746533, memory: 4311

@@ -14,10 +14,7 @@ main#1
   [(lam fromInt_3
     [(lam x_2
       [(lam main_1 main_1)
-        [(lam generated_5
-          (force
-            [[[(force (builtin ifThenElse)) generated_5] (delay (con bool True))]
-              (delay (con bool False))]))
+        [(lam generated_5 (case generated_5 (con bool False) (con bool True)))
           [[(builtin equalsInteger) x_2] [fromInt_3 (con integer 1)]]]])
       [fromInt_3 (con integer 1)]])
     (lam value_4 value_4)])
@@ -26,4 +23,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 640482, memory: 3302
+cpu: 452433, memory: 2601

@@ -12,11 +12,7 @@ main#1
 (program 1.1.0
   [(lam fromInt_2
     [(lam main_1 main_1)
-      [(lam generated_4
-        (force
-          [[[(force (builtin ifThenElse)) generated_4]
-            (delay [fromInt_2 (con integer 42)])]
-            (delay (error))]))
+      [(lam generated_4 (case generated_4 (error) [fromInt_2 (con integer 42)]))
         (con bool True)]])
     (lam value_3 value_3)])
 --- result
@@ -24,4 +20,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 428149, memory: 2301
+cpu: 240100, memory: 1600

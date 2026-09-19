@@ -88,41 +88,35 @@ main#1
                                     (lam elems_35
                                       [(lam match_43
                                         [(lam generated_58
-                                          (force
-                                            [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_58]]
-                                              (delay
-                                                [[(force (builtin mkCons))
-                                                  [[(builtin mkPairData) [(builtin bData) k_36]] [(builtin iData) v_37]]]
-                                                  (con (list (pair data data)) [])])]
-                                              (delay
-                                                [[(lam field_44
-                                                  (lam field_45
-                                                    [(lam entry_38
-                                                      [(lam rest_39
-                                                        [(lam projection_50
-                                                          [(lam v2_40
-                                                            [(lam projection_51
-                                                              [(lam k2_41
-                                                                [(lam generated_59
-                                                                  (force
-                                                                    [[[(force (builtin ifThenElse)) generated_59]
-                                                                      (delay
-                                                                        [[(force (builtin mkCons))
-                                                                          [[(builtin mkPairData) [(builtin bData) k_36]] [(builtin iData) v_37]]]
-                                                                          rest_39])]
-                                                                      (delay
-                                                                        [[(force (builtin mkCons))
-                                                                          [[(builtin mkPairData) [(builtin bData) k2_41]] [(builtin iData) v2_40]]]
-                                                                          [[self_55 self_55] rest_39]])]))
-                                                                  [[eq_42 k_36] k2_41]])
-                                                                [(builtin unBData) projection_51]])
-                                                              [(force (force (builtin fstPair))) entry_38]])
-                                                            [(builtin unIData) projection_50]])
-                                                          [(force (force (builtin sndPair))) entry_38]])
-                                                        field_45])
-                                                      field_44]))
-                                                  [(force (builtin headList)) generated_58]]
-                                                  [(force (builtin tailList)) generated_58]])]))
+                                          (case
+                                            generated_58
+                                            (lam field_44
+                                              (lam field_45
+                                                [(lam entry_38
+                                                  [(lam rest_39
+                                                    [(lam projection_50
+                                                      [(lam v2_40
+                                                        [(lam projection_51
+                                                          [(lam k2_41
+                                                            [(lam generated_59
+                                                              (case
+                                                                generated_59
+                                                                [[(force (builtin mkCons))
+                                                                  [[(builtin mkPairData) [(builtin bData) k2_41]] [(builtin iData) v2_40]]]
+                                                                  [[self_55 self_55] rest_39]]
+                                                                [[(force (builtin mkCons))
+                                                                  [[(builtin mkPairData) [(builtin bData) k_36]] [(builtin iData) v_37]]]
+                                                                  rest_39]))
+                                                              [[eq_42 k_36] k2_41]])
+                                                            [(builtin unBData) projection_51]])
+                                                          [(force (force (builtin fstPair))) entry_38]])
+                                                        [(builtin unIData) projection_50]])
+                                                      [(force (force (builtin sndPair))) entry_38]])
+                                                    field_45])
+                                                  field_44]))
+                                            [[(force (builtin mkCons))
+                                              [[(builtin mkPairData) [(builtin bData) k_36]] [(builtin iData) v_37]]]
+                                              (con (list (pair data data)) [])]))
                                           match_43])
                                         elems_35]))]
                                   elems_35])))])
@@ -153,19 +147,16 @@ main#1
                 (lam values_16
                   [(lam match_19
                     [(lam generated_61
-                      (force
-                        [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_61]]
-                          (delay (con (list (pair data data)) []))]
-                          (delay
-                            [[(lam field_20
-                              (lam field_21
-                                [(lam first_17
-                                  [(lam rest_18
-                                    [[(force (builtin mkCons)) [f_15 first_17]] [[self_56 self_56] rest_18]])
-                                    field_21])
-                                  field_20]))
-                              [(force (builtin headList)) generated_61]]
-                              [(force (builtin tailList)) generated_61]])]))
+                      (case
+                        generated_61
+                        (lam field_20
+                          (lam field_21
+                            [(lam first_17
+                              [(lam rest_18
+                                [[(force (builtin mkCons)) [f_15 first_17]] [[self_56 self_56] rest_18]])
+                                field_21])
+                              field_20]))
+                        (con (list (pair data data)) [])))
                       match_19])
                     values_16]))]
               values_16]))])
@@ -176,4 +167,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 20047589, memory: 82444
+cpu: 14926085, memory: 67102

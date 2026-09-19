@@ -42,11 +42,11 @@ main#1
                               [(lam x_6
                                 [(lam projection_20
                                   [(lam generated_22
-                                    (force
-                                      [[[(force (builtin ifThenElse)) generated_22] (delay (con bool True))]
-                                        (delay
-                                          (force
-                                            [[(force (builtin trace)) [fromString_7 message_21]] (delay (con bool False))]))]))
+                                    (case
+                                      generated_22
+                                      (force
+                                        [[(force (builtin trace)) [fromString_7 message_21]] (delay (con bool False))])
+                                      (con bool True)))
                                     [[(builtin equalsInteger) projection_20] x_6]])
                                   (case a_5 (lam generated_23 generated_23))])
                                 field_17])

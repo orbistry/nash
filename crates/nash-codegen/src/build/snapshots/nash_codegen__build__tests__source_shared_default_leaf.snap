@@ -26,15 +26,10 @@ main#1
               (lam field_7
                 (lam field_8
                   [(lam generated_11
-                    (force
-                      [[[(force (builtin ifThenElse)) generated_11]
-                        (delay
-                          [(lam generated_12
-                            (force
-                              [[[(force (builtin ifThenElse)) generated_12] (delay (con bool True))]
-                                (delay (force leaf_6))]))
-                            field_8])]
-                        (delay (force leaf_6))]))
+                    (case
+                      generated_11
+                      (force leaf_6)
+                      [(lam generated_12 (case generated_12 (force leaf_6) (con bool True))) field_8]))
                     field_7])))])
           (delay
             (force
@@ -47,4 +42,4 @@ main#1
 --- logs
 ["default"]
 --- budget
-cpu: 871647, memory: 4733
+cpu: 683598, memory: 4032

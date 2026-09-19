@@ -20,9 +20,10 @@ main#1
             [[(force (builtin trace)) [fromString_2 message_4]]
               (delay
                 [(lam generated_6
-                  (force
-                    [[[(force (builtin ifThenElse)) generated_6] (delay (con unit ()))]
-                      (delay (force [[(force (builtin trace)) message_5] (delay (error))]))]))
+                  (case
+                    generated_6
+                    (force [[(force (builtin trace)) message_5] (delay (error))])
+                    (con unit ())))
                   (con bool True)])])])
         (lam value_3 value_3)])
       (con string "assertion failed")])
@@ -32,4 +33,4 @@ main#1
 --- logs
 ["foo"]
 --- budget
-cpu: 695647, memory: 3633
+cpu: 507598, memory: 2932

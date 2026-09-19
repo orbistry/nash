@@ -14,7 +14,7 @@ pub struct Args {
     /// Include user traces in the script.
     #[arg(long, value_enum)]
     pub trace_level: Option<TraceLevelArg>,
-    /// Ledger language target (Plomin/protocol 10 compatibility).
+    /// Ledger language target (protocol 11 compatibility).
     #[arg(long, value_enum)]
     pub plutus_version: Option<PlutusVersionArg>,
     /// Include compiler traces for failed casts and pattern checks.

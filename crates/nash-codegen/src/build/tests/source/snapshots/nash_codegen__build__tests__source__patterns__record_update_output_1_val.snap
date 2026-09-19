@@ -93,37 +93,37 @@ main#1
               (lam arg_13
                 [(lam match_19
                   [(lam generated_37
-                    (force
-                      [[[[[[(force (builtin chooseData)) generated_37]
-                        (delay
-                          [(lam generated_39
-                            [[(lam tag_21
-                              (lam fields_22
-                                [(lam generated_38
-                                  (force
-                                    [[[(force (builtin ifThenElse))
-                                      [[(builtin equalsInteger) generated_38] (con integer 0)]]
-                                      (delay
-                                        [(lam fieldList_23
-                                          [(lam projection_27
-                                            [(lam field_20
-                                              [(lam n_14
-                                                [[(lam field_15 (lam field_16 [[(builtin constrData) field_15] field_16]))
-                                                  [fromInt_17 (con integer 0)]]
-                                                  [[(force (builtin mkCons)) [toData_18 n_14]] (con (list data) [])]])
-                                                field_20])
-                                              projection_27])
-                                            [(force (builtin headList)) fieldList_23]])
-                                          fields_22])]
-                                      (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]))
-                                  tag_21]))
-                              [(force (force (builtin fstPair))) generated_39]]
-                              [(force (force (builtin sndPair))) generated_39]])
-                            [(builtin unConstrData) generated_37]])]
-                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_36] (delay (error))]))]))
+                    (case
+                      [[[[[[(force (builtin chooseData)) generated_37] (con integer 0)] (con integer 1)]
+                        (con integer 2)]
+                        (con integer 3)]
+                        (con integer 4)]
+                      [(lam generated_39
+                        [[(lam tag_21
+                          (lam fields_22
+                            [(lam generated_38
+                              (case
+                                [[(builtin equalsInteger) generated_38] (con integer 0)]
+                                (force [[(force (builtin trace)) message_36] (delay (error))])
+                                [(lam fieldList_23
+                                  [(lam projection_27
+                                    [(lam field_20
+                                      [(lam n_14
+                                        [[(lam field_15 (lam field_16 [[(builtin constrData) field_15] field_16]))
+                                          [fromInt_17 (con integer 0)]]
+                                          [[(force (builtin mkCons)) [toData_18 n_14]] (con (list data) [])]])
+                                        field_20])
+                                      projection_27])
+                                    [(force (builtin headList)) fieldList_23]])
+                                  fields_22]))
+                              tag_21]))
+                          [(force (force (builtin fstPair))) generated_39]]
+                          [(force (force (builtin sndPair))) generated_39]])
+                        [(builtin unConstrData) generated_37]]
+                      (force [[(force (builtin trace)) message_36] (delay (error))])
+                      (force [[(force (builtin trace)) message_36] (delay (error))])
+                      (force [[(force (builtin trace)) message_36] (delay (error))])
+                      (force [[(force (builtin trace)) message_36] (delay (error))])))
                     match_19])
                   arg_13])])
             (lam value_25
@@ -137,4 +137,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 8728491, memory: 29287
+cpu: 8540442, memory: 28586

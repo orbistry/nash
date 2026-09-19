@@ -61,16 +61,13 @@ main#1
                   (lam xs_14
                     [(lam match_19
                       [(lam generated_28
-                        (force
-                          [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_28]]
-                            (delay zero_16)]
-                            (delay
-                              [[(lam field_20
-                                (lam field_21
-                                  [(lam x_17 [(lam rest_18 [[f_15 x_17] [[self_26 self_26] rest_18]]) field_21])
-                                    field_20]))
-                                [(force (builtin headList)) generated_28]]
-                                [(force (builtin tailList)) generated_28]])]))
+                        (case
+                          generated_28
+                          (lam field_20
+                            (lam field_21
+                              [(lam x_17 [(lam rest_18 [[f_15 x_17] [[self_26 self_26] rest_18]]) field_21])
+                                field_20]))
+                          zero_16))
                         match_19])
                       xs_14]))]
                 xs_14])))])
@@ -79,29 +76,27 @@ main#1
           (lam xs_5
             (lam ys_6
               [(lam generated_29
-                (force
-                  [[[(force (builtin ifThenElse)) generated_29]
-                    (delay [(force (builtin nullList)) ys_6])]
-                    (delay
-                      [(lam generated_30
-                        (force
-                          [[[(force (builtin ifThenElse)) generated_30] (delay (con bool False))]
-                            (delay
-                              [(lam projection_22
-                                [(lam projection_23
-                                  [(lam generated_31
-                                    (force
-                                      [[[(force (builtin ifThenElse)) generated_31]
-                                        (delay
-                                          [(lam projection_24
-                                            [(lam projection_25 [[[self_27 self_27] projection_24] projection_25])
-                                              [(force (builtin tailList)) ys_6]])
-                                            [(force (builtin tailList)) xs_5]])]
-                                        (delay (con bool False))]))
-                                    [[eq_7 projection_22] projection_23]])
-                                  [(force (builtin headList)) ys_6]])
-                                [(force (builtin headList)) xs_5]])]))
-                        [(force (builtin nullList)) ys_6]])]))
+                (case
+                  generated_29
+                  [(lam generated_30
+                    (case
+                      generated_30
+                      [(lam projection_22
+                        [(lam projection_23
+                          [(lam generated_31
+                            (case
+                              generated_31
+                              (con bool False)
+                              [(lam projection_24
+                                [(lam projection_25 [[[self_27 self_27] projection_24] projection_25])
+                                  [(force (builtin tailList)) ys_6]])
+                                [(force (builtin tailList)) xs_5]]))
+                            [[eq_7 projection_22] projection_23]])
+                          [(force (builtin headList)) ys_6]])
+                        [(force (builtin headList)) xs_5]]
+                      (con bool False)))
+                    [(force (builtin nullList)) ys_6]]
+                  [(force (builtin nullList)) ys_6]))
                 [(force (builtin nullList)) xs_5]])))]])
     (builtin equalsInteger)])
 --- result
@@ -109,4 +104,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 20080644, memory: 84145
+cpu: 14291346, memory: 63502

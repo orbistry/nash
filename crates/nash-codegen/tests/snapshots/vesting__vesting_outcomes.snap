@@ -5,20 +5,20 @@ description: "module Literal exposing (..)\n\nimport Builtin exposing (..)\n\ntr
 claim after deadline
 result: unit
 logs: []
-cpu: 6671849
-mem: 28111
+cpu: 4714679
+mem: 21482
 claim before deadline
 result: error
 logs: ["assertion failed"]
-cpu: 5563347
-mem: 20843
+cpu: 4630177
+mem: 20614
 cancel signed by owner
 result: unit
 logs: []
-cpu: 6861610
-mem: 29081
+cpu: 4716391
+mem: 21751
 cancel unsigned
 result: error
 logs: ["assertion failed"]
-cpu: 5593108
-mem: 20813
+cpu: 4583889
+mem: 20583

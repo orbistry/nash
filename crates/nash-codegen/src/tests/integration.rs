@@ -364,11 +364,10 @@ fn rejected_fuzzer_skips_body_and_selected_target_is_enforced() {
     ));
     assert!(result.logs.is_empty());
     for version in [PlutusVersion::V1, PlutusVersion::V2] {
-        assert!(
-            compile(source, version, TraceLevel::Silent)
-                .unwrap_err()
-                .contains("1.1.0")
-        );
+        let all = compile(source, version, TraceLevel::Silent).unwrap();
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].plutus_version, version);
+        assert_eq!(all[1].plutus_version, version);
         let selected =
             compile_selected(source, version, TraceLevel::Silent, Some("plain")).unwrap();
         assert_eq!(selected.len(), 1);

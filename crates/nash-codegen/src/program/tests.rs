@@ -229,28 +229,16 @@ fn assemble_selected_ledger_language() {
     let b = Builder::new(&a);
     for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
         let compiled = assemble_core_for_version(&a, b.int(42), version).unwrap();
-        assert_eq!(
-            compiled.program.version.is_v1_1_0(),
-            version == PlutusVersion::V3
-        );
+        assert!(compiled.program.version.is_v1_1_0());
         assert_eq!(
             pretty::term(compiled.program.eval_version(&a, version).term.unwrap()),
             "(con integer 42)"
         );
     }
-    let constr = b.constr(0, &[b.int(1)]);
-    assert!(matches!(
-        assemble_core_for_version(&a, constr, PlutusVersion::V1),
-        Err(Error::Target(_))
-    ));
-    assert!(matches!(
-        assemble_core_for_version(&a, constr, PlutusVersion::V2),
-        Err(Error::Target(_))
-    ));
-    assert!(assemble_core_for_version(&a, constr, PlutusVersion::V3).is_ok());
-    let newer = b.builtin(F::ExpModInteger, &[b.int(2), b.int(3), b.int(5)]);
-    assert!(matches!(
-        assemble_core_for_version(&a, newer, PlutusVersion::V3),
-        Err(Error::Target(_))
-    ));
+    for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
+        let constr = b.constr(0, &[b.int(1)]);
+        assert!(assemble_core_for_version(&a, constr, version).is_ok());
+        let newer = b.builtin(F::ExpModInteger, &[b.int(2), b.int(3), b.int(5)]);
+        assert!(assemble_core_for_version(&a, newer, version).is_ok());
+    }
 }

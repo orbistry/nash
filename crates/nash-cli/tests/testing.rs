@@ -178,13 +178,14 @@ fn tracing_defaults_overrides_and_reserved_labels() {
 }
 
 #[test]
-fn requested_target_rejects_unsupported_property_programs() {
+fn properties_run_on_each_ledger_target() {
     let project = Project::new(PROPS);
-    for target in ["v1", "v2"] {
+    for target in ["v1", "v2", "v3"] {
         let (output, report) = project.json(&["--plutus-version", target]);
-        assert_eq!(output.status.code(), Some(1));
-        assert_eq!(report["type"], "error");
-        assert!(report.to_string().contains("protocol 10"));
+        success(&output);
+        let tests = report["tests"].as_array().unwrap();
+        assert_eq!(tests.len(), 3);
+        assert!(tests.iter().all(|test| test["status"] == "pass"));
     }
 }
 

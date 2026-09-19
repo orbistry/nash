@@ -36,29 +36,27 @@ main#1
           (lam xs_5
             (lam ys_6
               [(lam generated_14
-                (force
-                  [[[(force (builtin ifThenElse)) generated_14]
-                    (delay [(force (builtin nullList)) ys_6])]
-                    (delay
-                      [(lam generated_15
-                        (force
-                          [[[(force (builtin ifThenElse)) generated_15] (delay (con bool False))]
-                            (delay
-                              [(lam projection_9
-                                [(lam projection_10
-                                  [(lam generated_16
-                                    (force
-                                      [[[(force (builtin ifThenElse)) generated_16]
-                                        (delay
-                                          [(lam projection_11
-                                            [(lam projection_12 [[[self_13 self_13] projection_11] projection_12])
-                                              [(force (builtin tailList)) ys_6]])
-                                            [(force (builtin tailList)) xs_5]])]
-                                        (delay (con bool False))]))
-                                    [[eq_7 projection_9] projection_10]])
-                                  [(force (builtin headList)) ys_6]])
-                                [(force (builtin headList)) xs_5]])]))
-                        [(force (builtin nullList)) ys_6]])]))
+                (case
+                  generated_14
+                  [(lam generated_15
+                    (case
+                      generated_15
+                      [(lam projection_9
+                        [(lam projection_10
+                          [(lam generated_16
+                            (case
+                              generated_16
+                              (con bool False)
+                              [(lam projection_11
+                                [(lam projection_12 [[[self_13 self_13] projection_11] projection_12])
+                                  [(force (builtin tailList)) ys_6]])
+                                [(force (builtin tailList)) xs_5]]))
+                            [[eq_7 projection_9] projection_10]])
+                          [(force (builtin headList)) ys_6]])
+                        [(force (builtin headList)) xs_5]]
+                      (con bool False)))
+                    [(force (builtin nullList)) ys_6]]
+                  [(force (builtin nullList)) ys_6]))
                 [(force (builtin nullList)) xs_5]])))]])
     (builtin equalsInteger)])
 --- result
@@ -66,4 +64,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3384711, memory: 14525
+cpu: 2632515, memory: 11721

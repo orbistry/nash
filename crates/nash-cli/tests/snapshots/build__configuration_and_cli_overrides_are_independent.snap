@@ -3,7 +3,7 @@ source: crates/nash-cli/tests/build.rs
 description: "{\"type\":\"application\",\"plutusVersion\":\"v2\",\"traceLevel\":\"verbose\",\"compilerTraces\":true}\n\nmodule Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt value = value\n\nimpl FromString string where\n    fromString value = value\n\nimpl FromBytes bytes where\n    fromBytes value = value\n\nimpl FromInt Int where\n    fromInt = Builtin.iData\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.bData\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Check exposing (Expected, validate)\nimport Builtin\nimport Literal exposing (..)\ntype Expected = First | Second\nvalidate : Expected -> Int\nvalidate value =\n    case value of\n        First -> Builtin.iData 0\n        Second -> Builtin.iData 1\n\nvalidator module Main exposing (main)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Check\nmain : Check.Expected -> Int\nmain d = trace \"user trace\" (Check.validate d)\n"
 ---
 --- configured
-(program 1.0.0
+(program 1.1.0
   [(lam message_12
     [(lam message_13
       [(lam fromInt_6
@@ -17,75 +17,73 @@ description: "{\"type\":\"application\",\"plutusVersion\":\"v2\",\"traceLevel\":
           (lam value_5
             [(lam match_7
               [(lam generated_14
-                (force
-                  [[[[[[(force (builtin chooseData)) generated_14]
-                    (delay
-                      [(lam generated_16
-                        [[(lam tag_8
-                          (lam fields_9
-                            [(lam generated_15
-                              (force
-                                [[[(force (builtin ifThenElse))
-                                  [[(builtin equalsInteger) generated_15] (con integer 0)]]
-                                  (delay [(builtin iData) [fromInt_6 (con integer 0)]])]
-                                  (delay
-                                    (force
-                                      [[[(force (builtin ifThenElse))
-                                        [[(builtin equalsInteger) generated_15] (con integer 1)]]
-                                        (delay [(builtin iData) [fromInt_6 (con integer 1)]])]
-                                        (delay (force [[(force (builtin trace)) message_12] (delay (error))]))]))]))
-                              tag_8]))
-                          [(force (force (builtin fstPair))) generated_16]]
-                          [(force (force (builtin sndPair))) generated_16]])
-                        [(builtin unConstrData) generated_14]])]
-                    (delay (force [[(force (builtin trace)) message_12] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_12] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_12] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_12] (delay (error))]))]))
+                (case
+                  [[[[[[(force (builtin chooseData)) generated_14] (con integer 0)] (con integer 1)]
+                    (con integer 2)]
+                    (con integer 3)]
+                    (con integer 4)]
+                  [(lam generated_16
+                    [[(lam tag_8
+                      (lam fields_9
+                        [(lam generated_15
+                          (case
+                            [[(builtin equalsInteger) generated_15] (con integer 0)]
+                            (case
+                              [[(builtin equalsInteger) generated_15] (con integer 1)]
+                              (force [[(force (builtin trace)) message_12] (delay (error))])
+                              [(builtin iData) [fromInt_6 (con integer 1)]])
+                            [(builtin iData) [fromInt_6 (con integer 0)]]))
+                          tag_8]))
+                      [(force (force (builtin fstPair))) generated_16]]
+                      [(force (force (builtin sndPair))) generated_16]])
+                    [(builtin unConstrData) generated_14]]
+                  (force [[(force (builtin trace)) message_12] (delay (error))])
+                  (force [[(force (builtin trace)) message_12] (delay (error))])
+                  (force [[(force (builtin trace)) message_12] (delay (error))])
+                  (force [[(force (builtin trace)) message_12] (delay (error))])))
                 match_7])
               value_5])])
         (lam value_11 value_11)])
       (con string "user trace")])
     (con string "incomplete pattern match")])
 --- compiler only
-(program 1.0.0
+(program 1.1.0
   [(lam message_10
     [(lam fromInt_5
       [(lam validate_3 [(lam main_1 main_1) (lam d_2 [validate_3 d_2])])
         (lam value_4
           [(lam match_6
             [(lam generated_11
-              (force
-                [[[[[[(force (builtin chooseData)) generated_11]
-                  (delay
-                    [(lam generated_13
-                      [[(lam tag_7
-                        (lam fields_8
-                          [(lam generated_12
-                            (force
-                              [[[(force (builtin ifThenElse))
-                                [[(builtin equalsInteger) generated_12] (con integer 0)]]
-                                (delay [(builtin iData) [fromInt_5 (con integer 0)]])]
-                                (delay
-                                  (force
-                                    [[[(force (builtin ifThenElse))
-                                      [[(builtin equalsInteger) generated_12] (con integer 1)]]
-                                      (delay [(builtin iData) [fromInt_5 (con integer 1)]])]
-                                      (delay (force [[(force (builtin trace)) message_10] (delay (error))]))]))]))
-                            tag_7]))
-                        [(force (force (builtin fstPair))) generated_13]]
-                        [(force (force (builtin sndPair))) generated_13]])
-                      [(builtin unConstrData) generated_11]])]
-                  (delay (force [[(force (builtin trace)) message_10] (delay (error))]))]
-                  (delay (force [[(force (builtin trace)) message_10] (delay (error))]))]
-                  (delay (force [[(force (builtin trace)) message_10] (delay (error))]))]
-                  (delay (force [[(force (builtin trace)) message_10] (delay (error))]))]))
+              (case
+                [[[[[[(force (builtin chooseData)) generated_11] (con integer 0)] (con integer 1)]
+                  (con integer 2)]
+                  (con integer 3)]
+                  (con integer 4)]
+                [(lam generated_13
+                  [[(lam tag_7
+                    (lam fields_8
+                      [(lam generated_12
+                        (case
+                          [[(builtin equalsInteger) generated_12] (con integer 0)]
+                          (case
+                            [[(builtin equalsInteger) generated_12] (con integer 1)]
+                            (force [[(force (builtin trace)) message_10] (delay (error))])
+                            [(builtin iData) [fromInt_5 (con integer 1)]])
+                          [(builtin iData) [fromInt_5 (con integer 0)]]))
+                        tag_7]))
+                    [(force (force (builtin fstPair))) generated_13]]
+                    [(force (force (builtin sndPair))) generated_13]])
+                  [(builtin unConstrData) generated_11]]
+                (force [[(force (builtin trace)) message_10] (delay (error))])
+                (force [[(force (builtin trace)) message_10] (delay (error))])
+                (force [[(force (builtin trace)) message_10] (delay (error))])
+                (force [[(force (builtin trace)) message_10] (delay (error))])))
               match_6])
             value_4])])
       (lam value_9 value_9)])
     (con string "incomplete pattern match")])
 --- user only
-(program 1.0.0
+(program 1.1.0
   [(lam message_12
     [(lam fromInt_6
       [(lam validate_3
@@ -98,31 +96,30 @@ description: "{\"type\":\"application\",\"plutusVersion\":\"v2\",\"traceLevel\":
         (lam value_5
           [(lam match_7
             [(lam generated_13
-              (force
-                [[[[[[(force (builtin chooseData)) generated_13]
-                  (delay
-                    [(lam generated_15
-                      [[(lam tag_8
-                        (lam fields_9
-                          [(lam generated_14
-                            (force
-                              [[[(force (builtin ifThenElse))
-                                [[(builtin equalsInteger) generated_14] (con integer 0)]]
-                                (delay [(builtin iData) [fromInt_6 (con integer 0)]])]
-                                (delay
-                                  (force
-                                    [[[(force (builtin ifThenElse))
-                                      [[(builtin equalsInteger) generated_14] (con integer 1)]]
-                                      (delay [(builtin iData) [fromInt_6 (con integer 1)]])]
-                                      (delay (error))]))]))
-                            tag_8]))
-                        [(force (force (builtin fstPair))) generated_15]]
-                        [(force (force (builtin sndPair))) generated_15]])
-                      [(builtin unConstrData) generated_13]])]
-                  (delay (error))]
-                  (delay (error))]
-                  (delay (error))]
-                  (delay (error))]))
+              (case
+                [[[[[[(force (builtin chooseData)) generated_13] (con integer 0)] (con integer 1)]
+                  (con integer 2)]
+                  (con integer 3)]
+                  (con integer 4)]
+                [(lam generated_15
+                  [[(lam tag_8
+                    (lam fields_9
+                      [(lam generated_14
+                        (case
+                          [[(builtin equalsInteger) generated_14] (con integer 0)]
+                          (case
+                            [[(builtin equalsInteger) generated_14] (con integer 1)]
+                            (error)
+                            [(builtin iData) [fromInt_6 (con integer 1)]])
+                          [(builtin iData) [fromInt_6 (con integer 0)]]))
+                        tag_8]))
+                    [(force (force (builtin fstPair))) generated_15]]
+                    [(force (force (builtin sndPair))) generated_15]])
+                  [(builtin unConstrData) generated_13]]
+                (error)
+                (error)
+                (error)
+                (error)))
               match_7])
             value_5])])
       (lam value_11 value_11)])
@@ -138,67 +135,65 @@ description: "{\"type\":\"application\",\"plutusVersion\":\"v2\",\"traceLevel\":
         (lam value_4
           [(lam match_6
             [(lam generated_11
-              (force
-                [[[[[[(force (builtin chooseData)) generated_11]
-                  (delay
-                    [(lam generated_13
-                      [[(lam tag_7
-                        (lam fields_8
-                          [(lam generated_12
-                            (force
-                              [[[(force (builtin ifThenElse))
-                                [[(builtin equalsInteger) generated_12] (con integer 0)]]
-                                (delay [(builtin iData) [fromInt_5 (con integer 0)]])]
-                                (delay
-                                  (force
-                                    [[[(force (builtin ifThenElse))
-                                      [[(builtin equalsInteger) generated_12] (con integer 1)]]
-                                      (delay [(builtin iData) [fromInt_5 (con integer 1)]])]
-                                      (delay (error))]))]))
-                            tag_7]))
-                        [(force (force (builtin fstPair))) generated_13]]
-                        [(force (force (builtin sndPair))) generated_13]])
-                      [(builtin unConstrData) generated_11]])]
-                  (delay (error))]
-                  (delay (error))]
-                  (delay (error))]
-                  (delay (error))]))
+              (case
+                [[[[[[(force (builtin chooseData)) generated_11] (con integer 0)] (con integer 1)]
+                  (con integer 2)]
+                  (con integer 3)]
+                  (con integer 4)]
+                [(lam generated_13
+                  [[(lam tag_7
+                    (lam fields_8
+                      [(lam generated_12
+                        (case
+                          [[(builtin equalsInteger) generated_12] (con integer 0)]
+                          (case
+                            [[(builtin equalsInteger) generated_12] (con integer 1)]
+                            (error)
+                            [(builtin iData) [fromInt_5 (con integer 1)]])
+                          [(builtin iData) [fromInt_5 (con integer 0)]]))
+                        tag_7]))
+                    [(force (force (builtin fstPair))) generated_13]]
+                    [(force (force (builtin sndPair))) generated_13]])
+                  [(builtin unConstrData) generated_11]]
+                (error)
+                (error)
+                (error)
+                (error)))
               match_6])
             value_4])])
       (lam value_9 value_9)])
     (con string "Main:6:10")])
 --- silent
-(program 1.0.0
+(program 1.1.0
   [(lam fromInt_5
     [(lam validate_3 [(lam main_1 main_1) (lam d_2 [validate_3 d_2])])
       (lam value_4
         [(lam match_6
           [(lam generated_10
-            (force
-              [[[[[[(force (builtin chooseData)) generated_10]
-                (delay
-                  [(lam generated_12
-                    [[(lam tag_7
-                      (lam fields_8
-                        [(lam generated_11
-                          (force
-                            [[[(force (builtin ifThenElse))
-                              [[(builtin equalsInteger) generated_11] (con integer 0)]]
-                              (delay [(builtin iData) [fromInt_5 (con integer 0)]])]
-                              (delay
-                                (force
-                                  [[[(force (builtin ifThenElse))
-                                    [[(builtin equalsInteger) generated_11] (con integer 1)]]
-                                    (delay [(builtin iData) [fromInt_5 (con integer 1)]])]
-                                    (delay (error))]))]))
-                          tag_7]))
-                      [(force (force (builtin fstPair))) generated_12]]
-                      [(force (force (builtin sndPair))) generated_12]])
-                    [(builtin unConstrData) generated_10]])]
-                (delay (error))]
-                (delay (error))]
-                (delay (error))]
-                (delay (error))]))
+            (case
+              [[[[[[(force (builtin chooseData)) generated_10] (con integer 0)] (con integer 1)]
+                (con integer 2)]
+                (con integer 3)]
+                (con integer 4)]
+              [(lam generated_12
+                [[(lam tag_7
+                  (lam fields_8
+                    [(lam generated_11
+                      (case
+                        [[(builtin equalsInteger) generated_11] (con integer 0)]
+                        (case
+                          [[(builtin equalsInteger) generated_11] (con integer 1)]
+                          (error)
+                          [(builtin iData) [fromInt_5 (con integer 1)]])
+                        [(builtin iData) [fromInt_5 (con integer 0)]]))
+                      tag_7]))
+                  [(force (force (builtin fstPair))) generated_12]]
+                  [(force (force (builtin sndPair))) generated_12]])
+                [(builtin unConstrData) generated_10]]
+              (error)
+              (error)
+              (error)
+              (error)))
             match_6])
           value_4])])
     (lam value_9 value_9)])

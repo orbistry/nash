@@ -1,6 +1,18 @@
 ---
 source: crates/nash-cli/tests/build.rs
-description: "validator module Main exposing (main)\nimport Builtin\nmain : Data -> bytes\nmain = Builtin.serialiseData\n"
+description: "validator module Main exposing (main)\nmain : Data -> unit\nmain value = value\n"
 ---
-Success! Compiled 1 modules (1 declarations)
-Error:   × code generation failed in Main: builtin SerialiseData is unavailable for V1 at the Plomin (protocol 10) compatibility baseline
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `Data`.
+   ╭─[src/Main.nash:3:14]
+ 1 │ validator module Main exposing (main)
+ 2 │ main : Data -> unit
+   ·        ──────┬─────
+   ·              ╰── declared type
+ 3 │ main value = value
+   ·              ──┬──
+   ·                ╰── body of `main`
+   ╰────
+
+Compilation failed: 0 succeeded, 1 failed or blocked.

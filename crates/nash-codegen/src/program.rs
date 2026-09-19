@@ -62,7 +62,7 @@ pub fn assemble_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Compile
     assemble_core_for_version(arena, core, PlutusVersion::V3)
 }
 
-/// Assemble and validate for the selected ledger language at the PV10 baseline.
+/// Assemble and validate for the selected ledger language at the PV11 baseline.
 pub fn assemble_core_for_version<'a>(
     arena: &'a Arena,
     core: &'a Core<'a>,
@@ -75,10 +75,7 @@ pub fn assemble_core_for_version<'a>(
     let core = crate::recursion::rewrite(&build, core)?;
     let named = crate::lower::lower(arena, core)?;
     let term = debruijn::to_debruijn(arena, named).map_err(Error::DeBruijn)?;
-    let uplc_version = match version {
-        PlutusVersion::V1 | PlutusVersion::V2 => Version::plutus_v1(arena),
-        PlutusVersion::V3 => Version::plutus_v3(arena),
-    };
+    let uplc_version = Version::plutus_v3(arena);
     let program = Program::new(arena, uplc_version, term);
     script::validate_program(program, version)?;
     Ok(Compiled { program, named })

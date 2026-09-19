@@ -1,0 +1,86 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Literal exposing (FromInt, FromString, FromBytes)\n\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt value = value\n\nimpl FromString string where\n    fromString value = value\n\nimpl FromBytes bytes where\n    fromBytes value = value\n\nimpl FromInt Int where\n    fromInt = Builtin.iData\n\nimpl FromBytes Bytes where\n    fromBytes = Builtin.bData\n\nimpl FromString bytes where\n    fromString = Builtin.encodeUtf8\n\nmodule Eq exposing (Eq)\n\nimport Builtin exposing (..)\n\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = if eq a b then False else True\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\nimpl Eq bool where\n    eq a b = if a then b else if b then False else True\n\nimpl Eq unit where\n    eq _ _ = True\n\nimpl Eq 'a => Eq (list 'a) where\n    eq xs ys =\n        if Builtin.nullList xs then Builtin.nullList ys\n        else if Builtin.nullList ys then False\n        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)\n        else False\n\nimpl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where\n    eq a b =\n        if eq (Builtin.fstPair a) (Builtin.fstPair b) then\n            eq (Builtin.sndPair a) (Builtin.sndPair b)\n        else False\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n\nmodule Main exposing (..)\nimport Builtin exposing (..)\nfirst : list int -> int\nfirst xs =\n    case xs of\n        [] -> Builtin.subtractInteger 0 1\n        x :: _ -> x\ndecode : Data -> int\ndecode data =\n    case data of\n        I n -> n\n        _ -> Builtin.subtractInteger 0 2\nselect : int -> int\nselect n =\n    case n of\n        7 -> 10\n        100 -> 20\n        _ -> 30\nmain = (first [], first [42], decode (I 9), decode (B #\"\"), select 7, select 100, select (Builtin.subtractInteger 0 7))\n"
+---
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam first_2
+      [(lam decode_4
+        [(lam fromBytes_7
+          [(lam eq_33
+            [(lam select_8
+              [(lam main_1 main_1)
+                (constr 0
+                  [first_2 (con (list integer) [])]
+                  [first_2
+                    [[(force (builtin mkCons)) [fromInt_3 (con integer 42)]]
+                      (con (list integer) [])]]
+                  [decode_4 [(lam field_5 [(builtin iData) field_5]) [fromInt_3 (con integer 9)]]]
+                  [decode_4
+                    [(lam field_6 [(builtin bData) field_6]) [fromBytes_7 (con bytestring #)]]]
+                  [select_8 [fromInt_3 (con integer 7)]]
+                  [select_8 [fromInt_3 (con integer 100)]]
+                  [select_8
+                    [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
+                      [fromInt_3 (con integer 7)]]])])
+              (lam n_32
+                [(lam match_36
+                  [(lam generated_37
+                    (case
+                      generated_37
+                      [(lam generated_38
+                        (case generated_38 [fromInt_3 (con integer 30)] [fromInt_3 (con integer 20)]))
+                        [(lam literal_35 [[eq_33 literal_35] [fromInt_3 (con integer 100)]]) match_36]]
+                      [fromInt_3 (con integer 10)]))
+                    [(lam literal_34 [[eq_33 literal_34] [fromInt_3 (con integer 7)]]) match_36]])
+                  n_32])])
+            (builtin equalsInteger)])
+          (lam value_31 value_31)])
+        (lam data_15
+          [(lam match_17
+            [(lam leaf_24
+              [(lam generated_39
+                (case
+                  [[[[[[(force (builtin chooseData)) generated_39] (con integer 0)] (con integer 1)]
+                    (con integer 2)]
+                    (con integer 3)]
+                    (con integer 4)]
+                  [(lam generated_40
+                    [[(lam field_25 (lam field_26 (force leaf_24)))
+                      [(force (force (builtin fstPair))) generated_40]]
+                      [(force (force (builtin sndPair))) generated_40]])
+                    [(builtin unConstrData) generated_39]]
+                  [(lam field_27 (force leaf_24)) [(builtin unMapData) generated_39]]
+                  [(lam field_28 (force leaf_24)) [(builtin unListData) generated_39]]
+                  [(lam field_29 [(lam n_16 n_16) field_29]) [(builtin unIData) generated_39]]
+                  [(lam field_30 (force leaf_24)) [(builtin unBData) generated_39]]))
+                match_17])
+              (delay
+                [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
+                  [fromInt_3 (con integer 2)]])])
+            data_15])])
+      (lam xs_9
+        [(lam match_11
+          [(lam generated_41
+            (case
+              generated_41
+              (lam field_12 (lam field_13 [(lam x_10 x_10) field_12]))
+              [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
+                [fromInt_3 (con integer 1)]]))
+            match_11])
+          xs_9])])
+    (lam value_14 value_14)])
+--- result
+(constr 0
+  (con integer -1)
+  (con integer 42)
+  (con integer 9)
+  (con integer -2)
+  (con integer 10)
+  (con integer 20)
+  (con integer 30))
+--- logs
+[]
+--- budget
+cpu: 5485869, memory: 29035

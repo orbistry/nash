@@ -16,8 +16,6 @@ main#1
         (lam i2
           (lam i3
             [(lam i4
-              (force
-                [[[(force (builtin ifThenElse)) i4] (delay (con unit ()))]
-                  (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
+              (case i4 (force [[(force (builtin trace)) i0] (delay (error))]) (con unit ())))
               (con bool True)])))])
     (con string "assertion failed")])

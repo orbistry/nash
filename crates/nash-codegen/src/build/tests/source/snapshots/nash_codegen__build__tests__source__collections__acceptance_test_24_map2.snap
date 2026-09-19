@@ -88,10 +88,7 @@ main#1
                               (lam field_37
                                 [(lam c_32
                                   [(lam d_33
-                                    [(lam generated_52
-                                      (force
-                                        [[[(force (builtin ifThenElse)) generated_52] (delay [[eq_34 b_30] d_33])]
-                                          (delay (con bool False))]))
+                                    [(lam generated_52 (case generated_52 (con bool False) [[eq_34 b_30] d_33]))
                                       [[eq_34 a_29] c_32]])
                                     field_37])
                                   field_36]))))
@@ -124,4 +121,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2884815, memory: 17003
+cpu: 2696766, memory: 16302

@@ -15,12 +15,7 @@ main#1
     [(lam match_3
       [(lam main_1 main_1)
         [(lam generated_6
-          (force
-            [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_6]]
-              (delay (con bool True))]
-              (delay
-                [[(lam field_4 (lam field_5 (error))) [(force (builtin headList)) generated_6]]
-                  [(force (builtin tailList)) generated_6]])]))
+          (case generated_6 (lam field_4 (lam field_5 (error))) (con bool True)))
           match_3]])
       x_2])
     (con (list integer) [])])
@@ -29,4 +24,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 550582, memory: 2633
+cpu: 240100, memory: 1600

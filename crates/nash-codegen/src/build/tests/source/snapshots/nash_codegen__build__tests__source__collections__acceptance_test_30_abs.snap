@@ -23,10 +23,10 @@ main#1
             [fromInt_4 (con integer 14)]]])
         (lam a_5
           [(lam generated_7
-            (force
-              [[[(force (builtin ifThenElse)) generated_7]
-                (delay [[(builtin subtractInteger) [fromInt_4 (con integer 0)]] a_5])]
-                (delay a_5)]))
+            (case
+              generated_7
+              a_5
+              [[(builtin subtractInteger) [fromInt_4 (con integer 0)]] a_5]))
             [[(builtin lessThanInteger) a_5] [fromInt_4 (con integer 0)]]])])
       (lam value_6 value_6)])
     (builtin equalsInteger)])
@@ -35,4 +35,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1320188, memory: 6007
+cpu: 1132139, memory: 5306

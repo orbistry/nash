@@ -376,6 +376,12 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                 ))
             }
             Constant::ProtoList(typ, items) => {
+                if branches.len() > 2 {
+                    return Err(MachineError::MissingCaseBranch(
+                        branches,
+                        Value::con(self.arena, constant),
+                    ));
+                }
                 if !items.is_empty() {
                     // Non-empty list: branch 0, with head and tail as arguments
                     if branches.is_empty() {

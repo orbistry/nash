@@ -40,10 +40,7 @@ main#1
           [(lam fromInt_4
             [(lam toData_5
               [(lam main_1 main_1)
-                [(lam generated_33
-                  (force
-                    [[[(force (builtin ifThenElse)) generated_33] (delay (con bool False))]
-                      (delay (con bool True))]))
+                [(lam generated_33 (case generated_33 (con bool True) (con bool False)))
                   [(force (builtin nullList))
                     [[(force (builtin mkCons))
                       [toData_2
@@ -61,74 +58,74 @@ main#1
               (lam arg_18
                 [(lam match_22
                   [(lam generated_34
-                    (force
-                      [[[[[[(force (builtin chooseData)) generated_34]
-                        (delay
-                          [(lam generated_36
-                            [[(lam tag_24
-                              (lam fields_25
-                                [(lam generated_35
-                                  (force
-                                    [[[(force (builtin ifThenElse))
-                                      [[(builtin equalsInteger) generated_35] (con integer 0)]]
-                                      (delay
-                                        [(lam fieldList_26
-                                          [(lam projection_31
-                                            [(lam field_23
-                                              [(lam n_19
-                                                [[(lam field_20 (lam field_21 [[(builtin constrData) field_20] field_21]))
-                                                  [fromInt_11 (con integer 0)]]
-                                                  [[(force (builtin mkCons)) [toData_12 n_19]] (con (list data) [])]])
-                                                field_23])
-                                              projection_31])
-                                            [(force (builtin headList)) fieldList_26]])
-                                          fields_25])]
-                                      (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]))
-                                  tag_24]))
-                              [(force (force (builtin fstPair))) generated_36]]
-                              [(force (force (builtin sndPair))) generated_36]])
-                            [(builtin unConstrData) generated_34]])]
-                        (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                        (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]))
+                    (case
+                      [[[[[[(force (builtin chooseData)) generated_34] (con integer 0)] (con integer 1)]
+                        (con integer 2)]
+                        (con integer 3)]
+                        (con integer 4)]
+                      [(lam generated_36
+                        [[(lam tag_24
+                          (lam fields_25
+                            [(lam generated_35
+                              (case
+                                [[(builtin equalsInteger) generated_35] (con integer 0)]
+                                (force [[(force (builtin trace)) message_32] (delay (error))])
+                                [(lam fieldList_26
+                                  [(lam projection_31
+                                    [(lam field_23
+                                      [(lam n_19
+                                        [[(lam field_20 (lam field_21 [[(builtin constrData) field_20] field_21]))
+                                          [fromInt_11 (con integer 0)]]
+                                          [[(force (builtin mkCons)) [toData_12 n_19]] (con (list data) [])]])
+                                        field_23])
+                                      projection_31])
+                                    [(force (builtin headList)) fieldList_26]])
+                                  fields_25]))
+                              tag_24]))
+                          [(force (force (builtin fstPair))) generated_36]]
+                          [(force (force (builtin sndPair))) generated_36]])
+                        [(builtin unConstrData) generated_34]]
+                      (force [[(force (builtin trace)) message_32] (delay (error))])
+                      (force [[(force (builtin trace)) message_32] (delay (error))])
+                      (force [[(force (builtin trace)) message_32] (delay (error))])
+                      (force [[(force (builtin trace)) message_32] (delay (error))])))
                     match_22])
                   arg_18])])
             (builtin iData)])
           (lam arg_7
             [(lam match_13
               [(lam generated_37
-                (force
-                  [[[[[[(force (builtin chooseData)) generated_37]
-                    (delay
-                      [(lam generated_39
-                        [[(lam tag_15
-                          (lam fields_16
-                            [(lam generated_38
-                              (force
-                                [[[(force (builtin ifThenElse))
-                                  [[(builtin equalsInteger) generated_38] (con integer 0)]]
-                                  (delay
-                                    [(lam fieldList_17
-                                      [(lam projection_30
-                                        [(lam field_14
-                                          [(lam n_8
-                                            [[(lam field_9 (lam field_10 [[(builtin constrData) field_9] field_10]))
-                                              [fromInt_11 (con integer 0)]]
-                                              [[(force (builtin mkCons)) [toData_12 n_8]] (con (list data) [])]])
-                                            field_14])
-                                          projection_30])
-                                        [(force (builtin headList)) fieldList_17]])
-                                      fields_16])]
-                                  (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]))
-                              tag_15]))
-                          [(force (force (builtin fstPair))) generated_39]]
-                          [(force (force (builtin sndPair))) generated_39]])
-                        [(builtin unConstrData) generated_37]])]
-                    (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]))
+                (case
+                  [[[[[[(force (builtin chooseData)) generated_37] (con integer 0)] (con integer 1)]
+                    (con integer 2)]
+                    (con integer 3)]
+                    (con integer 4)]
+                  [(lam generated_39
+                    [[(lam tag_15
+                      (lam fields_16
+                        [(lam generated_38
+                          (case
+                            [[(builtin equalsInteger) generated_38] (con integer 0)]
+                            (force [[(force (builtin trace)) message_32] (delay (error))])
+                            [(lam fieldList_17
+                              [(lam projection_30
+                                [(lam field_14
+                                  [(lam n_8
+                                    [[(lam field_9 (lam field_10 [[(builtin constrData) field_9] field_10]))
+                                      [fromInt_11 (con integer 0)]]
+                                      [[(force (builtin mkCons)) [toData_12 n_8]] (con (list data) [])]])
+                                    field_14])
+                                  projection_30])
+                                [(force (builtin headList)) fieldList_17]])
+                              fields_16]))
+                          tag_15]))
+                      [(force (force (builtin fstPair))) generated_39]]
+                      [(force (force (builtin sndPair))) generated_39]])
+                    [(builtin unConstrData) generated_37]]
+                  (force [[(force (builtin trace)) message_32] (delay (error))])
+                  (force [[(force (builtin trace)) message_32] (delay (error))])
+                  (force [[(force (builtin trace)) message_32] (delay (error))])
+                  (force [[(force (builtin trace)) message_32] (delay (error))])))
                 match_13])
               arg_7])])
         (lam value_28
@@ -140,4 +137,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 6468806, memory: 28869
+cpu: 5904659, memory: 26766

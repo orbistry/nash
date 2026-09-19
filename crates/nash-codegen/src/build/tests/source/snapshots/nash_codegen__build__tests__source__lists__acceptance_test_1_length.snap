@@ -27,17 +27,14 @@ main#1
           (lam xs_4
             [(lam match_6
               [(lam generated_11
-                (force
-                  [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_11]]
-                    (delay [fromInt_3 (con integer 0)])]
-                    (delay
-                      [[(lam field_7
-                        (lam field_8
-                          [(lam rest_5
-                            [[(builtin addInteger) [fromInt_3 (con integer 1)]] [[self_10 self_10] rest_5]])
-                            field_8]))
-                        [(force (builtin headList)) generated_11]]
-                        [(force (builtin tailList)) generated_11]])]))
+                (case
+                  generated_11
+                  (lam field_7
+                    (lam field_8
+                      [(lam rest_5
+                        [[(builtin addInteger) [fromInt_3 (con integer 1)]] [[self_10 self_10] rest_5]])
+                        field_8]))
+                  [fromInt_3 (con integer 0)]))
                 match_6])
               xs_4]))]])
     (lam value_9 value_9)])
@@ -46,4 +43,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 5013510, memory: 21427
+cpu: 2797143, memory: 14103

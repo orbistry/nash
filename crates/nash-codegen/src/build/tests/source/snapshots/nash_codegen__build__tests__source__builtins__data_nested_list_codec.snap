@@ -64,22 +64,23 @@ main#1
                       [(lam match_29
                         [(lam leaf_36
                           [(lam generated_81
-                            (force
-                              [[[[[[(force (builtin chooseData)) generated_81]
-                                (delay
-                                  [(lam generated_82
-                                    [[(lam field_37 (lam field_38 (force leaf_36)))
-                                      [(force (force (builtin fstPair))) generated_82]]
-                                      [(force (force (builtin sndPair))) generated_82]])
-                                    [(builtin unConstrData) generated_81]])]
-                                (delay [(lam field_39 (force leaf_36)) [(builtin unMapData) generated_81]])]
-                                (delay
-                                  [(lam field_40
-                                    [(lam values_27 [(builtin listData) [[mapList_7 fromData_28] values_27]])
-                                      field_40])
-                                    [(builtin unListData) generated_81]])]
-                                (delay [(lam field_41 (force leaf_36)) [(builtin unIData) generated_81]])]
-                                (delay [(lam field_42 (force leaf_36)) [(builtin unBData) generated_81]])]))
+                            (case
+                              [[[[[[(force (builtin chooseData)) generated_81] (con integer 0)] (con integer 1)]
+                                (con integer 2)]
+                                (con integer 3)]
+                                (con integer 4)]
+                              [(lam generated_82
+                                [[(lam field_37 (lam field_38 (force leaf_36)))
+                                  [(force (force (builtin fstPair))) generated_82]]
+                                  [(force (force (builtin sndPair))) generated_82]])
+                                [(builtin unConstrData) generated_81]]
+                              [(lam field_39 (force leaf_36)) [(builtin unMapData) generated_81]]
+                              [(lam field_40
+                                [(lam values_27 [(builtin listData) [[mapList_7 fromData_28] values_27]])
+                                  field_40])
+                                [(builtin unListData) generated_81]]
+                              [(lam field_41 (force leaf_36)) [(builtin unIData) generated_81]]
+                              [(lam field_42 (force leaf_36)) [(builtin unBData) generated_81]]))
                             match_29])
                           (delay (error))])
                         value_26])])
@@ -87,22 +88,23 @@ main#1
                     [(lam match_49
                       [(lam leaf_56
                         [(lam generated_83
-                          (force
-                            [[[[[[(force (builtin chooseData)) generated_83]
-                              (delay
-                                [(lam generated_84
-                                  [[(lam field_57 (lam field_58 (force leaf_56)))
-                                    [(force (force (builtin fstPair))) generated_84]]
-                                    [(force (force (builtin sndPair))) generated_84]])
-                                  [(builtin unConstrData) generated_83]])]
-                              (delay [(lam field_59 (force leaf_56)) [(builtin unMapData) generated_83]])]
-                              (delay
-                                [(lam field_60
-                                  [(lam values_47 [(builtin listData) [[mapList_7 fromData_48] values_47]])
-                                    field_60])
-                                  [(builtin unListData) generated_83]])]
-                              (delay [(lam field_61 (force leaf_56)) [(builtin unIData) generated_83]])]
-                              (delay [(lam field_62 (force leaf_56)) [(builtin unBData) generated_83]])]))
+                          (case
+                            [[[[[[(force (builtin chooseData)) generated_83] (con integer 0)] (con integer 1)]
+                              (con integer 2)]
+                              (con integer 3)]
+                              (con integer 4)]
+                            [(lam generated_84
+                              [[(lam field_57 (lam field_58 (force leaf_56)))
+                                [(force (force (builtin fstPair))) generated_84]]
+                                [(force (force (builtin sndPair))) generated_84]])
+                              [(builtin unConstrData) generated_83]]
+                            [(lam field_59 (force leaf_56)) [(builtin unMapData) generated_83]]
+                            [(lam field_60
+                              [(lam values_47 [(builtin listData) [[mapList_7 fromData_48] values_47]])
+                                field_60])
+                              [(builtin unListData) generated_83]]
+                            [(lam field_61 (force leaf_56)) [(builtin unIData) generated_83]]
+                            [(lam field_62 (force leaf_56)) [(builtin unBData) generated_83]]))
                           match_49])
                         (delay (error))])
                       value_46])])
@@ -110,20 +112,21 @@ main#1
                   [(lam match_65
                     [(lam leaf_72
                       [(lam generated_85
-                        (force
-                          [[[[[[(force (builtin chooseData)) generated_85]
-                            (delay
-                              [(lam generated_86
-                                [[(lam field_73 (lam field_74 (force leaf_72)))
-                                  [(force (force (builtin fstPair))) generated_86]]
-                                  [(force (force (builtin sndPair))) generated_86]])
-                                [(builtin unConstrData) generated_85]])]
-                            (delay [(lam field_75 (force leaf_72)) [(builtin unMapData) generated_85]])]
-                            (delay [(lam field_76 (force leaf_72)) [(builtin unListData) generated_85]])]
-                            (delay
-                              [(lam field_77 [(lam number_64 [(builtin iData) number_64]) field_77])
-                                [(builtin unIData) generated_85]])]
-                            (delay [(lam field_78 (force leaf_72)) [(builtin unBData) generated_85]])]))
+                        (case
+                          [[[[[[(force (builtin chooseData)) generated_85] (con integer 0)] (con integer 1)]
+                            (con integer 2)]
+                            (con integer 3)]
+                            (con integer 4)]
+                          [(lam generated_86
+                            [[(lam field_73 (lam field_74 (force leaf_72)))
+                              [(force (force (builtin fstPair))) generated_86]]
+                              [(force (force (builtin sndPair))) generated_86]])
+                            [(builtin unConstrData) generated_85]]
+                          [(lam field_75 (force leaf_72)) [(builtin unMapData) generated_85]]
+                          [(lam field_76 (force leaf_72)) [(builtin unListData) generated_85]]
+                          [(lam field_77 [(lam number_64 [(builtin iData) number_64]) field_77])
+                            [(builtin unIData) generated_85]]
+                          [(lam field_78 (force leaf_72)) [(builtin unBData) generated_85]]))
                         match_65])
                       (delay (error))])
                     value_63])])
@@ -158,19 +161,16 @@ main#1
             (lam values_17
               [(lam match_20
                 [(lam generated_87
-                  (force
-                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_87]]
-                      (delay (con (list data) []))]
-                      (delay
-                        [[(lam field_21
-                          (lam field_22
-                            [(lam first_18
-                              [(lam rest_19
-                                [[(force (builtin mkCons)) [f_16 first_18]] [[self_30 self_30] rest_19]])
-                                field_22])
-                              field_21]))
-                          [(force (builtin headList)) generated_87]]
-                          [(force (builtin tailList)) generated_87]])]))
+                  (case
+                    generated_87
+                    (lam field_21
+                      (lam field_22
+                        [(lam first_18
+                          [(lam rest_19
+                            [[(force (builtin mkCons)) [f_16 first_18]] [[self_30 self_30] rest_19]])
+                            field_22])
+                          field_21]))
+                    (con (list data) [])))
                   match_20])
                 values_17]))]
           values_17]))])
@@ -179,4 +179,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 21410893, memory: 93119
+cpu: 14465641, memory: 70145

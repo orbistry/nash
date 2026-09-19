@@ -36,19 +36,16 @@ main#1
             (lam values_8
               [(lam match_11
                 [(lam generated_17
-                  (force
-                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_17]]
-                      (delay (con (list data) []))]
-                      (delay
-                        [[(lam field_12
-                          (lam field_13
-                            [(lam first_9
-                              [(lam rest_10
-                                [[(force (builtin mkCons)) [f_7 first_9]] [[self_16 self_16] rest_10]])
-                                field_13])
-                              field_12]))
-                          [(force (builtin headList)) generated_17]]
-                          [(force (builtin tailList)) generated_17]])]))
+                  (case
+                    generated_17
+                    (lam field_12
+                      (lam field_13
+                        [(lam first_9
+                          [(lam rest_10
+                            [[(force (builtin mkCons)) [f_7 first_9]] [[self_16 self_16] rest_10]])
+                            field_13])
+                          field_12]))
+                    (con (list data) [])))
                   match_11])
                 values_8]))]
           values_8]))])
@@ -57,4 +54,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3382088, memory: 12123
+cpu: 2761124, memory: 10057

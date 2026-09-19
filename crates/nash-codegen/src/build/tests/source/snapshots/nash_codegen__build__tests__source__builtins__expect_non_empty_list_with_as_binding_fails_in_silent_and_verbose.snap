@@ -33,13 +33,10 @@ main#1
         (lam inner_8
           [(lam match_10
             [(lam generated_18
-              (force
-                [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_18]]
-                  (delay (error))]
-                  (delay
-                    [[(lam field_11 (lam field_12 [(lam x_9 x_9) match_10]))
-                      [(force (builtin headList)) generated_18]]
-                      [(force (builtin tailList)) generated_18]])]))
+              (case
+                generated_18
+                (lam field_11 (lam field_12 [(lam x_9 x_9) match_10]))
+                (error)))
               match_10])
             inner_8])])
       [(lam self_17 [self_17 self_17])
@@ -47,29 +44,27 @@ main#1
           (lam xs_5
             (lam ys_6
               [(lam generated_19
-                (force
-                  [[[(force (builtin ifThenElse)) generated_19]
-                    (delay [(force (builtin nullList)) ys_6])]
-                    (delay
-                      [(lam generated_20
-                        (force
-                          [[[(force (builtin ifThenElse)) generated_20] (delay (con bool False))]
-                            (delay
-                              [(lam projection_13
-                                [(lam projection_14
-                                  [(lam generated_21
-                                    (force
-                                      [[[(force (builtin ifThenElse)) generated_21]
-                                        (delay
-                                          [(lam projection_15
-                                            [(lam projection_16 [[[self_17 self_17] projection_15] projection_16])
-                                              [(force (builtin tailList)) ys_6]])
-                                            [(force (builtin tailList)) xs_5]])]
-                                        (delay (con bool False))]))
-                                    [[eq_7 projection_13] projection_14]])
-                                  [(force (builtin headList)) ys_6]])
-                                [(force (builtin headList)) xs_5]])]))
-                        [(force (builtin nullList)) ys_6]])]))
+                (case
+                  generated_19
+                  [(lam generated_20
+                    (case
+                      generated_20
+                      [(lam projection_13
+                        [(lam projection_14
+                          [(lam generated_21
+                            (case
+                              generated_21
+                              (con bool False)
+                              [(lam projection_15
+                                [(lam projection_16 [[[self_17 self_17] projection_15] projection_16])
+                                  [(force (builtin tailList)) ys_6]])
+                                [(force (builtin tailList)) xs_5]]))
+                            [[eq_7 projection_13] projection_14]])
+                          [(force (builtin headList)) ys_6]])
+                        [(force (builtin headList)) xs_5]]
+                      (con bool False)))
+                    [(force (builtin nullList)) ys_6]]
+                  [(force (builtin nullList)) ys_6]))
                 [(force (builtin nullList)) xs_5]])))]])
     (builtin equalsInteger)])
 --- result
@@ -77,4 +72,4 @@ error: ExplicitErrorTerm
 --- logs
 []
 --- budget
-cpu: 150582, memory: 133
+cpu: 100, memory: 100

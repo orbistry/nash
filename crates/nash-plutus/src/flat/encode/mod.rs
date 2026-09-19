@@ -256,8 +256,9 @@ fn encode_constant_value<'a>(e: &mut Encoder, x: &'a &Constant<'a>) -> Result<()
 
             encode_constant_value(e, b)?;
         }
-        Constant::Data(_data) => {
-            todo!();
+        Constant::Data(data) => {
+            let data = minicbor::to_vec(*data)?;
+            e.bytes(&data)?;
         }
         Constant::Value(v) => {
             encode_value(e, v)?;
@@ -327,6 +328,48 @@ mod tests {
             crate::pretty::program(decoded),
             crate::pretty::program(program)
         );
+    }
+
+    #[test]
+    fn roundtrip_data_inside_typed_containers() {
+        use crate::{data::PlutusData, program::Version};
+
+        let arena = Arena::new();
+        let integer = PlutusData::integer_from(&arena, -42);
+        let bytes = PlutusData::byte_string(&arena, b"nash");
+        let fields = [integer, bytes];
+        let entries = [(bytes, integer)];
+        let data = [
+            integer,
+            bytes,
+            PlutusData::constr(&arena, 0, &fields),
+            PlutusData::list(&arena, &fields),
+            PlutusData::map(&arena, &entries),
+        ];
+        for data in data {
+            let constant = Constant::Data(data);
+            let elements = [&constant];
+            let list = Constant::ProtoList(&Type::Data, &elements);
+            let array = Constant::ProtoArray(&Type::Data, &elements);
+            let pair = Constant::ProtoPair(&Type::Data, &Type::Data, &constant, &constant);
+            let nested = Constant::ProtoPair(
+                &Type::List(&Type::Data),
+                &Type::Array(&Type::Data),
+                &list,
+                &array,
+            );
+            for container in [&list, &array, &pair, &nested] {
+                let program = Program::new(
+                    &arena,
+                    Version::plutus_v3(&arena),
+                    Term::<DeBruijn>::constant(&arena, container),
+                );
+                let encoded = encode(program).unwrap();
+                let decoded: &Program<DeBruijn> = decode(&arena, &encoded).unwrap();
+                assert_eq!(decoded.term, program.term);
+                assert_eq!(encode(decoded).unwrap(), encoded);
+            }
+        }
     }
 
     #[test]

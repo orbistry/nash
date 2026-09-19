@@ -29,25 +29,19 @@ main#1
               (lam field_8
                 (lam field_9
                   [(lam generated_16
-                    (force
-                      [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_16]]
-                        (delay (con bool False))]
-                        (delay
-                          [[(lam field_10
-                            (lam field_11
-                              [(lam generated_17
-                                (force
-                                  [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_17]]
-                                    (delay (con bool False))]
-                                    (delay
-                                      [[(lam field_12
-                                        (lam field_13
-                                          [(lam a_5 [(lam b_6 [[(builtin equalsInteger) a_5] b_6]) field_12]) field_10]))
-                                        [(force (builtin headList)) generated_17]]
-                                        [(force (builtin tailList)) generated_17]])]))
-                                field_9]))
-                            [(force (builtin headList)) generated_16]]
-                            [(force (builtin tailList)) generated_16]])]))
+                    (case
+                      generated_16
+                      (lam field_10
+                        (lam field_11
+                          [(lam generated_17
+                            (case
+                              generated_17
+                              (lam field_12
+                                (lam field_13
+                                  [(lam a_5 [(lam b_6 [[(builtin equalsInteger) a_5] b_6]) field_12]) field_10]))
+                              (con bool False)))
+                            field_9]))
+                      (con bool False)))
                     field_8])))])
           (constr 0 bucket1_3 bucket2_2)])
         [[(force (builtin mkCons)) [fromInt_14 (con integer 1)]]
@@ -64,4 +58,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3309195, memory: 14187
+cpu: 2038605, memory: 9993

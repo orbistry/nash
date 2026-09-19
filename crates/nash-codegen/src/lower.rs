@@ -52,12 +52,12 @@ impl<'a> Lower<'a> {
         term
     }
 
-    fn lazy_if(&self, condition: Uplc<'a>, yes: Uplc<'a>, no: Uplc<'a>) -> Uplc<'a> {
-        self.builtin(
-            DefaultFunction::IfThenElse,
-            &[condition, yes.delay(self.arena), no.delay(self.arena)],
+    fn branch(&self, condition: Uplc<'a>, yes: Uplc<'a>, no: Uplc<'a>) -> Uplc<'a> {
+        Term::case(
+            self.arena,
+            condition,
+            self.arena.alloc_slice_copy(&[no, yes]),
         )
-        .force(self.arena)
     }
 
     fn lambda(&self, params: &[Binder<'a>], mut body: Uplc<'a>) -> Uplc<'a> {
@@ -223,7 +223,7 @@ impl<'a> Lower<'a> {
                     }
                     *slot = Some(self.term(b.body)?);
                 }
-                self.lazy_if(value, yes.unwrap_or(fallback), no.unwrap_or(fallback))
+                self.branch(value, yes.unwrap_or(fallback), no.unwrap_or(fallback))
             }
             CaseKind::Int | CaseKind::Bytes => {
                 let mut rest = fallback;
@@ -245,7 +245,7 @@ impl<'a> Lower<'a> {
                     };
                     let condition = self.builtin(func, &[value, literal]);
                     let body = self.term(b.body)?;
-                    rest = self.lazy_if(condition, body, rest);
+                    rest = self.branch(condition, body, rest);
                 }
                 rest
             }
@@ -258,23 +258,20 @@ impl<'a> Lower<'a> {
                             nil = Some(self.term(b.body)?)
                         }
                         Test::Cons if cons.is_none() && b.binders.len() == 2 => {
-                            let head = self.builtin(DefaultFunction::HeadList, &[value]);
-                            let tail = self.builtin(DefaultFunction::TailList, &[value]);
                             let body = self.term(b.body)?;
-                            cons = Some(
-                                self.lambda(b.binders, body)
-                                    .apply(self.arena, head)
-                                    .apply(self.arena, tail),
-                            );
+                            cons = Some(self.lambda(b.binders, body));
                         }
                         _ => return Err(Error::InvalidCase("invalid list branch")),
                     }
                 }
-                self.lazy_if(
-                    self.builtin(DefaultFunction::NullList, &[value]),
-                    nil.unwrap_or(fallback),
-                    cons.unwrap_or(fallback),
-                )
+                let cons = match cons {
+                    Some(cons) => cons,
+                    None => fallback
+                        .lambda(self.arena, self.fresh()?)
+                        .lambda(self.arena, self.fresh()?),
+                };
+                let nil = nil.unwrap_or(fallback);
+                Term::case(self.arena, value, self.arena.alloc_slice_copy(&[cons, nil]))
             }
             CaseKind::Data => {
                 let mut arms = [None; 5];
@@ -306,9 +303,10 @@ impl<'a> Lower<'a> {
                     });
                 }
                 let mut args = vec![value];
-                args.extend(arms.map(|arm| arm.unwrap_or(fallback).delay(self.arena)));
-                self.builtin(DefaultFunction::ChooseData, &args)
-                    .force(self.arena)
+                let arms = arms.map(|arm| arm.unwrap_or(fallback));
+                args.extend((0..5).map(|tag| Term::integer_from(self.arena, tag)));
+                let tag = self.builtin(DefaultFunction::ChooseData, &args);
+                Term::case(self.arena, tag, self.arena.alloc_slice_copy(&arms))
             }
             CaseKind::Tag => unreachable!("tag case handled above"),
         };

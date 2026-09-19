@@ -9,8 +9,8 @@ description: "module Main exposing (..)\nimport Prelude exposing (..)\nimport Li
     {
       "assert": null,
       "budget": {
-        "cpu": 12754342,
-        "mem": 52387
+        "cpu": 10334239,
+        "mem": 45368
       },
       "counterexample": null,
       "expectedFailure": false,
@@ -40,8 +40,8 @@ description: "module Main exposing (..)\nimport Prelude exposing (..)\nimport Li
         ]
       },
       "budget": {
-        "cpu": 15389684,
-        "mem": 60746
+        "cpu": 10541520,
+        "mem": 40722
       },
       "counterexample": [
         {
@@ -74,8 +74,8 @@ description: "module Main exposing (..)\nimport Prelude exposing (..)\nimport Li
         ]
       },
       "budget": {
-        "cpu": 15389684,
-        "mem": 60746
+        "cpu": 10541520,
+        "mem": 40722
       },
       "counterexample": null,
       "expectedFailure": false,

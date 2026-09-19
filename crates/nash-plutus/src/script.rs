@@ -1,19 +1,16 @@
 //! Ledger script compatibility and hashing.
 //!
-//! Compatibility is pinned to the Plomin (protocol 10) baseline. Ledger language
-//! versions are distinct from UPLC versions; protocol 11 extends even V1/V2.
+//! Compatibility is pinned to the van Rossem (protocol 11) baseline. Ledger
+//! language versions are distinct from UPLC versions; all support UPLC 1.1.0.
 //! Reference: IntersectMBO/plutus, PlutusLedgerApi/Common/Versions.hs,
-//! `builtinsIntroducedIn`, batches 1–5 (PV10), and `plcVersionsIntroducedIn`.
-//! Reference revision: 7d6eead0f0fba7958125a03a5123acef9f0e9c69.
-use crate::{
-    builtin::DefaultFunction, constant::Constant, machine::PlutusVersion, program::Program,
-    term::Term, typ::Type,
-};
+//! `builtinsIntroducedIn`, batches 1–6 (PV11), and `plcVersionsIntroducedIn`.
+//! Batch 7 remains unavailable.
+use crate::{constant::Constant, machine::PlutusVersion, program::Program, term::Term, typ::Type};
 use cryptoxide::{blake2b::Blake2b, digest::Digest};
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 #[error(
-    "{feature} is unavailable for {version:?} at the Plomin (protocol 10) compatibility baseline"
+    "{feature} is unavailable for {version:?} at the van Rossem (protocol 11) compatibility baseline"
 )]
 pub struct TargetError {
     pub version: PlutusVersion,
@@ -37,18 +34,14 @@ pub fn script_hash(version: PlutusVersion, single_wrapped_cbor: &[u8]) -> [u8; 2
     result
 }
 
-/// Validate every term and constant type against the explicit PV10 baseline.
+/// Validate every term and constant type against the explicit PV11 baseline.
 /// This does not type-check UPLC or check builtin application saturation.
 pub fn validate_program<V>(
     program: &Program<'_, V>,
     version: PlutusVersion,
 ) -> Result<(), TargetError> {
-    if !(program.version.is_v1_0_0() || version == PlutusVersion::V3 && program.version.is_v1_1_0())
-    {
-        return Err(error(
-            version,
-            "UPLC version (expected 1.0.0, or 1.1.0 for V3)",
-        ));
+    if !(program.version.is_v1_0_0() || program.version.is_v1_1_0()) {
+        return Err(error(version, "UPLC version (expected 1.0.0 or 1.1.0)"));
     }
     validate_term(program.term, version, program.version.is_v1_1_0())
 }
@@ -72,16 +65,16 @@ fn validate_term<V>(
             validate_term(argument, version, uplc_110)?;
         }
         Term::Constr { fields, .. } => {
-            if version != PlutusVersion::V3 || !uplc_110 {
-                return Err(error(version, "constr (requires UPLC 1.1.0 and ledger V3)"));
+            if !uplc_110 {
+                return Err(error(version, "constr (requires UPLC 1.1.0)"));
             }
             for term in *fields {
                 validate_term(term, version, uplc_110)?;
             }
         }
         Term::Case { constr, branches } => {
-            if version != PlutusVersion::V3 || !uplc_110 {
-                return Err(error(version, "case (requires UPLC 1.1.0 and ledger V3)"));
+            if !uplc_110 {
+                return Err(error(version, "case (requires UPLC 1.1.0)"));
             }
             validate_term(constr, version, uplc_110)?;
             for term in *branches {
@@ -90,18 +83,10 @@ fn validate_term<V>(
         }
         Term::Builtin(fun) => {
             let tag = **fun as u8;
-            let allowed = match version {
-                PlutusVersion::V1 => tag <= 50,
-                PlutusVersion::V2 => {
-                    tag <= 53
-                        || matches!(
-                            **fun,
-                            DefaultFunction::IntegerToByteString
-                                | DefaultFunction::ByteStringToInteger
-                        )
-                }
-                PlutusVersion::V3 => tag <= 86,
-            };
+            // Flat tags 0..=100 are exactly upstream batches 1–6. Keep this
+            // bound fixed: future runtime builtins must not become ledger-valid
+            // merely because they were added to DefaultFunction.
+            let allowed = tag <= 100;
             if !allowed {
                 return Err(error(version, format!("builtin {fun:?}")));
             }
@@ -113,25 +98,22 @@ fn validate_term<V>(
 }
 fn validate_type(typ: &Type<'_>, version: PlutusVersion) -> Result<(), TargetError> {
     match typ {
-        Type::List(t) => validate_type(t, version)?,
+        Type::List(t) | Type::Array(t) => validate_type(t, version)?,
         Type::Pair(a, b) => {
             validate_type(a, version)?;
             validate_type(b, version)?;
         }
         // Nash cannot encode BLS constant types (including empty containers).
-        // Arrays/Value require PV11.
-        Type::Bls12_381G1Element
-        | Type::Bls12_381G2Element
-        | Type::Bls12_381MlResult
-        | Type::Array(_)
-        | Type::Value => return Err(error(version, format!("constant type {typ:?}"))),
+        Type::Bls12_381G1Element | Type::Bls12_381G2Element | Type::Bls12_381MlResult => {
+            return Err(error(version, format!("constant type {typ:?}")));
+        }
         _ => {}
     }
     Ok(())
 }
 fn validate_constant(constant: &Constant<'_>, version: PlutusVersion) -> Result<(), TargetError> {
     match constant {
-        Constant::ProtoList(t, values) => {
+        Constant::ProtoList(t, values) | Constant::ProtoArray(t, values) => {
             validate_type(t, version)?;
             for value in *values {
                 validate_constant(value, version)?;
@@ -143,12 +125,10 @@ fn validate_constant(constant: &Constant<'_>, version: PlutusVersion) -> Result<
             validate_constant(x, version)?;
             validate_constant(y, version)?;
         }
-        Constant::ProtoArray(..)
-        | Constant::Value(_)
-        | Constant::Bls12_381G1Element(_)
+        Constant::Bls12_381G1Element(_)
         | Constant::Bls12_381G2Element(_)
         | Constant::Bls12_381MlResult(_) => {
-            return Err(error(version, "runtime-only or post-PV10 constant"));
+            return Err(error(version, "runtime-only BLS constant"));
         }
         _ => {}
     }

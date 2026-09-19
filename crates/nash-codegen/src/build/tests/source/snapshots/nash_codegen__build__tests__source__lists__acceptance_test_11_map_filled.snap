@@ -48,19 +48,16 @@ main#1
                 (lam xs_9
                   [(lam match_13
                     [(lam generated_23
-                      (force
-                        [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_23]]
-                          (delay (con (list integer) []))]
-                          (delay
-                            [[(lam field_14
-                              (lam field_15
-                                [(lam x_11
-                                  [(lam rest_12
-                                    [[(force (builtin mkCons)) [f_10 x_11]] [[self_21 self_21] rest_12]])
-                                    field_15])
-                                  field_14]))
-                              [(force (builtin headList)) generated_23]]
-                              [(force (builtin tailList)) generated_23]])]))
+                      (case
+                        generated_23
+                        (lam field_14
+                          (lam field_15
+                            [(lam x_11
+                              [(lam rest_12
+                                [[(force (builtin mkCons)) [f_10 x_11]] [[self_21 self_21] rest_12]])
+                                field_15])
+                              field_14]))
+                        (con (list integer) [])))
                       match_13])
                     xs_9]))]
               xs_9]))])
@@ -69,29 +66,27 @@ main#1
           (lam xs_6
             (lam ys_7
               [(lam generated_24
-                (force
-                  [[[(force (builtin ifThenElse)) generated_24]
-                    (delay [(force (builtin nullList)) ys_7])]
-                    (delay
-                      [(lam generated_25
-                        (force
-                          [[[(force (builtin ifThenElse)) generated_25] (delay (con bool False))]
-                            (delay
-                              [(lam projection_17
-                                [(lam projection_18
-                                  [(lam generated_26
-                                    (force
-                                      [[[(force (builtin ifThenElse)) generated_26]
-                                        (delay
-                                          [(lam projection_19
-                                            [(lam projection_20 [[[self_22 self_22] projection_19] projection_20])
-                                              [(force (builtin tailList)) ys_7]])
-                                            [(force (builtin tailList)) xs_6]])]
-                                        (delay (con bool False))]))
-                                    [[eq_8 projection_17] projection_18]])
-                                  [(force (builtin headList)) ys_7]])
-                                [(force (builtin headList)) xs_6]])]))
-                        [(force (builtin nullList)) ys_7]])]))
+                (case
+                  generated_24
+                  [(lam generated_25
+                    (case
+                      generated_25
+                      [(lam projection_17
+                        [(lam projection_18
+                          [(lam generated_26
+                            (case
+                              generated_26
+                              (con bool False)
+                              [(lam projection_19
+                                [(lam projection_20 [[[self_22 self_22] projection_19] projection_20])
+                                  [(force (builtin tailList)) ys_7]])
+                                [(force (builtin tailList)) xs_6]]))
+                            [[eq_8 projection_17] projection_18]])
+                          [(force (builtin headList)) ys_7]])
+                        [(force (builtin headList)) xs_6]]
+                      (con bool False)))
+                    [(force (builtin nullList)) ys_7]]
+                  [(force (builtin nullList)) ys_7]))
                 [(force (builtin nullList)) xs_6]])))]])
     (builtin equalsInteger)])
 --- result
@@ -99,4 +94,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 13113180, memory: 54871
+cpu: 9016323, memory: 40537

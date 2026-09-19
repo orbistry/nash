@@ -21,11 +21,11 @@ main#1
             (lam self_7
               (lam n_4
                 [(lam generated_8
-                  (force
-                    [[[(force (builtin ifThenElse)) generated_8] (delay [fromInt_3 (con integer 0)])]
-                      (delay
-                        [[(builtin addInteger) step_5]
-                          [[self_7 self_7] [[(builtin subtractInteger) n_4] [fromInt_3 (con integer 1)]]]])]))
+                  (case
+                    generated_8
+                    [[(builtin addInteger) step_5]
+                      [[self_7 self_7] [[(builtin subtractInteger) n_4] [fromInt_3 (con integer 1)]]]]
+                    [fromInt_3 (con integer 0)]))
                   [[(builtin equalsInteger) n_4] [fromInt_3 (con integer 0)]]]))]
             n_4]))])
     (lam value_6 value_6)])
@@ -34,4 +34,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3696876, memory: 16220
+cpu: 2944680, memory: 13416

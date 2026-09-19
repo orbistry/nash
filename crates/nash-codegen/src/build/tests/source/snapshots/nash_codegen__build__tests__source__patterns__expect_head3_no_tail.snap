@@ -32,61 +32,44 @@ main#1
         [(lam leaf_15
           [(lam main_1 main_1)
             [(lam generated_26
-              (force
-                [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_26]]
-                  (delay (force leaf_15))]
-                  (delay
-                    [[(lam field_16
-                      (lam field_17
-                        [(lam generated_27
-                          (force
-                            [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_27]]
-                              (delay (force leaf_15))]
-                              (delay
-                                [[(lam field_18
-                                  (lam field_19
-                                    [(lam generated_28
-                                      (force
-                                        [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_28]]
-                                          (delay (force leaf_15))]
-                                          (delay
-                                            [[(lam field_20
-                                              (lam field_21
-                                                [(lam generated_29
-                                                  (force
-                                                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_29]]
-                                                      (delay
-                                                        [(lam h_3
-                                                          [(lam i_4
-                                                            [(lam j_5
-                                                              [(lam generated_30
-                                                                (force
-                                                                  [[[(force (builtin ifThenElse)) generated_30]
-                                                                    (delay
-                                                                      [(lam generated_31
-                                                                        (force
-                                                                          [[[(force (builtin ifThenElse)) generated_31]
-                                                                            (delay [[(builtin equalsInteger) j_5] j_5])]
-                                                                            (delay (con bool False))]))
-                                                                        [[(builtin equalsInteger) i_4] i_4]])]
-                                                                    (delay (con bool False))]))
-                                                                [[(builtin equalsInteger) h_3] h_3]])
-                                                              field_20])
-                                                            field_18])
-                                                          field_16])]
-                                                      (delay
-                                                        [[(lam field_22 (lam field_23 (force leaf_15)))
-                                                          [(force (builtin headList)) generated_29]]
-                                                          [(force (builtin tailList)) generated_29]])]))
-                                                  field_21]))
-                                              [(force (builtin headList)) generated_28]]
-                                              [(force (builtin tailList)) generated_28]])]))
-                                      field_19]))
-                                  [(force (builtin headList)) generated_27]]
-                                  [(force (builtin tailList)) generated_27]])]))
-                          field_17]))
-                      [(force (builtin headList)) generated_26]]
-                      [(force (builtin tailList)) generated_26]])]))
+              (case
+                generated_26
+                (lam field_16
+                  (lam field_17
+                    [(lam generated_27
+                      (case
+                        generated_27
+                        (lam field_18
+                          (lam field_19
+                            [(lam generated_28
+                              (case
+                                generated_28
+                                (lam field_20
+                                  (lam field_21
+                                    [(lam generated_29
+                                      (case
+                                        generated_29
+                                        (lam field_22 (lam field_23 (force leaf_15)))
+                                        [(lam h_3
+                                          [(lam i_4
+                                            [(lam j_5
+                                              [(lam generated_30
+                                                (case
+                                                  generated_30
+                                                  (con bool False)
+                                                  [(lam generated_31
+                                                    (case generated_31 (con bool False) [[(builtin equalsInteger) j_5] j_5]))
+                                                    [[(builtin equalsInteger) i_4] i_4]]))
+                                                [[(builtin equalsInteger) h_3] h_3]])
+                                              field_20])
+                                            field_18])
+                                          field_16]))
+                                      field_21]))
+                                (force leaf_15)))
+                              field_19]))
+                        (force leaf_15)))
+                      field_17]))
+                (force leaf_15)))
               match_6]])
           (delay (error))])
         a_2])
@@ -100,4 +83,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 4518650, memory: 18625
+cpu: 1926185, memory: 9899

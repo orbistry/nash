@@ -193,5 +193,9 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
     let outputs = outputs.unwrap().unwrap();
     assert_eq!(outputs.len(), 1);
     assert_eq!(outputs[0].module, "Main");
-    assert!(outputs[0].uplc.starts_with("(program 1.0.0"));
+    assert!(outputs[0].uplc.starts_with("(program 1.1.0"));
+    assert_eq!(
+        outputs[0].hash,
+        nash_plutus::script::script_hash(nash_plutus::machine::PlutusVersion::V1, &outputs[0].cbor)
+    );
 }

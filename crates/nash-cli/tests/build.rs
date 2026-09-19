@@ -73,6 +73,12 @@ fn success(output: &Output) {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+fn build_hash(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr)
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("hash ").map(str::to_owned))
+        .expect("build reports a script hash")
+}
 fn logs(source: &str) -> Vec<String> {
     let arena = Arena::new();
     let named = syn::parse_program(&arena, source).unwrap();
@@ -94,7 +100,7 @@ fn configuration_and_cli_overrides_are_independent() {
     let built = project.build(&[]);
     success(&built);
     let configured = project.read("build/Main.uplc");
-    assert!(configured.starts_with("(program 1.0.0"));
+    assert!(configured.starts_with("(program 1.1.0"));
     let configured_logs = logs(&configured);
     assert_eq!(configured_logs.len(), 2, "{configured_logs:?}");
     assert_eq!(configured_logs[0], "user trace");
@@ -150,23 +156,38 @@ fn workspace_members_use_their_config_and_cli_overrides() {
     );
     project.write("shared/First.nash", &UNIT.replace("Main", "First"));
     project.write("two/src/Second.nash", &UNIT.replace("Main", "Second"));
-    success(&project.build(&[]));
+    let configured = project.build(&[]);
+    success(&configured);
+    let hashes: Vec<_> = String::from_utf8_lossy(&configured.stderr)
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("hash ").map(str::to_owned))
+        .collect();
+    assert_eq!(hashes.len(), 2);
+    assert_ne!(hashes[0], hashes[1]);
     assert!(
         project
             .read("build/First.uplc")
-            .starts_with("(program 1.0.0")
+            .starts_with("(program 1.1.0")
     );
     assert!(
         project
             .read("build/Second.uplc")
             .starts_with("(program 1.1.0")
     );
-    success(&project.build(&["--plutus-version", "v2"]));
+    let overridden = project.build(&["--plutus-version", "v2"]);
+    success(&overridden);
+    let overridden_hashes: Vec<_> = String::from_utf8_lossy(&overridden.stderr)
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("hash ").map(str::to_owned))
+        .collect();
+    assert_eq!(overridden_hashes.len(), 2);
+    assert_eq!(overridden_hashes[0], overridden_hashes[1]);
+    assert!(hashes.iter().all(|hash| hash != &overridden_hashes[0]));
     for name in ["First", "Second"] {
         assert!(
             project
                 .read(&format!("build/{name}.uplc"))
-                .starts_with("(program 1.0.0")
+                .starts_with("(program 1.1.0")
         );
     }
 }
@@ -177,11 +198,20 @@ fn package_build_settings_apply() {
         r#"{"type":"package","name":"test/validators","version":"0.1.0","summary":"validators","license":"MIT","exposedModules":["Main"],"plutusVersion":"v1"}"#,
         UNIT,
     );
-    success(&project.build(&[]));
+    let configured = project.build(&[]);
+    success(&configured);
+    let cbor = hex::decode(project.read("build/Main.cbor")).unwrap();
+    assert_eq!(
+        build_hash(&configured),
+        hex::encode(nash_plutus::script::script_hash(
+            nash_plutus::machine::PlutusVersion::V1,
+            &cbor
+        ))
+    );
     assert!(
         project
             .read("build/Main.uplc")
-            .starts_with("(program 1.0.0")
+            .starts_with("(program 1.1.0")
     );
 }
 
@@ -197,16 +227,18 @@ fn failures_preserve_outputs_and_zero_validators_remove_only_owned_files() {
     );
     assert!(!project.build(&[]).status.success());
     assert_eq!(project.artifacts(), prior);
-    let unsupported = "validator module Main exposing (main)\nimport Builtin\nmain : Data -> bytes\nmain = Builtin.serialiseData\n";
-    project.write("src/Main.nash", unsupported);
+    let invalid =
+        "validator module Main exposing (main)\nmain : Data -> unit\nmain value = value\n";
+    project.write("src/Main.nash", invalid);
     let failed = project.build(&["--plutus-version", "v1"]);
     assert!(!failed.status.success());
     assert_eq!(project.artifacts(), prior);
     let message = String::from_utf8(failed.stderr)
         .unwrap()
         .replace(project.0.to_str().unwrap(), "<project>");
-    assert!(message.contains("protocol 10"), "{message}");
-    insta::with_settings!({description => unsupported, omit_expression => true}, { insta::assert_snapshot!(message); });
+    assert!(message.contains("Type mismatch"), "{message}");
+    insta::with_settings!({description => invalid, omit_expression => true}, { insta::assert_snapshot!(message); });
+    project.write("src/Main.nash", UNIT);
     success(&project.build(&["--plutus-version", "v2"]));
     project.write("src/Main.nash", "module Main exposing (..)\nmain = ()\n");
     success(&project.build(&[]));
@@ -217,21 +249,39 @@ fn failures_preserve_outputs_and_zero_validators_remove_only_owned_files() {
 }
 
 #[test]
-fn v1_and_v2_reject_native_constructor_terms() {
+fn ledger_targets_support_native_terms_and_keep_distinct_hashes() {
     let source = "validator module Main exposing (main)\nimport Builtin\ntype wrapped = Wrapped int\nmain : int -> unit\nmain n = case Wrapped n of Wrapped x -> assert (Builtin.equalsInteger n x)\n";
     let project = Project::new(r#"{"type":"application"}"#, source);
-    success(&project.build(&[]));
-    let prior = project.artifacts();
-    for version in ["v1", "v2"] {
+    let mut hashes = std::collections::BTreeSet::new();
+    let mut bytecode = None;
+    for (version, ledger) in [
+        ("v1", nash_plutus::machine::PlutusVersion::V1),
+        ("v2", nash_plutus::machine::PlutusVersion::V2),
+        ("v3", nash_plutus::machine::PlutusVersion::V3),
+    ] {
         let output = project.build(&["--plutus-version", version]);
-        assert!(!output.status.success());
-        let message = String::from_utf8_lossy(&output.stderr);
+        success(&output);
+        let uplc = project.read("build/Main.uplc");
+        assert!(uplc.starts_with("(program 1.1.0"));
+        assert!(uplc.contains("(constr"));
+        assert!(uplc.contains("(case"));
+        let arena = Arena::new();
+        let program = syn::parse_program(&arena, &uplc).unwrap();
         assert!(
-            message.contains("constr") || message.contains("case"),
-            "{message}"
+            program
+                .apply(&arena, Term::integer_from(&arena, 42))
+                .eval_version(&arena, ledger)
+                .term
+                .is_ok()
         );
-        assert_eq!(project.artifacts(), prior);
+        let cbor = hex::decode(project.read("build/Main.cbor")).unwrap();
+        if let Some(prior) = &bytecode {
+            assert_eq!(&cbor, prior);
+        }
+        bytecode = Some(cbor);
+        hashes.insert(build_hash(&output));
     }
+    assert_eq!(hashes.len(), 3);
 }
 
 #[test]
@@ -255,11 +305,11 @@ fn validator_settings_apply_to_dependency_code() {
     project.write("app/src/Main.nash", main);
     success(&project.build(&[]));
     let program = project.read("build/Main.uplc");
-    assert!(program.starts_with("(program 1.0.0"));
+    assert!(program.starts_with("(program 1.1.0"));
     assert_eq!(logs(&program), ["helper trace"]);
-    let prior = project.artifacts();
-    assert!(!project.build(&["--plutus-version", "v1"]).status.success());
-    assert_eq!(project.artifacts(), prior);
+    let overridden = project.build(&["--plutus-version", "v1"]);
+    success(&overridden);
+    assert_eq!(project.read("build/Main.uplc"), program);
     success(&project.build(&["--trace-level", "silent"]));
     assert!(logs(&project.read("build/Main.uplc")).is_empty());
     insta::with_settings!({description => format!("{config}\n{helper_config}\n\n{LITERAL}\n{CHECK}\n{helper}\n{main}"), omit_expression => true}, {

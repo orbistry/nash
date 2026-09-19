@@ -59,52 +59,48 @@ main#1
                             (lam mbB_9
                               [(lam match_12
                                 [(lam generated_50
-                                  (force
-                                    [[[[[[(force (builtin chooseData)) generated_50]
-                                      (delay
-                                        [(lam generated_53
-                                          [[(lam tag_14
-                                            (lam fields_15
-                                              [(lam generated_51
-                                                (force
-                                                  [[[(force (builtin ifThenElse))
-                                                    [[(builtin equalsInteger) generated_51] (con integer 0)]]
-                                                    (delay
-                                                      [(lam projection_43
-                                                        [(lam projection_44
-                                                          [(lam projection_45
-                                                            [(lam generated_52
-                                                              (force
-                                                                [[[(force (builtin ifThenElse)) generated_52]
-                                                                  (delay
-                                                                    [(lam field_10
-                                                                      [[(builtin constrData) (con integer 1)]
-                                                                        [[(force (builtin mkCons)) field_10] (con (list data) [])]])
-                                                                      o_8])]
-                                                                  (delay [[(builtin constrData) (con integer 0)] (con (list data) [])])]))
-                                                              [[(builtin equalsData) projection_45] addr1_3]])
-                                                            [(force (builtin headList)) projection_44]])
-                                                          [(force (force (builtin sndPair))) projection_43]])
-                                                        [(builtin unConstrData) o_8]])]
-                                                    (delay
-                                                      (force
-                                                        [[[(force (builtin ifThenElse))
-                                                          [[(builtin equalsInteger) generated_51] (con integer 1)]]
-                                                          (delay
-                                                            [(lam fieldList_16
-                                                              [(lam projection_46
-                                                                [(lam field_13 [(lam otherwise_11 otherwise_11) match_12]) projection_46])
-                                                                [(force (builtin headList)) fieldList_16]])
-                                                              fields_15])]
-                                                          (delay (force [[(force (builtin trace)) message_47] (delay (error))]))]))]))
-                                                tag_14]))
-                                            [(force (force (builtin fstPair))) generated_53]]
-                                            [(force (force (builtin sndPair))) generated_53]])
-                                          [(builtin unConstrData) generated_50]])]
-                                      (delay (force [[(force (builtin trace)) message_47] (delay (error))]))]
-                                      (delay (force [[(force (builtin trace)) message_47] (delay (error))]))]
-                                      (delay (force [[(force (builtin trace)) message_47] (delay (error))]))]
-                                      (delay (force [[(force (builtin trace)) message_47] (delay (error))]))]))
+                                  (case
+                                    [[[[[[(force (builtin chooseData)) generated_50] (con integer 0)] (con integer 1)]
+                                      (con integer 2)]
+                                      (con integer 3)]
+                                      (con integer 4)]
+                                    [(lam generated_53
+                                      [[(lam tag_14
+                                        (lam fields_15
+                                          [(lam generated_51
+                                            (case
+                                              [[(builtin equalsInteger) generated_51] (con integer 0)]
+                                              (case
+                                                [[(builtin equalsInteger) generated_51] (con integer 1)]
+                                                (force [[(force (builtin trace)) message_47] (delay (error))])
+                                                [(lam fieldList_16
+                                                  [(lam projection_46
+                                                    [(lam field_13 [(lam otherwise_11 otherwise_11) match_12]) projection_46])
+                                                    [(force (builtin headList)) fieldList_16]])
+                                                  fields_15])
+                                              [(lam projection_43
+                                                [(lam projection_44
+                                                  [(lam projection_45
+                                                    [(lam generated_52
+                                                      (case
+                                                        generated_52
+                                                        [[(builtin constrData) (con integer 0)] (con (list data) [])]
+                                                        [(lam field_10
+                                                          [[(builtin constrData) (con integer 1)]
+                                                            [[(force (builtin mkCons)) field_10] (con (list data) [])]])
+                                                          o_8]))
+                                                      [[(builtin equalsData) projection_45] addr1_3]])
+                                                    [(force (builtin headList)) projection_44]])
+                                                  [(force (force (builtin sndPair))) projection_43]])
+                                                [(builtin unConstrData) o_8]]))
+                                            tag_14]))
+                                        [(force (force (builtin fstPair))) generated_53]]
+                                        [(force (force (builtin sndPair))) generated_53]])
+                                      [(builtin unConstrData) generated_50]]
+                                    (force [[(force (builtin trace)) message_47] (delay (error))])
+                                    (force [[(force (builtin trace)) message_47] (delay (error))])
+                                    (force [[(force (builtin trace)) message_47] (delay (error))])
+                                    (force [[(force (builtin trace)) message_47] (delay (error))])))
                                   match_12])
                                 mbB_9]))]
                           [[(builtin constrData) (con integer 0)] (con (list data) [])]]])
@@ -142,18 +138,15 @@ main#1
                 (lam values_37
                   [(lam match_40
                     [(lam generated_54
-                      (force
-                        [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_54]]
-                          (delay (con (list data) []))]
-                          (delay
-                            [[(lam field_41
-                              (lam field_42
-                                [(lam x_38
-                                  [(lam xs_39 [[(force (builtin mkCons)) [f_36 x_38]] [[self_48 self_48] xs_39]])
-                                    field_42])
-                                  field_41]))
-                              [(force (builtin headList)) generated_54]]
-                              [(force (builtin tailList)) generated_54]])]))
+                      (case
+                        generated_54
+                        (lam field_41
+                          (lam field_42
+                            [(lam x_38
+                              [(lam xs_39 [[(force (builtin mkCons)) [f_36 x_38]] [[self_48 self_48] xs_39]])
+                                field_42])
+                              field_41]))
+                        (con (list data) [])))
                       match_40])
                     values_37]))]
               values_37]))])
@@ -166,17 +159,14 @@ main#1
                   (lam zero_27
                     [(lam match_30
                       [(lam generated_55
-                        (force
-                          [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_55]]
-                            (delay zero_27)]
-                            (delay
-                              [[(lam field_31
-                                (lam field_32
-                                  [(lam x_28
-                                    [(lam xs_29 [[[self_49 self_49] xs_29] [[with_26 x_28] zero_27]]) field_32])
-                                    field_31]))
-                                [(force (builtin headList)) generated_55]]
-                                [(force (builtin tailList)) generated_55]])]))
+                        (case
+                          generated_55
+                          (lam field_31
+                            (lam field_32
+                              [(lam x_28
+                                [(lam xs_29 [[[self_49 self_49] xs_29] [[with_26 x_28] zero_27]]) field_32])
+                                field_31]))
+                          zero_27))
                         match_30])
                       self_25])))]
               self_25]
@@ -187,4 +177,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 17644330, memory: 64622
+cpu: 13989187, memory: 52059

@@ -12,15 +12,11 @@ main#1
 (program 1.1.0
   [(lam match_2
     [(lam main_1 main_1)
-      [(lam generated_3
-        (force
-          [[[(force (builtin ifThenElse)) generated_3] (delay (con bool True))]
-            (delay (error))]))
-        match_2]])
+      [(lam generated_3 (case generated_3 (error) (con bool True))) match_2]])
     (con bool False)])
 --- result
 error: ExplicitErrorTerm
 --- logs
 []
 --- budget
-cpu: 76149, memory: 101
+cpu: 100, memory: 100

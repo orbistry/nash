@@ -70,14 +70,11 @@ main#1
                 (lam self_24
                   [(lam match_27
                     [(lam generated_49
-                      (force
-                        [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_49]]
-                          (delay (constr 0))]
-                          (delay
-                            [[(lam field_28
-                              (lam field_29 [(lam field_25 (constr 1 field_25)) [doInit_26 self_24]]))
-                              [(force (builtin headList)) generated_49]]
-                              [(force (builtin tailList)) generated_49]])]))
+                      (case
+                        generated_49
+                        (lam field_28
+                          (lam field_29 [(lam field_25 (constr 1 field_25)) [doInit_26 self_24]]))
+                        (constr 0)))
                       match_27])
                     self_24])])
               [(lam self_13 [self_13 self_13])
@@ -85,29 +82,22 @@ main#1
                   (lam self_34
                     [(lam match_38
                       [(lam generated_50
-                        (force
-                          [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_50]]
-                            (delay
-                              (force [[(force (builtin trace)) [fromString_35 message_48]] (delay (error))]))]
-                            (delay
-                              [[(lam field_39
-                                (lam field_40
-                                  [(lam generated_51
-                                    (force
-                                      [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_51]]
-                                        (delay (con (list integer) []))]
-                                        (delay
-                                          [[(lam field_41
-                                            (lam field_42
-                                              [(lam x_36
-                                                [(lam xs_37 [[(force (builtin mkCons)) x_36] [[self_13 self_13] xs_37]])
-                                                  field_40])
-                                                field_39]))
-                                            [(force (builtin headList)) generated_51]]
-                                            [(force (builtin tailList)) generated_51]])]))
-                                    field_40]))
-                                [(force (builtin headList)) generated_50]]
-                                [(force (builtin tailList)) generated_50]])]))
+                        (case
+                          generated_50
+                          (lam field_39
+                            (lam field_40
+                              [(lam generated_51
+                                (case
+                                  generated_51
+                                  (lam field_41
+                                    (lam field_42
+                                      [(lam x_36
+                                        [(lam xs_37 [[(force (builtin mkCons)) x_36] [[self_13 self_13] xs_37]])
+                                          field_40])
+                                        field_39]))
+                                  (con (list integer) [])))
+                                field_40]))
+                          (force [[(force (builtin trace)) [fromString_35 message_48]] (delay (error))])))
                         match_38])
                       self_34]))]])
             (lam value_43 value_43)])
@@ -134,29 +124,27 @@ main#1
             (lam xs_31
               (lam ys_32
                 [(lam generated_52
-                  (force
-                    [[[(force (builtin ifThenElse)) generated_52]
-                      (delay [(force (builtin nullList)) ys_32])]
-                      (delay
-                        [(lam generated_53
-                          (force
-                            [[[(force (builtin ifThenElse)) generated_53] (delay (con bool False))]
-                              (delay
-                                [(lam projection_44
-                                  [(lam projection_45
-                                    [(lam generated_54
-                                      (force
-                                        [[[(force (builtin ifThenElse)) generated_54]
-                                          (delay
-                                            [(lam projection_46
-                                              [(lam projection_47 [[[self_15 self_15] projection_46] projection_47])
-                                                [(force (builtin tailList)) ys_32]])
-                                              [(force (builtin tailList)) xs_31]])]
-                                          (delay (con bool False))]))
-                                      [[eq_33 projection_44] projection_45]])
-                                    [(force (builtin headList)) ys_32]])
-                                  [(force (builtin headList)) xs_31]])]))
-                          [(force (builtin nullList)) ys_32]])]))
+                  (case
+                    generated_52
+                    [(lam generated_53
+                      (case
+                        generated_53
+                        [(lam projection_44
+                          [(lam projection_45
+                            [(lam generated_54
+                              (case
+                                generated_54
+                                (con bool False)
+                                [(lam projection_46
+                                  [(lam projection_47 [[[self_15 self_15] projection_46] projection_47])
+                                    [(force (builtin tailList)) ys_32]])
+                                  [(force (builtin tailList)) xs_31]]))
+                              [[eq_33 projection_44] projection_45]])
+                            [(force (builtin headList)) ys_32]])
+                          [(force (builtin headList)) xs_31]]
+                        (con bool False)))
+                      [(force (builtin nullList)) ys_32]]
+                    [(force (builtin nullList)) ys_32]))
                   [(force (builtin nullList)) xs_31]])))]])
       (builtin equalsInteger)])
     (con string "unreachable")])
@@ -165,4 +153,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 17114393, memory: 71982
+cpu: 9841061, memory: 47163

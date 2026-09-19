@@ -81,38 +81,34 @@ main#1
                     (lam xs_11
                       [(lam match_15
                         [(lam generated_56
-                          (force
-                            [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_56]]
-                              (delay
-                                [[(builtin mkPairData) [(builtin listData) (con (list data) [])]]
-                                  [(builtin listData) (con (list data) [])]])]
-                              (delay
-                                [[(lam field_16
-                                  (lam field_17
-                                    [(lam entry_12
-                                      [(lam rest_13
-                                        [(lam tails_14
-                                          [(lam projection_46
-                                            [(lam projection_47
-                                              [(lam projection_48
-                                                [(lam evaluated_52
-                                                  [(lam projection_49
-                                                    [(lam projection_50
-                                                      [(lam projection_51
-                                                        [[(builtin mkPairData) evaluated_52]
-                                                          [(builtin listData) [[(force (builtin mkCons)) projection_49] projection_51]]])
-                                                        [(builtin unListData) projection_50]])
-                                                      [(force (force (builtin sndPair))) tails_14]])
-                                                    [(force (force (builtin sndPair))) entry_12]])
-                                                  [(builtin listData) [[(force (builtin mkCons)) projection_46] projection_48]]])
-                                                [(builtin unListData) projection_47]])
-                                              [(force (force (builtin fstPair))) tails_14]])
-                                            [(force (force (builtin fstPair))) entry_12]])
-                                          [[self_53 self_53] rest_13]])
-                                        field_17])
-                                      field_16]))
-                                  [(force (builtin headList)) generated_56]]
-                                  [(force (builtin tailList)) generated_56]])]))
+                          (case
+                            generated_56
+                            (lam field_16
+                              (lam field_17
+                                [(lam entry_12
+                                  [(lam rest_13
+                                    [(lam tails_14
+                                      [(lam projection_46
+                                        [(lam projection_47
+                                          [(lam projection_48
+                                            [(lam evaluated_52
+                                              [(lam projection_49
+                                                [(lam projection_50
+                                                  [(lam projection_51
+                                                    [[(builtin mkPairData) evaluated_52]
+                                                      [(builtin listData) [[(force (builtin mkCons)) projection_49] projection_51]]])
+                                                    [(builtin unListData) projection_50]])
+                                                  [(force (force (builtin sndPair))) tails_14]])
+                                                [(force (force (builtin sndPair))) entry_12]])
+                                              [(builtin listData) [[(force (builtin mkCons)) projection_46] projection_48]]])
+                                            [(builtin unListData) projection_47]])
+                                          [(force (force (builtin fstPair))) tails_14]])
+                                        [(force (force (builtin fstPair))) entry_12]])
+                                      [[self_53 self_53] rest_13]])
+                                    field_17])
+                                  field_16]))
+                            [[(builtin mkPairData) [(builtin listData) (con (list data) [])]]
+                              [(builtin listData) (con (list data) [])]]))
                           match_15])
                         xs_11]))]])
               (lam a_7
@@ -121,17 +117,16 @@ main#1
                     [(lam evaluated_42
                       [(lam projection_41
                         [(lam generated_57
-                          (force
-                            [[[(force (builtin ifThenElse)) generated_57]
-                              (delay
-                                [(lam projection_43
-                                  [(lam evaluated_45
-                                    [(lam projection_44
-                                      [[(builtin equalsData) evaluated_45] [toData_10 projection_44]])
-                                      [(force (force (builtin sndPair))) b_8]])
-                                    [toData_10 projection_43]])
-                                  [(force (force (builtin sndPair))) a_7]])]
-                              (delay (con bool False))]))
+                          (case
+                            generated_57
+                            (con bool False)
+                            [(lam projection_43
+                              [(lam evaluated_45
+                                [(lam projection_44
+                                  [[(builtin equalsData) evaluated_45] [toData_10 projection_44]])
+                                  [(force (force (builtin sndPair))) b_8]])
+                                [toData_10 projection_43]])
+                              [(force (force (builtin sndPair))) a_7]]))
                           [[(builtin equalsData) evaluated_42] [toData_9 projection_41]]])
                         [(force (force (builtin fstPair))) b_8]])
                       [toData_9 projection_40]])
@@ -157,19 +152,16 @@ main#1
             (lam values_28
               [(lam match_31
                 [(lam generated_58
-                  (force
-                    [[[(force (builtin ifThenElse)) [(force (builtin nullList)) generated_58]]
-                      (delay (con (list data) []))]
-                      (delay
-                        [[(lam field_32
-                          (lam field_33
-                            [(lam first_29
-                              [(lam rest_30
-                                [[(force (builtin mkCons)) [f_27 first_29]] [[self_55 self_55] rest_30]])
-                                field_33])
-                              field_32]))
-                          [(force (builtin headList)) generated_58]]
-                          [(force (builtin tailList)) generated_58]])]))
+                  (case
+                    generated_58
+                    (lam field_32
+                      (lam field_33
+                        [(lam first_29
+                          [(lam rest_30
+                            [[(force (builtin mkCons)) [f_27 first_29]] [[self_55 self_55] rest_30]])
+                            field_33])
+                          field_32]))
+                    (con (list data) [])))
                   match_31])
                 values_28]))]
           values_28]))])
@@ -178,4 +170,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 27613819, memory: 110098
+cpu: 19520410, memory: 83262
