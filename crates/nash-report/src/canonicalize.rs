@@ -301,6 +301,15 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             expected,
             actual,
         } => arity(*region, name, "trait", *expected, *actual),
+        Error::DuplicateTest {
+            name,
+            first,
+            second,
+        } => name_clash(
+            *first,
+            *second,
+            &format!("This file has multiple tests named `{name}`."),
+        ),
         Error::DuplicateDecl {
             name,
             first,
@@ -980,6 +989,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         Error::BadArity { .. } => "nash::names::bad_arity",
         Error::ExportNotFound { .. } => "nash::names::export_not_found",
         Error::ExportOpenAlias { .. } => "nash::names::export_open_alias",
+        Error::DuplicateTest { .. } => "nash::names::duplicate_test",
         Error::DuplicateDecl { .. } => "nash::names::duplicate_decl",
         Error::DuplicateType { .. } => "nash::names::duplicate_type",
         Error::DuplicateCtor { .. } => "nash::names::duplicate_ctor",

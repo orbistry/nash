@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf = ( 1, 2, 3, 4 )\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,

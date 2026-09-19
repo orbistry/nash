@@ -4,7 +4,7 @@ pub mod primitives;
 
 use nash_region::{Located, Region};
 
-pub use nash_source::{Associativity, Docs, ModuleKind, Precedence};
+pub use nash_source::{Associativity, Budget, Docs, Expect, ModuleKind, Precedence};
 
 /// A closed Haskell 98 kind. Inference variables never escape the kind checker.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -53,7 +53,24 @@ pub struct ConstructorName<'a> {
 }
 
 #[derive(Debug)]
+pub struct Test<'a> {
+    pub region: Region,
+    pub name: &'a Located<&'a str>,
+    pub expect: Expect,
+    pub budget: Option<Budget>,
+    pub binders: &'a [ViaBinder<'a>],
+    pub body: &'a Located<Expr<'a>>,
+}
+
+#[derive(Debug)]
+pub struct ViaBinder<'a> {
+    pub pattern: &'a Located<Pattern<'a>>,
+    pub fuzzer: &'a Located<Expr<'a>>,
+}
+
+#[derive(Debug)]
 pub struct Module<'a> {
+    pub tests: &'a [Test<'a>],
     pub traits: &'a [&'a Located<Trait<'a>>],
     pub impls: &'a [&'a Located<Impl<'a>>],
     pub kind: ModuleKind,

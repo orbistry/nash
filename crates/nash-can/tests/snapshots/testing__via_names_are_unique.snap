@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (public)\npublic = ()\ngen = ()\ntests\n    prop \"duplicate\" =\n        let\n            x via gen\n            x via gen\n        in\n        do\n            ()\n"
+info: diagnostic
+---
+nash::names::duplicate_pattern
+
+  × This pattern contains multiple `x` variables.
+   ╭─[src/Main.nash:8:13]
+ 6 │         let
+ 7 │             x via gen
+   ·             ┬
+   ·             ╰── first definition
+ 8 │             x via gen
+   ·             ┬
+   ·             ╰── and another first definition
+ 9 │         in
+   ╰────
+  help: Rename one of the definitions.

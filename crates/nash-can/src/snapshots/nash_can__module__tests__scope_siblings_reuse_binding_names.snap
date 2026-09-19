@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\nf outer =\n    case outer of\n        (first, value) -> value\n        (second, value) -> value\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,

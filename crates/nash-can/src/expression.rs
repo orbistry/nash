@@ -1186,6 +1186,30 @@ fn canonicalize_let<'a>(
     free_locals: &mut FreeLocals<'a>,
     warnings: &mut Vec<Warning<'a>>,
 ) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
+    canonicalize_let_with(
+        bump,
+        env,
+        defs,
+        region,
+        free_locals,
+        warnings,
+        |env, free, warnings| canonicalize_expr(bump, env, body, free, warnings),
+    )
+}
+
+fn canonicalize_let_with<'a>(
+    bump: &'a Bump,
+    env: &Scope<'_, 'a>,
+    defs: &[&'a Located<SourceDef<'a>>],
+    region: Region,
+    free_locals: &mut FreeLocals<'a>,
+    warnings: &mut Vec<Warning<'a>>,
+    body: impl FnOnce(
+        &Scope<'_, 'a>,
+        &mut FreeLocals<'a>,
+        &mut Vec<Warning<'a>>,
+    ) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>>,
+) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
     let mut name_regions: Vec<(&'a str, Region)> = Vec::new();
     for def in defs {
         collect_def_names(&def.value, &mut name_regions);
@@ -1222,7 +1246,7 @@ fn canonicalize_let<'a>(
     }
 
     let mut combined_free_locals = FreeLocals::new();
-    let can_body = canonicalize_expr(bump, &inner_env, body, &mut combined_free_locals, warnings)?;
+    let can_body = body(&inner_env, &mut combined_free_locals, warnings)?;
 
     for (has_args, def_free) in def_free_locals_list {
         merge_free_locals(&mut combined_free_locals, def_free, has_args);
@@ -1668,4 +1692,53 @@ pub fn gather_typed_args<'a>(
         }
     }
     Ok((typed_args, current_type))
+}
+
+/// Only the outer test block is sequencing; nested expressions retain monadic do.
+pub(crate) fn canonicalize_test_block<'a>(
+    bump: &'a Bump,
+    env: &Scope<'_, 'a>,
+    stmts: &[&'a Located<nash_source::Stmt<'a>>],
+    last: &'a Located<SourceExpr<'a>>,
+    free: &mut FreeLocals<'a>,
+    warnings: &mut Vec<Warning<'a>>,
+) -> Result<&'a Located<CanExpr<'a>>, Vec<Error<'a>>> {
+    let Some((stmt, rest)) = stmts.split_first() else {
+        return canonicalize_expr(bump, env, last, free, warnings);
+    };
+    if let nash_source::Stmt::Let(defs) = stmt.value {
+        return canonicalize_let_with(
+            bump,
+            env,
+            defs,
+            stmt.region,
+            free,
+            warnings,
+            |env, free, warnings| canonicalize_test_block(bump, env, rest, last, free, warnings),
+        );
+    }
+    let (pattern, expr) = match stmt.value {
+        nash_source::Stmt::Bind { pattern, expr } => (pattern, expr),
+        nash_source::Stmt::Expr(expr) => (
+            &*bump.alloc(Located::at(expr.region, SourcePattern::Unit)),
+            expr,
+        ),
+        nash_source::Stmt::Let(_) => unreachable!(),
+    };
+    let value = canonicalize_expr(bump, env, expr, free, warnings)?;
+    let (pattern, bindings) =
+        pattern::verify(bump, env.module, DuplicatePatternContext::Destruct, pattern)?;
+    let inner = env.add_locals(&bindings)?;
+    let mut body_free = FreeLocals::new();
+    let body = canonicalize_test_block(bump, &inner, rest, last, &mut body_free, warnings)?;
+    let outer = verify_bindings(WarningContext::Def, &bindings, body_free, warnings);
+    merge_free_locals(free, outer, false);
+    Ok(bump.alloc(Located::at(
+        stmt.region,
+        CanExpr::LetDestruct {
+            pattern,
+            value,
+            body,
+        },
+    )))
 }

@@ -77,6 +77,18 @@ pub fn create_initial_env<'a>(
 
     env.q_types.insert("Builtin", env.types.clone());
 
+    add_imports(bump, &mut env, interfaces, imports)?;
+    Ok(env)
+}
+
+pub fn add_imports<'a>(
+    bump: &'a Bump,
+    env: &mut Env<'a>,
+    interfaces: Option<&BTreeMap<&'a str, Interface<'a>>>,
+    imports: &[&'a SourceImport<'a>],
+) -> Result<(), Vec<Error<'a>>> {
+    let home = env.home;
+    let builtin_home = nash_ast::primitives::builtin_home();
     let mut errors = Vec::new();
 
     for import in imports {
@@ -161,7 +173,7 @@ pub fn create_initial_env<'a>(
         match &import.exposing {
             Exposing::Open => {
                 for trait_ in interface.traits.iter().filter(|t| t.exported) {
-                    expose_trait(&mut env, trait_info(bump, interface.home, trait_));
+                    expose_trait(env, trait_info(bump, interface.home, trait_));
                 }
                 for (name, (typ, ctors)) in &raw_type_info {
                     merge_exposed(&mut env.types, name, interface.home, *typ);
@@ -172,7 +184,7 @@ pub fn create_initial_env<'a>(
                     }
                 }
                 for value in interface.values {
-                    add_single_value(&mut env, interface.home, value.name, value.annotation);
+                    add_single_value(env, interface.home, value.name, value.annotation);
                 }
                 for binop in interface.binops {
                     let info = to_env_binop(interface.home, binop);
@@ -181,7 +193,7 @@ pub fn create_initial_env<'a>(
             }
             Exposing::Explicit(exposed) => {
                 if let Err(errs) =
-                    add_explicit_exposing(bump, &mut env, interface, &raw_type_info, exposed)
+                    add_explicit_exposing(bump, env, interface, &raw_type_info, exposed)
                 {
                     errors.extend(errs);
                 }
@@ -190,7 +202,7 @@ pub fn create_initial_env<'a>(
     }
 
     if errors.is_empty() {
-        Ok(env)
+        Ok(())
     } else {
         Err(errors)
     }

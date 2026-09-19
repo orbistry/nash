@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "module Main exposing (..)\n\nimport Basics exposing (..)\n\nsection = (+ 5)\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,

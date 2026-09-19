@@ -246,6 +246,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region,
                             context: type_::FieldContext::Pattern,
                             record,
@@ -259,6 +260,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region,
                             context: type_::FieldContext::Pattern,
                             record,

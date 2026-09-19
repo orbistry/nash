@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (public)\npublic = ()\ntests\n    test \"first\" = do\n        x <- ()\n        x\n    test \"second\" = do\n        x\n"
+info: diagnostic
+---
+nash::names::not_found_var
+
+  × Unknown variable `x`.
+   ╭─[src/Main.nash:8:9]
+ 7 │     test "second" = do
+ 8 │         x
+   ·         ─
+   ╰────
+  help: Try public instead.

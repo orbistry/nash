@@ -396,6 +396,7 @@ impl<'a> Solver<'a, '_> {
                     rank,
                     state,
                     DeferredField {
+                        test_scope: self.test_scope,
                         region,
                         context: type_::FieldContext::Accessor,
                         record,
@@ -430,6 +431,7 @@ impl<'a> Solver<'a, '_> {
                     rank,
                     state,
                     DeferredField {
+                        test_scope: self.test_scope,
                         region,
                         context: type_::FieldContext::Access {
                             record_region: record.region,
@@ -475,6 +477,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region,
                             context: type_::FieldContext::Update { record },
                             record: record_var,
@@ -501,6 +504,7 @@ impl<'a> Solver<'a, '_> {
                         rank,
                         state,
                         DeferredField {
+                            test_scope: self.test_scope,
                             region: field.field.region,
                             context: type_::FieldContext::Update { record },
                             record: record_var,

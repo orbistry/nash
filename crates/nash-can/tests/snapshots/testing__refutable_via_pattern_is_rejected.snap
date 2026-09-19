@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (..)\ntype choice = One | Two\ngen = ()\ntests\n    prop \"pattern\" =\n        let One via gen in\n        do\n            ()\n"
+info: diagnostic
+---
+nash::pattern::incomplete
+
+  × Binding pattern is not exhaustive.
+   ╭─[Main.nash:6:13]
+ 5 │     prop "pattern" =
+ 6 │         let One via gen in
+   ·             ───
+ 7 │         do
+   ╰────
+  help: Missing patterns:
+
+            Two
+
+        Use a case expression to handle the missing patterns.

@@ -3,6 +3,7 @@ source: crates/nash-can/src/module.rs
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias transform 'a = 'a -> 'a\n\nf : transform (List 'b)\nf x = x\n"
 ---
 Module {
+    tests: [],
     traits: [],
     impls: [],
     kind: Normal,

@@ -1,0 +1,132 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (..)\ntests\n    test \"let\" = do\n        let\n            x = ()\n        x\n        ()\n"
+---
+[
+    Test {
+        region: Region {
+            start: Position {
+                line: 3,
+                column: 5,
+            },
+            end: Position {
+                line: 7,
+                column: 11,
+            },
+        },
+        name: Located {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 10,
+                },
+                end: Position {
+                    line: 3,
+                    column: 15,
+                },
+            },
+            value: "let",
+        },
+        expect: Pass,
+        budget: None,
+        binders: [],
+        body: Located {
+            region: Region {
+                start: Position {
+                    line: 4,
+                    column: 9,
+                },
+                end: Position {
+                    line: 5,
+                    column: 19,
+                },
+            },
+            value: Let {
+                definition: Def {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 13,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 14,
+                            },
+                        },
+                        value: "x",
+                    },
+                    args: [],
+                    body: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 19,
+                            },
+                        },
+                        value: Unit,
+                    },
+                },
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 10,
+                        },
+                    },
+                    value: LetDestruct {
+                        pattern: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 10,
+                                },
+                            },
+                            value: Unit,
+                        },
+                        value: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 10,
+                                },
+                            },
+                            value: VarLocal(
+                                "x",
+                            ),
+                        },
+                        body: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 11,
+                                },
+                            },
+                            value: Unit,
+                        },
+                    },
+                },
+            },
+        },
+    },
+]

@@ -1,0 +1,15 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (public)\npublic = ()\ntests\n    test \"nested\" = do\n        x <- do\n            y <- ()\n            y\n        ()\n"
+info: diagnostic
+---
+nash::names::do_without_monad
+
+  × A `do` expression requires `Monad`.
+   ╭─[src/Main.nash:6:13]
+ 5 │         x <- do
+ 6 │             y <- ()
+   ·             ───────
+ 7 │             y
+   ╰────
+  help: Import the module that defines `Monad`.

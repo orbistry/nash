@@ -1,0 +1,20 @@
+---
+source: crates/nash-can/tests/testing.rs
+description: "module Main exposing (public)\npublic = ()\ntests\n    test \"same\" = do\n        ()\n    test \"same\" = do\n        ()\n"
+info: diagnostic
+---
+nash::names::duplicate_test
+
+  × This file has multiple tests named `same`.
+   ╭─[src/Main.nash:6:10]
+ 3 │ tests
+ 4 │     test "same" = do
+   ·          ───┬──
+   ·             ╰── first definition
+ 5 │         ()
+ 6 │     test "same" = do
+   ·          ───┬──
+   ·             ╰── and another first definition
+ 7 │         ()
+   ╰────
+  help: Rename one of the definitions.

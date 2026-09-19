@@ -192,6 +192,8 @@ pub enum Context<'a> {
     RecordUpdateKeys(&'a str, &'a [FieldUpdate<'a>]),
     RecordUpdateValue(&'a str),
     Destructure,
+    TestBody,
+    TestGenerator,
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -200,6 +200,7 @@ mod tests {
     fn module() -> Module<'static> {
         const DOCS: Docs<'static> = Docs::NoDocs(Region::zero());
         Module {
+            tests: &[],
             kind: ModuleKind::Validator(Region::zero()),
             name: ModuleName {
                 package: None,
