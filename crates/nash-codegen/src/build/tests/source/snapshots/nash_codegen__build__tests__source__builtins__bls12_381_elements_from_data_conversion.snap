@@ -48,68 +48,53 @@ main#1
               [(lam leaf_27
                 [(lam main_1 main_1)
                   [(lam generated_60
-                    (case
-                      [[[[[[(force (builtin chooseData)) generated_60] (con integer 0)] (con integer 1)]
-                        (con integer 2)]
-                        (con integer 3)]
-                        (con integer 4)]
-                      [(lam generated_69
-                        [[(lam field_28
-                          (lam field_29
-                            [(lam generated_61
-                              (case
-                                generated_61
-                                (force leaf_27)
-                                [(lam generated_62
+                    (force
+                      [[[[[[(force (builtin chooseData)) generated_60]
+                        (delay
+                          (case
+                            [(builtin unConstrData) generated_60]
+                            (lam field_28
+                              (lam field_29
+                                (case
+                                  [(lam literal_6 [[eq_5 literal_6] [fromInt_4 (con integer 0)]]) field_28]
+                                  (force leaf_27)
                                   (case
-                                    generated_62
+                                    field_29
                                     (lam field_30
                                       (lam field_31
-                                        [(lam generated_63
-                                          (case
-                                            [[[[[[(force (builtin chooseData)) generated_63] (con integer 0)] (con integer 1)]
-                                              (con integer 2)]
-                                              (con integer 3)]
-                                              (con integer 4)]
-                                            [(lam generated_64
-                                              [[(lam field_32 (lam field_33 (force leaf_27)))
-                                                [(force (force (builtin fstPair))) generated_64]]
-                                                [(force (force (builtin sndPair))) generated_64]])
-                                              [(builtin unConstrData) generated_63]]
-                                            [(lam field_34 (force leaf_27)) [(builtin unMapData) generated_63]]
-                                            [(lam field_35 (force leaf_27)) [(builtin unListData) generated_63]]
-                                            [(lam field_36 (force leaf_27)) [(builtin unIData) generated_63]]
-                                            [(lam field_37
-                                              [(lam generated_65
+                                        [(lam generated_61
+                                          (force
+                                            [[[[[[(force (builtin chooseData)) generated_61]
+                                              (delay
                                                 (case
-                                                  generated_65
-                                                  (lam field_38
-                                                    (lam field_39
-                                                      [(lam generated_66
+                                                  [(builtin unConstrData) generated_61]
+                                                  (lam field_32 (lam field_33 (force leaf_27)))))]
+                                              (delay [(lam field_34 (force leaf_27)) [(builtin unMapData) generated_61]])]
+                                              (delay [(lam field_35 (force leaf_27)) [(builtin unListData) generated_61]])]
+                                              (delay [(lam field_36 (force leaf_27)) [(builtin unIData) generated_61]])]
+                                              (delay
+                                                [(lam field_37
+                                                  (case
+                                                    field_31
+                                                    (lam field_38
+                                                      (lam field_39
                                                         (case
-                                                          generated_66
+                                                          field_39
                                                           (lam field_40 (lam field_41 (force leaf_27)))
                                                           [(lam point_7
                                                             [(lam evaluated_59
                                                               [(lam projection_58 [[(builtin bls12_381_G1_equal) evaluated_59] projection_58])
-                                                                (case pk_3 (lam generated_67 (lam generated_68 generated_67)))])
+                                                                (case pk_3 (lam generated_62 (lam generated_63 generated_62)))])
                                                               [(builtin bls12_381_G1_uncompress) point_7]])
-                                                            field_37]))
-                                                        field_39]))
-                                                  (force leaf_27)))
-                                                field_31])
-                                              [(builtin unBData) generated_63]]))
+                                                            field_37])))
+                                                    (force leaf_27)))
+                                                  [(builtin unBData) generated_61]])]))
                                           field_30]))
-                                    (force leaf_27)))
-                                  field_29]))
-                              [(lam literal_6 [[eq_5 literal_6] [fromInt_4 (con integer 0)]]) field_28]]))
-                          [(force (force (builtin fstPair))) generated_69]]
-                          [(force (force (builtin sndPair))) generated_69]])
-                        [(builtin unConstrData) generated_60]]
-                      [(lam field_42 (force leaf_27)) [(builtin unMapData) generated_60]]
-                      [(lam field_43 (force leaf_27)) [(builtin unListData) generated_60]]
-                      [(lam field_44 (force leaf_27)) [(builtin unIData) generated_60]]
-                      [(lam field_45 (force leaf_27)) [(builtin unBData) generated_60]]))
+                                    (force leaf_27)))))))]
+                        (delay [(lam field_42 (force leaf_27)) [(builtin unMapData) generated_60]])]
+                        (delay [(lam field_43 (force leaf_27)) [(builtin unListData) generated_60]])]
+                        (delay [(lam field_44 (force leaf_27)) [(builtin unIData) generated_60]])]
+                        (delay [(lam field_45 (force leaf_27)) [(builtin unBData) generated_60]])]))
                     match_8]])
                 (delay (error))])
               [encode_2 pk_3]])
@@ -134,10 +119,10 @@ main#1
                       [(lam field_50 [(builtin bData) field_50])
                         [(builtin bls12_381_G2_compress) projection_55]]]
                       (con (list data) [])]]])
-                (case p_46 (lam generated_70 (lam generated_71 generated_71)))])
+                (case p_46 (lam generated_64 (lam generated_65 generated_65)))])
               [(lam field_49 [(builtin bData) field_49])
                 [(builtin bls12_381_G1_compress) projection_54]]])
-            (case p_46 (lam generated_72 (lam generated_73 generated_72)))])
+            (case p_46 (lam generated_66 (lam generated_67 generated_66)))])
           [fromInt_4 (con integer 0)]])])
     (lam value_52 value_52)])
 --- result
@@ -145,4 +130,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 191164362, memory: 21544
+cpu: 190480475, memory: 18980

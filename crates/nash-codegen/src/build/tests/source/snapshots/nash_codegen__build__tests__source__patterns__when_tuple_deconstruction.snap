@@ -41,14 +41,12 @@ main#1
                             [(lam a_5
                               [(lam x_6
                                 [(lam projection_20
-                                  [(lam generated_22
-                                    (case
-                                      generated_22
-                                      (force
-                                        [[(force (builtin trace)) [fromString_7 message_21]] (delay (con bool False))])
-                                      (con bool True)))
-                                    [[(builtin equalsInteger) projection_20] x_6]])
-                                  (case a_5 (lam generated_23 generated_23))])
+                                  (case
+                                    [[(builtin equalsInteger) projection_20] x_6]
+                                    (force
+                                      [[(force (builtin trace)) [fromString_7 message_21]] (delay (con bool False))])
+                                    (con bool True)))
+                                  (case a_5 (lam generated_22 generated_22))])
                                 field_17])
                               field_16])
                           (force leaf_13)))

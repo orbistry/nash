@@ -92,37 +92,33 @@ main#1
               (lam arg_14
                 [(lam match_20
                   [(lam generated_35
-                    (case
-                      [[[[[[(force (builtin chooseData)) generated_35] (con integer 0)] (con integer 1)]
-                        (con integer 2)]
-                        (con integer 3)]
-                        (con integer 4)]
-                      [(lam generated_37
-                        [[(lam tag_22
-                          (lam fields_23
-                            [(lam generated_36
-                              (case
-                                [[(builtin equalsInteger) generated_36] (con integer 0)]
-                                (force [[(force (builtin trace)) message_34] (delay (error))])
-                                [(lam fieldList_24
-                                  [(lam projection_27
-                                    [(lam field_21
-                                      [(lam n_15
-                                        [[(lam field_16 (lam field_17 [[(builtin constrData) field_16] field_17]))
-                                          [fromInt_18 (con integer 0)]]
-                                          [[(force (builtin mkCons)) [toData_19 n_15]] (con (list data) [])]])
-                                        field_21])
-                                      projection_27])
-                                    [(force (builtin headList)) fieldList_24]])
-                                  fields_23]))
-                              tag_22]))
-                          [(force (force (builtin fstPair))) generated_37]]
-                          [(force (force (builtin sndPair))) generated_37]])
-                        [(builtin unConstrData) generated_35]]
-                      (force [[(force (builtin trace)) message_34] (delay (error))])
-                      (force [[(force (builtin trace)) message_34] (delay (error))])
-                      (force [[(force (builtin trace)) message_34] (delay (error))])
-                      (force [[(force (builtin trace)) message_34] (delay (error))])))
+                    (force
+                      [[[[[[(force (builtin chooseData)) generated_35]
+                        (delay
+                          (case
+                            [(builtin unConstrData) generated_35]
+                            (lam tag_22
+                              (lam fields_23
+                                [(lam generated_36
+                                  (case
+                                    [[(builtin equalsInteger) generated_36] (con integer 0)]
+                                    (force [[(force (builtin trace)) message_34] (delay (error))])
+                                    [(lam fieldList_24
+                                      [(lam projection_27
+                                        [(lam field_21
+                                          [(lam n_15
+                                            [[(lam field_16 (lam field_17 [[(builtin constrData) field_16] field_17]))
+                                              [fromInt_18 (con integer 0)]]
+                                              [[(force (builtin mkCons)) [toData_19 n_15]] (con (list data) [])]])
+                                            field_21])
+                                          projection_27])
+                                        [(force (builtin headList)) fieldList_24]])
+                                      fields_23]))
+                                  tag_22]))))]
+                        (delay (force [[(force (builtin trace)) message_34] (delay (error))]))]
+                        (delay (force [[(force (builtin trace)) message_34] (delay (error))]))]
+                        (delay (force [[(force (builtin trace)) message_34] (delay (error))]))]
+                        (delay (force [[(force (builtin trace)) message_34] (delay (error))]))]))
                     match_20])
                   arg_14])])
             (lam coerce_26 coerce_26)])
@@ -135,4 +131,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 8320283, memory: 28154
+cpu: 7828396, memory: 26790

@@ -87,9 +87,7 @@ main#1
                             (lam field_36
                               (lam field_37
                                 [(lam c_32
-                                  [(lam d_33
-                                    [(lam generated_52 (case generated_52 (con bool False) [[eq_34 b_30] d_33]))
-                                      [[eq_34 a_29] c_32]])
+                                  [(lam d_33 (case [[eq_34 a_29] c_32] (con bool False) [[eq_34 b_30] d_33]))
                                     field_37])
                                   field_36]))))
                           arg_31])
@@ -121,4 +119,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2696766, memory: 16302
+cpu: 2648766, memory: 16002

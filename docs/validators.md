@@ -156,7 +156,7 @@ The entire generated program is validated, including nested terms and empty
 typed containers. Native `constr`/`case` terms are available for all three ledger
 languages. Protocol 11 also permits `case` on boolean, integer, list, pair,
 and unit constants. `Data` is not directly supported by native `case`: Nash
-uses `chooseData` to select an integer tag, then native `case` to dispatch.
+uses `chooseData` directly with delayed branches, forcing only the selected one.
 BLS runtime constants cannot be serialized as script literals; BLS builtins can
 construct values at runtime.
 

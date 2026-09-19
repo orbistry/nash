@@ -36,18 +36,16 @@ main#1
           [(lam projection_10
             [(lam evaluated_12
               [(lam projection_11
-                [(lam generated_16
-                  (case
-                    generated_16
-                    (con bool False)
-                    [(lam projection_13
-                      [(lam evaluated_15
-                        [(lam projection_14
-                          [[(builtin equalsData) evaluated_15] [toData_7 projection_14]])
-                          [(force (force (builtin sndPair))) b_6]])
-                        [toData_7 projection_13]])
-                      [(force (force (builtin sndPair))) a_5]]))
-                  [[(builtin equalsData) evaluated_12] [toData_7 projection_11]]])
+                (case
+                  [[(builtin equalsData) evaluated_12] [toData_7 projection_11]]
+                  (con bool False)
+                  [(lam projection_13
+                    [(lam evaluated_15
+                      [(lam projection_14
+                        [[(builtin equalsData) evaluated_15] [toData_7 projection_14]])
+                        [(force (force (builtin sndPair))) b_6]])
+                      [toData_7 projection_13]])
+                    [(force (force (builtin sndPair))) a_5]]))
                 [(force (force (builtin fstPair))) b_6]])
               [toData_7 projection_10]])
             [(force (force (builtin fstPair))) a_5]]))])
@@ -57,4 +55,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 4379075, memory: 10722
+cpu: 4331075, memory: 10422

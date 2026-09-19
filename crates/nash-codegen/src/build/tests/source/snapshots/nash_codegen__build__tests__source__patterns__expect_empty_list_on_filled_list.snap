@@ -16,9 +16,7 @@ main#1
     [(lam x_2
       [(lam match_3
         [(lam main_1 main_1)
-          [(lam generated_8
-            (case generated_8 (lam field_4 (lam field_5 (error))) (con bool True)))
-            match_3]])
+          (case match_3 (lam field_4 (lam field_5 (error))) (con bool True))])
         x_2])
       [[(force (builtin mkCons)) [fromInt_6 (con integer 1)]]
         [[(force (builtin mkCons)) [fromInt_6 (con integer 2)]] (con (list integer) [])]]])

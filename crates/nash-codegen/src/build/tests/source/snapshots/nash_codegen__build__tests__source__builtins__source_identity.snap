@@ -12,13 +12,14 @@ main#1
 (program 1.1.0
   [(lam identity_2
     [(lam main_1 main_1)
-      [(lam generated_4
-        (case generated_4 (con bool False) [identity_2 (con bool True)]))
-        [identity_2 (con bool True)]]])
+      (case
+        [identity_2 (con bool True)]
+        (con bool False)
+        [identity_2 (con bool True)])])
     (lam value_3 value_3)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 288100, memory: 1900
+cpu: 240100, memory: 1600

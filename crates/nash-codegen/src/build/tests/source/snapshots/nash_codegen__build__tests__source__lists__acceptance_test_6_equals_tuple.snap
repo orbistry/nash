@@ -54,10 +54,7 @@ main#1
                             (lam field_13
                               (lam field_14
                                 [(lam c_8
-                                  [(lam d_9
-                                    [(lam generated_26 (case generated_26 (con bool False) [[eq_11 b_6] d_9]))
-                                      [[eq_10 a_5] c_8]])
-                                    field_14])
+                                  [(lam d_9 (case [[eq_10 a_5] c_8] (con bool False) [[eq_11 b_6] d_9])) field_14])
                                   field_13]))))
                           arg_7])
                         field_17])
@@ -67,33 +64,27 @@ main#1
         (lam self_25
           (lam xs_19
             (lam ys_20
-              [(lam generated_27
+              (case
+                [(force (builtin nullList)) xs_19]
                 (case
-                  generated_27
-                  [(lam generated_28
-                    (case
-                      generated_28
-                      [(lam projection_21
-                        [(lam projection_22
-                          [(lam generated_29
-                            (case
-                              generated_29
-                              (con bool False)
-                              [(lam projection_23
-                                [(lam projection_24 [[[self_25 self_25] projection_23] projection_24])
-                                  [(force (builtin tailList)) ys_20]])
-                                [(force (builtin tailList)) xs_19]]))
-                            [[eq_10 projection_21] projection_22]])
-                          [(force (builtin headList)) ys_20]])
-                        [(force (builtin headList)) xs_19]]
-                      (con bool False)))
-                    [(force (builtin nullList)) ys_20]]
-                  [(force (builtin nullList)) ys_20]))
-                [(force (builtin nullList)) xs_19]])))]])
+                  [(force (builtin nullList)) ys_20]
+                  [(lam projection_21
+                    [(lam projection_22
+                      (case
+                        [[eq_10 projection_21] projection_22]
+                        (con bool False)
+                        [(lam projection_23
+                          [(lam projection_24 [[[self_25 self_25] projection_23] projection_24])
+                            [(force (builtin tailList)) ys_20]])
+                          [(force (builtin tailList)) xs_19]]))
+                      [(force (builtin headList)) ys_20]])
+                    [(force (builtin headList)) xs_19]]
+                  (con bool False))
+                [(force (builtin nullList)) ys_20]))))]])
     (builtin equalsInteger)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1641299, memory: 9165
+cpu: 1545299, memory: 8565

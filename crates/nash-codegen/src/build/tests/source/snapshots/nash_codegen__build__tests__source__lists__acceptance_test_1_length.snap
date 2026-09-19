@@ -26,16 +26,14 @@ main#1
         (lam self_10
           (lam xs_4
             [(lam match_6
-              [(lam generated_11
-                (case
-                  generated_11
-                  (lam field_7
-                    (lam field_8
-                      [(lam rest_5
-                        [[(builtin addInteger) [fromInt_3 (con integer 1)]] [[self_10 self_10] rest_5]])
-                        field_8]))
-                  [fromInt_3 (con integer 0)]))
-                match_6])
+              (case
+                match_6
+                (lam field_7
+                  (lam field_8
+                    [(lam rest_5
+                      [[(builtin addInteger) [fromInt_3 (con integer 1)]] [[self_10 self_10] rest_5]])
+                      field_8]))
+                [fromInt_3 (con integer 0)]))
               xs_4]))]])
     (lam value_9 value_9)])
 --- result
@@ -43,4 +41,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2797143, memory: 14103
+cpu: 2605143, memory: 12903

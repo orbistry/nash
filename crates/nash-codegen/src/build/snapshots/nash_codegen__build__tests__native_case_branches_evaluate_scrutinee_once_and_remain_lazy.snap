@@ -13,16 +13,14 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
               [(lam main_1 main_1)
                 (constr 0 [choose_2 (con bool True)] [choose_2 (con bool False)])])
               (lam flag_3
-                [(lam generated_11
-                  (case
-                    generated_11
-                    (force
-                      [[(force (builtin trace)) [fromString_5 message_10]]
-                        (delay [fromInt_4 (con integer 7)])])
-                    (force
-                      [[(force (builtin trace)) [fromString_5 message_9]]
-                        (delay [fromInt_4 (con integer 42)])])))
-                  (force [[(force (builtin trace)) [fromString_5 message_8]] (delay flag_3)])])])
+                (case
+                  (force [[(force (builtin trace)) [fromString_5 message_8]] (delay flag_3)])
+                  (force
+                    [[(force (builtin trace)) [fromString_5 message_10]]
+                      (delay [fromInt_4 (con integer 7)])])
+                  (force
+                    [[(force (builtin trace)) [fromString_5 message_9]]
+                      (delay [fromInt_4 (con integer 42)])])))])
             (lam value_7 value_7)])
           (lam value_6 value_6)])
         (con string "false")])
@@ -33,4 +31,4 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 --- logs
 ["condition", "true", "condition", "false"]
 --- budget
-cpu: 1614092, memory: 8828
+cpu: 1518092, memory: 8228

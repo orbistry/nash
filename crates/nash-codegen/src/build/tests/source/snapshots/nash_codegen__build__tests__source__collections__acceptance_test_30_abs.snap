@@ -22,12 +22,10 @@ main#1
                 [fromInt_4 (con integer 14)]]]]
             [fromInt_4 (con integer 14)]]])
         (lam a_5
-          [(lam generated_7
-            (case
-              generated_7
-              a_5
-              [[(builtin subtractInteger) [fromInt_4 (con integer 0)]] a_5]))
-            [[(builtin lessThanInteger) a_5] [fromInt_4 (con integer 0)]]])])
+          (case
+            [[(builtin lessThanInteger) a_5] [fromInt_4 (con integer 0)]]
+            a_5
+            [[(builtin subtractInteger) [fromInt_4 (con integer 0)]] a_5]))])
       (lam value_6 value_6)])
     (builtin equalsInteger)])
 --- result
@@ -35,4 +33,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1132139, memory: 5306
+cpu: 1084139, memory: 5006

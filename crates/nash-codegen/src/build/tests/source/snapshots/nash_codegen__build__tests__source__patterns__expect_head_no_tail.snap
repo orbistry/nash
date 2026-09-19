@@ -21,19 +21,15 @@ main#1
       [(lam match_4
         [(lam leaf_9
           [(lam main_1 main_1)
-            [(lam generated_16
-              (case
-                generated_16
-                (lam field_10
-                  (lam field_11
-                    [(lam generated_17
-                      (case
-                        generated_17
-                        (lam field_12 (lam field_13 (force leaf_9)))
-                        [(lam h_3 [[(builtin equalsInteger) h_3] h_3]) field_10]))
-                      field_11]))
-                (force leaf_9)))
-              match_4]])
+            (case
+              match_4
+              (lam field_10
+                (lam field_11
+                  (case
+                    field_11
+                    (lam field_12 (lam field_13 (force leaf_9)))
+                    [(lam h_3 [[(builtin equalsInteger) h_3] h_3]) field_10])))
+              (force leaf_9))])
           (delay (error))])
         a_2])
       [[(force (builtin mkCons)) [fromInt_14 (con integer 1)]]

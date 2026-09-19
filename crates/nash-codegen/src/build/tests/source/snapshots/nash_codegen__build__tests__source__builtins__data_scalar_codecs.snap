@@ -24,20 +24,16 @@ main#1
           [(lam decodedBytes_4
             [(lam toData_6
               [(lam main_1 main_1)
-                [(lam generated_15
-                  (case
-                    generated_15
-                    (con bool False)
-                    [(lam generated_16
-                      (case
-                        generated_16
-                        (con bool False)
-                        [[(builtin equalsData) [toData_6 decodedInt_2]]
-                          [(lam field_7 [(builtin iData) field_7]) [fromInt_3 (con integer 42)]]]))
-                      [[(builtin equalsByteString) [(builtin unBData) decodedBytes_4]]
-                        [fromBytes_5 (con bytestring #abcd)]]]))
+                (case
                   [[(builtin equalsInteger) [(builtin unIData) decodedInt_2]]
-                    [fromInt_3 (con integer 42)]]]])
+                    [fromInt_3 (con integer 42)]]
+                  (con bool False)
+                  (case
+                    [[(builtin equalsByteString) [(builtin unBData) decodedBytes_4]]
+                      [fromBytes_5 (con bytestring #abcd)]]
+                    (con bool False)
+                    [[(builtin equalsData) [toData_6 decodedInt_2]]
+                      [(lam field_7 [(builtin iData) field_7]) [fromInt_3 (con integer 42)]]]))])
               (lam coerce_13 coerce_13)])
             [fromData_8
               [(lam field_11 [(builtin bData) field_11]) [fromBytes_5 (con bytestring #abcd)]]]])
@@ -51,4 +47,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2591179, memory: 8963
+cpu: 2495179, memory: 8363

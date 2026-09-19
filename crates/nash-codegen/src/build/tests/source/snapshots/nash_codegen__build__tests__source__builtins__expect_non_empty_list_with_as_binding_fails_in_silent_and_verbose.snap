@@ -32,40 +32,29 @@ main#1
           [fromAssetList_4 (con (list integer) [])]])
         (lam inner_8
           [(lam match_10
-            [(lam generated_18
-              (case
-                generated_18
-                (lam field_11 (lam field_12 [(lam x_9 x_9) match_10]))
-                (error)))
-              match_10])
+            (case match_10 (lam field_11 (lam field_12 [(lam x_9 x_9) match_10])) (error)))
             inner_8])])
       [(lam self_17 [self_17 self_17])
         (lam self_17
           (lam xs_5
             (lam ys_6
-              [(lam generated_19
+              (case
+                [(force (builtin nullList)) xs_5]
                 (case
-                  generated_19
-                  [(lam generated_20
-                    (case
-                      generated_20
-                      [(lam projection_13
-                        [(lam projection_14
-                          [(lam generated_21
-                            (case
-                              generated_21
-                              (con bool False)
-                              [(lam projection_15
-                                [(lam projection_16 [[[self_17 self_17] projection_15] projection_16])
-                                  [(force (builtin tailList)) ys_6]])
-                                [(force (builtin tailList)) xs_5]]))
-                            [[eq_7 projection_13] projection_14]])
-                          [(force (builtin headList)) ys_6]])
-                        [(force (builtin headList)) xs_5]]
-                      (con bool False)))
-                    [(force (builtin nullList)) ys_6]]
-                  [(force (builtin nullList)) ys_6]))
-                [(force (builtin nullList)) xs_5]])))]])
+                  [(force (builtin nullList)) ys_6]
+                  [(lam projection_13
+                    [(lam projection_14
+                      (case
+                        [[eq_7 projection_13] projection_14]
+                        (con bool False)
+                        [(lam projection_15
+                          [(lam projection_16 [[[self_17 self_17] projection_15] projection_16])
+                            [(force (builtin tailList)) ys_6]])
+                          [(force (builtin tailList)) xs_5]]))
+                      [(force (builtin headList)) ys_6]])
+                    [(force (builtin headList)) xs_5]]
+                  (con bool False))
+                [(force (builtin nullList)) ys_6]))))]])
     (builtin equalsInteger)])
 --- result
 error: ExplicitErrorTerm

@@ -58,80 +58,65 @@ main#1
               (lam self_31
                 (lam xs_8
                   [(lam match_14
-                    [(lam generated_35
-                      (case
-                        generated_35
-                        (lam field_15
-                          (lam field_16
-                            [(lam x_9
-                              [(lam rest_10
-                                [[(force (builtin mkCons)) x_9]
-                                  [[self_31 self_31] [[filter_11 rest_10] (lam y_12 [[neq_13 y_12] x_9])]]])
-                                field_16])
-                              field_15]))
-                        (con (list integer) [])))
-                      match_14])
+                    (case
+                      match_14
+                      (lam field_15
+                        (lam field_16
+                          [(lam x_9
+                            [(lam rest_10
+                              [[(force (builtin mkCons)) x_9]
+                                [[self_31 self_31] [[filter_11 rest_10] (lam y_12 [[neq_13 y_12] x_9])]]])
+                              field_16])
+                            field_15]))
+                      (con (list integer) [])))
                     xs_8]))]])
-          (lam a_25
-            (lam b_26
-              [(lam generated_36 (case generated_36 (con bool True) (con bool False)))
-                [[eq_7 a_25] b_26]]))])
+          (lam a_25 (lam b_26 (case [[eq_7 a_25] b_26] (con bool True) (con bool False))))])
         (lam xs_18
           (lam f_19
             [[(lam self_33 [self_33 self_33])
               (lam self_33
                 (lam xs_18
                   [(lam match_22
-                    [(lam generated_37
-                      (case
-                        generated_37
-                        (lam field_23
-                          (lam field_24
-                            [(lam x_20
-                              [(lam rest_21
-                                [(lam generated_38
-                                  (case
-                                    generated_38
-                                    [[self_33 self_33] rest_21]
-                                    [[(force (builtin mkCons)) x_20] [[self_33 self_33] rest_21]]))
-                                  [f_19 x_20]])
-                                field_24])
-                              field_23]))
-                        (con (list integer) [])))
-                      match_22])
+                    (case
+                      match_22
+                      (lam field_23
+                        (lam field_24
+                          [(lam x_20
+                            [(lam rest_21
+                              (case
+                                [f_19 x_20]
+                                [[self_33 self_33] rest_21]
+                                [[(force (builtin mkCons)) x_20] [[self_33 self_33] rest_21]]))
+                              field_24])
+                            field_23]))
+                      (con (list integer) [])))
                     xs_18]))]
               xs_18]))])
       [(lam self_34 [self_34 self_34])
         (lam self_34
           (lam xs_5
             (lam ys_6
-              [(lam generated_39
+              (case
+                [(force (builtin nullList)) xs_5]
                 (case
-                  generated_39
-                  [(lam generated_40
-                    (case
-                      generated_40
-                      [(lam projection_27
-                        [(lam projection_28
-                          [(lam generated_41
-                            (case
-                              generated_41
-                              (con bool False)
-                              [(lam projection_29
-                                [(lam projection_30 [[[self_34 self_34] projection_29] projection_30])
-                                  [(force (builtin tailList)) ys_6]])
-                                [(force (builtin tailList)) xs_5]]))
-                            [[eq_7 projection_27] projection_28]])
-                          [(force (builtin headList)) ys_6]])
-                        [(force (builtin headList)) xs_5]]
-                      (con bool False)))
-                    [(force (builtin nullList)) ys_6]]
-                  [(force (builtin nullList)) ys_6]))
-                [(force (builtin nullList)) xs_5]])))]])
+                  [(force (builtin nullList)) ys_6]
+                  [(lam projection_27
+                    [(lam projection_28
+                      (case
+                        [[eq_7 projection_27] projection_28]
+                        (con bool False)
+                        [(lam projection_29
+                          [(lam projection_30 [[[self_34 self_34] projection_29] projection_30])
+                            [(force (builtin tailList)) ys_6]])
+                          [(force (builtin tailList)) xs_5]]))
+                      [(force (builtin headList)) ys_6]])
+                    [(force (builtin headList)) xs_5]]
+                  (con bool False))
+                [(force (builtin nullList)) ys_6]))))]])
     (builtin equalsInteger)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 13083479, memory: 64863
+cpu: 11691479, memory: 56163

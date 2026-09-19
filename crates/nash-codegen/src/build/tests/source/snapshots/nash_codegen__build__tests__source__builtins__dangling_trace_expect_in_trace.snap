@@ -24,12 +24,10 @@ main#1
                   (force
                     [[(force (builtin trace)) [fromString_2 message_5]]
                       (delay
-                        [(lam generated_7
-                          (case
-                            generated_7
-                            (force [[(force (builtin trace)) message_6] (delay (error))])
-                            (con unit ())))
-                          (con bool True)])]))])])
+                        (case
+                          (con bool True)
+                          (force [[(force (builtin trace)) message_6] (delay (error))])
+                          (con unit ())))]))])])
           (lam value_3 value_3)])
         (con string "assertion failed")])
       (con string "bar")])
@@ -39,4 +37,4 @@ main#1
 --- logs
 ["foo", "bar"]
 --- budget
-cpu: 775096, memory: 4264
+cpu: 727096, memory: 3964

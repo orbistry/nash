@@ -35,33 +35,27 @@ main#1
         (lam self_13
           (lam xs_5
             (lam ys_6
-              [(lam generated_14
+              (case
+                [(force (builtin nullList)) xs_5]
                 (case
-                  generated_14
-                  [(lam generated_15
-                    (case
-                      generated_15
-                      [(lam projection_9
-                        [(lam projection_10
-                          [(lam generated_16
-                            (case
-                              generated_16
-                              (con bool False)
-                              [(lam projection_11
-                                [(lam projection_12 [[[self_13 self_13] projection_11] projection_12])
-                                  [(force (builtin tailList)) ys_6]])
-                                [(force (builtin tailList)) xs_5]]))
-                            [[eq_7 projection_9] projection_10]])
-                          [(force (builtin headList)) ys_6]])
-                        [(force (builtin headList)) xs_5]]
-                      (con bool False)))
-                    [(force (builtin nullList)) ys_6]]
-                  [(force (builtin nullList)) ys_6]))
-                [(force (builtin nullList)) xs_5]])))]])
+                  [(force (builtin nullList)) ys_6]
+                  [(lam projection_9
+                    [(lam projection_10
+                      (case
+                        [[eq_7 projection_9] projection_10]
+                        (con bool False)
+                        [(lam projection_11
+                          [(lam projection_12 [[[self_13 self_13] projection_11] projection_12])
+                            [(force (builtin tailList)) ys_6]])
+                          [(force (builtin tailList)) xs_5]]))
+                      [(force (builtin headList)) ys_6]])
+                    [(force (builtin headList)) xs_5]]
+                  (con bool False))
+                [(force (builtin nullList)) ys_6]))))]])
     (builtin equalsInteger)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 2632515, memory: 11721
+cpu: 2440515, memory: 10521

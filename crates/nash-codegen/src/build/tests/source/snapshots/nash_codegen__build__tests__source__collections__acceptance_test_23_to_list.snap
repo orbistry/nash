@@ -71,44 +71,40 @@ main#1
                           (lam self_35
                             (lam elems_18
                               [(lam match_26
-                                [(lam generated_37
-                                  (case
-                                    generated_37
-                                    (lam field_27
-                                      (lam field_28
-                                        [(lam entry_21
-                                          [(lam rest_22
-                                            [(lam projection_30
-                                              [(lam v2_23
-                                                [(lam projection_31
-                                                  [(lam k2_24
-                                                    [(lam generated_38
-                                                      (case
-                                                        generated_38
-                                                        [[(force (builtin mkCons))
-                                                          [[(builtin mkPairData) [(builtin bData) k2_24]] [(builtin iData) v2_23]]]
-                                                          [[self_35 self_35] rest_22]]
-                                                        [[(force (builtin mkCons))
-                                                          [[(builtin mkPairData) [(builtin bData) k_19]] [(builtin iData) v_20]]]
-                                                          rest_22]))
-                                                      [[eq_25 k_19] k2_24]])
-                                                    [(builtin unBData) projection_31]])
-                                                  [(force (force (builtin fstPair))) entry_21]])
-                                                [(builtin unIData) projection_30]])
-                                              [(force (force (builtin sndPair))) entry_21]])
-                                            field_28])
-                                          field_27]))
-                                    [[(force (builtin mkCons))
-                                      [[(builtin mkPairData) [(builtin bData) k_19]] [(builtin iData) v_20]]]
-                                      (con (list (pair data data)) [])]))
-                                  match_26])
+                                (case
+                                  match_26
+                                  (lam field_27
+                                    (lam field_28
+                                      [(lam entry_21
+                                        [(lam rest_22
+                                          [(lam projection_30
+                                            [(lam v2_23
+                                              [(lam projection_31
+                                                [(lam k2_24
+                                                  (case
+                                                    [[eq_25 k_19] k2_24]
+                                                    [[(force (builtin mkCons))
+                                                      [[(builtin mkPairData) [(builtin bData) k2_24]] [(builtin iData) v2_23]]]
+                                                      [[self_35 self_35] rest_22]]
+                                                    [[(force (builtin mkCons))
+                                                      [[(builtin mkPairData) [(builtin bData) k_19]] [(builtin iData) v_20]]]
+                                                      rest_22]))
+                                                  [(builtin unBData) projection_31]])
+                                                [(force (force (builtin fstPair))) entry_21]])
+                                              [(builtin unIData) projection_30]])
+                                            [(force (force (builtin sndPair))) entry_21]])
+                                          field_28])
+                                        field_27]))
+                                  [[(force (builtin mkCons))
+                                    [[(builtin mkPairData) [(builtin bData) k_19]] [(builtin iData) v_20]]]
+                                    (con (list (pair data data)) [])]))
                                 elems_18]))]
                           elems_18])))])
                 (builtin equalsByteString)])
               (lam value_11 value_11)])
             (builtin encodeUtf8)])
           (lam m_8
-            [(lam projection_29 projection_29) (case m_8 (lam generated_39 generated_39))])])
+            [(lam projection_29 projection_29) (case m_8 (lam generated_37 generated_37))])])
         (lam coerce_7 coerce_7)])
       (con string "bar")])
     (con string "foo")])
@@ -117,4 +113,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 7303695, memory: 30350
+cpu: 7111695, memory: 29150

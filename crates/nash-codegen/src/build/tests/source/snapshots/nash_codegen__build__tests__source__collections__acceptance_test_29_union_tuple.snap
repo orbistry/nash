@@ -147,16 +147,14 @@ main#1
                                             [(lam rest_80
                                               [(lam k2_78
                                                 [(lam v2_79
-                                                  [(lam generated_100
-                                                    (case
-                                                      generated_100
-                                                      [[(lam field_81 (lam field_82 (constr 1 field_81 field_82)))
-                                                        (constr 0 k2_78 v2_79)]
-                                                        [[self_29 self_29] rest_80]]
-                                                      [[(lam field_83 (lam field_84 (constr 1 field_83 field_84)))
-                                                        (constr 0 k_74 v_75)]
-                                                        rest_80]))
-                                                    [[eq_49 k_74] k2_78]])
+                                                  (case
+                                                    [[eq_49 k_74] k2_78]
+                                                    [[(lam field_81 (lam field_82 (constr 1 field_81 field_82)))
+                                                      (constr 0 k2_78 v2_79)]
+                                                      [[self_29 self_29] rest_80]]
+                                                    [[(lam field_83 (lam field_84 (constr 1 field_83 field_84)))
+                                                      (constr 0 k_74 v_75)]
+                                                      rest_80]))
                                                   field_89])
                                                 field_88])
                                               field_87])))))))
@@ -166,8 +164,8 @@ main#1
                   (lam right_7
                     [(lam projection_90
                       [(lam projection_91 [[[seqEq_8 tupleEq_9] projection_90] projection_91])
-                        (case right_7 (lam generated_101 generated_101))])
-                      (case left_6 (lam generated_102 generated_102))]))])
+                        (case right_7 (lam generated_100 generated_100))])
+                      (case left_6 (lam generated_101 generated_101))]))])
               (lam arg_43
                 (lam arg_46
                   [(lam match_54
@@ -183,9 +181,7 @@ main#1
                                   (lam field_52
                                     (lam field_53
                                       [(lam c_47
-                                        [(lam d_48
-                                          [(lam generated_103 (case generated_103 (con bool False) [[eq_50 b_45] d_48]))
-                                            [[eq_49 a_44] c_47]])
+                                        [(lam d_48 (case [[eq_49 a_44] c_47] (con bool False) [[eq_50 b_45] d_48]))
                                           field_53])
                                         field_52]))))
                                 arg_46])
@@ -221,9 +217,7 @@ main#1
                                               [(lam xs_22
                                                 [(lam y_23
                                                   [(lam ys_24
-                                                    [(lam generated_104
-                                                      (case generated_104 (con bool False) [[[self_30 self_30] xs_22] ys_24]))
-                                                      [[same_18 x_21] y_23]])
+                                                    (case [[same_18 x_21] y_23] (con bool False) [[[self_30 self_30] xs_22] ys_24]))
                                                     field_42])
                                                   field_41])
                                                 field_40])
@@ -239,4 +233,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 10736910, memory: 65814
+cpu: 10448910, memory: 64014

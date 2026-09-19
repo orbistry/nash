@@ -56,8 +56,10 @@ main#1
                             (lam field_20
                               [(lam c_15
                                 [(lam d_16
-                                  [(lam generated_35 (case generated_35 (con bool False) [[eq_17 b_13] d_16]))
-                                    [[(builtin equalsInteger) a_12] c_15]])
+                                  (case
+                                    [[(builtin equalsInteger) a_12] c_15]
+                                    (con bool False)
+                                    [[eq_17 b_13] d_16]))
                                   field_20])
                                 field_19]))))
                         arg_14])
@@ -83,4 +85,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2136766, memory: 12802
+cpu: 2088766, memory: 12502

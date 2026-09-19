@@ -27,21 +27,18 @@ main#1
       [(lam match_8
         [(lam leaf_15
           [(lam generated_23
-            (case
-              [[[[[[(force (builtin chooseData)) generated_23] (con integer 0)] (con integer 1)]
-                (con integer 2)]
-                (con integer 3)]
-                (con integer 4)]
-              [(lam generated_24
-                [[(lam field_16 (lam field_17 (force leaf_15)))
-                  [(force (force (builtin fstPair))) generated_24]]
-                  [(force (force (builtin sndPair))) generated_24]])
-                [(builtin unConstrData) generated_23]]
-              [(lam field_18 (force leaf_15)) [(builtin unMapData) generated_23]]
-              [(lam field_19 (force leaf_15)) [(builtin unListData) generated_23]]
-              [(lam field_20 [(lam coerce_7 coerce_7) value_6])
-                [(builtin unIData) generated_23]]
-              [(lam field_21 (force leaf_15)) [(builtin unBData) generated_23]]))
+            (force
+              [[[[[[(force (builtin chooseData)) generated_23]
+                (delay
+                  (case
+                    [(builtin unConstrData) generated_23]
+                    (lam field_16 (lam field_17 (force leaf_15)))))]
+                (delay [(lam field_18 (force leaf_15)) [(builtin unMapData) generated_23]])]
+                (delay [(lam field_19 (force leaf_15)) [(builtin unListData) generated_23]])]
+                (delay
+                  [(lam field_20 [(lam coerce_7 coerce_7) value_6])
+                    [(builtin unIData) generated_23]])]
+                (delay [(lam field_21 (force leaf_15)) [(builtin unBData) generated_23]])]))
             match_8])
           (delay (error))])
         value_6])])

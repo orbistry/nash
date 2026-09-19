@@ -14,9 +14,7 @@ main#1
   [(lam x_2
     [(lam match_3
       [(lam main_1 main_1)
-        [(lam generated_6
-          (case generated_6 (lam field_4 (lam field_5 (error))) (con bool True)))
-          match_3]])
+        (case match_3 (lam field_4 (lam field_5 (error))) (con bool True))])
       x_2])
     (con (list integer) [])])
 --- result
@@ -24,4 +22,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 240100, memory: 1600
+cpu: 192100, memory: 1300

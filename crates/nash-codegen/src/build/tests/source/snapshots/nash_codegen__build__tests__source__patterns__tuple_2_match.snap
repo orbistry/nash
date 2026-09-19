@@ -55,14 +55,12 @@ main#1
                                           [(lam y1_7
                                             [(lam x2_8
                                               [(lam y2_9
-                                                [(lam generated_22
-                                                  (case
-                                                    generated_22
-                                                    (con bool False)
-                                                    [[(builtin equalsInteger) [[(builtin subtractInteger) y2_9] y1_7]]
-                                                      [fromInt_10 (con integer 0)]]))
+                                                (case
                                                   [[(builtin equalsInteger) [[(builtin subtractInteger) x2_8] x1_6]]
-                                                    [fromInt_10 (con integer 0)]]])
+                                                    [fromInt_10 (con integer 0)]]
+                                                  (con bool False)
+                                                  [[(builtin equalsInteger) [[(builtin subtractInteger) y2_9] y1_7]]
+                                                    [fromInt_10 (con integer 0)]]))
                                                 field_19])
                                               field_18])
                                             field_16])

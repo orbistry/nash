@@ -1011,7 +1011,8 @@ fn big_constructor_pattern_and_access_share_the_constructor_decoder() {
             let assembled = crate::program::assemble_core(arena, compiled.core).unwrap();
             let uplc = nash_plutus::pretty::program(assembled.program);
             assert_eq!(uplc.matches("unConstrData").count(), 1, "{uplc}");
-            assert_eq!(uplc.matches("sndPair").count(), 1, "{uplc}");
+            assert_eq!(uplc.matches("sndPair").count(), 0, "{uplc}");
+            assert_eq!(uplc.matches("fstPair").count(), 0, "{uplc}");
         },
     );
 }

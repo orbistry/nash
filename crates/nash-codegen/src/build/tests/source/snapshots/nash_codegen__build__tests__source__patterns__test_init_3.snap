@@ -69,36 +69,30 @@ main#1
                   (lam value_30 value_30)])
                 (lam self_24
                   [(lam match_27
-                    [(lam generated_49
-                      (case
-                        generated_49
-                        (lam field_28
-                          (lam field_29 [(lam field_25 (constr 1 field_25)) [doInit_26 self_24]]))
-                        (constr 0)))
-                      match_27])
+                    (case
+                      match_27
+                      (lam field_28
+                        (lam field_29 [(lam field_25 (constr 1 field_25)) [doInit_26 self_24]]))
+                      (constr 0)))
                     self_24])])
               [(lam self_13 [self_13 self_13])
                 (lam self_13
                   (lam self_34
                     [(lam match_38
-                      [(lam generated_50
-                        (case
-                          generated_50
-                          (lam field_39
-                            (lam field_40
-                              [(lam generated_51
-                                (case
-                                  generated_51
-                                  (lam field_41
-                                    (lam field_42
-                                      [(lam x_36
-                                        [(lam xs_37 [[(force (builtin mkCons)) x_36] [[self_13 self_13] xs_37]])
-                                          field_40])
-                                        field_39]))
-                                  (con (list integer) [])))
-                                field_40]))
-                          (force [[(force (builtin trace)) [fromString_35 message_48]] (delay (error))])))
-                        match_38])
+                      (case
+                        match_38
+                        (lam field_39
+                          (lam field_40
+                            (case
+                              field_40
+                              (lam field_41
+                                (lam field_42
+                                  [(lam x_36
+                                    [(lam xs_37 [[(force (builtin mkCons)) x_36] [[self_13 self_13] xs_37]])
+                                      field_40])
+                                    field_39]))
+                              (con (list integer) []))))
+                        (force [[(force (builtin trace)) [fromString_35 message_48]] (delay (error))])))
                       self_34]))]])
             (lam value_43 value_43)])
           (lam a_7
@@ -123,29 +117,23 @@ main#1
           (lam self_15
             (lam xs_31
               (lam ys_32
-                [(lam generated_52
+                (case
+                  [(force (builtin nullList)) xs_31]
                   (case
-                    generated_52
-                    [(lam generated_53
-                      (case
-                        generated_53
-                        [(lam projection_44
-                          [(lam projection_45
-                            [(lam generated_54
-                              (case
-                                generated_54
-                                (con bool False)
-                                [(lam projection_46
-                                  [(lam projection_47 [[[self_15 self_15] projection_46] projection_47])
-                                    [(force (builtin tailList)) ys_32]])
-                                  [(force (builtin tailList)) xs_31]]))
-                              [[eq_33 projection_44] projection_45]])
-                            [(force (builtin headList)) ys_32]])
-                          [(force (builtin headList)) xs_31]]
-                        (con bool False)))
-                      [(force (builtin nullList)) ys_32]]
-                    [(force (builtin nullList)) ys_32]))
-                  [(force (builtin nullList)) xs_31]])))]])
+                    [(force (builtin nullList)) ys_32]
+                    [(lam projection_44
+                      [(lam projection_45
+                        (case
+                          [[eq_33 projection_44] projection_45]
+                          (con bool False)
+                          [(lam projection_46
+                            [(lam projection_47 [[[self_15 self_15] projection_46] projection_47])
+                              [(force (builtin tailList)) ys_32]])
+                            [(force (builtin tailList)) xs_31]]))
+                        [(force (builtin headList)) ys_32]])
+                      [(force (builtin headList)) xs_31]]
+                    (con bool False))
+                  [(force (builtin nullList)) ys_32]))))]])
       (builtin equalsInteger)])
     (con string "unreachable")])
 --- result
@@ -153,4 +141,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 9841061, memory: 47163
+cpu: 8929061, memory: 41463

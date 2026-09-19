@@ -61,16 +61,14 @@ main#1
                   (lam self_35
                     (lam xs_9
                       [(lam match_14
-                        [(lam generated_38
-                          (case
-                            generated_38
-                            (lam field_15
-                              (lam field_16
-                                [(lam x_11
-                                  [(lam rest_12 [[concat_13 [f_10 x_11]] [[self_35 self_35] rest_12]]) field_16])
-                                  field_15]))
-                            (con (list integer) [])))
-                          match_14])
+                        (case
+                          match_14
+                          (lam field_15
+                            (lam field_16
+                              [(lam x_11
+                                [(lam rest_12 [[concat_13 [f_10 x_11]] [[self_35 self_35] rest_12]]) field_16])
+                                field_15]))
+                          (con (list integer) [])))
                         xs_9]))]
                   xs_9]))])
           (lam left_18
@@ -85,48 +83,40 @@ main#1
                 (lam self_36
                   (lam xs_23
                     [(lam match_28
-                      [(lam generated_39
-                        (case
-                          generated_39
-                          (lam field_29
-                            (lam field_30
-                              [(lam x_26 [(lam rest_27 [[f_24 x_26] [[self_36 self_36] rest_27]]) field_30])
-                                field_29]))
-                          zero_25))
-                        match_28])
+                      (case
+                        match_28
+                        (lam field_29
+                          (lam field_30
+                            [(lam x_26 [(lam rest_27 [[f_24 x_26] [[self_36 self_36] rest_27]]) field_30])
+                              field_29]))
+                        zero_25))
                       xs_23]))]
                 xs_23])))])
       [(lam self_37 [self_37 self_37])
         (lam self_37
           (lam xs_6
             (lam ys_7
-              [(lam generated_40
+              (case
+                [(force (builtin nullList)) xs_6]
                 (case
-                  generated_40
-                  [(lam generated_41
-                    (case
-                      generated_41
-                      [(lam projection_31
-                        [(lam projection_32
-                          [(lam generated_42
-                            (case
-                              generated_42
-                              (con bool False)
-                              [(lam projection_33
-                                [(lam projection_34 [[[self_37 self_37] projection_33] projection_34])
-                                  [(force (builtin tailList)) ys_7]])
-                                [(force (builtin tailList)) xs_6]]))
-                            [[eq_8 projection_31] projection_32]])
-                          [(force (builtin headList)) ys_7]])
-                        [(force (builtin headList)) xs_6]]
-                      (con bool False)))
-                    [(force (builtin nullList)) ys_7]]
-                  [(force (builtin nullList)) ys_7]))
-                [(force (builtin nullList)) xs_6]])))]])
+                  [(force (builtin nullList)) ys_7]
+                  [(lam projection_31
+                    [(lam projection_32
+                      (case
+                        [[eq_8 projection_31] projection_32]
+                        (con bool False)
+                        [(lam projection_33
+                          [(lam projection_34 [[[self_37 self_37] projection_33] projection_34])
+                            [(force (builtin tailList)) ys_7]])
+                          [(force (builtin tailList)) xs_6]]))
+                      [(force (builtin headList)) ys_7]])
+                    [(force (builtin headList)) xs_6]]
+                  (con bool False))
+                [(force (builtin nullList)) ys_7]))))]])
     (builtin equalsInteger)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 19045518, memory: 90694
+cpu: 17509518, memory: 81094

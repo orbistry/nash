@@ -25,12 +25,7 @@ main#1
               match_3
               (lam field_7
                 (lam field_8
-                  [(lam generated_11
-                    (case
-                      generated_11
-                      (force leaf_6)
-                      [(lam generated_12 (case generated_12 (force leaf_6) (con bool True))) field_8]))
-                    field_7])))])
+                  (case field_7 (force leaf_6) (case field_8 (force leaf_6) (con bool True))))))])
           (delay
             (force
               [[(force (builtin trace)) [fromString_2 message_10]] (delay (con bool False))]))])
@@ -42,4 +37,4 @@ main#1
 --- logs
 ["default"]
 --- budget
-cpu: 683598, memory: 4032
+cpu: 635598, memory: 3732

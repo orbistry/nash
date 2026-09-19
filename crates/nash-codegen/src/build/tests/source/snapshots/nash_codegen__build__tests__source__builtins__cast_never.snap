@@ -36,29 +36,21 @@ main#1
           [(lam match_9
             [(lam leaf_18
               [(lam generated_29
-                (case
-                  [[[[[[(force (builtin chooseData)) generated_29] (con integer 0)] (con integer 1)]
-                    (con integer 2)]
-                    (con integer 3)]
-                    (con integer 4)]
-                  [(lam generated_32
-                    [[(lam field_19
-                      (lam field_20
-                        [(lam generated_30
-                          (case
-                            generated_30
-                            (force leaf_18)
-                            [(lam generated_31
-                              (case generated_31 (lam field_21 (lam field_22 (force leaf_18))) (constr 0)))
-                              field_20]))
-                          [(lam literal_8 [[eq_7 literal_8] [fromInt_6 (con integer 1)]]) field_19]]))
-                      [(force (force (builtin fstPair))) generated_32]]
-                      [(force (force (builtin sndPair))) generated_32]])
-                    [(builtin unConstrData) generated_29]]
-                  [(lam field_23 (force leaf_18)) [(builtin unMapData) generated_29]]
-                  [(lam field_24 (force leaf_18)) [(builtin unListData) generated_29]]
-                  [(lam field_25 (force leaf_18)) [(builtin unIData) generated_29]]
-                  [(lam field_26 (force leaf_18)) [(builtin unBData) generated_29]]))
+                (force
+                  [[[[[[(force (builtin chooseData)) generated_29]
+                    (delay
+                      (case
+                        [(builtin unConstrData) generated_29]
+                        (lam field_19
+                          (lam field_20
+                            (case
+                              [(lam literal_8 [[eq_7 literal_8] [fromInt_6 (con integer 1)]]) field_19]
+                              (force leaf_18)
+                              (case field_20 (lam field_21 (lam field_22 (force leaf_18))) (constr 0)))))))]
+                    (delay [(lam field_23 (force leaf_18)) [(builtin unMapData) generated_29]])]
+                    (delay [(lam field_24 (force leaf_18)) [(builtin unListData) generated_29]])]
+                    (delay [(lam field_25 (force leaf_18)) [(builtin unIData) generated_29]])]
+                    (delay [(lam field_26 (force leaf_18)) [(builtin unBData) generated_29]])]))
                 match_9])
               (delay (error))])
             value_5])])
@@ -69,4 +61,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1981434, memory: 9661
+cpu: 1393547, memory: 7697

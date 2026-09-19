@@ -28,21 +28,17 @@ main#1
               match_7
               (lam field_8
                 (lam field_9
-                  [(lam generated_16
-                    (case
-                      generated_16
-                      (lam field_10
-                        (lam field_11
-                          [(lam generated_17
-                            (case
-                              generated_17
-                              (lam field_12
-                                (lam field_13
-                                  [(lam a_5 [(lam b_6 [[(builtin equalsInteger) a_5] b_6]) field_12]) field_10]))
-                              (con bool False)))
-                            field_9]))
-                      (con bool False)))
-                    field_8])))])
+                  (case
+                    field_8
+                    (lam field_10
+                      (lam field_11
+                        (case
+                          field_9
+                          (lam field_12
+                            (lam field_13
+                              [(lam a_5 [(lam b_6 [[(builtin equalsInteger) a_5] b_6]) field_12]) field_10]))
+                          (con bool False))))
+                    (con bool False)))))])
           (constr 0 bucket1_3 bucket2_2)])
         [[(force (builtin mkCons)) [fromInt_14 (con integer 1)]]
           [[(force (builtin mkCons)) [fromInt_14 (con integer 2)]]
@@ -58,4 +54,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2038605, memory: 9993
+cpu: 1942605, memory: 9393

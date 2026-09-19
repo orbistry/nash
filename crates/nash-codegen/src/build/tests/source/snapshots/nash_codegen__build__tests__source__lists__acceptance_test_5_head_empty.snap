@@ -30,12 +30,10 @@ main#1
         [(lam main_1 main_1) [[eq_2 [head_3 (con (list integer) [])]] (constr 0)]])
         (lam xs_21
           [(lam match_23
-            [(lam generated_26
-              (case
-                generated_26
-                (lam field_24 (lam field_25 [(lam field_22 (constr 1 field_22)) field_24]))
-                (constr 0)))
-              match_23])
+            (case
+              match_23
+              (lam field_24 (lam field_25 [(lam field_22 (constr 1 field_22)) field_24]))
+              (constr 0)))
             xs_21])])
       (lam a_4
         (lam b_5
@@ -61,4 +59,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 736100, memory: 4700
+cpu: 688100, memory: 4400

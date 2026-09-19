@@ -26,14 +26,14 @@ main#1
             [(lam bytes_2
               [(lam match_8
                 [(lam main_1 main_1)
-                  [(lam generated_12
+                  (case
+                    [(lam literal_5 [[eq_4 literal_5] [fromString_3 message_11]]) match_8]
                     (case
-                      generated_12
-                      [(lam generated_13 (case generated_13 (con bool False) (con bool True)))
-                        [(lam literal_7 [[eq_4 literal_7] [fromBytes_6 (con bytestring #666f6f)]])
-                          match_8]]
-                      (con bool False)))
-                    [(lam literal_5 [[eq_4 literal_5] [fromString_3 message_11]]) match_8]]])
+                      [(lam literal_7 [[eq_4 literal_7] [fromBytes_6 (con bytestring #666f6f)]])
+                        match_8]
+                      (con bool False)
+                      (con bool True))
+                    (con bool False))])
                 bytes_2])
               [fromString_3 message_10]])
             (lam value_9 value_9)])
@@ -46,4 +46,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 957172, memory: 5710
+cpu: 861172, memory: 5110

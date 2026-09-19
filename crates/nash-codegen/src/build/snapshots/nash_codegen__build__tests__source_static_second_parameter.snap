@@ -20,13 +20,11 @@ main#1
           [[(lam self_7 [self_7 self_7])
             (lam self_7
               (lam n_4
-                [(lam generated_8
-                  (case
-                    generated_8
-                    [[(builtin addInteger) step_5]
-                      [[self_7 self_7] [[(builtin subtractInteger) n_4] [fromInt_3 (con integer 1)]]]]
-                    [fromInt_3 (con integer 0)]))
-                  [[(builtin equalsInteger) n_4] [fromInt_3 (con integer 0)]]]))]
+                (case
+                  [[(builtin equalsInteger) n_4] [fromInt_3 (con integer 0)]]
+                  [[(builtin addInteger) step_5]
+                    [[self_7 self_7] [[(builtin subtractInteger) n_4] [fromInt_3 (con integer 1)]]]]
+                  [fromInt_3 (con integer 0)])))]
             n_4]))])
     (lam value_6 value_6)])
 --- result
@@ -34,4 +32,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2944680, memory: 13416
+cpu: 2752680, memory: 12216

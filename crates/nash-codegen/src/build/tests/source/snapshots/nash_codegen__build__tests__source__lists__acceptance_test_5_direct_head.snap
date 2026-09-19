@@ -38,12 +38,10 @@ main#1
               [(lam field_5 (constr 1 field_5)) [fromInt_4 (con integer 1)]]]])
           (lam xs_6
             [(lam match_8
-              [(lam generated_29
-                (case
-                  generated_29
-                  (lam field_9 (lam field_10 [(lam field_7 (constr 1 field_7)) field_9]))
-                  (constr 0)))
-                match_8])
+              (case
+                match_8
+                (lam field_9 (lam field_10 [(lam field_7 (constr 1 field_7)) field_9]))
+                (constr 0)))
               xs_6])])
         (lam value_28 value_28)])
       (lam a_11
@@ -70,4 +68,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1837519, memory: 9997
+cpu: 1789519, memory: 9697

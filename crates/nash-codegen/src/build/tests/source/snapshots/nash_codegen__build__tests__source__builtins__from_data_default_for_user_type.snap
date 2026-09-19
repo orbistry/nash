@@ -27,32 +27,28 @@ main#1
           [(lam match_4
             [(lam main_1 main_1)
               [(lam generated_18
-                (case
-                  [[[[[[(force (builtin chooseData)) generated_18] (con integer 0)] (con integer 1)]
-                    (con integer 2)]
-                    (con integer 3)]
-                    (con integer 4)]
-                  [(lam generated_20
-                    [[(lam tag_6
-                      (lam fields_7
-                        [(lam generated_19
-                          (case
-                            [[(builtin equalsInteger) generated_19] (con integer 0)]
-                            (force [[(force (builtin trace)) message_17] (delay (error))])
-                            [(lam fieldList_8
-                              [(lam projection_16
-                                [(lam field_5 [(lam number_3 [(builtin unIData) number_3]) field_5])
-                                  projection_16])
-                                [(force (builtin headList)) fieldList_8]])
-                              fields_7]))
-                          tag_6]))
-                      [(force (force (builtin fstPair))) generated_20]]
-                      [(force (force (builtin sndPair))) generated_20]])
-                    [(builtin unConstrData) generated_18]]
-                  (force [[(force (builtin trace)) message_17] (delay (error))])
-                  (force [[(force (builtin trace)) message_17] (delay (error))])
-                  (force [[(force (builtin trace)) message_17] (delay (error))])
-                  (force [[(force (builtin trace)) message_17] (delay (error))])))
+                (force
+                  [[[[[[(force (builtin chooseData)) generated_18]
+                    (delay
+                      (case
+                        [(builtin unConstrData) generated_18]
+                        (lam tag_6
+                          (lam fields_7
+                            [(lam generated_19
+                              (case
+                                [[(builtin equalsInteger) generated_19] (con integer 0)]
+                                (force [[(force (builtin trace)) message_17] (delay (error))])
+                                [(lam fieldList_8
+                                  [(lam projection_16
+                                    [(lam field_5 [(lam number_3 [(builtin unIData) number_3]) field_5])
+                                      projection_16])
+                                    [(force (builtin headList)) fieldList_8]])
+                                  fields_7]))
+                              tag_6]))))]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]))
                 match_4]])
             decoded_2])
           [fromData_9
@@ -69,4 +65,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2444989, memory: 11489
+cpu: 1953102, memory: 10125

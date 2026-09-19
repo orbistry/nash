@@ -198,14 +198,12 @@ impl<'a> Lower<'a> {
                 self.arena.alloc_slice_copy(&arms),
             ));
         }
-        // A match evaluates its scrutinee exactly once, including default-only matches.
-        let name = self.fresh()?;
-        let value = Term::var(self.arena, name);
+        let scrutinee = self.term(scrutinee)?;
         let fallback = match default {
             Some(c) => self.term(c)?,
             None => Term::error(self.arena),
         };
-        let result = match kind {
+        Ok(match kind {
             CaseKind::Bool => {
                 let mut yes = None;
                 let mut no = None;
@@ -223,9 +221,11 @@ impl<'a> Lower<'a> {
                     }
                     *slot = Some(self.term(b.body)?);
                 }
-                self.branch(value, yes.unwrap_or(fallback), no.unwrap_or(fallback))
+                self.branch(scrutinee, yes.unwrap_or(fallback), no.unwrap_or(fallback))
             }
             CaseKind::Int | CaseKind::Bytes => {
+                let name = self.fresh()?;
+                let value = Term::var(self.arena, name);
                 let mut rest = fallback;
                 let mut seen = Vec::new();
                 for b in branches.iter().rev() {
@@ -247,7 +247,7 @@ impl<'a> Lower<'a> {
                     let body = self.term(b.body)?;
                     rest = self.branch(condition, body, rest);
                 }
-                rest
+                rest.lambda(self.arena, name).apply(self.arena, scrutinee)
             }
             CaseKind::List => {
                 let mut nil = None;
@@ -271,9 +271,15 @@ impl<'a> Lower<'a> {
                         .lambda(self.arena, self.fresh()?),
                 };
                 let nil = nil.unwrap_or(fallback);
-                Term::case(self.arena, value, self.arena.alloc_slice_copy(&[cons, nil]))
+                Term::case(
+                    self.arena,
+                    scrutinee,
+                    self.arena.alloc_slice_copy(&[cons, nil]),
+                )
             }
             CaseKind::Data => {
+                let name = self.fresh()?;
+                let value = Term::var(self.arena, name);
                 let mut arms = [None; 5];
                 for b in branches {
                     let (index, unwrap, arity) = match b.test {
@@ -291,28 +297,27 @@ impl<'a> Lower<'a> {
                     let function = self.lambda(b.binders, body);
                     let unwrapped = self.builtin(unwrap, &[value]);
                     arms[index] = Some(if index == 0 {
-                        let pair_name = self.fresh()?;
-                        let pair = Term::var(self.arena, pair_name);
-                        function
-                            .apply(self.arena, self.builtin(DefaultFunction::FstPair, &[pair]))
-                            .apply(self.arena, self.builtin(DefaultFunction::SndPair, &[pair]))
-                            .lambda(self.arena, pair_name)
-                            .apply(self.arena, unwrapped)
+                        Term::case(
+                            self.arena,
+                            unwrapped,
+                            self.arena.alloc_slice_copy(&[function]),
+                        )
                     } else {
                         function.apply(self.arena, unwrapped)
                     });
                 }
-                let mut args = vec![value];
-                let arms = arms.map(|arm| arm.unwrap_or(fallback));
-                args.extend((0..5).map(|tag| Term::integer_from(self.arena, tag)));
-                let tag = self.builtin(DefaultFunction::ChooseData, &args);
-                Term::case(self.arena, tag, self.arena.alloc_slice_copy(&arms))
+                let [constr, map, list, int, bytes] =
+                    arms.map(|arm| arm.unwrap_or(fallback).delay(self.arena));
+                self.builtin(
+                    DefaultFunction::ChooseData,
+                    &[value, constr, map, list, int, bytes],
+                )
+                .force(self.arena)
+                .lambda(self.arena, name)
+                .apply(self.arena, scrutinee)
             }
             CaseKind::Tag => unreachable!("tag case handled above"),
-        };
-        Ok(result
-            .lambda(self.arena, name)
-            .apply(self.arena, self.term(scrutinee)?))
+        })
     }
 }
 

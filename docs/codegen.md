@@ -81,7 +81,7 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 | `Case(Int, s, bs, d)` | switch on integer literals | chain of `equalsInteger` + boolean `Term::Case` |
 | `Case(Bytes, s, bs, d)` | switch on bytestring literals | chain of `equalsByteString` + boolean `Term::Case` |
 | `Case(List, s, [nil, cons], _)` | match on a `Const` list; `cons` binds head and tail | `case s [\head tail -> cons, nil]` |
-| `Case(Data, s, bs, d)` | match on the `Data` tag; five branches `Constr\|Map\|List\|I\|B` | `chooseData` selects tag 0–4, then integer `Term::Case` |
+| `Case(Data, s, bs, d)` | match on the `Data` tag; five branches `Constr\|Map\|List\|I\|B` | `force (chooseData s (delay constr) (delay map) (delay list) (delay int) (delay bytes))` |
 | `Constr(i, fs)` | build a UPLC constr | `Term::Constr` |
 | `Field(r, i)` | project field `i` of a constr | `case r [\f0 .. fn -> fi]` |
 | `Builtin(f, as)` | call builtin `f`; `as.len() <= f.arity()` | `force^k (builtin f)` applied to `as` |
@@ -253,7 +253,7 @@ The `Switch` node lowers to the `Case` kind matching the scrutinee's `Ty`:
 | `int`, `bytes` literals | `Int`, `Bytes` | equality chain |
 | `list 'a` | `List` | native `case` (cons 0, nil 1) |
 | Big ADT | `Int` on `fstPair (unConstrData s)` | equality chain on the tag |
-| `Data` | `Data` | `chooseData` tag followed by integer `case` |
+| `Data` | `Data` | `chooseData` with delayed branches |
 | Big record, `List 'a`, `Map 'k 'v` | none (irrefutable) | projection only |
 
 Exhaustiveness is checked earlier by `nash-nitpick` (Elm's
@@ -375,7 +375,7 @@ pass has usually already replaced the head with a variable.
 | `bls_g1` `bls_g2` `bls_mlr` `value` | Const | constant | builtins | builtins |
 | `Int` | Big | `data (I n)` | `iData` | `unIData` |
 | `Bytes` | Big | `data (B bs)` | `bData` | `unBData` |
-| `Data` | Big | `data` | any | `chooseData` tag + integer `case` |
+| `Data` | Big | `data` | any | `chooseData` with delayed branches |
 | `List 'a` | Big | `data (List xs)` | `listData` | `unListData` |
 | `Map 'k 'v` | Big | `data (Map kvs)` | `mapData` | `unMapData` |
 | Big ADT `type Foo = A .. \| B ..` | Big | `data (Constr i fields)` | `constrData i fields` | `unConstrData`, `fstPair`, `sndPair`, list indexing |

@@ -208,8 +208,8 @@ Ordinary types without a twin retain ordinary constructor lookup.
   `constr` term; each branch is a lambda over the fields.
 - `case` on **`bool`**: native `case`, false at branch 0 and true at branch 1.
   On **`unit`**: the single branch.
-- `case` on **`Data`**: `chooseData` returns a tag from 0 to 4, followed by
-  integer native `case`. Native `case` does not accept `Data` directly.
+- `case` on **`Data`**: `chooseData` selects one of five delayed shape branches;
+  the selected branch is forced.
 - `case` on **`list 'a`**: native `case`, with cons at branch 0 and nil at
   branch 1. The cons branch is a lambda receiving head and tail.
 - `case` on **`List 'a`** (Big): `unListData` then as `list`.

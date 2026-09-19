@@ -10,9 +10,7 @@ let main#1 : bool = case@Bool match#2 of
 main#1
 --- uplc
 (program 1.1.0
-  [(lam match_2
-    [(lam main_1 main_1)
-      [(lam generated_3 (case generated_3 (error) (con bool True))) match_2]])
+  [(lam match_2 [(lam main_1 main_1) (case match_2 (error) (con bool True))])
     (con bool False)])
 --- result
 error: ExplicitErrorTerm

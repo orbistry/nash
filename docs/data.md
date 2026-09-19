@@ -67,12 +67,13 @@ A match on a `Data` scrutinee produces a `Core` `Case(Data, ...)` node with
 up to five branches, one per constructor, and a default. It lowers to
 
 ```
-case (chooseData d 0 1 2 3 4)
-     [constrBranch, mapBranch, listBranch, iBranch, bBranch]
+force (chooseData d
+    (delay constrBranch) (delay mapBranch) (delay listBranch)
+    (delay iBranch) (delay bBranch))
 ```
 
-Native `case` cannot inspect `Data` directly; `chooseData` supplies its tag.
-Only the selected case branch is evaluated. Constructors that no clause
+The five Data shapes are selected by `chooseData`; only the selected delayed
+branch is forced. Constructors that no clause
 mentions share the default branch. Inside a
 branch the fields are bound with the matching `un*Data` builtin and the
 rest of the pattern is an ordinary `Const` match:

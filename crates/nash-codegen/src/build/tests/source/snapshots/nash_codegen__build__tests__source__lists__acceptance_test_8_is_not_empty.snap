@@ -26,17 +26,10 @@ main#1
           [[(builtin equalsInteger) [(builtin lengthOfByteString) bytes_7]]
             [fromInt_8 (con integer 0)]])])
       (lam value_10 value_10)])
-    (lam a_5
-      (lam b_6
-        [(lam generated_11
-          (case
-            generated_11
-            [(lam generated_12 (case generated_12 (con bool True) (con bool False))) b_6]
-            b_6))
-          a_5]))])
+    (lam a_5 (lam b_6 (case a_5 (case b_6 (con bool True) (con bool False)) b_6)))])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 826533, memory: 4811
+cpu: 730533, memory: 4211

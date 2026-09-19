@@ -28,26 +28,7 @@ main#1
               [(lam tokens_9
                 [(lam mapping_13
                   [(lam main_1 main_1)
-                    [(lam generated_32
-                      (case
-                        generated_32
-                        (con bool False)
-                        [(lam generated_33
-                          (case
-                            generated_33
-                            (con bool False)
-                            [[(builtin equalsData) [toData_2 mapping_13]]
-                              [(lam field_14 [(builtin mapData) field_14])
-                                [[(force (builtin mkCons))
-                                  [[(builtin mkPairData)
-                                    [(lam field_15 [(builtin bData) field_15]) [fromBytes_12 (con bytestring #aa)]]]
-                                    [(lam field_16 [(builtin iData) field_16]) [fromInt_7 (con integer 7)]]]]
-                                  (con (list (pair data data)) [])]]]))
-                          [[(builtin equalsData) [toData_2 tokens_9]]
-                            [(lam field_10 [(builtin listData) field_10])
-                              [[(force (builtin mkCons))
-                                [(lam field_11 [(builtin bData) field_11]) [fromBytes_12 (con bytestring #aa)]]]
-                                (con (list data) [])]]]]))
+                    (case
                       [[(builtin equalsData) [toData_2 wrapped_3]]
                         [(lam field_4 [(builtin listData) field_4])
                           [[(force (builtin mkCons))
@@ -56,7 +37,22 @@ main#1
                               [[(force (builtin mkCons))
                                 [(lam field_8 [(builtin iData) field_8]) [fromInt_7 (con integer 42)]]]
                                 (con (list data) [])]]]
-                            (con (list data) [])]]]]])
+                            (con (list data) [])]]]
+                      (con bool False)
+                      (case
+                        [[(builtin equalsData) [toData_2 tokens_9]]
+                          [(lam field_10 [(builtin listData) field_10])
+                            [[(force (builtin mkCons))
+                              [(lam field_11 [(builtin bData) field_11]) [fromBytes_12 (con bytestring #aa)]]]
+                              (con (list data) [])]]]
+                        (con bool False)
+                        [[(builtin equalsData) [toData_2 mapping_13]]
+                          [(lam field_14 [(builtin mapData) field_14])
+                            [[(force (builtin mkCons))
+                              [[(builtin mkPairData)
+                                [(lam field_15 [(builtin bData) field_15]) [fromBytes_12 (con bytestring #aa)]]]
+                                [(lam field_16 [(builtin iData) field_16]) [fromInt_7 (con integer 7)]]]]
+                              (con (list (pair data data)) [])]]]))])
                   [fromData_27
                     [(lam field_28 [(builtin mapData) field_28])
                       [[(force (builtin mkCons))
@@ -88,4 +84,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 8476706, memory: 24535
+cpu: 8380706, memory: 23935

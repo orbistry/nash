@@ -14,7 +14,7 @@ main#1
   [(lam toData_2
     [(lam fromInt_4
       [(lam main_1 main_1)
-        [(lam generated_7 (case generated_7 (con bool True) (con bool False)))
+        (case
           [(force (builtin nullList))
             [[(force (builtin mkCons))
               [toData_2
@@ -28,7 +28,9 @@ main#1
                     [[(builtin constrData) (con integer 0)]
                       [[(force (builtin mkCons)) field_5] (con (list data) [])]])
                     [fromInt_4 (con integer 42)]]]]
-                (con (list data) [])]]]]])
+                (con (list data) [])]]]
+          (con bool True)
+          (con bool False))])
       (builtin iData)])
     (lam coerce_6 coerce_6)])
 --- result
@@ -36,4 +38,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1430881, memory: 6588
+cpu: 1382881, memory: 6288

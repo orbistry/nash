@@ -26,35 +26,31 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                       [fromInt_3 (con integer 7)]]])])
               (lam n_32
                 [(lam match_36
-                  [(lam generated_37
+                  (case
+                    [(lam literal_34 [[eq_33 literal_34] [fromInt_3 (con integer 7)]]) match_36]
                     (case
-                      generated_37
-                      [(lam generated_38
-                        (case generated_38 [fromInt_3 (con integer 30)] [fromInt_3 (con integer 20)]))
-                        [(lam literal_35 [[eq_33 literal_35] [fromInt_3 (con integer 100)]]) match_36]]
-                      [fromInt_3 (con integer 10)]))
-                    [(lam literal_34 [[eq_33 literal_34] [fromInt_3 (con integer 7)]]) match_36]])
+                      [(lam literal_35 [[eq_33 literal_35] [fromInt_3 (con integer 100)]]) match_36]
+                      [fromInt_3 (con integer 30)]
+                      [fromInt_3 (con integer 20)])
+                    [fromInt_3 (con integer 10)]))
                   n_32])])
             (builtin equalsInteger)])
           (lam value_31 value_31)])
         (lam data_15
           [(lam match_17
             [(lam leaf_24
-              [(lam generated_39
-                (case
-                  [[[[[[(force (builtin chooseData)) generated_39] (con integer 0)] (con integer 1)]
-                    (con integer 2)]
-                    (con integer 3)]
-                    (con integer 4)]
-                  [(lam generated_40
-                    [[(lam field_25 (lam field_26 (force leaf_24)))
-                      [(force (force (builtin fstPair))) generated_40]]
-                      [(force (force (builtin sndPair))) generated_40]])
-                    [(builtin unConstrData) generated_39]]
-                  [(lam field_27 (force leaf_24)) [(builtin unMapData) generated_39]]
-                  [(lam field_28 (force leaf_24)) [(builtin unListData) generated_39]]
-                  [(lam field_29 [(lam n_16 n_16) field_29]) [(builtin unIData) generated_39]]
-                  [(lam field_30 (force leaf_24)) [(builtin unBData) generated_39]]))
+              [(lam generated_37
+                (force
+                  [[[[[[(force (builtin chooseData)) generated_37]
+                    (delay
+                      (case
+                        [(builtin unConstrData) generated_37]
+                        (lam field_25 (lam field_26 (force leaf_24)))))]
+                    (delay [(lam field_27 (force leaf_24)) [(builtin unMapData) generated_37]])]
+                    (delay [(lam field_28 (force leaf_24)) [(builtin unListData) generated_37]])]
+                    (delay
+                      [(lam field_29 [(lam n_16 n_16) field_29]) [(builtin unIData) generated_37]])]
+                    (delay [(lam field_30 (force leaf_24)) [(builtin unBData) generated_37]])]))
                 match_17])
               (delay
                 [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
@@ -62,13 +58,11 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
             data_15])])
       (lam xs_9
         [(lam match_11
-          [(lam generated_41
-            (case
-              generated_41
-              (lam field_12 (lam field_13 [(lam x_10 x_10) field_12]))
-              [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
-                [fromInt_3 (con integer 1)]]))
-            match_11])
+          (case
+            match_11
+            (lam field_12 (lam field_13 [(lam x_10 x_10) field_12]))
+            [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
+              [fromInt_3 (con integer 1)]]))
           xs_9])])
     (lam value_14 value_14)])
 --- result
@@ -83,4 +77,4 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 --- logs
 []
 --- budget
-cpu: 5485869, memory: 29035
+cpu: 5149869, memory: 26935
