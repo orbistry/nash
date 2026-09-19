@@ -362,9 +362,9 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (fromData)
+    import Data exposing (validateData)
     decoded : List (List Int)
-    decoded = fromData (List [List [I 1, B #"aa"]])
+    decoded = validateData (List [List [I 1, B #"aa"]])
     main = nullList (unListData decoded)
     "#,
     Err(())
@@ -379,6 +379,138 @@ case!(
     decoded : Map Bytes (List Int)
     decoded = validateData (Map [mkPairData (B #"aa") (List [B #"bb"])])
     main = nullList (unMapData decoded)
+    "#,
+    Err(())
+);
+
+case!(
+    coerce_preserves_runtime_value,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    claimed : bytes
+    claimed = coerce original
+    original : int
+    original = 42
+    main : int
+    main = coerce claimed
+    "#,
+    Ok("(con integer 42)")
+);
+
+case!(
+    coerce_first_class_function,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    apply f x = f x
+    identity x = x
+    hidden : Data
+    hidden = apply coerce identity
+    recovered : int -> int
+    recovered = coerce hidden
+    main : int
+    main = recovered 42
+    "#,
+    Ok("(con integer 42)")
+);
+
+case!(
+    coerce_evaluates_argument,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    bad : int
+    bad = fail
+    main : bytes
+    main = coerce bad
+    "#,
+    Err(())
+);
+
+case!(
+    from_data_leaves_nested_data_unchecked,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (fromData)
+    decoded : List (List Int)
+    decoded = fromData (List [List [B #"aa"]])
+    main = nullList (unListData decoded)
+    "#,
+    Ok("(con bool False)")
+);
+
+case!(
+    from_data_leaves_outer_shape_unchecked,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (fromData)
+    decoded : Int
+    decoded = fromData (B #"aa")
+    main = equalsData (coerce decoded) (B #"aa")
+    "#,
+    Ok("(con bool True)")
+);
+
+case!(
+    validate_data_rejects_wrong_scalar_shape,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (validateData)
+    decoded : Int
+    decoded = validateData (B #"aa")
+    main = unIData decoded
+    "#,
+    Err(())
+);
+
+case!(
+    validate_data_accepts_nested_map,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (validateData, toData)
+    input = Map [mkPairData (B #"aa") (List [I 42])]
+    decoded : Map Bytes (List Int)
+    decoded = validateData input
+    main = equalsData (toData decoded) input
+    "#,
+    Ok("(con bool True)")
+);
+
+case!(
+    from_data_default_for_user_type,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (FromData)
+    type Datum = Datum Int
+    impl FromData Datum where
+        validateData value =
+            case value of
+                Constr 0 [I _] -> coerce value
+                _ -> fail
+    decoded : Datum
+    decoded = fromData (Constr 0 [I 42])
+    main =
+        case decoded of
+            Datum number -> unIData number
+    "#,
+    Ok("(con integer 42)")
+);
+
+case!(
+    from_data_malformed_value_fails_on_use,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (fromData)
+    decoded : Int
+    decoded = fromData (B #"aa")
+    main = unIData decoded
     "#,
     Err(())
 );

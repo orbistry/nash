@@ -274,23 +274,33 @@ trait ToData ('a : Big) where
 
 trait FromData ('a : Big) where
     fromData     : Data -> 'a
+    fromData = Builtin.coerce
     validateData : Data -> 'a
 ```
 
 - `toData` reconstructs universal Data in ordinary Nash source while
   preserving the declared wire encoding.
-- `fromData` matches universal Data and recursively decodes every field
-  before constructing a typed result. Invalid nested data fails immediately.
-- `validateData` has the same safe semantics and can delegate to `fromData`.
-  Non-failing decoding uses `Data.Decode` combinators.
+- `fromData` defaults to unchecked `Builtin.coerce`. It checks neither the
+  outer shape nor nested fields and preserves the original runtime value.
+  Malformed data fails only when a later operation needs its expected shape.
+- `validateData` is a required separate method. Core Int and Bytes impls check
+  the Data shape and then coerce the original value; List and Map impls retain
+  recursive source validation. Non-failing decoding uses `Data.Decode`.
 
 Core provides explicit codecs for primitive and collection Big types.
 User Big ADTs need source impls; future `@derive(ToData, FromData)` macros
-will generate equivalent source codecs. There is no automatic compiler
-codec synthesis or shallow reinterpretation. Real UPLC builtin signatures
+will generate unchecked `fromData` and checked recursive `validateData`.
+There is no automatic compiler codec synthesis. Real UPLC builtin signatures
 carry nominal types: `iData : int -> Int`, `unIData : Int -> int`, and
 similarly for Bytes, List and Map. Existing universal Data constructors
 and patterns remain unchanged; no new wrapper constructors are introduced.
+
+`Builtin.coerce : 'a -> 'b` is an explicit unchecked compiler intrinsic.
+Both variables independently accept any value type, including functions,
+without representation constraints. It changes no runtime representation
+and performs no validation; a cast between incompatible representations does
+not make those representations compatible. It is not a real Plutus builtin
+and does not change that inventory.
 
 ## Costs
 
@@ -303,6 +313,7 @@ Rough CEK costs, to guide the choice of representation:
 | field i | `sndPair` + i `tailList` + `headList`, plus one `un*Data` if the field is used as a little value | one `case` with a lambda that selects the field |
 | `lift`/`lower` of `int`/`bytes` | one builtin call each way | |
 | `lift`/`lower` of a list | O(n) map unless the element impl is reflexive | |
+| `fromData` / `Builtin.coerce` | identity; no traversal | |
 | `validateData` | O(size of the Data) | |
 
 Consequences:
@@ -329,7 +340,5 @@ Consequences:
   values (lambdas, `constr`) have no constant form in the flat encoding.
 - **Tests** and **traces** use `string`; on-chain code should use `bytes`.
 
-## Open questions
-
-- Whether `fromData` should verify field *count* for ADTs, or only the tag.
-  This document says both, since both are O(1) for `Constr` data.
+Derived `validateData` checks both the constructor tag and exact field count,
+then validates each field recursively.

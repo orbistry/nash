@@ -586,8 +586,9 @@ trait ToData ('a : Big) where
     toData : 'a -> Data
 
 trait FromData ('a : Big) where
-    fromData : Data -> 'a                       -- recursive source decoding
-    validateData : Data -> 'a                   -- recursive source decoding; traps on bad data
+    fromData : Data -> 'a                       -- unchecked identity
+    fromData = Builtin.coerce
+    validateData : Data -> 'a                   -- required recursive validation; traps on bad data
 
 trait Lift 'small 'big where
     lift : 'small -> 'big
@@ -673,8 +674,12 @@ has a declared scheme, so it is always constrained through its annotation.
   call site as a missing `Storable (option int)`, and the compiler-owned
   `impl Lift 'a 'a` carries `Big 'a`.
 - **Representation** ([representation.md](representation.md)): `Lift`,
-  `ToData`, `FromData` are the only bridges between reprs. Nothing in trait
-  resolution depends on reprs; specialization is by evidence only.
+  `ToData`, `FromData` provide explicit source conversions. The separate
+  `Builtin.coerce : 'a -> 'b` intrinsic is unchecked identity for any two
+  value types, including functions; it has no representation constraints
+  and does not change the runtime representation. `fromData` defaults to
+  it and checks no shape; `validateData` remains a required separate method.
+  Specialization is by evidence only.
 - **Macros** ([macros.md](macros.md)): `@derive` expands to `impl` decls
   before canonicalization of the expanded module; `@derive` on a type in
   another module is an orphan error like any hand-written impl.

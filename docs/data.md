@@ -99,12 +99,13 @@ usually inspected when a full `validateData` is too expensive.
 ## Traits
 
 ```elm
-trait ToData 'a where
+trait ToData ('a : Big) where
     toData : 'a -> Data
 
-trait FromData 'a where
-    fromData     : Data -> 'a     -- recursive decoding
-    validateData : Data -> 'a     -- recursive decoding
+trait FromData ('a : Big) where
+    fromData     : Data -> 'a     -- unchecked identity
+    fromData = Builtin.coerce
+    validateData : Data -> 'a     -- required recursive validation
 
 trait Lift 'small 'big where
     lift  : 'small -> 'big
@@ -115,15 +116,16 @@ trait Lift 'small 'big where
 impls for `Int`, `Bytes`, `Data`, `List 'a` and `Map 'k 'v`. Other types
 need explicit source impls; `@derive` remains future macro work.
 
-`fromData` matches the existing universal Data constructors, decodes every
-field recursively, then reconstructs a typed result. It fails on a shape
-mismatch, including a malformed nested element. `validateData` has the same
-safe semantics and may delegate to `fromData`; there is no shallow
-reinterpretation operation. `Data` itself accepts every Data shape.
-`toData` reconstructs universal Data using the matching concrete builtin
-and Data constructor. These methods preserve wire encoding, but are not
-promised to erase to runtime identity. `Data.Decode` supplies non-failing
+`fromData` defaults to `Builtin.coerce`, an unchecked identity. It checks
+neither the outer Data shape nor nested fields. Malformed data fails only
+if a later operation needs the expected shape; a value that is never inspected
+can pass through unchanged. `validateData` is a separate required method:
+core impls check the shape and recursively validate collection elements.
+`Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
 result-based decoding.
+
+`toData` is unchanged: it reconstructs universal Data using the matching
+concrete builtin and Data constructor, preserving wire encoding.
 
 For example, these are ordinary source impls:
 
@@ -132,18 +134,23 @@ impl ToData Int where
     toData value = I (Builtin.unIData value)
 
 impl FromData Int where
-    fromData value =
+    validateData value =
         case value of
-            I n -> Builtin.iData n
+            I _ -> Builtin.coerce value
             _ -> fail
-    validateData value = fromData value
 ```
 
+`Bytes` validation similarly checks its Data shape before coercing the
+original value. List and map validation retains recursive source checks.
 The actual builtin `iData` has type `int -> Int`; the existing constructor
-`I` has type `int -> Data`. Both emit the same UPLC Data shape. No new
-constructors, unsafe polymorphic builtins, generic cast IR nodes or generated
-checker functions are needed. Lists and maps use the corresponding typed
-builtins and map the source element codecs.
+`I` has type `int -> Data`. Both emit the same UPLC Data shape.
+
+`Builtin.coerce : 'a -> 'b` is an explicit compiler intrinsic, not a Plutus
+builtin. Its two type variables accept any value types independently,
+including functions, with no representation constraint. It performs no
+validation and no runtime representation change. It is therefore the caller's
+responsibility to use the result with a compatible runtime representation.
+The real Plutus builtin inventory stays unchanged.
 
 ## `Lift` between representations
 
@@ -327,7 +334,7 @@ datumDecoder =
         succeed { owner = o, deadline = d }
 ```
 
-Compared with `fromData`, a decoder converts to little types as it goes
+Unlike unchecked `fromData`, a decoder validates and converts to little types as it goes
 and reports *where* it failed (`At 1 (Failure "expected I")`). Compared
 with a hand-written `case`, it composes.
 
@@ -350,7 +357,8 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 |---|---|
 | `impl ToData` / `impl FromData` for a non-Big type | representation superclass check |
 | `Constr` pattern with a Big field type (e.g. `Constr 0 [x : Int]`) | type check (fields of `Data` are `Const`) |
-| `fromData d` where the node shape is wrong | runtime `error` with compiler trace |
+| `fromData d` where the node shape is wrong | no check; a later operation requiring that shape can fail |
+| `validateData d` where the node shape is wrong | runtime failure in source validation |
 | `validateData d` on a recursive type with a cycle in the data | cannot happen; `Data` is a finite tree |
 | `lift` at a pair with no impl | trait resolution error |
 | non-exhaustive `case` on `Data` | nitpick error |
@@ -365,7 +373,7 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 - **Codegen** ([codegen.md](codegen.md)): typed builtins, Data patterns,
   the `Case(Data)` lowering.
 - **Validators** ([validators.md](validators.md)): `main` arguments are Big
-  or Const; for the Big ones, `Data` patterns and `fromData` are how their
+  or Const; for the Big ones, `Data` patterns and `validateData` are how their
   shape is checked.
 - **Macros** ([macros.md](macros.md)): `@derive(ToData, FromData)`.
   A `field "owner"` form of `Data.Decode.field` that resolves the label

@@ -105,20 +105,27 @@ front end wraps excess arguments in an outer `App`.
 
 ### Data conversions
 
-`Builtin` exposes only real UPLC builtins. Their Nash signatures preserve
-nominal primitive types: `iData : int -> Int`, `unIData : Int -> int`,
-`bData : bytes -> Bytes`, and `unBData : Bytes -> bytes`. Collection
-constructors and destructors similarly preserve their Big element types.
-The existing `Data` constructors and patterns expose universal Data shapes.
+The real UPLC builtin inventory preserves nominal primitive types:
+`iData : int -> Int`, `unIData : Int -> int`, `bData : bytes -> Bytes`,
+and `unBData : Bytes -> bytes`. Collection constructors and destructors
+similarly preserve their Big element types. Existing `Data` constructors
+and patterns expose universal Data shapes.
 
-Core Nash impls connect these APIs with ordinary pattern matching:
-`fromData` for Int matches `I n` and returns `Builtin.iData n`; `toData`
-constructs `I (Builtin.unIData value)`. Collection decoders map element
-codecs recursively and construct typed collections. Invalid shapes fail in
-Nash. There are no generic cast nodes or generated validation checkers.
-`validateData` is an ordinary source method with the same safe decoding
-semantics as `fromData`. Identity is a Nash function; `fail` is language
-syntax, not an entry in the builtin table.
+`Builtin.coerce : 'a -> 'b` is a separate compiler intrinsic, not a real
+Plutus builtin. It accepts any value types independently, including
+functions, without representation constraints. Applied coercions lower to
+runtime identity with no validation, traversal, or representation change;
+the first-class intrinsic behaves as an identity function. It does not add
+an entry to the real builtin inventory.
+
+`FromData.fromData` defaults to this unchecked identity. It does not check
+even the outer Data shape; malformed data fails only if a later operation
+needs that shape. `validateData` is a separate required source method.
+Int and Bytes validation matches the Data shape then coerces the original
+value; List and Map retain recursive source validation. `toData` is unchanged:
+for Int it constructs `I (Builtin.unIData value)`. There are no generated
+validation checkers. Ordinary identity remains a Nash function; `fail` is
+language syntax, not an entry in the builtin table.
 
 ## Pipeline
 
@@ -489,8 +496,7 @@ Explicit `trace`, `fail`, `todo`, and `assert` messages follow this user trace
 level. Implicit match failures use compiler traces; explicit codec failures
 follow ordinary Nash failure behavior.
 
-Compiler-generated traces ("validateData: field 1 of Datum",
-"incomplete pattern match") are controlled by a
+Compiler-generated traces (such as "incomplete pattern match") are controlled by a
 separate boolean switch, `compilerTraces`, so a user can ship verbose user
 traces without the compiler's, or the reverse. In Aiken both are one
 `TraceLevel` (`crates/aiken-lang/src/ast.rs:2305`, used in

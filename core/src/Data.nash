@@ -8,31 +8,31 @@ trait ToData ('a : Big) where
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a
+    fromData = Builtin.coerce
     validateData : Data -> 'a
-    validateData = fromData
 
 impl ToData Data where
     toData value = value
 
 impl FromData Data where
-    fromData value = value
+    validateData value = value
 
 impl ToData Int where
     toData value = I (Builtin.unIData value)
 
 impl FromData Int where
-    fromData value =
+    validateData value =
         case value of
-            I number -> Builtin.iData number
+            I _ -> Builtin.coerce value
             _ -> fail
 
 impl ToData Bytes where
     toData value = B (Builtin.unBData value)
 
 impl FromData Bytes where
-    fromData value =
+    validateData value =
         case value of
-            B bytes -> Builtin.bData bytes
+            B _ -> Builtin.coerce value
             _ -> fail
 
 serialise : Data -> bytes
@@ -54,10 +54,6 @@ impl ToData 'a => ToData (List 'a) where
     toData values = List (mapList toData (Builtin.unListData values))
 
 impl FromData 'a => FromData (List 'a) where
-    fromData value =
-        case value of
-            List values -> Builtin.listData (mapList fromData values)
-            _ -> fail
     validateData value =
         case value of
             List values -> Builtin.listData (mapList validateData values)
@@ -67,10 +63,6 @@ impl (ToData 'k, ToData 'v) => ToData (Map 'k 'v) where
     toData values = Map (mapList pairToData (Builtin.unMapData values))
 
 impl (FromData 'k, FromData 'v) => FromData (Map 'k 'v) where
-    fromData value =
-        case value of
-            Map values -> Builtin.mapData (mapList pairFromData values)
-            _ -> fail
     validateData value =
         case value of
             Map values -> Builtin.mapData (mapList pairValidateData values)
@@ -84,9 +76,6 @@ mapList f values =
 
 pairToData : (ToData 'k, ToData 'v) => pair 'k 'v -> pair Data Data
 pairToData value = Builtin.mkPairData (toData (Builtin.fstPair value)) (toData (Builtin.sndPair value))
-
-pairFromData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v
-pairFromData value = Builtin.mkPairData (fromData (Builtin.fstPair value)) (fromData (Builtin.sndPair value))
 
 pairValidateData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v
 pairValidateData value = Builtin.mkPairData (validateData (Builtin.fstPair value)) (validateData (Builtin.sndPair value))

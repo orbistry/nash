@@ -2022,21 +2022,34 @@ pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
                 visibility: UnionVisibility::Open,
             }
         })),
-        values: bump.alloc_slice_fill_iter(primitives::BUILTINS.iter().map(|builtin| {
-            InterfaceValue {
-                name: builtin.name,
-                annotation: check_annotation(
-                    bump,
-                    &env,
-                    builtin.name,
-                    bump.alloc(nash_ast::Annotation {
-                        free_vars: builtin.free_vars,
-                        typ: builtin.typ,
-                        context: builtin.context,
-                    }),
-                )
-                .expect("compiler-owned builtin signatures are well formed"),
-            }
-        })),
+        values: bump.alloc_slice_fill_iter(
+            primitives::BUILTINS
+                .iter()
+                .map(|builtin| InterfaceValue {
+                    name: builtin.name,
+                    annotation: check_annotation(
+                        bump,
+                        &env,
+                        builtin.name,
+                        bump.alloc(nash_ast::Annotation {
+                            free_vars: builtin.free_vars,
+                            typ: builtin.typ,
+                            context: builtin.context,
+                        }),
+                    )
+                    .expect("compiler-owned builtin signatures are well formed"),
+                })
+                .chain(std::iter::once(InterfaceValue {
+                    name: "coerce",
+                    annotation: check_annotation(
+                        bump,
+                        &env,
+                        "coerce",
+                        bump.alloc(primitives::COERCE),
+                    )
+                    .expect("compiler-owned coerce signature is well formed"),
+                }))
+                .collect::<Vec<_>>(),
+        ),
     }
 }

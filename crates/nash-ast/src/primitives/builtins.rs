@@ -51,6 +51,13 @@ const BLS_G2: &Located<Type<'static>> = &named("bls_g2", &[]);
 const BLS_MLR: &Located<Type<'static>> = &named("bls_mlr", &[]);
 const VALUE: &Located<Type<'static>> = &named("value", &[]);
 
+/// Unchecked, representation-preserving coercion; not a Plutus builtin.
+pub const COERCE: crate::Annotation<'static> = crate::Annotation {
+    free_vars: &["a", "b"],
+    typ: function!(A, B),
+    context: &[],
+};
+
 pub const BUILTINS: &[Builtin] = &[
     builtin!("addInteger", "AddInteger", [], function!(INT, INT, INT)),
     builtin!(

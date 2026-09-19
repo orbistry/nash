@@ -450,6 +450,7 @@ trait ToData ('a : Big) where
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a
+    fromData = Builtin.coerce
     validateData : Data -> 'a
 
 -- Data itself requires no decoding.
@@ -457,18 +458,16 @@ impl ToData Data where
     toData value = value
 
 impl FromData Data where
-    fromData value = value
     validateData value = value
 
 impl ToData Int where
     toData value = I (Builtin.unIData value)
 
 impl FromData Int where
-    fromData value =
+    validateData value =
         case value of
-            I n -> Builtin.iData n
+            I _ -> Builtin.coerce value
             _ -> fail
-    validateData value = fromData value
 
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
@@ -488,11 +487,13 @@ fields d =
 
 `Data` fields in patterns are little (`Constr int (list Data)`), as data.md
 specifies, so no `lower` is needed on `t` and `fs`.
-Other Big types remain nominally distinct from Data. Their codecs use
-existing Data patterns and concrete typed UPLC builtins. Collection codecs
-decode every nested element before constructing the typed collection.
-`fromData` and `validateData` both reject invalid nested structure;
-Data.Decode provides the non-failing decoder API.
+Other Big types remain nominally distinct from Data. `fromData` defaults to
+unchecked `Builtin.coerce`, with no outer-shape or nested checks. Malformed
+data fails only if a later operation needs its expected shape. The required
+`validateData` method is separate: Int and Bytes check the shape and coerce
+the original value, while List and Map retain recursive source validation.
+`toData` keeps its existing source encoding. Data.Decode provides the
+non-failing decoder API.
 
 ## Twin modules
 
@@ -578,7 +579,8 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 | `Eq.Eq` | literal patterns |
 | `Monad.Monad` | `do` desugaring target |
 | `Show.Show` | power-assert rendering of operands |
-| `Builtin.*` | direct UPLC builtin nodes (below) |
+| Real `Builtin.*` operations | direct UPLC builtin nodes (below) |
+| `Builtin.coerce` | unchecked compiler intrinsic; runtime identity |
 | `Debug.trace`, `Debug.todo`, `Debug.fail` | trace levels, compiler-generated traces switch |
 | `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
 | `Fuzz.fuzzer`, `Fuzz.Prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
@@ -598,10 +600,16 @@ The canonicalizer derives representation predicates from those types; the backen
 resolves the symbolic variant without making the AST depend on the runtime.
 The `unit` spelling and `()` both canonicalize to the same unit type,
 including in impl heads.
-`nash-can` resolves `Builtin.foo` to `VarForeign { home: Builtin }` and
+`nash-can` resolves real `Builtin.foo` operations to `VarForeign { home: Builtin }` and
 `nash-codegen` lowers that to `Core::Builtin` (plans/07 chunk 4),
 applying the variant's `force_count()` forces. `nash docs` renders the
 same table.
+
+The module also exposes `coerce : 'a -> 'b`, an unchecked compiler
+intrinsic separate from the real Plutus builtin inventory. Its type variables
+independently accept any value types, including functions, without
+representation constraints. It returns the original runtime value with no
+validation or representation change.
 
 Rules:
 
@@ -617,8 +625,8 @@ Rules:
   is an ordinary Nash function and failure uses `fail` syntax.
 - Data conversion builtin signatures preserve nominal primitive and collection
   types. Existing universal Data constructors and patterns provide explicit
-  source codecs between those types and Data; no polymorphic conversion hooks
-  or compiler-generated checkers are exposed.
+  source codecs between those types and Data. `coerce` is a separate unchecked
+  intrinsic; no compiler-generated checkers are exposed.
 
 | DefaultFunction | Nash name | Type |
 |---|---|---|
@@ -930,8 +938,9 @@ foldl : ('k -> 'v -> 'b -> 'b) -> 'b -> Map 'k 'v -> 'b
 
 ## `Data.Decode`, `Data.Encode`
 
-Structured, failing decoders for untrusted `Data`. `FromData.validateData`
-for derived types is built from these.
+Structured decoders for untrusted `Data` return failure as a value.
+`FromData.validateData` is the separate trapping validation path; future
+derivation generates recursive source checks.
 
 ```elm
 module Data.Decode exposing (..)
