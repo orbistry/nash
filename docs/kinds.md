@@ -156,7 +156,7 @@ from the declaration body and never written by the user.
 | `List 'a` | `Big 'a` |
 | `Map 'k 'v` | `Big 'k, Big 'v` |
 | `list 'a`, `array 'a` | `Storable 'a` |
-| `pair 'a 'b` | `Storable 'a, Storable 'b` (only `mkPairData : Data -> Data -> pair Data Data` constructs one; `unConstrData` yields `pair int (list Data)`) |
+| `pair 'a 'b` | `Storable 'a, Storable 'b` (only `mkPairData : (Big 'a, Big 'b) => 'a -> 'b -> pair 'a 'b` constructs one; `unConstrData` yields `pair int (list Data)`) |
 | `type Box 'a = Box 'a` | `Big 'a` |
 | `type Tag 'a = Tag Int` | none (phantom) |
 | `type option 'a = None \| Some 'a` | none |

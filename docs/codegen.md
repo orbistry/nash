@@ -18,15 +18,14 @@ user type to `Data`. Nash does three things differently:
 1. **One tree IR.** `Core` is a specialized, explicitly-typed lambda
    calculus. Every pass is `Core -> Core` until the last one, which is
    `Core -> Term<Name>`. There is no linearized instruction stream.
-2. **Explicit representations.** Binders and casts carry a `Ty` tagged `Big`,
+2. **Explicit representations.** Binders carry a `Ty` tagged `Big`,
    `Const` or `Term` (see [kinds.md](kinds.md)); representation-independent
    parameters may instead be `Erased`. Codegen demands concrete types only
    where an operation needs them. Haskell 98 kinds have already been checked.
 3. **No `Data` by default.** A little type is never represented as `Data`.
-   Conversions between representations are explicit `Cast` nodes that the
-   front end inserted for `toData` / `fromData` / `validateData` / `lift` /
-   `lower`. The optimizer can cancel adjacent inverse casts; it never inserts
-   or removes a representation change on its own.
+   Conversions between representations are explicit Nash functions using
+   typed UPLC builtins and Data patterns. The optimizer may simplify inverse
+   builtin pairs when it preserves shape checks and evaluation behavior.
 
 ## The Core IR
 
@@ -41,7 +40,6 @@ Core ::= Var(name)
        | Constr(tag, fields)                    -- UPLC `constr`
        | Field(record, index)                   -- projection out of a `constr`
        | Builtin(fn, args)                      -- saturated or partial builtin call
-       | Cast(kind, from_ty, to_ty, arg)
        | Trace(msg, body)
        | Error
        | Delay(body) | Force(body)
@@ -62,8 +60,8 @@ pub enum Ty<'a> {
 ```
 
 `Ty::repr()` returns no representation for `Erased`. Constant construction
-and casts must require concrete layout metadata instead of assuming `Data`. `BigTy` records enough
-structure to generate `validateData` for the type (constructor count and
+must require concrete layout metadata instead of assuming `Data`. `BigTy` records enough
+structure to construct and destruct its Data layout (constructor count and
 field types); `TermTy` records constructor arities so `Case` and `Field` can
 be lowered; `ConstTy` maps one-to-one onto nash-plutus `typ::Type` so
 literals can be built (`crates/nash-plutus/src/typ.rs`).
@@ -87,7 +85,6 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 | `Constr(i, fs)` | build a UPLC constr | `Term::Constr` |
 | `Field(r, i)` | project field `i` of a constr | `case r [\f0 .. fn -> fi]` |
 | `Builtin(f, as)` | call builtin `f`; `as.len() <= f.arity()` | `force^k (builtin f)` applied to `as` |
-| `Cast` | representation change | see Casts |
 | `Trace(m, b)` | log `m` then evaluate `b` | `force (trace m (delay b))` |
 | `Error` | abort | `Term::Error` |
 | `Delay`/`Force` | explicit laziness | `Term::Delay` / `Term::Force` |
@@ -106,29 +103,22 @@ lowers to the same term; a `Builtin` with zero arguments is the (forced)
 builtin value itself. `Builtin` never has more arguments than its arity: the
 front end wraps excess arguments in an outer `App`.
 
-### Casts
+### Data conversions
 
-```rust
-pub enum CastKind {
-    ToData,           // Big -> Data: identity at runtime
-    FromDataShallow,  // Data -> Big: check the outermost node, then identity
-    ValidateData,     // Data -> Big: full recursive check, then identity
-    Lift,             // Const -> Big  (iData, bData, listData, mapData)
-    Lower,            // Big -> Const  (unIData, unBData, unListData, unMapData)
-}
-```
+`Builtin` exposes only real UPLC builtins. Their Nash signatures preserve
+nominal primitive types: `iData : int -> Int`, `unIData : Int -> int`,
+`bData : bytes -> Bytes`, and `unBData : Bytes -> bytes`. Collection
+constructors and destructors similarly preserve their Big element types.
+The existing `Data` constructors and patterns expose universal Data shapes.
 
-`ToData` is erased during lowering. `FromDataShallow` and `ValidateData`
-lower to a call of a compiler-generated checker function for the target
-type (one per Big type and check depth, hoisted as top-level `LetRec`
-bindings named `fromData#T` and `validateData#T`, see
-[data.md](data.md)), followed by the value itself. `Lift`/`Lower` lower to the
-single builtin that converts between the two representations (`iData`,
-`bData`, `listData`, `mapData` and their inverses), or to nothing for the
-built-in reflexive `Lift 'a 'a` on Big types. Only those `core/` impls
-become `Cast` nodes; the other stdlib impls (`list` with element
-conversion, `option`, `result`, `ordering`, see [data.md](data.md)) and
-user-written impls are ordinary functions.
+Core Nash impls connect these APIs with ordinary pattern matching:
+`fromData` for Int matches `I n` and returns `Builtin.iData n`; `toData`
+constructs `I (Builtin.unIData value)`. Collection decoders map element
+codecs recursively and construct typed collections. Invalid shapes fail in
+Nash. There are no generic cast nodes or generated validation checkers.
+`validateData` is an ordinary source method with the same safe decoding
+semantics as `fromData`. Identity is a Nash function; `fail` is language
+syntax, not an entry in the builtin table.
 
 ## Pipeline
 
@@ -176,7 +166,7 @@ The worklist identifies a specialization by:
    but do not all participate in key equality or hashing.
 
 Layout demand propagates through calls to a fixed point. It includes native
-constant construction and representation-dependent casts. In particular an
+constant construction and representation-dependent builtins. In particular an
 empty builtin list requires its complete UPLC element type: `list int` and
 `list Int` cannot share the same empty-list constant. A mere `Const`/`Big` tag
 is not enough for nested native lists and pairs. Little constructor tags and
@@ -344,7 +334,7 @@ Specified in `plans/08-optimizer.md`:
   are all `Lit` is evaluated on the nash-plutus CEK machine
   (`Program::eval`, `crates/nash-plutus/src/program.rs:38`) and replaced by
   the resulting constant when the builtin is error-safe on those arguments
-  (Aiken `builtin_eval_reducer`, `is_error_safe`). Adjacent inverse casts
+  (Aiken `builtin_eval_reducer`, `is_error_safe`). Adjacent inverse builtin calls
   (`unIData (iData x)`) cancel (Aiken `cast_data_reducer`).
 
 The passes run to a fixed point on node count (Aiken
@@ -371,7 +361,7 @@ pass has usually already replaced the head with a variable.
 |---|---|---|---|---|
 | `int` `bytes` `string` `bool` `unit` | Const | constant | `Lit` | builtins |
 | `list 'a` (`'a` Storable) | Const | `list t` constant | `mkCons` / `Lit []` | `chooseList` `headList` `tailList` |
-| `pair 'a 'b` (Storable components) | Const | `pair t1 t2` (each Big component becomes `data`; each Const component keeps its builtin type) | `mkPairData` constructs `pair Data Data`; `unConstrData` returns `pair int (list Data)` | `fstPair` `sndPair` |
+| `pair 'a 'b` (Storable components) | Const | `pair t1 t2` (each Big component becomes `data`; each Const component keeps its builtin type) | `mkPairData` constructs pairs with Big components; `unConstrData` returns `pair int (list Data)` | `fstPair` `sndPair` |
 | `array 'a` | Const | `array t` | `listToArray` | `indexArray` `lengthOfArray` |
 | `bls_g1` `bls_g2` `bls_mlr` `value` | Const | constant | builtins | builtins |
 | `Int` | Big | `data (I n)` | `iData` | `unIData` |
@@ -495,7 +485,8 @@ Trace levels are a build setting (`--trace-level`, config `traceLevel`;
 - `verbose`: the message is kept verbatim.
 
 Explicit `trace`, `fail`, `todo`, and `assert` messages follow this user trace
-level. Failed cast validation and implicit match failures use compiler traces.
+level. Implicit match failures use compiler traces; explicit codec failures
+follow ordinary Nash failure behavior.
 
 Compiler-generated traces ("validateData: field 1 of Datum",
 "incomplete pattern match") are controlled by a
@@ -574,9 +565,10 @@ tree and reads the output `Ast` from the result `Value`, never through
 - **Representations** ([kinds.md](kinds.md)): `Ty::repr()` decides every
   representation choice; codegen never inspects casing.
 - **Traits** ([traits.md](traits.md)): evidence drives phase 2; literal
-  traits (`FromInt` ...) resolve to `Lit` or to a `Lift` cast.
-- **Data** ([data.md](data.md)): `Cast` lowering and the checker
-  functions.
+  traits (`FromInt` ...) resolve to ordinary Nash impl bodies, including
+  direct Data builtin calls for Big literals.
+- **Data** ([data.md](data.md)): ordinary source codecs and typed Data
+  builtin signatures.
 - **Nitpick**: exhaustiveness is assumed; decision trees have no
   fallthrough of their own.
 - **Testing** ([testing.md](testing.md)): power-assert messages are built by

@@ -750,7 +750,10 @@ Notes on the sketch:
 - The `fallthrough` arm is omitted for single-constructor types by the
   real implementation to avoid a redundant-pattern warning.
 - `ToData`/`FromData` derivations check `union.representation == Some Big` and fail
-  otherwise; `Show` and `Ord` work on any representation. `Ord` derives `compare` by
+  otherwise. They generate ordinary source cases that preserve constructor tags
+  and field order, recursively encode/decode fields, check exact arity, and
+  rebuild typed constructors. `validateData` delegates to `fromData`; no hidden
+  conversion operations or unchecked identity impls are generated; `Show` and `Ord` work on any representation. `Ord` derives `compare` by
   constructor index then lexicographic fields.
 
 ## Interactions with other components

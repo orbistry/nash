@@ -14,7 +14,7 @@ Passes:
 2. Builtin force caching (and constant-argument currying).
 3. Dead code elimination and unused-parameter removal.
 4. Case-of-known-constructor and constant folding (via the CEK machine),
-   including cast cancellation and `Force(Delay)` removal.
+   including inverse builtin simplification and `Force(Delay)` removal.
 
 Specification: [docs/codegen.md](../docs/codegen.md), section
 "6. Optimizations".
@@ -145,7 +145,6 @@ pub fn cannot_throw(core: &Core<'_>) -> bool {
         Core::Var(_) | Core::Lit(_) | Core::Lam { .. } | Core::Delay(_) => true,
         Core::Builtin { func, args } => args.len() < func.arity() && args.iter().all(|a| cannot_throw(a)),
         Core::Constr { fields, .. } => fields.iter().all(|f| cannot_throw(f)),
-        Core::Cast { kind: CastKind::ToData, arg, .. } => cannot_throw(arg),
         _ => false,
     }
 }
@@ -164,7 +163,7 @@ pub fn size(core: &Core<'_>) -> usize {
         Core::Constr { fields, .. } => 1 + fields.len(),
         Core::Field { arity, .. } => 1 + *arity as usize,
         Core::Trace { .. } => 3,
-        Core::Cast { .. } | Core::Delay(_) | Core::Force(_) | Core::Error => 1,
+        Core::Delay(_) | Core::Force(_) | Core::Error => 1,
         Core::LetRec { .. } => unreachable!("rewritten before optimization"),
     });
     n
@@ -344,8 +343,8 @@ fn is_builtin_wrapper(params: &[Binder<'_>], body: &Core<'_>) -> bool {
 
 The size heuristic is the only tunable. `INLINE_LAMBDA_SIZE = 12` is
 about one builtin call with three arguments plus a `case`; it is chosen so
-that `Field` selectors, `Lift`/`Lower` wrappers and decision-tree leaves
-used twice inline, and a checker function does not.
+that `Field` selectors, Data builtin wrappers and decision-tree leaves
+used twice inline, and a recursive decoder does not.
 
 **Aiken reference**: `lambda_reducer` (1753), `inline_reducer` (2316),
 `is_a_builtin_wrapper` (2797), `substitute_single_var` (1461),
@@ -523,7 +522,7 @@ hoisted as lambdas over all their pattern variables.
 
 ---
 
-## Chunk 6 — Case-of-known-constructor, constant folding, cast cancellation, Big-list fast paths
+## Chunk 6 — Case-of-known-constructor, constant folding, inverse builtin simplification, Big-list fast paths
 
 **Files**
 
@@ -553,7 +552,6 @@ One bottom-up pass with these rules:
 | `Case(Data, Lit data, ..)` | the branch for its shape, payload bound to a `Lit` | always |
 | `Field(Constr(_, fs), i)` | `f_i` | every other `f_j` `cannot_throw` |
 | `Builtin(f, lits)` saturated | `Lit(result)` | `is_error_safe(f, lits)` |
-| `Cast(Lower, Cast(Lift, x))` and the reverse | `x` | always |
 | `Builtin(UnIData, [Builtin(IData, [x])])` and the other three pairs | `x` | always |
 | `Force(Delay(x))` | `x` | always |
 | `App(App(f, as), bs)` | `App(f, as ++ bs)` | always |
@@ -627,8 +625,6 @@ The `eval` closure in `assemble` is
 - `fold_add`: `addInteger 40 2` -> `Lit 42`.
 - `no_fold_div_zero`: `divideInteger 1 0` stays.
 - `no_fold_head_nil`: `headList []` stays.
-- `cancel_lift_lower`: plan 07 chunk 6's `castLower (castLift 41)` ->
-  `Lit 41`.
 - `cancel_un_i_data_i_data`.
 - `force_delay`.
 - `flatten_apps`.

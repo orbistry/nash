@@ -2747,9 +2747,8 @@ Status: complete under the approved scope above. The following entries are
 historical implementation steps; their intermediate counts and pending items
 are superseded by the final acceptance audit.
 
-The synthetic Builtin interface now exports all 103
-specified value schemes: 101 symbolic DefaultFunction variants plus identity
-and error. Static canonical type trees preserve the documented signatures;
+The synthetic Builtin interface exports only real DefaultFunction value
+schemes. Identity is ordinary Nash code; failure is language syntax. Static canonical type trees preserve the documented signatures;
 the existing kind checker derives their shared bounds. The table adds no
 runtime dependency to nash-ast. Inference snapshots and real CLI checks cover
 unConstrData projections, Storable list elements, Any choice results, and unit
@@ -2816,14 +2815,14 @@ declared in their type modules. Bool and Ordering export their Big constructors
 so closed imports can use them through module qualification. The core CLI
 acceptance checks both conversion directions and exact-core reflexive Lift on
 Bool, compiling 14 modules and 73 declarations. Primitive and container
-conversions still require the documented cast prerequisite; these three impls
-need no casts. Runtime representation and round-trip checks remain Plan 07.
+conversions use typed real Data builtins; these three impls
+use ordinary constructor rebuilding. Runtime representation and round-trip checks remain Plan 07.
 The CLI rejects `Lift bool Unit` at the calling `lift`. Formatting, strict
 Clippy, 1,912 tests and snapshot hygiene pass. This source-only step changes
 no Rust crate.
 Option now declares its little/Big twins and implements withDefault,
 Eq for the little type, and contextual Lift in both directions. The impl
-rebuilds constructors and resolves payload evidence; no primitive casts are
+rebuilds constructors and resolves payload evidence; no special conversion hooks are
 needed. Core CLI acceptance covers simple, nested and empty lifting/lowering,
 compiling 15 modules and 83 declarations. An invalid payload conversion from
 bool to Unit reports MissingImpl at the original outer `lift` call. Option's
@@ -2844,40 +2843,18 @@ non-constructor helper inputs and all three identity methods, compiling 17
 modules and 104 declarations. Separate CLI checks reject toData on unit and
 on nominal Int without an impl. The stdlib sketch now agrees with the
 representation spec: validateData returns the validated value and traps on
-failure; other Big conversions require typed casts, not polymorphic identity.
+failure; other Big conversions use typed real builtins and Data patterns.
 Formatting, strict Clippy, 1,912 tests and snapshot hygiene pass. These are
 source-only changes; runtime helper results await Plan 07.
-The frontend cast prerequisite now follows the existing Plan 07 contract:
-Builtin.castToData, castFromDataShallow, castValidateData, castLift and castLower
-have independent source/target variables and symbolic lowering operations.
-Only exact nash/core may name them, including qualified, aliased, wildcard and
-explicit imports. Canonicalizer snapshots check every route and package-name
-near misses; an inference snapshot preserves all five nominal signatures.
-Core cast generation, validation checkers and execution remain Plan 07.
-The stdlib Lift sketch now uses these bindings instead of assigning Data-valued
-UPLC builtins to nominal Int/Bytes/List/Map conversions. Actual cast-dependent
-core impls are being added below.
-The real CLI compiles a core cast module and application wrapper (two modules,
-six declarations), and rejects an application explicitly importing a cast.
-Existing core acceptance remains 17 modules and 104 declarations. Formatting,
-strict Clippy, 1,914 tests and snapshot hygiene pass (three ignored doctests).
-Lift now supplies int/Int, bytes/Bytes and string/Bytes impls through the
-specified casts; string conversion explicitly encodes/decodes UTF-8. Data
-supplies ToData/FromData for Int and Bytes, using distinct shallow and full
-validation operations. Core acceptance checks both primitive directions and
-nominal Data conversions, compiling 17 modules and 114 declarations. A real
-CLI negative case rejects Lift string Int at the calling lift. Formatting,
-strict Clippy, 1,914 tests and snapshot hygiene pass. These source-only changes
-do not change Rust crates. Runtime round trips, invalid UTF-8 and invalid Data
-checks remain Plan 07 execution requirements.
-Literal now supplies FromInt Int and FromBytes Bytes through castLift, plus
-the specified FromString bytes UTF-8 conversion. Core acceptance compiles 17
-modules and 117 declarations, selecting these impls with explicit annotations;
-the CLI rejects a bytes literal annotated Int. A focused inference snapshot
-preserves generalized exported literals and checks retained evidence for
-discarded literals defaulting to int/bytes/string despite the extra candidates.
-Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. Literal
-conversion execution and compile-time UTF-8 folding remain later-plan checks.
+The current conversion architecture supersedes the earlier primitive bridge
+implementation. Builtin exposes only actual UPLC operations. Their Data
+conversion signatures preserve nominal Int, Bytes, List and Map types.
+Lift and Literal call those operations directly. Core Data codecs match
+existing Data constructors, decode nested fields recursively, and rebuild
+typed results. Both fromData and validateData safely decode; no shallow
+reinterpretation or compiler-generated validation hooks remain. User ADTs
+need explicit source codecs until future derive macros generate them.
+
 Num Int and Integral Int now lower operands through Lift, call the matching
 integer builtin, and lift the result. Core acceptance exercises all eight
 methods and Integral's Num superclass, compiling 17 modules and 120
@@ -2894,21 +2871,11 @@ methods and a superclass-constrained helper. Comparing List Int with List Bytes
 is rejected at the incompatible operand. Runtime comparison results remain
 Plan 07 checks. Formatting, strict Clippy, 1,915 tests and snapshot hygiene
 pass. This source-only step changes no Rust crate.
-List Lift now maps contextual element conversions and uses private typed
-wrapList/unwrapList bridges. The raw polymorphic cast sketch lost the element
-relationship and produced MissingConstraint; the bridges preserve the shared
-Big element parameter. Data now supplies ToData/FromData for List and Map.
-Core acceptance covers nested and reflexive list conversions plus nominal
-container Data conversions, compiling 17 modules and 139 declarations. An
-invalid bool-to-Int element conversion reports MissingImpl at the outer lift.
-Runtime conversion/validation remains Plan 07 work.
-Formatting, strict Clippy, 1,915 tests and snapshot hygiene pass. This
-source-only step changes no Rust crate.
+List Lift maps contextual element conversions and calls typed listData and
+unListData. Map Lift calls typed mapData and unMapData, preserving key/value
+parameters. Data codecs recursively map source element codecs and preserve
+existing wire shapes. Nested invalid elements must fail during decoding.
 
-The documented `Lift (list (pair 'k 'v)) (Map 'k 'v)` impl now uses the
-general recursive-head representation and matcher. The core CLI fixture
-type-checks both lift and lower with `Map Int Bytes`; execution and cast
-lowering remain Plan 07 requirements.
 Show now covers Int, Bytes, List and Map. Primitive impls extract little
 representations; typed container bridges preserve contextual Show evidence
 for elements, keys and values. The stdlib spec makes nominal Map's

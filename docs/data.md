@@ -1,11 +1,11 @@
-# Data — the `Data` type, casts, encoders and decoders
+# Data — the `Data` type, encoders and decoders
 
 `Data` is the Plutus `Data` value: the on-chain wire format for datums,
 redeemers and the script context. In Nash it is an ordinary Big type with
 five constructors that can be pattern matched, plus a small set of traits
 and a stdlib decoder library on top. Decisions follow
 [overview.md](overview.md); the representation of every other type is in
-[representation.md](representation.md); the lowering of casts is in
+[representation.md](representation.md); builtin lowering is in
 [codegen.md](codegen.md).
 
 ## The type
@@ -26,7 +26,7 @@ Data node shapes themselves, and its fields are `Const` types (`int`,
 is what the builtins `unConstrData`, `unMapData`, `unListData`, `unIData`,
 `unBData` return. This is the one Big ADT whose fields are not Big. Every
 other Big value (an `Int`, a `Datum`, a `List Int`) is also a `Data` value
-at runtime; `toData` on it is the identity.
+at runtime; source codecs preserve its wire shape.
 
 Mapping to nash-plutus (`crates/nash-plutus/src/data.rs:10`):
 
@@ -104,85 +104,47 @@ trait ToData 'a where
     toData : 'a -> Data
 
 trait FromData 'a where
-    fromData     : Data -> 'a     -- shallow check
-    validateData : Data -> 'a     -- full check
+    fromData     : Data -> 'a     -- recursive decoding
+    validateData : Data -> 'a     -- recursive decoding
 
 trait Lift 'small 'big where
     lift  : 'small -> 'big
     lower : 'big -> 'small
 ```
 
-`ToData` and `FromData` are only implementable for Big types (representation
-`Big`); the impl is derived by `@derive(ToData, FromData)` (see
-[macros.md](macros.md)) and the stdlib provides impls for `Int`, `Bytes`,
-`Data`, `List 'a`, `Map 'k 'v`. Because every Big value is already `Data`,
-all three methods are identity **at runtime** and differ only in what they
-check:
+`ToData` and `FromData` apply to Big types. Core supplies ordinary Nash
+impls for `Int`, `Bytes`, `Data`, `List 'a` and `Map 'k 'v`. Other types
+need explicit source impls; `@derive` remains future macro work.
 
-| Method | Checks | Fails |
-|---|---|---|
-| `toData` | nothing | never |
-| `fromData` | the outermost node only | trace + `error` |
-| `validateData` | the whole value recursively | trace + `error` |
+`fromData` matches the existing universal Data constructors, decodes every
+field recursively, then reconstructs a typed result. It fails on a shape
+mismatch, including a malformed nested element. `validateData` has the same
+safe semantics and may delegate to `fromData`; there is no shallow
+reinterpretation operation. `Data` itself accepts every Data shape.
+`toData` reconstructs universal Data using the matching concrete builtin
+and Data constructor. These methods preserve wire encoding, but are not
+promised to erase to runtime identity. `Data.Decode` supplies non-failing
+result-based decoding.
 
-`fromData` and `validateData` **fail** (they do not return `option`)
-because a validator's success is "did not error" and because a failing
-check is the common case for a redeemer or datum. Non-failing variants live
-in `Data.Decode` (`run` returns a `result`).
+For example, these are ordinary source impls:
 
-The shallow check for each shape of Big type:
+```elm
+impl ToData Int where
+    toData value = I (Builtin.unIData value)
 
-| Big type | `fromData` checks | `validateData` additionally checks |
-|---|---|---|
-| ADT with `n` constructors (labeled fields included) | node is `Constr`, `0 <= tag < n`, field count matches the constructor's arity | every field, recursively, in declaration order |
-| record alias with `n` fields | node is `List` of length `n` | every field |
-| `Int` | node is `I` | nothing more |
-| `Bytes` | node is `B` | nothing more |
-| `List 'a` | node is `List` | every element is a valid `'a` |
-| `Map 'k 'v` | node is `Map` | every key is a valid `'k`, every value a valid `'v` |
-| `Data` | nothing | nothing |
-
-### Generated code shape
-
-`fromData` and `validateData` reach codegen as `Cast(FromDataShallow)` and
-`Cast(ValidateData)` nodes and lower to a call of a compiler-generated
-checker for the target type, then the value itself:
-
-```
-fromData#Datum = \d ->
-    let p = unConstrData d
-    case fstPair p of
-      0 -> let fs = sndPair p
-           if nullList (tailList (tailList fs)) then d else fail
-      _ -> fail
+impl FromData Int where
+    fromData value =
+        case value of
+            I n -> Builtin.iData n
+            _ -> fail
+    validateData value = fromData value
 ```
 
-```
-validateData#Datum = \d ->
-    let p = unConstrData d
-    case fstPair p of
-      0 -> let fs = sndPair p
-           let _  = validateData#Bytes (headList fs)
-           let _  = validateData#Int   (headList (tailList fs))
-           if nullList (tailList (tailList fs)) then d else fail
-      _ -> fail
-```
-
-Checkers are generated once per Big type, hoisted to top-level `LetRec`
-bindings (recursive types produce recursive checkers), and shared by every
-use in the program. `validateData#List#Int` is a loop over `unListData d`
-calling `validateData#Int`; `validateData#Data` is the identity and is
-inlined away. The `fail` carries a compiler-generated trace
-(`"validateData: Datum field 1"`) governed by the `compilerTraces` switch
-([codegen.md](codegen.md), Runtime errors).
-
-`chooseData` is what makes the shape tests cheap: a checker for `Int` is
-`force (chooseData d (delay fail) (delay fail) (delay fail) (delay d) (delay fail))`.
-This mirrors Aiken's `softcast_data_to_type_otherwise`
-(`crates/aiken-lang/src/gen_uplc/builder.rs:589`) and `unknown_data_to_type`
-(`builder.rs:529`), with two differences: Nash never converts to a little
-type inside the checker (the result stays `Data`), and shallow vs full is
-chosen by the caller, not by an `ExpectLevel` threaded through the tree.
+The actual builtin `iData` has type `int -> Int`; the existing constructor
+`I` has type `int -> Data`. Both emit the same UPLC Data shape. No new
+constructors, unsafe polymorphic builtins, generic cast IR nodes or generated
+checker functions are needed. Lists and maps use the corresponding typed
+builtins and map the source element codecs.
 
 ## `Lift` between representations
 
@@ -206,29 +168,26 @@ content. The impls shipped in `core/` are the table of
 So `list int` lifts to `List Int` through `Lift int Int` on each element,
 and `list Int` lifts to `List Int` through the reflexive impl, where the
 element map is the identity and the optimizer reduces the whole `lift` to
-`listData`. `string` has no Big partner (`Bytes` via `encodeUtf8` is a user
-function, not a lift).
+`listData`. `string` converts to `Bytes` through the core Lift impl using UTF-8.
 
-The `int`, `bytes`, `list`/`Map` and reflexive impls lower to `Cast(Lift)`
-/ `Cast(Lower)` nodes and then to one builtin (or nothing, for the
-reflexive impl). The others are ordinary Nash functions in `core/`, whose
-`case` is compiled like any other. `lower (lift x)` and `lift (lower d)`
-cancel in the optimizer (Aiken `cast_data_reducer`). A user-written
-`impl Lift myLittle MyBig` for a user pair is an ordinary function too.
+The primitive and collection Lift impls are ordinary Nash functions calling
+concrete typed Data builtins. The reflexive impl is identity. Other Lift
+impls use normal pattern matching and construction. Optimizations operate
+on actual builtin applications and preserve errors and evaluation order.
 
 ## Encoding: `Data.Encode`
 
 Encoders are plain functions to `Data`. The module is small because
-`toData` already covers every Big type:
+each supported type supplies its own `ToData` impl:
 
 ```elm
 module Data.Encode exposing (int, bytes, list, map, constr, bool)
 
 int : int -> Data
-int = lift
+int = I
 
 bytes : bytes -> Data
-bytes = lift
+bytes = B
 
 list : list Data -> Data
 list = List
@@ -250,7 +209,7 @@ Labeled constructor fields encode flat. `type Datum = Datum { owner :
 Bytes, deadline : Int }` is one constructor with two positional fields
 whose labels exist only at compile time, so a value is
 `Constr 0 [B owner, I deadline]`, never `Constr 0 [List [..]]`. The
-derived `ToData` is the identity and the derived `FromData` checks arity
+future derived codecs reconstruct the same encoding and check arity
 `2` under tag `0`. A little labeled constructor is `constr i [..]` the
 same way. Only `type alias` records are a `List` of fields.
 
@@ -404,7 +363,7 @@ it, so the stdlib is written first and the fusion pass is scheduled after
   are `Const`.
 - **Traits** ([traits.md](traits.md)): `ToData`, `FromData`, `Lift` are
   ordinary traits with stdlib impls; deriving is a macro.
-- **Codegen** ([codegen.md](codegen.md)): `Cast` nodes, checker generation,
+- **Codegen** ([codegen.md](codegen.md)): typed builtins, Data patterns,
   the `Case(Data)` lowering.
 - **Validators** ([validators.md](validators.md)): `main` arguments are Big
   or Const; for the Big ones, `Data` patterns and `fromData` are how their

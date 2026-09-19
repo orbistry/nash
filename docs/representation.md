@@ -21,7 +21,7 @@ A `Const` value is a UPLC constant. Each Nash Const type maps to one
 | `bool` | `Boolean(bool)` | `Bool` | the only type `if` accepts |
 | `unit` | `Unit` | `Unit` | written `()` in types and values |
 | `list 'a` | `ProtoList(&Type, &[&Constant])` | `List(elem)` | `'a : Storable` |
-| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `Pair(a, b)` | `'a 'b : Storable`; `mkPairData` constructs `pair Data Data`, while `unConstrData` returns `pair int (list Data)` |
+| `pair 'a 'b` | `ProtoPair(&Type, &Type, &Constant, &Constant)` | `Pair(a, b)` | `'a 'b : Storable`; `mkPairData` preserves Big component types, while `unConstrData` returns `pair int (list Data)` |
 | `array 'a` | `ProtoArray(&Type, &[&Constant])` | `Array(elem)` | `'a : Storable` |
 | `bls_g1` | `Bls12_381G1Element` | `Bls12_381G1Element` | |
 | `bls_g2` | `Bls12_381G2Element` | `Bls12_381G2Element` | |
@@ -275,21 +275,20 @@ trait FromData ('a : Big) where
     validateData : Data -> 'a
 ```
 
-- `toData` is the identity at runtime: a Big value already is a `Data`
-  constant. It exists to forget the static shape.
-- `fromData` is *shallow*: it checks only that the outer shape matches
-  (`Constr` with a tag in range and the right field count for an ADT, `List`
-  for a Big record, `I`/`B` for `Int`/`Bytes`) and then reinterprets. Field
-  contents are not inspected. It traps on a mismatch.
-- `validateData` is *full*: it recursively checks every field against the
-  type's shape and traps on the first mismatch, then reinterprets like
-  `fromData`. Use it once at the validator boundary when the datum comes
-  from an untrusted source; use `fromData` everywhere else. The
-  non-failing path is the `Data.Decode` combinators (see
-  [data.md](data.md)), which return `option`/`result` instead of trapping.
+- `toData` reconstructs universal Data in ordinary Nash source while
+  preserving the declared wire encoding.
+- `fromData` matches universal Data and recursively decodes every field
+  before constructing a typed result. Invalid nested data fails immediately.
+- `validateData` has the same safe semantics and can delegate to `fromData`.
+  Non-failing decoding uses `Data.Decode` combinators.
 
-`@derive(ToData, FromData)` generates these for user Big types; the
-builtins have compiler impls. `Data` itself has trivial impls.
+Core provides explicit codecs for primitive and collection Big types.
+User Big ADTs need source impls; future `@derive(ToData, FromData)` macros
+will generate equivalent source codecs. There is no automatic compiler
+codec synthesis or shallow reinterpretation. Real UPLC builtin signatures
+carry nominal types: `iData : int -> Int`, `unIData : Int -> int`, and
+similarly for Bytes, List and Map. Existing universal Data constructors
+and patterns remain unchanged; no new wrapper constructors are introduced.
 
 ## Costs
 

@@ -148,7 +148,7 @@ unchanged. The Sampo changeset is `kind-settle-termination.md` (nash-can patch).
 The builtin `pair` has two independent Storable component bounds. This admits
 `unConstrData : Data -> pair int (list Data)` and the polymorphic `fstPair` and
 `sndPair` signatures. Only the builtin API restricts construction through
-`mkPairData : Data -> Data -> pair Data Data`; the kind does not encode that API
+`mkPairData : (Big 'a, Big 'b) => 'a -> 'b -> pair 'a 'b`; the kind does not encode that API
 restriction. Snapshots cover Big/Const combinations, Term rejection at either
 argument, and all four signatures. No plan 01 grammar change is needed.
 The correction has its own Sampo changeset: nash-ast minor and nash-can patch.

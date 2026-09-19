@@ -1695,21 +1695,13 @@ deriveOrd decl =
         _ ->
             fail "derive(Ord): only `type` declarations can derive Ord"
 
-deriveToData : decl -> decl
-deriveToData decl =
-    case decl of
-        Union { name, params, representation } ->
-            if representation /= Some Big then
-                fail ("derive(ToData): " ++ Ast.nameText name ++ " is not a Big type")
-            else
-                Ast.impl (Raw "ToData") (Cons.singleton (selfType name params)) Nil
-                    (Cons.singleton (Ast.def (Raw "toData") Nil (quote Builtin.identity)))
-
-        Alias { name, params, representation, typ } ->
-            ...
-
-        _ ->
-            fail "derive(ToData): only `type` and `type alias` declarations can derive ToData"
+-- ToData derivation builds source cases over each declared constructor,
+-- calls toData on each field, and reconstructs universal Data with Constr.
+-- Record aliases use List in declaration order. FromData derivation matches
+-- those shapes, checks exact arity, recursively decodes every field, then
+-- invokes the user's constructor. validateData delegates to fromData.
+-- This requires ToData/FromData contexts for the relevant type parameters;
+-- neither derivation may emit an untyped identity or hidden cast operation.
 ```
 
 **Elm/Aiken reference**

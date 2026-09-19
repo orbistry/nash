@@ -60,8 +60,8 @@ impl Functor list where
 
 -- multi-parameter impl
 impl Lift int Int where
-    lift = Builtin.castLift
-    lower = Builtin.castLower
+    lift = Builtin.iData
+    lower = Builtin.unIData
 
 -- contexts in annotations
 member : Eq 'a => 'a -> List 'a -> bool
@@ -500,7 +500,7 @@ context, substitutes each recorded use, and selects the resulting impl method
 or requests a callee specialization. No dictionary is passed at runtime.
 
 Specialization identity also includes the runtime layout details demanded by
-native constant construction and casts. `Repr` proofs are erased, but this does
+native constant construction and typed builtins. `Repr` proofs are erased, but this does
 not make native constants independent of their element types. Complete source
 type arguments are substitution metadata, not unconditional key components.
 Opaque pass-through types need no distinct copy. See [codegen.md](codegen.md)
@@ -586,8 +586,8 @@ trait ToData ('a : Big) where
     toData : 'a -> Data
 
 trait FromData ('a : Big) where
-    fromData : Data -> 'a                       -- shallow: reinterprets the constant
-    validateData : Data -> 'a                   -- full structural check; traps on bad data
+    fromData : Data -> 'a                       -- recursive source decoding
+    validateData : Data -> 'a                   -- recursive source decoding; traps on bad data
 
 trait Lift 'small 'big where
     lift : 'small -> 'big
