@@ -108,6 +108,10 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData     : Data -> 'a     -- unchecked identity
     fromData = Builtin.coerce
+
+impl Big 'a => FromData 'a where
+
+trait Validate ('a : Big) where
     validate : Data -> 'a     -- required recursive validation
 
 trait Lift 'small 'big where
@@ -115,17 +119,19 @@ trait Lift 'small 'big where
     lower : 'big -> 'small
 ```
 
-`ToData` and `FromData` apply to Big types. Core supplies one ordinary Nash
-blanket `ToData` impl for every Big type, including user ADTs, nominal aliases,
-lists and maps. Its empty body uses the default method; collection elements
-need no `ToData` constraints. Core supplies `FromData` impls for `Int`, `Bytes`,
-`Data`, `List 'a` and `Map 'k 'v`. Other types need explicit `FromData` impls;
-`@derive` remains future macro work.
+`ToData` and `FromData` apply to Big types. Core supplies an ordinary blanket
+impl for each trait, covering every Big type, including user ADTs, nominal
+record aliases, lists and maps. The empty bodies use the default methods;
+collection elements need no conversion or validation constraints. Neither
+conversion trait needs derivation, and concrete impls would overlap the
+blanket impls. `Validate` is separate and opt-in: core provides impls for
+`Int`, `Bytes`, `Data`, `List 'a` and `Map 'k 'v`; user types need a source
+`Validate` impl. `@derive(Validate)` remains future macro work.
 
 `fromData` defaults to `Builtin.coerce`, an unchecked identity. It checks
 neither the outer Data shape nor nested fields. Malformed data fails only
 if a later operation needs the expected shape; a value that is never inspected
-can pass through unchanged. `validate` is a separate required method:
+can pass through unchanged. `Validate.validate` is the required method of a separate trait:
 core impls check the shape and recursively validate collection elements.
 `Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
 result-based decoding.
@@ -138,7 +144,7 @@ impl and are rejected.
 For example, validation is an ordinary source impl:
 
 ```elm
-impl FromData Int where
+impl Validate Int where
     validate value =
         case value of
             I _ -> Builtin.coerce value
@@ -360,7 +366,7 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 
 | Situation | Where reported |
 |---|---|
-| `impl ToData` / `impl FromData` for a non-Big type | representation superclass check |
+| `impl ToData` / `impl FromData` / `impl Validate` for a non-Big type | representation superclass check |
 | `Constr` pattern with a Big field type (e.g. `Constr 0 [x : Int]`) | type check (fields of `Data` are `Const`) |
 | `fromData d` where the node shape is wrong | no check; a later operation requiring that shape can fail |
 | `validate d` where the node shape is wrong | runtime failure in source validation |
@@ -373,13 +379,13 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 - **Kinds and representation** ([kinds.md](kinds.md)): `Data` has kind
   `Type` and representation `Big`; its constructor fields
   are `Const`.
-- **Traits** ([traits.md](traits.md)): `ToData`, `FromData`, `Lift` are
+- **Traits** ([traits.md](traits.md)): `ToData`, `FromData`, `Validate`, `Lift` are
   ordinary traits with stdlib impls; deriving is a macro.
 - **Codegen** ([codegen.md](codegen.md)): typed builtins, Data patterns,
   the `Case(Data)` lowering.
 - **Validators** ([validators.md](validators.md)): `main` arguments are Big
   or Const; for the Big ones, `Data` patterns and `validate` are how their
   shape is checked.
-- **Macros** ([macros.md](macros.md)): `@derive(FromData)`; `ToData` needs no derivation.
+- **Macros** ([macros.md](macros.md)): `@derive(Validate)`; conversion traits need no derivation.
   A `field "owner"` form of `Data.Decode.field` that resolves the label
   through an alias in scope would be a macro, not a library function.

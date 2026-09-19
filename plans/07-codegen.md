@@ -1382,16 +1382,18 @@ Actual UPLC conversion builtins have nominal Nash signatures:
   with inverse `unMapData`
 
 Lift and Literal use those builtins directly in Nash. ToData and FromData
-are ordinary source impls: match universal Data, recursively decode fields,
-then construct typed results with actual builtins or user constructors.
-`validate` retains safe recursive semantics and can delegate to
-`fromData`. Reject malformed nested elements rather than reinterpreting them.
-User ADTs require source codecs until future derive macros produce them.
+have ordinary blanket Big impls, both using their default Builtin.coerce
+method. This separate compiler intrinsic lowers to unchecked runtime identity,
+with no shape checks, traversal or reconstruction, for every Big type.
+Collections impose no element conversion or validation constraints.
+Validate is a separate opt-in trait. Its ordinary core impls check Data shape
+and recursively validate collection elements. User ADTs require source
+Validate impls until future derive macros produce them. Validation must not
+delegate to unchecked fromData.
 
-No virtual builtin functions, generic cast IR, generated checker subsystem,
-or extra wrapper constructors are part of this architecture. Identity is
-written in Nash and failure uses language syntax. Builtin lowering handles
-only concrete DefaultFunction entries.
+No generated checker subsystem or extra wrapper constructors are part of
+this architecture. Failure uses language syntax. Real builtin lowering handles
+concrete DefaultFunction entries; Builtin.coerce is a separate intrinsic.
 
 **Tests**: snapshot Nash inputs covering primitive and nested collection
 round trips, preservation of existing Data encodings, malformed nested

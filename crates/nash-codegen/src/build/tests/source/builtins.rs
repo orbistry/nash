@@ -474,11 +474,6 @@ case!(
     import Builtin exposing (..)
     import Data exposing (FromData)
     type Datum = Datum Int
-    impl FromData Datum where
-        validate value =
-            case value of
-                Constr 0 [I _] -> coerce value
-                _ -> fail
     decoded : Datum
     decoded = fromData (Constr 0 [I 42])
     main =
@@ -526,4 +521,51 @@ case!(
         else False
     "#,
     Ok("(con bool True)")
+);
+
+case!(
+    from_data_blanket_without_validation_instances,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (fromData, toData)
+    type Token = Token Int
+    type alias Wrapped = { item : Token }
+    unchecked : Big 'a => Data -> 'a
+    unchecked = fromData
+    wrapped : Wrapped
+    wrapped = unchecked (List [Constr 0 [I 42]])
+    tokens : List Token
+    tokens = unchecked (List [B #"aa"])
+    mapping : Map Token Token
+    mapping = fromData (Map [mkPairData (B #"aa") (I 7)])
+    main =
+        if equalsData (toData wrapped) (List [Constr 0 [I 42]]) then
+            if equalsData (toData tokens) (List [B #"aa"]) then
+                equalsData (toData mapping) (Map [mkPairData (B #"aa") (I 7)])
+            else False
+        else False
+    "#,
+    Ok("(con bool True)")
+);
+
+case!(
+    custom_validate_rejects_wrong_shape,
+    r#"
+    module Main exposing (..)
+    import Builtin exposing (..)
+    import Data exposing (Validate)
+    type Datum = Datum Int
+    impl Validate Datum where
+        validate value =
+            case value of
+                Constr 0 [I _] -> coerce value
+                _ -> fail
+    decoded : Datum
+    decoded = validate (Constr 0 [B #"aa"])
+    main =
+        case decoded of
+            Datum number -> unIData number
+    "#,
+    Err(())
 );

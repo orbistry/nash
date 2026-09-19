@@ -536,7 +536,7 @@ region supplies diagnostics.
 
 Decision: shipped in `nash/core` as one module per trait (`Eq`, `Ord`,
 `Show`, `Num`, `Integral`, `Semigroup`, `Monoid`, `Functor`,
-`Applicative`, `Monad`, `Lift`, `Data` for `ToData`/`FromData`, and
+`Applicative`, `Monad`, `Lift`, `Data` for `ToData`/`FromData`/`Validate`, and
 `Literal` for the three literal traits), all imported implicitly with the
 trait and its methods exposed (like Elm's default imports of `Basics`).
 `Prelude` holds the `infix` declarations that bind operators to methods and
@@ -594,6 +594,10 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData : Data -> 'a                       -- unchecked identity
     fromData = Builtin.coerce
+
+impl Big 'a => FromData 'a where
+
+trait Validate ('a : Big) where
     validate : Data -> 'a                   -- required recursive validation; traps on bad data
 
 trait Lift 'small 'big where
@@ -629,20 +633,22 @@ Notes:
   Interfaces retain the backing method's defining module independently of
   the module that declares the operator. Operator values and sections use
   the same scheme; each operator node owns its solved evidence.
-- Kinds: `ToData`/`FromData` and both `Lift` parameters have kind `Type`.
-  `ToData`/`FromData` require `Big` through their superclass predicates.
+- Kinds: `ToData`/`FromData`/`Validate` and both `Lift` parameters have kind `Type`.
+  `ToData`/`FromData`/`Validate` require `Big` through their superclass predicates.
   `Lift` relates its concrete impl heads, with a compiler-owned reflexive
   rule for Big types. `Functor`/`Applicative`/`Monad` parameters have the
   fixed kind `Type -> Type`; their method formation contexts enforce each
   constructor's representation requirements.
-- `@derive(Eq, Ord, Show, FromData)` generates impls as macros
+- `@derive(Eq, Ord, Show, Validate)` generates impls as macros
   ([macros.md](macros.md)); the generated impls are ordinary impls subject
   to the orphan rule (always satisfied: the type is local). Each requested
   trait must satisfy the target type's kind restrictions. Eq derivation is
   for little types; Big types already have compiler-owned structural Eq,
   and a generated Big Eq override is rejected like a handwritten one.
-  `ToData` already covers every Big type through its ordinary blanket impl;
-  deriving a concrete impl would overlap it and is rejected.
+  `ToData` and `FromData` already cover every Big type through ordinary
+  blanket impls, without validation constraints. Deriving concrete impls
+  would overlap those impls and is rejected. Validation is opt-in through
+  the separate `Validate` trait.
 
 ## Interfaces
 
@@ -686,7 +692,8 @@ has a declared scheme, so it is always constrained through its annotation.
   `Builtin.coerce : 'a -> 'b` intrinsic is unchecked identity for any two
   value types, including functions; it has no representation constraints
   and does not change the runtime representation. `fromData` defaults to
-  it and checks no shape; `validate` remains a required separate method.
+  it and checks no shape; `Validate.validate` is a required method of a
+  separate opt-in trait.
   Specialization is by evidence only.
 - **Macros** ([macros.md](macros.md)): `@derive` expands to `impl` decls
   before canonicalization of the expanded module; `@derive` on a type in

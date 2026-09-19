@@ -12,7 +12,7 @@ compiler features available when it lands):
 |---|---|
 | 1 skeleton, 2 default imports, 3 `Builtin` | nothing beyond today's pipeline |
 | 4 kinds-aware twin types | plans/02 (kinds) |
-| 5 trait modules, operators, `Lift`, `ToData` | plans/03 (traits; chunk 12 there is this chunk's file list) |
+| 5 trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` | plans/03 (traits; chunk 12 there is this chunk's file list) |
 | 6 type modules, 7 `Data`/`Map` modules | plans/03; `Data` patterns from data.md |
 | 8 `Fuzz`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `Prng` protocol, runner) |
 | 10 `Ast`, `Derive` | plans/11 chunk 4 (tags) and chunk 10 |
@@ -233,7 +233,7 @@ pub fn defaults<'a>(bump: &'a Bump) -> &'a [&'a Import<'a>] {
         explicit("Applicative", &[upper("Applicative")]),
         explicit("Monad", &[upper("Monad")]),
         explicit("Lift", &[upper("Lift")]),
-        explicit("Data", &[upper("ToData"), upper("FromData")]),
+        explicit("Data", &[upper("ToData"), upper("FromData"), upper("Validate")]),
         explicit("Literal", &[upper("FromInt"), upper("FromString"), upper("FromBytes")]),
         explicit("Bool", &[upper("Bool"), lower("not"), lower("and"), lower("or"), lower("xor")]),
         explicit("Unit", &[upper("Unit")]),
@@ -589,7 +589,7 @@ usable side by side in one user module.
 
 ---
 
-## Chunk 5: trait modules, operators, `Lift`, `ToData`, `FromData`
+## Chunk 5: trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate`
 
 **Files**
 
@@ -643,7 +643,7 @@ module imports only `Builtin` and its superclass module):
 Builtin
   └─ Eq ─ Ord          Show      Num ─ Integral      Semigroup ─ Monoid
      Functor ─ Applicative ─ Monad
-     Lift             Data (ToData/FromData)          Literal
+     Lift             Data (ToData/FromData/Validate)          Literal
 Bool, Unit                              (types only; `Bool` functions use `if`)
 Prelude                                 (imports every trait module and Bool)
 Option, Result, Ordering                (import Prelude and the trait modules they impl)
@@ -1168,7 +1168,7 @@ None; see plans/11.
 
 Big ADTs for the V3 `ScriptContext` per docs/stdlib.md, `Lift value Value`,
 interval helpers. Golden tests decode real contexts with
-`FromData.validate` and check a few fields.
+`Validate.validate` and check a few fields.
 
 **Code** (`core/src/Cardano/Value.nash` excerpt)
 

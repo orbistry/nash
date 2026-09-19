@@ -31,7 +31,7 @@ core/
     Applicative.nash      trait Applicative
     Monad.nash            trait Monad
     Lift.nash             trait Lift + impls for compiler-known types
-    Data.nash             traits ToData/FromData; functions over Data
+    Data.nash             traits ToData/FromData/Validate; functions over Data
     Literal.nash          traits FromInt, FromString, FromBytes
     Bool.nash             bool functions; Big Bool
     Unit.nash             Big Unit
@@ -65,8 +65,8 @@ Module naming: one module per type pair, named by the uppercase name
 it is not compiler-known (`option`), functions over the **little** type
 (`List.map : ('a -> 'b) -> list 'a -> list 'b`), and the `Lift` impl
 between the two. Big twins get no function set: only the type and
-constructor declarations and their `Lift`/`FromData` impls, with `ToData`
-provided by the blanket impl in `Data`. Big
+constructor declarations and their `Lift`/`Validate` impls, with `ToData`
+and `FromData` provided by blanket impls in `Data`. Big
 values are `lower`ed, worked on, and `lift`ed back. `Map` is the one
 module whose functions take the Big type, because its little form
 `list (pair 'k 'v)` is not a nominal type. `Data`, `Data.Decode` and
@@ -120,7 +120,7 @@ import Functor exposing (Functor)
 import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Lift exposing (Lift)
-import Data exposing (ToData, FromData)
+import Data exposing (ToData, FromData, Validate)
 import Literal exposing (FromInt, FromString, FromBytes)
 import Bool exposing (Bool, not, and, or, xor)
 import Unit exposing (Unit)
@@ -282,7 +282,7 @@ not repeated here. What each module adds beyond its trait:
 | `Functor` | `list`, `List`; each applied element must satisfy its constructor's datatype context (`Storable` for `list`, `Big` for `List`). No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
-| `Data` | Blanket `ToData` for every Big type; `FromData` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
+| `Data` | Blanket `ToData` and `FromData` for every Big type; `Validate` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
@@ -442,7 +442,7 @@ disjoint keys. `Lift bytes Bytes` and `Lift string Bytes` differ in the
 first head, so both exist.
 
 ```elm
-module Data exposing (ToData, FromData, serialise, tag, fields)
+module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
 
 import Builtin exposing (Data(..), Big)
 
@@ -455,13 +455,17 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData : Data -> 'a
     fromData = Builtin.coerce
+
+impl Big 'a => FromData 'a where
+
+trait Validate ('a : Big) where
     validate : Data -> 'a
 
 -- Data itself requires no decoding.
-impl FromData Data where
+impl Validate Data where
     validate value = value
 
-impl FromData Int where
+impl Validate Int where
     validate value =
         case value of
             I _ -> Builtin.coerce value
@@ -487,8 +491,10 @@ fields d =
 specifies, so no `lower` is needed on `t` and `fs`.
 Other Big types remain nominally distinct from Data. `fromData` defaults to
 unchecked `Builtin.coerce`, with no outer-shape or nested checks. Malformed
-data fails only if a later operation needs its expected shape. The required
-`validate` method is separate: Int and Bytes check the shape and coerce
+data fails only if a later operation needs its expected shape. Its blanket impl
+also covers user ADTs, nominal record aliases and collections, without any
+validation constraints. The required
+`Validate.validate` method is separate: Int and Bytes check the shape and coerce
 the original value, while List and Map retain recursive source validation.
 `toData` uses its `Builtin.coerce` default through one ordinary blanket impl
 for every Big type. User ADTs, nominal aliases, lists and maps all qualify,
@@ -940,7 +946,7 @@ foldl : ('k -> 'v -> 'b -> 'b) -> 'b -> Map 'k 'v -> 'b
 ## `Data.Decode`, `Data.Encode`
 
 Structured decoders for untrusted `Data` return failure as a value.
-`FromData.validate` is the separate trapping validation path; future
+`Validate.validate` is the separate trapping validation path; future
 derivation generates recursive source checks.
 
 ```elm

@@ -118,9 +118,10 @@ runtime identity with no validation, traversal, or representation change;
 the first-class intrinsic behaves as an identity function. It does not add
 an entry to the real builtin inventory.
 
-`FromData.fromData` defaults to this unchecked identity. It does not check
+`FromData.fromData` defaults to this unchecked identity through an ordinary
+blanket impl for every Big type, without validation constraints. It does not check
 even the outer Data shape; malformed data fails only if a later operation
-needs that shape. `validate` is a separate required source method.
+needs that shape. `Validate.validate` is a required source method on a separate opt-in trait.
 Int and Bytes validation matches the Data shape then coerces the original
 value; List and Map retain recursive source validation. `ToData.toData` also
 defaults to `Builtin.coerce`: its ordinary blanket impl covers every Big type

@@ -2837,23 +2837,22 @@ the destination payload types reports both missing payload Lift impls at the
 original call. Formatting, strict Clippy, 1,912 tests and snapshot hygiene
 pass. Higher-kinded Result impls remain pending; runtime round trips still
 depend on Plan 07. This source-only step changes no Rust crate.
-Data now defines Big-bounded ToData/FromData traits, their identity impls for
-Data itself, and serialise/tag/fields. The core CLI checks constructor and
-non-constructor helper inputs and all three identity methods, compiling 17
-modules and 104 declarations. Separate CLI checks reject toData on unit and
-on nominal Int without an impl. The stdlib sketch now agrees with the
-representation spec: validate returns the validated value and traps on
-failure; other Big conversions use typed real builtins and Data patterns.
-Formatting, strict Clippy, 1,912 tests and snapshot hygiene pass. These are
-source-only changes; runtime helper results await Plan 07.
-The current conversion architecture supersedes the earlier primitive bridge
-implementation. Builtin exposes only actual UPLC operations. Their Data
-conversion signatures preserve nominal Int, Bytes, List and Map types.
-Lift and Literal call those operations directly. Core Data codecs match
-existing Data constructors, decode nested fields recursively, and rebuild
-typed results. Both fromData and validate safely decode; no shallow
-reinterpretation or compiler-generated validation hooks remain. User ADTs
-need explicit source codecs until future derive macros generate them.
+Data defines Big-bounded ToData, FromData and Validate traits, plus
+serialise/tag/fields. ToData and FromData each have an ordinary blanket Big
+impl using the default Builtin.coerce method. Both conversions preserve the
+runtime Data value without traversal or shape checks. Every Big type is
+covered, including user ADTs, nominal record aliases and collections, with
+no element conversion or validation prerequisites. Little unit remains
+ineligible; nominal Int is covered automatically.
+Validate is separate and opt-in. Core Data accepts every shape; Int and Bytes
+check shape, while List and Map recursively validate their contents through
+Validate constraints. User ADTs provide source Validate impls until future
+derive macros generate them. validate returns the validated value and traps
+on failure; unchecked fromData cannot serve as validation.
+This architecture supersedes the earlier primitive bridge implementation.
+Real UPLC Data conversion builtins retain nominal Int, Bytes, List and Map
+signatures. Lift and Literal call those operations directly. Builtin.coerce
+is a separate unchecked compiler intrinsic, not a real Plutus builtin.
 
 Num Int and Integral Int now lower operands through Lift, call the matching
 integer builtin, and lift the result. Core acceptance exercises all eight
@@ -2945,7 +2944,7 @@ overlapping after byte truncation.
 Files: `core/Eq.nash`, `core/Ord.nash`, `core/Show.nash`, `core/Num.nash`,
 `core/Integral.nash`, `core/Semigroup.nash`, `core/Monoid.nash`,
 `core/Functor.nash`, `core/Applicative.nash`, `core/Monad.nash`,
-`core/Data.nash` (ToData/FromData), `core/Lift.nash`, `core/Literal.nash`,
+`core/Data.nash` (ToData/FromData/Validate), `core/Lift.nash`, `core/Literal.nash`,
 `core/Prelude.nash` (the `infix` table from docs/stdlib.md and the prelude
 impls), `crates/nash-ast/src/primitives.rs` (synthetic Builtin prerequisite),
 `crates/nash-driver/src/compile.rs` (implicit imports),

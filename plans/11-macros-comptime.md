@@ -1649,11 +1649,12 @@ emits the constant in the UPLC output.
 
 **Change**
 
-Write `derive` and the five derivations in Nash per docs/macros.md. `Eq`
+Write `derive` and the four derivations in Nash per docs/macros.md. `Eq`
 is in the doc; `Ord` compares constructor index then fields; `Show`
-renders `Ctor field1 field2` with parentheses for nested; `ToData` /
-`FromData` require `representation == Some Big` and generate identity `toData` /
-`fromData` plus a `validate` built from `Data.Decode`.
+renders `Ctor field1 field2` with parentheses for nested; `Validate` requires
+`representation == Some Big` and generates recursive source `validate` checks.
+`ToData` and `FromData` need no derivation: their ordinary blanket Big impls
+cover every Big type, and generated concrete impls would overlap them.
 
 **Code** (`core/src/Derive.nash`, excerpt beyond the doc's `deriveEq`)
 
@@ -1695,13 +1696,12 @@ deriveOrd decl =
         _ ->
             fail "derive(Ord): only `type` declarations can derive Ord"
 
--- ToData derivation builds source cases over each declared constructor,
--- calls toData on each field, and reconstructs universal Data with Constr.
--- Record aliases use List in declaration order. FromData derivation matches
--- those shapes, checks exact arity, recursively decodes every field, then
--- invokes the user's constructor. validate delegates to fromData.
--- This requires ToData/FromData contexts for the relevant type parameters;
--- neither derivation may emit an untyped identity or hidden cast operation.
+-- Validate derivation matches declared constructor shapes, checks exact
+-- arity, recursively validates every field, then invokes the constructor.
+-- Record aliases use List in declaration order.
+-- This requires Validate contexts for the relevant type parameters.
+-- Validation must not delegate to unchecked fromData. ToData and FromData
+-- already have blanket impls and must not receive generated concrete impls.
 ```
 
 **Elm/Aiken reference**

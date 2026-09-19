@@ -80,7 +80,7 @@ definition      = lower_var { pattern } '=' expression ;   (* same name, next fr
 ### Declaration attributes
 
 ```elm
-@derive(Ord, Show, FromData)
+@derive(Ord, Show, Validate)
 type Redeemer = Claim | Cancel
 
 @inline
@@ -560,7 +560,7 @@ Errors raised by the macro itself:
 deriveOne decl trait =
     case Ast.exprName trait of
         Some "Eq" -> deriveEq decl
-        _ -> fail "derive: expected a trait name such as Eq, Ord, Show, FromData"
+        _ -> fail "derive: expected a trait name such as Eq, Ord, Show, Validate"
 ```
 
 `fail msg` traces `msg` and errors. The runner reports the last trace
@@ -575,7 +575,7 @@ The macro `derive` failed while expanding this attribute:
    ^^^^^^^^^^^^^^^^^^^^
 It said:
 
-    derive: expected a trait name such as Eq, Ord, Show, FromData
+    derive: expected a trait name such as Eq, Ord, Show, Validate
 ```
 
 A macro that errors without a trace (a raw `error` term, a builtin
@@ -651,7 +651,7 @@ generator is `comptime` is a constant and is a warning.
 
 ## Deriving
 
-`@derive(Eq, Ord, Show, FromData)` is the declaration macro
+`@derive(Eq, Ord, Show, Validate)` is the declaration macro
 `Derive.derive` from `nash/core`, exposed by the default imports. It
 dispatches on the trait name and appends one `impl` per trait after the
 original declaration.
@@ -661,10 +661,11 @@ representation predicates. Eq
 derivation applies to little types. Big types already receive structural Eq
 from the compiler; deriving must not emit an Eq override for them. Generated
 impls go through the same checks as handwritten impls, including rejection
-of Big Eq overrides. For a Big Redeemer, request Ord/Show/FromData as
-needed and use the automatic Eq instance. `ToData` needs no derivation:
-core supplies an ordinary blanket impl for every Big type. A macro must not
-emit a concrete `ToData` impl because it would overlap that blanket impl.
+of Big Eq overrides. For a Big Redeemer, request Ord/Show/Validate as
+needed and use the automatic Eq instance. `ToData` and `FromData` need no derivation:
+core supplies ordinary blanket impls for every Big type. A macro must not
+emit concrete conversion impls because they would overlap those blanket
+impls. `Validate` is the separate opt-in validation trait.
 
 Sketch of the `Eq` derivation in Nash:
 
@@ -685,9 +686,9 @@ deriveOne decl arg =
         Some "Eq" -> deriveEq decl
         Some "Ord" -> deriveOrd decl
         Some "Show" -> deriveShow decl
-        Some "FromData" -> deriveFromData decl
+        Some "Validate" -> deriveValidate decl
         Some other -> fail ("derive: no derivation for " ++ other)
-        None -> fail "derive: expected a trait name such as Eq, Ord, Show, FromData"
+        None -> fail "derive: expected a trait name such as Eq, Ord, Show, Validate"
 
 deriveEq : decl -> decl
 deriveEq decl =
@@ -750,10 +751,9 @@ Notes on the sketch:
   conversion at any point.
 - The `fallthrough` arm is omitted for single-constructor types by the
   real implementation to avoid a redundant-pattern warning.
-- `FromData` derivations check `union.representation == Some Big` and fail
+- `Validate` derivations check `union.representation == Some Big` and fail
   otherwise. Future derivation preserves constructor tags and field order:
-  `fromData` uses its unchecked `Builtin.coerce` default with no shape checks,
-  and `validate` generates ordinary
+  `validate` generates ordinary
   source cases that check tags, exact arity, and all fields recursively before
   rebuilding typed constructors. Validation never delegates to unchecked
   `fromData`; no hidden compiler-generated checkers are needed. `Show` and

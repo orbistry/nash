@@ -264,7 +264,7 @@ Rules:
 - `lift`/`lower` on tuples and function types do not exist: there is no Big
   tuple and no Big function.
 
-### `ToData` and `FromData`
+### `ToData`, `FromData` and `Validate`
 
 Defined only for Big types:
 
@@ -278,6 +278,10 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData     : Data -> 'a
     fromData = Builtin.coerce
+
+impl Big 'a => FromData 'a where
+
+trait Validate ('a : Big) where
     validate : Data -> 'a
 ```
 
@@ -285,18 +289,20 @@ trait FromData ('a : Big) where
   every Big type, including user ADTs, nominal aliases, lists and maps, without
   element `ToData` constraints. It preserves the existing runtime Data value
   and wire encoding without traversal or reconstruction.
-- `fromData` defaults to unchecked `Builtin.coerce`. It checks neither the
+- `fromData` also has an ordinary blanket impl for every Big type, including
+  user ADTs, nominal record aliases and collections, without validation
+  constraints. It defaults to unchecked `Builtin.coerce` and checks neither the
   outer shape nor nested fields and preserves the original runtime value.
   Malformed data fails only when a later operation needs its expected shape.
-- `validate` is a required separate method. Core Int and Bytes impls check
+- `Validate.validate` is the required method of a separate opt-in trait. Core Int and Bytes impls check
   the Data shape and then coerce the original value; List and Map impls retain
   recursive source validation. Non-failing decoding uses `Data.Decode`.
 
-Core provides explicit `FromData` impls for primitive and collection Big types.
-User Big ADTs need `FromData` source impls; future `@derive(FromData)` macros
-will generate checked recursive `validate` and use the unchecked
-`fromData` default. `ToData` requires no derivation: a generated concrete impl
-would overlap the blanket impl and be rejected.
+Core provides explicit `Validate` impls for primitive and collection Big types.
+User Big ADTs opt into validation with `Validate` source impls; future
+`@derive(Validate)` macros will generate checked recursive `validate`.
+Neither conversion trait requires derivation: generated concrete impls would
+overlap their blanket impls and be rejected.
 There is no automatic compiler codec synthesis. Real UPLC builtin signatures
 carry nominal types: `iData : int -> Int`, `unIData : Int -> int`, and
 similarly for Bytes, List and Map. Existing universal Data constructors
@@ -320,7 +326,7 @@ Rough CEK costs, to guide the choice of representation:
 | field i | `sndPair` + i `tailList` + `headList`, plus one `un*Data` if the field is used as a little value | one `case` with a lambda that selects the field |
 | `lift`/`lower` of `int`/`bytes` | one builtin call each way | |
 | `lift`/`lower` of a list | O(n) map unless the element impl is reflexive | |
-| `fromData` / `Builtin.coerce` | identity; no traversal | |
+| `toData` / `fromData` / `Builtin.coerce` | identity; no traversal | |
 | `validate` | O(size of the Data) | |
 
 Consequences:
