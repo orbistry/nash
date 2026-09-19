@@ -1,5 +1,0 @@
----
-source: crates/nash-driver/tests/solve/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\nf : point -> ()\nf {} = ()\n"
----
-f : point -> unit

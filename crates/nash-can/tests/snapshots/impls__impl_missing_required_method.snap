@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\n    other : 'a -> 'a\nimpl Keep (List 'a) where\n    keep x = x\n"
+info: diagnostic
+---
+nash::names::missing_method
+
+  × This `Keep` impl does not define `other`:
+   ╭─[src/Main.nash:5:1]
+ 4 │         other : 'a -> 'a
+ 5 │ ╭─▶ impl Keep (List 'a) where
+ 6 │ ╰─▶     keep x = x
+   ╰────
+  help: Add a `other` definition to this impl.

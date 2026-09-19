@@ -1,0 +1,8 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { x : int }\ntype alias wrapped = point\ntype alias identity 'a = 'a\nf : point -> wrapped\nf r = r\ng : wrapped -> point\ng r = r\nh : identity point -> point\nh r = r\ni : point -> identity point\ni r = r\n"
+---
+f : point -> wrapped
+g : wrapped -> point
+h : identity point -> point
+i : point -> identity point

@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list int) where\n    keep x = x\nimpl Keep (list bytes) where\n    keep x = x\nintegers : list int -> list int\nintegers = keep\nbyteStrings : list bytes -> list bytes\nbyteStrings = keep\n"
+---
+byteStrings : list bytes -> list bytes
+integers : list int -> list int

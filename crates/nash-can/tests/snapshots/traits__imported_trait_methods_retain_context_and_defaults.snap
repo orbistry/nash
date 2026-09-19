@@ -1,0 +1,124 @@
+---
+source: crates/nash-can/tests/traits.rs
+description: "module Identity exposing (Keep)\n\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep x = x\n\n\nmodule Main exposing (..)\nimport Identity as I exposing (Keep)\n\nlocal : Keep 'a => 'a -> 'a\nlocal x = keep x\n\nqualified : I.Keep 'a => 'a -> 'a\nqualified x = I.keep x\n"
+---
+(
+    [
+        InterfaceTrait {
+            name: "Keep",
+            parameters: [
+                "a",
+            ],
+            kinds: [
+                Type,
+            ],
+            supers: [],
+            methods: [
+                InterfaceMethod {
+                    name: "keep",
+                    annotation: Annotation {
+                        context: [
+                            Trait {
+                                trait_: QualifiedName {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Identity",
+                                    },
+                                    name: "Keep",
+                                },
+                                args: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 12,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 14,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                ],
+                            },
+                        ],
+                        free_vars: [
+                            "a",
+                        ],
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 20,
+                                },
+                            },
+                            value: Lambda {
+                                from: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 12,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 14,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                                to: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 18,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 20,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                        },
+                    },
+                    has_default: true,
+                },
+            ],
+            exported: true,
+        },
+    ],
+    [
+        (
+            QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Identity",
+                },
+                name: "Keep",
+            },
+            "keep",
+        ),
+        (
+            QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Identity",
+                },
+                name: "Keep",
+            },
+            "keep",
+        ),
+    ],
+)

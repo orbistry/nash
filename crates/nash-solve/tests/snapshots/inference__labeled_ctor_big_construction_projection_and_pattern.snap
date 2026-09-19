@@ -1,0 +1,8 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype Datum = Datum { owner : Bytes, deadline : Int }\nmake : Bytes -> Int -> Datum\nmake o d = Datum { deadline = d, owner = o }\npositional : Bytes -> Int -> Datum\npositional o d = Datum o d\nowner : Datum -> Bytes\nowner d = d.owner\ndue (Datum { deadline }) = deadline\n"
+---
+due : Datum -> Int
+make : Bytes -> Int -> Datum
+owner : Datum -> Bytes
+positional : Bytes -> Int -> Datum

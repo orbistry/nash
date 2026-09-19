@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias x = int Int\n"
+info: diagnostic
+---
+nash::names::bad_arity
+
+  × The `int` type needs 0 arguments, but I see 1 instead:
+   ╭─[src/Main.nash:5:16]
+ 4 │ 
+ 5 │ type alias x = int Int
+   ·                ───────
+   ╰────
+  help: Remove the extra arguments or check the grouping.

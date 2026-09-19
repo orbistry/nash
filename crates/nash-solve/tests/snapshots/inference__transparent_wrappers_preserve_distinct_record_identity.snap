@@ -1,0 +1,17 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype alias point = { x : int }\ntype alias other = { x : int }\ntype alias wrapped = point\ntype alias wrappedOther = other\nf : wrapped -> wrappedOther\nf r = r\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `wrappedOther`, found `wrapped`.
+   ╭─[Main.nash:7:7]
+ 5 │ type alias wrappedOther = other
+ 6 │ f : wrapped -> wrappedOther
+   ·     ───────────┬───────────
+   ·                ╰── declared type
+ 7 │ f r = r
+   ·       ┬
+   ·       ╰── body of `f`
+   ╰────

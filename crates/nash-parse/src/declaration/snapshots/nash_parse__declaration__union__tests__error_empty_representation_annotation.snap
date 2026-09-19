@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type T ('f : ) = A"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected a representation bound.
+   ╭─[src/Main.nash:1:14]
+ 1 │ type T ('f : ) = A
+   ·              ─
+   ╰────
+  help: Use `Big`, `Const`, `Term`, or `Storable`.

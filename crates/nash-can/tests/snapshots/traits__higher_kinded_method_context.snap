@@ -1,0 +1,247 @@
+---
+source: crates/nash-can/tests/traits.rs
+description: "module Main exposing (..)\n\ntrait Applicative 'f where\n    pure : 'a -> 'f 'a\n\ntrait Traversable 't where\n    traverse : Applicative 'f => ('a -> 'f 'b) -> 't 'a -> 'f ('t 'b)\n"
+---
+(
+    [
+        (
+            "Applicative",
+            [
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ],
+        ),
+        (
+            "Traversable",
+            [
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ],
+        ),
+    ],
+    [
+        Trait {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Traversable",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 19,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 21,
+                        },
+                    },
+                    value: Var(
+                        "t",
+                    ),
+                },
+            ],
+        },
+        Trait {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Applicative",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 28,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 30,
+                        },
+                    },
+                    value: Var(
+                        "f",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 41,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 43,
+                    },
+                },
+                value: Var(
+                    "f",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 44,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 46,
+                        },
+                    },
+                    value: Var(
+                        "b",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 51,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 53,
+                    },
+                },
+                value: Var(
+                    "t",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 54,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 56,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 64,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 66,
+                    },
+                },
+                value: Var(
+                    "t",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 67,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 69,
+                        },
+                    },
+                    value: Var(
+                        "b",
+                    ),
+                },
+            ],
+        },
+        Apply {
+            head: Located {
+                region: Region {
+                    start: Position {
+                        line: 7,
+                        column: 60,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 62,
+                    },
+                },
+                value: Var(
+                    "f",
+                ),
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 64,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 69,
+                        },
+                    },
+                    value: App {
+                        head: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 64,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 66,
+                                },
+                            },
+                            value: Var(
+                                "t",
+                            ),
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 7,
+                                        column: 67,
+                                    },
+                                    end: Position {
+                                        line: 7,
+                                        column: 69,
+                                    },
+                                },
+                                value: Var(
+                                    "b",
+                                ),
+                            },
+                        ],
+                    },
+                },
+            ],
+        },
+    ],
+)

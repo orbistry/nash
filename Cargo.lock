@@ -1895,9 +1895,13 @@ name = "nash-can"
 version = "0.8.0"
 dependencies = [
  "bumpalo",
+ "indoc",
  "insta",
  "nash-ast",
+ "nash-can",
+ "nash-parse",
  "nash-region",
+ "nash-report",
  "nash-source",
 ]
 
@@ -2043,7 +2047,9 @@ dependencies = [
  "bumpalo",
  "indoc",
  "insta",
+ "nash-parse",
  "nash-region",
+ "nash-report",
  "nash-source",
 ]
 
@@ -2091,6 +2097,7 @@ dependencies = [
  "nash-nitpick",
  "nash-parse",
  "nash-region",
+ "nash-solve",
  "nash-source",
  "serde",
  "serde_json",
@@ -2109,6 +2116,8 @@ dependencies = [
  "nash-constrain",
  "nash-parse",
  "nash-region",
+ "nash-report",
+ "nash-source",
 ]
 
 [[package]]

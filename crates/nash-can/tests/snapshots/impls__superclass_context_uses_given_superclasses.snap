@@ -1,0 +1,66 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq 'a => Eq (List 'a) where\n    eq x = x\nimpl Ord 'a => Ord (List 'a) where\n    compare x = x\n"
+---
+[
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Eq",
+        },
+        heads: [
+            Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "List",
+                },
+                args: [
+                    Var(
+                        0,
+                    ),
+                ],
+            },
+        ],
+    },
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Ord",
+        },
+        heads: [
+            Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "core",
+                            },
+                        ),
+                        name: "Builtin",
+                    },
+                    name: "List",
+                },
+                args: [
+                    Var(
+                        0,
+                    ),
+                ],
+            },
+        ],
+    },
+]

@@ -52,11 +52,9 @@ We use **insta** for snapshot testing with extremely granular tests:
 
 Macros are defined in each module's test submodule for proper namespacing.
 
-Tests that render diagnostics live downstream of every crate they exercise:
-`crates/nash-report/tests/{parse,can}` for parser and canonicalizer errors, and
-`crates/nash-driver/tests/{solve,report}` for anything that runs the solver. A crate
-never dev-depends on a crate published after it: Sampo publishes one crate at a time
-in its own order, and a versioned dev-dependency on an unpublished crate fails.
+Internal dev-dependencies are path-only (`nash-report = { path = "../nash-report" }`, no
+`version`). Cargo strips them at publish, so test-only edges never constrain the publish
+order or require an unpublished crate on the registry.
 
 Example snapshot output:
 ```

@@ -18,8 +18,8 @@ nash-plutus = { path = "../nash-plutus", version = "0.2.0" }
 thiserror.workspace = true
 
 [dev-dependencies]
-nash-parse = { path = "../nash-parse", version = "0.6.1" }
-nash-constrain = { path = "../nash-constrain", version = "0.6.0" }
-nash-nitpick = { path = "../nash-nitpick", version = "0.2.2" }
+nash-parse = { path = "../nash-parse" }
+nash-constrain = { path = "../nash-constrain" }
+nash-nitpick = { path = "../nash-nitpick" }
 indoc.workspace = true
 insta.workspace = true

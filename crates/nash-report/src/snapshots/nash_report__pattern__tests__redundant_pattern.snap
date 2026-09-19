@@ -1,0 +1,15 @@
+---
+source: crates/nash-report/src/pattern.rs
+description: "Code:\n\nmodule Main exposing (..)\nf xs =\n    case xs of\n        _ -> 0\n        [] -> 1\n"
+---
+nash::pattern::redundant
+
+  × The 2nd pattern is unreachable.
+   ╭─[src/Main.nash:5:9]
+ 2 │ f xs =
+ 3 │     case xs of
+ 4 │         _ -> 0
+ 5 │         [] -> 1
+   ·         ──
+   ╰────
+  help: Remove it; earlier patterns cover every matching value.

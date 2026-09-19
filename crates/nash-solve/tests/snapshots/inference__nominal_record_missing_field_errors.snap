@@ -1,0 +1,18 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype alias point = { x : int }\nget : point -> int\nget p = p.y\n"
+info: diagnostic
+---
+nash::type::missing_field
+
+  × Record has no field `y`.
+   ╭─[Main.nash:4:9]
+ 3 │ get : point -> int
+ 4 │ get p = p.y
+   ·         ─┬─
+   ·          ╰── field `y` of `p`
+   ╰────
+  help: Did you mean `x`?
+
+        Available fields: { x : int
+        }

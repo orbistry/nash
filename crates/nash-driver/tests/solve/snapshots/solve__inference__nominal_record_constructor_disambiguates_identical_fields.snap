@@ -1,6 +1,0 @@
----
-source: crates/nash-driver/tests/solve/inference.rs
-description: "Code:\n\nmodule Main exposing (..)\ntype alias first = { x : unit }\ntype alias second = { x : unit }\na = first ()\nb = second ()\n"
----
-a : first
-b : second

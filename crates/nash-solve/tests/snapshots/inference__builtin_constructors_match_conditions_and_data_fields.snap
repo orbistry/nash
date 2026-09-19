@@ -1,0 +1,9 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Builtin exposing (type bool(..), Data(..))\nchoice flag = if flag then True else False\ninvert flag =\n    case flag of\n        False -> True\n        True -> False\nrewrap data =\n    case data of\n        Constr tag fields -> Constr tag fields\n        Map pairs -> Map pairs\n        List values -> List values\n        I n -> I n\n        B payload -> B payload\ninteger n = I n\nbytes b = B b\n"
+---
+bytes : bytes -> Data
+choice : bool -> bool
+integer : int -> Data
+invert : bool -> bool
+rewrap : Data -> Data

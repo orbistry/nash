@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::assert_pattern_snapshot;
+    use super::super::{assert_pattern_error_snapshot, assert_pattern_snapshot};
 
     #[test]
     fn empty() {
@@ -131,5 +131,15 @@ mod tests {
                 z
             }"
         );
+    }
+
+    #[test]
+    fn error_unclosed() {
+        assert_pattern_error_snapshot!("{ x, y");
+    }
+
+    #[test]
+    fn error_trailing_comma() {
+        assert_pattern_error_snapshot!("{ x, y, }");
     }
 }

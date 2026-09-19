@@ -677,6 +677,23 @@ macro_rules! assert_type_snapshot {
 }
 
 #[cfg(test)]
+macro_rules! assert_type_error_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = nash_parse::Parser::new(&bump, src);
+        let result = parser.type_expr().expect_err("expected parse error");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+                info => &"diagnostic",
+        }, {
+            insta::assert_snapshot!($crate::test_support::render_type_error(src, &result));
+        });
+    }};
+}
+
 #[cfg(test)]
 macro_rules! assert_scheme_snapshot {
     ($code:expr) => {{
@@ -697,6 +714,23 @@ macro_rules! assert_scheme_snapshot {
 }
 
 #[cfg(test)]
+macro_rules! assert_scheme_error_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = nash_parse::Parser::new(&bump, src);
+        let result = parser.type_scheme().expect_err("expected parse error");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+                info => &"diagnostic",
+        }, {
+            insta::assert_snapshot!($crate::test_support::render_type_error(src, &result));
+        });
+    }};
+}
+
 /// Snapshot test macro for multiline types, laid out as they would appear
 /// indented inside a declaration (see `test_support::indent_fragment`).
 #[cfg(test)]
@@ -750,10 +784,40 @@ mod tests {
         assert_scheme_snapshot!("'a -> 'a");
     }
 
+    #[test]
+    fn scheme_error_variable_context() {
+        assert_scheme_error_snapshot!("'a => 'a");
+    }
+
+    #[test]
+    fn scheme_error_constraint_without_argument() {
+        assert_scheme_error_snapshot!("Eq => 'a");
+    }
+
+    #[test]
+    fn scheme_error_tuple_member() {
+        assert_scheme_error_snapshot!("(Eq 'a, 'b) => 'a");
+    }
+
+    #[test]
+    fn scheme_error_little_class() {
+        assert_scheme_error_snapshot!("int 'a => 'a");
+    }
+
     // Type variables
+    #[test]
+    fn representation_annotation_rejects_arrow() {
+        assert_type_error_snapshot!("('f : Big -> Big)");
+    }
+
     #[test]
     fn inline_representation_annotation_in_nested_type() {
         assert_type_snapshot!("list (pair ('a : Big) ('b : Storable))");
+    }
+
+    #[test]
+    fn inline_representation_annotation_reports_unknown_name() {
+        assert_type_error_snapshot!("list ('a : Wrong)");
     }
 
     #[test]
@@ -941,5 +1005,20 @@ mod tests {
         assert_type_snapshot!("option 'a -> 'a");
         assert_type_snapshot!("Map 'k (List 'v)");
         assert_type_snapshot!("{ x : int, y : Int }");
+    }
+
+    #[test]
+    fn error_empty_type_variable() {
+        assert_type_error_snapshot!("'");
+    }
+
+    #[test]
+    fn error_upper_type_variable() {
+        assert_type_error_snapshot!("'A");
+    }
+
+    #[test]
+    fn error_record_extension() {
+        assert_type_error_snapshot!("{ r | x : int }");
     }
 }

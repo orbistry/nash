@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+description: "module Main exposing (..)\ntype A = A\nf = if A then A else A\n"
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `bool`, found `A`.
+   ╭─[Main.nash:3:8]
+ 2 │ type A = A
+ 3 │ f = if A then A else A
+   ·        ┬
+   ·        ╰── if condition
+   ╰────
+  help: Use an explicit comparison to produce a `bool`.

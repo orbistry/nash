@@ -16,7 +16,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::assert_expr_snapshot;
+    use crate::expression::{assert_expr_error_snapshot, assert_expr_snapshot};
 
     #[test]
     fn empty() {
@@ -31,5 +31,20 @@ mod tests {
     #[test]
     fn mixed_hex() {
         assert_expr_snapshot!("#\"DEADbeef\"");
+    }
+
+    #[test]
+    fn error_odd_length() {
+        assert_expr_error_snapshot!("#\"f\"");
+    }
+
+    #[test]
+    fn error_bad_digit() {
+        assert_expr_error_snapshot!("#\"zz\"");
+    }
+
+    #[test]
+    fn error_endless() {
+        assert_expr_error_snapshot!("#\"ab");
     }
 }

@@ -234,7 +234,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::expression::{
-        assert_expr_snapshot, assert_expression_snapshot, assert_indented_expr_snapshot,
+        assert_expr_error_snapshot, assert_expr_snapshot, assert_expression_snapshot,
+        assert_indented_expr_snapshot,
     };
 
     #[test]
@@ -284,6 +285,21 @@ mod tests {
     }
 
     #[test]
+    fn error_unclosed() {
+        assert_expr_error_snapshot!("(1, 2");
+    }
+
+    #[test]
+    fn error_trailing_comma() {
+        assert_expr_error_snapshot!("(1, 2,)");
+    }
+
+    #[test]
+    fn error_empty_comma() {
+        assert_expr_error_snapshot!("(,)");
+    }
+
+    #[test]
     fn right_section() {
         assert_expr_snapshot!("(> 5)");
     }
@@ -318,5 +334,17 @@ mod tests {
     #[test]
     fn applied_section() {
         assert_expression_snapshot!("(> 5) 10");
+    }
+    #[test]
+    fn error_section_unclosed() {
+        assert_expr_error_snapshot!("(> 5");
+    }
+    #[test]
+    fn error_reserved_section_operator() {
+        assert_expr_error_snapshot!("(=> 5)");
+    }
+    #[test]
+    fn error_section_missing_operand() {
+        assert_expr_error_snapshot!("(> ,)");
     }
 }

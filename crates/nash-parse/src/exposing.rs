@@ -210,6 +210,23 @@ mod tests {
         }};
     }
 
+    macro_rules! assert_exposing_error_snapshot {
+        ($input:expr) => {{
+            let input = indoc!($input);
+            let bump = Bump::new();
+            let src = bump.alloc_str(input);
+            let mut parser = nash_parse::Parser::new(&bump, src);
+            let error = parser.exposing().expect_err("expected exposing parse error");
+            insta::with_settings!({
+                description => format!("Code:\n\n{}", input),
+                omit_expression => true,
+                info => &"diagnostic",
+            }, {
+                insta::assert_snapshot!($crate::test_support::render_exposing_error(src, &error));
+            });
+        }};
+    }
+
     #[test]
     fn exposing_open() {
         assert_exposing_snapshot!("(..)");
@@ -268,6 +285,21 @@ mod tests {
     #[test]
     fn exposing_mixed_little_type() {
         assert_exposing_snapshot!("(type option(..), Data(..), (+))");
+    }
+
+    #[test]
+    fn error_uppercase_after_type() {
+        assert_exposing_error_snapshot!("(type Foo)");
+    }
+
+    #[test]
+    fn error_missing_little_type_name() {
+        assert_exposing_error_snapshot!("(type)");
+    }
+
+    #[test]
+    fn error_unclosed_little_type() {
+        assert_exposing_error_snapshot!("(type option(..)");
     }
 
     // Note: Multiline exposing lists are tested indirectly through module/import tests,

@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype box = Box { value : unit }\nmake = Box { value = () }\nget : box -> unit\nget {} = ()\n"
+---
+get : box -> unit
+make : box

@@ -1,0 +1,5 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Basics exposing (..)\ntype Bool = False | True\ninvert flag =\n    case flag of\n        False -> True\n        True -> False\n"
+---
+invert : Bool -> Bool

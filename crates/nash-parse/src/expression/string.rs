@@ -26,7 +26,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::assert_expr_snapshot;
+    use crate::expression::{assert_expr_error_snapshot, assert_expr_snapshot};
 
     #[test]
     fn simple() {
@@ -66,5 +66,15 @@ mod tests {
     #[test]
     fn unicode_multiline() {
         assert_expr_snapshot!("\"\"\"é\r\n漢😀\"\"\"");
+    }
+
+    #[test]
+    fn error_overflowing_unicode_escape() {
+        assert_expr_error_snapshot!(r#""\u{FFFFFFFFF}""#);
+    }
+
+    #[test]
+    fn error_endless() {
+        assert_expr_error_snapshot!(r#""hello"#);
     }
 }

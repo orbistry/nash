@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: "type D = D { owner }"
+info: diagnostic
+---
+nash::syntax
+
+  × Expected `:` after the constructor field name.
+   ╭─[src/Main.nash:1:20]
+ 1 │ type D = D { owner }
+   ·                    ─
+   ╰────
+  help: Separate the field name and type with `:`.

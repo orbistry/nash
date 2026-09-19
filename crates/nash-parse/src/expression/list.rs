@@ -146,7 +146,9 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::{assert_expr_snapshot, assert_indented_expr_snapshot};
+    use crate::expression::{
+        assert_expr_error_snapshot, assert_expr_snapshot, assert_indented_expr_snapshot,
+    };
 
     #[test]
     fn empty() {
@@ -193,5 +195,20 @@ mod tests {
     #[test]
     fn mixed_types() {
         assert_expr_snapshot!(r#"[foo, "bar", 42]"#);
+    }
+
+    #[test]
+    fn error_unclosed() {
+        assert_expr_error_snapshot!("[1, 2");
+    }
+
+    #[test]
+    fn error_trailing_comma() {
+        assert_expr_error_snapshot!("[1, 2,]");
+    }
+
+    #[test]
+    fn error_tab() {
+        assert_expr_error_snapshot!("[1,\t2]");
     }
 }

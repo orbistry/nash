@@ -24,3 +24,4 @@ nash-source = { path = "../nash-source", version = "0.7.0" }
 bumpalo.workspace = true
 indoc.workspace = true
 insta.workspace = true
+nash-solve = { path = "../nash-solve" }

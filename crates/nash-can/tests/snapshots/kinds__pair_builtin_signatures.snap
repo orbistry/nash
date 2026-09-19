@@ -1,0 +1,167 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype alias unConstrData = Data -> pair int (list Data)\ntype alias fstPair 'a 'b = pair 'a 'b -> 'a\ntype alias sndPair 'a 'b = pair 'a 'b -> 'b\ntype alias mkPairData = Data -> Data -> pair Data Data\n"
+---
+(
+    [],
+    [
+        (
+            "unConstrData",
+            Type,
+            [],
+        ),
+        (
+            "fstPair",
+            Arrow(
+                Type,
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 33,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 35,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 36,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 38,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            ],
+        ),
+        (
+            "sndPair",
+            Arrow(
+                Type,
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ),
+            [
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 33,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 35,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 36,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 38,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            ],
+        ),
+        (
+            "mkPairData",
+            Type,
+            [],
+        ),
+    ],
+)

@@ -1,0 +1,62 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\ntype Wrap 'f 'a = Wrap ('f 'a)\ntrait Eq 'a where\n    eq : 'a -> 'a\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a\nimpl Eq ('f 'a) => Eq (Wrap 'f 'a) where\n    eq x = x\nimpl Eq ('f 'a) => Ord (Wrap 'f 'a) where\n    compare x = x\n"
+---
+[
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Eq",
+        },
+        heads: [
+            Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Wrap",
+                },
+                args: [
+                    Var(
+                        0,
+                    ),
+                    Var(
+                        1,
+                    ),
+                ],
+            },
+        ],
+    },
+    ImplKey {
+        trait_: QualifiedName {
+            home: ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Ord",
+        },
+        heads: [
+            Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: None,
+                        name: "Main",
+                    },
+                    name: "Wrap",
+                },
+                args: [
+                    Var(
+                        0,
+                    ),
+                    Var(
+                        1,
+                    ),
+                ],
+            },
+        ],
+    },
+]

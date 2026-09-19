@@ -1,0 +1,58 @@
+---
+source: crates/nash-can/tests/kinds.rs
+description: "module Main exposing (..)\n\nimport Builtin exposing (..)\n\ntype wrap 'f 'a = Wrap ('f 'a)\n"
+---
+(
+    [
+        (
+            "wrap",
+            Arrow(
+                Arrow(
+                    Type,
+                    Type,
+                ),
+                Arrow(
+                    Type,
+                    Type,
+                ),
+            ),
+            [
+                Apply {
+                    head: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 25,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 27,
+                            },
+                        },
+                        value: Var(
+                            "f",
+                        ),
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 28,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 30,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
+        ),
+    ],
+    [],
+)

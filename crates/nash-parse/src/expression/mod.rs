@@ -415,6 +415,23 @@ macro_rules! assert_expr_snapshot {
 
 /// Snapshot test macro for expression parse errors.
 #[cfg(test)]
+macro_rules! assert_expr_error_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = nash_parse::Parser::new(&bump, src);
+        let result = parser.term().expect_err("expected parse error");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+                info => &"diagnostic",
+        }, {
+            insta::assert_snapshot!($crate::test_support::render_expr_error(src, &result));
+        });
+    }};
+}
+
 /// Snapshot test macro for full expression parsing.
 #[cfg(test)]
 macro_rules! assert_expression_snapshot {
@@ -437,6 +454,23 @@ macro_rules! assert_expression_snapshot {
 
 /// Snapshot test macro for full expression parse errors.
 #[cfg(test)]
+macro_rules! assert_expression_error_snapshot {
+    ($code:expr) => {{
+        let bump = bumpalo::Bump::new();
+        let src = bump.alloc_str(indoc::indoc!($code));
+        let mut parser = nash_parse::Parser::new(&bump, src);
+        let result = parser.expression().expect_err("expected parse error");
+
+        insta::with_settings!({
+            description => format!("Code:\n\n{}", indoc::indoc!($code)),
+            omit_expression => true,
+                info => &"diagnostic",
+        }, {
+            insta::assert_snapshot!($crate::test_support::render_expr_error(src, &result));
+        });
+    }};
+}
+
 /// Snapshot test macro for multiline terms, laid out as they would appear
 /// indented inside a definition. Bare fragments cannot use multiline
 /// layout: a token at column 1 always starts a new top-level declaration.
@@ -490,9 +524,11 @@ macro_rules! assert_indented_expression_snapshot {
 }
 
 #[cfg(test)]
+pub(crate) use assert_expr_error_snapshot;
 #[cfg(test)]
 pub(crate) use assert_expr_snapshot;
 #[cfg(test)]
+pub(crate) use assert_expression_error_snapshot;
 #[cfg(test)]
 pub(crate) use assert_expression_snapshot;
 #[cfg(test)]
@@ -528,6 +564,16 @@ mod tests {
     #[test]
     fn call_with_bytes_argument() {
         assert_expression_snapshot!("f #\"01\" x");
+    }
+
+    #[test]
+    fn error_fat_arrow() {
+        assert_expression_error_snapshot!("a => b");
+    }
+
+    #[test]
+    fn error_left_arrow() {
+        assert_expression_error_snapshot!("a <- b");
     }
 
     #[test]

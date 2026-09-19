@@ -17,4 +17,6 @@ nash-region = { path = "../nash-region", version = "0.3.0" }
 [dev-dependencies]
 indoc.workspace = true
 insta.workspace = true
-nash-parse = { path = "../nash-parse", version = "0.6.1" }
+nash-parse = { path = "../nash-parse" }
+nash-source = { path = "../nash-source" }
+nash-report = { path = "../nash-report" }

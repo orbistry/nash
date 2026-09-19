@@ -117,7 +117,9 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{assert_indented_pattern_snapshot, assert_pattern_snapshot};
+    use super::super::{
+        assert_indented_pattern_snapshot, assert_pattern_error_snapshot, assert_pattern_snapshot,
+    };
 
     #[test]
     fn unit() {
@@ -158,5 +160,15 @@ mod tests {
                 c
             )"
         );
+    }
+
+    #[test]
+    fn error_unclosed() {
+        assert_pattern_error_snapshot!("(a, b");
+    }
+
+    #[test]
+    fn error_trailing_comma() {
+        assert_pattern_error_snapshot!("(a, b,)");
     }
 }

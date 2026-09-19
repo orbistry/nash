@@ -1,0 +1,18 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (cast)\n\ncast : 'a -> 'b\ncast x = x\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `'b`, found `'a`.
+   ╭─[Main.nash:4:10]
+ 2 │ 
+ 3 │ cast : 'a -> 'b
+   ·        ────┬───
+   ·            ╰── declared type
+ 4 │ cast x = x
+   ·          ┬
+   ·          ╰── body of `cast`
+   ╰────
+  help: The annotation keeps `'a` and `'b` independent; use one variable if they must be equal.

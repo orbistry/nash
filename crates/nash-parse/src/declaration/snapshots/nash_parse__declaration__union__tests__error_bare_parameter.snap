@@ -1,0 +1,13 @@
+---
+source: crates/nash-parse/src/declaration/union.rs
+description: type Maybe a = Just a
+info: diagnostic
+---
+nash::syntax
+
+  × Expected `=` before the variants.
+   ╭─[src/Main.nash:1:12]
+ 1 │ type Maybe a = Just a
+   ·            ─
+   ╰────
+  help: Separate the datatype name and variants with `=`.

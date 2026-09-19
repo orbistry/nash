@@ -1,0 +1,15 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (getX)\n\ngetX r = r.x\n"
+info: diagnostic
+---
+nash::type::ambiguous_record_access
+
+  × Cannot determine record type `'a`.
+   ╭─[Main.nash:3:10]
+ 2 │ 
+ 3 │ getX r = r.x
+   ·          ─┬─
+   ·           ╰── field `x` of `r`
+   ╰────
+  help: Add a type annotation that identifies the record.

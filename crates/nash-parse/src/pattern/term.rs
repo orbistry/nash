@@ -200,7 +200,7 @@ use nash_region::Located;
 
 #[cfg(test)]
 mod tests {
-    use super::super::assert_pattern_snapshot;
+    use super::super::{assert_pattern_error_snapshot, assert_pattern_snapshot};
 
     // Wildcard
     #[test]
@@ -251,5 +251,19 @@ mod tests {
         assert_pattern_snapshot!("#\"00\"");
     }
 
+    #[test]
+    fn bytes_literal_odd_length() {
+        assert_pattern_error_snapshot!("#\"0\"");
+    }
+
     // Errors
+    #[test]
+    fn error_wildcard_not_var() {
+        assert_pattern_error_snapshot!("_foo");
+    }
+
+    #[test]
+    fn error_char_literal() {
+        assert_pattern_error_snapshot!("'x'");
+    }
 }

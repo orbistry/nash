@@ -40,4 +40,4 @@ supports-hyperlinks = "3.2"
 
 [dev-dependencies]
 insta.workspace = true
-nash-plutus = { path = "../nash-plutus", version = "0.2.0" }
+nash-plutus = { path = "../nash-plutus" }

@@ -1,0 +1,144 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\n\ntrait Keep 'a where\n    keep : 'a -> 'b -> 'b\n\nimpl Keep (List 'b) where\n    keep xs value = value\n"
+---
+(
+    Located {
+        region: Region {
+            start: Position {
+                line: 4,
+                column: 12,
+            },
+            end: Position {
+                line: 4,
+                column: 26,
+            },
+        },
+        value: Lambda {
+            from: Located {
+                region: Region {
+                    start: Position {
+                        line: 6,
+                        column: 12,
+                    },
+                    end: Position {
+                        line: 6,
+                        column: 19,
+                    },
+                },
+                value: Named {
+                    reference: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "core",
+                                },
+                            ),
+                            name: "Builtin",
+                        },
+                        name: "List",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 17,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 19,
+                                },
+                            },
+                            value: Var(
+                                "b",
+                            ),
+                        },
+                    ],
+                },
+            },
+            to: Located {
+                region: Region {
+                    start: Position {
+                        line: 4,
+                        column: 18,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 26,
+                    },
+                },
+                value: Lambda {
+                    from: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "$impl0",
+                        ),
+                    },
+                    to: Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "$impl0",
+                        ),
+                    },
+                },
+            },
+        },
+    },
+    [
+        "$impl0",
+        "b",
+    ],
+    [
+        Implied {
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: Some(
+                        PackageName {
+                            author: "nash",
+                            project: "core",
+                        },
+                    ),
+                    name: "Builtin",
+                },
+                name: "Big",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 19,
+                        },
+                    },
+                    value: Var(
+                        "b",
+                    ),
+                },
+            ],
+        },
+    ],
+)

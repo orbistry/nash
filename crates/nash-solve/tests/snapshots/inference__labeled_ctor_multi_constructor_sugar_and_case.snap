@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype choice = First { x : unit, y : unit } | Second { x : unit }\nfirst = First { y = (), x = () }\nsecond = Second { x = () }\npick : choice -> unit\npick c =\n    case c of\n        First { y } -> y\n        Second { x } -> x\n"
+---
+first : choice
+pick : choice -> unit
+second : choice

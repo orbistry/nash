@@ -1,0 +1,15 @@
+---
+source: crates/nash-can/tests/traits.rs
+description: "module Main exposing (..)\n\ntrait Convert 'a 'b where\n    convert : 'a -> 'a\n"
+info: diagnostic
+---
+nash::names::method_missing_parameter
+
+  × The `convert` method does not mention trait parameter 'b:
+   ╭─[src/Main.nash:4:5]
+ 3 │ trait Convert 'a 'b where
+ 4 │     convert : 'a -> 'a
+   ·     ───────
+   ╰────
+  help: Every trait parameter must occur in the method's type so a call can determine
+        which impl to use.
