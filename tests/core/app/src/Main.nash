@@ -116,7 +116,7 @@ readList : List Int
 readList = fromData listData
 mapData = toData bigMap
 checkedMap : Map Int Bytes
-checkedMap = validateData mapData
+checkedMap = validate mapData
 
 bigEquality = (eq integerLiteral bigInteger, eq bytesLiteral bigBytes)
 bigOrdering = (compare integerLiteral bigInteger, compare bytesLiteral bigBytes)
@@ -158,14 +158,14 @@ bytesData = toData bigBytes
 readInteger : Int
 readInteger = fromData integerData
 checkedBytes : Bytes
-checkedBytes = validateData bytesData
+checkedBytes = validate bytesData
 
 wireData = Constr 0 [I 1, B #"ff"]
 dataIdentity = toData wireData
 readData : Data
 readData = fromData wireData
 checkedData : Data
-checkedData = validateData wireData
+checkedData = validate wireData
 dataTags = (Data.tag wireData, Data.tag (I 1))
 dataFields = (Data.fields wireData, Data.fields (I 1))
 serialisedData = Data.serialise wireData

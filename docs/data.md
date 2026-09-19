@@ -94,7 +94,7 @@ unwraps once.
 
 Pattern matching on `Data` is the primitive everything else in this
 document is built from. It is also how `Data` arguments to `main` are
-usually inspected when a full `validateData` is too expensive.
+usually inspected when a full `validate` is too expensive.
 
 ## Traits
 
@@ -108,7 +108,7 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData     : Data -> 'a     -- unchecked identity
     fromData = Builtin.coerce
-    validateData : Data -> 'a     -- required recursive validation
+    validate : Data -> 'a     -- required recursive validation
 
 trait Lift 'small 'big where
     lift  : 'small -> 'big
@@ -125,7 +125,7 @@ need no `ToData` constraints. Core supplies `FromData` impls for `Int`, `Bytes`,
 `fromData` defaults to `Builtin.coerce`, an unchecked identity. It checks
 neither the outer Data shape nor nested fields. Malformed data fails only
 if a later operation needs the expected shape; a value that is never inspected
-can pass through unchanged. `validateData` is a separate required method:
+can pass through unchanged. `validate` is a separate required method:
 core impls check the shape and recursively validate collection elements.
 `Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
 result-based decoding.
@@ -139,7 +139,7 @@ For example, validation is an ordinary source impl:
 
 ```elm
 impl FromData Int where
-    validateData value =
+    validate value =
         case value of
             I _ -> Builtin.coerce value
             _ -> fail
@@ -363,8 +363,8 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 | `impl ToData` / `impl FromData` for a non-Big type | representation superclass check |
 | `Constr` pattern with a Big field type (e.g. `Constr 0 [x : Int]`) | type check (fields of `Data` are `Const`) |
 | `fromData d` where the node shape is wrong | no check; a later operation requiring that shape can fail |
-| `validateData d` where the node shape is wrong | runtime failure in source validation |
-| `validateData d` on a recursive type with a cycle in the data | cannot happen; `Data` is a finite tree |
+| `validate d` where the node shape is wrong | runtime failure in source validation |
+| `validate d` on a recursive type with a cycle in the data | cannot happen; `Data` is a finite tree |
 | `lift` at a pair with no impl | trait resolution error |
 | non-exhaustive `case` on `Data` | nitpick error |
 
@@ -378,7 +378,7 @@ it, so the stdlib is written first and the fusion pass is scheduled after
 - **Codegen** ([codegen.md](codegen.md)): typed builtins, Data patterns,
   the `Case(Data)` lowering.
 - **Validators** ([validators.md](validators.md)): `main` arguments are Big
-  or Const; for the Big ones, `Data` patterns and `validateData` are how their
+  or Const; for the Big ones, `Data` patterns and `validate` are how their
   shape is checked.
 - **Macros** ([macros.md](macros.md)): `@derive(FromData)`; `ToData` needs no derivation.
   A `field "owner"` form of `Data.Decode.field` that resolves the label

@@ -348,9 +348,9 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (validateData)
+    import Data exposing (validate)
     decoded : List (List Int)
-    decoded = validateData (List [List [I 1, B #"aa"]])
+    decoded = validate (List [List [I 1, B #"aa"]])
     main = nullList (unListData decoded)
     "#,
     Err(())
@@ -361,9 +361,9 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (validateData)
+    import Data exposing (validate)
     decoded : Map Bytes (List Int)
-    decoded = validateData (Map [mkPairData (B #"aa") (List [B #"bb"])])
+    decoded = validate (Map [mkPairData (B #"aa") (List [B #"bb"])])
     main = nullList (unMapData decoded)
     "#,
     Err(())
@@ -445,9 +445,9 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (validateData)
+    import Data exposing (validate)
     decoded : Int
-    decoded = validateData (B #"aa")
+    decoded = validate (B #"aa")
     main = unIData decoded
     "#,
     Err(())
@@ -458,10 +458,10 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (validateData, toData)
+    import Data exposing (validate, toData)
     input = Map [mkPairData (B #"aa") (List [I 42])]
     decoded : Map Bytes (List Int)
-    decoded = validateData input
+    decoded = validate input
     main = equalsData (toData decoded) input
     "#,
     Ok("(con bool True)")
@@ -475,7 +475,7 @@ case!(
     import Data exposing (FromData)
     type Datum = Datum Int
     impl FromData Datum where
-        validateData value =
+        validate value =
             case value of
                 Constr 0 [I _] -> coerce value
                 _ -> fail

@@ -458,14 +458,14 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (validateData)
+    import Data exposing (validate)
     import Lift exposing (lower)
     main =
         let
             a : Data
             a = List [I 1, I 2, I 3]
             checked : List Int
-            checked = validateData a
+            checked = validate a
             values : list int
             values = lower checked
         in
@@ -483,14 +483,14 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (validateData)
+    import Data exposing (validate)
     import Lift exposing (lower)
     main =
         let
             a : Data
             a = List [I 1, I 2, I 3]
             checked : List Int
-            checked = validateData a
+            checked = validate a
             values : list int
             values = lower checked
         in
@@ -506,14 +506,14 @@ case!(
     r#"
     module Main exposing (..)
     import Builtin exposing (..)
-    import Data exposing (validateData)
+    import Data exposing (validate)
     import Lift exposing (lower)
     main =
         let
             a : Data
             a = List [I 1, I 2, I 3]
             checked : List Int
-            checked = validateData a
+            checked = validate a
             values : list int
             values = lower checked
         in

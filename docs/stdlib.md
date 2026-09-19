@@ -455,14 +455,14 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData : Data -> 'a
     fromData = Builtin.coerce
-    validateData : Data -> 'a
+    validate : Data -> 'a
 
 -- Data itself requires no decoding.
 impl FromData Data where
-    validateData value = value
+    validate value = value
 
 impl FromData Int where
-    validateData value =
+    validate value =
         case value of
             I _ -> Builtin.coerce value
             _ -> fail
@@ -488,7 +488,7 @@ specifies, so no `lower` is needed on `t` and `fs`.
 Other Big types remain nominally distinct from Data. `fromData` defaults to
 unchecked `Builtin.coerce`, with no outer-shape or nested checks. Malformed
 data fails only if a later operation needs its expected shape. The required
-`validateData` method is separate: Int and Bytes check the shape and coerce
+`validate` method is separate: Int and Bytes check the shape and coerce
 the original value, while List and Map retain recursive source validation.
 `toData` uses its `Builtin.coerce` default through one ordinary blanket impl
 for every Big type. User ADTs, nominal aliases, lists and maps all qualify,
@@ -940,7 +940,7 @@ foldl : ('k -> 'v -> 'b -> 'b) -> 'b -> Map 'k 'v -> 'b
 ## `Data.Decode`, `Data.Encode`
 
 Structured decoders for untrusted `Data` return failure as a value.
-`FromData.validateData` is the separate trapping validation path; future
+`FromData.validate` is the separate trapping validation path; future
 derivation generates recursive source checks.
 
 ```elm

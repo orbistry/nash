@@ -120,7 +120,7 @@ an entry to the real builtin inventory.
 
 `FromData.fromData` defaults to this unchecked identity. It does not check
 even the outer Data shape; malformed data fails only if a later operation
-needs that shape. `validateData` is a separate required source method.
+needs that shape. `validate` is a separate required source method.
 Int and Bytes validation matches the Data shape then coerces the original
 value; List and Map retain recursive source validation. `ToData.toData` also
 defaults to `Builtin.coerce`: its ordinary blanket impl covers every Big type
@@ -524,7 +524,7 @@ No boundary conversion is inserted for either representation: a Big value *is* i
 `Data`, and a Const value is the constant itself.
 `main : Datum -> Redeemer -> Data -> unit` lowers to
 `\datum redeemer ctx -> body`. Pattern matches inside `body` are what check
-the shape; a `validateData` call is the user's choice.
+the shape; a `validate` call is the user's choice.
 
 The result type is free. Success is "evaluation did not error", so a `bool`
 result is **not** checked; `assert` is the idiom for a condition. (Aiken

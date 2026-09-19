@@ -594,7 +594,7 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData : Data -> 'a                       -- unchecked identity
     fromData = Builtin.coerce
-    validateData : Data -> 'a                   -- required recursive validation; traps on bad data
+    validate : Data -> 'a                   -- required recursive validation; traps on bad data
 
 trait Lift 'small 'big where
     lift : 'small -> 'big
@@ -686,7 +686,7 @@ has a declared scheme, so it is always constrained through its annotation.
   `Builtin.coerce : 'a -> 'b` intrinsic is unchecked identity for any two
   value types, including functions; it has no representation constraints
   and does not change the runtime representation. `fromData` defaults to
-  it and checks no shape; `validateData` remains a required separate method.
+  it and checks no shape; `validate` remains a required separate method.
   Specialization is by evidence only.
 - **Macros** ([macros.md](macros.md)): `@derive` expands to `impl` decls
   before canonicalization of the expanded module; `@derive` on a type in

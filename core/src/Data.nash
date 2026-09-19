@@ -12,19 +12,19 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData : Data -> 'a
     fromData = Builtin.coerce
-    validateData : Data -> 'a
+    validate : Data -> 'a
 
 impl FromData Data where
-    validateData value = value
+    validate value = value
 
 impl FromData Int where
-    validateData value =
+    validate value =
         case value of
             I _ -> Builtin.coerce value
             _ -> fail
 
 impl FromData Bytes where
-    validateData value =
+    validate value =
         case value of
             B _ -> Builtin.coerce value
             _ -> fail
@@ -45,15 +45,15 @@ fields value =
         _ -> None
 
 impl FromData 'a => FromData (List 'a) where
-    validateData value =
+    validate value =
         case value of
-            List values -> Builtin.listData (mapList validateData values)
+            List values -> Builtin.listData (mapList validate values)
             _ -> fail
 
 impl (FromData 'k, FromData 'v) => FromData (Map 'k 'v) where
-    validateData value =
+    validate value =
         case value of
-            Map values -> Builtin.mapData (mapList pairValidateData values)
+            Map values -> Builtin.mapData (mapList pairValidate values)
             _ -> fail
 
 mapList : ('a -> 'b) -> list 'a -> list 'b
@@ -62,5 +62,5 @@ mapList f values =
         [] -> []
         first :: rest -> Builtin.mkCons (f first) (mapList f rest)
 
-pairValidateData : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v
-pairValidateData value = Builtin.mkPairData (validateData (Builtin.fstPair value)) (validateData (Builtin.sndPair value))
+pairValidate : (FromData 'k, FromData 'v) => pair Data Data -> pair 'k 'v
+pairValidate value = Builtin.mkPairData (validate (Builtin.fstPair value)) (validate (Builtin.sndPair value))

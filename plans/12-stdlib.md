@@ -1168,7 +1168,7 @@ None; see plans/11.
 
 Big ADTs for the V3 `ScriptContext` per docs/stdlib.md, `Lift value Value`,
 interval helpers. Golden tests decode real contexts with
-`FromData.validateData` and check a few fields.
+`FromData.validate` and check a few fields.
 
 **Code** (`core/src/Cardano/Value.nash` excerpt)
 
@@ -1202,7 +1202,7 @@ truth for the encoding.
 
 **Tests**
 
-`core/tests/CardanoTests.nash`: `validateData` on each golden context is
+`core/tests/CardanoTests.nash`: `validate` on each golden context is
 `Some`; `Tx.inputs` length matches; `lovelace` of the first output
 matches the fixture.
 

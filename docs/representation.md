@@ -278,7 +278,7 @@ impl Big 'a => ToData 'a where
 trait FromData ('a : Big) where
     fromData     : Data -> 'a
     fromData = Builtin.coerce
-    validateData : Data -> 'a
+    validate : Data -> 'a
 ```
 
 - `toData` defaults to `Builtin.coerce`. The ordinary blanket impl covers
@@ -288,13 +288,13 @@ trait FromData ('a : Big) where
 - `fromData` defaults to unchecked `Builtin.coerce`. It checks neither the
   outer shape nor nested fields and preserves the original runtime value.
   Malformed data fails only when a later operation needs its expected shape.
-- `validateData` is a required separate method. Core Int and Bytes impls check
+- `validate` is a required separate method. Core Int and Bytes impls check
   the Data shape and then coerce the original value; List and Map impls retain
   recursive source validation. Non-failing decoding uses `Data.Decode`.
 
 Core provides explicit `FromData` impls for primitive and collection Big types.
 User Big ADTs need `FromData` source impls; future `@derive(FromData)` macros
-will generate checked recursive `validateData` and use the unchecked
+will generate checked recursive `validate` and use the unchecked
 `fromData` default. `ToData` requires no derivation: a generated concrete impl
 would overlap the blanket impl and be rejected.
 There is no automatic compiler codec synthesis. Real UPLC builtin signatures
@@ -321,7 +321,7 @@ Rough CEK costs, to guide the choice of representation:
 | `lift`/`lower` of `int`/`bytes` | one builtin call each way | |
 | `lift`/`lower` of a list | O(n) map unless the element impl is reflexive | |
 | `fromData` / `Builtin.coerce` | identity; no traversal | |
-| `validateData` | O(size of the Data) | |
+| `validate` | O(size of the Data) | |
 
 Consequences:
 
@@ -347,5 +347,5 @@ Consequences:
   values (lambdas, `constr`) have no constant form in the flat encoding.
 - **Tests** and **traces** use `string`; on-chain code should use `bytes`.
 
-Derived `validateData` checks both the constructor tag and exact field count,
+Derived `validate` checks both the constructor tag and exact field count,
 then validates each field recursively.

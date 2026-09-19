@@ -258,7 +258,7 @@ Benchmarks (`tests/budgets.rs`), each a fixture in `tests/fixtures/`:
 | `list_length_100` | `length` over a 100-element list |
 | `sum_static` | `replicate` / `sumTo` from plan 07 chunk 8 |
 | `data_match` | the four-clause `Data` match from plan 07 chunk 6 |
-| `validate_datum` | `validateData` on a nested record |
+| `validate_datum` | `validate` on a nested record |
 | `decoder_datum` | `Data.Decode` example from docs/data.md |
 
 **Aiken reference**: none; Aiken measures in `aiken-project` benchmarks
@@ -362,7 +362,7 @@ used twice inline, and a recursive decoder does not.
   unchanged.
 - `beta_reduce_small_lambda`: `let sel = \a b c -> b in sel 1 2 3` -> `2`
   (after chunk 5 removes the dead lets).
-- `keep_large_lambda`: a `validateData#Datum`-sized lambda used twice is
+- `keep_large_lambda`: a `validate#Datum`-sized lambda used twice is
   not inlined.
 - budgets: `vesting_*`, `data_match`, `decoder_datum` must improve;
   update baselines.

@@ -1653,7 +1653,7 @@ Write `derive` and the five derivations in Nash per docs/macros.md. `Eq`
 is in the doc; `Ord` compares constructor index then fields; `Show`
 renders `Ctor field1 field2` with parentheses for nested; `ToData` /
 `FromData` require `representation == Some Big` and generate identity `toData` /
-`fromData` plus a `validateData` built from `Data.Decode`.
+`fromData` plus a `validate` built from `Data.Decode`.
 
 **Code** (`core/src/Derive.nash`, excerpt beyond the doc's `deriveEq`)
 
@@ -1699,7 +1699,7 @@ deriveOrd decl =
 -- calls toData on each field, and reconstructs universal Data with Constr.
 -- Record aliases use List in declaration order. FromData derivation matches
 -- those shapes, checks exact arity, recursively decodes every field, then
--- invokes the user's constructor. validateData delegates to fromData.
+-- invokes the user's constructor. validate delegates to fromData.
 -- This requires ToData/FromData contexts for the relevant type parameters;
 -- neither derivation may emit an untyped identity or hidden cast operation.
 ```

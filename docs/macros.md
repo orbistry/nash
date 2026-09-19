@@ -753,7 +753,7 @@ Notes on the sketch:
 - `FromData` derivations check `union.representation == Some Big` and fail
   otherwise. Future derivation preserves constructor tags and field order:
   `fromData` uses its unchecked `Builtin.coerce` default with no shape checks,
-  and `validateData` generates ordinary
+  and `validate` generates ordinary
   source cases that check tags, exact arity, and all fields recursively before
   rebuilding typed constructors. Validation never delegates to unchecked
   `fromData`; no hidden compiler-generated checkers are needed. `Show` and

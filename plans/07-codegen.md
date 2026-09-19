@@ -1384,7 +1384,7 @@ Actual UPLC conversion builtins have nominal Nash signatures:
 Lift and Literal use those builtins directly in Nash. ToData and FromData
 are ordinary source impls: match universal Data, recursively decode fields,
 then construct typed results with actual builtins or user constructors.
-`validateData` retains safe recursive semantics and can delegate to
+`validate` retains safe recursive semantics and can delegate to
 `fromData`. Reject malformed nested elements rather than reinterpreting them.
 User ADTs require source codecs until future derive macros produce them.
 
@@ -1903,7 +1903,7 @@ impl<'a> Traces<'a> {
         }
     }
 
-    /// A compiler trace (validateData, incomplete match): on or off.
+    /// A compiler trace (validate, incomplete match): on or off.
     pub fn compiler(&mut self, build: &Builder<'a>, text: &'a str, body: &'a Core<'a>) -> &'a Core<'a> {
         if self.config.compiler { build.trace(build.var(self.message(build, text)), body) } else { body }
     }

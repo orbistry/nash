@@ -2842,7 +2842,7 @@ Data itself, and serialise/tag/fields. The core CLI checks constructor and
 non-constructor helper inputs and all three identity methods, compiling 17
 modules and 104 declarations. Separate CLI checks reject toData on unit and
 on nominal Int without an impl. The stdlib sketch now agrees with the
-representation spec: validateData returns the validated value and traps on
+representation spec: validate returns the validated value and traps on
 failure; other Big conversions use typed real builtins and Data patterns.
 Formatting, strict Clippy, 1,912 tests and snapshot hygiene pass. These are
 source-only changes; runtime helper results await Plan 07.
@@ -2851,7 +2851,7 @@ implementation. Builtin exposes only actual UPLC operations. Their Data
 conversion signatures preserve nominal Int, Bytes, List and Map types.
 Lift and Literal call those operations directly. Core Data codecs match
 existing Data constructors, decode nested fields recursively, and rebuild
-typed results. Both fromData and validateData safely decode; no shallow
+typed results. Both fromData and validate safely decode; no shallow
 reinterpretation or compiler-generated validation hooks remain. User ADTs
 need explicit source codecs until future derive macros generate them.
 
