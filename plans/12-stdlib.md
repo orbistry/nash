@@ -1,6 +1,6 @@
-# Plan 12: `nash/core` standard library
+# Plan 12: `nash/base` standard library
 
-Goal: write `core/` in Nash per [docs/stdlib.md](../docs/stdlib.md) and
+Goal: write `crates/nash-driver/base/` in Nash per [docs/stdlib.md](../docs/stdlib.md) and
 wire it into the compiler: embedded package, default imports, the
 synthetic `Builtin` module, the trait modules and twin types, the type
 modules, decoders, `Fuzz`, `Test`, `Ast`, `Cardano.*`.
@@ -23,8 +23,8 @@ per type pair named by the uppercase name, functions on the little twin
 only. `Prelude` is the `infix` table, its helper functions, and the tuple
 impls. There is no Big `String` and no `Data.List`-style module family.
 
-Crates touched: new `nash-core`, `nash-can`, `nash-driver`, `nash-cli`,
-`nash-codegen` (builtin lowering), `core/`.
+Crates touched: `nash-can`, `nash-driver`, `nash-cli`,
+`nash-codegen` (builtin lowering), `crates/nash-driver/base/`.
 
 References:
 
@@ -42,7 +42,7 @@ References:
   `crates/nash-driver/src/source.rs:224` (`OverlaySource`),
   `crates/nash-driver/src/compile.rs:86` (`build_sync` interface map),
   `crates/nash-plutus/src/builtin/default_function.rs`,
-  `SPEC.md` "Prelude / default imports (deferred)".
+  `SPEC.md` and `nash-can/src/defaults.rs`.
 
 Conventions: type variables `'a`; lowercase bare type names are little,
 uppercase Big.
@@ -53,473 +53,46 @@ Plan 10 implements the minimum `Fuzz` and `Test` modules required by its runner.
 Chunks 8 and 9 here extend and verify those modules; they must not duplicate or
 replace the tested PRNG, replay, label, and assertion protocols.
 
-## Chunk 1: package skeleton and embedding
-
-**Files**
-
-- `core/nash.jsonc` (new)
-- `core/src/Prelude.nash` (new, minimal)
-- `crates/nash-core/Cargo.toml`, `build.rs`, `src/lib.rs` (new)
-- `crates/nash-driver/Cargo.toml`, `src/project.rs`, `src/source.rs`
-- `Cargo.toml` (workspace member is picked up by `crates/*`)
-
-**Change**
-
-Embed `core/src/**/*.nash` into the compiler at build time and make the
-driver see those modules as part of every build under the `nash/core`
-package. In-repo path dependency was considered and rejected: `nash check`
-must work with no config and no network, and one compiler must map to one
-core.
-
-**Code**
-
-`core/nash.jsonc`: as in docs/stdlib.md.
-
-`core/src/Prelude.nash` (chunk 1 version, grows later):
-
-```elm
-module Prelude exposing (..)
-
-identity : 'a -> 'a
-identity x = x
-
-always : 'a -> 'b -> 'a
-always x _ = x
-```
-
-`crates/nash-core/build.rs`:
-
-```rust
-//! Embeds `core/src/**/*.nash` as `(module_name, source)` pairs.
-use std::{env, fs, path::{Path, PathBuf}};
-
-fn main() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../core/src");
-    let mut files = Vec::new();
-    collect(&root, &root, &mut files);
-    files.sort();
-
-    let mut out = String::from("pub static SOURCES: &[(&str, &str)] = &[\n");
-    for (module, path) in &files {
-        println!("cargo:rerun-if-changed={}", path.display());
-        out.push_str(&format!("    ({module:?}, include_str!({:?})),\n", path.display()));
-    }
-    out.push_str("];\n");
-    fs::write(PathBuf::from(env::var("OUT_DIR").unwrap()).join("sources.rs"), out).unwrap();
-    println!("cargo:rerun-if-changed={}", root.display());
-}
-
-fn collect(root: &Path, dir: &Path, out: &mut Vec<(String, PathBuf)>) {
-    for entry in fs::read_dir(dir).unwrap() {
-        let path = entry.unwrap().path();
-        if path.is_dir() {
-            collect(root, &path, out);
-        } else if path.extension().is_some_and(|e| e == "nash") {
-            let rel = path.strip_prefix(root).unwrap().with_extension("");
-            let module = rel.components().map(|c| c.as_os_str().to_str().unwrap()).collect::<Vec<_>>().join(".");
-            out.push((module, path));
-        }
-    }
-}
-```
-
-`crates/nash-core/src/lib.rs`:
-
-```rust
-//! The `nash/core` package, embedded at build time.
-include!(concat!(env!("OUT_DIR"), "/sources.rs"));
-
-pub const PACKAGE: &str = "nash/core";
-
-/// `core://Prelude.nash`-style URL for a core module.
-pub fn url(module: &str) -> url::Url {
-    url::Url::parse(&format!("core:///{}.nash", module.replace('.', "/"))).expect("static module name")
-}
-
-pub fn source(module: &str) -> Option<&'static str> {
-    SOURCES.iter().find(|(m, _)| *m == module).map(|(_, s)| *s)
-}
-```
-
-Driver (`crates/nash-driver/src/project.rs`):
-
-```rust
-impl Project {
-    /// Core modules first, then the project's own modules.
-    pub async fn discover_modules(&self, db: &Database) -> Result<Vec<Url>, DriverError> {
-        let mut modules: Vec<Url> = nash_core::SOURCES.iter().map(|(m, _)| nash_core::url(m)).collect();
-        modules.extend(self.discover_project_modules(db).await?);
-        Ok(modules)
-    }
-}
-```
-
-`crates/nash-driver/src/source.rs`: a `CoreSource` implementing
-`FileSource` (`source.rs:22`) that serves `core:///` URLs from
-`nash_core::SOURCES` and errors on `write`. `Database::new` wraps the
-caller's source in `OverlaySource::new(CoreSource, user_source)`
-(`source.rs:224`). `compile_module` sets `Context.package` to
-`nash/core` for `core:///` URLs (`crates/nash-driver/src/compile.rs:176`).
-
-`build_graph`'s `resolve_import` (`compile.rs:263`) already matches on
-path suffix; `core:///Data/Decode.nash` matches `Data.Decode`. A user module
-named like a core module is an error (`ModuleShadowsCore`), added to
-`DriverError`.
-
-**Elm/Aiken reference**
-
-Elm: `elm/compiler/src/Elm/Details.hs` `verifyPkg` loads packages from
-`ELM_HOME`; we replace that with the embedded table. Aiken:
-`crates/aiken-project/src/lib.rs` `read_source_files` / `parse_sources`.
-
-**Tests**
-
-- `nash-core`: `sources_contain_prelude` and `url_roundtrip`.
-- `nash-driver` `test_core_modules_are_always_present`: an in-memory project with one module `import Prelude` builds; `test_user_module_cannot_shadow_core`.
-
-**Done when** `nash check` on `scratch/` builds `Prelude` plus the user
-modules and reports `total == core count + user count`.
-
----
-
-## Chunk 2: default imports
-
-**Files**
-
-- `crates/nash-can/src/environment/defaults.rs` (new)
-- `crates/nash-can/src/environment/foreign.rs`
-- `crates/nash-can/src/module.rs`
-- `SPEC.md`
-
-**Change**
-
-Port `Elm.Compiler.Imports.defaults`. `Context.package` decides:
-`nash/core` modules get no defaults, everyone else gets the list in
-docs/stdlib.md "Default imports". In this chunk only modules that exist so
-far are defaulted (`Prelude`); the list grows with later chunks, each one
-adding its module and a test. The exposing forms needed are Elm's
-`Exposed::Lower` (values), `Exposed::Upper { privacy: Private }` (a trait,
-or a Big type without its constructors), and plans/01's `type` prefix for
-little types (`Exposed::LittleType { open: true }` for `type option(..)`).
-
-**Code**
-
-```rust
-// crates/nash-can/src/environment/defaults.rs
-use nash_region::{Located, Region};
-use nash_source::{Exposed, Exposing, Import, Privacy};
-
-/// Mirrors Elm's `Imports.defaults`; the list is docs/stdlib.md "Default imports".
-pub fn defaults<'a>(bump: &'a Bump) -> &'a [&'a Import<'a>] {
-    let at = |n: &'a str| bump.alloc(Located::at(Region::zero(), n));
-    let open = |name: &'a str| import(bump, name, Exposing::Open);
-    let closed = |name: &'a str| import(bump, name, Exposing::Explicit(&[]));
-    let explicit = |name: &'a str, items: &[Exposed<'a>]| import(bump, name, Exposing::Explicit(bump.alloc_slice_fill_iter(items.iter().map(|e| bump.alloc(*e) as &_))));
-    let lower = |n| Exposed::Lower(at(n));
-    // trait, or Big type without `(..)`: constructors stay qualified (`Option.Some`)
-    let upper = |n| Exposed::Upper(at(n), Privacy::Private);
-    // `type option(..)`: little constructors unqualified (`Some`)
-    let little = |n| Exposed::LittleType(at(n), Privacy::Public);
-    bump.alloc_slice_copy(&[
-        open("Prelude"),
-        explicit("Eq", &[upper("Eq")]),
-        explicit("Ord", &[upper("Ord")]),
-        explicit("Show", &[upper("Show")]),
-        explicit("Num", &[upper("Num")]),
-        explicit("Integral", &[upper("Integral")]),
-        explicit("Semigroup", &[upper("Semigroup")]),
-        explicit("Monoid", &[upper("Monoid")]),
-        explicit("Functor", &[upper("Functor")]),
-        explicit("Applicative", &[upper("Applicative")]),
-        explicit("Monad", &[upper("Monad")]),
-        explicit("Lift", &[upper("Lift")]),
-        explicit("Data", &[upper("ToData"), upper("FromData"), upper("Validate")]),
-        explicit("Literal", &[upper("FromInt"), upper("FromString"), upper("FromBytes")]),
-        explicit("Bool", &[upper("Bool"), lower("not"), lower("and"), lower("or"), lower("xor")]),
-        explicit("Unit", &[upper("Unit")]),
-        explicit("Option", &[upper("Option"), little("option")]),
-        explicit("Result", &[upper("Result"), little("result")]),
-        explicit("Ordering", &[upper("Ordering"), little("ordering")]),
-        explicit("Cons", &[little("cons")]),
-        explicit("Derive", &[lower("derive")]),
-        closed("Debug"),
-        closed("Builtin"),
-        closed("Int"),
-        closed("Bytes"),
-        closed("String"),
-        closed("List"),
-        closed("Pair"),
-        closed("Array"),
-        closed("Map"),
-        closed("Fuzz"),
-        closed("Test"),
-    ])
-}
-
-fn import<'a>(bump: &'a Bump, name: &'a str, exposing: Exposing<'a>) -> &'a Import<'a> {
-    bump.alloc(Import {
-        import: bump.alloc(Located::at(Region::zero(), name)),
-        alias: None,
-        exposing: bump.alloc(exposing),
-    })
-}
-```
-
-`crates/nash-can/src/module.rs` `canonicalize` (line 48):
-
-```rust
-let imports: &[&SourceImport] = if context.package.is_some_and(|p| p.author == "nash" && p.project == "core") {
-    module.imports
-} else {
-    bump.alloc_slice_fill_iter(defaults(bump).iter().chain(module.imports.iter()).copied())
-};
-let mut env = environment::foreign::create_initial_env(bump, home, context.interfaces, imports)?;
-```
-
-User imports come after defaults so an explicit `import List exposing (map)`
-adds to what the defaults gave (Elm's `Map.union` semantics in
-`merge_exposed`, `environment.rs:340`). An import with `Region::zero()`
-never appears in an error message: `ImportNotFound` for a default import
-is an internal error (core is embedded), so `find_interface`
-(`foreign.rs:387`) panics with a message naming the module if the region
-is zero.
-
-`SPEC.md`: tick "Prelude / default imports".
-
-Because the Big twins are exposed without `(..)`, `Some` resolves only to
-the little constructor and `Option.Some` only to the Big one, through the
-qualified namespace Elm's env already keeps for imported-but-unexposed
-constructors. No expected-type resolution and no dual constructor entries
-are needed.
-
-**Elm/Aiken reference**
-
-`Elm/Compiler/Imports.hs` `defaults`, `import_`, `typeOpen`, `typeClosed`,
-`operator`; `Compile.hs` `compile` (`Imports.addDefaults` applied when the
-package is not `elm/core`).
-
-**Tests** (`crates/nash-can/src/snapshots`)
-
-- `defaults_bring_identity_into_scope`: `main = identity 1` with a `Prelude` interface in `interfaces` canonicalizes to `VarForeign { home: Prelude }`.
-- `core_modules_get_no_defaults`: the same source with `package = nash/core` fails `NotFoundVar identity`.
-- `user_import_extends_defaults`: `import Prelude exposing (always)` plus use of `identity` still works.
-- (after chunk 4) `twin_ctors_resolve_by_qualification`: `Some 1` is the little ctor, `Option.Some (lift 1)` the Big one, bare `Option.Some 1` without `lift` is a type error, and `case x of Bool.True -> ..` matches the Big ctor.
-
-**Done when** `test_core_modules_are_always_present` (chunk 1) passes
-without an explicit `import Prelude`.
-
----
-
-## Chunk 3: the synthetic `Builtin` module
-
-**Files**
-
-- `crates/nash-ast/src/primitives.rs` (plans/02 chunk 3's module; add the `BUILTINS` table next to `PRIMITIVES`)
-- `crates/nash-ast/Cargo.toml` (depend on `nash-plutus` for `DefaultFunction`)
-- `crates/nash-driver/src/compile.rs`
-- `crates/nash-codegen/src/builtin.rs` (plans/07, one match)
-
-**Change**
-
-`Builtin` has no `.nash` file. `nash_ast::primitives::PRIMITIVES` (plans/02
-chunk 3) already holds its types; this chunk adds `BUILTINS`, a table that
-maps every `DefaultFunction` to a Nash name and a type string, in the same
-module. At driver start `primitives::interface(bump)` (plans/02) is
-extended to parse and canonicalize each type string into the `Builtin`
-`Interface`'s values, inserted into the build-wide interface map before
-any module compiles. Codegen lowers `VarForeign { home: Builtin, name }`
-to the builtin node.
-
-**Code**
-
-```rust
-// crates/nash-ast/src/primitives.rs (continued from plans/02 chunk 3)
-use nash_plutus::builtin::default_function::DefaultFunction as F;
-
-pub struct Builtin {
-    pub name: &'static str,
-    pub function: F,
-    /// Nash type, parsed by `nash-parse` at driver start.
-    pub typ: &'static str,
-}
-
-pub static BUILTINS: &[Builtin] = &[
-    Builtin { name: "addInteger", function: F::AddInteger, typ: "int -> int -> int" },
-    Builtin { name: "subtractInteger", function: F::SubtractInteger, typ: "int -> int -> int" },
-    Builtin { name: "multiplyInteger", function: F::MultiplyInteger, typ: "int -> int -> int" },
-    Builtin { name: "divideInteger", function: F::DivideInteger, typ: "int -> int -> int" },
-    Builtin { name: "quotientInteger", function: F::QuotientInteger, typ: "int -> int -> int" },
-    Builtin { name: "remainderInteger", function: F::RemainderInteger, typ: "int -> int -> int" },
-    Builtin { name: "modInteger", function: F::ModInteger, typ: "int -> int -> int" },
-    Builtin { name: "equalsInteger", function: F::EqualsInteger, typ: "int -> int -> bool" },
-    Builtin { name: "lessThanInteger", function: F::LessThanInteger, typ: "int -> int -> bool" },
-    Builtin { name: "lessThanEqualsInteger", function: F::LessThanEqualsInteger, typ: "int -> int -> bool" },
-    Builtin { name: "appendByteString", function: F::AppendByteString, typ: "bytes -> bytes -> bytes" },
-    Builtin { name: "consByteString", function: F::ConsByteString, typ: "int -> bytes -> bytes" },
-    Builtin { name: "sliceByteString", function: F::SliceByteString, typ: "int -> int -> bytes -> bytes" },
-    Builtin { name: "lengthOfByteString", function: F::LengthOfByteString, typ: "bytes -> int" },
-    Builtin { name: "indexByteString", function: F::IndexByteString, typ: "bytes -> int -> int" },
-    Builtin { name: "equalsByteString", function: F::EqualsByteString, typ: "bytes -> bytes -> bool" },
-    Builtin { name: "lessThanByteString", function: F::LessThanByteString, typ: "bytes -> bytes -> bool" },
-    Builtin { name: "lessThanEqualsByteString", function: F::LessThanEqualsByteString, typ: "bytes -> bytes -> bool" },
-    Builtin { name: "sha2_256", function: F::Sha2_256, typ: "bytes -> bytes" },
-    Builtin { name: "sha3_256", function: F::Sha3_256, typ: "bytes -> bytes" },
-    Builtin { name: "blake2b_256", function: F::Blake2b_256, typ: "bytes -> bytes" },
-    Builtin { name: "blake2b_224", function: F::Blake2b_224, typ: "bytes -> bytes" },
-    Builtin { name: "keccak_256", function: F::Keccak_256, typ: "bytes -> bytes" },
-    Builtin { name: "ripemd_160", function: F::Ripemd_160, typ: "bytes -> bytes" },
-    Builtin { name: "verifyEd25519Signature", function: F::VerifyEd25519Signature, typ: "bytes -> bytes -> bytes -> bool" },
-    Builtin { name: "verifyEcdsaSecp256k1Signature", function: F::VerifyEcdsaSecp256k1Signature, typ: "bytes -> bytes -> bytes -> bool" },
-    Builtin { name: "verifySchnorrSecp256k1Signature", function: F::VerifySchnorrSecp256k1Signature, typ: "bytes -> bytes -> bytes -> bool" },
-    Builtin { name: "appendString", function: F::AppendString, typ: "string -> string -> string" },
-    Builtin { name: "equalsString", function: F::EqualsString, typ: "string -> string -> bool" },
-    Builtin { name: "encodeUtf8", function: F::EncodeUtf8, typ: "string -> bytes" },
-    Builtin { name: "decodeUtf8", function: F::DecodeUtf8, typ: "bytes -> string" },
-    Builtin { name: "ifThenElse", function: F::IfThenElse, typ: "bool -> 'a -> 'a -> 'a" },
-    Builtin { name: "chooseUnit", function: F::ChooseUnit, typ: "unit -> 'a -> 'a" },
-    Builtin { name: "trace", function: F::Trace, typ: "string -> 'a -> 'a" },
-    Builtin { name: "fstPair", function: F::FstPair, typ: "pair 'a 'b -> 'a" },
-    Builtin { name: "sndPair", function: F::SndPair, typ: "pair 'a 'b -> 'b" },
-    Builtin { name: "chooseList", function: F::ChooseList, typ: "list 'a -> 'b -> 'b -> 'b" },
-    Builtin { name: "mkCons", function: F::MkCons, typ: "'a -> list 'a -> list 'a" },
-    Builtin { name: "headList", function: F::HeadList, typ: "list 'a -> 'a" },
-    Builtin { name: "tailList", function: F::TailList, typ: "list 'a -> list 'a" },
-    Builtin { name: "nullList", function: F::NullList, typ: "list 'a -> bool" },
-    Builtin { name: "dropList", function: F::DropList, typ: "int -> list 'a -> list 'a" },
-    Builtin { name: "chooseData", function: F::ChooseData, typ: "Data -> 'a -> 'a -> 'a -> 'a -> 'a -> 'a" },
-    Builtin { name: "constrData", function: F::ConstrData, typ: "int -> list Data -> Data" },
-    Builtin { name: "mapData", function: F::MapData, typ: "(Big 'k, Big 'v) => list (pair 'k 'v) -> Map 'k 'v" },
-    Builtin { name: "listData", function: F::ListData, typ: "Big 'a => list 'a -> List 'a" },
-    Builtin { name: "iData", function: F::IData, typ: "int -> Int" },
-    Builtin { name: "bData", function: F::BData, typ: "bytes -> Bytes" },
-    Builtin { name: "unConstrData", function: F::UnConstrData, typ: "Data -> pair int (list Data)" },
-    Builtin { name: "unMapData", function: F::UnMapData, typ: "(Big 'k, Big 'v) => Map 'k 'v -> list (pair 'k 'v)" },
-    Builtin { name: "unListData", function: F::UnListData, typ: "Big 'a => List 'a -> list 'a" },
-    Builtin { name: "unIData", function: F::UnIData, typ: "Int -> int" },
-    Builtin { name: "unBData", function: F::UnBData, typ: "Bytes -> bytes" },
-    Builtin { name: "equalsData", function: F::EqualsData, typ: "Data -> Data -> bool" },
-    Builtin { name: "serialiseData", function: F::SerialiseData, typ: "Data -> bytes" },
-    Builtin { name: "mkPairData", function: F::MkPairData, typ: "(Big 'a, Big 'b) => 'a -> 'b -> pair 'a 'b" },
-    Builtin { name: "mkNilData", function: F::MkNilData, typ: "unit -> list Data" },
-    Builtin { name: "mkNilPairData", function: F::MkNilPairData, typ: "unit -> list (pair Data Data)" },
-    Builtin { name: "bls12_381_g1_add", function: F::Bls12_381_G1_Add, typ: "bls_g1 -> bls_g1 -> bls_g1" },
-    Builtin { name: "bls12_381_g1_neg", function: F::Bls12_381_G1_Neg, typ: "bls_g1 -> bls_g1" },
-    Builtin { name: "bls12_381_g1_scalarMul", function: F::Bls12_381_G1_ScalarMul, typ: "int -> bls_g1 -> bls_g1" },
-    Builtin { name: "bls12_381_g1_equal", function: F::Bls12_381_G1_Equal, typ: "bls_g1 -> bls_g1 -> bool" },
-    Builtin { name: "bls12_381_g1_compress", function: F::Bls12_381_G1_Compress, typ: "bls_g1 -> bytes" },
-    Builtin { name: "bls12_381_g1_uncompress", function: F::Bls12_381_G1_Uncompress, typ: "bytes -> bls_g1" },
-    Builtin { name: "bls12_381_g1_hashToGroup", function: F::Bls12_381_G1_HashToGroup, typ: "bytes -> bytes -> bls_g1" },
-    Builtin { name: "bls12_381_g1_multiScalarMul", function: F::Bls12_381_G1_MultiScalarMul, typ: "list int -> list bls_g1 -> bls_g1" },
-    Builtin { name: "bls12_381_g2_add", function: F::Bls12_381_G2_Add, typ: "bls_g2 -> bls_g2 -> bls_g2" },
-    Builtin { name: "bls12_381_g2_neg", function: F::Bls12_381_G2_Neg, typ: "bls_g2 -> bls_g2" },
-    Builtin { name: "bls12_381_g2_scalarMul", function: F::Bls12_381_G2_ScalarMul, typ: "int -> bls_g2 -> bls_g2" },
-    Builtin { name: "bls12_381_g2_equal", function: F::Bls12_381_G2_Equal, typ: "bls_g2 -> bls_g2 -> bool" },
-    Builtin { name: "bls12_381_g2_compress", function: F::Bls12_381_G2_Compress, typ: "bls_g2 -> bytes" },
-    Builtin { name: "bls12_381_g2_uncompress", function: F::Bls12_381_G2_Uncompress, typ: "bytes -> bls_g2" },
-    Builtin { name: "bls12_381_g2_hashToGroup", function: F::Bls12_381_G2_HashToGroup, typ: "bytes -> bytes -> bls_g2" },
-    Builtin { name: "bls12_381_g2_multiScalarMul", function: F::Bls12_381_G2_MultiScalarMul, typ: "list int -> list bls_g2 -> bls_g2" },
-    Builtin { name: "bls12_381_millerLoop", function: F::Bls12_381_MillerLoop, typ: "bls_g1 -> bls_g2 -> bls_mlr" },
-    Builtin { name: "bls12_381_mulMlResult", function: F::Bls12_381_MulMlResult, typ: "bls_mlr -> bls_mlr -> bls_mlr" },
-    Builtin { name: "bls12_381_finalVerify", function: F::Bls12_381_FinalVerify, typ: "bls_mlr -> bls_mlr -> bool" },
-    Builtin { name: "integerToByteString", function: F::IntegerToByteString, typ: "bool -> int -> int -> bytes" },
-    Builtin { name: "byteStringToInteger", function: F::ByteStringToInteger, typ: "bool -> bytes -> int" },
-    Builtin { name: "andByteString", function: F::AndByteString, typ: "bool -> bytes -> bytes -> bytes" },
-    Builtin { name: "orByteString", function: F::OrByteString, typ: "bool -> bytes -> bytes -> bytes" },
-    Builtin { name: "xorByteString", function: F::XorByteString, typ: "bool -> bytes -> bytes -> bytes" },
-    Builtin { name: "complementByteString", function: F::ComplementByteString, typ: "bytes -> bytes" },
-    Builtin { name: "readBit", function: F::ReadBit, typ: "bytes -> int -> bool" },
-    Builtin { name: "writeBits", function: F::WriteBits, typ: "bytes -> list int -> bool -> bytes" },
-    Builtin { name: "replicateByte", function: F::ReplicateByte, typ: "int -> int -> bytes" },
-    Builtin { name: "shiftByteString", function: F::ShiftByteString, typ: "bytes -> int -> bytes" },
-    Builtin { name: "rotateByteString", function: F::RotateByteString, typ: "bytes -> int -> bytes" },
-    Builtin { name: "countSetBits", function: F::CountSetBits, typ: "bytes -> int" },
-    Builtin { name: "findFirstSetBit", function: F::FindFirstSetBit, typ: "bytes -> int" },
-    Builtin { name: "expModInteger", function: F::ExpModInteger, typ: "int -> int -> int -> int" },
-    Builtin { name: "lengthOfArray", function: F::LengthOfArray, typ: "array 'a -> int" },
-    Builtin { name: "listToArray", function: F::ListToArray, typ: "list 'a -> array 'a" },
-    Builtin { name: "indexArray", function: F::IndexArray, typ: "array 'a -> int -> 'a" },
-    Builtin { name: "insertCoin", function: F::InsertCoin, typ: "bytes -> bytes -> int -> value -> value" },
-    Builtin { name: "lookupCoin", function: F::LookupCoin, typ: "bytes -> bytes -> value -> int" },
-    Builtin { name: "unionValue", function: F::UnionValue, typ: "value -> value -> value" },
-    Builtin { name: "valueContains", function: F::ValueContains, typ: "value -> value -> bool" },
-    Builtin { name: "valueData", function: F::ValueData, typ: "value -> Data" },
-    Builtin { name: "unValueData", function: F::UnValueData, typ: "Data -> value" },
-    Builtin { name: "scaleValue", function: F::ScaleValue, typ: "int -> value -> value" },
-];
-```
-
-A unit test asserts that every `DefaultFunction` variant appears exactly
-once (iterate `0..=100u8`, transmute-free: keep a `DefaultFunction::ALL`
-array in `nash-plutus`, added in this chunk).
-
-```rust
-// crates/nash-can/src/environment/builtin.rs
-/// The `Builtin` interface: `PRIMITIVES` as unions (plans/02 `primitives::interface`)
-/// plus one value per `BUILTINS` row, its type string parsed and canonicalized
-/// in an environment that has only the compiler-known types.
-pub fn builtin_interface<'a>(bump: &'a Bump) -> Interface<'a> {
-    let base = nash_ast::primitives::interface(bump);
-    let env = known_types_env(bump, base.home);
-    let values = bump.alloc_slice_fill_iter(nash_ast::primitives::BUILTINS.iter().map(|b| {
-        let src = bump.alloc_str(b.typ);
-        let mut parser = nash_parse::Parser::new(bump, src.as_bytes());
-        let typ = parser.type_expr().expect("builtin table types are valid");
-        let annotation = nash_can::types::to_annotation(bump, &env, typ).expect("builtin table types are closed");
-        InterfaceValue { name: b.name, annotation }
-    }));
-    Interface { values, ..base }
-}
-```
-
-`nash_can::types::to_annotation` is `canonicalize_type` followed by
-`free_vars` collection (`crates/nash-can/src/types.rs`; Elm's
-`Type.toAnnotation`). `known_types_env` is `create_initial_env` seeded
-from `PRIMITIVES` with no imports.
-
-Driver: `build_sync` (`compile.rs:86`) inserts `builtin_interface(&store)`
-into `interfaces` before the loop. `Builtin` is not a URL and never
-appears in `BuildResult.modules`.
-
-Codegen (`crates/nash-codegen/src/builtin.rs`):
-
-```rust
-pub fn lower_builtin(name: &str) -> Option<Core<'static>> {
-    let entry = nash_ast::primitives::BUILTINS.iter().find(|b| b.name == name)?;
-    Some(match entry.function {
-        Some(f) => Core::Builtin(f),
-        None => Core::Identity,
-    })
-}
-```
-
-Until plans/02 lands, `bool`, `unit`, `pair`, `array`, `bls_*`, `value`,
-`Data` are pre-seeded as opaque `Type::Union { arity }` entries with
-`home = Builtin` so the table canonicalizes; plans/02 chunk 3 replaces
-that seed with `PRIMITIVES`.
-
-**Elm/Aiken reference**
-
-Aiken `crates/aiken-lang/src/builtins.rs` `from_default_function`
-(type per builtin, including the `bool` endianness argument of
-`integerToByteString`) and `DefaultFunction::aiken_name`.
-
-**Tests**
-
-- `nash-ast`: `builtins_cover_every_default_function`, `builtin_types_parse`.
-- `nash-driver`: `test_builtin_call_type_checks`: `main = Builtin.addInteger 1 2` builds; `main = Builtin.addInteger "a" 2` fails with a type error; `main = Builtin.nope` fails `NotFoundVarQual`.
-- `nash docs` (plans/13) renders the table; not tested here.
-
-**Done when** the driver tests pass and `Builtin.*` is usable from user
-modules.
-
----
+## Chunk 1: package skeleton and embedding — complete
+
+- [x] Store the foundation Nash sources in `crates/nash-driver/base/src/`.
+- [x] Embed them through `nash-driver/build.rs`; no separate Rust crate or Nash package manifest.
+- [x] Discover bundled modules automatically, with stable `nash-base:///Module.nash` URIs and compiler-owned `nash/base` identity.
+- [x] Read sources offline, independently of checkout and current directory; reject virtual-source writes.
+- [x] Reserve bundled module names and package identity against application/dependency replacement.
+
+Base changes ship with a compiler release. Applications do not list Base as
+a dependency or install its sources. The language server uses the same driver
+source provider.
+
+## Chunk 2: default imports — complete for shipped modules
+
+- [x] Share `nash-can::defaults::MODULES` between dependency discovery, canonical scope, and diagnostic localization.
+- [x] Expose Prelude operators/helpers, traits and methods, primitive names, and little constructors in application modules.
+- [x] Keep Big twin constructors qualified; make `Test.label` unqualified only in tests blocks.
+- [x] Preserve original source imports; formatting must never serialize implicit imports.
+- [x] Compile all bundled modules and an application without imports or dependencies through the in-process driver.
+
+Base modules import explicitly to avoid bootstrap cycles. Extend the catalog
+when later chunks add new modules; do not install placeholder interfaces.
+
+## Chunk 3: synthetic `Primitive` and `Builtin` — complete
+
+- [x] `Primitive` owns compiler-known types, constructors, representation traits, and unchecked `coerce`.
+- [x] `Builtin` owns only actual Plutus Core builtin functions from `BUILTINS`.
+- [x] Builtin signatures use primitive type identities; codegen dispatches `Primitive.coerce` separately.
+- [x] Test the strict Builtin inventory and rejection of `Builtin.coerce`.
+
+`Primitive.coerce` is runtime identity with independently polymorphic input
+and output. It checks neither representation nor shape. The normal Nash
+blanket impls of `ToData` and `FromData` use it; `Validate` remains opt-in.
 
 ## Chunk 4: compiler-known types and the twin type modules
 
 **Files**
 
-- `core/src/Bool.nash`, `Unit.nash`, `Option.nash`, `Result.nash`, `Ordering.nash` (new; type declarations only, functions in chunk 6, impls in chunk 5)
-- `crates/nash-can/src/environment/foreign.rs` (`make_union_ctor` special case for `Builtin.bool`; the `List` pre-seed at `foreign.rs:34` is gone once plans/02 chunk 3 seeds from `PRIMITIVES`)
+- `crates/nash-driver/base/src/Bool.nash`, `Unit.nash`, `Option.nash`, `Result.nash`, `Ordering.nash` (new; type declarations only, functions in chunk 6, impls in chunk 5)
+- `crates/nash-can/src/environment/foreign.rs` (`make_union_ctor` special case for `Primitive.bool`; the `List` pre-seed at `foreign.rs:34` is gone once plans/02 chunk 3 seeds from `PRIMITIVES`)
 - `crates/nash-can/src/environment/defaults.rs` (add the five modules)
 
 **Change**
@@ -532,11 +105,11 @@ in `Bool.nash`, `type Unit = Unit` in `Unit.nash`,
 `type option 'a = Some 'a | None` and `type Option 'a = Some 'a | None` in
 `Option.nash`, and likewise `Result`, `Ordering` (representation.md
 "Prelude twins", constructor order is load-bearing); move the
-`Basics.Bool` special case (`foreign.rs:349`) to `Builtin.bool`.
+`Basics.Bool` special case (`foreign.rs:349`) to `Primitive.bool`.
 
 **Code**
 
-`core/src/Option.nash` (chunk 4 version):
+`crates/nash-driver/base/src/Option.nash` (chunk 4 version):
 
 ```elm
 module Option exposing (Option(..), type option(..))
@@ -552,7 +125,7 @@ Canonicalization treats a module's own Big twin constructors as
 qualified-only when a little constructor of the same name is declared in
 the same module (`Env.ctors` keeps the little one, `Env.q_ctors` the Big
 one). User modules may not declare two constructors with one name; only
-`nash/core` twin modules may, and only for a little/Big pair
+`nash/base` twin modules may, and only for a little/Big pair
 (`Context.package` check).
 
 The type seed is plans/02 chunk 3's (`primitives::PRIMITIVES`, homed by
@@ -580,7 +153,7 @@ compiler-known ADTs).
 
 **Tests**
 
-- `core` compiles (`nash check core/` via the driver test `test_core_compiles`, kept green from here on).
+- `core` compiles (the in-process Base compilation tests via the driver test `test_core_compiles`, kept green from here on).
 - nash-can: `if` on `bool` uses `Ctor::Bool`; `type t = A | B` little and `type T = A | B` Big in one user module is a dup-ctor error; `Some 1` and `Option.Some (lift 1)` from the defaults resolve to the little and the Big constructor.
 - kinds: `list (option int)` has kind `Type` but fails `Storable` storage formation; `list Int` and `list int` are fine.
 
@@ -593,11 +166,11 @@ usable side by side in one user module.
 
 **Files**
 
-- `core/src/Eq.nash`, `Ord.nash`, `Show.nash`, `Num.nash`, `Integral.nash`, `Semigroup.nash`, `Monoid.nash`, `Functor.nash`, `Applicative.nash`, `Monad.nash`, `Lift.nash`, `Data.nash`, `Literal.nash` (new; the file list of plans/03 chunk 12)
-- `core/src/Prelude.nash` (the `infix` table and the tuple impls)
-- `core/src/Bool.nash` (`not`, `and`, `or`, `xor`)
-- `core/src/Debug.nash` (new)
-- `core/src/Option.nash`, `Result.nash`, `Ordering.nash` (their `Eq`/`Functor`/`Applicative`/`Monad`/`Lift` impls)
+- `crates/nash-driver/base/src/Eq.nash`, `Ord.nash`, `Show.nash`, `Num.nash`, `Integral.nash`, `Semigroup.nash`, `Monoid.nash`, `Functor.nash`, `Applicative.nash`, `Monad.nash`, `Lift.nash`, `Data.nash`, `Literal.nash` (new; the file list of plans/03 chunk 12)
+- `crates/nash-driver/base/src/Prelude.nash` (the `infix` table and the tuple impls)
+- `crates/nash-driver/base/src/Bool.nash` (`not`, `and`, `or`, `xor`)
+- `crates/nash-driver/base/src/Debug.nash` (new)
+- `crates/nash-driver/base/src/Option.nash`, `Result.nash`, `Ordering.nash` (their `Eq`/`Functor`/`Applicative`/`Monad`/`Lift` impls)
 - `crates/nash-can/src/environment/foreign.rs` (lazy `and`/`or` special case marker)
 - `crates/nash-codegen/src/special.rs` (plans/07: `Bool.and`/`or` delay the second argument)
 
@@ -614,7 +187,7 @@ the twin's module.
 
 **Code**
 
-`core/src/Debug.nash`:
+`crates/nash-driver/base/src/Debug.nash`:
 
 ```elm
 module Debug exposing (trace, todo, failWith)
@@ -650,18 +223,18 @@ Option, Result, Ordering                (import Prelude and the trait modules th
 List, Int, Bytes, String, Map, ...      (import Prelude for operators; chunks 6–7)
 ```
 
-`core/src/Functor.nash` carries `impl Functor list` with a local
+`crates/nash-driver/base/src/Functor.nash` carries `impl Functor list` with a local
 recursive `mapList`; chunk 6's `List.map` is `Functor.map` specialized at
 `list`, so `List` imports `Functor`, never the other way round.
 
-`core/src/Prelude.nash` is docs/stdlib.md "Prelude" verbatim: the `infix`
+`crates/nash-driver/base/src/Prelude.nash` is docs/stdlib.md "Prelude" verbatim: the `infix`
 block (`infix non 4 (==) = eq`, `infix left 6 (+) = add`,
 `infix left 7 (/) = div`, `infix right 5 (::) = prepend`, ...), `identity`,
 `always`, `applyForward`, `applyBackward`, `composeLeft`, `composeRight`,
 `prepend = Builtin.mkCons` (kept here because `List` imports `Prelude`;
 named `prepend` because `Cons` is the `Cons` module's constructor), and
 `impl (Eq 'a, Eq 'b) => Eq ('a, 'b)` and friends up to 4-tuples for
-`Eq`, `Ord`, `Show` (tuples count as defined in `nash/core` for the orphan
+`Eq`, `Ord`, `Show` (tuples count as defined in `nash/base` for the orphan
 rule).
 
 Lazy `and`/`or`: codegen recognizes `VarForeign { home: Bool, name: "and" | "or" }`
@@ -671,18 +244,18 @@ back to the strict function.
 
 **Elm/Aiken reference**
 
-Elm `core/src/Basics.elm` for the operator table, precedences, and
+Elm `crates/nash-driver/base/src/Basics.elm` for the operator table, precedences, and
 `&&`/`||` (Elm's compiler special-cases them in `Optimize/Expression.hs`).
 Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 `ToData`-like `Data` conversions (`builtins::data`).
 
 **Tests**
 
-- `core/src/Prelude.nash` `tests` block (runs after plans/10): `1 + 2 == 3`, `compare 1 2 == LT`, `lift 1 == (1 : Int)`, `lower (lift "a" : Bytes) == "a"`, `Some 1 == Some 1` and `Option.Some (lift 1) == Option.Some (lift 1)`, `[1,2] ++ [3] == [1,2,3]`, `fail` raises (`test "fail fails" fail = do fail "x"`).
+- `crates/nash-driver/base/src/Prelude.nash` `tests` block (runs after plans/10): `1 + 2 == 3`, `compare 1 2 == LT`, `lift 1 == (1 : Int)`, `lower (lift "a" : Bytes) == "a"`, `Some 1 == Some 1` and `Option.Some (lift 1) == Option.Some (lift 1)`, `[1,2] ++ [3] == [1,2,3]`, `fail` raises (`test "fail fails" fail = do fail "x"`).
 - nash-can/nash-solve: `1 + 2` resolves to `Num int`; `(1 : Int) + 2` resolves `Num Int` with the literal at `Int` via `FromInt Int`; `lift [1, 2] : List Int` resolves `Lift (list int) (List Int)` through `Lift int Int`; `lift ([] : list Int) : List Int` resolves the element through the reflexive impl.
 - codegen: `False && fail "x"` evaluates to `False` (laziness).
 
-**Done when** `nash check core/` and the user-facing operator tests pass.
+**Done when** the in-process Base compilation tests and the user-facing operator tests pass.
 
 ---
 
@@ -690,7 +263,7 @@ Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 
 **Files**
 
-- `core/src/Int.nash`, `Bytes.nash`, `String.nash`, `List.nash`, `Cons.nash`, `Pair.nash`, `Array.nash`, `Option.nash`, `Result.nash`, `Ordering.nash`, `Bool.nash`
+- `crates/nash-driver/base/src/Int.nash`, `Bytes.nash`, `String.nash`, `List.nash`, `Cons.nash`, `Pair.nash`, `Array.nash`, `Option.nash`, `Result.nash`, `Ordering.nash`, `Bool.nash`
 
 **Change**
 
@@ -704,7 +277,7 @@ linked list `type cons 'a = Nil | Cons 'a (cons 'a)` (docs/stdlib.md
 and `toList` carry the `Storable` bound of `list`. All functions are
 total unless documented (`Array.at`, `Option.unwrap`).
 
-**Code** (`core/src/List.nash` excerpt, the shape everything else follows)
+**Code** (`crates/nash-driver/base/src/List.nash` excerpt, the shape everything else follows)
 
 ```elm
 module List exposing (..)
@@ -754,7 +327,7 @@ lazy today. This chunk uses the `if` form; plans/07 may rewrite.
 
 **Elm/Aiken reference**
 
-Elm `core/src/List.elm` for names and argument order. Aiken
+Elm `crates/nash-driver/base/src/List.elm` for names and argument order. Aiken
 `stdlib/lib/aiken/collection/list.ak` for what is worth having on-chain
 (no `zip` on `list`, `at` returns `option`).
 
@@ -767,8 +340,8 @@ per module (`List.reverse (List.reverse xs) == xs` with `xs via listOf int`
 once chunk 8 lands; before that the `prop`s are written but `nash test`
 only runs `test`s).
 
-**Done when** `nash check core/` passes and the `test`s pass under
-`nash test core/`.
+**Done when** the in-process Base compilation tests passes and the `test`s pass under
+the in-process Base test runner.
 
 ---
 
@@ -776,7 +349,7 @@ only runs `test`s).
 
 **Files**
 
-- `core/src/Data.nash` (`serialise`, `tag`, `fields` added to chunk 5's traits), `Data/Decode.nash`, `Data/Encode.nash`, `Map.nash`
+- `crates/nash-driver/base/src/Data.nash` (`serialise`, `tag`, `fields` added to chunk 5's traits), `Data/Decode.nash`, `Data/Encode.nash`, `Map.nash`
 
 **Change**
 
@@ -786,7 +359,7 @@ form `list (pair 'k 'v)` is not nominal). `Data`, `Data.Decode` and
 `Data.Encode` are about `Data` only; there are no `Data.List`-style Big
 counterparts of the type modules. Needs `Data` patterns (data.md).
 
-**Code** (`core/src/Data/Decode.nash` excerpt)
+**Code** (`crates/nash-driver/base/src/Data/Decode.nash` excerpt)
 
 ```elm
 module Data.Decode exposing (..)
@@ -846,7 +419,7 @@ traverse dec xs =
         xs
 ```
 
-`core/src/Map.nash` works on `Map 'k 'v` through `lower`/`lift`
+`crates/nash-driver/base/src/Map.nash` works on `Map 'k 'v` through `lower`/`lift`
 (`Lift (list (pair 'k 'v)) (Map 'k 'v)`, one `unMapData`/`mapData` each):
 
 ```elm
@@ -871,7 +444,7 @@ and costs one `unListData` after the optimizer drops the identity map.
 
 **Elm/Aiken reference**
 
-Elm `core/src/Dict.elm` for `Map` API names (insert/get/remove/keys/values).
+Elm `crates/nash-driver/base/src/Dict.elm` for `Map` API names (insert/get/remove/keys/values).
 Aiken `stdlib/lib/aiken/collection/dict.ak` (association list semantics),
 `stdlib/lib/aiken/cbor.ak` for diagnostics. Elm `Json.Decode` for the
 combinator shapes (`field`, `andThen`, `oneOf`, `succeed`, `fail`).
@@ -883,7 +456,7 @@ combinator shapes (`field`, `andThen`, `oneOf`, `succeed`, `fail`).
 `Map.get (lift 1) (Map.fromList [Pair.make (lift 1) (lift "a")]) == Some (lift "a")`;
 a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 
-**Done when** `nash check core/` passes and the decode tests pass.
+**Done when** the in-process Base compilation tests passes and the decode tests pass.
 
 ---
 
@@ -891,7 +464,7 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 
 **Files**
 
-- `core/src/Fuzz.nash`
+- `crates/nash-driver/base/src/Fuzz.nash`
 - `crates/nash-test/src/prng.rs` (plans/10 chunk 5: `Prng::from_seed`, `from_choices`, `to_data`, `from_data`)
 
 **Change**
@@ -902,7 +475,7 @@ runner builds as `PlutusData`, the **little** `fuzzer 'a` wrapper with
 over `u64` integer choices (not Aiken's bytes), and the generators listed
 in docs/stdlib.md "`Fuzz`" built on `choice`.
 
-**Code** (`core/src/Fuzz.nash` excerpt; the type and impl definitions are
+**Code** (`crates/nash-driver/base/src/Fuzz.nash` excerpt; the type and impl definitions are
 docs/testing.md's)
 
 ```elm
@@ -1023,7 +596,7 @@ choice element type: `Int`, not bytes (testing.md "Open questions").
 - `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` sampled through `Fuzz.run` stays in range.
 - Rust (plans/10 chunk 6): a shrink test that a failing `listOf int` counterexample shrinks to `[0]` or `[]`.
 
-**Done when** `nash test core/` runs the props with the plans/10 runner.
+**Done when** the in-process Base test runner runs the props with the plans/10 runner.
 
 ---
 
@@ -1031,7 +604,7 @@ choice element type: `Int`, not bytes (testing.md "Open questions").
 
 **Files**
 
-- `core/src/Test.nash`
+- `crates/nash-driver/base/src/Test.nash`
 - `crates/nash-codegen/src/test.rs` (plans/10 chunks 3–4: power-assert rewrite, `draw`/`run` programs)
 
 **Change**
@@ -1087,8 +660,8 @@ power-assert output through this module.
 
 **Files**
 
-- `core/src/Ast.nash`
-- `core/src/Derive.nash`
+- `crates/nash-driver/base/src/Ast.nash`
+- `crates/nash-driver/base/src/Derive.nash`
 - `core/tests/DeriveTests.nash`
 
 **Change**
@@ -1101,7 +674,7 @@ with native `string`/`int`/`bytes` fields, `option` slots, and `cons`
 child lists (chunk 6); `Ast` imports `Prelude`, `Cons`, `String`, and the
 trait modules. No `Data`, `Lift`, or Big type appears.
 
-**Code** (`core/src/Ast.nash` builders excerpt)
+**Code** (`crates/nash-driver/base/src/Ast.nash` builders excerpt)
 
 ```elm
 expr : exprNode -> expr
@@ -1129,10 +702,10 @@ and es =
         Cons e rest -> Cons.foldl (\b acc -> expr (BinOp (Global boolModule "and") acc b)) e rest
 
 builtinModule : modname
-builtinModule = { package = Some "nash/core", name = "Builtin" }
+builtinModule = { package = Some "nash/base", name = "Builtin" }
 
 boolModule : modname
-boolModule = { package = Some "nash/core", name = "Bool" }
+boolModule = { package = Some "nash/base", name = "Bool" }
 
 exprName : expr -> option string
 exprName (Expr _ node) =
@@ -1160,7 +733,7 @@ None; see plans/11.
 
 **Files**
 
-- `core/src/Cardano/Tx.nash`, `Cardano/Address.nash`, `Cardano/Value.nash`, `Cardano/Time.nash`
+- `crates/nash-driver/base/src/Cardano/Tx.nash`, `Cardano/Address.nash`, `Cardano/Value.nash`, `Cardano/Time.nash`
 - `core/tests/golden/*.cbor` (real V3 script contexts)
 - `core/tests/CardanoTests.nash`
 
@@ -1170,7 +743,7 @@ Big ADTs for the V3 `ScriptContext` per docs/stdlib.md, `Lift value Value`,
 interval helpers. Golden tests decode real contexts with
 `Validate.validate` and check a few fields.
 
-**Code** (`core/src/Cardano/Value.nash` excerpt)
+**Code** (`crates/nash-driver/base/src/Cardano/Value.nash` excerpt)
 
 ```elm
 module Cardano.Value exposing (..)
@@ -1206,20 +779,17 @@ truth for the encoding.
 `Some`; `Tx.inputs` length matches; `lovelace` of the first output
 matches the fixture.
 
-**Done when** all fixtures decode and `nash check core/` stays green.
+**Done when** all fixtures decode and the in-process Base compilation tests stays green.
 
 ---
 
 ## Test harness
 
-- `crates/nash-driver/src/compile.rs` `test_core_compiles`: builds an
-  empty in-memory project (core only). Every chunk keeps it green.
-- `nash test core/` (from plans/10) runs the `tests` blocks; CI runs it
-  after `cargo test`. Until plans/10 lands, `tests` blocks are parsed and
-  type-checked by `nash check` (plans/01 syntax, plans/10 chunks 1–2) but
-  not executed.
-- `crates/nash-ast` unit tests cover the `PRIMITIVES`/`BUILTINS` tables;
-  `crates/nash-core` covers the embedded sources.
+- `crates/nash-driver/tests/bundled_base.rs` compiles every embedded module and import-free applications through the driver library, without invoking the CLI.
+- `crates/nash-driver/tests/testing_base.rs` executes the Base fuzzer and test protocol through codegen and the evaluator.
+- `crates/nash-driver/tests/vesting.rs` compiles validators against bundled Base and executes serialized UPLC.
+- `nash-can` tests preserve source imports and enforce the real-only Builtin inventory.
+- CI runs these with `cargo test`; unit and integration tests do not spawn the Nash CLI.
 
 ## Open questions
 

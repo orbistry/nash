@@ -3,7 +3,7 @@
 Goal: implement [docs/macros.md](../docs/macros.md): `macro` declarations,
 `@attr` and `name!()` invocations, `quote`/`~`, the `Ast` reification in a
 new `nash-macro` crate, the expansion loop in `nash-driver`, hygiene,
-`comptime`, `@derive` in `nash/core`, diagnostics, and expansion snapshot
+`comptime`, `@derive` in `nash/base`, diagnostics, and expansion snapshot
 tests.
 
 Prerequisites:
@@ -20,14 +20,14 @@ Prerequisites:
   resolution with a hook to defer unresolved predicates.
 - plans/07 (codegen): `nash_codegen::lower_value(&ModuleSet, QualifiedName) -> &Term<DeBruijn>`
   and `Core::Const`.
-- plans/12 (stdlib) chunk "Ast": `core/src/Ast.nash` is the Nash side of the
+- plans/12 (stdlib) chunk "Ast": `crates/nash-driver/base/src/Ast.nash` is the Nash side of the
   reifier/unreifier in this plan (chunks 4 and 5), and chunk 6 there
   supplies `Cons.cons`. The tag table and `Ast.nash` must be changed
   together.
 
 Crates touched: `nash-source`, `nash-parse`, `nash-ast`, `nash-can`,
 `nash-constrain`, `nash-solve`, `nash-codegen`, `nash-driver`, `nash-report`,
-new `nash-macro`, `core/`.
+new `nash-macro`, `crates/nash-driver/base/`.
 
 References:
 
@@ -705,12 +705,12 @@ tests pass.
 
 - `crates/nash-macro/Cargo.toml` (new; deps: `nash-ast`, `nash-source`, `nash-region`, `nash-plutus`, `nash-can`, `nash-solve`, `bumpalo`)
 - `crates/nash-macro/src/lib.rs`, `tags.rs`, `reify.rs`
-- `core/src/Ast.nash`, `core/src/Cons.nash` (plans/12 chunks 10 and 6 — same PR)
+- `crates/nash-driver/base/src/Ast.nash`, `crates/nash-driver/base/src/Cons.nash` (plans/12 chunks 10 and 6 — same PR)
 
 **Change**
 
 Build, for a `MacroUse`, the UPLC `Term::Constr` tree that *is* the
-little `Ast` value the macro expects, matching `core/src/Ast.nash`. The
+little `Ast` value the macro expects, matching `crates/nash-driver/base/src/Ast.nash`. The
 tree is arena-allocated (`nash_plutus::arena::Arena`), constructor tags
 are declaration indices, leaves are `Constant::String`/`Integer`/
 `ByteString` constants, child lists are `Cons`/`Nil` chains, and the
@@ -755,7 +755,7 @@ pub mod assoc { pub const LEFT: u64 = 0; pub const RIGHT: u64 = 1; pub const NON
 pub mod option { pub const SOME: u64 = 0; pub const NONE: u64 = 1; }
 ```
 
-Matching Nash (`core/src/Ast.nash`, little types, order is load-bearing;
+Matching Nash (`crates/nash-driver/base/src/Ast.nash`, little types, order is load-bearing;
 the full listing is docs/macros.md "What the macro sees"):
 
 ```elm
@@ -979,7 +979,7 @@ chunk 5):
 
 - `reify_int_literal`: `1` → `Constr 0 [Constr 0 [Some (Constr 0 [ints..]), Some (Constr 1 [Global Builtin "int", Nil])], Constr 0 [(con integer 1)]]`.
 - `reify_lambda_local_binder`: `\x -> x` → binder and use both `Raw "x"`; the parameter list is `Cons (..) Nil`.
-- `reify_foreign_var`: `List.map` → `Global {package: Some "nash/core", name: "List"} "map"`.
+- `reify_foreign_var`: `List.map` → `Global {package: Some "nash/base", name: "List"} "map"`.
 - `reify_if_chain`: `if a then 1 else if b then 2 else 3` → nested `If`.
 - `reify_union_decl`: `type Foo 'a = A 'a | B` → `Union` with `kind = Some (Arrow Type Type)` and `representation = Some Big`.
 - `reify_no_data`: no `Constant::Data` anywhere in the tree for any input (walk and assert).
@@ -1639,12 +1639,12 @@ emits the constant in the UPLC output.
 
 ---
 
-## Chunk 10: `@derive` in `nash/core`
+## Chunk 10: `@derive` in `nash/base`
 
 **Files**
 
-- `core/src/Derive.nash` (new)
-- `core/src/Ast.nash` (builders section)
+- `crates/nash-driver/base/src/Derive.nash` (new)
+- `crates/nash-driver/base/src/Ast.nash` (builders section)
 - `crates/nash-driver/src/compile.rs` tests
 
 **Change**
@@ -1656,7 +1656,7 @@ renders `Ctor field1 field2` with parentheses for nested; `Validate` requires
 `ToData` and `FromData` need no derivation: their ordinary blanket Big impls
 cover every Big type, and generated concrete impls would overlap them.
 
-**Code** (`core/src/Derive.nash`, excerpt beyond the doc's `deriveEq`)
+**Code** (`crates/nash-driver/base/src/Derive.nash`, excerpt beyond the doc's `deriveEq`)
 
 ```elm
 deriveOrd : decl -> decl
@@ -1712,7 +1712,7 @@ Aiken derives nothing; `Eq` via `==` is builtin on all types. Haskell's
 
 **Tests**
 
-- `core/src/Derive.nash` `tests` block: cannot invoke `derive` in its own module, so the tests live in `core/tests/DeriveTests.nash` (a test-only module) with `@derive(Eq, Ord, Show)` on a three-constructor little type and a two-field Big record, and `prop`s for reflexivity, antisymmetry, `show` round trip via a hand-written parser stub.
+- `crates/nash-driver/base/src/Derive.nash` `tests` block: cannot invoke `derive` in its own module, so the tests live in `core/tests/DeriveTests.nash` (a test-only module) with `@derive(Eq, Ord, Show)` on a three-constructor little type and a two-field Big record, and `prop`s for reflexivity, antisymmetry, `show` round trip via a hand-written parser stub.
 - Driver expansion snapshot (chunk 12): `@derive(Eq)` on `type Foo = A int | B` prints the generated `impl`.
 
 **Done when** `nash test core/` passes and the snapshot matches

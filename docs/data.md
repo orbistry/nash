@@ -103,13 +103,13 @@ trait ToData ('a : Big) where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
-    toData = Builtin.coerce
+    toData = Primitive.coerce
 
 trait FromData ('a : Big) where
     fromData     : Data -> 'a     -- unchecked identity
 
 impl FromData ('a : Big) where
-    fromData = Builtin.coerce
+    fromData = Primitive.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a     -- required recursive validation
@@ -128,7 +128,7 @@ blanket impls. `Validate` is separate and opt-in: core provides impls for
 `Int`, `Bytes`, `Data`, `List 'a` and `Map 'k 'v`; user types need a source
 `Validate` impl. `@derive(Validate)` remains future macro work.
 
-`fromData` uses `Builtin.coerce`, an unchecked identity. It checks
+`fromData` uses `Primitive.coerce`, an unchecked identity. It checks
 neither the outer Data shape nor nested fields. Malformed data fails only
 if a later operation needs the expected shape; a value that is never inspected
 can pass through unchanged. `Validate.validate` is the required method of a separate trait:
@@ -136,7 +136,7 @@ core impls check the shape and recursively validate collection elements.
 `Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
 result-based decoding.
 
-`toData` uses `Builtin.coerce`: every Big value already has its Data
+`toData` uses `Primitive.coerce`: every Big value already has its Data
 representation. Conversion preserves that value and its wire encoding without
 traversing or rebuilding it. Concrete `ToData` impls would overlap the blanket
 impl and are rejected.
@@ -147,7 +147,7 @@ For example, validation is an ordinary source impl:
 impl Validate Int where
     validate value =
         case value of
-            I _ -> Builtin.coerce value
+            I _ -> Primitive.coerce value
             _ -> fail
 ```
 
@@ -156,7 +156,7 @@ original value. List and map validation retains recursive source checks.
 The actual builtin `iData` has type `int -> Int`; the existing constructor
 `I` has type `int -> Data`. Both emit the same UPLC Data shape.
 
-`Builtin.coerce : 'a -> 'b` is an explicit compiler intrinsic, not a Plutus
+`Primitive.coerce : 'a -> 'b` is an explicit compiler intrinsic, not a Plutus
 builtin. Its two type variables accept any value types independently,
 including functions, with no representation constraint. It performs no
 validation and no runtime representation change. It is therefore the caller's
@@ -166,7 +166,7 @@ The real Plutus builtin inventory stays unchanged.
 ## `Lift` between representations
 
 `Lift 'small 'big` connects a `Const` type to the Big type with the same
-content. The impls shipped in `core/` are the table of
+content. The impls shipped in `crates/nash-driver/base/` are the table of
 [representation.md](representation.md) (which is authoritative):
 
 | `'small` | `'big` | `lift` | `lower` |

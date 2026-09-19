@@ -214,7 +214,7 @@ predicateAll p xs =
 
 ## What the macro sees: the `Ast` module
 
-`nash/core` ships an `Ast` module. Every type in it is a **little** ADT
+`nash/base` ships an `Ast` module. Every type in it is a **little** ADT
 (representation `Term`): a value is a UPLC `constr` tree whose leaves are `string`,
 `int`, and `bytes` constants, exactly the layout of any user little type
 ([representation.md](representation.md)). The compiler builds that tree
@@ -433,7 +433,7 @@ Semantics:
 
 - `quote` is resolved during canonicalization of the *macro's* module.
   Free names inside the quote resolve there and become `Global` names.
-  `==` above becomes `BinOp (Global {nash/core} Eq "eq")` (the method
+  `==` above becomes `BinOp (Global {nash/base} Eq "eq")` (the method
   the `Prelude` infix binds to). The invocation site does not need to
   import `Prelude` or `Eq` items for the spliced code to work.
 - Binders introduced inside the quote (`\x ->`, `let y =`, pattern
@@ -652,7 +652,7 @@ generator is `comptime` is a constant and is a warning.
 ## Deriving
 
 `@derive(Eq, Ord, Show, Validate)` is the declaration macro
-`Derive.derive` from `nash/core`, exposed by the default imports. It
+`Derive.derive` from `nash/base`, exposed by the default imports. It
 dispatches on the trait name and appends one `impl` per trait after the
 original declaration.
 

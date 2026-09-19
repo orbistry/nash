@@ -34,9 +34,9 @@ element's Nash type: a `Const` element erases to its own UPLC `Type`; a
 `list Int` and `list Data` and `list (List Int)` are all `List(Data)`, and
 `list (list bytes)` is `List(List(ByteString))`.
 
-All primitive type names are in scope both unqualified and under `Builtin`,
+All primitive type names are in scope both unqualified and under `Primitive`,
 without a value import. Local type declarations can shadow the unqualified
-name. `()` in a source type canonicalizes to the named type `Builtin.unit`;
+name. `()` in a source type canonicalizes to the named type `Primitive.unit`;
 canonical types, inference, instance heads and diagnostics use this same
 identity. Unit expressions and patterns keep their dedicated syntax nodes.
 
@@ -273,25 +273,25 @@ trait ToData ('a : Big) where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
-    toData = Builtin.coerce
+    toData = Primitive.coerce
 
 trait FromData ('a : Big) where
     fromData     : Data -> 'a
 
 impl FromData ('a : Big) where
-    fromData = Builtin.coerce
+    fromData = Primitive.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a
 ```
 
-- `toData` uses `Builtin.coerce`. The ordinary blanket impl covers
+- `toData` uses `Primitive.coerce`. The ordinary blanket impl covers
   every Big type, including user ADTs, nominal aliases, lists and maps, without
   element `ToData` constraints. It preserves the existing runtime Data value
   and wire encoding without traversal or reconstruction.
 - `fromData` also has an ordinary blanket impl for every Big type, including
   user ADTs, nominal record aliases and collections, without validation
-  constraints. It uses unchecked `Builtin.coerce` and checks neither the
+  constraints. It uses unchecked `Primitive.coerce` and checks neither the
   outer shape nor nested fields and preserves the original runtime value.
   Malformed data fails only when a later operation needs its expected shape.
 - `Validate.validate` is the required method of a separate opt-in trait. Core Int and Bytes impls check
@@ -308,7 +308,7 @@ carry nominal types: `iData : int -> Int`, `unIData : Int -> int`, and
 similarly for Bytes, List and Map. Existing universal Data constructors
 and patterns remain unchanged; no new wrapper constructors are introduced.
 
-`Builtin.coerce : 'a -> 'b` is an explicit unchecked compiler intrinsic.
+`Primitive.coerce : 'a -> 'b` is an explicit unchecked compiler intrinsic.
 Both variables independently accept any value type, including functions,
 without representation constraints. It changes no runtime representation
 and performs no validation; a cast between incompatible representations does
@@ -326,7 +326,7 @@ Rough CEK costs, to guide the choice of representation:
 | field i | `sndPair` + i `tailList` + `headList`, plus one `un*Data` if the field is used as a little value | one `case` with a lambda that selects the field |
 | `lift`/`lower` of `int`/`bytes` | one builtin call each way | |
 | `lift`/`lower` of a list | O(n) map unless the element impl is reflexive | |
-| `toData` / `fromData` / `Builtin.coerce` | identity; no traversal | |
+| `toData` / `fromData` / `Primitive.coerce` | identity; no traversal | |
 | `validate` | O(size of the Data) | |
 
 Consequences:

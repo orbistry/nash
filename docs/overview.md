@@ -65,7 +65,7 @@ implementation, default imports, Fuzz and the full validator example.
 | Named ctor fields | `type Datum = Datum { owner : Bytes, deadline : Int }` is a constructor with *labeled fields* (Aiken style), not a nested record: encoded flat (`Constr 0 [B, I]` / `constr 0 [..]`), fields follow the enclosing type's representation rule, `.field` access allowed on single-constructor types, record-style construction `Datum { owner = o, deadline = d }` and pattern `Datum { owner, deadline }` allowed; record update only on alias records in v1. Anonymous record *types* are not allowed anywhere else; use `type alias`. |
 | Prelude twins | `bool`/`Bool`, `unit`/`Unit`, `option`/`Option`, `result`/`Result`, `ordering`/`Ordering`. Little constructors are exposed unqualified by the prelude (`True`, `Some`, `Ok`, `LT`...); Big twins only qualified (`Bool.True`, `Option.Some`). `if` takes `bool`. |
 | `Data` | Big type with constructors `Constr tag fields | Map kvs | List xs | I n | B bs`; pattern-matchable. Decoder combinators built on top in the stdlib. |
-| Big <-> little | Explicit. `ToData`/`FromData` on Big types (`toData` implemented with `Builtin.coerce` through an ordinary blanket impl for all Big types, unchecked `fromData` implemented with `Builtin.coerce` through its own blanket impl, and opt-in `Validate.validate` for recursive checking in Nash source). `Lift 'small 'big` multi-param trait (`lift`/`lower`) between reprs; built-in reflexive `impl Big 'a => Lift 'a 'a` (exempt from head rules) so `Lift 'a 'b => Lift (list 'a) (List 'b)` covers `list Int`. `validate : Data -> 'a` traps on mismatch; `Data.Decode` is the non-failing path. `Builtin.coerce : 'a -> 'b` is explicit unchecked runtime identity for any value types, including functions; it changes no representation and validates no shape. No implicit coercion. |
+| Big <-> little | Explicit. `ToData`/`FromData` on Big types (`toData` implemented with `Primitive.coerce` through an ordinary blanket impl for all Big types, unchecked `fromData` implemented with `Primitive.coerce` through its own blanket impl, and opt-in `Validate.validate` for recursive checking in Nash source). `Lift 'small 'big` multi-param trait (`lift`/`lower`) between reprs; built-in reflexive `impl Big 'a => Lift 'a 'a` (exempt from head rules) so `Lift 'a 'b => Lift (list 'a) (List 'b)` covers `list Int`. `validate : Data -> 'a` traps on mismatch; `Data.Decode` is the non-failing path. `Primitive.coerce : 'a -> 'b` is explicit unchecked runtime identity for any value types, including functions; it changes no representation and validates no shape. No implicit coercion. |
 | Literals | Polymorphic via `FromInt` / `FromString` / `FromBytes` traits. Ambiguous literals default to little (`int`, `string`, `bytes`). |
 | Operators | Trait methods (`Num`, `Integral`, `Eq`, `Ord`, `Semigroup`, ...). Elm's `number`/`comparable`/`appendable` supertypes removed. |
 | Operator sections | Whole `(+)` plus partial `(> 5)` / `(5 >)`, canonicalized to hygienic lambdas; `(-x)` stays negation. |
@@ -82,7 +82,7 @@ implementation, default imports, Fuzz and the full validator example.
 | Recursion | Self-application with static-parameter lifting; mutual recursion via a combined dispatcher. No Y combinator. |
 | Runtime errors | `fail`, `todo`, `trace`, `assert`. Trace levels silent / compact / verbose; compiler-generated traces separate switch. |
 | Diagnostics | Concise diagnostics with expected/actual types, source labels, stable codes, and shared terminal/JSON/LSP output. One `nash-report` crate. |
-| Stdlib | `nash/core` package in-repo (`core/`), implicit default imports like Elm's `core`. `Builtin` exposes real UPLC builtins with nominally typed Data conversion signatures plus the separate unchecked compiler intrinsic `coerce`; the real builtin inventory is unchanged. One module per type pair named by the uppercase name (`List`, `Int`, ...); functions operate on the little twin; Big twins only carry `Lift`/`ToData`/`FromData`/`Validate`. No Big `String`. |
+| Stdlib | `nash/base` package in-repo (`crates/nash-driver/base/`), implicit default imports like Elm's `core`. `Builtin` exposes only real UPLC builtin functions. Synthetic `Primitive` owns primitive types, representation traits, constructors, and unchecked `coerce`. Base ships embedded in `nash-driver`; applications need no explicit dependency or download. Defaults affect canonical scope, not source imports. One module per type pair named by the uppercase name (`List`, `Int`, ...); functions operate on the little twin; Big twins only carry `Lift`/`ToData`/`FromData`/`Validate`. No Big `String`. |
 | Exposing little types | `exposing (type option(..), map)` — the `type` prefix marks a lowercase type in exposing/import lists. |
 | Target | Plutus V3, latest builtins (`case`/`constr`, bitwise, BLS, arrays, ledger `Value`). |
 | CLI v1 | `nash check`, `nash build`, `nash test`, `nash fmt`, `nash docs`, `nash lsp`. |
@@ -226,7 +226,7 @@ crates/
   nash-docs            doc generator                     (new)
   nash-plutus          UPLC runtime
   nash-config / nash-driver / nash-cli / nash-language-server
-core/                  the `nash/core` package (Nash source)
+crates/nash-driver/base/  compiler-bundled Base (Nash source)
 ```
 
 ## Component docs
@@ -241,5 +241,5 @@ core/                  the `nash/core` package (Nash source)
 - [macros.md](macros.md) — procedural macros, `@derive`, `comptime`
 - [codegen.md](codegen.md) — Core IR, lowering, pattern compilation, recursion, optimizations
 - [diagnostics.md](diagnostics.md) — error reporting architecture
-- [stdlib.md](stdlib.md) — `nash/core` layout, prelude, `Builtin`
+- [stdlib.md](stdlib.md) — `nash/base` layout, prelude, `Builtin`
 - [cli.md](cli.md) — commands and outputs

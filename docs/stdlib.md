@@ -1,10 +1,15 @@
-# Standard library: `nash/core`
+# Standard library: `nash/base`
 
-`nash/core` is a normal Nash package that lives in this repository under
-`core/`. It is embedded into the compiler at build time, so `nash check`
-works offline and every compiler version ships exactly one core. The
-compiler special-cases a small, listed set of its names. Everything else
-is ordinary Nash.
+`nash/base` is the compiler-owned foundation library. Its Nash sources live
+in `crates/nash-driver/base/src/` and are embedded in `nash-driver` at build
+time. Applications neither declare a Base dependency nor download it. A new
+Base version ships with a new compiler version; there is no independently
+versioned Base package or separate `nash-base` crate.
+
+The driver reads these sources through stable `nash-base:///Module.nash`
+URIs. Compilation and diagnostics need no installed source directory and do
+not depend on the compiler checkout. Bundled sources are read-only. The
+package identity `nash/base` and its module names are reserved.
 
 Decisions here follow [overview.md](overview.md), the trait hierarchy and
 module split in [traits.md](traits.md), the layouts in
@@ -14,11 +19,12 @@ module split in [traits.md](traits.md), the layouts in
 
 ## Layout
 
+The layout includes planned library modules as well as the current foundation.
+`Primitive` and `Builtin` are synthetic modules with no Nash source file.
+
 ```
-core/
-  nash.jsonc
+crates/nash-driver/base/
   src/
-    Builtin.nash          synthetic; see "Builtin"
     Prelude.nash          infix declarations, basics
     Eq.nash               trait Eq + impls for compiler-known types
     Ord.nash              trait Ord
@@ -74,40 +80,16 @@ module whose functions take the Big type, because its little form
 text in Big positions is `Bytes` holding UTF-8, and `String.nash` is the
 little `string` module.
 
-`core/nash.jsonc`:
-
-```jsonc
-{
-    "type": "package",
-    "name": "nash/core",
-    "version": "0.1.0",
-    "summary": "Nash standard library",
-    "license": "Apache-2.0",
-    "exposedModules": {
-        "Prelude": ["Prelude", "Builtin", "Debug"],
-        "Traits": ["Eq", "Ord", "Show", "Num", "Integral", "Semigroup", "Monoid", "Functor", "Applicative", "Monad", "Lift", "Data", "Literal"],
-        "Types": ["Bool", "Unit", "Option", "Result", "Ordering", "Int", "Bytes", "String", "List", "Cons", "Pair", "Array", "Map"],
-        "Data": ["Data.Decode", "Data.Encode"],
-        "Testing": ["Fuzz", "Test"],
-        "Macros": ["Ast", "Derive"],
-        "Cardano": ["Cardano.Tx", "Cardano.Address", "Cardano.Value", "Cardano.Time"]
-    },
-    "dependencies": {}
-}
-```
-
 ## Default imports
 
-Default imports are deferred to Plan 12's stdlib integration. Plan 03 uses
-explicit imports of real core modules; it does not install partial defaults
-or placeholder modules. The list below specifies the eventual behavior.
-
-Every module outside `nash/core` starts with these imports, prepended by
-`nash-can` (Elm's `Elm.Compiler.Imports.defaults`,
-`elm/compiler/src/Elm/Compiler/Imports.hs`). `exposing (Trait)` exposes
-the trait and all its methods (traits.md).
+Every module outside `nash/base` receives the following scope during
+canonicalization. These imports are not inserted into the source AST or
+formatted source. The driver adds dependency edges using the same catalog,
+and diagnostic localization uses the same exposing rules.
+`exposing (Trait)` exposes the trait and all its methods (traits.md).
 
 ```elm
+import Primitive exposing (..)
 import Prelude exposing (..)
 import Eq exposing (Eq)
 import Ord exposing (Ord)
@@ -128,16 +110,9 @@ import Option exposing (Option, type option(..))
 import Result exposing (Result, type result(..))
 import Ordering exposing (Ordering, type ordering(..))
 import Cons exposing (type cons(..))
-import Derive exposing (derive)
-import Debug
 import Builtin
-import Int
-import Bytes
-import String
-import List
 import Pair
 import Array
-import Map
 import Fuzz
 import Test
 ```
@@ -155,7 +130,7 @@ Consequences, matching representation.md "Prelude twins":
   (`Option`, `Bool`). No resolution by expected type is involved.
 - Operators come from `Prelude` (the `infix` declarations) and the methods
   they bind to come from the trait modules; both are in scope.
-- Modules inside `nash/core` get no defaults and import explicitly (Elm
+- Modules inside `nash/base` get no defaults and import explicitly (Elm
   does the same for `elm/core`).
 - `Fuzz` and `Test` are default imports so `tests` blocks can use
   `Fuzz.int` and `label`; `Test.label` is additionally exposed unqualified
@@ -167,7 +142,7 @@ Differences from Elm's list: no `Char`, `Tuple`, `Platform`, `Cmd`, `Sub`.
 
 ## Compiler-known types
 
-The `Builtin` module is seeded by the compiler with every builtin type
+The `Primitive` module is seeded by the compiler with every builtin type
 constructor (kinds.md "Datatype contexts", plans/02's
 `nash-ast/src/primitives.rs`). They have no Nash declaration and every
 one is in scope everywhere:
@@ -184,14 +159,14 @@ in `nash-can`). `unit` has `()`. `Data` has `Constr`, `Map`, `List`, `I`,
 
 Impls for compiler-known types live in the trait's module, because the
 orphan rule needs either the trait or the head type to be local and
-`Builtin` has no source.
+`Primitive` has no source.
 
 ## Prelude
 
 `Prelude` holds only the `infix` table, the non-method functions the
 table binds (`|>`, `<|`, `<<`, `>>`, `::` targets, plus
 `identity`/`always`), and the prelude impls: impls for tuples, which
-count as defined in `nash/core` under the orphan rule. Everything else
+count as defined in `nash/base` under the orphan rule. Everything else
 lives in the trait modules or the type modules. `Prelude` imports every
 trait module and `Bool` (for `&&`/`||`); none of those import `Prelude`.
 The `::` target is named `prepend` (not `cons`, which is the `Cons`
@@ -444,19 +419,19 @@ first head, so both exist.
 ```elm
 module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
 
-import Builtin exposing (Data(..))
+import Primitive exposing (Data(..))
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
-    toData = Builtin.coerce
+    toData = Primitive.coerce
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a
 
 impl FromData ('a : Big) where
-    fromData = Builtin.coerce
+    fromData = Primitive.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a
@@ -468,7 +443,7 @@ impl Validate Data where
 impl Validate Int where
     validate value =
         case value of
-            I _ -> Builtin.coerce value
+            I _ -> Primitive.coerce value
             _ -> fail
 
 serialise : Data -> bytes
@@ -490,13 +465,13 @@ fields d =
 `Data` fields in patterns are little (`Constr int (list Data)`), as data.md
 specifies, so no `lower` is needed on `t` and `fs`.
 Other Big types remain nominally distinct from Data. `fromData` uses
-unchecked `Builtin.coerce`, with no outer-shape or nested checks. Malformed
+unchecked `Primitive.coerce`, with no outer-shape or nested checks. Malformed
 data fails only if a later operation needs its expected shape. Its blanket impl
 also covers user ADTs, nominal record aliases and collections, without any
 validation constraints. The required
 `Validate.validate` method is separate: Int and Bytes check the shape and coerce
 the original value, while List and Map retain recursive source validation.
-`toData` uses `Builtin.coerce` directly in one ordinary blanket impl
+`toData` uses `Primitive.coerce` directly in one ordinary blanket impl
 for every Big type. User ADTs, nominal aliases, lists and maps all qualify,
 without element `ToData` constraints or reconstruction. Additional concrete
 impls overlap this blanket impl and are rejected. Data.Decode provides the
@@ -577,17 +552,17 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 
 | Name | Treatment |
 |---|---|
-| `Builtin.bool`, `False`, `True` | `if` scrutinee type; UPLC `bool` constants; `Ctor::Bool` in `nash-can` (`crates/nash-can/src/environment/foreign.rs`, `make_union_ctor`) |
-| `Builtin.unit`, `()` | UPLC `unit` constant |
-| `Builtin.Data` and its constructors | pattern-matchable Big type (data.md) |
-| `Builtin.list`, `[..]`, `::` patterns | list literals and patterns; element predicate `Storable` |
+| `Primitive.bool`, `False`, `True` | `if` scrutinee type; UPLC `bool` constants; `Ctor::Bool` in `nash-can` (`crates/nash-can/src/environment/foreign.rs`, `make_union_ctor`) |
+| `Primitive.unit`, `()` | UPLC `unit` constant |
+| `Primitive.Data` and its constructors | pattern-matchable Big type (data.md) |
+| `Primitive.list`, `[..]`, `::` patterns | list literals and patterns; element predicate `Storable` |
 | `Bool.and`, `Bool.or` | second argument delayed (`&&`, `||` are lazy) |
 | `Literal.FromInt`, `FromString`, `FromBytes` | literal desugaring and defaulting to `int`, `string`, `bytes` |
 | `Eq.Eq` | literal patterns |
 | `Monad.Monad` | `do` desugaring target |
 | `Show.Show` | power-assert rendering of operands |
 | Real `Builtin.*` operations | direct UPLC builtin nodes (below) |
-| `Builtin.coerce` | unchecked compiler intrinsic; runtime identity |
+| `Primitive.coerce` | unchecked compiler intrinsic; runtime identity |
 | `Debug.trace`, `Debug.todo`, `Debug.fail` | trace levels, compiler-generated traces switch |
 | `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
 | `Fuzz.fuzzer`, `Fuzz.Prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
@@ -596,23 +571,24 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 
 ## Builtin
 
-`Builtin` is a synthetic module: it has no `.nash` source. Its interface
-is generated from the Rust tables in `crates/nash-ast/src/primitives.rs`:
-`PRIMITIVES` (the compiler-known types, plans/02 chunk 3) and `BUILTINS`,
-which maps each `DefaultFunction` variant by its symbolic Rust name
-(`crates/nash-plutus/src/builtin/default_function.rs`) to a Nash name and
-type, plus the type constructors from plans/02's primitives table. The typed
-value table is in `primitives/builtins.rs`, re-exported by `primitives.rs`.
-The canonicalizer derives representation predicates from those types; the backend
-resolves the symbolic variant without making the AST depend on the runtime.
-The `unit` spelling and `()` both canonicalize to the same unit type,
-including in impl heads.
+`Builtin` is a synthetic module containing only actual Plutus Core builtin
+functions. Its interface comes from `BUILTINS` in
+`crates/nash-ast/src/primitives/builtins.rs`, re-exported by `primitives.rs`.
+Each entry maps a `DefaultFunction` variant to a Nash name and type.
+The canonicalizer derives representation predicates from those signatures;
+the backend resolves the symbolic variant without making the AST depend on
+the runtime.
+
+`Primitive` separately owns the compiler-known types, their constructors,
+and the representation traits `Const`, `Little`, `Big`, `Term`, and `Storable`.
+The `unit` spelling and `()` canonicalize to the same primitive type.
+
 `nash-can` resolves real `Builtin.foo` operations to `VarForeign { home: Builtin }` and
 `nash-codegen` lowers that to `Core::Builtin` (plans/07 chunk 4),
 applying the variant's `force_count()` forces. `nash docs` renders the
 same table.
 
-The module also exposes `coerce : 'a -> 'b`, an unchecked compiler
+`Primitive` exposes `coerce : 'a -> 'b`, an unchecked compiler
 intrinsic separate from the real Plutus builtin inventory. Its type variables
 independently accept any value types, including functions, without
 representation constraints. It returns the original runtime value with no
@@ -755,14 +731,14 @@ import Builtin
 type Bool = False | True
 
 not : bool -> bool
-not b = if b then Builtin.False else Builtin.True
+not b = if b then Primitive.False else Primitive.True
 
 -- special-cased: lazy in the second argument
 and : bool -> bool -> bool
-and a b = if a then b else Builtin.False
+and a b = if a then b else Primitive.False
 
 or : bool -> bool -> bool
-or a b = if a then Builtin.True else b
+or a b = if a then Primitive.True else b
 
 xor : bool -> bool -> bool
 xor a b = if a then not b else b

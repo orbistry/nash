@@ -155,19 +155,12 @@ impl Localizer {
 }
 ```
 
-`defaults` are the implicit imports canonicalization prepends
-(`docs/stdlib.md`, "Default imports": `import Prelude exposing (..)` plus
-qualified `Int`, `List`, `Data`, ...). They are registered with their real
-exposing, so the dual prelude types (`Int`, `int`, `List`, `list`, `Data`,
-`option`, ...) render bare through the open `Prelude` import and, say,
-`Data.Map.Map` renders as `Data.Map.Map` unless the user exposed it. That
-subsumes Elm's hard-coded `List` special case.
-
-Compiler primitive types from `nash_ast::primitives::PRIMITIVES` are already
-available without imports. The localizer includes that current inventory and
-keeps shadowed primitives qualified. Prelude default imports remain Plan 12;
-the driver currently supplies no future default imports. Local union ownership
-and package identity are retained for actionable impl advice.
+`defaults` are the implicit imports from `nash-can::defaults` (stdlib.md).
+The driver supplies the same catalog to the localizer and canonicalizer.
+Their exposing rules determine which type names render unqualified, without
+changing source imports. Compiler primitive types are available without
+imports; shadowed primitives remain qualified as `Primitive.Int`, for example.
+Local union ownership and package identity are retained for impl advice.
 
 The localizer is built once per module by the driver from the *source*
 module (it only needs the import list) and is threaded to every type
@@ -231,7 +224,7 @@ Driver-level errors (`nash_driver::DriverError`: file not found, config
 problems, import cycles) already derive `miette::Diagnostic` via
 `thiserror` and keep doing so; they are not `Report`s.
 
-The following examples are checked against the shipping `core/` package by the
+The following examples are checked against the shipping `crates/nash-driver/base/` package by the
 CLI integration tests. Output uses `--color=never --no-warnings`; only the
 project path is shortened to `src/`. `map` currently comes from `Functor`; a
 future `List` convenience module is not assumed.
@@ -308,7 +301,7 @@ nash::type::missing_impl
 
 ```elm
 module Tag exposing (tag)
-import Builtin exposing (Data(..))
+import Primitive exposing (Data(..))
 import Literal exposing (FromInt)
 
 tag : Data -> int

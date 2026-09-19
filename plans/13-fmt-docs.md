@@ -287,7 +287,7 @@ the side-table approach.
   comments.
 - `comments_preserved`: for each input, count of `--`/`{-` in output
   equals count in input.
-- Idempotency over the whole `core/` tree once it exists.
+- Idempotency over the whole `crates/nash-driver/base/` tree once it exists.
 
 **Done when** `nash fmt --check core/` reports no changes after one
 `nash fmt core/`.
@@ -324,7 +324,7 @@ pub struct Args {
 CLI integration test with a temp dir: `--check` exit codes, in-place
 rewrite, `--stdin` round trip.
 
-**Done when** CI runs `nash fmt --check` on `core/` and the repo's
+**Done when** CI runs `nash fmt --check` on `crates/nash-driver/base/` and the repo's
 examples.
 
 ---
@@ -381,7 +381,7 @@ index).
 Snapshot `ModuleDocs` for a module with `@docs`, one of each block kind,
 and a missing name (warning present, docs still produced).
 
-**Done when** `extract` runs over `core/` without warnings.
+**Done when** `extract` runs over `crates/nash-driver/base/` without warnings.
 
 ---
 
@@ -418,7 +418,7 @@ pub struct Args {
 - HTML: snapshot with the CSS stripped; a smoke test that the index links
   to every module.
 
-**Done when** `nash docs` on `core/` produces a browsable site and CI
+**Done when** `nash docs` on `crates/nash-driver/base/` produces a browsable site and CI
 publishes it for the repo.
 
 ---

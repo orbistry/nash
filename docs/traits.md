@@ -191,7 +191,7 @@ separately by Haskell 98 unification before table insertion.
 
 **Orphan rule.** An impl in module `M` is legal only if the trait `T` is
 defined in `M`, or at least one head constructor is defined in `M`. Unit and
-tuples count as defined in `nash/core`. Bare variable heads require the trait
+tuples count as defined in `nash/base`. Bare variable heads require the trait
 to be defined in `M`; a local constructor in another head does not permit a
 bare variable head for a foreign trait. This allows trait owners to provide
 ordinary blanket impls, such as `impl ToData ('a : Big) where` in `Data`.
@@ -206,7 +206,7 @@ impl contexts; contexts do not make these ordinary impls disjoint. Overlap
 remains an error; declaration order does not select an impl.
 Check this across
 all build interfaces as well as within a module. In particular, separate
-modules in `nash/core` may both satisfy the orphan rule for unit or tuple
+modules in `nash/base` may both satisfy the orphan rule for unit or tuple
 heads; that ownership does not permit duplicate impls.
 
 Consequence: the impl table is global. Canonicalization builds it from
@@ -235,7 +235,7 @@ when it needs one that is missing.
   instantiated at `P`'s arguments.
 
 After checking givens, resolution recognizes the compiler-owned reflexive
-rule only for package `nash/core`, module `Lift`, trait `Lift`. Both arguments
+rule only for package `nash/base`, module `Lift`, trait `Lift`. Both arguments
 must already be equal and their representation must be proven Big. Resolution must
 not unify unknown arguments or narrow a rigid variable's representation to select
 this rule. A same-named trait elsewhere receives no special behavior.
@@ -375,8 +375,8 @@ definition and list equal requirements once.
 For each ambiguous variable, in order:
 
 - If its predicates include exactly one distinct literal trait from package
-  `nash/core`, module `Literal` (`FromInt`, `FromString`, `FromBytes`), unify
-  it with `Builtin.int`, `Builtin.string`, or `Builtin.bytes` respectively.
+  `nash/base`, module `Literal` (`FromInt`, `FromString`, `FromBytes`), unify
+  it with `Primitive.int`, `Primitive.string`, or `Primitive.bytes` respectively.
   The predicate's sole argument must be that variable, not a type containing
   it. Repeated requirements of the same trait still select one default.
 - Otherwise report an ambiguous type error listing the predicates.
@@ -534,7 +534,7 @@ region supplies diagnostics.
 
 ## Core trait hierarchy
 
-Decision: shipped in `nash/core` as one module per trait (`Eq`, `Ord`,
+Decision: shipped in `nash/base` as one module per trait (`Eq`, `Ord`,
 `Show`, `Num`, `Integral`, `Semigroup`, `Monoid`, `Functor`,
 `Applicative`, `Monad`, `Lift`, `Data` for `ToData`/`FromData`/`Validate`, and
 `Literal` for the three literal traits), all imported implicitly with the
@@ -589,13 +589,13 @@ trait ToData ('a : Big) where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
-    toData = Builtin.coerce
+    toData = Primitive.coerce
 
 trait FromData ('a : Big) where
     fromData : Data -> 'a                       -- unchecked identity
 
 impl FromData ('a : Big) where
-    fromData = Builtin.coerce
+    fromData = Primitive.coerce
 
 trait Validate ('a : Big) where
     validate : Data -> 'a                   -- required recursive validation; traps on bad data
@@ -689,7 +689,7 @@ has a declared scheme, so it is always constrained through its annotation.
   `impl Lift 'a 'a` carries `Big 'a`.
 - **Representation** ([representation.md](representation.md)): `Lift`,
   `ToData`, `FromData` provide explicit source conversions. The separate
-  `Builtin.coerce : 'a -> 'b` intrinsic is unchecked identity for any two
+  `Primitive.coerce : 'a -> 'b` intrinsic is unchecked identity for any two
   value types, including functions; it has no representation constraints
   and does not change the runtime representation. `fromData` uses
   it and checks no shape; `Validate.validate` is a required method of a
@@ -864,7 +864,7 @@ for it. `Mode::Strict`, the default, is everything above.
 - **Method-bound operators inside the defining module.** Today a module's
   own `infix` declarations do not enter its env (Elm rule); operators
   bound to local methods therefore need the method called by name in the
-  defining module. `nash/core` is written that way.
+  defining module. `nash/base` is written that way.
 
 Implementation lookup uses the existing `ImplKey` map ordering: start at the
 requested trait with an empty head slice and stop when the trait changes.

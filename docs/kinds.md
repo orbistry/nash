@@ -99,7 +99,7 @@ type alias count = int                                  -- ok
 
 ## Representation predicates
 
-Five compiler-owned traits live in `Builtin` and are re-exposed by the
+Five compiler-owned traits live in `Primitive` and are re-exposed by the
 prelude. They have no user impls; the compiler resolves them structurally
 from the head constructor:
 

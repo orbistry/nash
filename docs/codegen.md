@@ -111,7 +111,7 @@ and `unBData : Bytes -> bytes`. Collection constructors and destructors
 similarly preserve their Big element types. Existing `Data` constructors
 and patterns expose universal Data shapes.
 
-`Builtin.coerce : 'a -> 'b` is a separate compiler intrinsic, not a real
+`Primitive.coerce : 'a -> 'b` is a separate compiler intrinsic, not a real
 Plutus builtin. It accepts any value types independently, including
 functions, without representation constraints. Applied coercions lower to
 runtime identity with no validation, traversal, or representation change;
@@ -124,7 +124,7 @@ even the outer Data shape; malformed data fails only if a later operation
 needs that shape. `Validate.validate` is a required source method on a separate opt-in trait.
 Int and Bytes validation matches the Data shape then coerces the original
 value; List and Map retain recursive source validation. `ToData.toData` also
-uses `Builtin.coerce`: its ordinary blanket impl covers every Big type
+uses `Primitive.coerce`: its ordinary blanket impl covers every Big type
 and preserves the runtime value without reconstruction or traversal. There are no generated
 validation checkers. Ordinary identity remains a Nash function; `fail` is
 language syntax, not an entry in the builtin table.

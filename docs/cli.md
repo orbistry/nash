@@ -159,7 +159,7 @@ Rust side (`crates/nash-config/src/config.rs`): `PlutusVersion` and
 ## Open questions
 
 - **`nash init`** needs a template stdlib import list and a default
-  `compiler` pin. Both depend on the first published `nash/core` version.
+  `compiler` pin. Both depend on the first published `nash/base` version.
 - **`--json` shape** for `nash test` is specified in testing.md; compile
   errors from `check`, `build` and `test` use nash-report's Elm-shaped JSON
   (`--report=json`, [diagnostics.md](diagnostics.md)). Whether a stable
