@@ -56,11 +56,11 @@ impl ToData 'a => ToData (List 'a) where
 impl FromData 'a => FromData (List 'a) where
     fromData value =
         case value of
-            List values -> Builtin.listData (mapList fromData values)
+            List values -> Builtin.listData values
             _ -> fail
     validateData value =
         case value of
-            List values -> Builtin.listData (mapList validateData values)
+            List values -> Builtin.listData values
             _ -> fail
 
 impl (ToData 'k, ToData 'v) => ToData (Map 'k 'v) where
