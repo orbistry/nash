@@ -1,5 +1,18 @@
 # nash-plutus
 
+## 0.3.0 — 2026-09-20
+
+### Minor changes
+
+- [7d8979fa](https://github.com/orbistry/nash/commit/7d8979fa62fcf3fa2b4d40994873b2f6a50d267e) Target protocol 11 and UPLC 1.1.0 for all supported ledger languages. Lower
+  conditionals and boolean/list matches to native case terms, and dispatch Data
+  branches through a chooseData tag and native case. Preserve branch laziness and
+  single evaluation of scrutinees.
+  
+  Enable protocol-11 builtin and constant validation, correct constant-case branch
+  limits and UTF-8 string costing, and encode nested Data constants without panics.
+  Bundled evaluator costs remain estimates rather than live ledger parameters. — Thanks @MicroProofs!
+
 ## 0.2.0 — 2026-09-18
 
 ### Minor changes

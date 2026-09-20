@@ -1348,9 +1348,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.27.9"
+version = "0.27.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ca68d021ef39cf6463ab54c1d0f5daf03377b70561305bb89a8f83aab66e0f"
+checksum = "dfa8e654703247911e29c23fbeaa261834bd9bb74efba2f9acddc37bfb127f53"
 dependencies = [
  "http",
  "hyper",
@@ -1883,7 +1883,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ast"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "bumpalo",
  "nash-region",
@@ -1892,7 +1892,7 @@ dependencies = [
 
 [[package]]
 name = "nash-can"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1908,7 +1908,7 @@ dependencies = [
 
 [[package]]
 name = "nash-cli"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "clap",
  "color-print",
@@ -1938,7 +1938,7 @@ dependencies = [
 
 [[package]]
 name = "nash-codegen"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1960,7 +1960,7 @@ dependencies = [
 
 [[package]]
 name = "nash-config"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "indoc",
  "insta",
@@ -1974,7 +1974,7 @@ dependencies = [
 
 [[package]]
 name = "nash-constrain"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "insta",
@@ -1985,7 +1985,7 @@ dependencies = [
 
 [[package]]
 name = "nash-driver"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "async-trait",
  "bumpalo",
@@ -2014,7 +2014,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ir"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "insta",
  "nash-ast",
@@ -2023,7 +2023,7 @@ dependencies = [
 
 [[package]]
 name = "nash-language-server"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "nash-driver",
  "nash-region",
@@ -2037,7 +2037,7 @@ dependencies = [
 
 [[package]]
 name = "nash-nitpick"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "bumpalo",
  "hex",
@@ -2048,7 +2048,7 @@ dependencies = [
 
 [[package]]
 name = "nash-parse"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2061,7 +2061,7 @@ dependencies = [
 
 [[package]]
 name = "nash-plutus"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "append-only-vec",
  "blst",
@@ -2091,7 +2091,7 @@ version = "0.3.0"
 
 [[package]]
 name = "nash-report"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2112,7 +2112,7 @@ dependencies = [
 
 [[package]]
 name = "nash-solve"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2128,7 +2128,7 @@ dependencies = [
 
 [[package]]
 name = "nash-source"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "bumpalo",
  "nash-region",
@@ -2136,7 +2136,7 @@ dependencies = [
 
 [[package]]
 name = "nash-test"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cryptoxide",
  "insta",

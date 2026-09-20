@@ -1,5 +1,37 @@
 # nash-can
 
+## 0.9.0 — 2026-09-20
+
+### Minor changes
+
+- [21914bc6](https://github.com/orbistry/nash/commit/21914bc6fefd951775d9b05f15c90d8b1d36b757) Support `pair(first, second)` patterns for builtin pairs in bindings, function arguments, lambdas, and case expressions. Preserve the distinction from tuples and enforce Storable component types.
+  
+  Lower pair patterns to native UPLC case even when a field is ignored. Use the same Core pair case for Data constructor payloads and implement Base Pair.fst and Pair.snd with Nash patterns. — Thanks @MicroProofs!
+- [352361ba](https://github.com/orbistry/nash/commit/352361baf35943117863225aca6a9d99ab5bdf92) Use one coercion-based `ToData` implementation for every Big type, including user-defined types and nested collections. Remove redundant recursive encoding implementations. Permit blanket impls in the trait's defining module while retaining overlap checks; existing concrete `ToData` impls must be removed because they overlap the blanket. — Thanks @MicroProofs!
+- [0ec9311b](https://github.com/orbistry/nash/commit/0ec9311bf91305cf6253df3525f22c072ef346b5) Canonicalize and type-check module-local tests and property generators. Preserve
+  scoped test imports and private declarations, enforce unit sequencing and
+  irrefutable generator patterns, and report source-aware test diagnostics. — Thanks @MicroProofs!
+- [e69fd3cc](https://github.com/orbistry/nash/commit/e69fd3ccf423c921fbaaecf243f54ce03a83a2cb) Add `Builtin.coerce : 'a -> 'b` as an unchecked, representation-preserving function. Core `FromData.fromData` now defaults to unchecked coercion; use `validate` to reject malformed scalar and nested collection data. — Thanks @MicroProofs!
+- [9d2a2b40](https://github.com/orbistry/nash/commit/9d2a2b40090d450c685b3048a31563d61a819cc8) Embed compiler-versioned Base sources in the driver and make Prelude available automatically without a declared dependency, download, or installed source directory. Keep implicit imports out of source syntax and snapshots.
+  
+  Reserve `Builtin` for actual Plutus functions. Move compiler-owned types, constructors, representation traits, and unchecked `coerce` to `Primitive`, with the foundation package renamed to `nash/base`.
+  
+  Check bundled Base through in-process compilation tests and remove CLI subprocess tests. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [09eb8f56](https://github.com/orbistry/nash/commit/09eb8f5678871a2bb861138d1962fad601e69acd) Restrict Builtin to actual Plutus operations and remove compiler cast nodes,
+  cast expansion, generated validation checkers, and privileged core intrinsics.
+  Implement core identity, Data encoding, decoding, and representation bridges in
+  Nash using concrete builtins and existing Data patterns.
+  
+  Data builtins now preserve nominal Int, Bytes, List, and Map types. Core fromData
+  reconstructs and validates nested values; shallow unchecked reinterpretation is
+  no longer available. Existing Data wire formats are preserved. — Thanks @MicroProofs!
+- [9fa1d0a7](https://github.com/orbistry/nash/commit/9fa1d0a7de4c416cbaa7e45b5b56702b80046119) Preserve parsed call endpoints and the complete outer infix expression region so
+  assertion reports include closing delimiters in their original source text. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.9.0, nash-source@0.8.0
+
 ## 0.8.0 — 2026-09-18
 
 ### Minor changes

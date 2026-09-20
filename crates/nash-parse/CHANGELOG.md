@@ -1,5 +1,19 @@
 # nash-parse
 
+## 0.7.0 — 2026-09-20
+
+### Minor changes
+
+- [21914bc6](https://github.com/orbistry/nash/commit/21914bc6fefd951775d9b05f15c90d8b1d36b757) Support `pair(first, second)` patterns for builtin pairs in bindings, function arguments, lambdas, and case expressions. Preserve the distinction from tuples and enforce Storable component types.
+  
+  Lower pair patterns to native UPLC case even when a field is ignored. Use the same Core pair case for Data constructor payloads and implement Base Pair.fst and Pair.snd with Nash patterns. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [9fa1d0a7](https://github.com/orbistry/nash/commit/9fa1d0a7de4c416cbaa7e45b5b56702b80046119) Preserve parsed call endpoints and the complete outer infix expression region so
+  assertion reports include closing delimiters in their original source text. — Thanks @MicroProofs!
+- Updated dependencies: nash-source@0.8.0
+
 ## 0.6.1 — 2026-09-18
 
 ### Patch changes

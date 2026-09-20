@@ -1,5 +1,35 @@
 # nash-cli
 
+## 0.6.0 — 2026-09-20
+
+### Minor changes
+
+- [9fa1d0a7](https://github.com/orbistry/nash/commit/9fa1d0a7de4c416cbaa7e45b5b56702b80046119) Add module-local unit tests and properties, scoped test dependencies, source-aware
+  power assertions, deterministic seeded fuzzing and counterexample shrinking.
+  Provide `nash test` with budget checks, labels, trace controls, parallel execution,
+  and terminal/JSON reports. Type-check tests with `nash check` while keeping them
+  out of production builds. Add core Fuzz and Test support with explicit imports.
+  
+  Preserve short-circuit evaluation for the core boolean infix operators, including
+  inside instrumented assertions. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [7d8979fa](https://github.com/orbistry/nash/commit/7d8979fa62fcf3fa2b4d40994873b2f6a50d267e) Target protocol 11 and UPLC 1.1.0 for all supported ledger languages. Lower
+  conditionals and boolean/list matches to native case terms, and dispatch Data
+  branches through a chooseData tag and native case. Preserve branch laziness and
+  single evaluation of scrutinees.
+  
+  Enable protocol-11 builtin and constant validation, correct constant-case branch
+  limits and UTF-8 string costing, and encode nested Data constants without panics.
+  Bundled evaluator costs remain estimates rather than live ledger parameters. — Thanks @MicroProofs!
+- [9d2a2b40](https://github.com/orbistry/nash/commit/9d2a2b40090d450c685b3048a31563d61a819cc8) Embed compiler-versioned Base sources in the driver and make Prelude available automatically without a declared dependency, download, or installed source directory. Keep implicit imports out of source syntax and snapshots.
+  
+  Reserve `Builtin` for actual Plutus functions. Move compiler-owned types, constructors, representation traits, and unchecked `coerce` to `Primitive`, with the foundation package renamed to `nash/base`.
+  
+  Check bundled Base through in-process compilation tests and remove CLI subprocess tests. — Thanks @MicroProofs!
+- Updated dependencies: nash-codegen@0.3.0, nash-config@0.5.0, nash-driver@0.8.0, nash-language-server@0.4.2, nash-report@0.5.0, nash-test@0.2.0
+
 ## 0.5.0 — 2026-09-18
 
 ### Minor changes
