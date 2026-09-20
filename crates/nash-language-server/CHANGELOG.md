@@ -1,5 +1,16 @@
 # nash-language-server
 
+## 0.4.2 — 2026-09-20
+
+### Patch changes
+
+- [9d2a2b40](https://github.com/orbistry/nash/commit/9d2a2b40090d450c685b3048a31563d61a819cc8) Embed compiler-versioned Base sources in the driver and make Prelude available automatically without a declared dependency, download, or installed source directory. Keep implicit imports out of source syntax and snapshots.
+  
+  Reserve `Builtin` for actual Plutus functions. Move compiler-owned types, constructors, representation traits, and unchecked `coerce` to `Primitive`, with the foundation package renamed to `nash/base`.
+  
+  Check bundled Base through in-process compilation tests and remove CLI subprocess tests. — Thanks @MicroProofs!
+- Updated dependencies: nash-driver@0.8.0, nash-report@0.5.0
+
 ## 0.4.1 — 2026-09-18
 
 ### Patch changes

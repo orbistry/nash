@@ -1,5 +1,37 @@
 # nash-driver
 
+## 0.8.0 — 2026-09-20
+
+### Minor changes
+
+- [4de7fb4b](https://github.com/orbistry/nash/commit/4de7fb4bf2a87ff059f934a7b9c99b2029cbaee9) Rename `FromData.validateData` to `FromData.validate`. Update method definitions, imports, and calls to use `validate`; validation behavior is unchanged. — Thanks @MicroProofs!
+- [352361ba](https://github.com/orbistry/nash/commit/352361baf35943117863225aca6a9d99ab5bdf92) Use one coercion-based `ToData` implementation for every Big type, including user-defined types and nested collections. Remove redundant recursive encoding implementations. Permit blanket impls in the trait's defining module while retaining overlap checks; existing concrete `ToData` impls must be removed because they overlap the blanket. — Thanks @MicroProofs!
+- [a95b6910](https://github.com/orbistry/nash/commit/a95b6910d1867463cac0d1030599ea5bc6bfdf71) Provide unchecked `FromData` conversion for every Big type through a blanket coercion impl. Move checked `validate` into the separate `Validate` trait; migrate validation impls and trait imports to `Validate`. Unchecked conversion no longer requires validation instances for a type or its fields. — Thanks @MicroProofs!
+- [9fa1d0a7](https://github.com/orbistry/nash/commit/9fa1d0a7de4c416cbaa7e45b5b56702b80046119) Add module-local unit tests and properties, scoped test dependencies, source-aware
+  power assertions, deterministic seeded fuzzing and counterexample shrinking.
+  Provide `nash test` with budget checks, labels, trace controls, parallel execution,
+  and terminal/JSON reports. Type-check tests with `nash check` while keeping them
+  out of production builds. Add core Fuzz and Test support with explicit imports.
+  
+  Preserve short-circuit evaluation for the core boolean infix operators, including
+  inside instrumented assertions. — Thanks @MicroProofs!
+- [e69fd3cc](https://github.com/orbistry/nash/commit/e69fd3ccf423c921fbaaecf243f54ce03a83a2cb) Add `Builtin.coerce : 'a -> 'b` as an unchecked, representation-preserving function. Core `FromData.fromData` now defaults to unchecked coercion; use `validate` to reject malformed scalar and nested collection data. — Thanks @MicroProofs!
+- [9d2a2b40](https://github.com/orbistry/nash/commit/9d2a2b40090d450c685b3048a31563d61a819cc8) Embed compiler-versioned Base sources in the driver and make Prelude available automatically without a declared dependency, download, or installed source directory. Keep implicit imports out of source syntax and snapshots.
+  
+  Reserve `Builtin` for actual Plutus functions. Move compiler-owned types, constructors, representation traits, and unchecked `coerce` to `Primitive`, with the foundation package renamed to `nash/base`.
+  
+  Check bundled Base through in-process compilation tests and remove CLI subprocess tests. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [21914bc6](https://github.com/orbistry/nash/commit/21914bc6fefd951775d9b05f15c90d8b1d36b757) Support `pair(first, second)` patterns for builtin pairs in bindings, function arguments, lambdas, and case expressions. Preserve the distinction from tuples and enforce Storable component types.
+  
+  Lower pair patterns to native UPLC case even when a field is ignored. Use the same Core pair case for Data constructor payloads and implement Base Pair.fst and Pair.snd with Nash patterns. — Thanks @MicroProofs!
+- [bfb38fbc](https://github.com/orbistry/nash/commit/bfb38fbc83c51affea4b4ebf965d9b26b94018dc) Make the bundled map Lift instance explicitly require Big keys and values. Add regression coverage for rejecting native pair components and preserving already encoded map entries through lift and lower. — Thanks @MicroProofs!
+- [a219dde2](https://github.com/orbistry/nash/commit/a219dde26f6e582c5305968f21d675da931e5779) Make Data.Constr accept one `pair int (list Data)` payload in expressions and patterns. Require explicit pair destructuring for the tag and fields, lowered with native UPLC case. Update Base helpers and source snapshots. — Thanks @MicroProofs!
+- [c985eecb](https://github.com/orbistry/nash/commit/c985eecb822877ccda3b9ae487042f806fd3391b) Define `toData` and `fromData` directly in their blanket impls using inline Big bounds, instead of trait defaults. Conversion behavior is unchanged. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.9.0, nash-can@0.9.0, nash-codegen@0.3.0, nash-config@0.5.0, nash-constrain@0.7.0, nash-nitpick@0.3.0, nash-parse@0.7.0, nash-plutus@0.3.0, nash-report@0.5.0, nash-solve@0.7.0, nash-source@0.8.0, nash-test@0.2.0
+
 ## 0.7.0 — 2026-09-18
 
 ### Minor changes
