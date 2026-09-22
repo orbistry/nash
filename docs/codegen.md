@@ -672,3 +672,14 @@ expressions and retained prefix fields, including traces before decoding.
 This is not validation: for malformed records obtained through unchecked
 coercion, an untouched suffix retains extra fields and is not checked for
 missing fields.
+
+Single-constructor labeled types also support record updates. The base evaluates
+once, and replacement expressions and retained fields follow declaration order.
+Big labeled types reconstruct `constrData 0`; little labeled types reconstruct
+native `constr 0`. Alias-record suffix sharing does not change this constructor
+encoding.
+
+When a source Data pattern ignores its payload, `chooseData` selects the branch
+without calling its unwrapper. A used payload still invokes the corresponding
+`un*Data` builtin. This does not remove explicitly written discarded calls in
+Nash validation implementations.

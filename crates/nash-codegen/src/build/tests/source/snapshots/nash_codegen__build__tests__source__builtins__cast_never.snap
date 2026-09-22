@@ -52,10 +52,10 @@ main#1
                                 (force leaf_20)
                                 (case field_23 (lam field_24 (lam field_25 (force leaf_20))) (constr 0)))))))
                         [(builtin unConstrData) generated_33]])]
-                    (delay [(lam field_26 (force leaf_20)) [(builtin unMapData) generated_33]])]
-                    (delay [(lam field_27 (force leaf_20)) [(builtin unListData) generated_33]])]
-                    (delay [(lam field_28 (force leaf_20)) [(builtin unIData) generated_33]])]
-                    (delay [(lam field_29 (force leaf_20)) [(builtin unBData) generated_33]])]))
+                    (delay (force leaf_20))]
+                    (delay (force leaf_20))]
+                    (delay (force leaf_20))]
+                    (delay (force leaf_20))]))
                 match_10])
               (delay (error))])
             value_6])])

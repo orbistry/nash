@@ -66,11 +66,10 @@ main#1
                                         (lam field_32
                                           [(lam generated_59
                                             (force
-                                              [[[[[[(force (builtin chooseData)) generated_59]
-                                                (delay [(lam field_33 (force leaf_27)) [(builtin unConstrData) generated_59]])]
-                                                (delay [(lam field_34 (force leaf_27)) [(builtin unMapData) generated_59]])]
-                                                (delay [(lam field_35 (force leaf_27)) [(builtin unListData) generated_59]])]
-                                                (delay [(lam field_36 (force leaf_27)) [(builtin unIData) generated_59]])]
+                                              [[[[[[(force (builtin chooseData)) generated_59] (delay (force leaf_27))]
+                                                (delay (force leaf_27))]
+                                                (delay (force leaf_27))]
+                                                (delay (force leaf_27))]
                                                 (delay
                                                   [(lam field_37
                                                     (case
@@ -91,10 +90,10 @@ main#1
                                             field_31]))
                                       (force leaf_27)))))))
                             [(builtin unConstrData) generated_58]])]
-                        (delay [(lam field_42 (force leaf_27)) [(builtin unMapData) generated_58]])]
-                        (delay [(lam field_43 (force leaf_27)) [(builtin unListData) generated_58]])]
-                        (delay [(lam field_44 (force leaf_27)) [(builtin unIData) generated_58]])]
-                        (delay [(lam field_45 (force leaf_27)) [(builtin unBData) generated_58]])]))
+                        (delay (force leaf_27))]
+                        (delay (force leaf_27))]
+                        (delay (force leaf_27))]
+                        (delay (force leaf_27))]))
                     match_8]])
                 (delay (error))])
               [encode_2 pk_3]])

@@ -423,13 +423,6 @@ impl<'a> Solver<'a, '_> {
                     else {
                         break;
                     };
-                    if matches!(field.context, type_::FieldContext::Update { .. }) {
-                        errors.push(Error::UpdateNotRecord {
-                            region: field.region,
-                            record: to_error_type(self.bump, uf, field.record),
-                        });
-                        return true;
-                    }
                     let Some((name, field_type)) = field.field else {
                         return true;
                     };

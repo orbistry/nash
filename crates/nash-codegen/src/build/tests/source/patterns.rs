@@ -1008,3 +1008,109 @@ case!(
     "#,
     Ok("(con integer 11)")
 );
+
+case!(
+    labeled_big_update_preserves_layout_and_order,
+    r#"
+    module Main exposing (..)
+    type Record = Record { a : Int, b : Int, c : Int }
+    change : Record -> Record
+    change value = { value | c = (trace "c" 30), a = (trace "a" 10) }
+    main : Record
+    main = change (trace "base" (Record 1 2 3))
+    "#,
+    Ok("(con data (Constr 0 [I 10, I 2, I 30]))")
+);
+
+case!(
+    labeled_little_update_preserves_layout_and_order,
+    r#"
+    module Main exposing (..)
+    type record = Record { a : int, b : int, c : int }
+    change : record -> record
+    change value = { value | c = (trace "c" 30), a = (trace "a" 10) }
+    main : record
+    main = change (trace "base" (Record 1 2 3))
+    "#,
+    Ok("(constr 0 (con integer 10) (con integer 2) (con integer 30))")
+);
+
+case!(
+    validate_int_preserves_original_data,
+    r#"
+    module Main exposing (..)
+    import Data exposing (ToData, Validate)
+    main : Int
+    main = validate (toData (Builtin.iData 42))
+    "#,
+    Ok("(con data (I 42))")
+);
+
+case!(
+    validate_int_rejects_bytes,
+    r#"
+    module Main exposing (..)
+    import Data exposing (ToData, Validate)
+    main : Int
+    main = validate (toData (Builtin.bData #"ff"))
+    "#,
+    Err(())
+);
+
+case!(
+    validate_bytes_rejects_integer,
+    r#"
+    module Main exposing (..)
+    import Data exposing (ToData, Validate)
+    main : Bytes
+    main = validate (toData (Builtin.iData 42))
+    "#,
+    Err(())
+);
+
+case!(
+    data_ignored_payload_keeps_scrutinee_effects,
+    r#"
+    module Main exposing (..)
+    import Data exposing (ToData)
+    import Primitive exposing (Data(..))
+    main : int
+    main = case trace "data input" (toData (Builtin.iData 42)) of
+        I _ -> 7
+        _ -> fail
+    "#,
+    Ok("(con integer 7)")
+);
+
+case!(
+    validate_bytes_preserves_original_data,
+    r#"
+    module Main exposing (..)
+    import Data exposing (ToData, Validate)
+    main : Bytes
+    main = validate (toData (Builtin.bData #"ff"))
+    "#,
+    Ok("(con data (B #ff))")
+);
+
+case!(
+    validate_list_rejects_wrong_element,
+    r#"
+    module Main exposing (..)
+    import Data exposing (ToData, Validate)
+    main : List Int
+    main = validate (toData (Builtin.listData [Builtin.bData #"ff"]))
+    "#,
+    Err(())
+);
+
+case!(
+    validate_map_rejects_wrong_key,
+    r#"
+    module Main exposing (..)
+    import Data exposing (ToData, Validate)
+    main : Map Int Bytes
+    main = validate (toData (Builtin.mapData [Builtin.mkPairData (Builtin.bData #"aa") (Builtin.bData #"bb")]))
+    "#,
+    Err(())
+);

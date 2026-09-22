@@ -1,0 +1,69 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Data exposing (ToData, Validate)\nmain : List Int\nmain = validate (toData (Builtin.listData [Builtin.bData #\"ff\"]))\n"
+---
+--- core
+let mapList#7 : ('erased -> Data) -> list 'erased -> list Data = \(f#12 : 'erased -> Data) values#13 : list 'erased -> (\self#24 : 'erased -> self#24 self#24) (\self#24 : 'erased values#13 : list 'erased -> let match#16 : list 'erased = values#13 in
+case@List match#16 of
+  Nil -> (con (list data) [])
+  Cons field#17 field#18 -> let first#14 : 'erased = field#17 in
+  let rest#15 : list 'erased = field#18 in
+  mkCons (f#12 first#14) (self#24 self#24 rest#15)) values#13 in
+let validate#8 : Data -> Int = \value#19 : Data -> let candidate#20 : Int = (\coerce#22 : 'erased -> coerce#22) value#19 in
+let destruct#21 : int = unIData candidate#20 in
+candidate#20 in
+let validate#2 : Data -> List Data = \value#5 : Data -> let candidate#6 : List Data = (\coerce#9 : 'erased -> coerce#9) value#5 in
+let projection#23 : list Data = unListData candidate#6 in
+listData (mapList#7 validate#8 projection#23) in
+let toData#3 : 'erased -> Data = \coerce#10 : 'erased -> coerce#10 in
+let fromBytes#4 : bytes -> bytes = \value#11 : bytes -> value#11 in
+let main#1 : List Int = validate#2 (toData#3 (listData (mkCons (bData (fromBytes#4 (con bytestring #ff))) (con (list data) [])))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam mapList_7
+    [(lam validate_8
+      [(lam validate_2
+        [(lam toData_3
+          [(lam fromBytes_4
+            [(lam main_1 main_1)
+              [validate_2
+                [toData_3
+                  [(builtin listData)
+                    [[(force (builtin mkCons)) [(builtin bData) [fromBytes_4 (con bytestring #ff)]]]
+                      (con (list data) [])]]]]])
+            (lam value_11 value_11)])
+          (lam coerce_10 coerce_10)])
+        (lam value_5
+          [(lam candidate_6
+            [(lam projection_23 [(builtin listData) [[mapList_7 validate_8] projection_23]])
+              [(builtin unListData) candidate_6]])
+            [(lam coerce_9 coerce_9) value_5]])])
+      (lam value_19
+        [(lam candidate_20
+          [(lam destruct_21 candidate_20) [(builtin unIData) candidate_20]])
+          [(lam coerce_22 coerce_22) value_19]])])
+    (lam f_12
+      (lam values_13
+        [[(lam self_24 [self_24 self_24])
+          (lam self_24
+            (lam values_13
+              [(lam match_16
+                (case
+                  match_16
+                  (lam field_17
+                    (lam field_18
+                      [(lam first_14
+                        [(lam rest_15
+                          [[(force (builtin mkCons)) [f_12 first_14]] [[self_24 self_24] rest_15]])
+                          field_18])
+                        field_17]))
+                  (con (list data) [])))
+                values_13]))]
+          values_13]))])
+--- result
+error: Runtime(MalFormedData(ByteString([255])))
+--- logs
+[]
+--- budget
+cpu: 143430, memory: 228

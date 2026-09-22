@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype box = Box { value : bool }\nchange : box -> box\nchange b = { b | value = () }\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Literal.FromUnit bool`.
+   ╭─[Main.nash:4:26]
+ 3 │ change : box -> box
+ 4 │ change b = { b | value = () }
+   ·                          ─┬
+   ·                           ╰── required by `fromUnit`
+   ╰────
+  help: Available impl heads:
+
+            unit
+
+        Import or define an impl for `Literal.FromUnit bool`.

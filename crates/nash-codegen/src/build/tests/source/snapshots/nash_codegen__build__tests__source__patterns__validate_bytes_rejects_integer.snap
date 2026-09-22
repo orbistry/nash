@@ -1,0 +1,30 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Data exposing (ToData, Validate)\nmain : Bytes\nmain = validate (toData (Builtin.iData 42))\n"
+---
+--- core
+let validate#2 : Data -> Bytes = \value#5 : Data -> let candidate#6 : Bytes = (\coerce#8 : 'erased -> coerce#8) value#5 in
+let destruct#7 : bytes = unBData candidate#6 in
+candidate#6 in
+let toData#3 : 'erased -> Data = \coerce#9 : 'erased -> coerce#9 in
+let fromInt#4 : int -> int = \value#10 : int -> value#10 in
+let main#1 : Bytes = validate#2 (toData#3 (iData (fromInt#4 42))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam validate_2
+    [(lam toData_3
+      [(lam fromInt_4
+        [(lam main_1 main_1)
+          [validate_2 [toData_3 [(builtin iData) [fromInt_4 (con integer 42)]]]]])
+        (lam value_10 value_10)])
+      (lam coerce_9 coerce_9)])
+    (lam value_5
+      [(lam candidate_6 [(lam destruct_7 candidate_6) [(builtin unBData) candidate_6]])
+        [(lam coerce_8 coerce_8) value_5]])])
+--- result
+error: Runtime(MalFormedData(Integer(42)))
+--- logs
+[]
+--- budget
+cpu: 15399, memory: 132

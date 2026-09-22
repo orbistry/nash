@@ -1,0 +1,14 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype choice = First { value : bool } | Second { value : bool }\nchange : choice -> choice\nchange b = { b | value = Primitive.True }\n"
+info: diagnostic
+---
+nash::type::not_a_record
+
+  × Expected a record, found `choice`.
+   ╭─[Main.nash:4:18]
+ 3 │ change : choice -> choice
+ 4 │ change b = { b | value = Primitive.True }
+   ·                  ──┬──
+   ·                    ╰── field `value` update of `b`
+   ╰────

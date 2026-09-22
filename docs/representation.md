@@ -117,8 +117,10 @@ Two declaration forms give named fields, with different encodings:
 
 Anonymous record types do not exist otherwise. `x.a` on a labeled
 multi-constructor type is a type error; use `case`. Record update
-`{ x | a = e }` is for alias records only; on a labeled constructor,
-rebuild the value with the constructor. A labeled constructor is
+`{ x | a = e }` works on alias records and visible single-constructor labeled
+types. Labeled updates retain the constructor tag and declaration-order fields;
+Big labeled types rebuild `Constr 0`, while little labeled types rebuild native
+`constr 0`. A labeled constructor is
 built positionally (`Datum owner deadline`) or by label
 (`Datum { owner = o, deadline = d }`); the labeled form is sugar that the
 compiler rewrites to the positional call in wire order, and its field set
@@ -296,9 +298,9 @@ trait Validate ('a : Big) where
   constraints. It uses unchecked `Primitive.coerce` and checks neither the
   outer shape nor nested fields and preserves the original runtime value.
   Malformed data fails only when a later operation needs its expected shape.
-- `Validate.validate` is the required method of a separate opt-in trait. Core Int and Bytes impls check
-  the Data shape and then coerce the original value; List and Map impls retain
-  recursive source validation. Non-failing decoding uses `Data.Decode`.
+- `Validate.validate` is the required method of a separate opt-in trait. Base Int and Bytes impls discard the result of a direct unwrapper call,
+  relying on its failure behavior, then return the original coerced value.
+  List and Map impls unwrap directly and retain recursive source validation. Non-failing decoding uses `Data.Decode`.
 
 Core provides explicit `Validate` impls for primitive and collection Big types.
 User Big ADTs opt into validation with `Validate` source impls; future

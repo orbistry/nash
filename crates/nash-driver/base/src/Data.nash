@@ -25,15 +25,21 @@ impl Validate Data where
 
 impl Validate Int where
     validate value =
-        case value of
-            I _ -> Primitive.coerce value
-            _ -> fail
+        let
+            candidate : Int
+            candidate = Primitive.coerce value
+            _ = Builtin.unIData candidate
+        in
+        candidate
 
 impl Validate Bytes where
     validate value =
-        case value of
-            B _ -> Primitive.coerce value
-            _ -> fail
+        let
+            candidate : Bytes
+            candidate = Primitive.coerce value
+            _ = Builtin.unBData candidate
+        in
+        candidate
 
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
@@ -52,15 +58,19 @@ fields value =
 
 impl Validate 'a => Validate (List 'a) where
     validate value =
-        case value of
-            List values -> Builtin.listData (mapList validate values)
-            _ -> fail
+        let
+            candidate : List Data
+            candidate = Primitive.coerce value
+        in
+        Builtin.listData (mapList validate (Builtin.unListData candidate))
 
 impl (Validate 'k, Validate 'v) => Validate (Map 'k 'v) where
     validate value =
-        case value of
-            Map values -> Builtin.mapData (mapList pairValidate values)
-            _ -> fail
+        let
+            candidate : Map Data Data
+            candidate = Primitive.coerce value
+        in
+        Builtin.mapData (mapList pairValidate (Builtin.unMapData candidate))
 
 mapList : ('a -> 'b) -> list 'a -> list 'b
 mapList f values =

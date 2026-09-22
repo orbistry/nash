@@ -66,10 +66,9 @@ main#1
                                                 (lam field_18
                                                   [(lam generated_48
                                                     (force
-                                                      [[[[[[(force (builtin chooseData)) generated_48]
-                                                        (delay [(lam field_19 (force leaf_16)) [(builtin unConstrData) generated_48]])]
-                                                        (delay [(lam field_20 (force leaf_16)) [(builtin unMapData) generated_48]])]
-                                                        (delay [(lam field_21 (force leaf_16)) [(builtin unListData) generated_48]])]
+                                                      [[[[[[(force (builtin chooseData)) generated_48] (delay (force leaf_16))]
+                                                        (delay (force leaf_16))]
+                                                        (delay (force leaf_16))]
                                                         (delay
                                                           [(lam field_22
                                                             (case
@@ -78,7 +77,7 @@ main#1
                                                               [(lam number_5 [[(builtin addInteger) [(builtin unIData) key_3]] number_5])
                                                                 field_22]))
                                                             [(builtin unIData) generated_48]])]
-                                                        (delay [(lam field_25 (force leaf_16)) [(builtin unBData) generated_48]])]))
+                                                        (delay (force leaf_16))]))
                                                     field_17]))
                                               (force leaf_16)))
                                             (delay (error))])

@@ -157,8 +157,8 @@ Changes from Elm:
   representation rule. A constructor has either positional arguments or one `{ ... }`
   block, never both. `datum.owner` works on single-constructor types with
   labeled fields. Construction is `Datum { owner = o, deadline = d }`; the
-  record update form `Datum { d | deadline = 0 }` is not supported in v1
-  (update exists only on alias records).
+  update form is `{ d | deadline = 0 }`, for alias records and visible
+  single-constructor labeled types.
 - Anonymous record types `{ x : int }` are legal syntax only as the direct
   body of `type alias`; canonicalization rejects them anywhere else, since
   records are nominal (see `kinds.md`).
@@ -343,8 +343,9 @@ rule). Since records are nominal, the type of an update is the type of `r`.
 The parser reads it as the constructor applied to a record literal;
 canonicalization turns it into labeled construction when `Datum` declares
 labeled fields (the two forms cannot be told apart syntactically, and a
-positional constructor taking an alias record is the other reading). Update
-on a labeled constructor is not in v1. Parenthesize a record literal to pass
+positional constructor taking an alias record is the other reading). Update uses `{ d | deadline = 0 }` for a visible single-constructor labeled
+type, preserving its constructor and declaration order. Multi-constructor types
+do not support record updates. Parenthesize a record literal to pass
 it as one positional field of a labeled constructor: `Wrap ({ x = () })`.
 Labeled constructors are matched
 positionally, `Datum owner deadline`, or by label with record-pattern sugar,

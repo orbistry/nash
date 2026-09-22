@@ -85,25 +85,22 @@ main#1
                                     (lam field_39
                                       [(lam generated_56
                                         (force
-                                          [[[[[[(force (builtin chooseData)) generated_56]
-                                            (delay [(lam field_40 (force leaf_34)) [(builtin unConstrData) generated_56]])]
-                                            (delay [(lam field_41 (force leaf_34)) [(builtin unMapData) generated_56]])]
-                                            (delay [(lam field_42 (force leaf_34)) [(builtin unListData) generated_56]])]
+                                          [[[[[[(force (builtin chooseData)) generated_56] (delay (force leaf_34))]
+                                            (delay (force leaf_34))]
+                                            (delay (force leaf_34))]
                                             (delay
-                                              [(lam field_43
-                                                (case
-                                                  field_39
-                                                  (lam field_44 (lam field_45 (force leaf_34)))
-                                                  [(lam coerce_16 coerce_16) value_13]))
-                                                [(builtin unIData) generated_56]])]
-                                            (delay [(lam field_46 (force leaf_34)) [(builtin unBData) generated_56]])]))
+                                              (case
+                                                field_39
+                                                (lam field_44 (lam field_45 (force leaf_34)))
+                                                [(lam coerce_16 coerce_16) value_13]))]
+                                            (delay (force leaf_34))]))
                                         field_38]))
                                   (force leaf_34)))))))
                         [(builtin unConstrData) generated_55]])]
-                    (delay [(lam field_47 (force leaf_34)) [(builtin unMapData) generated_55]])]
-                    (delay [(lam field_48 (force leaf_34)) [(builtin unListData) generated_55]])]
-                    (delay [(lam field_49 (force leaf_34)) [(builtin unIData) generated_55]])]
-                    (delay [(lam field_50 (force leaf_34)) [(builtin unBData) generated_55]])]))
+                    (delay (force leaf_34))]
+                    (delay (force leaf_34))]
+                    (delay (force leaf_34))]
+                    (delay (force leaf_34))]))
                 match_17])
               (delay (error))])
             value_13])])
@@ -114,4 +111,4 @@ error: ExplicitErrorTerm
 --- logs
 []
 --- budget
-cpu: 391609, memory: 325
+cpu: 371467, memory: 293

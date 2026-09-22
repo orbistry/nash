@@ -1,0 +1,18 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type box(..))\ntype box = Box { value : bool }\n\nmodule Main exposing (..)\nimport Types\nchange : Types.box -> Types.box\nchange x = { x | value = Primitive.True }\n"
+---
+{
+    "Main": [
+        Value {
+            name: "change",
+        },
+    ],
+    "Types": [
+        Type {
+            name: "box",
+            constructors_exposed: true,
+            kind: "Type",
+        },
+    ],
+}

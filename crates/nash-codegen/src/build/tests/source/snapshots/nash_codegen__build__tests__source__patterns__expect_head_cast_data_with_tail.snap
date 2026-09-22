@@ -4,41 +4,30 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 ---
 --- core
 let fromBool#7 : bool -> bool = \value#25 : bool -> value#25 in
-let mapList#26 : ('erased -> int) -> list 'erased -> list int = \(f#44 : 'erased -> int) values#45 : list 'erased -> (\self#10 : 'erased -> self#10 self#10) (\self#10 : 'erased values#45 : list 'erased -> let match#48 : list 'erased = values#45 in
-case@List match#48 of
+let mapList#26 : ('erased -> int) -> list 'erased -> list int = \(f#33 : 'erased -> int) values#34 : list 'erased -> (\self#10 : 'erased -> self#10 self#10) (\self#10 : 'erased values#34 : list 'erased -> let match#37 : list 'erased = values#34 in
+case@List match#37 of
   Nil -> (con (list integer) [])
-  Cons field#49 field#50 -> let x#46 : 'erased = field#49 in
-  let xs#47 : list 'erased = field#50 in
-  mkCons (f#44 x#46) (self#10 self#10 xs#47)) values#45 in
+  Cons field#38 field#39 -> let x#35 : 'erased = field#38 in
+  let xs#36 : list 'erased = field#39 in
+  mkCons (f#33 x#35) (self#10 self#10 xs#36)) values#34 in
 let map#18 : ('erased -> int) -> list 'erased -> list int = mapList#26 in
-let mapList#29 : ('erased -> Data) -> list 'erased -> list Data = \(f#51 : 'erased -> Data) values#52 : list 'erased -> (\self#9 : 'erased -> self#9 self#9) (\self#9 : 'erased values#52 : list 'erased -> let match#55 : list 'erased = values#52 in
-case@List match#55 of
+let mapList#29 : ('erased -> Data) -> list 'erased -> list Data = \(f#40 : 'erased -> Data) values#41 : list 'erased -> (\self#9 : 'erased -> self#9 self#9) (\self#9 : 'erased values#41 : list 'erased -> let match#44 : list 'erased = values#41 in
+case@List match#44 of
   Nil -> (con (list data) [])
-  Cons field#56 field#57 -> let first#53 : 'erased = field#56 in
-  let rest#54 : list 'erased = field#57 in
-  mkCons (f#51 first#53) (self#9 self#9 rest#54)) values#52 in
-let validate#30 : Data -> Int = \value#58 : Data -> let match#60 : Data = value#58 in
-let leaf#66 : 'erased = delay error in
-case@Data match#60 of
-  DataConstr field#67 -> force leaf#66
-  DataMap field#68 -> force leaf#66
-  DataList field#69 -> force leaf#66
-  DataI field#70 -> (\coerce#59 : 'erased -> coerce#59) value#58
-  DataB field#71 -> force leaf#66 in
-let validate#19 : Data -> List Data = \value#27 : Data -> let match#31 : Data = value#27 in
-let leaf#37 : 'erased = delay error in
-case@Data match#31 of
-  DataConstr field#38 -> force leaf#37
-  DataMap field#39 -> force leaf#37
-  DataList field#40 -> let values#28 : list Data = field#40 in
-  listData (mapList#29 validate#30 values#28)
-  DataI field#41 -> force leaf#37
-  DataB field#42 -> force leaf#37 in
-let fromInt#22 : int -> int = \value#43 : int -> value#43 in
+  Cons field#45 field#46 -> let first#42 : 'erased = field#45 in
+  let rest#43 : list 'erased = field#46 in
+  mkCons (f#40 first#42) (self#9 self#9 rest#43)) values#41 in
+let validate#30 : Data -> Int = \value#47 : Data -> let candidate#48 : Int = (\coerce#50 : 'erased -> coerce#50) value#47 in
+let destruct#49 : int = unIData candidate#48 in
+candidate#48 in
+let validate#19 : Data -> List Data = \value#27 : Data -> let candidate#28 : List Data = (\coerce#31 : 'erased -> coerce#31) value#27 in
+let projection#51 : list Data = unListData candidate#28 in
+listData (mapList#29 validate#30 projection#51) in
+let fromInt#22 : int -> int = \value#32 : int -> value#32 in
 let a#2 : Data = (\field#20 : list Data -> listData field#20) (mkCons ((\field#21 : int -> iData field#21) (fromInt#22 1)) (mkCons ((\field#23 : int -> iData field#23) (fromInt#22 2)) (mkCons ((\field#24 : int -> iData field#24) (fromInt#22 3)) (con (list data) [])))) in
 let checked#3 : List Int = validate#19 a#2 in
-let projection#72 : list Data = unListData checked#3 in
-let values#4 : list int = map#18 unIData projection#72 in
+let projection#52 : list Data = unListData checked#3 in
+let values#4 : list int = map#18 unIData projection#52 in
 let match#8 : list int = values#4 in
 let leaf#13 : 'erased = delay error in
 let main#1 : bool = case@List match#8 of
@@ -62,7 +51,7 @@ main#1
               [(lam fromInt_22
                 [(lam a_2
                   [(lam checked_3
-                    [(lam projection_72
+                    [(lam projection_52
                       [(lam values_4
                         [(lam match_8
                           [(lam leaf_13
@@ -87,7 +76,7 @@ main#1
                                 (force leaf_13))])
                             (delay (error))])
                           values_4])
-                        [[map_18 (builtin unIData)] projection_72]])
+                        [[map_18 (builtin unIData)] projection_52]])
                       [(builtin unListData) checked_3]])
                     [validate_19 a_2]])
                   [(lam field_20 [(builtin listData) field_20])
@@ -98,81 +87,57 @@ main#1
                         [[(force (builtin mkCons))
                           [(lam field_24 [(builtin iData) field_24]) [fromInt_22 (con integer 3)]]]
                           (con (list data) [])]]]]])
-                (lam value_43 value_43)])
+                (lam value_32 value_32)])
               (lam value_27
-                [(lam match_31
-                  [(lam leaf_37
-                    [(lam generated_73
-                      (force
-                        [[[[[[(force (builtin chooseData)) generated_73]
-                          (delay [(lam field_38 (force leaf_37)) [(builtin unConstrData) generated_73]])]
-                          (delay [(lam field_39 (force leaf_37)) [(builtin unMapData) generated_73]])]
-                          (delay
-                            [(lam field_40
-                              [(lam values_28 [(builtin listData) [[mapList_29 validate_30] values_28]])
-                                field_40])
-                              [(builtin unListData) generated_73]])]
-                          (delay [(lam field_41 (force leaf_37)) [(builtin unIData) generated_73]])]
-                          (delay [(lam field_42 (force leaf_37)) [(builtin unBData) generated_73]])]))
-                      match_31])
-                    (delay (error))])
-                  value_27])])
-            (lam value_58
-              [(lam match_60
-                [(lam leaf_66
-                  [(lam generated_74
-                    (force
-                      [[[[[[(force (builtin chooseData)) generated_74]
-                        (delay [(lam field_67 (force leaf_66)) [(builtin unConstrData) generated_74]])]
-                        (delay [(lam field_68 (force leaf_66)) [(builtin unMapData) generated_74]])]
-                        (delay [(lam field_69 (force leaf_66)) [(builtin unListData) generated_74]])]
-                        (delay
-                          [(lam field_70 [(lam coerce_59 coerce_59) value_58])
-                            [(builtin unIData) generated_74]])]
-                        (delay [(lam field_71 (force leaf_66)) [(builtin unBData) generated_74]])]))
-                    match_60])
-                  (delay (error))])
-                value_58])])
-          (lam f_51
-            (lam values_52
+                [(lam candidate_28
+                  [(lam projection_51
+                    [(builtin listData) [[mapList_29 validate_30] projection_51]])
+                    [(builtin unListData) candidate_28]])
+                  [(lam coerce_31 coerce_31) value_27]])])
+            (lam value_47
+              [(lam candidate_48
+                [(lam destruct_49 candidate_48) [(builtin unIData) candidate_48]])
+                [(lam coerce_50 coerce_50) value_47]])])
+          (lam f_40
+            (lam values_41
               [[(lam self_9 [self_9 self_9])
                 (lam self_9
-                  (lam values_52
-                    [(lam match_55
+                  (lam values_41
+                    [(lam match_44
                       (case
-                        match_55
-                        (lam field_56
-                          (lam field_57
-                            [(lam first_53
-                              [(lam rest_54
-                                [[(force (builtin mkCons)) [f_51 first_53]] [[self_9 self_9] rest_54]])
-                                field_57])
-                              field_56]))
+                        match_44
+                        (lam field_45
+                          (lam field_46
+                            [(lam first_42
+                              [(lam rest_43
+                                [[(force (builtin mkCons)) [f_40 first_42]] [[self_9 self_9] rest_43]])
+                                field_46])
+                              field_45]))
                         (con (list data) [])))
-                      values_52]))]
-                values_52]))])
+                      values_41]))]
+                values_41]))])
         mapList_26])
-      (lam f_44
-        (lam values_45
+      (lam f_33
+        (lam values_34
           [[(lam self_10 [self_10 self_10])
             (lam self_10
-              (lam values_45
-                [(lam match_48
+              (lam values_34
+                [(lam match_37
                   (case
-                    match_48
-                    (lam field_49
-                      (lam field_50
-                        [(lam x_46
-                          [(lam xs_47 [[(force (builtin mkCons)) [f_44 x_46]] [[self_10 self_10] xs_47]])
-                            field_50])
-                          field_49]))
+                    match_37
+                    (lam field_38
+                      (lam field_39
+                        [(lam x_35
+                          [(lam xs_36 [[(force (builtin mkCons)) [f_33 x_35]] [[self_10 self_10] xs_36]])
+                            field_39])
+                          field_38]))
                     (con (list integer) [])))
-                  values_45]))]
-            values_45]))])
+                  values_34]))]
+            values_34]))])
     (lam value_25 value_25)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 8543455, memory: 45434
+cpu: 6821955, memory: 36906

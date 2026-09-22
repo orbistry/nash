@@ -1,25 +1,30 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntype thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | a = (assert Primitive.True) }\nsibling = missing (assert Primitive.True)\n"
+description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntype thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | absent = (assert Primitive.True) }\nsibling = missing (assert Primitive.True)\n"
 info: diagnostic
 ---
-nash::type::update_not_record
+nash::type::missing_field
 
-  × Cannot update fields of `thing`.
+  × Record has no field `absent`.
    ╭─[Main.nash:6:33]
  5 │ bad : thing -> thing
- 6 │ bad record = missing { record | a = (assert Primitive.True) }
-   ·                                 ─
+ 6 │ bad record = missing { record | absent = (assert Primitive.True) }
+   ·                                 ───┬──
+   ·                                    ╰── field `absent` update of `record`
  7 │ sibling = missing (assert Primitive.True)
    ╰────
-  help: Rebuild the value with its constructor.
+  help: Record type: thing
+
+        Did you mean `a`?
+
+        Available fields: `a`.
 
 
 nash::type::missing_impl
 
   × No impl for `Missing unit`.
    ╭─[Main.nash:7:11]
- 6 │ bad record = missing { record | a = (assert Primitive.True) }
+ 6 │ bad record = missing { record | absent = (assert Primitive.True) }
  7 │ sibling = missing (assert Primitive.True)
    ·           ───┬───
    ·              ╰── required by `missing`

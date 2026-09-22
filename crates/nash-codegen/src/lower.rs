@@ -309,9 +309,15 @@ impl<'a> Lower<'a> {
                         return Err(Error::InvalidCase("invalid Data branch"));
                     }
                     let body = self.term(b.body)?;
-                    let function = self.lambda(b.binders, body);
-                    let unwrapped = self.builtin(unwrap, &[value]);
-                    arms[index] = Some(function.apply(self.arena, unwrapped));
+                    arms[index] = Some(
+                        if crate::build::names(b.body).contains(&b.binders[0].name.unique) {
+                            let function = self.lambda(b.binders, body);
+                            let unwrapped = self.builtin(unwrap, &[value]);
+                            function.apply(self.arena, unwrapped)
+                        } else {
+                            body
+                        },
+                    );
                 }
                 let [constr, map, list, int, bytes] =
                     arms.map(|arm| arm.unwrap_or(fallback).delay(self.arena));

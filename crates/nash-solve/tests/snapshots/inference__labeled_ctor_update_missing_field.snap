@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype box = Box { value : bool }\nchange : box -> box\nchange b = { b | missing = Primitive.True }\n"
+info: diagnostic
+---
+nash::type::missing_field
+
+  × Record has no field `missing`.
+   ╭─[Main.nash:4:18]
+ 3 │ change : box -> box
+ 4 │ change b = { b | missing = Primitive.True }
+   ·                  ───┬───
+   ·                     ╰── field `missing` update of `b`
+   ╰────
+  help: Record type: box
+
+        Did you mean `value`?
+
+        Available fields: `value`.

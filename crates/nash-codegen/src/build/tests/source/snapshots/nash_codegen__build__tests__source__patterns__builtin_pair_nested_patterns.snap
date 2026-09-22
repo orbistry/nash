@@ -48,19 +48,17 @@ main#1
                 (lam field_27
                   [(lam generated_40
                     (force
-                      [[[[[[(force (builtin chooseData)) generated_40]
-                        (delay [(lam field_28 (force leaf_25)) [(builtin unConstrData) generated_40]])]
-                        (delay [(lam field_29 (force leaf_25)) [(builtin unMapData) generated_40]])]
-                        (delay [(lam field_30 (force leaf_25)) [(builtin unListData) generated_40]])]
+                      [[[[[[(force (builtin chooseData)) generated_40] (delay (force leaf_25))]
+                        (delay (force leaf_25))]
+                        (delay (force leaf_25))]
                         (delay
                           [(lam field_31
                             [(lam generated_41
                               (force
-                                [[[[[[(force (builtin chooseData)) generated_41]
-                                  (delay [(lam field_32 (force leaf_25)) [(builtin unConstrData) generated_41]])]
-                                  (delay [(lam field_33 (force leaf_25)) [(builtin unMapData) generated_41]])]
-                                  (delay [(lam field_34 (force leaf_25)) [(builtin unListData) generated_41]])]
-                                  (delay [(lam field_35 (force leaf_25)) [(builtin unIData) generated_41]])]
+                                [[[[[[(force (builtin chooseData)) generated_41] (delay (force leaf_25))]
+                                  (delay (force leaf_25))]
+                                  (delay (force leaf_25))]
+                                  (delay (force leaf_25))]
                                   (delay
                                     [(lam field_36
                                       [(lam a_10
@@ -71,7 +69,7 @@ main#1
                                       [(builtin unBData) generated_41]])]))
                               field_27])
                             [(builtin unIData) generated_40]])]
-                        (delay [(lam field_37 (force leaf_25)) [(builtin unBData) generated_40]])]))
+                        (delay (force leaf_25))]))
                     field_26]))))
             (delay [fromInt_4 (con integer 0)])])
           value_9])])
@@ -81,4 +79,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3348825, memory: 17398
+cpu: 3248683, memory: 16866

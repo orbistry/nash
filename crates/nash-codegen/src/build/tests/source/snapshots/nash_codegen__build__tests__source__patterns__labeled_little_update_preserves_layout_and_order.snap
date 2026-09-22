@@ -1,0 +1,61 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\ntype record = Record { a : int, b : int, c : int }\nchange : record -> record\nchange value = { value | c = (trace \"c\" 30), a = (trace \"a\" 10) }\nmain : record\nmain = change (trace \"base\" (Record 1 2 3))\n"
+---
+--- core
+let message#14 : string = "a" in
+let message#15 : string = "c" in
+let message#16 : string = "base" in
+let fromInt#6 : int -> int = \value#10 : int -> value#10 in
+let fromString#7 : string -> string = \value#11 : string -> value#11 in
+let change#2 : Main.record -> Main.record = \value#8 : Main.record -> let base#9 : Main.record = value#8 in
+let evaluated#13 : 'erased = trace (fromString#7 message#14) in fromInt#6 10 in
+let projection#12 : 'erased = field@1/3 base#9 in
+constr 0 evaluated#13 projection#12 (trace (fromString#7 message#15) in fromInt#6 30) in
+let main#1 : Main.record = change#2 (trace (fromString#7 message#16) in (\field#3 : int field#4 : int field#5 : int -> constr 0 field#3 field#4 field#5) (fromInt#6 1) (fromInt#6 2) (fromInt#6 3)) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_14
+    [(lam message_15
+      [(lam message_16
+        [(lam fromInt_6
+          [(lam fromString_7
+            [(lam change_2
+              [(lam main_1 main_1)
+                [change_2
+                  (force
+                    [[(force (builtin trace)) [fromString_7 message_16]]
+                      (delay
+                        [[[(lam field_3 (lam field_4 (lam field_5 (constr 0 field_3 field_4 field_5))))
+                          [fromInt_6 (con integer 1)]]
+                          [fromInt_6 (con integer 2)]]
+                          [fromInt_6 (con integer 3)]])])]])
+              (lam value_8
+                [(lam base_9
+                  [(lam evaluated_13
+                    [(lam projection_12
+                      (constr 0
+                        evaluated_13
+                        projection_12
+                        (force
+                          [[(force (builtin trace)) [fromString_7 message_15]]
+                            (delay [fromInt_6 (con integer 30)])])))
+                      (case
+                        base_9
+                        (lam generated_17 (lam generated_18 (lam generated_19 generated_18))))])
+                    (force
+                      [[(force (builtin trace)) [fromString_7 message_14]]
+                        (delay [fromInt_6 (con integer 10)])])])
+                  value_8])])
+            (lam value_11 value_11)])
+          (lam value_10 value_10)])
+        (con string "base")])
+      (con string "c")])
+    (con string "a")])
+--- result
+(constr 0 (con integer 10) (con integer 2) (con integer 30))
+--- logs
+["base", "a", "c"]
+--- budget
+cpu: 1762594, memory: 10096

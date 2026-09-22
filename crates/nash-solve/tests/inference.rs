@@ -337,7 +337,7 @@ fn recovery_field_failures_block_dependent_traits_and_keep_independent_traits() 
         "bad : ()\nbad = missing ((assert Primitive.True).field)",
         "type alias record = { a : () }\nbad : ()\nbad = missing ({ a = (assert Primitive.True) }.field)",
         "type thing = Thing { a : () }\nbad : thing -> ()\nbad record = missing record.absent",
-        "type thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | a = (assert Primitive.True) }",
+        "type thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | absent = (assert Primitive.True) }",
         "bad : () -> ()\nbad record = missing { record | a = (assert Primitive.True) }",
     ] {
         let bump = Bump::new();
@@ -4352,8 +4352,8 @@ fn labeled_ctor_access_and_construction() {
 }
 
 #[test]
-fn labeled_ctor_update_error() {
-    assert_inference_error_snapshot!(
+fn labeled_ctor_update() {
+    assert_inference_snapshot!(
         r#"
         module Main exposing (..)
         type box 'a = Box { value : 'a }
@@ -5248,5 +5248,41 @@ fn unit_literal_conversion_preserves_nominal_alias_identity() {
 fn user_boolean_constructor_names_are_not_literals() {
     assert_inference_snapshot!(
         "module Main exposing (..)\ntype flag = True | False\ntruth = True\nfalsehood = False\n"
+    );
+}
+
+#[test]
+fn labeled_ctor_update_wrong_type() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type box = Box { value : bool }
+        change : box -> box
+        change b = { b | value = () }
+    "#
+    );
+}
+
+#[test]
+fn labeled_ctor_update_missing_field() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type box = Box { value : bool }
+        change : box -> box
+        change b = { b | missing = Primitive.True }
+    "#
+    );
+}
+
+#[test]
+fn labeled_multi_constructor_update_rejected() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type choice = First { value : bool } | Second { value : bool }
+        change : choice -> choice
+        change b = { b | value = Primitive.True }
+    "#
     );
 }

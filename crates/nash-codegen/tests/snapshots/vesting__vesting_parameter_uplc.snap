@@ -68,11 +68,9 @@ description: "module Cardano.Tx exposing (currentSlot, signedBy)\n\nimport Primi
                                               (lam i15
                                                 [(lam i16
                                                   (force
-                                                    [[[[[[(force (builtin chooseData)) i16]
-                                                      (delay [(lam i17 (force i7)) [(builtin unConstrData) i16]])]
-                                                      (delay [(lam i17 (force i7)) [(builtin unMapData) i16]])]
-                                                      (delay [(lam i17 (force i7)) [(builtin unListData) i16]])]
-                                                      (delay [(lam i17 (force i7)) [(builtin unIData) i16]])]
+                                                    [[[[[[(force (builtin chooseData)) i16] (delay (force i7))] (delay (force i7))]
+                                                      (delay (force i7))]
+                                                      (delay (force i7))]
                                                       (delay
                                                         [(lam i17
                                                           (case
@@ -84,10 +82,10 @@ description: "module Cardano.Tx exposing (currentSlot, signedBy)\n\nimport Primi
                                             (force i7))))
                                       (force i7))))))
                               [(builtin unConstrData) i8]])]
-                          (delay [(lam i9 (force i7)) [(builtin unMapData) i8]])]
-                          (delay [(lam i9 (force i7)) [(builtin unListData) i8]])]
-                          (delay [(lam i9 (force i7)) [(builtin unIData) i8]])]
-                          (delay [(lam i9 (force i7)) [(builtin unBData) i8]])]))
+                          (delay (force i7))]
+                          (delay (force i7))]
+                          (delay (force i7))]
+                          (delay (force i7))]))
                       i6])
                     (delay (error))])
                   i4]))])
@@ -110,10 +108,8 @@ description: "module Cardano.Tx exposing (currentSlot, signedBy)\n\nimport Primi
                                   (lam i10
                                     [(lam i11
                                       (force
-                                        [[[[[[(force (builtin chooseData)) i11]
-                                          (delay [(lam i12 (force i4)) [(builtin unConstrData) i11]])]
-                                          (delay [(lam i12 (force i4)) [(builtin unMapData) i11]])]
-                                          (delay [(lam i12 (force i4)) [(builtin unListData) i11]])]
+                                        [[[[[[(force (builtin chooseData)) i11] (delay (force i4))] (delay (force i4))]
+                                          (delay (force i4))]
                                           (delay
                                             [(lam i12
                                               (case
@@ -122,14 +118,14 @@ description: "module Cardano.Tx exposing (currentSlot, signedBy)\n\nimport Primi
                                                   (lam i14 (case i14 (lam i15 (lam i16 (force i4))) [(lam i15 i15) i12])))
                                                 (force i4)))
                                               [(builtin unIData) i11]])]
-                                          (delay [(lam i12 (force i4)) [(builtin unBData) i11]])]))
+                                          (delay (force i4))]))
                                       i9]))
                                 (force i4))))))
                         [(builtin unConstrData) i5]])]
-                    (delay [(lam i6 (force i4)) [(builtin unMapData) i5]])]
-                    (delay [(lam i6 (force i4)) [(builtin unListData) i5]])]
-                    (delay [(lam i6 (force i4)) [(builtin unIData) i5]])]
-                    (delay [(lam i6 (force i4)) [(builtin unBData) i5]])]))
+                    (delay (force i4))]
+                    (delay (force i4))]
+                    (delay (force i4))]
+                    (delay (force i4))]))
                 i3])
               (delay (error))])
             i2])])

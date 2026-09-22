@@ -3,41 +3,30 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validate)\nimport Lift exposing (lower)\nimport Functor\nmain =\n    let\n        a : Data\n        a = List [I 1, I 2, I 3]\n        checked : List Int\n        checked = validate a\n        values : list int\n        values = Functor.map Builtin.unIData (Builtin.unListData checked)\n    in\n    case values of\n        [h] -> equalsInteger h h\n        _ -> fail\n"
 ---
 --- core
-let mapList#23 : ('erased -> int) -> list 'erased -> list int = \(f#41 : 'erased -> int) values#42 : list 'erased -> (\self#8 : 'erased -> self#8 self#8) (\self#8 : 'erased values#42 : list 'erased -> let match#45 : list 'erased = values#42 in
-case@List match#45 of
+let mapList#23 : ('erased -> int) -> list 'erased -> list int = \(f#30 : 'erased -> int) values#31 : list 'erased -> (\self#8 : 'erased -> self#8 self#8) (\self#8 : 'erased values#31 : list 'erased -> let match#34 : list 'erased = values#31 in
+case@List match#34 of
   Nil -> (con (list integer) [])
-  Cons field#46 field#47 -> let x#43 : 'erased = field#46 in
-  let xs#44 : list 'erased = field#47 in
-  mkCons (f#41 x#43) (self#8 self#8 xs#44)) values#42 in
+  Cons field#35 field#36 -> let x#32 : 'erased = field#35 in
+  let xs#33 : list 'erased = field#36 in
+  mkCons (f#30 x#32) (self#8 self#8 xs#33)) values#31 in
 let map#16 : ('erased -> int) -> list 'erased -> list int = mapList#23 in
-let mapList#26 : ('erased -> Data) -> list 'erased -> list Data = \(f#48 : 'erased -> Data) values#49 : list 'erased -> (\self#7 : 'erased -> self#7 self#7) (\self#7 : 'erased values#49 : list 'erased -> let match#52 : list 'erased = values#49 in
-case@List match#52 of
+let mapList#26 : ('erased -> Data) -> list 'erased -> list Data = \(f#37 : 'erased -> Data) values#38 : list 'erased -> (\self#7 : 'erased -> self#7 self#7) (\self#7 : 'erased values#38 : list 'erased -> let match#41 : list 'erased = values#38 in
+case@List match#41 of
   Nil -> (con (list data) [])
-  Cons field#53 field#54 -> let first#50 : 'erased = field#53 in
-  let rest#51 : list 'erased = field#54 in
-  mkCons (f#48 first#50) (self#7 self#7 rest#51)) values#49 in
-let validate#27 : Data -> Int = \value#55 : Data -> let match#57 : Data = value#55 in
-let leaf#63 : 'erased = delay error in
-case@Data match#57 of
-  DataConstr field#64 -> force leaf#63
-  DataMap field#65 -> force leaf#63
-  DataList field#66 -> force leaf#63
-  DataI field#67 -> (\coerce#56 : 'erased -> coerce#56) value#55
-  DataB field#68 -> force leaf#63 in
-let validate#17 : Data -> List Data = \value#24 : Data -> let match#28 : Data = value#24 in
-let leaf#34 : 'erased = delay error in
-case@Data match#28 of
-  DataConstr field#35 -> force leaf#34
-  DataMap field#36 -> force leaf#34
-  DataList field#37 -> let values#25 : list Data = field#37 in
-  listData (mapList#26 validate#27 values#25)
-  DataI field#38 -> force leaf#34
-  DataB field#39 -> force leaf#34 in
-let fromInt#20 : int -> int = \value#40 : int -> value#40 in
+  Cons field#42 field#43 -> let first#39 : 'erased = field#42 in
+  let rest#40 : list 'erased = field#43 in
+  mkCons (f#37 first#39) (self#7 self#7 rest#40)) values#38 in
+let validate#27 : Data -> Int = \value#44 : Data -> let candidate#45 : Int = (\coerce#47 : 'erased -> coerce#47) value#44 in
+let destruct#46 : int = unIData candidate#45 in
+candidate#45 in
+let validate#17 : Data -> List Data = \value#24 : Data -> let candidate#25 : List Data = (\coerce#28 : 'erased -> coerce#28) value#24 in
+let projection#48 : list Data = unListData candidate#25 in
+listData (mapList#26 validate#27 projection#48) in
+let fromInt#20 : int -> int = \value#29 : int -> value#29 in
 let a#2 : Data = (\field#18 : list Data -> listData field#18) (mkCons ((\field#19 : int -> iData field#19) (fromInt#20 1)) (mkCons ((\field#21 : int -> iData field#21) (fromInt#20 2)) (mkCons ((\field#22 : int -> iData field#22) (fromInt#20 3)) (con (list data) [])))) in
 let checked#3 : List Int = validate#17 a#2 in
-let projection#69 : list Data = unListData checked#3 in
-let values#4 : list int = map#16 unIData projection#69 in
+let projection#49 : list Data = unListData checked#3 in
+let values#4 : list int = map#16 unIData projection#49 in
 let match#6 : list int = values#4 in
 let leaf#11 : 'erased = delay error in
 let main#1 : bool = case@List match#6 of
@@ -57,7 +46,7 @@ main#1
             [(lam fromInt_20
               [(lam a_2
                 [(lam checked_3
-                  [(lam projection_69
+                  [(lam projection_49
                     [(lam values_4
                       [(lam match_6
                         [(lam leaf_11
@@ -73,7 +62,7 @@ main#1
                               (force leaf_11))])
                           (delay (error))])
                         values_4])
-                      [[map_16 (builtin unIData)] projection_69]])
+                      [[map_16 (builtin unIData)] projection_49]])
                     [(builtin unListData) checked_3]])
                   [validate_17 a_2]])
                 [(lam field_18 [(builtin listData) field_18])
@@ -84,80 +73,56 @@ main#1
                       [[(force (builtin mkCons))
                         [(lam field_22 [(builtin iData) field_22]) [fromInt_20 (con integer 3)]]]
                         (con (list data) [])]]]]])
-              (lam value_40 value_40)])
+              (lam value_29 value_29)])
             (lam value_24
-              [(lam match_28
-                [(lam leaf_34
-                  [(lam generated_70
-                    (force
-                      [[[[[[(force (builtin chooseData)) generated_70]
-                        (delay [(lam field_35 (force leaf_34)) [(builtin unConstrData) generated_70]])]
-                        (delay [(lam field_36 (force leaf_34)) [(builtin unMapData) generated_70]])]
-                        (delay
-                          [(lam field_37
-                            [(lam values_25 [(builtin listData) [[mapList_26 validate_27] values_25]])
-                              field_37])
-                            [(builtin unListData) generated_70]])]
-                        (delay [(lam field_38 (force leaf_34)) [(builtin unIData) generated_70]])]
-                        (delay [(lam field_39 (force leaf_34)) [(builtin unBData) generated_70]])]))
-                    match_28])
-                  (delay (error))])
-                value_24])])
-          (lam value_55
-            [(lam match_57
-              [(lam leaf_63
-                [(lam generated_71
-                  (force
-                    [[[[[[(force (builtin chooseData)) generated_71]
-                      (delay [(lam field_64 (force leaf_63)) [(builtin unConstrData) generated_71]])]
-                      (delay [(lam field_65 (force leaf_63)) [(builtin unMapData) generated_71]])]
-                      (delay [(lam field_66 (force leaf_63)) [(builtin unListData) generated_71]])]
-                      (delay
-                        [(lam field_67 [(lam coerce_56 coerce_56) value_55])
-                          [(builtin unIData) generated_71]])]
-                      (delay [(lam field_68 (force leaf_63)) [(builtin unBData) generated_71]])]))
-                  match_57])
-                (delay (error))])
-              value_55])])
-        (lam f_48
-          (lam values_49
+              [(lam candidate_25
+                [(lam projection_48
+                  [(builtin listData) [[mapList_26 validate_27] projection_48]])
+                  [(builtin unListData) candidate_25]])
+                [(lam coerce_28 coerce_28) value_24]])])
+          (lam value_44
+            [(lam candidate_45
+              [(lam destruct_46 candidate_45) [(builtin unIData) candidate_45]])
+              [(lam coerce_47 coerce_47) value_44]])])
+        (lam f_37
+          (lam values_38
             [[(lam self_7 [self_7 self_7])
               (lam self_7
-                (lam values_49
-                  [(lam match_52
+                (lam values_38
+                  [(lam match_41
                     (case
-                      match_52
-                      (lam field_53
-                        (lam field_54
-                          [(lam first_50
-                            [(lam rest_51
-                              [[(force (builtin mkCons)) [f_48 first_50]] [[self_7 self_7] rest_51]])
-                              field_54])
-                            field_53]))
+                      match_41
+                      (lam field_42
+                        (lam field_43
+                          [(lam first_39
+                            [(lam rest_40
+                              [[(force (builtin mkCons)) [f_37 first_39]] [[self_7 self_7] rest_40]])
+                              field_43])
+                            field_42]))
                       (con (list data) [])))
-                    values_49]))]
-              values_49]))])
+                    values_38]))]
+              values_38]))])
       mapList_23])
-    (lam f_41
-      (lam values_42
+    (lam f_30
+      (lam values_31
         [[(lam self_8 [self_8 self_8])
           (lam self_8
-            (lam values_42
-              [(lam match_45
+            (lam values_31
+              [(lam match_34
                 (case
-                  match_45
-                  (lam field_46
-                    (lam field_47
-                      [(lam x_43
-                        [(lam xs_44 [[(force (builtin mkCons)) [f_41 x_43]] [[self_8 self_8] xs_44]])
-                          field_47])
-                        field_46]))
+                  match_34
+                  (lam field_35
+                    (lam field_36
+                      [(lam x_32
+                        [(lam xs_33 [[(force (builtin mkCons)) [f_30 x_32]] [[self_8 self_8] xs_33]])
+                          field_36])
+                        field_35]))
                   (con (list integer) [])))
-                values_42]))]
-          values_42]))])
+                values_31]))]
+          values_31]))])
 --- result
 error: ExplicitErrorTerm
 --- logs
 []
 --- budget
-cpu: 7718789, memory: 40932
+cpu: 4141289, memory: 20804

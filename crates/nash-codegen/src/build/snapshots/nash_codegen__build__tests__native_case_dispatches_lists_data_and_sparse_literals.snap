@@ -67,13 +67,12 @@ main#1
             [(lam leaf_23
               [(lam generated_35
                 (force
-                  [[[[[[(force (builtin chooseData)) generated_35]
-                    (delay [(lam field_24 (force leaf_23)) [(builtin unConstrData) generated_35]])]
-                    (delay [(lam field_25 (force leaf_23)) [(builtin unMapData) generated_35]])]
-                    (delay [(lam field_26 (force leaf_23)) [(builtin unListData) generated_35]])]
+                  [[[[[[(force (builtin chooseData)) generated_35] (delay (force leaf_23))]
+                    (delay (force leaf_23))]
+                    (delay (force leaf_23))]
                     (delay
                       [(lam field_27 [(lam n_16 n_16) field_27]) [(builtin unIData) generated_35]])]
-                    (delay [(lam field_28 (force leaf_23)) [(builtin unBData) generated_35]])]))
+                    (delay (force leaf_23))]))
                 match_17])
               (delay
                 [[(builtin subtractInteger) [fromInt_3 (con integer 0)]]
@@ -100,4 +99,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 5149869, memory: 26935
+cpu: 5049727, memory: 26403

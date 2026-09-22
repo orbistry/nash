@@ -36,17 +36,11 @@ main#1
           [(lam generated_18
             (force
               [[[[[[(force (builtin chooseData)) generated_18]
-                (delay
-                  [(lam field_11 [fromInt_3 (con integer 0)])
-                    [(builtin unConstrData) generated_18]])]
-                (delay
-                  [(lam field_12 [fromInt_3 (con integer 1)]) [(builtin unMapData) generated_18]])]
-                (delay
-                  [(lam field_13 [fromInt_3 (con integer 2)]) [(builtin unListData) generated_18]])]
-                (delay
-                  [(lam field_14 [fromInt_3 (con integer 3)]) [(builtin unIData) generated_18]])]
-                (delay
-                  [(lam field_15 [fromInt_3 (con integer 4)]) [(builtin unBData) generated_18]])]))
+                (delay [fromInt_3 (con integer 0)])]
+                (delay [fromInt_3 (con integer 1)])]
+                (delay [fromInt_3 (con integer 2)])]
+                (delay [fromInt_3 (con integer 3)])]
+                (delay [fromInt_3 (con integer 4)])]))
             match_10])
           value_9])])
     (lam value_16 value_16)])
@@ -60,4 +54,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 4114736, memory: 21680
+cpu: 3598706, memory: 19020

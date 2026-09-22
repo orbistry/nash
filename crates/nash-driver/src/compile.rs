@@ -1077,22 +1077,12 @@ mod kind_tests {
     }
 
     #[tokio::test]
-    async fn labeled_ctor_import_rejects_updates() {
+    async fn labeled_ctor_import_updates() {
         let result = compile_pair(
             "module Types exposing (type box(..))\ntype box = Box { value : bool }\n",
             "module Main exposing (..)\nimport Types\nchange : Types.box -> Types.box\nchange x = { x | value = Primitive.True }\n",
         ).await;
-        assert_eq!(result.success, 1, "{result:?}");
-        let ModuleResult::Failed(reports) =
-            &result.modules[&Url::parse("file:///Main.nash").unwrap()]
-        else {
-            panic!("consumer must reject union update")
-        };
-        let message = report_text(reports);
-        assert!(
-            message.contains("nash::type::update_not_record"),
-            "{message}"
-        );
+        assert_eq!(result.success, 2, "{result:?}");
     }
 
     #[tokio::test]
