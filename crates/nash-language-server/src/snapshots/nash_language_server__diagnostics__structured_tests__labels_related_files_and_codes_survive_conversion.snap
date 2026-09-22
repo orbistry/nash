@@ -1,0 +1,70 @@
+---
+source: crates/nash-language-server/src/diagnostics.rs
+description: a b c
+---
+{
+  "range": {
+    "start": {
+      "line": 0,
+      "character": 4
+    },
+    "end": {
+      "line": 0,
+      "character": 5
+    }
+  },
+  "severity": 1,
+  "code": "nash::type::mismatch",
+  "source": "nash",
+  "message": "Type mismatch.\n\nargument 2 of `f`\n\n",
+  "relatedInformation": [
+    {
+      "location": {
+        "uri": "file:///project/Main.nash",
+        "range": {
+          "start": {
+            "line": 0,
+            "character": 0
+          },
+          "end": {
+            "line": 0,
+            "character": 1
+          }
+        }
+      },
+      "message": "first requirement"
+    },
+    {
+      "location": {
+        "uri": "file:///project/Main.nash",
+        "range": {
+          "start": {
+            "line": 0,
+            "character": 2
+          },
+          "end": {
+            "line": 0,
+            "character": 3
+          }
+        }
+      },
+      "message": "second requirement"
+    },
+    {
+      "location": {
+        "uri": "file:///project/Other%20%23.nash",
+        "range": {
+          "start": {
+            "line": 0,
+            "character": 4
+          },
+          "end": {
+            "line": 0,
+            "character": 5
+          }
+        }
+      },
+      "message": "Declared here.\n\nannotation for `f`\n\n"
+    }
+  ]
+}

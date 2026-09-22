@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+description: "module Main exposing (..)\ntype step = Done\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\nvalue = eq Done Done\n"
+---
+nash::type::missing_impl
+
+  × No impl for `Eq step`.
+   ╭─[Main.nash:5:9]
+ 4 │     eq : 'a -> 'a -> bool
+ 5 │ value = eq Done Done
+   ·         ─┬
+   ·          ╰── required by `eq`
+   ╰────
+  help: Import or define an impl for `Eq step`.

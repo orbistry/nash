@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\nf : (Big 'a, Little 'a) => 'a -> 'a\nf x = x\n"
+---
+nash::names::contradictory_representation
+
+  × The representation requirements on 'a are incompatible:
+   ╭─[src/Main.nash:6:21]
+ 5 │ 
+ 6 │ f : (Big 'a, Little 'a) => 'a -> 'a
+   ·                     ──
+ 7 │ f x = x
+   ╰────
+  help: Change the incompatible constraints or uses of this variable.

@@ -54,6 +54,19 @@
 //! - Path reference: `{ "path": "../my-lib" }`
 //! - Git reference: `{ "git": "https://...", "branch": "main" }`
 
+#[cfg(test)]
+macro_rules! assert_config_roundtrip_snapshot {
+    ($source:expr, $config:expr) => {{
+        let config = &$config;
+        let serialized = serde_json::to_string_pretty(config).unwrap();
+        insta::with_settings!({description => $source, omit_expression => true}, {
+            insta::assert_snapshot!(&serialized);
+        });
+        assert_eq!(&crate::parse(&serialized, "nash.jsonc").unwrap(), config);
+        assert_eq!(&serde_json::from_str::<crate::Config>(&serialized).unwrap(), config);
+    }};
+}
+
 mod config;
 mod error;
 mod name;

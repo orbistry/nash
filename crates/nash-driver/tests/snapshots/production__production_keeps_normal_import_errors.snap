@@ -1,0 +1,13 @@
+---
+source: crates/nash-driver/tests/production.rs
+description: "validator module Main exposing (main)\nimport Missing\nmain _ = ()\n"
+---
+nash::names::import_not_found
+
+  × Unknown module `Missing`.
+   ╭─[/project/src/Main.nash:2:8]
+ 1 │ validator module Main exposing (main)
+ 2 │ import Missing
+   ·        ───────
+ 3 │ main _ = ()
+   ╰────

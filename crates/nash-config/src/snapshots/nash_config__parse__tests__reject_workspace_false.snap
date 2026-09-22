@@ -1,0 +1,6 @@
+---
+source: crates/nash-config/src/parse.rs
+description: "{\n    \"type\": \"application\",\n    \"dependencies\": {\n        \"nash/base\": { \"workspace\": false }\n    }\n}\n"
+info: diagnostic
+---
+  × 'test.jsonc' at 4:37: 'workspace' must be true

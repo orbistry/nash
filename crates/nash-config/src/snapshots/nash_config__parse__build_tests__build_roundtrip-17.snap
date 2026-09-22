@@ -1,0 +1,15 @@
+---
+source: crates/nash-config/src/parse.rs
+description: "{\"type\":\"application\",\"plutusVersion\":\"v3\",\"traceLevel\":\"verbose\",\"compilerTraces\":false}"
+---
+{
+  "type": "application",
+  "plutusVersion": "v3",
+  "traceLevel": "verbose",
+  "compilerTraces": false,
+  "sourceDirectories": [
+    "src"
+  ],
+  "dependencies": {},
+  "testDependencies": {}
+}

@@ -1,0 +1,27 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nbad : ((), ())\nbad = (\\x -> x, () ())\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `( unit, unit )`, found `( 'a -> 'a, ? )`.
+   ╭─[Main.nash:3:7]
+ 1 │ module Main exposing (..)
+ 2 │ bad : ((), ())
+   ·       ────┬───
+   ·           ╰── declared type
+ 3 │ bad = (\x -> x, () ())
+   ·       ────────┬───────
+   ·               ╰── body of `bad`
+   ╰────
+
+
+nash::type::mismatch
+
+  × this function is not a function; received 1 argument.
+   ╭─[Main.nash:3:17]
+ 2 │ bad : ((), ())
+ 3 │ bad = (\x -> x, () ())
+   ·                 ──
+   ╰────

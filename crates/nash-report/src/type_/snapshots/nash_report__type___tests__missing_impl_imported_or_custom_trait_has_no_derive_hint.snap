@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+description: "module Main exposing (..)\nimport Imported\nvalue = eq Imported.Done Imported.Done\n"
+---
+nash::type::missing_impl
+
+  × No impl for `Eq Imported.step`.
+   ╭─[Main.nash:3:9]
+ 2 │ import Imported
+ 3 │ value = eq Imported.Done Imported.Done
+   ·         ─┬
+   ·          ╰── required by `eq`
+   ╰────
+  help: Import or define an impl for `Eq Imported.step`.

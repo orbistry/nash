@@ -1,0 +1,46 @@
+---
+source: crates/nash-test/tests/runtime.rs
+description: é == x
+---
+{
+  "maxSuccess": 5,
+  "seed": 42,
+  "tests": [
+    {
+      "assert": {
+        "column": 1,
+        "file": "Example.nash",
+        "line": 1,
+        "source": "é == x",
+        "values": [
+          {
+            "column": 0,
+            "row": 0,
+            "value": "é"
+          },
+          {
+            "column": 5,
+            "row": 0,
+            "value": "?"
+          }
+        ]
+      },
+      "budget": {
+        "cpu": 100,
+        "mem": 100
+      },
+      "counterexample": null,
+      "expectedFailure": false,
+      "failure": {
+        "kind": "body"
+      },
+      "iterations": 1,
+      "kind": "test",
+      "labels": {},
+      "module": "Example",
+      "name": "fixture",
+      "status": "fail",
+      "traces": []
+    }
+  ]
+}

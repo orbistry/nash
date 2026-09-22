@@ -1,0 +1,12 @@
+---
+source: crates/nash-driver/tests/build.rs
+description: "validator module First exposing (main)\nmain _ = ()\n\nvalidator module Second exposing (main)\nmain _ = ()\n"
+---
+First
+(program 1.1.0
+  [(lam main_1 main_1) (lam arg_2 [(lam match_3 (con unit ())) arg_2])])
+hash: 24687ca990ace303f332724de71f891952cbc69365df15113cf21403
+Second
+(program 1.1.0
+  [(lam main_1 main_1) (lam arg_2 [(lam match_3 (con unit ())) arg_2])])
+hash: 4c4af607e924b1d6c18262b29dae4937a62bf61858724151820ae91f

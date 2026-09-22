@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/tests/test_dependencies.rs
+description: "{\"type\":\"application\",\"testDependencies\":{\"sample/helpers\":\"1.0.0 <= v < 2.0.0\"}}"
+---
+cannot resolve dependency sample/helpers: registry and git resolution are not implemented; use a local path dependency or a workspace package

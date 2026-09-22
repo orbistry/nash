@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/tests/build.rs
+description: write validator artifacts named Main and MAIN
+---
+duplicate validator module name (ignoring ASCII case)

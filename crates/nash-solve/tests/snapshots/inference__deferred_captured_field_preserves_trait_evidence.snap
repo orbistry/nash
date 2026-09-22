@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype alias point = { x : int }\ntrait Read 'a where\n    read : 'a -> 'a\nimpl Read int where\n    read x = x\ng : point -> ()\ng p = ()\nf p =\n    let\n        get ignored = read p.x\n    in\n    (get (), g p)\n"
+---
+f : point -> ( int, unit )
+g : point -> unit

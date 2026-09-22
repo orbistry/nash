@@ -1,0 +1,23 @@
+---
+source: crates/nash-language-server/src/diagnostics.rs
+description: a = unknown
+---
+{
+  "range": {
+    "start": {
+      "line": 0,
+      "character": 4
+    },
+    "end": {
+      "line": 0,
+      "character": 11
+    }
+  },
+  "severity": 2,
+  "code": "nash::diagnostic",
+  "source": "nash",
+  "message": "Name:\n\n\n\n",
+  "data": [
+    "known"
+  ]
+}

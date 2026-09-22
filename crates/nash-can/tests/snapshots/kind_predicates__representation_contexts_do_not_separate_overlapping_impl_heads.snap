@@ -1,0 +1,19 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntrait T 'a where\nimpl Big 'a => T (list 'a) where\nimpl Const 'a => T (list 'a) where\n"
+---
+nash::names::overlapping_impls
+
+  × These `Main.T` impls can both match the same trait arguments. The overlapping
+  │ head is (Primitive.list 'a0):
+   ╭─[src/Main.nash:8:1]
+ 6 │ trait T 'a where
+ 7 │ impl Big 'a => T (list 'a) where
+   · ────────────────┬───────────────
+   ·                 ╰── first impl in `Main`
+ 8 │ impl Const 'a => T (list 'a) where
+   · ─────────────────┬────────────────
+   ·                  ╰── overlapping impl in `Main`
+   ╰────
+  help: Remove one impl or make their heads disjoint; context constraints do not
+        disambiguate heads.

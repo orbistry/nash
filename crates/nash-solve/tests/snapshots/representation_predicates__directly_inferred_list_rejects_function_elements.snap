@@ -1,0 +1,18 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nbad = [\\x -> x]\n"
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable ('a -> 'a)`.
+   ╭─[Main.nash:4:7]
+ 3 │ import Builtin exposing (..)
+ 4 │ bad = [\x -> x]
+   ·       ────┬────
+   ·           ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming Primitive.list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.

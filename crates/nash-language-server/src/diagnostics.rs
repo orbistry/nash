@@ -160,6 +160,9 @@ mod tests {
         );
         let source = Source::new("x\nx");
         let diagnostic = to_lsp(&report, &source, &uri);
+        insta::with_settings!({description => source.text(), omit_expression => true}, {
+            insta::assert_snapshot!(serde_json::to_string_pretty(&diagnostic).unwrap());
+        });
         assert_eq!(diagnostic.range, to_range(report.region, &source).unwrap());
         assert_eq!(
             diagnostic.related_information.unwrap()[0].location.range,
@@ -184,6 +187,9 @@ mod tests {
         .warning();
         let uri = "file:///test/Main.nash".parse().unwrap();
         let diagnostic = to_lsp(&report, &source, &uri);
+        insta::with_settings!({description => source.text(), omit_expression => true}, {
+            insta::assert_snapshot!(serde_json::to_string_pretty(&diagnostic).unwrap());
+        });
         assert_eq!(diagnostic.severity, Some(DiagnosticSeverity::WARNING));
         assert_eq!(diagnostic.data, Some(serde_json::json!(["known"])));
         assert_eq!(
@@ -191,7 +197,11 @@ mod tests {
             to_range(region(1, 5, 1, 12), &source).unwrap()
         );
         report = report.without_source();
-        assert!(to_lsp(&report, &source, &uri).related_information.is_none());
+        let diagnostic = to_lsp(&report, &source, &uri);
+        assert!(diagnostic.related_information.is_none());
+        insta::with_settings!({description => source.text(), omit_expression => true}, {
+            insta::assert_snapshot!(serde_json::to_string_pretty(&diagnostic).unwrap());
+        });
     }
 }
 
@@ -241,6 +251,9 @@ mod structured_tests {
         });
         let uri: Uri = "file:///project/Main.nash".parse().unwrap();
         let diagnostic = to_lsp(&report, &Source::new("a b c"), &uri);
+        insta::with_settings!({description => "a b c", omit_expression => true}, {
+            insta::assert_snapshot!(serde_json::to_string_pretty(&diagnostic).unwrap());
+        });
         assert_eq!(
             diagnostic.code,
             Some(NumberOrString::String("nash::type::mismatch".into()))

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+description: "module Main exposing (..)\napply f = f ()\nvalue = apply <| ()\n"
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `Primitive.unit -> Primitive.unit`,
+  │ found `Primitive.unit`.
+   ╭─[Main.nash:3:18]
+ 2 │ apply f = f ()
+ 3 │ value = apply <| ()
+   ·                  ─┬
+   ·                   ╰── right operand of (<|)
+   ╰────

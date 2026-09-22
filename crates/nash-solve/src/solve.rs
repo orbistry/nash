@@ -3163,6 +3163,15 @@ mod copy_tests {
                 errors: Vec::new(),
             },
         );
+        let localizer = nash_report::localizer::Localizer::from_module(&parsed, &[]);
+        insta::with_settings!({description => source, omit_expression => true, info => &"diagnostic"}, {
+            insta::assert_snapshot!(result.errors.iter().map(|error|
+                nash_report::render_plain(
+                    &nash_report::type_::to_report(&localizer, error),
+                    &nash_report::Source::new(source), "Main.nash"
+                )
+            ).collect::<Vec<_>>().join("\n"));
+        });
         assert!(
             matches!(&result.errors[..], [Error::MissingImpl { region, .. }] if region.start.line == 8)
         );

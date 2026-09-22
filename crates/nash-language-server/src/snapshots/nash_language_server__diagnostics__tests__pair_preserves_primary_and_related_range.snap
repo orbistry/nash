@@ -1,0 +1,38 @@
+---
+source: crates/nash-language-server/src/diagnostics.rs
+description: "x\nx"
+---
+{
+  "range": {
+    "start": {
+      "line": 1,
+      "character": 0
+    },
+    "end": {
+      "line": 1,
+      "character": 1
+    }
+  },
+  "severity": 1,
+  "code": "nash::diagnostic",
+  "source": "nash",
+  "message": "Duplicate names:\n\nsecond name\n\nRename one.",
+  "relatedInformation": [
+    {
+      "location": {
+        "uri": "file:///test/Main.nash",
+        "range": {
+          "start": {
+            "line": 0,
+            "character": 0
+          },
+          "end": {
+            "line": 0,
+            "character": 1
+          }
+        }
+      },
+      "message": "first name"
+    }
+  ]
+}

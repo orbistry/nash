@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\nimpl Big int where\n"
+---
+nash::names::impl_of_builtin_trait
+
+  × The `Primitive.Big` trait is owned by the compiler:
+   ╭─[src/Main.nash:6:1]
+ 5 │ 
+ 6 │ impl Big int where
+   · ──────────────────
+   ╰────
+  help: Its representation rules cannot be replaced by an impl. Remove this impl and use
+        a type with an admitted representation.

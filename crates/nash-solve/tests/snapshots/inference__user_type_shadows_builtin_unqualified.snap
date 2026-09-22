@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype int = Mine\nmain = Mine\nidentity : Primitive.int -> Primitive.int\nidentity x = x\n"
+---
+identity : int -> int
+main : int

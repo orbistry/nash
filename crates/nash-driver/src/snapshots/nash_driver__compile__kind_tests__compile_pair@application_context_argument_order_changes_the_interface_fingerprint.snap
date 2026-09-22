@@ -1,0 +1,14 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type app)\ntype app 'f 'a 'b = App ('f 'a 'b)\n\nmodule Main exposing (..)\nimport Types exposing (type app)\n"
+---
+{
+    "Main": [],
+    "Types": [
+        Type {
+            name: "app",
+            constructors_exposed: false,
+            kind: "(Type -> Type -> Type) -> Type -> Type -> Type",
+        },
+    ],
+}

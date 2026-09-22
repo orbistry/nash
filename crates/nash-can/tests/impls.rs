@@ -7,10 +7,8 @@ use indoc::indoc;
 #[test]
 fn inline_impl_bounds_are_retained_for_superclasses() {
     let bump = Bump::new();
-    let result = canonicalize(
-        &bump,
-        indoc!(
-            "
+    let source = indoc!(
+        "
         module Main exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a
@@ -21,9 +19,9 @@ fn inline_impl_bounds_are_retained_for_superclasses() {
         impl More (list ('a : Big)) where
             more x = x
     "
-        ),
-    )
-    .unwrap();
+    );
+    let result = canonicalize(&bump, source).unwrap();
+    insta::with_settings!({description => source, omit_expression => true}, { insta::assert_debug_snapshot!(result.module.impls); });
     assert_eq!(result.tables.impls.len(), 2);
     for info in result.tables.impls.values() {
         assert!(
@@ -999,10 +997,8 @@ fn impl_unapplied_constructor() {
 #[test]
 fn impl_method_retains_owner_kind_restriction() {
     let bump = Bump::new();
-    let result = canonicalize(
-        &bump,
-        indoc!(
-            "
+    let source = indoc!(
+        "
         module Main exposing (..)
 
         type option 'a = None | Some 'a
@@ -1013,9 +1009,9 @@ fn impl_method_retains_owner_kind_restriction() {
         impl Keep option where
             keep value = value
         "
-        ),
-    )
-    .unwrap();
+    );
+    let result = canonicalize(&bump, source).unwrap();
+    insta::with_settings!({description => source, omit_expression => true}, { insta::assert_debug_snapshot!(result.module.impls); });
     let nash_ast::Def::TypedDef {
         free_vars, context, ..
     } = result.module.impls[0].value.methods[0]

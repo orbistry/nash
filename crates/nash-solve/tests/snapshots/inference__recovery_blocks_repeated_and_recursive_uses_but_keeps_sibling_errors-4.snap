@@ -1,0 +1,30 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbroken = missing ()\nfirst : ()\nfirst = broken\nsecond : ()\nsecond = broken\nsibling : ()\nsibling = \\x -> x\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Missing Primitive.unit`.
+   ╭─[Main.nash:6:10]
+ 5 │     missing : 'a -> 'a
+ 6 │ broken = missing ()
+   ·          ───┬───
+   ·             ╰── required by `missing`
+ 7 │ first : ()
+   ╰────
+  help: Import or define an impl for `Missing Primitive.unit`.
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `Primitive.unit`, found `'a -> 'a`.
+    ╭─[Main.nash:12:11]
+ 10 │ second = broken
+ 11 │ sibling : ()
+    ·           ─┬
+    ·            ╰── declared type
+ 12 │ sibling = \x -> x
+    ·           ───┬───
+    ·              ╰── body of `sibling`
+    ╰────

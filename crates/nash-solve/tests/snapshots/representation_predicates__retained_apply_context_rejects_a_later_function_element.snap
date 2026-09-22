@@ -1,0 +1,49 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype wrap 'f 'a = Wrap ('f 'a)\nwrap xs = Wrap xs\nbad = wrap [\\x -> x]\n"
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable ('a -> 'a)`.
+   ╭─[Main.nash:6:7]
+ 5 │ wrap xs = Wrap xs
+ 6 │ bad = wrap [\x -> x]
+   ·       ──┬─
+   ·         ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming wrap Primitive.list ('a -> 'a)
+            Primitive.list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable ('a -> 'a)`.
+   ╭─[Main.nash:6:7]
+ 5 │ wrap xs = Wrap xs
+ 6 │ bad = wrap [\x -> x]
+   ·       ──┬─
+   ·         ╰── required by `wrap`
+   ╰────
+  help: Requirement chain:
+
+            Primitive.list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable ('a -> 'a)`.
+   ╭─[Main.nash:6:12]
+ 5 │ wrap xs = Wrap xs
+ 6 │ bad = wrap [\x -> x]
+   ·            ────┬────
+   ·                ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming Primitive.list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.

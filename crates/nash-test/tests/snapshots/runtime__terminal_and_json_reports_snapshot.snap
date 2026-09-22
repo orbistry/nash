@@ -1,6 +1,6 @@
 ---
 source: crates/nash-test/tests/runtime.rs
-description: x == 2
+description: (program 1.1.0 (con unit ()))
 ---
   Testing Example (Example.nash)
 

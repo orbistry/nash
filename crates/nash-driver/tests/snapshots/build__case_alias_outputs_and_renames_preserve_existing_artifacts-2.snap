@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/tests/build.rs
+description: write validator artifacts named Main and MAIN
+---
+artifact filenames differ only by ASCII case near Main.cbor; remove old owned outputs before renaming

@@ -1,0 +1,15 @@
+---
+source: crates/nash-config/src/config.rs
+description: "{\"type\":\"application\",\"traceLevel\":\"silent\"}"
+---
+{
+  "type": "application",
+  "plutusVersion": "v3",
+  "traceLevel": "silent",
+  "compilerTraces": false,
+  "sourceDirectories": [
+    "src"
+  ],
+  "dependencies": {},
+  "testDependencies": {}
+}

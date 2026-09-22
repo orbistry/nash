@@ -1,0 +1,306 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\n\ntype option 'a = None | Some 'a\n\ntrait Keep 'f where\n    keep : 'f ('a : Big) -> 'f 'a\n\nimpl Keep option where\n    keep value = value\n"
+---
+[
+    Located {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 1,
+            },
+            end: Position {
+                line: 9,
+                column: 23,
+            },
+        },
+        value: Impl {
+            variables: [],
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Keep",
+            },
+            context: [],
+            heads: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 8,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 8,
+                            column: 17,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "option",
+                        },
+                        args: [],
+                    },
+                },
+            ],
+            methods: [
+                TypedDef {
+                    context: [
+                        Trait {
+                            trait_: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "Big",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 18,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                    ],
+                    annotation: Located {
+                        region: Region {
+                            start: Position {
+                                line: 6,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 6,
+                                column: 34,
+                            },
+                        },
+                        value: Lambda {
+                            from: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 25,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: None,
+                                            name: "Main",
+                                        },
+                                        name: "option",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 6,
+                                                    column: 15,
+                                                },
+                                                end: Position {
+                                                    line: 6,
+                                                    column: 25,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                            to: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 29,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 34,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: None,
+                                            name: "Main",
+                                        },
+                                        name: "option",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 6,
+                                                    column: 32,
+                                                },
+                                                end: Position {
+                                                    line: 6,
+                                                    column: 34,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 9,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 9,
+                                column: 9,
+                            },
+                        },
+                        value: "keep",
+                    },
+                    free_vars: [
+                        "a",
+                    ],
+                    args: [
+                        TypedPattern {
+                            pattern: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 9,
+                                        column: 10,
+                                    },
+                                    end: Position {
+                                        line: 9,
+                                        column: 15,
+                                    },
+                                },
+                                value: Var(
+                                    "value",
+                                ),
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 25,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: None,
+                                            name: "Main",
+                                        },
+                                        name: "option",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 6,
+                                                    column: 15,
+                                                },
+                                                end: Position {
+                                                    line: 6,
+                                                    column: 25,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                    body: Located {
+                        region: Region {
+                            start: Position {
+                                line: 9,
+                                column: 18,
+                            },
+                            end: Position {
+                                line: 9,
+                                column: 23,
+                            },
+                        },
+                        value: VarLocal(
+                            "value",
+                        ),
+                    },
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 6,
+                                column: 29,
+                            },
+                            end: Position {
+                                line: 6,
+                                column: 34,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: None,
+                                    name: "Main",
+                                },
+                                name: "option",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 32,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 34,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                },
+            ],
+        },
+    },
+]

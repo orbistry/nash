@@ -3,6 +3,23 @@ use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::Mutex;
 use url::Url;
 
+fn diagnostics(report: &nash_driver::BuildResult) -> String {
+    report
+        .ordered_reports()
+        .iter()
+        .map(|reports| {
+            let view = nash_report::Source::new(&reports.source);
+            reports
+                .reports
+                .iter()
+                .map(|report| nash_report::render_plain(report, &view, &reports.path))
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 #[tokio::test]
 async fn production_excludes_test_blocks_and_their_imports() {
     let files = [
@@ -60,6 +77,9 @@ async fn production_excludes_test_blocks_and_their_imports() {
         insta::assert_snapshot!(output[0].uplc);
     });
     let checked = build(db, &graph, &origins).await;
+    insta::with_settings!({description => files.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true}, {
+        insta::assert_snapshot!("check_test_imports", diagnostics(&checked));
+    });
     assert!(
         !checked.is_success(),
         "check must diagnose invalid test imports and bodies"
@@ -81,6 +101,9 @@ async fn production_keeps_normal_import_errors() {
     .await;
     assert!(!report.is_success());
     assert!(output.is_none());
+    insta::with_settings!({description => text, omit_expression => true}, {
+        insta::assert_snapshot!(diagnostics(&report));
+    });
 }
 
 #[tokio::test]
@@ -150,13 +173,11 @@ async fn check_rejects_non_unit_test_body() {
         .await
         .unwrap();
     let checked = build(db, &graph, &origins).await;
-    let nash_driver::ModuleResult::Failed(reports) = &checked.modules[&uri] else {
+    let nash_driver::ModuleResult::Failed(_) = &checked.modules[&uri] else {
         panic!("invalid test body passed: {checked:?}")
     };
     insta::with_settings!({description => source, omit_expression => true}, {
-        let view = nash_report::Source::new(&reports.source);
-        let rendered = reports.reports.iter().map(|report| nash_report::render_plain(report, &view, &reports.path)).collect::<Vec<_>>().join("\n");
-        insta::assert_snapshot!(rendered);
+        insta::assert_snapshot!(diagnostics(&checked));
     });
 }
 
@@ -165,11 +186,11 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
     let memory = InMemorySource::new();
     let main = Url::parse("file:///project/src/Main.nash").unwrap();
     let dependency = Url::parse("file:///dependency/src/Dependency.nash").unwrap();
-    memory.insert(main.clone(), "validator module Main exposing (main)\nimport Dependency\nmain : Data -> unit\nmain value = Dependency.main value\n".into());
-    memory.insert(
-        dependency.clone(),
-        "validator module Dependency exposing (main)\nmain : Data -> unit\nmain _ = ()\n".into(),
-    );
+    let main_source = "validator module Main exposing (main)\nimport Dependency\nmain : Data -> unit\nmain value = Dependency.main value\n";
+    let dependency_source =
+        "validator module Dependency exposing (main)\nmain : Data -> unit\nmain _ = ()\n";
+    memory.insert(main.clone(), main_source.into());
+    memory.insert(dependency.clone(), dependency_source.into());
     let origins = BTreeMap::from([
         (main.clone(), None),
         (dependency, Some("sample/dependency".parse().unwrap())),
@@ -194,7 +215,9 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
     let outputs = outputs.unwrap().unwrap();
     assert_eq!(outputs.len(), 1);
     assert_eq!(outputs[0].module, "Main");
-    assert!(outputs[0].uplc.starts_with("(program 1.1.0"));
+    insta::with_settings!({description => [main_source, dependency_source].join("\n"), omit_expression => true}, {
+        insta::assert_snapshot!(outputs[0].uplc);
+    });
     assert_eq!(
         outputs[0].hash,
         nash_plutus::script::script_hash(nash_plutus::machine::PlutusVersion::V1, &outputs[0].cbor)

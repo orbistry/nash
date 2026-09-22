@@ -1,0 +1,25 @@
+---
+source: crates/nash-language-server/src/workspace.rs
+description: read src/Unavailable.nash (a directory)
+---
+{
+  "uri": "file:///project/src/Unavailable.nash",
+  "diagnostics": [
+    {
+      "range": {
+        "start": {
+          "line": 0,
+          "character": 0
+        },
+        "end": {
+          "line": 0,
+          "character": 0
+        }
+      },
+      "severity": 1,
+      "code": "SOURCE UNAVAILABLE",
+      "source": "nash",
+      "message": "failed to read file /project/src/Unavailable.nash: <directory read error>"
+    }
+  ]
+}

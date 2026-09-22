@@ -1,0 +1,856 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\ntrait Keep 'a => More 'a where\n    more : 'a -> 'a\nimpl Keep (list ('a : Big)) where\n    keep x = x\nimpl More (list ('a : Big)) where\n    more x = x\n"
+---
+[
+    Located {
+        region: Region {
+            start: Position {
+                line: 6,
+                column: 1,
+            },
+            end: Position {
+                line: 7,
+                column: 15,
+            },
+        },
+        value: Impl {
+            variables: [
+                "a",
+            ],
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "Keep",
+            },
+            context: [
+                Trait {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "base",
+                                },
+                            ),
+                            name: "Primitive",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 18,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 20,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "base",
+                                },
+                            ),
+                            name: "Primitive",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 17,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 27,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
+            heads: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 27,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "base",
+                                    },
+                                ),
+                                name: "Primitive",
+                            },
+                            name: "list",
+                        },
+                        args: [
+                            Var(
+                                0,
+                            ),
+                        ],
+                    },
+                },
+            ],
+            methods: [
+                TypedDef {
+                    context: [
+                        Trait {
+                            trait_: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "Big",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 18,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 20,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                        Implied {
+                            trait_: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "Storable",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 17,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 27,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                    ],
+                    annotation: Located {
+                        region: Region {
+                            start: Position {
+                                line: 3,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 20,
+                            },
+                        },
+                        value: Lambda {
+                            from: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 27,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "base",
+                                                },
+                                            ),
+                                            name: "Primitive",
+                                        },
+                                        name: "list",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 6,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 6,
+                                                    column: 27,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                            to: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 27,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "base",
+                                                },
+                                            ),
+                                            name: "Primitive",
+                                        },
+                                        name: "list",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 6,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 6,
+                                                    column: 27,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 7,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 9,
+                            },
+                        },
+                        value: "keep",
+                    },
+                    free_vars: [
+                        "a",
+                    ],
+                    args: [
+                        TypedPattern {
+                            pattern: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 7,
+                                        column: 10,
+                                    },
+                                    end: Position {
+                                        line: 7,
+                                        column: 11,
+                                    },
+                                },
+                                value: Var(
+                                    "x",
+                                ),
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 27,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "base",
+                                                },
+                                            ),
+                                            name: "Primitive",
+                                        },
+                                        name: "list",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 6,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 6,
+                                                    column: 27,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                    body: Located {
+                        region: Region {
+                            start: Position {
+                                line: 7,
+                                column: 14,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 15,
+                            },
+                        },
+                        value: VarLocal(
+                            "x",
+                        ),
+                    },
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 6,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 6,
+                                column: 27,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "list",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 17,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 27,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                },
+            ],
+        },
+    },
+    Located {
+        region: Region {
+            start: Position {
+                line: 8,
+                column: 1,
+            },
+            end: Position {
+                line: 9,
+                column: 15,
+            },
+        },
+        value: Impl {
+            variables: [
+                "a",
+            ],
+            trait_: QualifiedName {
+                home: ModuleName {
+                    package: None,
+                    name: "Main",
+                },
+                name: "More",
+            },
+            context: [
+                Trait {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "base",
+                                },
+                            ),
+                            name: "Primitive",
+                        },
+                        name: "Big",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 8,
+                                    column: 18,
+                                },
+                                end: Position {
+                                    line: 8,
+                                    column: 20,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+                Implied {
+                    trait_: QualifiedName {
+                        home: ModuleName {
+                            package: Some(
+                                PackageName {
+                                    author: "nash",
+                                    project: "base",
+                                },
+                            ),
+                            name: "Primitive",
+                        },
+                        name: "Storable",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 8,
+                                    column: 17,
+                                },
+                                end: Position {
+                                    line: 8,
+                                    column: 27,
+                                },
+                            },
+                            value: Var(
+                                "a",
+                            ),
+                        },
+                    ],
+                },
+            ],
+            heads: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 8,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 8,
+                            column: 27,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "base",
+                                    },
+                                ),
+                                name: "Primitive",
+                            },
+                            name: "list",
+                        },
+                        args: [
+                            Var(
+                                0,
+                            ),
+                        ],
+                    },
+                },
+            ],
+            methods: [
+                TypedDef {
+                    context: [
+                        Trait {
+                            trait_: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "Big",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 8,
+                                            column: 18,
+                                        },
+                                        end: Position {
+                                            line: 8,
+                                            column: 20,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                        Implied {
+                            trait_: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "Storable",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 8,
+                                            column: 17,
+                                        },
+                                        end: Position {
+                                            line: 8,
+                                            column: 27,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                    ],
+                    annotation: Located {
+                        region: Region {
+                            start: Position {
+                                line: 5,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 20,
+                            },
+                        },
+                        value: Lambda {
+                            from: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 8,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 8,
+                                        column: 27,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "base",
+                                                },
+                                            ),
+                                            name: "Primitive",
+                                        },
+                                        name: "list",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 8,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 8,
+                                                    column: 27,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                            to: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 8,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 8,
+                                        column: 27,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "base",
+                                                },
+                                            ),
+                                            name: "Primitive",
+                                        },
+                                        name: "list",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 8,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 8,
+                                                    column: 27,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 9,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 9,
+                                column: 9,
+                            },
+                        },
+                        value: "more",
+                    },
+                    free_vars: [
+                        "a",
+                    ],
+                    args: [
+                        TypedPattern {
+                            pattern: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 9,
+                                        column: 10,
+                                    },
+                                    end: Position {
+                                        line: 9,
+                                        column: 11,
+                                    },
+                                },
+                                value: Var(
+                                    "x",
+                                ),
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 8,
+                                        column: 12,
+                                    },
+                                    end: Position {
+                                        line: 8,
+                                        column: 27,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: Some(
+                                                PackageName {
+                                                    author: "nash",
+                                                    project: "base",
+                                                },
+                                            ),
+                                            name: "Primitive",
+                                        },
+                                        name: "list",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 8,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 8,
+                                                    column: 27,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                    body: Located {
+                        region: Region {
+                            start: Position {
+                                line: 9,
+                                column: 14,
+                            },
+                            end: Position {
+                                line: 9,
+                                column: 15,
+                            },
+                        },
+                        value: VarLocal(
+                            "x",
+                        ),
+                    },
+                    typ: Located {
+                        region: Region {
+                            start: Position {
+                                line: 8,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 8,
+                                column: 27,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "list",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 8,
+                                            column: 17,
+                                        },
+                                        end: Position {
+                                            line: 8,
+                                            column: 27,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                },
+            ],
+        },
+    },
+]

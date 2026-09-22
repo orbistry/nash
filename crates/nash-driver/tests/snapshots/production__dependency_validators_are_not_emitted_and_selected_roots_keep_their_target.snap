@@ -1,0 +1,7 @@
+---
+source: crates/nash-driver/tests/production.rs
+description: "validator module Main exposing (main)\nimport Dependency\nmain : Data -> unit\nmain value = Dependency.main value\n\nvalidator module Dependency exposing (main)\nmain : Data -> unit\nmain _ = ()\n"
+---
+(program 1.1.0
+  [(lam main_3 [(lam main_1 main_1) (lam value_2 [main_3 value_2])])
+    (lam arg_4 [(lam match_5 (con unit ())) arg_4])])

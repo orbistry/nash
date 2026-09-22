@@ -1,0 +1,29 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nsingleton x = [x]\nbad = singleton (\\x -> x)\n"
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable ('a -> 'a)`.
+   ╭─[Main.nash:5:7]
+ 4 │ singleton x = [x]
+ 5 │ bad = singleton (\x -> x)
+   ·       ────┬────
+   ·           ╰── required by `type application`
+   ╰────
+  help: Requirement chain:
+
+            forming Primitive.list ('a -> 'a)
+
+        Use a type with Big or Const representation; an impl cannot change representation.
+
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Storable ('a -> 'a)`.
+   ╭─[Main.nash:5:7]
+ 4 │ singleton x = [x]
+ 5 │ bad = singleton (\x -> x)
+   ·       ────┬────
+   ·           ╰── required by `singleton`
+   ╰────
+  help: Use a type with Big or Const representation; an impl cannot change representation.

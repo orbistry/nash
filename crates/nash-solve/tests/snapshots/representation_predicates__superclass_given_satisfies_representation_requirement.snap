@@ -1,0 +1,194 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nconsume : Storable 'a => 'a -> unit\nconsume x = ()\nuse : Big 'a => 'a -> unit\nuse x = consume x\n"
+---
+{
+    "consume": Annotation {
+        context: [
+            Trait {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "base",
+                            },
+                        ),
+                        name: "Primitive",
+                    },
+                    name: "Storable",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+        free_vars: [
+            "a",
+        ],
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Lambda {
+                from: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+                to: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "base",
+                                    },
+                                ),
+                                name: "Primitive",
+                            },
+                            name: "unit",
+                        },
+                        args: [],
+                    },
+                },
+            },
+        },
+    },
+    "use": Annotation {
+        context: [
+            Trait {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "base",
+                            },
+                        ),
+                        name: "Primitive",
+                    },
+                    name: "Big",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+        free_vars: [
+            "a",
+        ],
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Lambda {
+                from: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+                to: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "base",
+                                    },
+                                ),
+                                name: "Primitive",
+                            },
+                            name: "unit",
+                        },
+                        args: [],
+                    },
+                },
+            },
+        },
+    },
+}

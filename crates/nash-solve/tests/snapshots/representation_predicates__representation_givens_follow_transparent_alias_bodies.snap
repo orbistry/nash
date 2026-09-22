@@ -1,0 +1,447 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Eq exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n\nmodule Lift exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Lift 'a 'b where\n    lift : 'a -> 'b\n    lower : 'b -> 'a\n\n\nmodule Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (Eq)\nimport Lift exposing (Lift)\ntype alias Alias 'a = 'a\nsame : Alias 'a -> Alias 'a -> bool\nsame x y = eq x y\nroundTrip : Alias 'a -> Alias 'a\nroundTrip x = lift x\n"
+---
+{
+    "roundTrip": Annotation {
+        context: [
+            Implied {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "base",
+                            },
+                        ),
+                        name: "Primitive",
+                    },
+                    name: "Big",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+        free_vars: [
+            "a",
+        ],
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Lambda {
+                from: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Alias {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "Alias",
+                        },
+                        arguments: [
+                            AliasArgument {
+                                name: "a",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                        ],
+                        remaining: [],
+                        target: Filled {
+                            body: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 23,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 25,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        },
+                    },
+                },
+                to: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Alias {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "Alias",
+                        },
+                        arguments: [
+                            AliasArgument {
+                                name: "a",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                        ],
+                        remaining: [],
+                        target: Filled {
+                            body: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 23,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 25,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    "same": Annotation {
+        context: [
+            Implied {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "base",
+                            },
+                        ),
+                        name: "Primitive",
+                    },
+                    name: "Big",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+        free_vars: [
+            "a",
+        ],
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Lambda {
+                from: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Alias {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: None,
+                                name: "Main",
+                            },
+                            name: "Alias",
+                        },
+                        arguments: [
+                            AliasArgument {
+                                name: "a",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                        ],
+                        remaining: [],
+                        target: Filled {
+                            body: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 23,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 25,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        },
+                    },
+                },
+                to: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Lambda {
+                        from: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Alias {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: None,
+                                        name: "Main",
+                                    },
+                                    name: "Alias",
+                                },
+                                arguments: [
+                                    AliasArgument {
+                                        name: "a",
+                                        typ: Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                            },
+                                            value: Var(
+                                                "a",
+                                            ),
+                                        },
+                                    },
+                                ],
+                                remaining: [],
+                                target: Filled {
+                                    body: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 6,
+                                                column: 23,
+                                            },
+                                            end: Position {
+                                                line: 6,
+                                                column: 25,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                    typ: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                },
+                            },
+                        },
+                        to: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                            },
+                            value: Named {
+                                reference: QualifiedName {
+                                    home: ModuleName {
+                                        package: Some(
+                                            PackageName {
+                                                author: "nash",
+                                                project: "base",
+                                            },
+                                        ),
+                                        name: "Primitive",
+                                    },
+                                    name: "bool",
+                                },
+                                args: [],
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}

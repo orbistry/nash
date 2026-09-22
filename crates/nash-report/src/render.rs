@@ -340,9 +340,10 @@ mod tests {
     fn surrounding_region_keeps_primary_highlight() {
         let report = snippet().with_region(region(1, 10));
         assert_eq!(report.region, region(5, 6));
-        assert!(plain(&report).contains("[Main.nash:1:5]"));
+        assert_source_snapshot!("f = x + 1", plain(&report));
         assert_eq!(report.context, Some(region(1, 10)));
-        let source = Source::new("f =\n    case x of\n        _ -> ()\n        () -> ()");
+        let input = "f =\n    case x of\n        _ -> ()\n        () -> ()";
+        let source = Source::new(input);
         let narrow = Region::new(Position::new(4, 9), Position::new(4, 11));
         let wide = Region::new(Position::new(2, 5), Position::new(4, 17));
         let report = Report::snippet("TEST", narrow, None, Doc::text("Before:"), Doc::Empty)
@@ -350,6 +351,7 @@ mod tests {
         let output = render_plain(&report, &source, "Main.nash");
         assert!(output.contains("[Main.nash:4:9]"), "{output}");
         assert!(output.contains("case x of"), "{output}");
+        assert_source_snapshot!(input, output);
     }
 }
 

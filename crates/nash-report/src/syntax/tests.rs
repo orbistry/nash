@@ -14,13 +14,19 @@ fn parse_error_report(input: &str) -> String {
 }
 
 macro_rules! syntax_snapshot {
+    (@output $description:expr, $output:expr) => {{
+        insta::with_settings!({description => $description, omit_expression => true}, {
+            insta::assert_snapshot!($output);
+        });
+    }};
+    (@report $input:expr, $report:expr) => {{
+        syntax_snapshot!(@output $input, render_plain($report, &Source::new($input), "src/Main.nash"));
+    }};
     ($name:ident, $input:expr) => {
         #[test]
         fn $name() {
             let input = $input;
-            insta::with_settings!({ description => format!("Code:\n\n{input}"), omit_expression => true }, {
-                insta::assert_snapshot!(parse_error_report(input));
-            });
+            syntax_snapshot!(@output format!("Code:\n\n{input}"), parse_error_report(input));
         }
     };
 }
@@ -475,6 +481,7 @@ fn underindented_closing_delimiter_is_not_reported_missing() {
             .module()
             .expect_err(source);
         let report = to_report(&Source::new(source), &Error::ParseError(&error));
+        syntax_snapshot!(@report source, &report);
         assert!(
             report.after.render(80, false).contains("Indent"),
             "{source}: {report:?}"
@@ -496,6 +503,7 @@ fn malformed_empty_collections_keep_opener_and_comma_guidance() {
             .module()
             .expect_err(source);
         let report = to_report(&Source::new(source), &Error::ParseError(&error));
+        syntax_snapshot!(@report source, &report);
         assert_eq!(report.labels.len(), 1, "{source}: {report:?}");
         assert_eq!(
             report.labels[0].region.start,
@@ -512,6 +520,7 @@ fn malformed_empty_collections_keep_opener_and_comma_guidance() {
     let bump = bumpalo::Bump::new();
     let error = nash_parse::Parser::new(&bump, source).module().unwrap_err();
     let report = to_report(&Source::new(source), &Error::ParseError(&error));
+    syntax_snapshot!(@report source, &report);
     assert!(report.after.render(80, false).contains("comma"));
 }
 

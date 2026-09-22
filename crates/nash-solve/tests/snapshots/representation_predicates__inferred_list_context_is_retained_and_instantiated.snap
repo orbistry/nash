@@ -1,0 +1,175 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nsingleton x = [x]\ngood = singleton True\n"
+---
+{
+    "good": Annotation {
+        context: [],
+        free_vars: [],
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Named {
+                reference: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "base",
+                            },
+                        ),
+                        name: "Primitive",
+                    },
+                    name: "list",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Named {
+                            reference: QualifiedName {
+                                home: ModuleName {
+                                    package: Some(
+                                        PackageName {
+                                            author: "nash",
+                                            project: "base",
+                                        },
+                                    ),
+                                    name: "Primitive",
+                                },
+                                name: "bool",
+                            },
+                            args: [],
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "singleton": Annotation {
+        context: [
+            Implied {
+                trait_: QualifiedName {
+                    home: ModuleName {
+                        package: Some(
+                            PackageName {
+                                author: "nash",
+                                project: "base",
+                            },
+                        ),
+                        name: "Primitive",
+                    },
+                    name: "Storable",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                        },
+                        value: Var(
+                            "a",
+                        ),
+                    },
+                ],
+            },
+        ],
+        free_vars: [
+            "a",
+        ],
+        typ: Located {
+            region: Region {
+                start: Position {
+                    line: 0,
+                    column: 0,
+                },
+                end: Position {
+                    line: 0,
+                    column: 0,
+                },
+            },
+            value: Lambda {
+                from: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Var(
+                        "a",
+                    ),
+                },
+                to: Located {
+                    region: Region {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                    },
+                    value: Named {
+                        reference: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "base",
+                                    },
+                                ),
+                                name: "Primitive",
+                            },
+                            name: "list",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    },
+}

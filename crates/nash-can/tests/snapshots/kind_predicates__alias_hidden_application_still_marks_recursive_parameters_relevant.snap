@@ -1,0 +1,13 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias app 'f 'a = 'f 'a\ntype r 'f 'a = R (app 'f 'a) (r 'f (list 'a))\n"
+---
+nash::names::irregular_recursion
+
+  × This recursive use of `Main.r` constructs the parameter 'a:
+   ╭─[src/Main.nash:7:31]
+ 6 │ type alias app 'f 'a = 'f 'a
+ 7 │ type r 'f 'a = R (app 'f 'a) (r 'f (list 'a))
+   ·                               ──────────────
+   ╰────
+  help: Pass a type variable for this parameter so context inference can terminate.

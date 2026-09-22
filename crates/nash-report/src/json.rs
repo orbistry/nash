@@ -242,6 +242,9 @@ mod structured_tests {
             ],
         });
         let value = report_to_json(&report);
+        insta::with_settings!({description => report.related[0].source.as_str(), omit_expression => true}, {
+            insta::assert_snapshot!(serde_json::to_string_pretty(&value).unwrap());
+        });
         assert_eq!(value["code"], "nash::type::mismatch");
         assert_eq!(value["title"], "NEW TITLE");
         assert_eq!(value["labels"].as_array().unwrap().len(), 3);

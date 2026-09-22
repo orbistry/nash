@@ -1,0 +1,14 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nconsume : Big 'a => 'a -> unit\nconsume x = ()\nuse : int -> unit\nuse x = consume x\n"
+---
+nash::type::missing_impl
+
+  × Unsatisfied representation constraint `Big Primitive.int`.
+   ╭─[Main.nash:7:9]
+ 6 │ use : int -> unit
+ 7 │ use x = consume x
+   ·         ───┬───
+   ·            ╰── required by `consume`
+   ╰────
+  help: Use a type with Big representation; an impl cannot change representation.

@@ -1,0 +1,14 @@
+---
+source: crates/nash-config/src/config.rs
+description: "{\"type\":\"application\"}"
+---
+{
+  "type": "application",
+  "plutusVersion": "v3",
+  "compilerTraces": false,
+  "sourceDirectories": [
+    "src"
+  ],
+  "dependencies": {},
+  "testDependencies": {}
+}

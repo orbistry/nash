@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/render.rs
+description: "Code:\n\nf =\n    case x of\n        _ -> ()\n        () -> ()"
+---
+nash::diagnostic
+
+  × Before:
+   ╭─[Main.nash:4:9]
+ 1 │ f =
+ 2 │     case x of
+ 3 │         _ -> ()
+ 4 │         () -> ()
+   ·         ──
+   ╰────

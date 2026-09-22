@@ -1,0 +1,27 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : () -> ()\nbad record = missing { record | a = () }\nsibling = missing ()\n"
+info: diagnostic
+---
+nash::type::not_a_record
+
+  × Expected a record, found `unit`.
+   ╭─[Main.nash:5:33]
+ 4 │ bad : () -> ()
+ 5 │ bad record = missing { record | a = () }
+   ·                                 ┬
+   ·                                 ╰── field `a` update of `record`
+ 6 │ sibling = missing ()
+   ╰────
+
+
+nash::type::missing_impl
+
+  × No impl for `Missing unit`.
+   ╭─[Main.nash:6:11]
+ 5 │ bad record = missing { record | a = () }
+ 6 │ sibling = missing ()
+   ·           ───┬───
+   ·              ╰── required by `missing`
+   ╰────
+  help: Import or define an impl for `Missing unit`.

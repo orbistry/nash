@@ -1,0 +1,24 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type point)\ntype alias point = { z : unit, a : unit }\n\nmodule Main exposing (..)\nimport Types\nvalue = { a = (), z = () }\nget : Types.point -> unit\nget r = r.z\nconstructed = Types.point () ()\n"
+---
+{
+    "Main": [
+        Value {
+            name: "constructed",
+        },
+        Value {
+            name: "get",
+        },
+        Value {
+            name: "value",
+        },
+    ],
+    "Types": [
+        Type {
+            name: "point",
+            constructors_exposed: false,
+            kind: "Type",
+        },
+    ],
+}

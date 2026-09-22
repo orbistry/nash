@@ -265,7 +265,9 @@ fn pretty_short_and_multiline_layout() {
         "(lam x [(builtin addInteger) (con integer 1234567890123456789012345678901234567890) x])";
     let term = syn::parse_term(&arena, source).into_result().unwrap();
     let printed = pretty::term(term);
-    assert!(printed.contains("\n  "));
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(printed);
+    });
     assert_eq!(
         term,
         syn::parse_term(&arena, &printed).into_result().unwrap()

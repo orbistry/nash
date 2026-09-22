@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias Record = ({ field : Int } : Term)\n"
+---
+nash::names::representation_mismatch
+
+  × This position requires `Term` in the type annotation:
+   ╭─[src/Main.nash:6:22]
+ 5 │ 
+ 6 │ type alias Record = ({ field : Int } : Term)
+   ·                      ───────────────
+   ╰────
+  help: The type has `Big` representation, but `Term` admits only Term types. Change the
+        type or the representation requirement.

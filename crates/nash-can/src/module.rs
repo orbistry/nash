@@ -1639,18 +1639,18 @@ mod tests {
     }
 
     macro_rules! assert_module_snapshot {
+        (@output $input:expr, $module:expr) => {{
+            insta::with_settings!({description => $input, omit_expression => true}, {
+                insta::assert_debug_snapshot!($module);
+            });
+        }};
         ($input:expr) => {{
             let input = indoc!($input);
             let bump = Bump::new();
             let result = parse_and_canonicalize(&bump, input, Context::default())
                 .expect("expected successful canonicalization");
 
-            insta::with_settings!({
-                description => format!("Code:\n\n{}", input),
-                omit_expression => true,
-            }, {
-                insta::assert_debug_snapshot!(result);
-            });
+            assert_module_snapshot!(@output format!("Code:\n\n{}", input), result);
         }};
     }
 
@@ -4741,6 +4741,7 @@ mod tests {
             &parsed,
         )
         .unwrap();
+        assert_module_snapshot!(@output &*source, result.module);
         assert!(result.warnings.is_empty(), "{:?}", result.warnings);
         assert!(super::collect_used_modules(&result.module).contains("Builtin"));
         let mut decls = result.module.decls;
@@ -4764,12 +4765,10 @@ mod tests {
     #[test]
     fn keyword_expressions_preserve_children_and_source_regions() {
         let bump = Bump::new();
-        let module = parse_and_canonicalize(
-            &bump,
-            "module Main exposing (..)\nvalue message body = trace message (comptime body)\n",
-            Context::default(),
-        )
-        .unwrap();
+        let source =
+            "module Main exposing (..)\nvalue message body = trace message (comptime body)\n";
+        let module = parse_and_canonicalize(&bump, source, Context::default()).unwrap();
+        assert_module_snapshot!(@output source, module);
         let nash_ast::Decls::Declare { definition, .. } = module.decls else {
             panic!("definition")
         };

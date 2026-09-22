@@ -1,0 +1,188 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype Nest 'a = N (Nest (List 'a))\n"
+---
+Module {
+    tests: [],
+    traits: [],
+    impls: [],
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 7,
+                column: 1,
+            },
+        },
+    ),
+    decls: Empty,
+    unions: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 6,
+                    column: 1,
+                },
+                end: Position {
+                    line: 7,
+                    column: 1,
+                },
+            },
+            value: Union {
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [
+                    Implied {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "base",
+                                    },
+                                ),
+                                name: "Primitive",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 30,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 32,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 10,
+                        },
+                    },
+                    value: "Nest",
+                },
+                parameters: [
+                    "a",
+                ],
+                ctors: [
+                    Ctor {
+                        labels: None,
+                        name: "N",
+                        index: 0,
+                        arity: 1,
+                        arguments: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 19,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 33,
+                                    },
+                                },
+                                value: Named {
+                                    reference: QualifiedName {
+                                        home: ModuleName {
+                                            package: None,
+                                            name: "Main",
+                                        },
+                                        name: "Nest",
+                                    },
+                                    args: [
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 6,
+                                                    column: 25,
+                                                },
+                                                end: Position {
+                                                    line: 6,
+                                                    column: 32,
+                                                },
+                                            },
+                                            value: Named {
+                                                reference: QualifiedName {
+                                                    home: ModuleName {
+                                                        package: Some(
+                                                            PackageName {
+                                                                author: "nash",
+                                                                project: "base",
+                                                            },
+                                                        ),
+                                                        name: "Primitive",
+                                                    },
+                                                    name: "List",
+                                                },
+                                                args: [
+                                                    Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 6,
+                                                                column: 30,
+                                                            },
+                                                            end: Position {
+                                                                line: 6,
+                                                                column: 32,
+                                                            },
+                                                        },
+                                                        value: Var(
+                                                            "a",
+                                                        ),
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+                alternatives: 1,
+                options: Unbox,
+            },
+        },
+    ],
+    aliases: [],
+    binops: [],
+}

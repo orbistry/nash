@@ -1,0 +1,15 @@
+---
+source: crates/nash-solve/tests/representation_predicates.rs
+description: "module Source exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nidfa : 'f 'a -> 'f 'a\nidfa x = x\n\n\nmodule Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Source exposing (..)\ntype higher 'f = Higher ('f int)\nbad = idfa (Higher [])\n"
+---
+nash::type::bad_kind
+
+  × Kind mismatch in `type application`: expected `Type -> Type`, found `Type`.
+   ╭─[Main.nash:6:1]
+ 5 │ type higher 'f = Higher ('f int)
+ 6 │ bad = idfa (Higher [])
+   · ───
+   ╰────
+  help: Type arguments:
+
+        Check type-constructor arguments and the annotation's quantified kinds.

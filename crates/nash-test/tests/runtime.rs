@@ -293,6 +293,9 @@ fn unicode_assert_columns_and_json() {
     let json: serde_json::Value =
         serde_json::from_str(&report::json::render(42, 5, &[outcome])).unwrap();
     assert_eq!(json["tests"][0]["assert"]["values"][1]["column"], 5);
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(serde_json::to_string_pretty(&json).unwrap());
+    });
 }
 fn lazy_if<'a>(
     a: &'a Arena,
@@ -431,26 +434,32 @@ fn coverage_counts_duplicate_labels_and_uses_requested_denominator() {
     }
     let out = run(t);
     assert_eq!(out.labels["a"], 10);
-    assert!(
-        report::terminal::render(
-            std::slice::from_ref(&out),
-            Coverage::Labels,
-            42,
-            std::time::Duration::ZERO
-        )
-        .contains("a  100.0%")
-    );
-    assert!(
-        report::terminal::render(&[out], Coverage::Tests, 42, std::time::Duration::ZERO)
-            .contains("a  200.0%")
-    );
+
+    let Programs::Prop { run: bytes, .. } = &out.test.programs else {
+        unreachable!()
+    };
+    let program: &nash_plutus::program::Program<'_, DeBruijn> =
+        nash_plutus::flat::decode(a, bytes).unwrap();
+    insta::with_settings!({description => nash_plutus::pretty::program(program), omit_expression => true}, {
+        insta::assert_snapshot!("coverage_labels", report::terminal::render(std::slice::from_ref(&out), Coverage::Labels, 42, std::time::Duration::ZERO));
+        insta::assert_snapshot!("coverage_tests", report::terminal::render(&[out], Coverage::Tests, 42, std::time::Duration::ZERO));
+    });
 }
+
 #[test]
 fn terminal_and_json_reports_snapshot() {
-    let mut outcome = run(unit(false, Expect::Pass));
+    let test = unit(false, Expect::Pass);
+    let arena = Arena::new();
+    let Programs::Unit { run: bytes } = &test.programs else {
+        unreachable!()
+    };
+    let program: &nash_plutus::program::Program<'_, DeBruijn> =
+        nash_plutus::flat::decode(&arena, bytes).unwrap();
+    let input = nash_plutus::pretty::program(program);
+    let mut outcome = run(test);
     outcome.budget = ExBudget::new(1200, 345100);
     let mut settings = insta::Settings::clone_current();
-    settings.set_description(&outcome.test.source);
+    settings.set_description(&input);
     settings.set_omit_expression(true);
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(report::terminal::render(
@@ -472,7 +481,12 @@ fn terminal_and_json_reports_snapshot() {
         json["tests"][0]["failure"]["limit"]["cpu"],
         i128::MAX.to_string()
     );
+    insta::assert_snapshot!(
+        "budget_failure_json",
+        serde_json::to_string_pretty(&json).unwrap()
+    );
 }
+
 #[test]
 fn multiline_assert_uses_source_rows_display_width_and_indented_values() {
     let source = "  assert (identity \"界\" == identity \"e\u{301}\" ++ z\n      && identity \"名\" == value)";

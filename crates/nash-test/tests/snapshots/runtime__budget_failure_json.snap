@@ -1,0 +1,37 @@
+---
+source: crates/nash-test/tests/runtime.rs
+description: (program 1.1.0 (con unit ()))
+---
+{
+  "maxSuccess": 100,
+  "seed": 42,
+  "tests": [
+    {
+      "assert": null,
+      "budget": {
+        "cpu": 345100,
+        "mem": 1200
+      },
+      "counterexample": null,
+      "expectedFailure": false,
+      "failure": {
+        "kind": "budgetExceeded",
+        "limit": {
+          "cpu": "170141183460469231731687303715884105727",
+          "mem": 0
+        },
+        "used": {
+          "cpu": 345100,
+          "mem": 1200
+        }
+      },
+      "iterations": 1,
+      "kind": "test",
+      "labels": {},
+      "module": "Example",
+      "name": "fixture",
+      "status": "fail",
+      "traces": []
+    }
+  ]
+}

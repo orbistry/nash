@@ -1,0 +1,18 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type item)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias item = int\n\nmodule Main exposing (..)\n\nimport Types exposing (type item)\n\nf : item -> item\nf x = x\n"
+---
+{
+    "Main": [
+        Value {
+            name: "f",
+        },
+    ],
+    "Types": [
+        Type {
+            name: "item",
+            constructors_exposed: false,
+            kind: "Type",
+        },
+    ],
+}

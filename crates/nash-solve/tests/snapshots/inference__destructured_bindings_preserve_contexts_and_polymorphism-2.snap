@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nmain =\n    let\n        (unused, value) = ((), 7)\n    in\n    value ()\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Literal.FromInt (unit -> 'a)`.
+   ╭─[Main.nash:6:5]
+ 5 │     in
+ 6 │     value ()
+   ·     ──┬──
+   ·       ╰── required by `value`
+   ╰────
+  help: Available impl heads:
+
+            int
+
+        Import or define an impl for `Literal.FromInt (unit -> 'a)`.

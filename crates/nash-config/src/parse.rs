@@ -498,6 +498,26 @@ fn position_of(contents: &str, range: Range) -> Position {
 }
 
 #[cfg(test)]
+macro_rules! config_error_snapshot {
+    (@error $source:expr, $error:expr) => {{
+        let mut rendered = String::new();
+        miette::GraphicalReportHandler::new_themed(miette::GraphicalTheme::unicode_nocolor())
+            .with_width(80).render_report(&mut rendered, &miette::MietteDiagnostic::new($error.to_string())).unwrap();
+        insta::with_settings!({description => $source, omit_expression => true, info => &"diagnostic"}, {
+            insta::assert_snapshot!(rendered);
+        });
+    }};
+    ($name:ident, $source:expr) => {
+        #[test]
+        fn $name() {
+            let source = indoc::indoc!($source);
+            let error = parse(source, "nash.jsonc").unwrap_err();
+            config_error_snapshot!(@error source, error);
+        }
+    };
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use indoc::indoc;
@@ -645,6 +665,7 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("workspace config cannot use"));
+        config_error_snapshot!(@error json, err);
     }
 
     #[test]
@@ -745,6 +766,7 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("must be true"));
+        config_error_snapshot!(@error json, err);
     }
 
     #[test]
@@ -820,6 +842,7 @@ mod tests {
         // Error should contain line/column info
         let msg = err.to_string();
         assert!(msg.contains("4:") || msg.contains("line 4"));
+        config_error_snapshot!(@error json, err);
     }
 }
 
@@ -827,25 +850,6 @@ mod tests {
 mod build_tests {
     use super::*;
     use crate::{Build, PlutusVersion, TraceLevel};
-    use miette::{GraphicalReportHandler, GraphicalTheme, MietteDiagnostic};
-
-    macro_rules! config_error_snapshot {
-        ($name:ident, $source:expr) => {
-            #[test]
-            fn $name() {
-                let source = indoc::indoc!($source);
-                let error = parse(source, "nash.jsonc").unwrap_err();
-                let mut rendered = String::new();
-                GraphicalReportHandler::new_themed(GraphicalTheme::unicode_nocolor())
-                    .with_width(80)
-                    .render_report(&mut rendered, &MietteDiagnostic::new(error.to_string()))
-                    .unwrap();
-                insta::with_settings!({ description => source, omit_expression => true, info => &"diagnostic" }, {
-                    insta::assert_snapshot!(rendered);
-                });
-            }
-        };
-    }
 
     #[test]
     fn build_defaults() {
@@ -889,9 +893,7 @@ mod build_tests {
                             compiler_traces
                         }
                     );
-                    let serialized = serde_json::to_string(&config).unwrap();
-                    assert_eq!(parse(&serialized, "nash.jsonc").unwrap(), config);
-                    assert_eq!(serde_json::from_str::<Config>(&serialized).unwrap(), config);
+                    assert_config_roundtrip_snapshot!(&source, config);
                 }
             }
         }
@@ -911,10 +913,7 @@ mod build_tests {
             }
         );
         assert_eq!(serde_json::from_str::<Config>(source).unwrap(), config);
-        assert_eq!(
-            parse(&serde_json::to_string(&config).unwrap(), "nash.jsonc").unwrap(),
-            config
-        );
+        assert_config_roundtrip_snapshot!(source, config);
     }
 
     config_error_snapshot!(

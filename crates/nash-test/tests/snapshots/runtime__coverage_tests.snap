@@ -1,0 +1,11 @@
+---
+source: crates/nash-test/tests/runtime.rs
+description: "(program 1.1.0\n  (lam i0\n    (force\n      [[(force (builtin trace)) (con string \"\\0label\\0a\")]\n        (delay\n          (force\n            [[(force (builtin trace)) (con string \"\\0label\\0a\")] (delay (constr 0 i0))]))])))"
+---
+  Testing Example (Example.nash)
+
+  PASS fixture  [after 5 tests]
+  · with coverage
+  | a  200.0%
+
+  Summary 1 passed, 0 failed, 0 skipped   seed 42   0.00s

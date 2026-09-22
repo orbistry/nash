@@ -1,0 +1,14 @@
+---
+source: crates/nash-driver/src/compile.rs
+description: "module Types exposing (type box)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype box 'a = Box (list 'a)\n\nmodule Main exposing (..)\n\nimport Types exposing (type box)\n"
+---
+{
+    "Main": [],
+    "Types": [
+        Type {
+            name: "box",
+            constructors_exposed: false,
+            kind: "Type -> Type",
+        },
+    ],
+}

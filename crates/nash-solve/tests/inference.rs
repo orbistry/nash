@@ -77,6 +77,50 @@ fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'
     nash_solve::run(bump, &mut uf, module, &can_result.tables).map(|(annotations, _)| annotations)
 }
 
+// SNAPSHOT MACROS
+
+macro_rules! assert_inference_snapshot {
+    (@output $input:expr, $annotations:expr) => {{
+        insta::with_settings!({description => $input, omit_expression => true}, {
+            insta::assert_snapshot!(render_annotations($annotations));
+        });
+    }};
+    ($input:expr) => {{
+        let input = indoc!($input);
+        let bump = Bump::new();
+        let annotations = infer(&bump, input).expect("expected successful type inference");
+
+        assert_inference_snapshot!(@output format!("Code:\n\n{}", input), &annotations);
+    }};
+}
+
+macro_rules! assert_inference_error_snapshot {
+    (@output $input:expr, $errors:expr) => {{
+        insta::with_settings!({description => $input, omit_expression => true, info => &"diagnostic"}, {
+            insta::assert_snapshot!(render_errors($input, $errors));
+        });
+    }};
+    ($input:expr) => {{
+        let input = indoc!($input);
+        let bump = Bump::new();
+        let errors = infer(&bump, input).expect_err("expected type errors");
+
+        assert_inference_error_snapshot!(@output input, &errors);
+    }};
+}
+
+macro_rules! infer_output_snapshot {
+    ($bump:expr, $source:expr $(,)?) => {{
+        let source = $source;
+        let result = infer($bump, source);
+        match &result {
+            Ok(annotations) => assert_inference_snapshot!(@output source, annotations),
+            Err(errors) => assert_inference_error_snapshot!(@output source, errors),
+        }
+        result
+    }};
+}
+
 #[test]
 fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
     let header = "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\n";
@@ -154,7 +198,7 @@ fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
 #[test]
 fn recovery_reports_an_independent_escaping_annotation_and_blocks_its_uses() {
     let bump = Bump::new();
-    let errors = infer(
+    let errors = infer_output_snapshot!(
         &bump,
         indoc!(
             r#"
@@ -202,7 +246,8 @@ fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
         let source = format!(
             "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n{broken}first : ()\nfirst = broken\nsecond : ()\nsecond = broken\nsibling : ()\nsibling = \\x -> x\n"
         );
-        let errors = infer(&bump, &source).expect_err("failed dependencies stay blocked");
+        let errors =
+            infer_output_snapshot!(&bump, &source).expect_err("failed dependencies stay blocked");
         assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
         if broken == "broken x = x x\n" {
             assert_eq!(
@@ -220,7 +265,7 @@ fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
 #[test]
 fn recovery_shared_partial_unification_does_not_create_trait_or_call_cascades() {
     let bump = Bump::new();
-    let errors = infer(
+    let errors = infer_output_snapshot!(
         &bump,
         indoc!(
             r#"
@@ -251,7 +296,7 @@ fn recovery_shared_partial_unification_does_not_create_trait_or_call_cascades() 
 #[test]
 fn recovery_final_recursive_evidence_error_survives_an_independent_mismatch() {
     let bump = Bump::new();
-    let errors = infer(
+    let errors = infer_output_snapshot!(
         &bump,
         indoc!(
             r#"
@@ -291,7 +336,7 @@ fn recovery_final_recursive_evidence_error_survives_an_independent_mismatch() {
 #[test]
 fn recovery_resolution_limit_keeps_unrelated_obligations() {
     let bump = Bump::new();
-    let errors = infer(
+    let errors = infer_output_snapshot!(
         &bump,
         indoc!(
             r#"
@@ -341,7 +386,8 @@ fn recovery_field_failures_block_dependent_traits_and_keep_independent_traits() 
         let source = format!(
             "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\n{body}\nsibling = missing ()\n"
         );
-        let errors = infer(&bump, &source).expect_err("field failure and independent missing impl");
+        let errors = infer_output_snapshot!(&bump, &source)
+            .expect_err("field failure and independent missing impl");
         assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
         assert_eq!(
             errors
@@ -371,7 +417,7 @@ fn recovery_keeps_independent_tuple_siblings_in_both_orders() {
                 (first, second)
             };
             let source = format!("{header}bad = ({first}, {second})\n");
-            let errors = infer(&bump, &source)
+            let errors = infer_output_snapshot!(&bump, &source)
                 .expect_err("both tuple expressions are independently invalid");
             let mut actual: Vec<_> = errors
                 .iter()
@@ -398,8 +444,8 @@ fn recovery_annotated_tuple_keeps_independent_obligations() {
         let source = format!(
             "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ((), ())\nbad = {body}\n"
         );
-        let errors =
-            infer(&bump, &source).expect_err("both tuple expressions are independently invalid");
+        let errors = infer_output_snapshot!(&bump, &source)
+            .expect_err("both tuple expressions are independently invalid");
         assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
         assert!(
             errors
@@ -430,7 +476,8 @@ fn recovery_poisoned_tuple_child_keeps_independent_type_mismatches() {
     ] {
         let bump = Bump::new();
         let source = format!("module Main exposing (..)\nbad : {annotation}\nbad = {body}\n");
-        let errors = infer(&bump, &source).expect_err("both tuple errors must survive");
+        let errors =
+            infer_output_snapshot!(&bump, &source).expect_err("both tuple errors must survive");
         assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
         assert_eq!(
             errors
@@ -461,8 +508,8 @@ fn recovery_field_selection_keeps_errors_independent_of_other_fields() {
         let source = format!(
             "module Main exposing (..)\ntype alias record 'a 'b = {{ a : 'a, b : 'b }}\nbad : ()\nbad = {body}\n"
         );
-        let errors =
-            infer(&bump, &source).expect_err("selected field remains independently invalid");
+        let errors = infer_output_snapshot!(&bump, &source)
+            .expect_err("selected field remains independently invalid");
         assert_eq!(errors.len(), 2, "{source}\n{errors:#?}");
         assert!(
             errors
@@ -485,7 +532,7 @@ fn recovery_field_selection_keeps_errors_independent_of_other_fields() {
         let source = format!(
             "module Main exposing (..)\ntype alias record 'a 'b = {{ a : 'a, b : 'b }}\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ()\nbad = {body}\n"
         );
-        let errors = infer(&bump, &source).expect_err("failed record field");
+        let errors = infer_output_snapshot!(&bump, &source).expect_err("failed record field");
         assert_eq!(
             errors.len(),
             if independent { 2 } else { 1 },
@@ -772,39 +819,6 @@ fn render_errors(input: &str, errors: &[Error<'_>]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n\n")
-}
-
-// SNAPSHOT MACROS
-
-macro_rules! assert_inference_snapshot {
-    ($input:expr) => {{
-        let input = indoc!($input);
-        let bump = Bump::new();
-        let annotations = infer(&bump, input).expect("expected successful type inference");
-
-        insta::with_settings!({
-            description => format!("Code:\n\n{}", input),
-            omit_expression => true,
-        }, {
-            insta::assert_snapshot!(render_annotations(&annotations));
-        });
-    }};
-}
-
-macro_rules! assert_inference_error_snapshot {
-    ($input:expr) => {{
-        let input = indoc!($input);
-        let bump = Bump::new();
-        let errors = infer(&bump, input).expect_err("expected type errors");
-
-        insta::with_settings!({
-            description => input,
-            omit_expression => true,
-            info => &"diagnostic",
-        }, {
-            insta::assert_snapshot!(render_errors(input, &errors));
-        });
-    }};
 }
 
 // LITERALS AND SIMPLE VALUES
@@ -1705,7 +1719,8 @@ fn type_variable_names_do_not_imply_constraints() {
         let source = format!(
             "module Main exposing (..)\nidentity : '{name} -> '{name}\nidentity x = x\nmain = identity ()\n"
         );
-        let annotations = infer(&bump, &source).expect("ordinary type variable accepts unit");
+        let annotations =
+            infer_output_snapshot!(&bump, &source).expect("ordinary type variable accepts unit");
         assert!(annotations["identity"].context.is_empty());
         assert!((annotations["main"].typ.value == CanType::unit()));
     }
@@ -2168,6 +2183,7 @@ fn destructured_bindings_preserve_contexts_and_polymorphism() {
     let module = &can.module;
     let (polymorphic, solved) = nash_solve::run(&bump, &mut uf, module, &can.tables)
         .expect("destructured functions remain polymorphic");
+    assert_inference_snapshot!(@output &*input, &polymorphic);
     assert!(polymorphic["main"].context.is_empty());
     let nash_ast::Decls::Declare { definition, .. } = can.module.decls else {
         panic!("main")
@@ -2201,7 +2217,7 @@ fn destructured_bindings_preserve_contexts_and_polymorphism() {
         );
         assert!(instance.evidence.is_empty());
     }
-    let invalid = infer(
+    let invalid = infer_output_snapshot!(
         &bump,
         indoc!(
             r#"
@@ -4212,6 +4228,7 @@ fn deferred_captured_field_preserves_trait_evidence() {
     let mut uf = UnionFind::new();
     let module = &canonical.module;
     let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
+    assert_inference_snapshot!(@output source, &annotations);
     assert_eq!(
         render_annotation(annotations["f"]),
         "point -> ( int, unit )"
@@ -4231,7 +4248,7 @@ fn big_builtin_types_in_scope() {
 #[test]
 fn user_type_shadows_builtin_unqualified() {
     let bump = Bump::new();
-    let annotations = infer(&bump, "module Main exposing (..)\ntype int = Mine\nmain = Mine\nidentity : Primitive.int -> Primitive.int\nidentity x = x\n").unwrap();
+    let annotations = infer_output_snapshot!(&bump, "module Main exposing (..)\ntype int = Mine\nmain = Mine\nidentity : Primitive.int -> Primitive.int\nidentity x = x\n").unwrap();
     assert!(
         matches!(annotations["main"].typ.value, CanType::Named { reference, .. } if reference.home.name == "Main" && reference.name == "int")
     );
@@ -4943,10 +4960,8 @@ fn solved_metadata_names_captures_consistently_with_schemes_and_instances() {
 #[test]
 fn keyword_expressions_infer_messages_and_preserve_result_types() {
     let bump = Bump::new();
-    let (annotations, solved, nodes) = metadata_fixture(
-        &bump,
-        indoc!(
-            r#"
+    let source = indoc!(
+        r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -4962,8 +4977,9 @@ fn keyword_expressions_infer_messages_and_preserve_result_types() {
         typedStop : 'a
         typedStop = fail "stop"
     "#
-        ),
     );
+    let (annotations, solved, nodes) = metadata_fixture(&bump, source);
+    assert_inference_snapshot!(@output source, &annotations);
     let CanType::Lambda { from, to } = annotations["check"].typ.value else {
         panic!("function")
     };
@@ -4998,8 +5014,8 @@ fn keyword_expressions_reject_wrong_message_and_condition_types() {
     for expression in ["assert ()", "trace () ()", "fail ()", "todo ()"] {
         let bump = Bump::new();
         let source = format!("module Main exposing (..)\nvalue = {expression}\n");
-        let errors =
-            infer(&bump, &source).expect_err("keyword argument has its required builtin type");
+        let errors = infer_output_snapshot!(&bump, &source)
+            .expect_err("keyword argument has its required builtin type");
         assert!(
             errors
                 .iter()
@@ -5016,7 +5032,8 @@ fn keyword_wrappers_preserve_annotated_branch_error_recovery() {
         let source = format!(
             "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nvalue : ()\nvalue = {wrapper} (if True then (\\x -> x) else [])\n"
         );
-        let errors = infer(&bump, &source).expect_err("each branch disagrees with unit");
+        let errors =
+            infer_output_snapshot!(&bump, &source).expect_err("each branch disagrees with unit");
         assert_eq!(
             errors
                 .iter()

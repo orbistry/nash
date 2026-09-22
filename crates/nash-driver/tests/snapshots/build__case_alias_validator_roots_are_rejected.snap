@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/tests/build.rs
+description: "validator module Main exposing (main)\nmain _ = ()\n\nvalidator module MAIN exposing (main)\nmain _ = ()\n"
+---
+multiple validator modules would write the same output filename (ignoring ASCII case)

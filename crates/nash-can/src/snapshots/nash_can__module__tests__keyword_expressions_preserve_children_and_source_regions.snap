@@ -1,0 +1,149 @@
+---
+source: crates/nash-can/src/module.rs
+description: "module Main exposing (..)\nvalue message body = trace message (comptime body)\n"
+---
+Module {
+    tests: [],
+    traits: [],
+    impls: [],
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 3,
+                column: 1,
+            },
+        },
+    ),
+    decls: Declare {
+        definition: Def {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 2,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 2,
+                        column: 6,
+                    },
+                },
+                value: "value",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 14,
+                        },
+                    },
+                    value: Var(
+                        "message",
+                    ),
+                },
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 15,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 19,
+                        },
+                    },
+                    value: Var(
+                        "body",
+                    ),
+                },
+            ],
+            body: Located {
+                region: Region {
+                    start: Position {
+                        line: 2,
+                        column: 22,
+                    },
+                    end: Position {
+                        line: 2,
+                        column: 51,
+                    },
+                },
+                value: Trace {
+                    message: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 28,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 35,
+                            },
+                        },
+                        value: VarLocal(
+                            "message",
+                        ),
+                    },
+                    body: Located {
+                        region: Region {
+                            start: Position {
+                                line: 2,
+                                column: 37,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 50,
+                            },
+                        },
+                        value: Comptime(
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 2,
+                                        column: 46,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        column: 50,
+                                    },
+                                },
+                                value: VarLocal(
+                                    "body",
+                                ),
+                            },
+                        ),
+                    },
+                },
+            },
+        },
+        next: Empty,
+    },
+    unions: [],
+    aliases: [],
+    binops: [],
+}

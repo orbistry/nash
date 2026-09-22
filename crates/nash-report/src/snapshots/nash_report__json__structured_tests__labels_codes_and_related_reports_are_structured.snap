@@ -1,0 +1,113 @@
+---
+source: crates/nash-report/src/json.rs
+description: other
+---
+{
+  "code": "nash::type::mismatch",
+  "labels": [
+    {
+      "primary": true,
+      "region": {
+        "end": {
+          "column": 0,
+          "line": 0
+        },
+        "start": {
+          "column": 0,
+          "line": 0
+        }
+      },
+      "text": "failing argument"
+    },
+    {
+      "primary": false,
+      "region": {
+        "end": {
+          "column": 0,
+          "line": 0
+        },
+        "start": {
+          "column": 0,
+          "line": 0
+        }
+      },
+      "text": "annotation"
+    },
+    {
+      "primary": false,
+      "region": {
+        "end": {
+          "column": 0,
+          "line": 0
+        },
+        "start": {
+          "column": 0,
+          "line": 0
+        }
+      },
+      "text": "earlier argument"
+    }
+  ],
+  "message": [
+    "Problem.\n\nHint."
+  ],
+  "region": {
+    "end": {
+      "column": 0,
+      "line": 0
+    },
+    "start": {
+      "column": 0,
+      "line": 0
+    }
+  },
+  "related": [
+    {
+      "name": "Other",
+      "path": "Other.nash",
+      "problems": [
+        {
+          "code": "nash::type::origin",
+          "labels": [
+            {
+              "primary": true,
+              "region": {
+                "end": {
+                  "column": 0,
+                  "line": 0
+                },
+                "start": {
+                  "column": 0,
+                  "line": 0
+                }
+              },
+              "text": ""
+            }
+          ],
+          "message": [
+            "Origin.\n\n"
+          ],
+          "region": {
+            "end": {
+              "column": 0,
+              "line": 0
+            },
+            "start": {
+              "column": 0,
+              "line": 0
+            }
+          },
+          "related": [],
+          "severity": "error",
+          "suggestions": [],
+          "title": "RELATED"
+        }
+      ]
+    }
+  ],
+  "severity": "error",
+  "suggestions": [
+    "replacement"
+  ],
+  "title": "NEW TITLE"
+}

@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/syntax/tests.rs
+description: "value = {]"
+---
+nash::syntax::unclosed_delimiter
+
+  × Expected `}`, found `]`.
+   ╭─[src/Main.nash:1:10]
+ 1 │ value = {]
+   ·         ┬┬
+   ·         │╰── expected `}`
+   ·         ╰── opened here
+   ╰────
+  help: Replace `]` with `}`.

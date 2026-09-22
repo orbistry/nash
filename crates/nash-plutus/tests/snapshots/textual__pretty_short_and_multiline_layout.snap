@@ -1,0 +1,7 @@
+---
+source: crates/nash-plutus/tests/textual.rs
+description: "(lam x [(builtin addInteger) (con integer 1234567890123456789012345678901234567890) x])"
+---
+(lam i0
+  [[(builtin addInteger) (con integer 1234567890123456789012345678901234567890)]
+    i0])

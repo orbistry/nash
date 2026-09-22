@@ -1,0 +1,642 @@
+---
+source: crates/nash-can/src/module.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nf message x = trace message (comptime (addInteger x x))\ncheck = assert True\nstop message = fail message\nlater message = todo message\nrecur x = comptime (recur x)\n"
+---
+Module {
+    tests: [],
+    traits: [],
+    impls: [],
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 9,
+                column: 1,
+            },
+        },
+    ),
+    decls: Declare {
+        definition: Def {
+            name: Located {
+                region: Region {
+                    start: Position {
+                        line: 6,
+                        column: 1,
+                    },
+                    end: Position {
+                        line: 6,
+                        column: 5,
+                    },
+                },
+                value: "stop",
+            },
+            args: [
+                Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 13,
+                        },
+                    },
+                    value: Var(
+                        "message",
+                    ),
+                },
+            ],
+            body: Located {
+                region: Region {
+                    start: Position {
+                        line: 6,
+                        column: 16,
+                    },
+                    end: Position {
+                        line: 6,
+                        column: 28,
+                    },
+                },
+                value: Fail(
+                    Some(
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 6,
+                                    column: 21,
+                                },
+                                end: Position {
+                                    line: 6,
+                                    column: 28,
+                                },
+                            },
+                            value: VarLocal(
+                                "message",
+                            ),
+                        },
+                    ),
+                ),
+            },
+        },
+        next: DeclareRec {
+            definition: Def {
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 8,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 8,
+                            column: 6,
+                        },
+                    },
+                    value: "recur",
+                },
+                args: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 8,
+                                column: 7,
+                            },
+                            end: Position {
+                                line: 8,
+                                column: 8,
+                            },
+                        },
+                        value: Var(
+                            "x",
+                        ),
+                    },
+                ],
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 8,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 8,
+                            column: 29,
+                        },
+                    },
+                    value: Comptime(
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 8,
+                                    column: 21,
+                                },
+                                end: Position {
+                                    line: 8,
+                                    column: 28,
+                                },
+                            },
+                            value: Call {
+                                function: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 8,
+                                            column: 21,
+                                        },
+                                        end: Position {
+                                            line: 8,
+                                            column: 26,
+                                        },
+                                    },
+                                    value: VarTopLevel(
+                                        QualifiedName {
+                                            home: ModuleName {
+                                                package: None,
+                                                name: "Main",
+                                            },
+                                            name: "recur",
+                                        },
+                                    ),
+                                },
+                                arguments: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 8,
+                                                column: 27,
+                                            },
+                                            end: Position {
+                                                line: 8,
+                                                column: 28,
+                                            },
+                                        },
+                                        value: VarLocal(
+                                            "x",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ),
+                },
+            },
+            following: [],
+            next: Declare {
+                definition: Def {
+                    name: Located {
+                        region: Region {
+                            start: Position {
+                                line: 7,
+                                column: 1,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 6,
+                            },
+                        },
+                        value: "later",
+                    },
+                    args: [
+                        Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 7,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 14,
+                                },
+                            },
+                            value: Var(
+                                "message",
+                            ),
+                        },
+                    ],
+                    body: Located {
+                        region: Region {
+                            start: Position {
+                                line: 7,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 29,
+                            },
+                        },
+                        value: Todo(
+                            Some(
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 7,
+                                            column: 22,
+                                        },
+                                        end: Position {
+                                            line: 7,
+                                            column: 29,
+                                        },
+                                    },
+                                    value: VarLocal(
+                                        "message",
+                                    ),
+                                },
+                            ),
+                        ),
+                    },
+                },
+                next: Declare {
+                    definition: Def {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 1,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 2,
+                                },
+                            },
+                            value: "f",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 4,
+                                        column: 3,
+                                    },
+                                    end: Position {
+                                        line: 4,
+                                        column: 10,
+                                    },
+                                },
+                                value: Var(
+                                    "message",
+                                ),
+                            },
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 4,
+                                        column: 11,
+                                    },
+                                    end: Position {
+                                        line: 4,
+                                        column: 12,
+                                    },
+                                },
+                                value: Var(
+                                    "x",
+                                ),
+                            },
+                        ],
+                        body: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 56,
+                                },
+                            },
+                            value: Trace {
+                                message: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 21,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 28,
+                                        },
+                                    },
+                                    value: VarLocal(
+                                        "message",
+                                    ),
+                                },
+                                body: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 30,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 55,
+                                        },
+                                    },
+                                    value: Comptime(
+                                        Located {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 4,
+                                                    column: 40,
+                                                },
+                                                end: Position {
+                                                    line: 4,
+                                                    column: 54,
+                                                },
+                                            },
+                                            value: Call {
+                                                function: Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 4,
+                                                            column: 40,
+                                                        },
+                                                        end: Position {
+                                                            line: 4,
+                                                            column: 50,
+                                                        },
+                                                    },
+                                                    value: VarForeign {
+                                                        reference: QualifiedName {
+                                                            home: ModuleName {
+                                                                package: Some(
+                                                                    PackageName {
+                                                                        author: "nash",
+                                                                        project: "base",
+                                                                    },
+                                                                ),
+                                                                name: "Builtin",
+                                                            },
+                                                            name: "addInteger",
+                                                        },
+                                                        annotation: Annotation {
+                                                            context: [],
+                                                            free_vars: [],
+                                                            typ: Located {
+                                                                region: Region {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 0,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 0,
+                                                                    },
+                                                                },
+                                                                value: Lambda {
+                                                                    from: Located {
+                                                                        region: Region {
+                                                                            start: Position {
+                                                                                line: 0,
+                                                                                column: 0,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 0,
+                                                                                column: 0,
+                                                                            },
+                                                                        },
+                                                                        value: Named {
+                                                                            reference: QualifiedName {
+                                                                                home: ModuleName {
+                                                                                    package: Some(
+                                                                                        PackageName {
+                                                                                            author: "nash",
+                                                                                            project: "base",
+                                                                                        },
+                                                                                    ),
+                                                                                    name: "Primitive",
+                                                                                },
+                                                                                name: "int",
+                                                                            },
+                                                                            args: [],
+                                                                        },
+                                                                    },
+                                                                    to: Located {
+                                                                        region: Region {
+                                                                            start: Position {
+                                                                                line: 0,
+                                                                                column: 0,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 0,
+                                                                                column: 0,
+                                                                            },
+                                                                        },
+                                                                        value: Lambda {
+                                                                            from: Located {
+                                                                                region: Region {
+                                                                                    start: Position {
+                                                                                        line: 0,
+                                                                                        column: 0,
+                                                                                    },
+                                                                                    end: Position {
+                                                                                        line: 0,
+                                                                                        column: 0,
+                                                                                    },
+                                                                                },
+                                                                                value: Named {
+                                                                                    reference: QualifiedName {
+                                                                                        home: ModuleName {
+                                                                                            package: Some(
+                                                                                                PackageName {
+                                                                                                    author: "nash",
+                                                                                                    project: "base",
+                                                                                                },
+                                                                                            ),
+                                                                                            name: "Primitive",
+                                                                                        },
+                                                                                        name: "int",
+                                                                                    },
+                                                                                    args: [],
+                                                                                },
+                                                                            },
+                                                                            to: Located {
+                                                                                region: Region {
+                                                                                    start: Position {
+                                                                                        line: 0,
+                                                                                        column: 0,
+                                                                                    },
+                                                                                    end: Position {
+                                                                                        line: 0,
+                                                                                        column: 0,
+                                                                                    },
+                                                                                },
+                                                                                value: Named {
+                                                                                    reference: QualifiedName {
+                                                                                        home: ModuleName {
+                                                                                            package: Some(
+                                                                                                PackageName {
+                                                                                                    author: "nash",
+                                                                                                    project: "base",
+                                                                                                },
+                                                                                            ),
+                                                                                            name: "Primitive",
+                                                                                        },
+                                                                                        name: "int",
+                                                                                    },
+                                                                                    args: [],
+                                                                                },
+                                                                            },
+                                                                        },
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                                arguments: [
+                                                    Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 4,
+                                                                column: 51,
+                                                            },
+                                                            end: Position {
+                                                                line: 4,
+                                                                column: 52,
+                                                            },
+                                                        },
+                                                        value: VarLocal(
+                                                            "x",
+                                                        ),
+                                                    },
+                                                    Located {
+                                                        region: Region {
+                                                            start: Position {
+                                                                line: 4,
+                                                                column: 53,
+                                                            },
+                                                            end: Position {
+                                                                line: 4,
+                                                                column: 54,
+                                                            },
+                                                        },
+                                                        value: VarLocal(
+                                                            "x",
+                                                        ),
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    ),
+                                },
+                            },
+                        },
+                    },
+                    next: Declare {
+                        definition: Def {
+                            name: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 5,
+                                        column: 1,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        column: 6,
+                                    },
+                                },
+                                value: "check",
+                            },
+                            args: [],
+                            body: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 5,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        column: 20,
+                                    },
+                                },
+                                value: Assert(
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 16,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 20,
+                                            },
+                                        },
+                                        value: VarConstructor {
+                                            options: Enum,
+                                            reference: ConstructorName {
+                                                home: ModuleName {
+                                                    package: Some(
+                                                        PackageName {
+                                                            author: "nash",
+                                                            project: "base",
+                                                        },
+                                                    ),
+                                                    name: "Primitive",
+                                                },
+                                                union: "bool",
+                                                name: "True",
+                                            },
+                                            index: 1,
+                                            annotation: Annotation {
+                                                context: [],
+                                                free_vars: [],
+                                                typ: Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 0,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 0,
+                                                        },
+                                                    },
+                                                    value: Named {
+                                                        reference: QualifiedName {
+                                                            home: ModuleName {
+                                                                package: Some(
+                                                                    PackageName {
+                                                                        author: "nash",
+                                                                        project: "base",
+                                                                    },
+                                                                ),
+                                                                name: "Primitive",
+                                                            },
+                                                            name: "bool",
+                                                        },
+                                                        args: [],
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                ),
+                            },
+                        },
+                        next: Empty,
+                    },
+                },
+            },
+        },
+    },
+    unions: [],
+    aliases: [],
+    binops: [],
+}

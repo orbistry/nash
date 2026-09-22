@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias id 'a = 'a\ntype alias bad = id Int\n"
+---
+nash::names::representation_mismatch
+
+  × This position requires `Little` in the lowercase name of alias `bad`:
+   ╭─[src/Main.nash:7:21]
+ 6 │ type alias id 'a = 'a
+ 7 │ type alias bad = id Int
+   ·                     ───
+   ╰────
+  help: The type has `Big` representation, but `Little` admits Const or Term types.
+        Change the type or the representation requirement.

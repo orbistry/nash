@@ -252,9 +252,23 @@ mod tests {
             .unwrap()
     }
 
+    macro_rules! publication_snapshot {
+        ($source:expr, $dir:expr, $publication:expr) => {{
+            let mut output = serde_json::to_string_pretty($publication).unwrap();
+            for root in [$dir.path().canonicalize().unwrap(), $dir.path().to_owned()] {
+                output = output.replace(Url::from_file_path(&root).unwrap().as_str(), "file:///project");
+                output = output.replace(root.to_str().unwrap(), "/project");
+            }
+            output = output.replace("Is a directory (os error 21)", "<directory read error>");
+            insta::with_settings!({description => $source, omit_expression => true}, {
+                insta::assert_snapshot!(output);
+            });
+        }};
+    }
+
     #[tokio::test]
     async fn unsaved_versions_override_disk_and_clear_fixed_errors() {
-        let (_dir, uri) = fixture();
+        let (dir, uri) = fixture();
         let mut workspace = Workspace::default();
         assert!(workspace.open(uri.clone(), BROKEN.into(), 1));
         let (notifications, error) = workspace.rebuild(&uri).await;
@@ -262,6 +276,7 @@ mod tests {
         let notification = for_uri(&notifications, &uri);
         assert_eq!(notification.version, Some(1));
         assert!(!notification.diagnostics.is_empty());
+        publication_snapshot!(BROKEN, dir, notification);
         assert!(workspace.change(&uri, CLEAN.into(), 3));
         assert!(!workspace.change(&uri, BROKEN.into(), 2));
         let (notifications, error) = workspace.rebuild(&uri).await;
@@ -282,14 +297,14 @@ mod tests {
 
     #[tokio::test]
     async fn close_discards_overlay_and_clears_diagnostics() {
-        let (_dir, uri) = fixture();
+        let (dir, uri) = fixture();
         let mut workspace = Workspace::default();
         workspace.open(uri.clone(), BROKEN.into(), 8);
-        assert!(
-            !for_uri(&workspace.rebuild(&uri).await.0, &uri)
-                .diagnostics
-                .is_empty()
-        );
+        let (notifications, error) = workspace.rebuild(&uri).await;
+        assert!(error.is_none(), "{error:?}");
+        let notification = for_uri(&notifications, &uri);
+        assert!(!notification.diagnostics.is_empty());
+        publication_snapshot!(BROKEN, dir, notification);
         workspace.close(&uri);
         let (notifications, error) = workspace.rebuild(&uri).await;
         assert!(error.is_none(), "{error:?}");
@@ -306,6 +321,7 @@ mod tests {
         workspace.open(uri.clone(), BROKEN.into(), 1);
         let (notifications, error) = workspace.rebuild(&uri).await;
         assert!(error.is_none(), "{error:?}");
+        publication_snapshot!(BROKEN, dir, for_uri(&notifications, &uri));
         let lsp = &for_uri(&notifications, &uri).diagnostics;
         let overlay = InMemorySource::with_files([(file_url(&uri).unwrap(), BROKEN.into())]);
         let db = Arc::new(Mutex::new(Database::new(OverlaySource::new(
@@ -375,7 +391,13 @@ mod tests {
         let (notifications, error) = workspace.rebuild(&uri).await;
         assert!(error.is_none(), "{error:?}");
         assert!(!for_uri(&notifications, &uri).diagnostics.is_empty());
+        publication_snapshot!(BROKEN, dir, for_uri(&notifications, &uri));
         assert!(!for_uri(&notifications, &other).diagnostics.is_empty());
+        publication_snapshot!(
+            "module Other exposing (..)\nvalue = missing\n",
+            dir,
+            for_uri(&notifications, &other)
+        );
         std::fs::remove_file(other_path).unwrap();
         let (notifications, _) = workspace.rebuild(&uri).await;
         assert!(for_uri(&notifications, &other).diagnostics.is_empty());
@@ -404,6 +426,11 @@ mod tests {
         let (notifications, error) = workspace.rebuild(&other).await;
         assert!(error.is_none(), "{error:?}");
         assert!(!for_uri(&notifications, &other).diagnostics.is_empty());
+        publication_snapshot!(
+            "module Other exposing (..)\nvalue = missing\n",
+            dir,
+            for_uri(&notifications, &other)
+        );
         assert!(for_uri(&notifications, &uri).diagnostics.is_empty());
         workspace.close(&other);
         let (notifications, error) = workspace.rebuild(&other).await;
@@ -429,6 +456,11 @@ mod tests {
         let (notifications, error) = workspace.rebuild(&uri).await;
         assert!(error.is_none(), "{error:?}");
         assert!(!for_uri(&notifications, &uri).diagnostics.is_empty());
+        publication_snapshot!(
+            "module New exposing (..)\nvalue = missing\n",
+            dir,
+            for_uri(&notifications, &uri)
+        );
     }
     #[tokio::test]
     async fn nested_projects_use_the_most_specific_owning_root() {
@@ -460,6 +492,7 @@ mod tests {
             let (notifications, error) = workspace.rebuild(&uri).await;
             assert!(error.is_none(), "{error:?}");
             assert!(!for_uri(&notifications, &uri).diagnostics.is_empty());
+            publication_snapshot!(BROKEN, dir, for_uri(&notifications, &uri));
         }
     }
 
@@ -484,7 +517,13 @@ mod tests {
         );
         assert_eq!(diagnostic.severity, Some(DiagnosticSeverity::ERROR));
         assert!(diagnostic.message.contains("read"));
+        publication_snapshot!(
+            "read src/Unavailable.nash (a directory)",
+            dir,
+            for_uri(&notifications, &unavailable_uri)
+        );
         assert!(!for_uri(&notifications, &uri).diagnostics.is_empty());
+        publication_snapshot!(BROKEN, dir, for_uri(&notifications, &uri));
         std::fs::remove_dir(&unavailable).unwrap();
         std::fs::write(
             &unavailable,

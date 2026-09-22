@@ -2025,6 +2025,7 @@ dependencies = [
 name = "nash-language-server"
 version = "0.4.2"
 dependencies = [
+ "insta",
  "nash-driver",
  "nash-region",
  "nash-report",

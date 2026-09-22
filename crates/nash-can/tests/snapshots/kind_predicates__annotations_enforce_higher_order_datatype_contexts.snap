@@ -1,0 +1,15 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype option 'a = None | Some 'a\ntype wrap 'f 'a = Wrap ('f 'a)\nf : wrap list (option int) -> unit\nf x = ()\n"
+---
+nash::names::representation_mismatch
+
+  × This position requires `Storable` in the annotation for `f`:
+   ╭─[src/Main.nash:8:16]
+ 7 │ type wrap 'f 'a = Wrap ('f 'a)
+ 8 │ f : wrap list (option int) -> unit
+   ·                ──────────
+ 9 │ f x = ()
+   ╰────
+  help: The type has `Term` representation, but `Storable` admits Big or Const types.
+        Change the type or the representation requirement.

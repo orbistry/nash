@@ -74,13 +74,12 @@ async fn ordinary_modules_produce_no_scripts() {
 
 #[tokio::test]
 async fn unconstrained_validator_input_uses_data() {
-    let outputs = outputs(&[(
-        "Main",
-        "validator module Main exposing (main)\nmain _ = ()\n",
-    )])
-    .await;
+    let source = "validator module Main exposing (main)\nmain _ = ()\n";
+    let outputs = outputs(&[("Main", source)]).await;
     assert_eq!(outputs.len(), 1);
-    assert!(outputs[0].uplc.contains("lam"));
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(outputs[0].uplc);
+    });
 }
 
 struct OutputDirectory(std::path::PathBuf);
@@ -210,30 +209,29 @@ async fn refuses_symlink_artifacts_and_manifests_without_touching_their_targets(
 
 #[tokio::test]
 async fn roots_use_their_own_target_settings_and_hashes() {
-    let artifacts = outputs_with(
-        &[
-            (
-                "First",
-                "validator module First exposing (main)\nmain _ = ()\n",
-            ),
-            (
-                "Second",
-                "validator module Second exposing (main)\nmain _ = ()\n",
-            ),
-        ],
-        |uri| nash_config::Build {
-            plutus_version: if uri.path().ends_with("First.nash") {
-                nash_config::PlutusVersion::V1
-            } else {
-                nash_config::PlutusVersion::V3
-            },
-            ..Default::default()
+    let files = [
+        (
+            "First",
+            "validator module First exposing (main)\nmain _ = ()\n",
+        ),
+        (
+            "Second",
+            "validator module Second exposing (main)\nmain _ = ()\n",
+        ),
+    ];
+    let artifacts = outputs_with(&files, |uri| nash_config::Build {
+        plutus_version: if uri.path().ends_with("First.nash") {
+            nash_config::PlutusVersion::V1
+        } else {
+            nash_config::PlutusVersion::V3
         },
-    )
+        ..Default::default()
+    })
     .await;
     assert_eq!(artifacts.len(), 2);
-    assert!(artifacts[0].uplc.contains("1.1.0"));
-    assert!(artifacts[1].uplc.contains("1.1.0"));
+    insta::with_settings!({description => files.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true}, {
+        insta::assert_snapshot!(artifacts.iter().map(|artifact| format!("{}\n{}\nhash: {}", artifact.module, artifact.uplc, hex::encode(artifact.hash))).collect::<Vec<_>>().join("\n"));
+    });
     for (artifact, version) in artifacts.iter().zip([
         nash_plutus::machine::PlutusVersion::V1,
         nash_plutus::machine::PlutusVersion::V3,
@@ -284,22 +282,22 @@ fn directory_contents(path: &std::path::Path) -> BTreeMap<std::ffi::OsString, Ve
 
 #[tokio::test]
 async fn case_alias_validator_roots_are_rejected() {
-    let error = outputs_result_with(
-        &[
-            (
-                "Main",
-                "validator module Main exposing (main)\nmain _ = ()\n",
-            ),
-            (
-                "MAIN",
-                "validator module MAIN exposing (main)\nmain _ = ()\n",
-            ),
-        ],
-        |_| nash_config::Build::default(),
-    )
-    .await
-    .unwrap_err();
-    assert!(error.message.contains("ignoring ASCII case"));
+    let files = [
+        (
+            "Main",
+            "validator module Main exposing (main)\nmain _ = ()\n",
+        ),
+        (
+            "MAIN",
+            "validator module MAIN exposing (main)\nmain _ = ()\n",
+        ),
+    ];
+    let error = outputs_result_with(&files, |_| nash_config::Build::default())
+        .await
+        .unwrap_err();
+    insta::with_settings!({description => files.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true}, {
+        insta::assert_snapshot!(error.message);
+    });
 }
 
 #[tokio::test]
@@ -322,13 +320,17 @@ async fn case_alias_outputs_and_renames_preserve_existing_artifacts() {
     let before = directory_contents(&directory.0);
     artifacts[1].module = "MAIN".into();
     let error = write_outputs(&directory.0, &artifacts).await.unwrap_err();
-    assert!(error.to_string().contains("ignoring ASCII case"));
+    insta::with_settings!({description => "write validator artifacts named Main and MAIN", omit_expression => true}, {
+        insta::assert_snapshot!(error.to_string().replace(&directory.0.to_string_lossy().to_string(), "<build>"));
+    });
     assert_eq!(directory_contents(&directory.0), before);
 
     let error = write_outputs(&directory.0, &artifacts[1..])
         .await
         .unwrap_err();
-    assert!(error.to_string().contains("differ only by ASCII case"));
+    insta::with_settings!({description => "write validator artifacts named Main and MAIN", omit_expression => true}, {
+        insta::assert_snapshot!(error.to_string().replace(&directory.0.to_string_lossy().to_string(), "<build>"));
+    });
     assert_eq!(directory_contents(&directory.0), before);
 
     // Even a manifest containing aliases must not trigger ambiguous stale cleanup.

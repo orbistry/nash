@@ -2,9 +2,6 @@ use super::*;
 
 use nash_region::Position;
 
-fn region() -> Region {
-    Region::new(Position::new(1, 1), Position::new(1, 6))
-}
 fn source_region(source: &str, text: &str) -> Region {
     let start = source.rfind(text).expect("highlight must occur in fixture");
     let position = |offset: usize| {
@@ -1485,10 +1482,6 @@ fn missing_impl_local_union_suggests_a_supported_impl() {
 
 #[test]
 fn missing_impl_imported_or_custom_trait_has_no_derive_hint() {
-    let source = "module Main exposing (..)\ntype step = Done\n";
-    let bump = bumpalo::Bump::new();
-    let module = nash_parse::Parser::new(&bump, source).module().unwrap();
-    let l = Localizer::from_module(&module, &[]);
     for (home, trait_) in [
         (
             nash_ast::ModuleName {
@@ -1511,19 +1504,30 @@ fn missing_impl_imported_or_custom_trait_has_no_derive_hint() {
             },
         ),
     ] {
+        let source = if home.name == "Imported" {
+            "module Main exposing (..)\nimport Imported\nvalue = eq Imported.Done Imported.Done\n"
+        } else {
+            "module Main exposing (..)\ntype step = Done\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\nvalue = eq Done Done\n"
+        };
+        let settings = source_settings(source);
+        let _guard = settings.bind_to_scope();
+        let bump = bumpalo::Bump::new();
+        let module = nash_parse::Parser::new(&bump, source).module().unwrap();
+        let l = Localizer::from_module(&module, &[]);
         let typ = ErrorType::Type {
             home,
             name: "step",
             args: &[],
         };
         let error = Error::MissingImpl {
-            region: region(),
+            region: source_region(source, "eq"),
             name: "eq",
             trait_,
             args: &[&typ],
             available: &[],
             because: &[],
         };
+        insta::assert_snapshot!(show(source, &error));
         assert!(
             !to_report(&l, &error)
                 .after
@@ -1559,6 +1563,10 @@ fn append_number_hints_wrap() {
 
 #[test]
 fn pipe_argument_mismatch_does_not_blame_the_function_operand() {
+    let source = "module Main exposing (..)\napply f = f ()\nvalue = apply <| ()\n";
+    let region = || source_region(source, "()");
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
     let unit = ErrorType::Type {
         home: nash_ast::primitives::primitive_home(),
         name: "unit",
@@ -1571,6 +1579,7 @@ fn pipe_argument_mismatch_does_not_blame_the_function_operand() {
         &unit,
         Expected::FromContext(region(), Context::OpRight("<|"), &function),
     );
+    insta::assert_snapshot!(show(source, &error));
     let report = to_report(&Localizer::from_names([]), &error);
     assert!(!report.after.render(80, false).contains("left operand"));
     assert_eq!(

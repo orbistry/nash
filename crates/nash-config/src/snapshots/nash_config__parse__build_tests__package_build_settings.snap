@@ -1,0 +1,17 @@
+---
+source: crates/nash-config/src/parse.rs
+description: "{\"type\":\"package\",\"name\":\"test/lib\",\"version\":\"1.0.0\",\"summary\":\"\",\"license\":\"MIT\",\"exposedModules\":[],\"plutusVersion\":\"v1\",\"traceLevel\":\"verbose\",\"compilerTraces\":true}"
+---
+{
+  "type": "package",
+  "plutusVersion": "v1",
+  "traceLevel": "verbose",
+  "compilerTraces": true,
+  "name": "test/lib",
+  "version": "1.0.0",
+  "summary": "",
+  "license": "MIT",
+  "exposedModules": [],
+  "dependencies": {},
+  "testDependencies": {}
+}

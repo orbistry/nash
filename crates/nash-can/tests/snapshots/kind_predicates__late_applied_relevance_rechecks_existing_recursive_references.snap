@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype r 'f 'a = R (s 'f 'a) (r 'f (list 'a))\ntype s 'g 'b = S ('g 'b) (r 'g 'b)\n"
+---
+nash::names::irregular_recursion
+
+  × This recursive use of `Main.r` constructs the parameter 'a:
+   ╭─[src/Main.nash:6:29]
+ 5 │ 
+ 6 │ type r 'f 'a = R (s 'f 'a) (r 'f (list 'a))
+   ·                             ──────────────
+ 7 │ type s 'g 'b = S ('g 'b) (r 'g 'b)
+   ╰────
+  help: Pass a type variable for this parameter so context inference can terminate.

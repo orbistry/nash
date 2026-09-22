@@ -1,0 +1,44 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nvalue : ()\nvalue = trace \"message\" (if True then (\\x -> x) else [])\n"
+info: diagnostic
+---
+nash::type::ambiguous_type
+
+  × Cannot determine type `'a` in `value`.
+   ╭─[Main.nash:5:1]
+ 4 │ value : ()
+ 5 │ value = trace "message" (if True then (\x -> x) else [])
+   · ─────
+   ╰────
+  help: Required constraints: Storable 'a
+
+        Add a type annotation that determines this variable.
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `Primitive.unit`, found `Primitive.list 'a`.
+   ╭─[Main.nash:5:54]
+ 3 │ import Builtin exposing (..)
+ 4 │ value : ()
+   ·         ─┬
+   ·          ╰── declared type
+ 5 │ value = trace "message" (if True then (\x -> x) else [])
+   ·                                                      ─┬
+   ·                                                       ╰── if branch 2
+   ╰────
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `Primitive.unit`, found `'a -> 'a`.
+   ╭─[Main.nash:5:40]
+ 3 │ import Builtin exposing (..)
+ 4 │ value : ()
+   ·         ─┬
+   ·          ╰── declared type
+ 5 │ value = trace "message" (if True then (\x -> x) else [])
+   ·                                        ───┬───
+   ·                                           ╰── if branch 1
+   ╰────

@@ -1,0 +1,44 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\ntrait Missing 'a where\n    missing : 'a -> 'a\nimpl Keep (list (list 'a)) => Keep (list 'a) where\n    keep xs = xs\nvalue = (keep [()], missing ())\nsibling : ()\nsibling = \\x -> x\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+    ╭─[Main.nash:10:11]
+  8 │ value = (keep [()], missing ())
+  9 │ sibling : ()
+    ·           ─┬
+    ·            ╰── declared type
+ 10 │ sibling = \x -> x
+    ·           ───┬───
+    ·              ╰── body of `sibling`
+    ╰────
+
+
+nash::type::impl_resolution_limit
+
+  × Impl resolution for `Keep` in `keep` exceeded the work limit.
+   ╭─[Main.nash:8:10]
+ 7 │     keep xs = xs
+ 8 │ value = (keep [()], missing ())
+   ·          ────
+ 9 │ sibling : ()
+   ╰────
+  help: This requirement remains unchecked; other reported errors still apply.
+
+        Simplify cyclic or growing impl constraints.
+
+
+nash::type::missing_impl
+
+  × No impl for `Missing unit`.
+   ╭─[Main.nash:8:21]
+ 7 │     keep xs = xs
+ 8 │ value = (keep [()], missing ())
+   ·                     ───┬───
+   ·                        ╰── required by `missing`
+ 9 │ sibling : ()
+   ╰────
+  help: Import or define an impl for `Missing unit`.

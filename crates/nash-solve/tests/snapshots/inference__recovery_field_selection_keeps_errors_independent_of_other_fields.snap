@@ -1,0 +1,28 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype alias record 'a 'b = { a : 'a, b : 'b }\nbad : ()\nbad = { a = ().field, b = (\\x -> x) }.b\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:4:7]
+ 2 │ type alias record 'a 'b = { a : 'a, b : 'b }
+ 3 │ bad : ()
+   ·       ─┬
+   ·        ╰── declared type
+ 4 │ bad = { a = ().field, b = (\x -> x) }.b
+   ·       ────────────────┬────────────────
+   ·                       ╰── body of `bad`
+   ╰────
+
+
+nash::type::not_a_record
+
+  × Expected a record, found `unit`.
+   ╭─[Main.nash:4:13]
+ 3 │ bad : ()
+ 4 │ bad = { a = ().field, b = (\x -> x) }.b
+   ·             ────┬───
+   ·                 ╰── field `field` access
+   ╰────

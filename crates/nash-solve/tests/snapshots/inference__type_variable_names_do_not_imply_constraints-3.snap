@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nidentity : 'appendable -> 'appendable\nidentity x = x\nmain = identity ()\n"
+---
+identity : forall appendable. appendable -> appendable
+main : unit

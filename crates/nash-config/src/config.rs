@@ -326,9 +326,7 @@ mod test_defaults {
                 }
             );
             assert!(build.for_tests().compiler_traces);
-            let encoded = serde_json::to_string(&config).unwrap();
-            assert_eq!(crate::parse(&encoded, "nash.jsonc").unwrap(), config);
-            assert_eq!(serde_json::from_str::<Config>(&encoded).unwrap(), config);
+            assert_config_roundtrip_snapshot!(source, config);
         }
     }
 }

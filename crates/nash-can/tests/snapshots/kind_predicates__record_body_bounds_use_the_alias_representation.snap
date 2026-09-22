@@ -1,0 +1,145 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype alias Record 'a = ({ field : ('a : Big) } : Big)\n"
+---
+Module {
+    tests: [],
+    traits: [],
+    impls: [],
+    kind: Normal,
+    name: ModuleName {
+        package: None,
+        name: "Main",
+    },
+    exports: Everything(
+        Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+    ),
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 7,
+                column: 1,
+            },
+        },
+    ),
+    decls: Empty,
+    unions: [],
+    aliases: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 6,
+                    column: 1,
+                },
+                end: Position {
+                    line: 7,
+                    column: 1,
+                },
+            },
+            value: Alias {
+                kind: Arrow(
+                    Type,
+                    Type,
+                ),
+                context: [
+                    Trait {
+                        trait_: QualifiedName {
+                            home: ModuleName {
+                                package: Some(
+                                    PackageName {
+                                        author: "nash",
+                                        project: "base",
+                                    },
+                                ),
+                                name: "Primitive",
+                            },
+                            name: "Big",
+                        },
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 6,
+                                        column: 36,
+                                    },
+                                    end: Position {
+                                        line: 6,
+                                        column: 38,
+                                    },
+                                },
+                                value: Var(
+                                    "a",
+                                ),
+                            },
+                        ],
+                    },
+                ],
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 18,
+                        },
+                    },
+                    value: "Record",
+                },
+                parameters: [
+                    "a",
+                ],
+                typ: Located {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 25,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 47,
+                        },
+                    },
+                    value: Record {
+                        fields: [
+                            FieldType {
+                                index: 0,
+                                field: "field",
+                                typ: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 6,
+                                            column: 35,
+                                        },
+                                        end: Position {
+                                            line: 6,
+                                            column: 45,
+                                        },
+                                    },
+                                    value: Var(
+                                        "a",
+                                    ),
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    ],
+    binops: [],
+}

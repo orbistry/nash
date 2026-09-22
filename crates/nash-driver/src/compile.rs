@@ -1037,11 +1037,16 @@ mod kind_tests {
                 _ => None,
             })
             .collect::<Vec<_>>();
-        if !diagnostics.is_empty() {
-            insta::with_settings!({ description => [producer, consumer].join("\n"), omit_expression => true, snapshot_suffix => std::thread::current().name().expect("named test thread").rsplit("::").next().unwrap() }, {
+        insta::with_settings!({ description => [producer, consumer].join("\n"), omit_expression => true, snapshot_suffix => std::thread::current().name().expect("named test thread").rsplit("::").next().unwrap() }, {
+            if diagnostics.is_empty() {
+                let exports = result.interfaces.values()
+                    .map(|interface| (&interface.module_name, &interface.exports))
+                    .collect::<std::collections::BTreeMap<_, _>>();
+                insta::assert_debug_snapshot!(exports);
+            } else {
                 insta::assert_snapshot!(diagnostics.join("\n"));
-            });
-        }
+            }
+        });
         result
     }
 

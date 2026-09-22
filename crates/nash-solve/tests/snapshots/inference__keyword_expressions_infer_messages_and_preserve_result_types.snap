@@ -1,0 +1,13 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ncheck flag = assert flag\nstop = fail\nunfinished = todo\nfailMessage message = fail message\ntodoMessage message = todo message\ntraced message value = trace message value\ncomputed value = comptime value\ntyped : 'a -> 'a\ntyped value = trace \"hello\" (comptime value)\ntypedStop : 'a\ntypedStop = fail \"stop\"\n"
+---
+check : bool -> unit
+computed : forall a. a -> a
+failMessage : forall a. string -> a
+stop : forall a. a
+todoMessage : forall a. string -> a
+traced : forall a. string -> a -> a
+typed : forall a. a -> a
+typedStop : forall a. a
+unfinished : forall a. a

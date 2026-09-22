@@ -57,15 +57,12 @@ async fn path_test_dependencies_are_scoped_and_dependency_tests_are_not_discover
             .to_string(),
         "sample/helpers"
     );
-    fixture.write(
-        "app/src/Main.nash",
-        "module Main exposing (..)\nimport Helper\nvalue = Helper.identity ()\n",
-    );
+    let source = "module Main exposing (..)\nimport Helper\nvalue = Helper.identity ()\n";
+    fixture.write("app/src/Main.nash", source);
     let error = project.discover_modules(&db).await.unwrap_err();
-    assert!(
-        error.to_string().contains("outside its tests block"),
-        "{error}"
-    );
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(error.to_string().replace(&fixture.root().to_string_lossy().to_string(), "<project>"));
+    });
 }
 
 #[tokio::test]
@@ -102,10 +99,9 @@ async fn workspace_test_dependency_paths_are_relative_to_workspace_root() {
 #[tokio::test]
 async fn unavailable_test_dependency_reports_resolution_error_only_for_checks() {
     let fixture = Fixture::new();
-    fixture.write(
-        "nash.jsonc",
-        r#"{"type":"application","testDependencies":{"sample/helpers":"1.0.0 <= v < 2.0.0"}}"#,
-    );
+    let source =
+        r#"{"type":"application","testDependencies":{"sample/helpers":"1.0.0 <= v < 2.0.0"}}"#;
+    fixture.write("nash.jsonc", source);
     fixture.write("src/Main.nash", "module Main exposing (..)\nvalue = ()\n");
     let project = Project::load(fixture.root()).await.unwrap();
     let db = Database::new(FileSystemSource::new());
@@ -118,8 +114,7 @@ async fn unavailable_test_dependency_reports_resolution_error_only_for_checks() 
         1 + nash_driver::bundled_base::SOURCES.len()
     );
     let error = project.discover_modules(&db).await.unwrap_err().to_string();
-    assert!(
-        error.contains("sample/helpers") && error.contains("local path"),
-        "{error}"
-    );
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(error.replace(&fixture.root().to_string_lossy().to_string(), "<project>"));
+    });
 }
