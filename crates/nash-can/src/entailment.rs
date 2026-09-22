@@ -327,15 +327,7 @@ impl<'a> Resolver<'_, 'a> {
                 },
             )?
         {
-            let big = Predicate {
-                trait_: Some(nash_ast::primitives::ReprTrait::Big.qualified()),
-                args: &wanted.args[..1],
-            };
-            match self.resolve(given, big, active) {
-                Ok(()) => return Ok(()),
-                Err(Failure::Missing) => {}
-                Err(reason) => return Err(reason),
-            }
+            return Ok(());
         }
         for pred in active.iter() {
             if self.equal(*pred, wanted)? {

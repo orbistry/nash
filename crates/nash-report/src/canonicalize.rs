@@ -925,7 +925,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 |h| h.region,
             ),
             "This impl overlaps the reflexive `Lift` rule:",
-            "Every Big type can lift to itself. Remove this impl or choose heads that do not overlap that built-in rule.",
+            "Every type can lift and lower to itself. Remove this impl or choose heads that do not overlap that built-in rule.",
         ),
         Error::Unsupported { feature, region } => simple(
             "NOT SUPPORTED",

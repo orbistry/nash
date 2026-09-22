@@ -1,6 +1,7 @@
 module Cons exposing (type cons(..), map, indexedMap, map2, foldr, foldl, append, length, singleton, fromList, toList)
 
 import Builtin
+import Lift exposing (Lift)
 
 import Primitive exposing (type bool(..))
 import Literal
@@ -58,11 +59,14 @@ append left right =
 length : cons 'a -> int
 length values = foldl (\_ count -> Builtin.addInteger count 1) 0 values
 
-fromList : list 'a -> cons 'a
-fromList values =
+fromList : Lift (list 'a) ('f 'a) => 'f 'a -> cons 'a
+fromList values = fromLittleList (lower values)
+
+fromLittleList : list 'a -> cons 'a
+fromLittleList values =
     case values of
         [] -> Nil
-        x :: xs -> Cons x (fromList xs)
+        x :: xs -> Cons x (fromLittleList xs)
 
 toList : cons 'a -> list 'a
 toList values =

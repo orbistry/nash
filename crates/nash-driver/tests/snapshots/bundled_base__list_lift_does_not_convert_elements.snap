@@ -1,0 +1,24 @@
+---
+source: crates/nash-driver/tests/bundled_base.rs
+description: "module Main exposing (..)\nbad : list int -> List Int\nbad values = lift values\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Lift (list int) (List Int)`.
+   ╭─[/app/src/Main.nash:3:14]
+ 2 │ bad : list int -> List Int
+ 3 │ bad values = lift values
+   ·              ──┬─
+   ·                ╰── required by `lift`
+   ╰────
+  help: Available impl heads:
+
+            (option 'a0) (Option 'a0)
+            ordering Ordering
+            bool Bool
+            bytes Bytes
+
+        …
+
+        Import or define an impl for `Lift (list int) (List Int)`.

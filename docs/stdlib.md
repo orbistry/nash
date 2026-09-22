@@ -64,20 +64,19 @@ crates/nash-driver/base/
     Cardano/Time.nash
 ```
 
-Module naming: one module per type pair, named by the uppercase name
-(`List`, `Int`, `Bytes`, `Option`, `Result`, `Ordering`, `Map`, `Bool`,
-`Unit`). The module declares the Big twin (`Option`), the little twin when
-it is not compiler-known (`option`), functions over the **little** type
-(`List.map : ('a -> 'b) -> list 'a -> list 'b`), and the `Lift` impl
-between the two. Big twins get no function set: only the type and
-constructor declarations and their `Lift`/`Validate` impls, with `ToData`
-and `FromData` provided by blanket impls in `Data`. Big
-values are `lower`ed, worked on, and `lift`ed back. `Map` is the one
-module whose functions take the Big type, because its little form
-`list (pair 'k 'v)` is not a nominal type. `Data`, `Data.Decode` and
-`Data.Encode` are about the `Data` type only. There is no Big `String`:
-text in Big positions is `Bytes` holding UTF-8, and `String.nash` is the
-little `string` module.
+Module naming: one module per type pair (`List`, `Int`, `Bytes`, `Option`,
+`Result`, `Ordering`, `Bool`, `Unit`). Named helpers accept either Big or little
+outer inputs and return the little outer representation. Different arguments
+may use different representations. Payloads retain their types: reversing a
+`List Int` returns `list Int`, and `Option.unwrap : Option Int -> Int` leaves
+its payload intact. `List.map` returns exactly the callback's result element type.
+Trait methods such as `Functor.map` retain their trait's container contract.
+
+`lift` and `lower` change only the outer representation; both have identity
+conversion for already-matching types. Recursive element conversion requires
+explicit mapping. There is no Big String: use `String.toBytes` / `fromBytes`
+for UTF-8 and `lift` / `lower` for bytes/Bytes. `Data`, `Data.Decode` and
+`Data.Encode` operate on Data itself. Map's dedicated API is planned separately.
 
 ## Default imports
 
@@ -256,7 +255,7 @@ not repeated here. What each module adds beyond its trait:
 | `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
 | `Functor` | `list`, `List`; each applied element must satisfy its constructor's datatype context (`Storable` for `list`, `Big` for `List`). No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
-| `Lift` | representation.md's table verbatim: `Lift int Int`, `Lift bytes Bytes`, `Lift string Bytes` (UTF-8), `Lift bool Bool`, `Lift unit Unit`, `Lift 'a 'b => Lift (list 'a) (List 'b)`, `(Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v)`, `Big 'a => Lift 'a 'a`; plus `Lift value Value` in `Cardano.Value` |
+| `Lift` | Outer-only conversions in representation.md; reflexive identity for every type. |
 | `Data` | Blanket `ToData` and `FromData` for every Big type; `Validate` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
 | `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
 
@@ -373,6 +372,8 @@ module Lift exposing (Lift)
 
 import Builtin
 
+import Primitive exposing (Big)
+
 trait Lift 'small 'big where
     lift : 'small -> 'big
     lower : 'big -> 'small
@@ -385,40 +386,18 @@ impl Lift bytes Bytes where
     lift = Builtin.bData
     lower = Builtin.unBData
 
--- text: `string` is the little twin of `Bytes` holding UTF-8
-impl Lift string Bytes where
-    lift s = Builtin.bData (Builtin.encodeUtf8 s)
-    lower b = Builtin.decodeUtf8 (Builtin.unBData b)
-
--- The reflexive `impl Big 'a => Lift 'a 'a` (identity both ways) is
--- compiler-provided (traits.md "Impl declarations"); it is not written here.
-
--- walks the list; `lift : list Int -> List Int` picks the reflexive
--- element impl and the optimizer removes the identity map, leaving `listData`
-impl Lift 'a 'b => Lift (list 'a) (List 'b) where
-    lift xs = wrapList (mapList lift xs)
-    lower xs = mapList lower (unwrapList xs)
-
--- Typed concrete builtins preserve the element type.
-wrapList : list 'a -> List 'a
-wrapList = Builtin.listData
-
-unwrapList : List 'a -> list 'a
-unwrapList = Builtin.unListData
+impl Lift (list ('a : Big)) (List 'a) where
+    lift = Builtin.listData
+    lower = Builtin.unListData
 
 impl (Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v) where
     lift = Builtin.mapData
     lower = Builtin.unMapData
 ```
 
-The map instance wraps entries whose keys and values are already Big. It does
-not recursively lift native components; `pair int (list Data)` cannot be
-wrapped as a map.
-
-This is representation.md's impl table. There is no overlap: `list 'a` is
-never Big, so `Lift (list 'a) (List 'b)` and the reflexive impl have
-disjoint keys. `Lift bytes Bytes` and `Lift string Bytes` differ in the
-first head, so both exist.
+Twin modules own their outer-only Lift implementations. The compiler provides
+identity when both Lift arguments are already the same type. Map wrapping
+requires Big keys and values and does not convert its entries.
 
 ```elm
 module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
@@ -483,73 +462,11 @@ non-failing decoder API.
 
 ## Twin modules
 
-```elm
-module Option exposing (Option(..), type option(..), withDefault, map, map2, andThen, isSome, unwrap, toResult)
-
-import Prelude exposing (..)
-import Functor exposing (Functor)
-import Applicative exposing (Applicative)
-import Monad exposing (Monad)
-import Eq exposing (Eq)
-import Lift exposing (Lift)
-
-type option 'a = Some 'a | None
-type Option 'a = Some 'a | None
-
-withDefault : 'a -> option 'a -> 'a
-withDefault d m =
-    case m of
-        Some x -> x
-        None -> d
-
-unwrap : option 'a -> 'a
-unwrap m =
-    case m of
-        Some x -> x
-        None -> fail "Option.unwrap: None"
-
-impl Functor option where
-    map f m =
-        case m of
-            Some x -> Some (f x)
-            None -> None
-
-impl Applicative option where
-    pure = Some
-    apply mf m =
-        case mf of
-            Some f -> map f m
-            None -> None
-
-impl Monad option where
-    bind m f =
-        case m of
-            Some x -> f x
-            None -> None
-
-impl Eq 'a => Eq (option 'a) where
-    eq a b =
-        case (a, b) of
-            (Some x, Some y) -> x == y
-            (None, None) -> True
-            _ -> False
-
-impl Lift 'a 'b => Lift (option 'a) (Option 'b) where
-    lift m =
-        case m of
-            Some x -> Option.Some (lift x)
-            None -> Option.None
-
-    lower m =
-        case m of
-            Option.Some x -> Some (lower x)
-            Option.None -> None
-```
-
-`Result` and `Ordering` follow the same shape (`Result.mapError`,
-`Result.withDefault`, `Ordering.invert`, `Ordering.then_`). `Bool` adds
-the `bool` functions (below); `Unit` declares only the Big twin. Their
-`Lift` impls are in `Lift.nash` (representation.md's table).
+Option and Result helpers accept either twin and return little containers.
+Their Lift instances preserve payloads, including errors, without mapping.
+`Option.unwrap` fails on None; `withDefault` returns its supplied fallback.
+`map2` returns None if either option is None, or the leftmost error for Result.
+`andThen` also normalizes the callback's returned outer container.
 
 ## Compiler special cases
 
@@ -727,114 +644,119 @@ rejects programs that use builtins newer than the target's version
 ### `Bool`
 
 ```elm
-module Bool exposing (Bool, not, and, or, xor)
-
-import Builtin
-
-type Bool = False | True
-
-not : bool -> bool
-not b = if b then Primitive.False else Primitive.True
-
--- special-cased: lazy in the second argument
-and : bool -> bool -> bool
-and a b = if a then b else Primitive.False
-
-or : bool -> bool -> bool
-or a b = if a then Primitive.True else b
-
-xor : bool -> bool -> bool
-xor a b = if a then not b else b
+not : Lift bool 'a => 'a -> bool
+and : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
+or : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
+xor : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
 ```
 
 ### `Int`
 
 ```elm
-module Int exposing (..)
-
-abs : int -> int
-pow : int -> int -> int
-powMod : int -> int -> int -> int          -- expModInteger
-toBytes : bool -> int -> int -> bytes      -- integerToByteString bigEndian size n
-fromBytes : bool -> bytes -> int
-toString : int -> string
+abs : Lift int 'n => 'n -> int
+pow : (Lift int 'n, Lift int 'e) => 'n -> 'e -> int
+powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
+toBytes : (Lift bool 'b, Lift int 's, Lift int 'n) => 'b -> 's -> 'n -> bytes
+fromBytes : (Lift bool 'b, Lift bytes 'v) => 'b -> 'v -> int
+toString : Lift int 'n => 'n -> string
 ```
 
 ### `Bytes`
 
 ```elm
-module Bytes exposing (..)
-
-length : bytes -> int
-at : bytes -> int -> int
-slice : int -> int -> bytes -> bytes
-take, drop : int -> bytes -> bytes
-concat : list bytes -> bytes
-sha2_256, sha3_256, blake2b_256, blake2b_224, keccak_256, ripemd_160 : bytes -> bytes
-and, or, xor : bool -> bytes -> bytes -> bytes
-complement : bytes -> bytes
-readBit : bytes -> int -> bool
-writeBits : bytes -> list int -> bool -> bytes
-shift, rotate : bytes -> int -> bytes
-countSetBits, findFirstSetBit : bytes -> int
-toHex : bytes -> string
+length : Lift bytes 'b => 'b -> int
+at : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> int
+slice : (Lift int 's, Lift int 'n, Lift bytes 'b) => 's -> 'n -> 'b -> bytes
+take : (Lift int 'n, Lift bytes 'b) => 'n -> 'b -> bytes
+drop : (Lift int 'n, Lift bytes 'b) => 'n -> 'b -> bytes
+concat : (Lift (list 'b) ('f 'b), Lift bytes 'b) => ('f 'b) -> bytes
+sha2_256 : Lift bytes 'b => 'b -> bytes
+sha3_256 : Lift bytes 'b => 'b -> bytes
+blake2b_256 : Lift bytes 'b => 'b -> bytes
+blake2b_224 : Lift bytes 'b => 'b -> bytes
+keccak_256 : Lift bytes 'b => 'b -> bytes
+ripemd_160 : Lift bytes 'b => 'b -> bytes
+complement : Lift bytes 'b => 'b -> bytes
+countSetBits : Lift bytes 'b => 'b -> int
+findFirstSetBit : Lift bytes 'b => 'b -> int
+and : (Lift bool 'p, Lift bytes 'a, Lift bytes 'b) => 'p -> 'a -> 'b -> bytes
+or : (Lift bool 'p, Lift bytes 'a, Lift bytes 'b) => 'p -> 'a -> 'b -> bytes
+xor : (Lift bool 'p, Lift bytes 'a, Lift bytes 'b) => 'p -> 'a -> 'b -> bytes
+readBit : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> bool
+shift : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> bytes
+rotate : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> bytes
+writeBits : (Lift bytes 'b, Lift (list 'n) ('f 'n), Lift int 'n, Lift bool 'v) => 'b -> ('f 'n) -> 'v -> bytes
+toHex : Lift bytes 'b => 'b -> string
 ```
 
 ### `String`
 
 ```elm
-module String exposing (..)
-
 toBytes : string -> bytes
-fromBytes : bytes -> string          -- errors on invalid UTF-8
-fromInt : int -> string
+fromBytes : Lift bytes 'b => 'b -> string
+fromInt : Lift int 'n => 'n -> string
 concat : list string -> string
 join : string -> list string -> string
 ```
 
 ### `List`
 
-Over `list 'a`, built on `nullList`/`headList`/`tailList`/`mkCons`.
-
 ```elm
-module List exposing (..)
-
 singleton : 'a -> list 'a
-repeat : int -> 'a -> list 'a
-range : int -> int -> list int
-head : list 'a -> option 'a
-tail : list 'a -> option (list 'a)
-isEmpty : list 'a -> bool
-length : list 'a -> int
-reverse : list 'a -> list 'a
-append : list 'a -> list 'a -> list 'a
-concat : list (list 'a) -> list 'a
-map : ('a -> 'b) -> list 'a -> list 'b
-indexedMap : (int -> 'a -> 'b) -> list 'a -> list 'b
-filter : ('a -> bool) -> list 'a -> list 'a
-filterMap : ('a -> option 'b) -> list 'a -> list 'b
-foldl : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
-foldr : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
-any, all : ('a -> bool) -> list 'a -> bool
-find : ('a -> bool) -> list 'a -> option 'a
-member : Eq 'a => 'a -> list 'a -> bool
-take, drop : int -> list 'a -> list 'a
-at : int -> list 'a -> option 'a
-map2 : ('a -> 'b -> 'c) -> list 'a -> list 'b -> list 'c
-sort : Ord 'a => list 'a -> list 'a
-sortBy : ('a -> 'a -> ordering) -> list 'a -> list 'a
-sum : Num 'a => list 'a -> 'a
-partition : ('a -> bool) -> list 'a -> (list 'a, list 'a)
-toArray : list 'a -> array 'a
+repeat : Lift int 'n => 'n -> 'a -> list 'a
+range : (Lift int 's, Lift int 'e) => 's -> 'e -> list int
+head : Lift (list 'a) ('f 'a) => ('f 'a) -> option 'a
+tail : Lift (list 'a) ('f 'a) => ('f 'a) -> option (list 'a)
+isEmpty : Lift (list 'a) ('f 'a) => ('f 'a) -> bool
+length : Lift (list 'a) ('f 'a) => ('f 'a) -> int
+reverse : Lift (list 'a) ('f 'a) => ('f 'a) -> list 'a
+append : (Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a)) => ('f 'a) -> ('g 'a) -> list 'a
+concat : (Lift (list ('f 'a)) ('g ('f 'a)), Lift (list 'a) ('f 'a)) => 'g ('f 'a) -> list 'a
+map : Lift (list 'a) ('f 'a) => ('a -> 'b) -> ('f 'a) -> list 'b
+indexedMap : Lift (list 'a) ('f 'a) => (int -> 'a -> 'b) -> ('f 'a) -> list 'b
+filter : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> list 'a
+filterMap : (Lift (list 'a) ('f 'a), Lift (option 'b) ('g 'b)) => ('a -> 'g 'b) -> ('f 'a) -> list 'b
+foldl : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> ('f 'a) -> 'b
+foldr : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> ('f 'a) -> 'b
+any : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> bool
+all : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> bool
+find : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> option 'a
+member : (Eq 'a, Lift (list 'a) ('f 'a)) => 'a -> ('f 'a) -> bool
+take : (Lift int 'n, Lift (list 'a) ('f 'a)) => 'n -> ('f 'a) -> list 'a
+drop : (Lift int 'n, Lift (list 'a) ('f 'a)) => 'n -> ('f 'a) -> list 'a
+at : (Lift int 'n, Lift (list 'a) ('f 'a)) => 'n -> ('f 'a) -> option 'a
+map2 : (Lift (list 'a) ('f 'a), Lift (list 'b) ('g 'b)) => ('a -> 'b -> 'c) -> ('f 'a) -> ('g 'b) -> list 'c
+sort : (Ord 'a, Lift (list 'a) ('f 'a)) => ('f 'a) -> list 'a
+sortBy : (Lift (list 'a) ('f 'a), Lift ordering 'o) => ('a -> 'a -> 'o) -> ('f 'a) -> list 'a
+sum : (Lift int 'a, Lift (list 'a) ('f 'a)) => 'f 'a -> int
+partition : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> (list 'a, list 'a)
+toArray : Lift (list 'a) ('f 'a) => ('f 'a) -> array 'a
 ```
 
-`List 'a` has no functions of its own: `lower` it (one `unListData`),
-work on the `list`, `lift` the result. `List.map = Functor.map` at `list`.
+The higher-kinded inputs above share their element types with the little
+result; e.g. `Lift (list 'a) ('f 'a)` admits both list and List without
+converting `'a`. Binary helpers use independent input constructors.
 
-`zip` returns a `list` of tuples, which are `Term` elements and therefore
-illegal for `list` (elements must be `Storable`). `zip`/`unzip` are
-omitted; `map2` covers the common case. A list of tuples (or of any
-other `Term` value) is a `cons`, below.
+List counts at or below zero produce empty take/repeat results and unchanged
+input for drop. Range is start-inclusive and end-exclusive; start >= end is
+empty. Access outside the list returns None. map2 truncates to the shorter
+input. Sorting is stable. any/all stop at the first decisive element; empty
+any is False and empty all is True. Sum computes an int for native or Big integer elements; empty sum is zero.
+Predicates, comparators, and filterMap callbacks accept either outer representation. Fold callbacks take
+item then accumulator. Native dropList handles list skipping.
+
+Int.pow rejects negative exponents and returns 1 for exponent zero. Int.powMod
+uses Plutus expModInteger semantics, including its invalid-modulus and modular
+inverse failures. Int.toBytes rejects negative values, invalid sizes and values
+that do not fit. Bytes.at/readBit/writeBits fail for invalid indices; slice
+uses Plutus start/count clamping. String.fromBytes fails for invalid UTF-8.
+Byte logic takes the builtin padding flag; shift/rotate and hash functions
+use the corresponding Plutus builtin semantics. Bytes.toHex is lowercase
+without a prefix. String.join inserts separators only between entries.
+
+Bool.and/or and &&/|| short-circuit fully applied calls, including mixed
+Big/little operands. Partial applications remain strict. A polymorphic failing
+operand needs an annotation to identify its representation.
 
 ### `Cons`
 
@@ -861,7 +783,7 @@ foldr : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
 foldl : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
 append : cons 'a -> cons 'a -> cons 'a
 length : cons 'a -> int
-fromList : list 'a -> cons 'a                     -- 'a : Storable, from `list`
+fromList : Lift (list 'a) ('f 'a) => 'f 'a -> cons 'a                     -- 'a : Storable, from `list`
 toList : cons 'a -> list 'a                       -- 'a : Storable, from `list`
 ```
 
@@ -885,10 +807,10 @@ snd pair(_, second) = second
 make : Data -> Data -> pair Data Data      -- only Data pairs can be built
 
 module Array exposing (..)
-fromList : list 'a -> array 'a
+fromList : Lift (list 'a) ('f 'a) => 'f 'a -> array 'a
 length : array 'a -> int
-at : array 'a -> int -> 'a                 -- errors out of bounds
-get : array 'a -> int -> option 'a
+at : Lift int 'n => array 'a -> 'n -> 'a                 -- errors out of bounds
+get : Lift int 'n => array 'a -> 'n -> option 'a
 ```
 
 `Array.get` returns None for a negative index or an index at least the

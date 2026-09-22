@@ -4,14 +4,4 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
 info: diagnostic
 ---
 Case 1: accepted
-nash::names::missing_superclass
-
-  × The `Main.RoundTrip` impl for Primitive.unit does not establish superclass 1:
-   ╭─[src/Main.nash:6:1]
- 5 │         roundTrip : 'a -> 'a
- 6 │ ╭─▶ impl RoundTrip () where
- 7 │ ╰─▶     roundTrip x = x
-   ╰────
-  help: It must also satisfy `Lift.Lift Primitive.unit Primitive.unit`. I cannot find an
-        impl or context constraint that provides it. Add the required impl or include
-        the necessary constraint in this impl's context.
+Case 2: accepted

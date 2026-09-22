@@ -1,3 +1,10 @@
 module Unit exposing (Unit(..))
 
+import Lift exposing (Lift)
+
 type Unit = Unit
+
+impl Lift unit Unit where
+    lift _ = Unit.Unit
+    lower _ = ()
+

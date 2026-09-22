@@ -8,26 +8,26 @@ bigUnit = lift ()
 bigOrder : Ordering
 bigOrder = lift LT
 bigOption : Option Int
-bigOption = lift (Some 42)
+bigOption = lift (Some (Builtin.iData 42))
 bigNone : Option Int
 bigNone = lift littleNone
 bigResult : Result Bytes Int
 bigResult = lift littleOk
 bigError : Result Bytes Int
 bigError = lift littleErr
-smallResult : result string int
+smallResult : result Bytes Int
 smallResult = lower bigResult
-smallError : result string int
+smallError : result Bytes Int
 smallError = lower bigError
 bigList : List Int
-bigList = lift [1, 2]
-smallList : list int
+bigList = lift [Builtin.iData 1, Builtin.iData 2]
+smallList : list Int
 smallList = lower bigList
 reflexiveList : List Int
 reflexiveList = lift [Builtin.iData 1, Builtin.iData 2]
 nested : List (List Int)
-nested = lift [[1], [2]]
-smallNested : list (list int)
+nested = lift [bigList, bigList]
+smallNested : list (List Int)
 smallNested = lower nested
 entries : list (pair Int Bytes)
 entries = [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa")]
@@ -36,9 +36,9 @@ bigMap = lift entries
 roundTripMap : list (pair Int Bytes)
 roundTripMap = lower bigMap
 utf8 : Bytes
-utf8 = lift "é"
+utf8 = lift (String.toBytes "é")
 text : string
-text = lower utf8
+text = String.fromBytes utf8
 plainBytes : bytes
 plainBytes = lower utf8
 restored : Token
@@ -58,14 +58,14 @@ checkList = validate
 checkMap : Data -> Map Int Bytes
 checkMap = validate
 
-littleNone : option int
+littleNone : option Int
 littleNone = None
 expectedNone : Option Int
 expectedNone = Option.None
-littleOk : result string int
+littleOk : result Bytes Int
 littleOk = Ok 42
-littleErr : result string int
-littleErr = Err "bad"
+littleErr : result Bytes Int
+littleErr = Err #"626164"
 
 tests
     test "primitive and twin lift" = do
@@ -76,14 +76,14 @@ tests
         assert (lower bigUnit == ())
         assert (lower bigOrder == LT)
         assert (bigOption == Option.Some (Builtin.iData 42))
-        assert (lower bigOption == Some 42)
+        assert (lower bigOption == Some (Builtin.iData 42))
         assert (bigNone == expectedNone)
         assert (smallResult == Ok 42)
-        assert (smallError == Err "bad")
+        assert (smallError == Err #"626164")
     test "container lift and reflexive Big lift" = do
         assert (smallList == [1, 2])
         assert (bigList == reflexiveList)
-        assert (smallNested == [[1], [2]])
+        assert (smallNested == [bigList, bigList])
         assert (roundTripMap == entries)
         assert (lift (Token 7) == Token 7)
     test "Data conversions and validation" = do

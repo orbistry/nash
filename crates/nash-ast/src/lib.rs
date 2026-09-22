@@ -629,7 +629,7 @@ pub enum Evidence<'a> {
         trait_: primitives::ReprTrait,
         typ: &'a Located<Type<'a>>,
     },
-    /// The compiler-owned core Lift rule for an already-equal Big type.
+    /// The compiler-owned core Lift rule for an already-equal type.
     ReflexiveLift { typ: &'a Located<Type<'a>> },
     /// Compiler-owned structural equality for any Big type.
     StructuralEq { typ: &'a Located<Type<'a>> },

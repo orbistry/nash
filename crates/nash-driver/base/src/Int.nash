@@ -1,0 +1,44 @@
+module Int exposing (abs, pow, powMod, toBytes, fromBytes, toString)
+
+import Prelude exposing (..)
+import Lift exposing (Lift)
+import Integral exposing (Integral)
+import Builtin
+import Show
+
+abs : Lift int 'n => 'n -> int
+abs value =
+    let
+        n : int
+        n = lower value
+    in if n < 0 then Builtin.subtractInteger 0 n else n
+
+pow : (Lift int 'n, Lift int 'e) => 'n -> 'e -> int
+pow value exponent =
+    let
+        e : int
+        e = lower exponent
+    in
+    if e < 0 then fail else power (lower value) e
+
+power : int -> int -> int
+power n e =
+    if e == 0 then 1
+    else
+        let half = power n (quot e 2) in
+        if rem e 2 == 0 then half * half else n * half * half
+
+powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
+powMod n e m = Builtin.expModInteger (lower n) (lower e) (lower m)
+
+toBytes : (Lift bool 'b, Lift int 's, Lift int 'n) => 'b -> 's -> 'n -> bytes
+toBytes bigEndian size n = Builtin.integerToByteString (lower bigEndian) (lower size) (lower n)
+
+fromBytes : (Lift bool 'b, Lift bytes 'v) => 'b -> 'v -> int
+fromBytes bigEndian value = Builtin.byteStringToInteger (lower bigEndian) (lower value)
+
+toString : Lift int 'n => 'n -> string
+toString value = showInt (lower value)
+
+showInt : int -> string
+showInt = Show.show

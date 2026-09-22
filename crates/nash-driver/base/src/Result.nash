@@ -1,16 +1,16 @@
-module Result exposing (Result(..), type result(..), withDefault, mapError)
+module Result exposing (Result(..), type result(..), withDefault, mapError, map, map2, andThen)
 
 import Primitive exposing (type bool(..))
 import Eq exposing (Eq)
 import Lift exposing (Lift)
-import Functor exposing (Functor)
+import Functor
 import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 
 type result 'e 'a = Ok 'a | Err 'e
 type Result 'e 'a = Ok 'a | Err 'e
 
-impl Functor (result 'e) where
+impl Functor.Functor (result 'e) where
     map f value =
         case value of
             Ok item -> Ok (f item)
@@ -20,7 +20,7 @@ impl Applicative (result 'e) where
     pure = Ok
     apply functions value =
         case functions of
-            Ok f -> map f value
+            Ok f -> Functor.map f value
             Err error -> Err error
 
 impl Monad (result 'e) where
@@ -29,15 +29,15 @@ impl Monad (result 'e) where
             Ok item -> f item
             Err error -> Err error
 
-withDefault : 'a -> result 'e 'a -> 'a
+withDefault : Lift (result 'e 'a) ('f 'e 'a) => 'a -> 'f 'e 'a -> 'a
 withDefault fallback value =
-    case value of
+    case lowerOuter value of
         Ok item -> item
         Err _ -> fallback
 
-mapError : ('e -> 'f) -> result 'e 'a -> result 'f 'a
+mapError : Lift (result 'e 'a) ('r 'e 'a) => ('e -> 'f) -> 'r 'e 'a -> result 'f 'a
 mapError change value =
-    case value of
+    case lowerOuter value of
         Ok item -> Ok item
         Err error -> Err (change error)
 
@@ -48,12 +48,31 @@ impl (Eq 'e, Eq 'a) => Eq (result 'e 'a) where
             (Err x, Err y) -> eq x y
             _ -> False
 
-impl (Lift 'e 'f, Lift 'a 'b) => Lift (result 'e 'a) (Result 'f 'b) where
+impl Lift (result ('e : Big) ('a : Big)) (Result 'e 'a) where
     lift value =
         case value of
-            Ok item -> Result.Ok (lift item)
-            Err error -> Result.Err (lift error)
+            Ok item -> Result.Ok item
+            Err error -> Result.Err error
     lower value =
         case value of
-            Result.Ok item -> Ok (lower item)
-            Result.Err error -> Err (lower error)
+            Result.Ok item -> Ok item
+            Result.Err error -> Err error
+
+map : Lift (result 'e 'a) ('f 'e 'a) => ('a -> 'b) -> 'f 'e 'a -> result 'e 'b
+map f value = Functor.map f (lowerOuter value)
+
+map2 : (Lift (result 'e 'a) ('f 'e 'a), Lift (result 'e 'b) ('g 'e 'b)) => ('a -> 'b -> 'c) -> 'f 'e 'a -> 'g 'e 'b -> result 'e 'c
+map2 f left right =
+    case (lowerOuter left, lowerOuter right) of
+        (Ok a, Ok b) -> Ok (f a b)
+        (Err error, _) -> Err error
+        (_, Err error) -> Err error
+
+andThen : (Lift (result 'e 'a) ('f 'e 'a), Lift (result 'e 'b) ('g 'e 'b)) => ('a -> 'g 'e 'b) -> 'f 'e 'a -> result 'e 'b
+andThen f value =
+    case lowerOuter value of
+        Ok x -> lower (f x)
+        Err error -> Err error
+
+lowerOuter : Lift (result 'e 'a) ('f 'e 'a) => 'f 'e 'a -> result 'e 'a
+lowerOuter = lower

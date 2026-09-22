@@ -17,6 +17,67 @@ mod patterns;
 const DATA: Ty<'static> = Ty::Big(&BigTy::Data);
 
 impl<'a> Engine<'a, '_, '_> {
+    pub(crate) fn normalize_bool(
+        &mut self,
+        node: NodeId,
+        value: &'a Core<'a>,
+        call: NodeId,
+        slot: usize,
+        ctx: &Context<'a>,
+    ) -> Result<&'a Core<'a>, Error<'a>> {
+        let typ = self.substitute(self.can_type(node, ctx)?, &ctx.subst)?;
+        if matches!(typ.value, Type::Named { reference, args: [] }
+            if reference.home == primitives::primitive_home() && reference.name == "bool")
+        {
+            return Ok(value);
+        }
+        let trait_ = primitives::lift_trait();
+        let info = self
+            .build
+            .tables
+            .traits
+            .get(&trait_)
+            .ok_or(Error::MethodType)?;
+        let [small, big] = info.parameters else {
+            return Err(Error::MethodType);
+        };
+        let boolean = self.ir.arena.alloc(Located::at_zero(Type::Named {
+            reference: QualifiedName {
+                home: primitives::primitive_home(),
+                name: "bool",
+            },
+            args: &[],
+        }));
+        let subst = crate::ty_of::Substitution::from([(*small, &*boolean), (*big, typ)]);
+        let instance = self
+            .solved(ctx)
+            .instances
+            .get(&call)
+            .ok_or(Error::InvalidInstance(call))?;
+        let proof = instance
+            .evidence
+            .get(slot)
+            .ok_or(Error::InvalidInstance(call))?;
+        let proof = crate::evidence::ground(
+            self.ir.arena,
+            &self.build.tables,
+            proof,
+            &ctx.subst,
+            &ctx.givens,
+        )?;
+        let evidence = self.ir.arena.alloc_slice_fill_iter([proof]);
+        let annotation = self.method_annotation(trait_, "lower")?;
+        // A method initializer belongs to the same lazy branch as its operand.
+        let mut lower = Engine::new(self.build, self.ir.arena, self.trace);
+        std::mem::swap(&mut self.ir, &mut lower.ir);
+        let function = (|| {
+            let function = lower.selected_method(trait_, "lower", annotation, &subst, evidence)?;
+            lower.finish_root(function)
+        })();
+        std::mem::swap(&mut self.ir, &mut lower.ir);
+        Ok(self.ir.app(function?, &[value]))
+    }
+
     pub(crate) fn definition(
         &mut self,
         def: &'a Def<'a>,
@@ -86,8 +147,11 @@ impl<'a> Engine<'a, '_, '_> {
                 ..
             } => {
                 if let Some(conjunction) = short_circuit(*reference) {
-                    let left = self.expr(left, ctx)?;
-                    let right = self.expr(right, ctx)?;
+                    let left_value = self.expr(left, ctx)?;
+                    let left = self.normalize_bool(NodeId::expr(left), left_value, node, 0, ctx)?;
+                    let right_value = self.expr(right, ctx)?;
+                    let right =
+                        self.normalize_bool(NodeId::expr(right), right_value, node, 1, ctx)?;
                     let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
                     return Ok(if conjunction {
                         self.ir.if_(left, right, constant)
@@ -110,8 +174,22 @@ impl<'a> Engine<'a, '_, '_> {
                     | Expr::VarOperator { reference, .. } = function.value
                     && let Some(conjunction) = short_circuit(reference)
                 {
-                    let left = self.expr(left, ctx)?;
-                    let right = self.expr(right, ctx)?;
+                    let left_value = self.expr(left, ctx)?;
+                    let left = self.normalize_bool(
+                        NodeId::expr(left),
+                        left_value,
+                        NodeId::expr(function),
+                        0,
+                        ctx,
+                    )?;
+                    let right_value = self.expr(right, ctx)?;
+                    let right = self.normalize_bool(
+                        NodeId::expr(right),
+                        right_value,
+                        NodeId::expr(function),
+                        1,
+                        ctx,
+                    )?;
                     let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
                     return Ok(if conjunction {
                         self.ir.if_(left, right, constant)

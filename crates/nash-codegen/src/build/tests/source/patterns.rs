@@ -342,7 +342,7 @@ case!(
         let
             addr1 = Address { paymentCredential = #"61646666", stakeCredential = None }
             out = Output { address = addr1, value = (lift empty), datum = None, referenceScript = None }
-            empty : list int
+            empty : list Int
             empty = []
             outputs : list Output
             outputs = [out, out, out]
@@ -482,6 +482,7 @@ case!(
     import Builtin exposing (..)
     import Data exposing (validate)
     import Lift exposing (lower)
+    import Functor
     main =
         let
             a : Data
@@ -489,7 +490,7 @@ case!(
             checked : List Int
             checked = validate a
             values : list int
-            values = lower checked
+            values = Functor.map Builtin.unIData (Builtin.unListData checked)
         in
         case values of
             [h, i, j] -> if equalsInteger h h then
@@ -508,6 +509,7 @@ case!(
     import Builtin exposing (..)
     import Data exposing (validate)
     import Lift exposing (lower)
+    import Functor
     main =
         let
             a : Data
@@ -515,7 +517,7 @@ case!(
             checked : List Int
             checked = validate a
             values : list int
-            values = lower checked
+            values = Functor.map Builtin.unIData (Builtin.unListData checked)
         in
         case values of
             [h] -> equalsInteger h h
@@ -532,6 +534,7 @@ case!(
     import Builtin exposing (..)
     import Data exposing (validate)
     import Lift exposing (lower)
+    import Functor
     main =
         let
             a : Data
@@ -539,7 +542,7 @@ case!(
             checked : List Int
             checked = validate a
             values : list int
-            values = lower checked
+            values = Functor.map Builtin.unIData (Builtin.unListData checked)
         in
         case values of
             h :: j :: _ -> if equalsInteger h h then equalsInteger j j else False
@@ -784,4 +787,83 @@ case!(
     main = first 2
     "#,
     Ok("(con integer 42)")
+);
+
+case!(
+    mixed_boolean_representations_short_circuit,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (type bool(..))
+    import Bool
+    import Lift exposing (Lift)
+    both : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
+    both a b = Bool.and a b
+    bad : unit -> Bool.Bool
+    bad _ = fail
+    main : bool
+    main =
+        if Bool.or Bool.True (bad ()) then
+            both Bool.True True
+        else False
+"#,
+    Ok("(con bool True)")
+);
+
+case!(
+    partial_big_boolean_application_is_strict,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (type bool(..))
+    import Bool
+    bad : unit -> Bool.Bool
+    bad _ = fail
+    main : bool
+    main =
+        let
+            partial : Bool.Bool -> bool
+            partial = Bool.or Bool.True
+        in
+        partial (bad ())
+"#,
+    Err(())
+);
+
+case!(
+    boolean_alias_uses_selected_lower,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (type bool(..), coerce)
+    import Bool
+    import Lift exposing (Lift)
+    type alias flag = bool
+    impl Lift bool flag where
+        lift value = coerce value
+        lower value = if coerce value then False else True
+    off : flag
+    off = coerce True
+    both : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
+    both a b = Bool.and a b
+    main : bool
+    main = if Bool.and off True then True else both off True
+"#,
+    Ok("(con bool False)")
+);
+
+case!(
+    unselected_boolean_conversion_initializer_is_lazy,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (type bool(..), coerce)
+    import Bool
+    import Lift exposing (Lift)
+    type alias flag = bool
+    impl Lift bool flag where
+        lift item = coerce item
+        lower = (fail "unselected conversion")
+    value : flag
+    value = coerce False
+    main : bool
+    main = Bool.or True value
+"#,
+    Ok("(con bool True)")
 );

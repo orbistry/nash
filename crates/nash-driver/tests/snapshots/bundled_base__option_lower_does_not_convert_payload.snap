@@ -1,0 +1,24 @@
+---
+source: crates/nash-driver/tests/bundled_base.rs
+description: "module Main exposing (..)\nbad : Option Int -> option int\nbad value = lower value\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Lift (option int) (Option Int)`.
+   ╭─[/app/src/Main.nash:3:13]
+ 2 │ bad : Option Int -> option int
+ 3 │ bad value = lower value
+   ·             ──┬──
+   ·               ╰── required by `lower`
+   ╰────
+  help: Available impl heads:
+
+            (option 'a0) (Option 'a0)
+            ordering Ordering
+            bool Bool
+            bytes Bytes
+
+        …
+
+        Import or define an impl for `Lift (option int) (Option Int)`.

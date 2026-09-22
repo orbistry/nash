@@ -1,0 +1,33 @@
+module String exposing (toBytes, fromBytes, fromInt, concat, join)
+
+import Literal
+import Lift exposing (Lift)
+import Builtin
+import Int
+
+toBytes : string -> bytes
+toBytes = Builtin.encodeUtf8
+
+fromBytes : Lift bytes 'b => 'b -> string
+fromBytes value = Builtin.decodeUtf8 (lower value)
+
+fromInt : Lift int 'n => 'n -> string
+fromInt = Int.toString
+
+concat : list string -> string
+concat values = concatList values
+
+concatList : list string -> string
+concatList xs = case xs of
+    [] -> ""
+    x :: rest -> Builtin.appendString x (concatList rest)
+
+join : string -> list string -> string
+join separator values = case values of
+    [] -> ""
+    x :: rest -> Builtin.appendString x (joinRest separator rest)
+
+joinRest : string -> list string -> string
+joinRest separator xs = case xs of
+    [] -> ""
+    x :: rest -> Builtin.appendString separator (Builtin.appendString x (joinRest separator rest))

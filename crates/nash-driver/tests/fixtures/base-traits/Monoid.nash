@@ -29,7 +29,7 @@ tests
         assert (append emptyUnit () == ())
     test "Big append and identities" = do
         assert (Builtin.unBData (Builtin.bData #"aa" ++ emptyBigBytes) == #"aa")
-        assert (Builtin.unListData (emptyBigList ++ lift [1, 2]) == [Builtin.iData 1, Builtin.iData 2])
+        assert (Builtin.unListData (emptyBigList ++ lift [Builtin.iData 1, Builtin.iData 2]) == [Builtin.iData 1, Builtin.iData 2])
     test "right biased map union" = do
         assert (left ++ right == expected)
         assert (empty ++ left == left)

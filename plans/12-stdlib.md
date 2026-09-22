@@ -19,7 +19,7 @@ compiler features available when it lands):
 | 11 `Cardano.*` | chunk 7 |
 
 Module layout is docs/stdlib.md "Layout": one file per trait, one module
-per type pair named by the uppercase name, functions on the little twin
+per type pair named by the uppercase name, helpers accepting either outer representation
 only. `Prelude` is the `infix` table, its helper functions, and the tuple
 impls. There is no Big `String` and no `Data.List`-style module family.
 
@@ -55,8 +55,8 @@ replace the tested PRNG, replay, label, and assertion protocols.
 
 ## Current status
 
-Reconciled with chunk 5 completion (2026-09-20). Base currently
-ships 24 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
+Reconciled with chunk 6 implementation (2026-09-20). Base currently
+ships 28 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
 |---|---|---|
@@ -65,7 +65,7 @@ ships 24 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 3 Primitive / Builtin | complete | none |
 | 4 twin types | complete | none; helper APIs belong to chunks 5–6 |
 | 5 traits / operators | complete | none |
-| 6 type modules | partial | Int, Bytes, String, List; complete existing helper APIs |
+| 6 type modules | implementation complete | final validation and snapshot review |
 | 7 Data / Map | partial | Data.Decode, Data.Encode, Map APIs |
 | 8 Prop | implemented foundation from Plan 10 | audit full planned API and property coverage |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
@@ -160,7 +160,7 @@ The implemented structure and executable coverage are listed below.
 Write each trait of traits.md "Core trait hierarchy" in its own module
 with the impls for compiler-known types listed in docs/stdlib.md "Trait
 modules"; `Lift.nash` holds representation.md's impl table (the reflexive
-`Big 'a => Lift 'a 'a` is compiler-provided and not written); `Prelude`
+`Lift 'a 'a` is compiler-provided and not written); `Prelude`
 gets the `infix` table, the operator helper functions, and the tuple
 impls; `Bool` gets the `bool` functions; tracing and failure use native
 `trace`, `todo`, and `fail` syntax directly. Impls for the twin types go in
@@ -171,7 +171,7 @@ functions. Tests verify returned values, trace ordering before failure,
 and silent trace removal. Builtin contains only actual Plutus builtins.
 
 Base modules use explicit imports. Preserve the acyclic bootstrap chain:
-`Lift` imports `Ordering`, which imports `Eq`. `Prelude` imports its required
+`Bool`, `Unit`, and `Ordering` import `Lift`; `Ordering` also imports `Eq`. `Prelude` imports its required
 traits and `Bool`; the application default-import catalog independently
 exposes all shipped traits. Later type modules may import `Prelude` for
 operators without adding reverse dependencies.
@@ -207,104 +207,35 @@ Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 
 - `crates/nash-driver/tests/base_traits.rs` compiles and evaluates seven import-free Nash fixtures against embedded Base. Snapshots record Nash source and outcomes for equality/ordering, numeric/literal traits, Show, semigroup/monoid, functor/applicative/monad, Lift/Data, and Prelude/native debugging syntax. The debugging fixture also runs with silent traces.
 - Named and operator boolean calls preserve laziness in ordinary expressions and assertions; partial applications remain strict.
-- nash-can/nash-solve: `1 + 2` resolves to `Num int`; `(1 : Int) + 2` resolves `Num Int` with the literal at `Int` via `FromInt Int`; `lift [1, 2] : List Int` resolves `Lift (list int) (List Int)` through `Lift int Int`; `lift ([] : list Int) : List Int` resolves the element through the reflexive impl.
+- nash-can/nash-solve: `1 + 2` resolves to `Num int`; `(1 : Int) + 2` resolves `Num Int` with the literal at `Int` via `FromInt Int`; `lift` wraps `list Int` as `List Int` without converting elements; reflexive Lift works for Big and little types.
 - codegen: `False && fail "x"` evaluates to `False` (laziness).
 
 **Done when** the in-process Base compilation tests and the user-facing operator tests pass.
 
 ---
 
-## Chunk 6: type modules — partial
+## Chunk 6: type modules — in progress
 
-- [x] Ship Cons, Pair, Array and initial Bool/Option/Result/Ordering helpers.
-- [ ] Add dedicated Int, Bytes, String and List modules.
-- [ ] Complete the documented APIs of existing modules and their tests.
+- [x] Ship Int, Bytes, String and List APIs and complete Option/Result helpers.
+- [x] Accept Big/little outer inputs independently; return little outer results.
+- [x] Preserve elements in all Lift/lower instances; make identity universal.
+- [x] Keep imports acyclic and List.map delegated to Functor.map.
+- [x] Snapshot source and evaluated helper outcomes through the existing in-process Base test helper.
+- [ ] Complete workspace validation and review snapshots.
 
-Current Pair exposes fst/snd/make; Array exposes fromList/length/at/get.
-Option and Result have initial helpers and trait instances, not their full
-planned helper surface.
+Implementation lives in `crates/nash-driver/base/src/`. Exact signatures and
+boundary behavior are documented in docs/stdlib.md. All Lift conversions
+change only the outer representation. UTF-8 encoding is explicit in String.
+List range is end-exclusive; negative take/repeat is empty, negative drop
+preserves input; map2 truncates; sorting is stable. Scalar wrappers retain
+documented builtin failure behavior.
 
-**Files**
+Tests in `base_traits.rs` compile embedded Base, then execute Nash fixtures
+for Lists and TypeHelpers as well as the existing trait fixtures. They cover
+mixed representations, preserved elements, callback results, empty and invalid
+inputs, stable ordering, hashes, UTF-8, and lazy booleans. No CLI subprocesses.
 
-- `crates/nash-driver/base/src/Int.nash`, `Bytes.nash`, `String.nash`, `List.nash`, `Cons.nash`, `Pair.nash`, `Array.nash`, `Option.nash`, `Result.nash`, `Ordering.nash`, `Bool.nash`
-
-**Change**
-
-Write the APIs listed in docs/stdlib.md "Little-type modules" and "Twin
-modules". Every function takes the little twin (`list 'a`, `option 'a`,
-`int`, ...); the Big twins (`List 'a`, `Int`, `Option 'a`, ...) get no
-functions, only the impls from chunk 5. `String.nash` is the little
-`string` module; there is no Big `String`. `Cons.nash` is the Term-representation
-linked list `type cons 'a = Nil | Cons 'a (cons 'a)` (docs/stdlib.md
-"`Cons`") that chunk 10's `Ast` and plans/11 depend on; its `fromList`
-and `toList` carry the `Storable` bound of `list`. All functions are
-total unless documented (`Array.at`, `Option.unwrap`).
-
-**Code** (`crates/nash-driver/base/src/List.nash` excerpt, the shape everything else follows)
-
-```elm
-module List exposing (..)
-
-import Prelude exposing (..)
-import Builtin
-import Functor
-
-map : ('a -> 'b) -> list 'a -> list 'b
-map = Functor.map
-
-foldr : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
-foldr f acc xs =
-    case xs of
-        [] -> acc
-        x :: rest -> f x (foldr f acc rest)
-
-foldl : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
-foldl f acc xs =
-    case xs of
-        [] -> acc
-        x :: rest -> foldl f (f x acc) rest
-
-length : list 'a -> int
-length = foldl (\_ n -> n + 1) 0
-
-filter : ('a -> bool) -> list 'a -> list 'a
-filter p =
-    foldr (\x acc -> if p x then x :: acc else acc) []
-
-member : Eq 'a => 'a -> list 'a -> bool
-member x = any (\y -> x == y)
-
-sortBy : ('a -> 'a -> ordering) -> list 'a -> list 'a
-sortBy cmp xs =
-    case xs of
-        [] -> []
-        pivot :: rest ->
-            let
-                (smaller, larger) = partition (\y -> cmp y pivot == LT) rest
-            in
-            sortBy cmp smaller ++ (pivot :: sortBy cmp larger)
-```
-
-Use source list patterns; codegen lowers them to native UPLC case. Do not
-rely on automatic laziness for strict builtin applications.
-
-**Elm/Aiken reference**
-
-Elm `crates/nash-driver/base/src/List.elm` for names and argument order. Aiken
-`stdlib/lib/aiken/collection/list.ak` for what is worth having on-chain
-(no `zip` on `list`, `at` returns `option`).
-
-**Tests**
-
-Each module has a `tests` block: `List.reverse [1,2,3] == [3,2,1]`,
-`List.sort [3,1,2] == [1,2,3]`, `Bytes.slice 1 2 "abcd" == "bc"`,
-`Int.pow 2 10 == 1024`, `Option.withDefault 0 None == 0`, and one `prop`
-per module (`List.reverse (List.reverse xs) == xs` with `xs via listOf int`
-once chunk 8 lands; before that the `prop`s are written but `nash test`
-only runs `test`s).
-
-**Done when** the in-process Base compilation tests passes and the `test`s pass under
-the in-process Base test runner.
+**Done when** workspace checks pass and reviewed snapshots cover the APIs.
 
 ---
 
@@ -407,8 +338,8 @@ get k m =
 ```
 
 `lower xs : list Int` on a `List Int` goes through
-`Lift 'a 'b => Lift (list 'a) (List 'b)` with the reflexive element impl
-and costs one `unListData` after the optimizer drops the identity map.
+`Lift (list ('a : Big)) (List 'a)` and costs one `unListData`;
+no element traversal or optimizer is needed.
 
 **Elm/Aiken reference**
 

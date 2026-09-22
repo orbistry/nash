@@ -1,0 +1,78 @@
+module Bytes exposing (length, at, slice, take, drop, concat, sha2_256, sha3_256, blake2b_256, blake2b_224, keccak_256, ripemd_160, and, or, xor, complement, readBit, writeBits, shift, rotate, countSetBits, findFirstSetBit, toHex)
+
+import Literal
+import Lift exposing (Lift)
+import Builtin
+import List
+import Show
+
+length : Lift bytes 'b => 'b -> int
+length value = Builtin.lengthOfByteString (lower value)
+
+at : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> int
+at value index = Builtin.indexByteString (lower value) (lower index)
+
+slice : (Lift int 's, Lift int 'n, Lift bytes 'b) => 's -> 'n -> 'b -> bytes
+slice start size value = Builtin.sliceByteString (lower start) (lower size) (lower value)
+
+take : (Lift int 'n, Lift bytes 'b) => 'n -> 'b -> bytes
+take count value = Builtin.sliceByteString 0 (lower count) (lower value)
+
+drop : (Lift int 'n, Lift bytes 'b) => 'n -> 'b -> bytes
+drop count value =
+    let bytes = lower value in
+    Builtin.sliceByteString (lower count) (Builtin.lengthOfByteString bytes) bytes
+
+concat : (Lift (list 'b) ('f 'b), Lift bytes 'b) => ('f 'b) -> bytes
+concat values = List.foldr (\x acc -> Builtin.appendByteString (lower x) acc) #"" values
+
+sha2_256 : Lift bytes 'b => 'b -> bytes
+sha2_256 value = Builtin.sha2_256 (lower value)
+
+sha3_256 : Lift bytes 'b => 'b -> bytes
+sha3_256 value = Builtin.sha3_256 (lower value)
+
+blake2b_256 : Lift bytes 'b => 'b -> bytes
+blake2b_256 value = Builtin.blake2b_256 (lower value)
+
+blake2b_224 : Lift bytes 'b => 'b -> bytes
+blake2b_224 value = Builtin.blake2b_224 (lower value)
+
+keccak_256 : Lift bytes 'b => 'b -> bytes
+keccak_256 value = Builtin.keccak_256 (lower value)
+
+ripemd_160 : Lift bytes 'b => 'b -> bytes
+ripemd_160 value = Builtin.ripemd_160 (lower value)
+
+complement : Lift bytes 'b => 'b -> bytes
+complement value = Builtin.complementByteString (lower value)
+
+countSetBits : Lift bytes 'b => 'b -> int
+countSetBits value = Builtin.countSetBits (lower value)
+
+findFirstSetBit : Lift bytes 'b => 'b -> int
+findFirstSetBit value = Builtin.findFirstSetBit (lower value)
+
+and : (Lift bool 'p, Lift bytes 'a, Lift bytes 'b) => 'p -> 'a -> 'b -> bytes
+and pad left right = Builtin.andByteString (lower pad) (lower left) (lower right)
+
+or : (Lift bool 'p, Lift bytes 'a, Lift bytes 'b) => 'p -> 'a -> 'b -> bytes
+or pad left right = Builtin.orByteString (lower pad) (lower left) (lower right)
+
+xor : (Lift bool 'p, Lift bytes 'a, Lift bytes 'b) => 'p -> 'a -> 'b -> bytes
+xor pad left right = Builtin.xorByteString (lower pad) (lower left) (lower right)
+
+readBit : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> bool
+readBit value count = Builtin.readBit (lower value) (lower count)
+
+shift : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> bytes
+shift value count = Builtin.shiftByteString (lower value) (lower count)
+
+rotate : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> bytes
+rotate value count = Builtin.rotateByteString (lower value) (lower count)
+
+writeBits : (Lift bytes 'b, Lift (list 'n) ('f 'n), Lift int 'n, Lift bool 'v) => 'b -> ('f 'n) -> 'v -> bytes
+writeBits value indices bit = Builtin.writeBits (lower value) (List.map lower indices) (lower bit)
+
+toHex : Lift bytes 'b => 'b -> string
+toHex value = Show.hexBytes (lower value)

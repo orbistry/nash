@@ -4,18 +4,7 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
 info: diagnostic
 ---
 Case 1: accepted
-nash::names::missing_superclass
-
-  × The `Main.Top` impl for (Main.container 'a0) does not establish superclass 1:
-    ╭─[src/Main.nash:10:1]
-  9 │         tag x = x
- 10 │ ╭─▶ impl Top (container 'a) where
- 11 │ ╰─▶     top x = x
-    ╰────
-  help: It must also satisfy `Main.Tag (Main.container 'a)`. I cannot find an impl or
-        context constraint that provides it. Add the required impl or include the
-        necessary constraint in this impl's context.
-
+Case 2: accepted
 nash::names::missing_superclass
 
   × The `Main.Top` impl for (Main.container 'a0) does not establish superclass 1:

@@ -1,0 +1,157 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Bool\nimport Lift exposing (Lift)\nboth : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool\nboth a b = Bool.and a b\nbad : unit -> Bool.Bool\nbad _ = fail\nmain : bool\nmain =\n    if Bool.or Bool.True (bad ()) then\n        both Bool.True True\n    else False\n"
+---
+--- core
+let message#29 : string = "incomplete pattern match" in
+let bad#9 : unit -> nash/base:Bool.Bool = \arg#18 : unit -> let match#19 : unit = arg#18 in
+error in
+let both#17 : 'erased -> 'erased -> bool = \a#20 : 'erased b#21 : 'erased -> let message#28 : string = message#29 in
+let lower#22 : nash/base:Bool.Bool -> bool = \value#23 : nash/base:Bool.Bool -> let match#24 : nash/base:Bool.Bool = value#23 in
+case@Data match#24 of
+  DataConstr pair#27 -> case@Pair pair#27 of
+    Pair tag#25 fields#26 -> case@Int tag#25 of
+      0 -> false
+      1 -> true
+      _ -> trace message#28 in error
+  _ -> trace message#28 in error in
+case@Bool lower#22 a#20 of
+  True -> b#21
+  False -> false in
+let message#8 : string = message#29 in
+let lower#2 : nash/base:Bool.Bool -> bool = \value#3 : nash/base:Bool.Bool -> let match#4 : nash/base:Bool.Bool = value#3 in
+case@Data match#4 of
+  DataConstr pair#7 -> case@Pair pair#7 of
+    Pair tag#5 fields#6 -> case@Int tag#5 of
+      0 -> false
+      1 -> true
+      _ -> trace message#8 in error
+  _ -> trace message#8 in error in
+let main#1 : bool = case@Bool (case@Bool lower#2 (constrData 1 (con (list data) [])) of
+  True -> true
+  False -> let message#16 : string = message#29 in
+  let lower#10 : nash/base:Bool.Bool -> bool = \value#11 : nash/base:Bool.Bool -> let match#12 : nash/base:Bool.Bool = value#11 in
+  case@Data match#12 of
+    DataConstr pair#15 -> case@Pair pair#15 of
+      Pair tag#13 fields#14 -> case@Int tag#13 of
+        0 -> false
+        1 -> true
+        _ -> trace message#16 in error
+    _ -> trace message#16 in error in
+  lower#10 (bad#9 ())) of
+  True -> both#17 (constrData 1 (con (list data) [])) true
+  False -> false in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_29
+    [(lam bad_9
+      [(lam both_17
+        [(lam message_8
+          [(lam lower_2
+            [(lam main_1 main_1)
+              (case
+                (case
+                  [lower_2 [[(builtin constrData) (con integer 1)] (con (list data) [])]]
+                  [(lam message_16
+                    [(lam lower_10 [lower_10 [bad_9 (con unit ())]])
+                      (lam value_11
+                        [(lam match_12
+                          [(lam generated_30
+                            (force
+                              [[[[[[(force (builtin chooseData)) generated_30]
+                                (delay
+                                  [(lam pair_15
+                                    (case
+                                      pair_15
+                                      (lam tag_13
+                                        (lam fields_14
+                                          [(lam generated_31
+                                            (case
+                                              [[(builtin equalsInteger) generated_31] (con integer 0)]
+                                              (case
+                                                [[(builtin equalsInteger) generated_31] (con integer 1)]
+                                                (force [[(force (builtin trace)) message_16] (delay (error))])
+                                                (con bool True))
+                                              (con bool False)))
+                                            tag_13]))))
+                                    [(builtin unConstrData) generated_30]])]
+                                (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                                (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                                (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                                (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]))
+                            match_12])
+                          value_11])])
+                    message_29]
+                  (con bool True))
+                (con bool False)
+                [[both_17 [[(builtin constrData) (con integer 1)] (con (list data) [])]]
+                  (con bool True)])])
+            (lam value_3
+              [(lam match_4
+                [(lam generated_32
+                  (force
+                    [[[[[[(force (builtin chooseData)) generated_32]
+                      (delay
+                        [(lam pair_7
+                          (case
+                            pair_7
+                            (lam tag_5
+                              (lam fields_6
+                                [(lam generated_33
+                                  (case
+                                    [[(builtin equalsInteger) generated_33] (con integer 0)]
+                                    (case
+                                      [[(builtin equalsInteger) generated_33] (con integer 1)]
+                                      (force [[(force (builtin trace)) message_8] (delay (error))])
+                                      (con bool True))
+                                    (con bool False)))
+                                  tag_5]))))
+                          [(builtin unConstrData) generated_32]])]
+                      (delay (force [[(force (builtin trace)) message_8] (delay (error))]))]
+                      (delay (force [[(force (builtin trace)) message_8] (delay (error))]))]
+                      (delay (force [[(force (builtin trace)) message_8] (delay (error))]))]
+                      (delay (force [[(force (builtin trace)) message_8] (delay (error))]))]))
+                  match_4])
+                value_3])])
+          message_29])
+        (lam a_20
+          (lam b_21
+            [(lam message_28
+              [(lam lower_22 (case [lower_22 a_20] (con bool False) b_21))
+                (lam value_23
+                  [(lam match_24
+                    [(lam generated_34
+                      (force
+                        [[[[[[(force (builtin chooseData)) generated_34]
+                          (delay
+                            [(lam pair_27
+                              (case
+                                pair_27
+                                (lam tag_25
+                                  (lam fields_26
+                                    [(lam generated_35
+                                      (case
+                                        [[(builtin equalsInteger) generated_35] (con integer 0)]
+                                        (case
+                                          [[(builtin equalsInteger) generated_35] (con integer 1)]
+                                          (force [[(force (builtin trace)) message_28] (delay (error))])
+                                          (con bool True))
+                                        (con bool False)))
+                                      tag_25]))))
+                              [(builtin unConstrData) generated_34]])]
+                          (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]
+                          (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]
+                          (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]
+                          (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]))
+                      match_24])
+                    value_23])])
+              message_29]))])
+      (lam arg_18 [(lam match_19 (error)) arg_18])])
+    (con string "incomplete pattern match")])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 2747660, memory: 14396

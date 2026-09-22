@@ -2,23 +2,24 @@ module Ordering exposing (Ordering(..), type ordering(..), invert, then_)
 
 import Primitive exposing (type bool(..))
 import Eq exposing (Eq)
+import Lift exposing (Lift)
 
 type ordering = LT | EQ | GT
 
 type Ordering = LT | EQ | GT
 
-invert : ordering -> ordering
+invert : Lift ordering 'a => 'a -> ordering
 invert order =
-    case order of
+    case lower order of
         LT -> GT
         EQ -> EQ
         GT -> LT
 
-then_ : ordering -> ordering -> ordering
+then_ : (Lift ordering 'a, Lift ordering 'b) => 'a -> 'b -> ordering
 then_ first second =
-    case first of
-        EQ -> second
-        _ -> first
+    case lower first of
+        EQ -> lower second
+        order -> order
 
 impl Eq ordering where
     eq a b =
@@ -27,3 +28,16 @@ impl Eq ordering where
             (EQ, EQ) -> True
             (GT, GT) -> True
             _ -> False
+
+impl Lift ordering Ordering where
+    lift value =
+        case value of
+            LT -> Ordering.LT
+            EQ -> Ordering.EQ
+            GT -> Ordering.GT
+    lower value =
+        case value of
+            Ordering.LT -> LT
+            Ordering.EQ -> EQ
+            Ordering.GT -> GT
+

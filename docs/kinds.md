@@ -270,7 +270,7 @@ exempt from the Big-field rule: they mirror `chooseData`.
   requirement is placed on the head; representation requirements arise
   from the specialized method signatures, as above.
 - Compiler-owned impls that depend on representation state it as a context:
-  the reflexive `impl Big 'a => Lift 'a 'a`, structural `impl Big 'a => Eq
+  the reflexive `impl Lift 'a 'a`, structural `impl Big 'a => Eq
   'a`. These are the only impls with a representation predicate in their
   context that the user cannot write themselves; they are exempt from the
   Haskell 98 head-shape rule (see [traits.md](traits.md)).

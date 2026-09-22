@@ -193,8 +193,22 @@ impl<'a> Engine<'a, '_, '_> {
                     | Expr::VarOperator { reference, .. } = function.value
                     && let Some(conjunction) = crate::can_to_core::short_circuit(reference)
                 {
-                    let left = self.assert_expression(left, ctx, true, bindings, captures)?;
-                    let right = self.expr(right, ctx)?;
+                    let left_value = self.assert_expression(left, ctx, true, bindings, captures)?;
+                    let left = self.normalize_bool(
+                        NodeId::expr(left),
+                        left_value,
+                        NodeId::expr(function),
+                        0,
+                        ctx,
+                    )?;
+                    let right_value = self.expr(right, ctx)?;
+                    let right = self.normalize_bool(
+                        NodeId::expr(right),
+                        right_value,
+                        NodeId::expr(function),
+                        1,
+                        ctx,
+                    )?;
                     let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
                     let value = if conjunction {
                         self.ir.if_(left, right, constant)
@@ -234,8 +248,22 @@ impl<'a> Engine<'a, '_, '_> {
                 ..
             } => {
                 if let Some(conjunction) = crate::can_to_core::short_circuit(*reference) {
-                    let left = self.assert_expression(left, ctx, true, bindings, captures)?;
-                    let right = self.expr(right, ctx)?;
+                    let left_value = self.assert_expression(left, ctx, true, bindings, captures)?;
+                    let left = self.normalize_bool(
+                        NodeId::expr(left),
+                        left_value,
+                        NodeId::expr(expression),
+                        0,
+                        ctx,
+                    )?;
+                    let right_value = self.expr(right, ctx)?;
+                    let right = self.normalize_bool(
+                        NodeId::expr(right),
+                        right_value,
+                        NodeId::expr(expression),
+                        1,
+                        ctx,
+                    )?;
                     let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
                     let value = if conjunction {
                         self.ir.if_(left, right, constant)

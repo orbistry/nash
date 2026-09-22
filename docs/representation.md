@@ -234,8 +234,8 @@ trait Lift 'small 'big where
 ```
 
 A multi-parameter trait relating a little representation to its Big twin.
-`lift` always succeeds. `lower` traps (evaluation error) when the `Data`
-does not have the expected shape, because the builtin unwrappers trap.
+Builtin-backed twin conversions can fail on malformed input at an unwrapper.
+Reflexive `lift` and `lower` are unchecked identity; they do not validate Data.
 
 Builtin impls, with their UPLC:
 
@@ -243,33 +243,28 @@ Builtin impls, with their UPLC:
 |---|---|---|
 | `Lift int Int` | `iData` | `unIData` |
 | `Lift bytes Bytes` | `bData` | `unBData` |
-| `Lift string Bytes` | UTF-8 encode, then `bData` | `unBData`, then UTF-8 decode |
 | `Lift bool Bool` | `case c [Constr 0 [], Constr 1 []]` | tag compare |
 | `Lift unit Unit` | `Constr 0 []` | `()` |
-| `Lift (list 'a) (List 'b)` given `Lift 'a 'b` | map `lift` over the elements, then `listData` | `unListData` then map `lower` |
+| `Lift (list ('a : Big)) (List 'a)` | `listData` | `unListData` |
 | `Lift (list (pair 'k 'v)) (Map 'k 'v)` with `'k 'v : Big` | `mapData` | `unMapData` |
-| `Lift 'a 'a` for every `'a : Big` (compiler built-in) | identity | identity |
-| `Lift (option 'a) (Option 'b)` given `Lift 'a 'b` | `case`, rebuild | `unConstrData`, rebuild |
-| `Lift (result 'e 'a) (Result 'f 'b)` | as `option` | as `option` |
+| `Lift 'a 'a` for every type `'a` (compiler built-in) | identity | identity |
+| `Lift (option ('a : Big)) (Option 'a)` | `case`, rebuild | `unConstrData`, rebuild |
+| `Lift (result ('e : Big) ('a : Big)) (Result 'e 'a)` | as `option` | as `option` |
 | `Lift ordering Ordering` | rebuild | rebuild |
 
 Rules:
 
-- The reflexive impl `impl Big 'a => Lift 'a 'a` is provided by the
-  compiler, not written in Nash. Ordinary bare-variable impl heads are
-  permitted only in the module defining the trait (see
-  [traits.md](traits.md)). It is restricted to Big types by the representation
-  predicate `Big 'a` (see [kinds.md](kinds.md)) and is what makes
-  `lift : list Int -> List Int` a single `listData`, because mapping the
-  identity is removed by the optimizer.
-- `Lift (list 'a) (List 'b)` does not overlap the reflexive impl because
-  `list 'a` is never Big.
-- Users write `Lift` impls for their own pairs of twins, or derive them
-  with `@derive(Lift Foo)` on the little type, naming the Big twin. Deriving
-  requires the same constructor names and arities; each field pair must
-  itself have a `Lift` impl. Orphan rules apply as for any trait.
-- `lift`/`lower` on tuples and function types do not exist: there is no Big
-  tuple and no Big function.
+- Every `lift` and `lower` changes only the outer representation. Container
+  payloads keep their types and values. Convert elements explicitly with `map`.
+- The compiler provides reflexive `Lift 'a 'a` for every type. Both arguments
+  must already be equal; resolution does not choose an unknown representation.
+- Explicit impls must not overlap the reflexive rule. Big/little twin heads
+  are distinct, so their conversion impls do not overlap identity.
+- User twin conversions and future derivation preserve corresponding field
+  types. Orphan rules apply as for any trait.
+- Tuples and functions have identity conversion only; they have no Big twin.
+- String encoding is explicit through `String.toBytes` and `String.fromBytes`,
+  not a Lift instance.
 
 ### `ToData`, `FromData` and `Validate`
 
@@ -332,7 +327,7 @@ Rough CEK costs, to guide the choice of representation:
 | match, k constructors | `unConstrData` + `fstPair` + up to k tag compares | one `case` |
 | field i | `sndPair` + i `tailList` + `headList`, plus one `un*Data` if the field is used as a little value | one `case` with a lambda that selects the field |
 | `lift`/`lower` of `int`/`bytes` | one builtin call each way | |
-| `lift`/`lower` of a list | O(n) map unless the element impl is reflexive | |
+| `lift`/`lower` of a list | O(1), outer wrapper only | |
 | `toData` / `fromData` / `Primitive.coerce` | identity; no traversal | |
 | `validate` | O(size of the Data) | |
 

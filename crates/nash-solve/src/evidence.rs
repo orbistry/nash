@@ -295,7 +295,6 @@ impl<'a> Resolver<'_, 'a> {
         if trait_ == nash_ast::primitives::lift_trait()
             && self.tables.has_reflexive_lift()
             && matches!(terms.as_slice(), [first, second] if first == second)
-            && big
         {
             return Ok(Resolution::Complete(Evidence::ReflexiveLift {
                 typ: args[0],

@@ -262,8 +262,6 @@ pub(crate) fn canonicalize<'a>(
         }
         if trait_ == nash_ast::primitives::lift_trait()
             && let [left, right] = heads.as_slice()
-            && (head_types.iter().any(|typ| known_big(*typ))
-                || heads.iter().all(|head| matches!(head.value, Head::Var(_))))
             && nash_ast::head::can_equal(&[left.value], &[right.value], &mut 16_384).map_err(
                 |_| {
                     vec![Error::ImplPatternLimit {

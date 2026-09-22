@@ -1,25 +1,18 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lower, lift)\ntype Option 'a = None | Some 'a\ntype Address = Address { paymentCredential : Bytes, stakeCredential : Option Bytes }\ntype Output = Output { address : Address, value : List Int, datum : Option Int, referenceScript : Option Int }\nfoldl self with zero =\n    case self of\n        [] -> zero\n        x :: xs -> foldl xs with (with x zero)\nmain =\n    let\n        addr1 = Address { paymentCredential = #\"61646666\", stakeCredential = None }\n        out = Output { address = addr1, value = (lift empty), datum = None, referenceScript = None }\n        empty : list int\n        empty = []\n        outputs : list Output\n        outputs = [out, out, out]\n        cry =\n            foldl outputs\n                (\\o mbB ->\n                    case mbB of\n                        None -> if eq o.address addr1 then Some o else None\n                        otherwise -> otherwise\n                )\n                None\n    in\n    eq cry cry\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lower, lift)\ntype Option 'a = None | Some 'a\ntype Address = Address { paymentCredential : Bytes, stakeCredential : Option Bytes }\ntype Output = Output { address : Address, value : List Int, datum : Option Int, referenceScript : Option Int }\nfoldl self with zero =\n    case self of\n        [] -> zero\n        x :: xs -> foldl xs with (with x zero)\nmain =\n    let\n        addr1 = Address { paymentCredential = #\"61646666\", stakeCredential = None }\n        out = Output { address = addr1, value = (lift empty), datum = None, referenceScript = None }\n        empty : list Int\n        empty = []\n        outputs : list Output\n        outputs = [out, out, out]\n        cry =\n            foldl outputs\n                (\\o mbB ->\n                    case mbB of\n                        None -> if eq o.address addr1 then Some o else None\n                        otherwise -> otherwise\n                )\n                None\n    in\n    eq cry cry\n"
 ---
 --- core
-let message#50 : string = "incomplete pattern match" in
-let foldl#7 : list 'erased -> ('erased -> 'erased -> 'erased) -> 'erased -> 'erased = \self#28 : list 'erased (with#29 : 'erased -> 'erased -> 'erased) zero#30 : 'erased -> (\self#52 : 'erased -> self#52 self#52) (\self#52 : 'erased self#28 : list 'erased zero#30 : 'erased -> let match#33 : list 'erased = self#28 in
+let message#40 : string = "incomplete pattern match" in
+let foldl#7 : list 'erased -> ('erased -> 'erased -> 'erased) -> 'erased -> 'erased = \self#28 : list 'erased (with#29 : 'erased -> 'erased -> 'erased) zero#30 : 'erased -> (\self#41 : 'erased -> self#41 self#41) (\self#41 : 'erased self#28 : list 'erased zero#30 : 'erased -> let match#33 : list 'erased = self#28 in
 case@List match#33 of
   Nil -> zero#30
   Cons field#34 field#35 -> let x#31 : 'erased = field#34 in
   let xs#32 : list 'erased = field#35 in
-  self#52 self#52 xs#32 (with#29 x#31 zero#30)) self#28 zero#30 in
-let mapList#37 : ('erased -> Data) -> list 'erased -> list Data = \(f#39 : 'erased -> Data) values#40 : list 'erased -> (\self#51 : 'erased -> self#51 self#51) (\self#51 : 'erased values#40 : list 'erased -> let match#43 : list 'erased = values#40 in
-case@List match#43 of
-  Nil -> (con (list data) [])
-  Cons field#44 field#45 -> let x#41 : 'erased = field#44 in
-  let xs#42 : list 'erased = field#45 in
-  mkCons (f#39 x#41) (self#51 self#51 xs#42)) values#40 in
-let lift#38 : int -> Int = iData in
-let lift#24 : list int -> List Data = \values#36 : list int -> listData (mapList#37 lift#38 values#36) in
+  self#41 self#41 xs#32 (with#29 x#31 zero#30)) self#28 zero#30 in
+let lift#24 : list 'erased -> List 'erased = listData in
 let fromBytes#27 : bytes -> Bytes = bData in
-let empty#2 : list int = (con (list integer) []) in
+let empty#2 : list Int = (con (list data) []) in
 let addr1#3 : Main.Address = (\field#25 : Bytes field#26 : Main.Option Bytes -> constrData 0 (mkCons field#25 (mkCons field#26 (con (list data) [])))) (fromBytes#27 (con bytestring #61646666)) (constrData 0 (con (list data) [])) in
 let out#4 : Main.Output = (\field#20 : Main.Address field#21 : List Int field#22 : Main.Option Int field#23 : Main.Option Int -> constrData 0 (mkCons field#20 (mkCons field#21 (mkCons field#22 (mkCons field#23 (con (list data) [])))))) addr1#3 (lift#24 empty#2) (constrData 0 (con (list data) [])) (constrData 0 (con (list data) [])) in
 let outputs#5 : list Main.Output = mkCons out#4 (mkCons out#4 (mkCons out#4 (con (list data) []))) in
@@ -27,130 +20,110 @@ let cry#6 : Main.Option Main.Output = foldl#7 outputs#5 (\o#8 : Main.Output mbB#
 case@Data match#14 of
   DataConstr pair#19 -> case@Pair pair#19 of
     Pair tag#16 fields#17 -> case@Int tag#16 of
-      0 -> let projection#46 : pair int (list Data) = unConstrData o#8 in
-      let evaluated#47 : 'erased = case@Pair projection#46 of
+      0 -> let projection#36 : pair int (list Data) = unConstrData o#8 in
+      let evaluated#37 : 'erased = case@Pair projection#36 of
         Pair tag#10 fields#11 -> fields#11 in
-      let projection#48 : 'erased = headList evaluated#47 in
-      case@Bool equalsData projection#48 addr1#3 of
+      let projection#38 : 'erased = headList evaluated#37 in
+      case@Bool equalsData projection#38 addr1#3 of
         True -> (\field#12 : Main.Output -> constrData 1 (mkCons field#12 (con (list data) []))) o#8
         False -> constrData 0 (con (list data) [])
       1 -> let fieldList#18 : list Data = fields#17 in
-      let projection#49 : Data = headList fieldList#18 in
-      let field#15 : Main.Output = projection#49 in
+      let projection#39 : Data = headList fieldList#18 in
+      let field#15 : Main.Output = projection#39 in
       let otherwise#13 : Main.Option Main.Output = match#14 in
       otherwise#13
-      _ -> trace message#50 in error
-  _ -> trace message#50 in error) (constrData 0 (con (list data) [])) in
+      _ -> trace message#40 in error
+  _ -> trace message#40 in error) (constrData 0 (con (list data) [])) in
 let main#1 : bool = equalsData cry#6 cry#6 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_50
+  [(lam message_40
     [(lam foldl_7
-      [(lam mapList_37
-        [(lam lift_38
-          [(lam lift_24
-            [(lam fromBytes_27
-              [(lam empty_2
-                [(lam addr1_3
-                  [(lam out_4
-                    [(lam outputs_5
-                      [(lam cry_6 [(lam main_1 main_1) [[(builtin equalsData) cry_6] cry_6]])
-                        [[[foldl_7 outputs_5]
-                          (lam o_8
-                            (lam mbB_9
-                              [(lam match_14
-                                [(lam generated_53
-                                  (force
-                                    [[[[[[(force (builtin chooseData)) generated_53]
-                                      (delay
-                                        [(lam pair_19
-                                          (case
-                                            pair_19
-                                            (lam tag_16
-                                              (lam fields_17
-                                                [(lam generated_54
-                                                  (case
-                                                    [[(builtin equalsInteger) generated_54] (con integer 0)]
-                                                    (case
-                                                      [[(builtin equalsInteger) generated_54] (con integer 1)]
-                                                      (force [[(force (builtin trace)) message_50] (delay (error))])
-                                                      [(lam fieldList_18
-                                                        [(lam projection_49
-                                                          [(lam field_15 [(lam otherwise_13 otherwise_13) match_14]) projection_49])
-                                                          [(force (builtin headList)) fieldList_18]])
-                                                        fields_17])
-                                                    [(lam projection_46
-                                                      [(lam evaluated_47
-                                                        [(lam projection_48
-                                                          (case
-                                                            [[(builtin equalsData) projection_48] addr1_3]
-                                                            [[(builtin constrData) (con integer 0)] (con (list data) [])]
-                                                            [(lam field_12
-                                                              [[(builtin constrData) (con integer 1)]
-                                                                [[(force (builtin mkCons)) field_12] (con (list data) [])]])
-                                                              o_8]))
-                                                          [(force (builtin headList)) evaluated_47]])
-                                                        (case projection_46 (lam tag_10 (lam fields_11 fields_11)))])
-                                                      [(builtin unConstrData) o_8]]))
-                                                  tag_16]))))
-                                          [(builtin unConstrData) generated_53]])]
-                                      (delay (force [[(force (builtin trace)) message_50] (delay (error))]))]
-                                      (delay (force [[(force (builtin trace)) message_50] (delay (error))]))]
-                                      (delay (force [[(force (builtin trace)) message_50] (delay (error))]))]
-                                      (delay (force [[(force (builtin trace)) message_50] (delay (error))]))]))
-                                  match_14])
-                                mbB_9]))]
-                          [[(builtin constrData) (con integer 0)] (con (list data) [])]]])
-                      [[(force (builtin mkCons)) out_4]
-                        [[(force (builtin mkCons)) out_4]
-                          [[(force (builtin mkCons)) out_4] (con (list data) [])]]]])
-                    [[[[(lam field_20
-                      (lam field_21
-                        (lam field_22
-                          (lam field_23
-                            [[(builtin constrData) (con integer 0)]
-                              [[(force (builtin mkCons)) field_20]
-                                [[(force (builtin mkCons)) field_21]
-                                  [[(force (builtin mkCons)) field_22]
-                                    [[(force (builtin mkCons)) field_23] (con (list data) [])]]]]]))))
-                      addr1_3]
-                      [lift_24 empty_2]]
-                      [[(builtin constrData) (con integer 0)] (con (list data) [])]]
+      [(lam lift_24
+        [(lam fromBytes_27
+          [(lam empty_2
+            [(lam addr1_3
+              [(lam out_4
+                [(lam outputs_5
+                  [(lam cry_6 [(lam main_1 main_1) [[(builtin equalsData) cry_6] cry_6]])
+                    [[[foldl_7 outputs_5]
+                      (lam o_8
+                        (lam mbB_9
+                          [(lam match_14
+                            [(lam generated_42
+                              (force
+                                [[[[[[(force (builtin chooseData)) generated_42]
+                                  (delay
+                                    [(lam pair_19
+                                      (case
+                                        pair_19
+                                        (lam tag_16
+                                          (lam fields_17
+                                            [(lam generated_43
+                                              (case
+                                                [[(builtin equalsInteger) generated_43] (con integer 0)]
+                                                (case
+                                                  [[(builtin equalsInteger) generated_43] (con integer 1)]
+                                                  (force [[(force (builtin trace)) message_40] (delay (error))])
+                                                  [(lam fieldList_18
+                                                    [(lam projection_39
+                                                      [(lam field_15 [(lam otherwise_13 otherwise_13) match_14]) projection_39])
+                                                      [(force (builtin headList)) fieldList_18]])
+                                                    fields_17])
+                                                [(lam projection_36
+                                                  [(lam evaluated_37
+                                                    [(lam projection_38
+                                                      (case
+                                                        [[(builtin equalsData) projection_38] addr1_3]
+                                                        [[(builtin constrData) (con integer 0)] (con (list data) [])]
+                                                        [(lam field_12
+                                                          [[(builtin constrData) (con integer 1)]
+                                                            [[(force (builtin mkCons)) field_12] (con (list data) [])]])
+                                                          o_8]))
+                                                      [(force (builtin headList)) evaluated_37]])
+                                                    (case projection_36 (lam tag_10 (lam fields_11 fields_11)))])
+                                                  [(builtin unConstrData) o_8]]))
+                                              tag_16]))))
+                                      [(builtin unConstrData) generated_42]])]
+                                  (delay (force [[(force (builtin trace)) message_40] (delay (error))]))]
+                                  (delay (force [[(force (builtin trace)) message_40] (delay (error))]))]
+                                  (delay (force [[(force (builtin trace)) message_40] (delay (error))]))]
+                                  (delay (force [[(force (builtin trace)) message_40] (delay (error))]))]))
+                              match_14])
+                            mbB_9]))]
                       [[(builtin constrData) (con integer 0)] (con (list data) [])]]])
-                  [[(lam field_25
-                    (lam field_26
-                      [[(builtin constrData) (con integer 0)]
-                        [[(force (builtin mkCons)) field_25]
-                          [[(force (builtin mkCons)) field_26] (con (list data) [])]]]))
-                    [fromBytes_27 (con bytestring #61646666)]]
-                    [[(builtin constrData) (con integer 0)] (con (list data) [])]]])
-                (con (list integer) [])])
-              (builtin bData)])
-            (lam values_36 [(builtin listData) [[mapList_37 lift_38] values_36]])])
-          (builtin iData)])
-        (lam f_39
-          (lam values_40
-            [[(lam self_51 [self_51 self_51])
-              (lam self_51
-                (lam values_40
-                  [(lam match_43
-                    (case
-                      match_43
-                      (lam field_44
-                        (lam field_45
-                          [(lam x_41
-                            [(lam xs_42 [[(force (builtin mkCons)) [f_39 x_41]] [[self_51 self_51] xs_42]])
-                              field_45])
-                            field_44]))
-                      (con (list data) [])))
-                    values_40]))]
-              values_40]))])
+                  [[(force (builtin mkCons)) out_4]
+                    [[(force (builtin mkCons)) out_4]
+                      [[(force (builtin mkCons)) out_4] (con (list data) [])]]]])
+                [[[[(lam field_20
+                  (lam field_21
+                    (lam field_22
+                      (lam field_23
+                        [[(builtin constrData) (con integer 0)]
+                          [[(force (builtin mkCons)) field_20]
+                            [[(force (builtin mkCons)) field_21]
+                              [[(force (builtin mkCons)) field_22]
+                                [[(force (builtin mkCons)) field_23] (con (list data) [])]]]]]))))
+                  addr1_3]
+                  [lift_24 empty_2]]
+                  [[(builtin constrData) (con integer 0)] (con (list data) [])]]
+                  [[(builtin constrData) (con integer 0)] (con (list data) [])]]])
+              [[(lam field_25
+                (lam field_26
+                  [[(builtin constrData) (con integer 0)]
+                    [[(force (builtin mkCons)) field_25]
+                      [[(force (builtin mkCons)) field_26] (con (list data) [])]]]))
+                [fromBytes_27 (con bytestring #61646666)]]
+                [[(builtin constrData) (con integer 0)] (con (list data) [])]]])
+            (con (list data) [])])
+          (builtin bData)])
+        (builtin listData)])
       (lam self_28
         (lam with_29
           (lam zero_30
-            [[[(lam self_52 [self_52 self_52])
-              (lam self_52
+            [[[(lam self_41 [self_41 self_41])
+              (lam self_41
                 (lam self_28
                   (lam zero_30
                     [(lam match_33
@@ -159,7 +132,7 @@ main#1
                         (lam field_34
                           (lam field_35
                             [(lam x_31
-                              [(lam xs_32 [[[self_52 self_52] xs_32] [[with_29 x_31] zero_30]]) field_35])
+                              [(lam xs_32 [[[self_41 self_41] xs_32] [[with_29 x_31] zero_30]]) field_35])
                               field_34]))
                         zero_30))
                       self_28])))]
@@ -171,4 +144,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 12227534, memory: 47035
+cpu: 11763534, memory: 44135

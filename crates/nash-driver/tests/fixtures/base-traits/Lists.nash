@@ -1,0 +1,94 @@
+module Main exposing (..)
+
+big : List Int
+big = lift items
+items : list Int
+items = [1, 2, 3]
+empty : list int
+empty = []
+none : option int
+none = None
+nested : List (List Int)
+nested = lift [big, big]
+
+badBool : unit -> bool
+badBool _ = fail
+
+tests
+    test "construction and count boundaries" = do
+        assert (List.singleton 3 == [3])
+        assert (List.repeat 3 7 == [7, 7, 7])
+        assert (List.repeat (-1) 7 == [])
+        assert (List.range 2 5 == [2, 3, 4])
+    test "construction and count boundaries 2" = do
+        assert (List.range 5 2 == [])
+        assert (List.range 2 2 == [])
+    test "Big and little inputs preserve elements" = do
+        assert (List.reverse big == [3, 2, 1])
+        assert (List.reverse items == [3, 2, 1])
+        assert (List.append items big == [1, 2, 3, 1, 2, 3])
+        assert (List.append big items == [1, 2, 3, 1, 2, 3])
+    test "Big and little inputs preserve elements 2" = do
+        assert (List.concat nested == [1, 2, 3, 1, 2, 3])
+        assert (List.map Builtin.unIData big == [1, 2, 3])
+        assert (List.map Builtin.iData [1, 2, 3] == items)
+        assert (List.indexedMap (\i x -> i + x) [10, 10] == [10, 11])
+    test "Big and little inputs preserve elements 3" = do
+        assert (List.length big == 3)
+        assert (List.head big == Some (Builtin.iData 1))
+        assert (List.tail big == Some [Builtin.iData 2, Builtin.iData 3])
+    test "empty access" = do
+        assert (List.head empty == none)
+        assert (List.tail empty == None)
+        assert (List.isEmpty empty)
+        assert (List.length empty == 0)
+    test "empty access 2" = do
+        assert (List.at 0 empty == none)
+        assert (List.at (-1) [1] == none)
+        assert (List.at 3 [1, 2, 3] == none)
+        assert (List.at 1 [1, 2, 3] == Some 2)
+    test "slicing" = do
+        assert (List.take 2 big == [1, 2])
+        assert (List.drop 2 big == [3])
+        assert (List.take (-1) [1, 2] == [])
+        assert (List.drop (-1) [1, 2] == [1, 2])
+    test "slicing 2" = do
+        assert (List.take 9 [1, 2] == [1, 2])
+        assert (List.drop 9 [1, 2] == [])
+    test "folds filtering and search" = do
+        assert (List.foldl (\x acc -> x - acc) 0 [1, 2] == 1)
+        assert (List.foldr (\x acc -> x - acc) 0 [1, 2] == -1)
+        assert (List.filter (\x -> x > 1) [1, 2, 3] == [2, 3])
+        assert (List.filterMap (\x -> if x > 1 then Some (x + 1) else None) [1, 2, 3] == [3, 4])
+    test "folds filtering and search 2" = do
+        assert (List.any (\x -> x == 2) [1, 2, 3])
+        assert (List.all (\x -> x > 0) [1, 2, 3])
+        assert (List.any (\x -> if x == 1 then True else badBool ()) [1, 2])
+        assert (not (List.all (\x -> if x == 1 then False else badBool ()) [1, 2]))
+    test "folds filtering and search 3" = do
+        assert (List.all (\_ -> badBool ()) empty)
+        assert (not (List.any (\_ -> badBool ()) empty))
+        assert (List.find (\x -> x > 1) [1, 2, 3] == Some 2)
+        assert (List.member 2 [1, 2, 3])
+    test "folds filtering and search 4" = do
+        assert (List.partition (\x -> x > 1) [1, 2, 3] == ([2, 3], [1]))
+        assert (List.sum [1, 2, 3] == 6)
+    test "map2 truncates and sort is stable" = do
+        assert (List.map2 (\x y -> x + y) items big == [2, 4, 6])
+        assert (List.map2 (\x y -> x + y) [1, 2] [10] == [11])
+        assert (List.sort [3, 1, 2, 1] == [1, 1, 2, 3])
+        assert (List.sortBy (\a b -> compare (rem a 10) (rem b 10)) [21, 12, 11, 22] == [21, 11, 12, 22])
+    test "map2 truncates and sort is stable 2" = do
+        assert (Array.at (List.toArray big) 1 == Builtin.iData 2)
+        assert (Array.at (Array.fromList big) 1 == Builtin.iData 2)
+        assert (Cons.toList (Cons.fromList big) == items)
+    test "Big control results and little sum" = do
+        assert (List.filter (\_ -> Bool.True) big == items)
+        assert (List.filterMap (\x -> Option.Some x) big == items)
+        assert (List.any (\_ -> Bool.True) big)
+        assert (List.all (\_ -> Bool.True) big)
+    test "Big comparison and selection" = do
+        assert (List.sortBy (\_ _ -> Ordering.EQ) big == items)
+        assert (List.find (\_ -> Bool.True) big == Some (Builtin.iData 1))
+        assert (List.partition (\_ -> Bool.True) big == (items, []))
+        assert (Builtin.equalsInteger (List.sum big) 6)

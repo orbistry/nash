@@ -1,0 +1,45 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..), coerce)\nimport Bool\nimport Lift exposing (Lift)\ntype alias flag = bool\nimpl Lift bool flag where\n    lift value = coerce value\n    lower value = if coerce value then False else True\noff : flag\noff = coerce True\nboth : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool\nboth a b = Bool.and a b\nmain : bool\nmain = if Bool.and off True then True else both off True\n"
+---
+--- core
+let both#2 : 'erased -> 'erased -> bool = \a#7 : 'erased b#8 : 'erased -> let lower#9 : bool -> bool = \value#10 : bool -> case@Bool (\coerce#11 : 'erased -> coerce#11) value#10 of
+  True -> false
+  False -> true in
+case@Bool lower#9 a#7 of
+  True -> b#8
+  False -> false in
+let off#3 : bool = (\coerce#12 : 'erased -> coerce#12) true in
+let lower#4 : bool -> bool = \value#5 : bool -> case@Bool (\coerce#6 : 'erased -> coerce#6) value#5 of
+  True -> false
+  False -> true in
+let main#1 : bool = case@Bool (case@Bool lower#4 off#3 of
+  True -> true
+  False -> false) of
+  True -> true
+  False -> both#2 off#3 true in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam both_2
+    [(lam off_3
+      [(lam lower_4
+        [(lam main_1 main_1)
+          (case
+            (case [lower_4 off_3] (con bool False) (con bool True))
+            [[both_2 off_3] (con bool True)]
+            (con bool True))])
+        (lam value_5
+          (case [(lam coerce_6 coerce_6) value_5] (con bool True) (con bool False)))])
+      [(lam coerce_12 coerce_12) (con bool True)]])
+    (lam a_7
+      (lam b_8
+        [(lam lower_9 (case [lower_9 a_7] (con bool False) b_8))
+          (lam value_10
+            (case [(lam coerce_11 coerce_11) value_10] (con bool True) (con bool False)))]))])
+--- result
+(con bool False)
+--- logs
+[]
+--- budget
+cpu: 752100, memory: 4800

@@ -3392,7 +3392,7 @@ fn nested_use_requires_owners_storable_constraint() {
     );
 }
 
-const LIFT_SOURCE: &str = "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\nimpl Lift () () where\n    lift x = x\n    lower x = x\n";
+const LIFT_SOURCE: &str = "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n";
 
 fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
     let module = nash_parse::Parser::new(bump, LIFT_SOURCE).module().unwrap();
@@ -3412,7 +3412,7 @@ fn lift_interface(bump: &Bump, core: bool) -> nash_can::Interface<'_> {
 }
 
 #[test]
-fn reflexive_lift_retains_big_evidence() {
+fn reflexive_lift_preserves_explicit_big_evidence() {
     let snapshot_inputs = SnapshotInputs::default();
     snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
@@ -3432,6 +3432,8 @@ fn reflexive_lift_retains_big_evidence() {
         inferred x = (rigid x, same x (lift x))
         explicit : () -> ()
         explicit x = lift x
+        polymorphic : 'a -> 'a
+        polymorphic x = lower x
         type Box 'a = Box 'a
         trait Keep 'a where
             keep : 'a -> 'a
@@ -3483,20 +3485,20 @@ fn reflexive_lift_retains_big_evidence() {
             nash_ast::Evidence::Given { .. } | nash_ast::Evidence::Repr { .. }
         )
     });
-    assert_eq!(proofs.len(), 5);
+    assert_eq!(proofs.len(), 6);
     assert_eq!(
         proofs
             .iter()
             .filter(|proof| matches!(proof, nash_ast::Evidence::ReflexiveLift { .. }))
             .count(),
-        3
+        5
     );
     assert_eq!(
         proofs
             .iter()
             .filter(|proof| matches!(proof, nash_ast::Evidence::Impl { .. }))
             .count(),
-        2
+        1
     );
     assert!(proofs.iter().any(|proof| matches!(proof, nash_ast::Evidence::Impl { args, .. } if args.iter().any(|arg| matches!(arg, nash_ast::Evidence::ReflexiveLift { .. })))));
     proofs.sort_by_key(|proof| format!("{proof:?}"));
@@ -3511,11 +3513,7 @@ fn reflexive_lift_neither_narrows_types_nor_uses_foreign_identity() {
     snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
     let mut results = Vec::new();
-    for (core, annotation) in [
-        (true, "'a -> 'a"),
-        (true, "'a -> 'b"),
-        (false, "Color -> Color"),
-    ] {
+    for (core, annotation) in [(true, "'a -> 'b"), (false, "Color -> Color")] {
         let interfaces = std::collections::BTreeMap::from([("Lift", lift_interface(&bump, core))]);
         let source = bump.alloc_str(&format!("module Main exposing (..)\nimport Lift exposing (Lift)\ntype Color = Red\nbad : {annotation}\nbad x = lift x\n"));
         let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))

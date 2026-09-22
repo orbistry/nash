@@ -77,14 +77,14 @@ shownBigPrimitives = (show integerLiteral, show bytesLiteral)
 shownBigContainers = (show bigList, show nestedBigLists, show bigMap)
 
 bigList : List Int
-bigList = lift [1, 2]
-littleList : list int
+bigList = lift [Builtin.iData 1, Builtin.iData 2]
+littleList : list Int
 littleList = lower bigList
 reflexiveList : List Int
 reflexiveList = lift [integerLiteral]
 nestedBigLists : List (List Int)
-nestedBigLists = lift [[1], [2]]
-nestedLittleLists : list (list int)
+nestedBigLists = lift [bigList, bigList]
+nestedLittleLists : list (List Int)
 nestedLittleLists = lower nestedBigLists
 bigMap : Map Int Bytes
 bigMap = fromData (Map [])
@@ -127,9 +127,9 @@ bigBytes = lift #"ff"
 littleBytes : bytes
 littleBytes = lower bigBytes
 textBytes : Bytes
-textBytes = lift "Nash"
+textBytes = lift (String.toBytes "Nash")
 littleText : string
-littleText = lower textBytes
+littleText = String.fromBytes textBytes
 integerData = toData bigInteger
 bytesData = toData bigBytes
 readInteger : Int
@@ -152,12 +152,16 @@ okResult = Ok True
 errResult : result unit bool
 errResult = Err ()
 liftedOk : Result Unit Bool.Bool
-liftedOk = lift okResult
+liftedOk = lift bigPayloadOk
+bigPayloadOk : result Unit Bool.Bool
+bigPayloadOk = Ok Bool.True
 liftedErr : Result Unit Bool.Bool
-liftedErr = lift errResult
-loweredOk : result unit bool
+liftedErr = lift bigPayloadErr
+bigPayloadErr : result Unit Bool.Bool
+bigPayloadErr = Err Unit.Unit
+loweredOk : result Unit Bool.Bool
 loweredOk = lower liftedOk
-loweredErr : result unit bool
+loweredErr : result Unit Bool.Bool
 loweredErr = lower liftedErr
 resultDefault = Result.withDefault False errResult
 resultMappedError = Result.mapError (\_ -> True) errResult
@@ -166,18 +170,18 @@ resultEquality = (eq okResult errResult, eq errResult errResult)
 optionalEquality = eq (Some True) (Some False)
 optionalDefault = Option.withDefault True None
 liftedOption : Option Bool.Bool
-liftedOption = lift (Some True)
-loweredOption : option bool
+liftedOption = lift (Some Bool.True)
+loweredOption : option Bool.Bool
 loweredOption = lower liftedOption
 nestedOption : Option (Option Bool.Bool)
-nestedOption = lift (Some (Some True))
-loweredNestedOption : option (option bool)
+nestedOption = lift (Some liftedOption)
+loweredNestedOption : option (Option Bool.Bool)
 loweredNestedOption = lower nestedOption
 emptyOption : Option Unit
 emptyOption = lift emptyLittleOption
-emptyLittleOption : option unit
+emptyLittleOption : option Unit
 emptyLittleOption = None
-loweredEmptyOption : option unit
+loweredEmptyOption : option Unit
 loweredEmptyOption = lower emptyOption
 
 liftedBool : Bool.Bool

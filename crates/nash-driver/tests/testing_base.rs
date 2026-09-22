@@ -10,7 +10,7 @@ async fn compile(body: &str) -> nash_driver::build::ValidatorOutput {
     let memory = InMemorySource::new();
     let mut origins = nash_driver::bundled_base::modules();
     let uri = Url::parse("file:///project/src/TestingCore.nash").unwrap();
-    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (Prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nemptyInts : list int\nemptyInts = []\nreplay : int -> list int -> Prng\nreplay count values = Replayed (lift count) (lift values)\nmain : Data -> unit\nmain _ =\n{body}\n"));
+    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (Prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nimport List\nemptyInts : list int\nemptyInts = []\nreplay : int -> list int -> Prng\nreplay count values = Replayed (lift count) (lift (List.map Builtin.iData values))\nmain : Data -> unit\nmain _ =\n{body}\n"));
     origins.insert(uri, None);
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
@@ -27,7 +27,7 @@ async fn compile(body: &str) -> nash_driver::build::ValidatorOutput {
 #[tokio::test]
 async fn choice_seeded_and_replayed_draws_agree() {
     let output = compile(r##"    let
-        initial = Seeded (lift #"0000000000000000000000000000000000000000000000000000000000000000") (lift emptyInts)
+        initial = Seeded (lift #"0000000000000000000000000000000000000000000000000000000000000000") (lift (List.map Builtin.iData emptyInts))
     in
     case Prop.run (Prop.choice 100) initial of
         Some (Seeded seed choices, n) ->

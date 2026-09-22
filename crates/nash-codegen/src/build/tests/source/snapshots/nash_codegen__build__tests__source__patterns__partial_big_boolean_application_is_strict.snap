@@ -1,0 +1,66 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Bool\nbad : unit -> Bool.Bool\nbad _ = fail\nmain : bool\nmain =\n    let\n        partial : Bool.Bool -> bool\n        partial = Bool.or Bool.True\n    in\n    partial (bad ())\n"
+---
+--- core
+let message#15 : string = "incomplete pattern match" in
+let bad#3 : unit -> nash/base:Bool.Bool = \arg#5 : unit -> let match#6 : unit = arg#5 in
+error in
+let lower#9 : nash/base:Bool.Bool -> bool = \value#10 : nash/base:Bool.Bool -> let match#11 : nash/base:Bool.Bool = value#10 in
+case@Data match#11 of
+  DataConstr pair#14 -> case@Pair pair#14 of
+    Pair tag#12 fields#13 -> case@Int tag#12 of
+      0 -> false
+      1 -> true
+      _ -> trace message#15 in error
+  _ -> trace message#15 in error in
+let or#4 : 'erased -> 'erased -> bool = \a#7 : 'erased b#8 : 'erased -> case@Bool lower#9 a#7 of
+  True -> true
+  False -> lower#9 b#8 in
+let partial#2 : nash/base:Bool.Bool -> bool = or#4 (constrData 1 (con (list data) [])) in
+let main#1 : bool = partial#2 (bad#3 ()) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_15
+    [(lam bad_3
+      [(lam lower_9
+        [(lam or_4
+          [(lam partial_2 [(lam main_1 main_1) [partial_2 [bad_3 (con unit ())]]])
+            [or_4 [[(builtin constrData) (con integer 1)] (con (list data) [])]]])
+          (lam a_7 (lam b_8 (case [lower_9 a_7] [lower_9 b_8] (con bool True))))])
+        (lam value_10
+          [(lam match_11
+            [(lam generated_16
+              (force
+                [[[[[[(force (builtin chooseData)) generated_16]
+                  (delay
+                    [(lam pair_14
+                      (case
+                        pair_14
+                        (lam tag_12
+                          (lam fields_13
+                            [(lam generated_17
+                              (case
+                                [[(builtin equalsInteger) generated_17] (con integer 0)]
+                                (case
+                                  [[(builtin equalsInteger) generated_17] (con integer 1)]
+                                  (force [[(force (builtin trace)) message_15] (delay (error))])
+                                  (con bool True))
+                                (con bool False)))
+                              tag_12]))))
+                      [(builtin unConstrData) generated_16]])]
+                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]
+                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]
+                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]
+                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]))
+              match_11])
+            value_10])])
+      (lam arg_5 [(lam match_6 (error)) arg_5])])
+    (con string "incomplete pattern match")])
+--- result
+error: ExplicitErrorTerm
+--- logs
+[]
+--- budget
+cpu: 22251, memory: 132

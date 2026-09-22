@@ -10,5 +10,5 @@ nash::names::reflexive_lift_overlap
    ·                       ─────
  2 │     lift x = x
    ╰────
-  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
-        overlap that built-in rule.
+  help: Every type can lift and lower to itself. Remove this impl or choose heads that
+        do not overlap that built-in rule.

@@ -209,3 +209,47 @@ async fn map_lift_rejects_inferred_native_pair_components() {
     "#
     );
 }
+
+#[tokio::test]
+async fn list_lift_does_not_convert_elements() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : list int -> List Int
+        bad values = lift values
+    "#
+    );
+}
+
+#[tokio::test]
+async fn list_lower_does_not_convert_elements() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : List Int -> list int
+        bad values = lower values
+    "#
+    );
+}
+
+#[tokio::test]
+async fn option_lower_does_not_convert_payload() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : Option Int -> option int
+        bad value = lower value
+    "#
+    );
+}
+
+#[tokio::test]
+async fn lift_does_not_encode_strings() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : string -> Bytes
+        bad value = lift value
+    "#
+    );
+}

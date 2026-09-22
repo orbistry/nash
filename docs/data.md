@@ -178,17 +178,16 @@ content. The impls shipped in `crates/nash-driver/base/` are the table of
 | `bytes` | `Bytes` | `bData` | `unBData` |
 | `bool` | `Bool` | `case c [Constr 0 [], Constr 1 []]` | tag compare |
 | `unit` | `Unit` | `Constr 0 []` | `()` |
-| `list 'a` given `Lift 'a 'b` | `List 'b` | map `lift` over the elements, then `listData` | `unListData`, then map `lower` |
+| `list ('a : Big)` | `List 'a` | `listData` | `unListData` |
 | `list (pair 'k 'v)` with `'k 'v : Big` | `Map 'k 'v` | `mapData` | `unMapData` |
-| `'a` for every `'a : Big` (built-in reflexive impl) | `'a` | identity | identity |
-| `option 'a` given `Lift 'a 'b` | `Option 'b` | `case`, rebuild | `unConstrData`, rebuild |
-| `result 'e 'a` given `Lift 'e 'f`, `Lift 'a 'b` | `Result 'f 'b` | as `option` | as `option` |
+| `'a` for every type (built-in reflexive impl) | `'a` | identity | identity |
+| `option ('a : Big)` | `Option 'a` | `case`, rebuild | `unConstrData`, rebuild |
+| `result ('e : Big) ('a : Big)` | `Result 'e 'a` | as `option` | as `option` |
 | `ordering` | `Ordering` | rebuild | rebuild |
 
-So `list int` lifts to `List Int` through `Lift int Int` on each element,
-and `list Int` lifts to `List Int` through the reflexive impl, where the
-element map is the identity and the optimizer reduces the whole `lift` to
-`listData`. `string` converts to `Bytes` through the core Lift impl using UTF-8.
+Container conversions preserve their element types and values. Convert native
+integers explicitly with `List.map lift` before wrapping as a Big List.
+String encoding uses `String.toBytes` / `String.fromBytes` rather than Lift.
 
 The primitive and collection Lift impls are ordinary Nash functions calling
 concrete typed Data builtins. The reflexive impl is identity. Other Lift

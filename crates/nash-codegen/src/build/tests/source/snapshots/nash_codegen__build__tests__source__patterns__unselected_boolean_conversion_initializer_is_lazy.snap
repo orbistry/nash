@@ -1,0 +1,36 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..), coerce)\nimport Bool\nimport Lift exposing (Lift)\ntype alias flag = bool\nimpl Lift bool flag where\n    lift item = coerce item\n    lower = (fail \"unselected conversion\")\nvalue : flag\nvalue = coerce False\nmain : bool\nmain = Bool.or True value\n"
+---
+--- core
+let message#8 : string = "unselected conversion" in
+let value#2 : bool = (\coerce#7 : 'erased -> coerce#7) false in
+let main#1 : bool = case@Bool true of
+  True -> true
+  False -> let message#6 : string = message#8 in
+  let fromString#4 : string -> string = \value#5 : string -> value#5 in
+  let lower#3 : bool -> bool = trace (fromString#4 message#6) in error in
+  lower#3 value#2 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_8
+    [(lam value_2
+      [(lam main_1 main_1)
+        (case
+          (con bool True)
+          [(lam message_6
+            [(lam fromString_4
+              [(lam lower_3 [lower_3 value_2])
+                (force [[(force (builtin trace)) [fromString_4 message_6]] (delay (error))])])
+              (lam value_5 value_5)])
+            message_8]
+          (con bool True))])
+      [(lam coerce_7 coerce_7) (con bool False)]])
+    (con string "unselected conversion")])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 240100, memory: 1600

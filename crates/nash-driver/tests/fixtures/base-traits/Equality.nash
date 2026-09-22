@@ -2,7 +2,7 @@ module Main exposing (..)
 
 type Token = Token Int
 bigList : List Int
-bigList = lift [1, 2]
+bigList = lift [Builtin.iData 1, Builtin.iData 2]
 bigMap : Map Int Bytes
 bigMap = lift [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa")]
 
@@ -29,7 +29,7 @@ tests
     test "Big equality" = do
         assert (Token 1 == Token 1)
         assert (Token 1 /= Token 2)
-        assert (bigList == lift [1, 2])
+        assert (bigList == lift [Builtin.iData 1, Builtin.iData 2])
         assert (bigMap == bigMap)
         assert (I 1 /= B #"01")
         assert (Bool.True /= Bool.False)

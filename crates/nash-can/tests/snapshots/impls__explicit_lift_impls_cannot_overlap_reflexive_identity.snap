@@ -12,8 +12,8 @@ nash::names::reflexive_lift_overlap
    ·           ─────
  5 │     lift x = x
    ╰────
-  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
-        overlap that built-in rule.
+  help: Every type can lift and lower to itself. Remove this impl or choose heads that
+        do not overlap that built-in rule.
 
 nash::names::reflexive_lift_overlap
 
@@ -24,10 +24,21 @@ nash::names::reflexive_lift_overlap
    ·            ────────────
  5 │     lift x = x
    ╰────
-  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
-        overlap that built-in rule.
+  help: Every type can lift and lower to itself. Remove this impl or choose heads that
+        do not overlap that built-in rule.
 
-Case 3: accepted
+nash::names::reflexive_lift_overlap
+
+  × This impl overlaps the reflexive `Lift` rule:
+   ╭─[src/Main.nash:4:11]
+ 3 │ type color = Red
+ 4 │ impl Lift color color where
+   ·           ─────
+ 5 │     lift x = x
+   ╰────
+  help: Every type can lift and lower to itself. Remove this impl or choose heads that
+        do not overlap that built-in rule.
+
 nash::names::reflexive_lift_overlap
 
   × This impl overlaps the reflexive `Lift` rule:
@@ -37,5 +48,5 @@ nash::names::reflexive_lift_overlap
    ·            ────────
  5 │     lift x = x
    ╰────
-  help: Every Big type can lift to itself. Remove this impl or choose heads that do not
-        overlap that built-in rule.
+  help: Every type can lift and lower to itself. Remove this impl or choose heads that
+        do not overlap that built-in rule.

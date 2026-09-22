@@ -103,3 +103,6 @@ async fn debug_syntax_silent() {
         insta::assert_snapshot!(output);
     });
 }
+
+base_snapshot!(list_helpers, "fixtures/base-traits/Lists.nash");
+base_snapshot!(type_helpers, "fixtures/base-traits/TypeHelpers.nash");

@@ -40,6 +40,10 @@ fn compile_selected(
             Some(primitives::BASE),
         ),
         (
+            include_str!("../../../nash-driver/base/src/Lift.nash"),
+            Some(primitives::BASE),
+        ),
+        (
             include_str!("../../../nash-driver/base/src/Bool.nash"),
             Some(primitives::BASE),
         ),
@@ -200,17 +204,19 @@ fn captures_preserve_partial_application_order_and_lazy_branches() {
         compare x = trace "partial" (\y -> Builtin.equalsInteger x y)
         one : int
         one = 1
+        badBool : unit -> bool
+        badBool _ = fail "unselected"
         ordinary : unit
-        ordinary = if True || (fail "unselected") then () else (fail "wrong")
+        ordinary = if True || (badBool ()) then () else (fail "wrong")
         tests
             test "ordered" = do
                 assert (compare (trace "left" one) (trace "right" 2))
             test "lazy" = do
                 assert (if False then (fail "unselected") else True)
             test "lazy or" = do
-                assert (True || (fail "unselected"))
+                assert (True || (badBool ()))
             test "lazy and" = do
-                assert (if False && (fail "unselected") then False else True)
+                assert (if False && (badBool ()) then False else True)
             test "ordinary lowering is lazy" = do
                 ordinary
     "#

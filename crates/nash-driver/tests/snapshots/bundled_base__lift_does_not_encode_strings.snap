@@ -1,0 +1,24 @@
+---
+source: crates/nash-driver/tests/bundled_base.rs
+description: "module Main exposing (..)\nbad : string -> Bytes\nbad value = lift value\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Lift string Bytes`.
+   ╭─[/app/src/Main.nash:3:13]
+ 2 │ bad : string -> Bytes
+ 3 │ bad value = lift value
+   ·             ──┬─
+   ·               ╰── required by `lift`
+   ╰────
+  help: Available impl heads:
+
+            (option 'a0) (Option 'a0)
+            ordering Ordering
+            bool Bool
+            bytes Bytes
+
+        …
+
+        Import or define an impl for `Lift string Bytes`.

@@ -376,7 +376,7 @@ fn ground_higher_kinded_context_keeps_partial_alias_and_head_order() {
 }
 
 #[test]
-fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
+fn ground_reflexive_lift_requires_exact_core_identity() {
     let bump = Bump::new();
     let (mut tables, annotations) = fixture(
         &bump,
@@ -386,9 +386,6 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
         trait Lift 'small 'big where
             lift : 'small -> 'big
             lower : 'big -> 'small
-        impl Lift () () where
-            lift x = x
-            lower x = x
         big : Int -> Int
         big x = x
         otherBig : Int -> Int
@@ -482,14 +479,12 @@ fn ground_reflexive_lift_requires_exact_core_identity_and_big() {
     ));
     assert!(matches!(
         resolve(&bump, &tables, &predicate("unit")),
-        Ok(Some(Evidence::Impl { .. }))
+        Ok(Some(Evidence::ReflexiveLift { .. }))
     ));
-    assert_eq!(
-        resolve(&bump, &tables, &predicate("small"))
-            .unwrap_err()
-            .reason,
-        Failure::MissingImpl
-    );
+    assert!(matches!(
+        resolve(&bump, &tables, &predicate("small")),
+        Ok(Some(Evidence::ReflexiveLift { .. }))
+    ));
     let foreign = Pred::Trait {
         trait_: QualifiedName {
             home: nash_ast::ModuleName {

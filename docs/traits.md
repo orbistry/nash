@@ -130,7 +130,7 @@ both its trait and its head type are visible.
   superclass proof and selection; they do not distinguish overlapping heads.
   Matching must preserve that equality. A bare variable head is permitted only
   when the trait is defined in the same module as the impl. Function heads
-  remain excluded; reflexive Big Lift remains a compiler-provided rule.
+  remain excluded; reflexive Lift remains a compiler-provided rule.
   This rule applies uniformly to user and core impls, with no Map-specific
   exception or enumeration of permitted nested shapes.
   Aliases remain nominal: matching uses their qualified names and arguments,
@@ -236,12 +236,12 @@ when it needs one that is missing.
 
 After checking givens, resolution recognizes the compiler-owned reflexive
 rule only for package `nash/base`, module `Lift`, trait `Lift`. Both arguments
-must already be equal and their representation must be proven Big. Resolution must
+must already be equal. Resolution must
 not unify unknown arguments or narrow a rigid variable's representation to select
 this rule. A same-named trait elsewhere receives no special behavior.
 Explicit impls that can overlap this rule are rejected: the same nominal
 constructor at the same application arity conflicts when corresponding
-argument kinds can unify and the resulting type can be Big. This check
+argument kinds can unify. This check
 does not assume that different head variable names make impls disjoint.
 
 Superclass checking during canonicalization performs a bounded search.
@@ -543,7 +543,7 @@ trait and its methods exposed (like Elm's default imports of `Basics`).
 the impls for the prelude types. The compiler recognizes these core identities:
 `Literal.FromInt`, `Literal.FromString`, `Literal.FromBytes`, `Eq.Eq`
 (literal patterns), `Num.Num` (prefix negation), `Monad.Monad` (`do`), and
-`Lift.Lift` (reflexive Big evidence). Negation uses the checked `Num.negate`
+`Lift.Lift` (reflexive identity evidence). Negation uses the checked `Num.negate`
 method annotation, independent of lexical values named `negate`. The declarations match
 [stdlib.md](stdlib.md):
 
@@ -636,7 +636,7 @@ Notes:
 - Kinds: `ToData`/`FromData`/`Validate` and both `Lift` parameters have kind `Type`.
   `ToData`/`FromData`/`Validate` require `Big` through their superclass predicates.
   `Lift` relates its concrete impl heads, with a compiler-owned reflexive
-  rule for Big types. `Functor`/`Applicative`/`Monad` parameters have the
+  rule for all types. `Functor`/`Applicative`/`Monad` parameters have the
   fixed kind `Type -> Type`; their method formation contexts enforce each
   constructor's representation requirements.
 - `@derive(Eq, Ord, Show, Validate)` generates impls as macros

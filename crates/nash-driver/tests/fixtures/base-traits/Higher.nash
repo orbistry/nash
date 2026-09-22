@@ -10,7 +10,7 @@ resultErr = Err "bad"
 resultFunction : result string (int -> int)
 resultFunction = pure increment
 bigList : List Int
-bigList = lift [1, 2]
+bigList = lift [Builtin.iData 1, Builtin.iData 2]
 
 doResult : option int
 doResult = do

@@ -19,12 +19,12 @@ description: "module New exposing (..)\nvalue = missing\n"
       "severity": 1,
       "code": "nash::names::not_found_var",
       "source": "nash",
-      "message": "Unknown variable `missing`.\n\n\n\nSimilar names:\n\n    min\n    bind\n    fromInt\n    and",
+      "message": "Unknown variable `missing`.\n\n\n\nSimilar names:\n\n    min\n    bind\n    fromInt\n    List.any",
       "data": [
         "min",
         "bind",
         "fromInt",
-        "and"
+        "List.any"
       ]
     }
   ],

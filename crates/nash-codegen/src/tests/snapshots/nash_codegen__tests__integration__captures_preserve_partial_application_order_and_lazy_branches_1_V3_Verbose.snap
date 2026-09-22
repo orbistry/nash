@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/tests/integration.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nimport Logic exposing (..)\ncompare : int -> int -> bool\ncompare x = trace \"partial\" (\\y -> Builtin.equalsInteger x y)\none : int\none = 1\nordinary : unit\nordinary = if True || (fail \"unselected\") then () else (fail \"wrong\")\ntests\n    test \"ordered\" = do\n        assert (compare (trace \"left\" one) (trace \"right\" 2))\n    test \"lazy\" = do\n        assert (if False then (fail \"unselected\") else True)\n    test \"lazy or\" = do\n        assert (True || (fail \"unselected\"))\n    test \"lazy and\" = do\n        assert (if False && (fail \"unselected\") then False else True)\n    test \"ordinary lowering is lazy\" = do\n        ordinary\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nimport Logic exposing (..)\ncompare : int -> int -> bool\ncompare x = trace \"partial\" (\\y -> Builtin.equalsInteger x y)\none : int\none = 1\nbadBool : unit -> bool\nbadBool _ = fail \"unselected\"\nordinary : unit\nordinary = if True || (badBool ()) then () else (fail \"wrong\")\ntests\n    test \"ordered\" = do\n        assert (compare (trace \"left\" one) (trace \"right\" 2))\n    test \"lazy\" = do\n        assert (if False then (fail \"unselected\") else True)\n    test \"lazy or\" = do\n        assert (True || (badBool ()))\n    test \"lazy and\" = do\n        assert (if False && (badBool ()) then False else True)\n    test \"ordinary lowering is lazy\" = do\n        ordinary\n"
 ---
 --- ordered
 (program 1.1.0
@@ -111,14 +111,14 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
     [(lam i1
       [(lam i2
         [(lam i3
-          (case
+          [(lam i4
             (case
-              i3
-              (force [[(force (builtin trace)) [i2 i0]] (delay (error))])
-              (con bool True))
-            (force [[(force (builtin trace)) i1] (delay (error))])
-            (con unit ())))
-          (con bool True)])
+              (case i4 [i3 (con unit ())] (con bool True))
+              (force [[(force (builtin trace)) i1] (delay (error))])
+              (con unit ())))
+            (con bool True)])
+          (lam i3
+            [(lam i4 (force [[(force (builtin trace)) [i2 i0]] (delay (error))])) i3])])
         (lam i2 i2)])
       (con string "\0assert\0\48")])
     (con string "unselected")])
@@ -132,28 +132,28 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
             [(lam i5
               [(lam i6
                 [(lam i7
-                  (case
-                    (case i7 (con bool True) (con bool False))
-                    (force
-                      [[(force (builtin trace)) i1]
-                        (delay
-                          [(lam i8
+                  [(lam i8
+                    (case
+                      (case i8 (con bool True) (con bool False))
+                      (force
+                        [[(force (builtin trace)) i1]
+                          (delay
                             [(lam i9
                               [(lam i10
                                 [(lam i11
-                                  (force
-                                    [[(force (builtin trace)) [[(builtin appendString) i4] [i11 i7]]]
-                                      (delay (error))]))
-                                  (lam i11 (case i11 [i10 i9] [i10 i8]))])
-                                (lam i10 i10)])
-                              i3])
-                            i2])])
-                    (con unit ())))
-                  (case
-                    i6
-                    (con bool False)
-                    (force [[(force (builtin trace)) [i5 i0]] (delay (error))]))])
-                (con bool False)])
+                                  [(lam i12
+                                    (force
+                                      [[(force (builtin trace)) [[(builtin appendString) i4] [i12 i8]]]
+                                        (delay (error))]))
+                                    (lam i12 (case i12 [i11 i10] [i11 i9]))])
+                                  (lam i11 i11)])
+                                i3])
+                              i2])])
+                      (con unit ())))
+                    (case i7 (con bool False) [i6 (con unit ())])])
+                  (con bool False)])
+                (lam i6
+                  [(lam i7 (force [[(force (builtin trace)) [i5 i0]] (delay (error))])) i6])])
               (lam i5 i5)])
             (con string "\0assert\0\48\0\48\0")])
           (con string "False")])
@@ -165,14 +165,14 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
   [(lam i0
     [(lam i1
       [(lam i2
-        [(lam i3 i3)
-          (case
+        [(lam i3
+          [(lam i4 i4)
             (case
-              (con bool True)
-              (force [[(force (builtin trace)) [i2 i0]] (delay (error))])
-              (con bool True))
-            (force [[(force (builtin trace)) [i2 i1]] (delay (error))])
-            (con unit ()))])
+              (case (con bool True) [i3 (con unit ())] (con bool True))
+              (force [[(force (builtin trace)) [i2 i1]] (delay (error))])
+              (con unit ()))])
+          (lam i3
+            [(lam i4 (force [[(force (builtin trace)) [i2 i0]] (delay (error))])) i3])])
         (lam i2 i2)])
       (con string "wrong")])
     (con string "unselected")])

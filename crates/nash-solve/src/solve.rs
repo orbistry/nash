@@ -1330,9 +1330,10 @@ impl<'a> Solver<'a, '_> {
                 && self.tables.has_reflexive_lift()
                 && args.len() == 2
                 && crate::preds::same_args(uf, &args[..1], &args[1..]);
-            if (structural_eq || reflexive_lift)
-                && (self.given_big(uf, rank, args[0])
-                    || self.representation(uf, rank, args[0]) == Some(Repr::Big))
+            if reflexive_lift
+                || (structural_eq
+                    && (self.given_big(uf, rank, args[0])
+                        || self.representation(uf, rank, args[0]) == Some(Repr::Big)))
             {
                 let solution = if structural_eq {
                     Solution::StructuralEq { typ: args[0] }
@@ -2247,20 +2248,21 @@ impl<'a> Solver<'a, '_> {
                 && self.tables.has_reflexive_lift()
                 && args.len() == 2
                 && crate::preds::same_args(uf, &args[..1], &args[1..]);
-            if (equality || lift)
-                && closures.iter().flatten().any(|given| {
-                    crate::representation::same_predicate(
-                        uf,
-                        &self.tables.kinds,
-                        &given.body,
-                        &Body::Trait {
-                            trait_: nash_ast::primitives::ReprTrait::Big.qualified(),
-                            args: vec![args[0]],
-                            hidden: true,
-                        },
-                        &mut allocated,
-                    )
-                })
+            if lift
+                || (equality
+                    && closures.iter().flatten().any(|given| {
+                        crate::representation::same_predicate(
+                            uf,
+                            &self.tables.kinds,
+                            &given.body,
+                            &Body::Trait {
+                                trait_: nash_ast::primitives::ReprTrait::Big.qualified(),
+                                args: vec![args[0]],
+                                hidden: true,
+                            },
+                            &mut allocated,
+                        )
+                    }))
             {
                 derived.insert(
                     *id,

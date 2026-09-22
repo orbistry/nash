@@ -5,8 +5,11 @@ double x = x * 2
 strictAnd : bool -> bool
 strictAnd = and False
 
-namedAnd = and False (fail "unselected outside assertion")
-namedOr = Bool.or True (fail "unselected outside assertion")
+namedAnd = and False (failBool "unselected outside assertion")
+namedOr = Bool.or True (failBool "unselected outside assertion")
+
+failBool : string -> bool
+failBool message = fail message
 
 tests
     test "helpers and composition" = do
@@ -23,12 +26,12 @@ tests
         assert (not False)
         assert (xor True False)
         assert (not (xor True True))
-        assert (not (False && (fail "unselected and")))
-        assert (True || (fail "unselected or"))
-        assert (not (and False (fail "unselected named and")))
-        assert (or True (fail "unselected named or"))
-        assert (not (Bool.and False (fail "unselected qualified and")))
-        assert (Bool.or True (fail "unselected qualified or"))
+        assert (not (False && (failBool "unselected and")))
+        assert (True || (failBool "unselected or"))
+        assert (not (and False (failBool "unselected named and")))
+        assert (or True (failBool "unselected named or"))
+        assert (not (Bool.and False (failBool "unselected qualified and")))
+        assert (Bool.or True (failBool "unselected qualified or"))
         assert (and True True)
         assert (not (or False False))
     test "trace result" = do

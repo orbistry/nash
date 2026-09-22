@@ -1,17 +1,26 @@
 module Bool exposing (Bool(..), not, and, or, xor)
 
 import Primitive
+import Lift exposing (Lift)
 
 type Bool = False | True
 
-not : bool -> bool
-not value = if value then Primitive.False else Primitive.True
+not : Lift bool 'a => 'a -> bool
+not value = if lower value then Primitive.False else Primitive.True
 
-and : bool -> bool -> bool
-and a b = if a then b else Primitive.False
+and : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
+and a b = if lower a then lower b else Primitive.False
 
-or : bool -> bool -> bool
-or a b = if a then Primitive.True else b
+or : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
+or a b = if lower a then Primitive.True else lower b
 
-xor : bool -> bool -> bool
-xor a b = if a then not b else b
+xor : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
+xor a b = if lower a then not b else lower b
+
+impl Lift bool Bool where
+    lift value = if value then Bool.True else Bool.False
+    lower value =
+        case value of
+            Bool.True -> Primitive.True
+            Bool.False -> Primitive.False
+

@@ -134,7 +134,7 @@ fn impl_heads_reject_non_constructor_shapes() {
 }
 
 #[test]
-fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
+fn explicit_lift_impls_cannot_overlap_reflexive_identity() {
     let snapshot_inputs = SnapshotInputs::default();
     snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
@@ -173,7 +173,7 @@ fn explicit_lift_impls_cannot_overlap_the_big_reflexive_rule() {
         results[1].as_ref().unwrap_err().as_slice(),
         [nash_can::Error::ReflexiveLiftOverlap { .. }]
     ));
-    assert!(results[2].is_ok());
+    assert!(results[2].is_err());
     assert!(matches!(
         results[3].as_ref().unwrap_err().as_slice(),
         [nash_can::Error::ReflexiveLiftOverlap { .. }]
@@ -200,7 +200,7 @@ fn core_lift<'a>(bump: &'a Bump) -> nash_can::Interface<'a> {
 }
 
 #[test]
-fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
+fn reflexive_lift_preserves_representation_constraints() {
     let snapshot_inputs = SnapshotInputs::default();
     snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
@@ -228,7 +228,7 @@ fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
         );
     }
     assert!(results[0].is_ok());
-    assert!(results[1].is_err());
+    assert!(results[1].is_ok());
     assert!(results[2].is_err());
     insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(snapshot_inputs.results(&results));
@@ -236,7 +236,7 @@ fn reflexive_lift_proves_big_without_narrowing_rigid_variables() {
 }
 
 #[test]
-fn reflexive_lift_accepts_big_but_not_const() {
+fn reflexive_lift_accepts_big_and_const() {
     let snapshot_inputs = SnapshotInputs::default();
     snapshot_inputs.record(LIFT_SOURCE);
     let bump = Bump::new();
@@ -260,7 +260,7 @@ fn reflexive_lift_accepts_big_but_not_const() {
         );
     }
     assert!(results[0].is_ok());
-    assert!(results[1].is_err());
+    assert!(results[1].is_ok());
     insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(snapshot_inputs.results(&results));
     });
