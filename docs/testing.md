@@ -8,8 +8,8 @@ and, for properties, a shrunk counterexample.
 The design follows Aiken: the PRNG is a Plutus value that the generator
 threads through on-chain code, the runner only sees the sequence of random
 choices, and shrinking is choice-sequence shrinking in Rust (MiniThesis). Nash
-uses a `generator 'a` function alias with Monad support so generators are written
-with `do`, and a power-assert
+uses ordinary generation functions returning a value and next PRNG state.
+They can sequence draws with `Option` `do` notation. A power-assert
 `assert` that prints the value of every sub-expression on failure.
 
 ## Surface syntax
@@ -76,7 +76,7 @@ Rules the parser and canonicalizer enforce:
   fine. Irrefutable patterns only; a refutable pattern is the usual
   exhaustiveness error.
 - Generators resolve in the module and test-import scope; they do not refer to
-  other via-bound values. Use `Prop.bind` inside a generator for dependent draws.
+  other via-bound values. Use direct draws inside a generation function for dependent values.
 - The `let ... in` that holds `via` binders holds nothing else. Ordinary
   `let` follows in the body.
 - `within` takes one or two budgets in either order, at most one of each.
@@ -251,17 +251,11 @@ to test bodies.
 type prng = Seeded bytes (list int) | Replayed (list int)
 type alias generator 'a = prng -> option ('a, prng)
 
-map : ('a -> 'b) -> generator 'a -> generator 'b
-map f generator state =
-    case generator state of
-        None -> None
-        Some (value, next) -> Some (f value, next)
-
-bind : generator 'a -> ('a -> generator 'b) -> generator 'b
-bind generator continuation state =
-    case generator state of
-        None -> None
-        Some (value, next) -> continuation value next
+dependent : Prop.generator int
+dependent state = do
+    (bound, next) <- Prop.choice 10 state
+    (value, final) <- Prop.choice bound next
+    Some (value, final)
 
 ```
 
@@ -271,8 +265,9 @@ bind generator continuation state =
   choices still to replay, next first. An empty list means replay is exhausted.
 - `generator 'a` is a function alias. Each draw returns `(value, nextPrng)` in
   `Some`, or `None` for invalid replay. The value may itself contain functions.
-  Functor, Applicative and Monad instances attach to the alias; there is no
-  runtime `Generator` constructor.
+  Call the function directly with a PRNG state. The alias has no trait instances
+  or runtime constructor. `do` sequences the returned `option` values through
+  `Monad option`; state threading remains explicit.
 - Choices are integers in `0..18446744073709551615`, one per primitive draw, as in
   MiniThesis. Aiken uses bytes; Nash uses `int` so a primitive can draw a
   64-bit integer in one choice and shrink it with one binary search. Larger
@@ -310,8 +305,8 @@ choiceInt bound prng =
 A replayed sequence that runs out, or replays a value outside the requested
 bounds, yields `None`. That is what makes choice-sequence shrinking sound: any
 edit to the sequence either replays to a valid smaller input or is rejected
-by the generator itself. Everything else (`int`, `listOf`, `oneOf`, `bytes`,
-`map`, `bind`) is built on `choice`, and generators must draw smaller values
+by the generator itself. The generation helpers (`int`, `listOf`, `oneOf`,
+`bytes`) are built on `choice`, and generators must draw smaller values
 from smaller choices for shrinking to produce smaller inputs.
 
 Nullary generators like `int` are values, so `a via int` and
@@ -509,8 +504,8 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 
 - **Validators.** `nash build` strips the `tests` block before
   canonicalization ([validators.md](validators.md)).
-- **Traits.** `Show` for power-assert and counterexamples; `Functor`,
-  `Applicative`, `Monad` for `generator`; `@derive(Show)` from
+- **Traits.** `Show` for power-assert and counterexamples; `Monad option` for
+  optional `do` sequencing of direct draws; `@derive(Show)` from
   [macros.md](macros.md).
 - **Representations.** `('a, prng)` is a tuple (`Term`) because `pair` requires
   `Storable` components, while `'a` may be `Term`; `list string` is a `Const` list of `Const` strings.

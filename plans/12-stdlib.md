@@ -370,8 +370,8 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 ## Chunk 8: `Prop` — foundation implemented through Plan 10
 
 - [x] Ship prng/generator types, choice bounds, seeded draws and validated replay.
-- [x] Ship Functor/Applicative/Monad, run, constant, intBetween, int, listOf,
-  listBetween, tuple2, oneOf, bytes, map and bind.
+- [x] Ship direct generation functions: choice, constant, intBetween, int, listOf,
+  listBetween, tuple2, oneOf and bytes; sequence draws with explicit state.
 - [x] Test Nash generators against the Rust runner and replay protocol in
   `crates/nash-driver/tests/testing_base.rs`.
 - [ ] Audit the complete docs/stdlib.md generator API and remaining properties.
@@ -387,8 +387,8 @@ Extend the existing implementation; do not replace its tested protocol.
 **Change**
 
 docs/testing.md "Generators", verbatim: the **little** `prng` ADT that the
-runner builds as native constructor terms, the `generator 'a` function alias with
-`Functor`/`Applicative`/`Monad` impls, `choice` as the single primitive
+runner builds as native constructor terms, the `generator 'a` function alias,
+direct draws with explicit state threading, `choice` as the single primitive
 over `u64` integer choices (not Aiken's bytes), and the generators listed
 in docs/stdlib.md "`Prop`" built on `choice`.
 
@@ -397,7 +397,7 @@ in docs/stdlib.md "`Prop`" built on `choice`.
 Use `crates/nash-driver/base/src/Prop.nash` as the current implementation,
 with `crates/nash-test/src/prng.rs` and docs/testing.md for the wire contract.
 Choices are u64 integers. Invalid bounds fail; exhausted or invalid replay
-returns None. Seeded/Replayed payloads are Big. The existing runner owns
+returns None. Seeded/Replayed payloads use little types. The existing runner owns
 sampling, replay and shrinking; preserve their behavior when extending APIs.
 
 **Elm/Aiken reference**
@@ -410,8 +410,8 @@ choice element type: `Int`, not bytes (testing.md "Open questions").
 
 **Tests**
 
-- `tests` block: `run (choice 10) (Seeded #"" [])` is `Some`; `run (choice 10) (Replayed [])` is `None`; `run (choice 10) (Replayed [11])` is `None` (over bound); `intBetween 3 3` is `3`.
-- `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` sampled through `Prop.run` stays in range.
+- `tests` block: `choice 10 (Seeded #"" [])` is `Some`; `choice 10 (Replayed [])` is `None`; `choice 10 (Replayed [11])` is `None` (over bound); `intBetween 3 3` is `3`.
+- `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` called directly with a PRNG state stays in range.
 - Rust (plans/10 chunk 6): a shrink test that a failing `listOf int` counterexample shrinks to `[0]` or `[]`.
 
 **Done when** the in-process Base test runner runs the props with the plans/10 runner.

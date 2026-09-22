@@ -1,4 +1,4 @@
-module Prop exposing (type prng(..), type generator, run, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, map, bind)
+module Prop exposing (type prng(..), type generator, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes)
 
 import Builtin
 
@@ -8,16 +8,10 @@ import Literal
 import Num exposing (Num)
 import Lift exposing (Lift)
 import Option exposing (type option(..))
-import Functor exposing (Functor)
-import Applicative exposing (Applicative)
-import Monad exposing (Monad)
 import Cons exposing (type cons(..))
 
 type prng = Seeded bytes (list int) | Replayed (list int)
 type alias generator 'a = prng -> option ('a, prng)
-
-run : generator 'a -> generator 'a
-run f = f
 
 -- The runner stores each primitive choice in a u64.
 choice : Lift int 'n => 'n -> generator int
@@ -42,34 +36,6 @@ choiceInt bound prng =
                         if n < 0 || n > bound then None
                         else Some (n, Replayed rest)
 
-map : ('a -> 'b) -> generator 'a -> generator 'b
-map f g prng =
-    case g prng of
-        None -> None
-        Some (a, next) -> Some (f a, next)
-
-bind : generator 'a -> ('a -> generator 'b) -> generator 'b
-bind g k prng =
-    case g prng of
-        None -> None
-        Some (a, next) -> k a next
-
-impl Functor generator where
-    map = mapGenerator
-
-mapGenerator : ('a -> 'b) -> generator 'a -> generator 'b
-mapGenerator = map
-
-impl Applicative generator where
-    pure = constant
-    apply ff fa = bind ff (\f -> map f fa)
-
-impl Monad generator where
-    bind = bindGenerator
-
-bindGenerator : generator 'a -> ('a -> generator 'b) -> generator 'b
-bindGenerator = bind
-
 constant : 'a -> generator 'a
 constant a prng = Some (a, prng)
 
@@ -80,16 +46,23 @@ intBetweenInt : int -> int -> generator int
 intBetweenInt lo hi =
     if hi < lo then (fail "Prop.intBetween has reversed bounds")
     else if hi == lo then constant lo
-    else map (\n -> lo + n) (choice (hi - lo))
+    else
+        let draw = choice (hi - lo) in
+        \state ->
+            case draw state of
+                None -> None
+                Some (n, next) -> Some (lo + n, next)
 
 -- Signed 64-bit values, with small-width draws favored.
 int : generator int
-int =
-    bind (choice 2) (\width ->
-        case width of
-            0 -> choice 255
-            1 -> intBetween -32768 32767
-            _ -> intBetween -9223372036854775808 9223372036854775807)
+int state =
+    case choice 2 state of
+        None -> None
+        Some (width, next) ->
+            case width of
+                0 -> choice 255 next
+                1 -> intBetween -32768 32767 next
+                _ -> intBetween -9223372036854775808 9223372036854775807 next
 
 listOf : generator 'a -> generator (list 'a)
 listOf = listBetween 0 20
@@ -103,25 +76,45 @@ listBetweenInt lo hi item =
     else listFrom 0 lo hi item
 
 listFrom : int -> int -> int -> generator 'a -> generator (list 'a)
-listFrom n lo hi item =
-    if n >= hi then constant []
-    else if n < lo then listMore n lo hi item
-    else bind (choice 1) (\continue ->
-        if continue == 0 then constant [] else listMore n lo hi item)
+listFrom n lo hi item state =
+    if n >= hi then Some ([], state)
+    else if n < lo then listMore n lo hi item state
+    else
+        case choice 1 state of
+            None -> None
+            Some (continue, next) ->
+                if continue == 0 then Some ([], next)
+                else listMore n lo hi item next
 
 listMore : int -> int -> int -> generator 'a -> generator (list 'a)
-listMore n lo hi item =
-    bind item (\x -> map (\xs -> Builtin.mkCons x xs) (listFrom (n + 1) lo hi item))
+listMore n lo hi item state =
+    case item state of
+        None -> None
+        Some (x, next) ->
+            case listFrom (n + 1) lo hi item next of
+                None -> None
+                Some (xs, final) -> Some (Builtin.mkCons x xs, final)
 
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
-tuple2 first second = bind first (\a -> map (\b -> (a, b)) second)
+tuple2 first second state =
+    case first state of
+        None -> None
+        Some (a, next) ->
+            case second next of
+                None -> None
+                Some (b, final) -> Some ((a, b), final)
 
 -- Generators contain functions, so use the Term-representation Cons list.
 oneOf : cons (generator 'a) -> generator 'a
 oneOf generators =
     case generators of
         Nil -> (fail "Prop.oneOf requires a generator")
-        Cons _ _ -> bind (choice (Cons.length generators - 1)) (\n -> pick n generators)
+        Cons _ _ ->
+            let draw = choice (Cons.length generators - 1) in
+            \state ->
+                case draw state of
+                    None -> None
+                    Some (n, next) -> pick n generators next
 
 pick : int -> cons (generator 'a) -> generator 'a
 pick index generators =
@@ -130,7 +123,10 @@ pick index generators =
         Cons first rest -> if index == 0 then first else pick (index - 1) rest
 
 bytes : generator bytes
-bytes = map packBytes (listBetween 0 32 (choice 255))
+bytes state =
+    case listBetween 0 32 (choice 255) state of
+        None -> None
+        Some (values, next) -> Some (packBytes values, next)
 
 packBytes : list int -> bytes
 packBytes values =

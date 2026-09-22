@@ -722,8 +722,9 @@ has a declared scheme, so it is always constrained through its annotation.
 - **Codegen** ([codegen.md](codegen.md)): consumes `SolvedTypes`;
   specialization worklist keyed by (definition, type arguments, ground
   evidence vector).
-- **Testing** ([testing.md](testing.md)): the little type `generator 'a`
-  (constructor `Generator`) has a `Monad` impl; `prop` bodies are `do` blocks.
+- **Testing** ([testing.md](testing.md)): `Prop.generator 'a` is an ordinary function alias
+  with no trait instances. Generation functions can use `Monad option` to sequence
+  direct draws; `prop` bodies are `do` blocks.
 - **Diagnostics** ([diagnostics.md](diagnostics.md)): the errors below are
   `nash-can` errors (declaration checks) or `nash-constrain` type errors
   (resolution), rendered by `nash-report`.

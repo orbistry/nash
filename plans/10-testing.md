@@ -26,7 +26,7 @@ them with the former `CompileMode`, retained-store, or optimizer sketches.
 
 `Prop` and `Test` are now implemented in core. This plan owns the minimum real modules
 needed for executable properties, labels and assertion failures, including the
-generator trait instances and useful primitive/composite generators. Plan 12 owns
+ordinary primitive/composite generation functions. Plan 12 owns
 remaining stdlib expansion. Use the existing Option, Lift, Show, Functor,
 Applicative and Monad APIs. `Applicative`'s method is `apply`.
 
@@ -80,8 +80,7 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 
 ## 5. Core support, PRNG and evaluation
 
-- [x] Implement real core Prop and Test modules and the required generator trait
-  instances. Imports remain explicit. Keep reserved Test traces independent of
+- [x] Implement real core Prop and Test modules with direct generation functions. Imports remain explicit. Keep reserved Test traces independent of
   user trace suppression.
 - [x] Seed with Blake2b-256 of u32 big-endian bytes. Thread the 32-byte seed and
   newest-first choices in Seeded; replay next-first choices until the list is empty.

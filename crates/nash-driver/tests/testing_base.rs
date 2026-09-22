@@ -29,9 +29,9 @@ async fn choice_seeded_and_replayed_draws_agree() {
     let output = compile(r##"    let
         initial = Seeded #"0000000000000000000000000000000000000000000000000000000000000000" emptyInts
     in
-    case Prop.run (Prop.choice 100) initial of
+    case (Prop.choice 100) initial of
         Some (n, Seeded seed choices) ->
-            case Prop.run (Prop.choice 100) (Replayed choices) of
+            case (Prop.choice 100) (Replayed choices) of
                 Some (replayed, Replayed rest) ->
                     assert (n == replayed)
                 _ -> (fail "replay rejected seeded choice")
@@ -57,7 +57,7 @@ async fn malformed_replayed_choices_are_rejected() {
             r#"    let
         values = {choices}
     in
-    case Prop.run (Prop.choice 10) (replay values) of
+    case (Prop.choice 10) (replay values) of
         None -> ()
         Some _ -> (fail "invalid replay accepted")"#
         ))
@@ -78,7 +78,7 @@ async fn malformed_replayed_choices_are_rejected() {
 }
 
 #[tokio::test]
-async fn generator_combinators_thread_choices() {
+async fn generation_functions_thread_choices() {
     for (generator, choices, expected) in [
         (
             "Prop.tuple2 (Prop.choice 10) (Prop.choice 10)",
@@ -102,9 +102,9 @@ async fn generator_combinators_thread_choices() {
         ("Prop.intBetween 3 3", "[]", "3"),
     ] {
         let output = compile(&format!(
-            r#"    case Prop.run ({generator}) (replay {choices}) of
+            r#"    case ({generator}) (replay {choices}) of
         Some (value, _) -> assert (value == {expected})
-        None -> (fail "combinator exhausted replay")"#
+        None -> (fail "generator exhausted replay")"#
         ))
         .await;
         let arena = Arena::new();
@@ -126,7 +126,7 @@ async fn generator_combinators_thread_choices() {
 async fn invalid_choice_bounds_fail() {
     for bound in ["-1", "18446744073709551616"] {
         let output = compile(&format!(
-            r#"    case Prop.run (Prop.choice ({bound})) (replay [0]) of
+            r#"    case (Prop.choice ({bound})) (replay [0]) of
         Some _ -> ()
         None -> ()"#
         ))

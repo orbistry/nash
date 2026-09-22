@@ -2668,7 +2668,7 @@ reports the right errors.
 Builtin pair has no Functor impl; its projection and Data-only construction
 helpers remain. Default imports are deferred to Plan 12, with explicit
 imports for Plan 03 acceptance. Do not add partial defaults or placeholders.
-Generator impls land with the real Prop implementation after Plan 10. The full
+Prop generation uses ordinary functions with no generator-specific trait instances. The full
 overview validator example is a later integration check because it needs
 Cardano modules, deriving, and the deferred defaults; it is not a Plan 03
 completion gate. Plan 03 must verify the shipping trait hierarchy, operators,
@@ -2683,7 +2683,7 @@ declarations with explicit imports. Remaining requirements are:
 | Requirement | Current evidence / remaining work |
 |---|---|
 | Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses disjoint Big/Const element bounds. |
-| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option; Applicative/Monad support option. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Generator impls are deferred with the real Prop implementation. |
+| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option; Applicative/Monad support option. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Prop generation functions use explicit state threading; Option supplies optional do sequencing. |
 | Core option do acceptance | The real core fixture compiles option do blocks, operator calls, mixed-kind builtin list mapping and normalized List Int mapping via List.map. Runtime execution remains a backend prerequisite. |
 | Default imports | User-approved deferral to Plan 12. Explicit imports are required for Plan 03. Eventual defaults must participate in dependency discovery before sequential compilation. |
 | Overview example up to tests | Later integration requirement: Cardano.Tx, deriving, field access, validator features and defaults require later work; the sketch also has undefined currentSlot/signedBy. Plan 03 acceptance uses the real core fixture with explicit imports. |

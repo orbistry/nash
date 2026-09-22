@@ -1,5 +1,7 @@
 module Main exposing (..)
 
+import Cons
+
 zero : Int
 zero = 0
 two : Int
@@ -9,26 +11,39 @@ five = 5
 
 draw : Prop.generator 'a -> option 'a
 draw generator =
-    case Prop.run generator (Prop.Seeded #"" []) of
+    case generator (Prop.Seeded #"" []) of
         Some (value, _) -> Some value
         None -> None
 
-increment x = x + 1
-
 composed : Prop.generator int
-composed = do
-    x <- Prop.constant 2
-    y <- Prop.constant 3
-    pure (x + y)
+composed state = do
+    (x, next) <- Prop.choice 10 state
+    (y, final) <- Prop.choice x next
+    Some (x + y, final)
+
+increment x = x + 1
 
 custom : Prop.generator int
 custom state = Some (9, state)
 
+emptyGenerators : Cons.cons (Prop.generator int)
+emptyGenerators = Cons.Nil
+
 tests
-    test "generator alias traits" = do
-        assert (draw (increment <$> Prop.constant 1) == Some 2)
-        assert (draw (Prop.constant increment <*> Prop.constant 2) == Some 3)
-        assert (draw composed == Some 5)
+    test "direct draws with option do" = do
+        case composed (Prop.Replayed [4, 3, 9]) of
+            Some (value, Prop.Replayed rest) ->
+                assert (value == 7 && rest == [9])
+            _ -> fail
+        case composed (Prop.Replayed []) of
+            None -> ()
+            Some _ -> fail
+        case composed (Prop.Replayed [4]) of
+            None -> ()
+            Some _ -> fail
+        case composed (Prop.Replayed [4, 5]) of
+            None -> ()
+            Some _ -> fail
         assert (draw custom == Some 9)
     test "function values survive draw tuples" = do
         case draw (Prop.constant increment) of
@@ -50,3 +65,9 @@ tests
     test "mixed list bounds" = do
         assert (draw (Prop.listBetween two 2 (Prop.constant 7)) == Some [7, 7])
         assert (draw (Prop.listBetween 2 two (Prop.constant 7)) == Some [7, 7])
+    test "reversed bounds fail before drawing" fail = do
+        case Prop.intBetween 2 1 of
+            _ -> ()
+    test "empty alternatives fail before drawing" fail = do
+        case Prop.oneOf emptyGenerators of
+            _ -> ()

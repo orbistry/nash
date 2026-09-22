@@ -261,8 +261,8 @@ not repeated here. What each module adds beyond its trait:
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
 
-The shipping hierarchy provides Functor for `list`, `cons`, `option`, and
-`generator`, and Applicative/Monad for `option` and `generator`. Computation traits
+The shipping hierarchy provides Functor for `list`, `cons`, and `option`,
+and Applicative/Monad for `option`. Computation traits
 operate on little representations. Normalize Big inputs through named helpers:
 `Int.add`/`negate` and the other arithmetic helpers return `int`, `Bytes.append`
 returns `bytes`, `List.map`/`append` return `list`, and `Map.union` returns
@@ -277,7 +277,7 @@ mapping can change element representations within Storable; it cannot produce Te
 elements. Builtin pair has no Functor impl: `mkPairData` accepts only Big
 components, not arbitrary Storable components needed by `map`. Pair.fst,
 Pair.snd and Pair.make remain the specified projection/construction helpers.
-The `generator` impls require the real Prop implementation from plan 10.
+Generation functions have no Functor, Applicative or Monad instances.
 
 ### Equality at the Big boundary
 
@@ -931,28 +931,18 @@ module Prop exposing (..)
 
 import Prelude exposing (..)
 import Builtin
-import Functor exposing (Functor)
-import Applicative exposing (Applicative)
-import Monad exposing (Monad)
 import Lift exposing (Lift)
 import List
 
 type prng = Seeded bytes (list int) | Replayed (list int)
 type alias generator 'a = prng -> option ('a, prng)
 
-run : generator 'a -> prng -> option ('a, prng)
-run generator state = generator state
-
 -- Each draw returns its value and next state. Replay consumes one choice.
 choice : Lift int 'n => 'n -> generator int
 
--- Functor, Applicative and Monad instances use this function alias.
-map : ('a -> 'b) -> generator 'a -> generator 'b
-bind : generator 'a -> ('a -> generator 'b) -> generator 'b
-
 constant : 'a -> generator 'a
 int : generator int                         -- small-biased, full range possible
-intBetween : int -> int -> generator int
+intBetween : (Lift int 'a, Lift int 'b) => 'a -> 'b -> generator int
 intAtLeast : int -> generator int
 bool : generator bool
 bytes : generator bytes                     -- length 0..32
@@ -960,13 +950,17 @@ bytesBetween : int -> int -> generator bytes
 bytesExactly : int -> generator bytes
 option : generator 'a -> generator (option 'a)
 listOf : generator 'a -> generator (list 'a)   -- length 0..20
-listBetween : int -> int -> generator 'a -> generator (list 'a)
+listBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator 'a -> generator (list 'a)
 oneOf : cons (generator 'a) -> generator 'a
 frequency : list (int, generator 'a) -> generator 'a
 suchThat : ('a -> bool) -> generator 'a -> generator 'a       -- gives up after 100 draws
 data : generator Data                        -- arbitrary well-formed Data, depth-bounded
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
 ```
+
+Call a generator directly with its PRNG state. Each draw returns `Some (value, next)`
+or `None` for rejected replay. Ordinary `Option` `do` notation can sequence draws;
+there is no separate generator composition interface.
 
 Shrinking-friendliness rules for generators, so smaller choices give
 smaller values (testing.md "Shrinking"):
