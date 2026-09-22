@@ -4,17 +4,15 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 ---
 --- core
 let main#1 : Main.Datum -> (Bytes, Int) = \d#2 : Main.Datum -> let match#6 : Main.Datum = d#2 in
-let projection#13 : pair int (list Data) = unConstrData match#6 in
-case@Pair projection#13 of
+let projection#12 : pair int (list Data) = unConstrData match#6 in
+case@Pair projection#12 of
   Pair tag#9 fields#10 -> let fieldList#11 : list Data = fields#10 in
-  let projection#14 : Data = headList fieldList#11 in
-  let field#7 : Bytes = projection#14 in
-  let projection#15 : list Data = tailList fieldList#11 in
-  let fieldList#12 : list Data = projection#15 in
-  let projection#16 : Data = headList fieldList#12 in
-  let field#8 : Int = projection#16 in
+  let projection#13 : Data = headList fieldList#11 in
+  let field#7 : Bytes = projection#13 in
   let owner#3 : Bytes = field#7 in
-  constr 0 owner#3 projection#16 in
+  let projection#14 : list Data = tailList fields#10 in
+  let projection#15 : Data = headList projection#14 in
+  constr 0 owner#3 projection#15 in
 main#1
 --- uplc
 (program 1.1.0
@@ -30,11 +28,9 @@ main#1
                   [(lam i6
                     [(lam i7
                       [(lam i8
-                        [(lam i9
-                          [(lam i10 [(lam i11 [(lam i12 (constr 0 i12 i10)) i7]) i10])
-                            [(force (builtin headList)) i9]])
-                          i8])
-                        [(force (builtin tailList)) i5]])
+                        [(lam i9 [(lam i10 (constr 0 i8 i10)) [(force (builtin headList)) i9]])
+                          [(force (builtin tailList)) i4]])
+                        i7])
                       i6])
                     [(force (builtin headList)) i5]])
                   i4]))))

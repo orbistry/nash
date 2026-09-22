@@ -751,52 +751,77 @@ fn nested_constructors_share_tests_and_preserve_fallback() {
 }
 
 #[test]
-fn big_list_tail_binding_remains_data_encoded() {
-    use nash_plutus::data::PlutusData;
-    let arena = Arena::new();
-    let b = Builder::new(&arena);
-    let unions = HashMap::new();
-    let mut types = TypeEnv::new(&arena, &unions);
-    let ty = Ty::Big(&BigTy::List(Ty::Big(&BigTy::Int)));
-    let pattern = pat(
-        &arena,
-        Pattern::Cons {
-            head: pat(&arena, Pattern::Anything),
-            tail: pat(&arena, Pattern::Var("tail")),
-        },
-    );
-    let records = HashMap::new();
-    let literals = HashMap::new();
-    let names = bindings(&b, &mut types, ty, pattern, &records).unwrap();
-    let rows = [MatchBranch {
-        pattern,
-        body: b.var(names["tail"].name),
-        bindings: names,
-    }];
-    let data = PlutusData::list(
-        &arena,
-        arena.alloc_slice_copy(&[
-            PlutusData::integer_from(&arena, 1),
-            PlutusData::integer_from(&arena, 2),
-        ]),
-    );
-    let core = compile(
-        &b,
-        &mut types,
-        ty,
-        b.lit(Constant::data(&arena, data)),
-        &rows,
-        MatchInputs {
-            record_fields: &records,
-            literal_tests: &literals,
-        },
-        b.error(),
-    )
-    .unwrap();
-    assert_eq!(
-        crate::harness::eval_core(&arena, core).result,
-        "(con data (List [I 2]))"
-    );
+fn big_list_tail_binding_is_only_reconstructed_when_used() {
+    for keep_tail in [true, false] {
+        use nash_plutus::data::PlutusData;
+        let arena = Arena::new();
+        let b = Builder::new(&arena);
+        let unions = HashMap::new();
+        let mut types = TypeEnv::new(&arena, &unions);
+        let ty = Ty::Big(&BigTy::List(Ty::Big(&BigTy::Int)));
+        let pattern = pat(
+            &arena,
+            Pattern::Cons {
+                head: pat(&arena, Pattern::Anything),
+                tail: pat(
+                    &arena,
+                    if keep_tail {
+                        Pattern::Var("tail")
+                    } else {
+                        Pattern::Anything
+                    },
+                ),
+            },
+        );
+        let records = HashMap::new();
+        let literals = HashMap::new();
+        let names = bindings(&b, &mut types, ty, pattern, &records).unwrap();
+        let rows = [MatchBranch {
+            pattern,
+            body: if keep_tail {
+                b.var(names["tail"].name)
+            } else {
+                b.int(42)
+            },
+            bindings: names,
+        }];
+        let data = PlutusData::list(
+            &arena,
+            arena.alloc_slice_copy(&[
+                PlutusData::integer_from(&arena, 1),
+                PlutusData::integer_from(&arena, 2),
+            ]),
+        );
+        let core = compile(
+            &b,
+            &mut types,
+            ty,
+            b.lit(Constant::data(&arena, data)),
+            &rows,
+            MatchInputs {
+                record_fields: &records,
+                literal_tests: &literals,
+            },
+            b.error(),
+        )
+        .unwrap();
+        let evaluated = crate::harness::eval_core(&arena, core);
+        assert_eq!(
+            evaluated.result,
+            if keep_tail {
+                "(con data (List [I 2]))"
+            } else {
+                "(con integer 42)"
+            }
+        );
+        insta::with_settings!({
+            description => nash_ir::pretty::pretty(core),
+            omit_expression => true,
+            snapshot_suffix => if keep_tail { "used" } else { "ignored" },
+        }, {
+            insta::assert_snapshot!(evaluated.to_string());
+        });
+    }
 }
 
 #[test]

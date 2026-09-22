@@ -3,29 +3,26 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "validator module Main exposing (main)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype Void = Void\ntype A 'x = NoA | SomeA Void 'x\ntype B = B { something : Void }\ntype Option 'a = None | Some 'a\nmain : Option Data -> A B -> Data -> Data -> unit\nmain datum r outputRef transaction =\n    assert\n        (case r of\n            NoA -> False\n            SomeA _ (B something) -> eq something Void\n        )\n"
 ---
 --- core
-let message#26 : string = "assertion failed" in
-let fromBool#6 : bool -> bool = \value#19 : bool -> value#19 in
+let message#24 : string = "assertion failed" in
+let fromBool#6 : bool -> bool = \value#18 : bool -> value#18 in
 let main#1 : Main.Option Data -> Main.A Main.B -> Data -> Data -> unit = \datum#2 : Main.Option Data r#3 : Main.A Main.B outputRef#4 : Data transaction#5 : Data -> let match#8 : Main.A Main.B = r#3 in
-let projection#20 : pair int (list Data) = unConstrData match#8 in
-case@Bool (case@Pair projection#20 of
+let projection#19 : pair int (list Data) = unConstrData match#8 in
+case@Bool (case@Pair projection#19 of
   Pair tag#15 fields#16 -> case@Tag tag#15 of
     0 -> fromBool#6 false
-    1 -> let fieldList#17 : list Data = fields#16 in
+    1 -> let projection#20 : list Data = tailList fields#16 in
+    let fieldList#17 : list Data = projection#20 in
     let projection#21 : Data = headList fieldList#17 in
-    let field#9 : Main.Void = projection#21 in
-    let projection#22 : list Data = tailList fieldList#17 in
-    let fieldList#18 : list Data = projection#22 in
-    let projection#23 : Data = headList fieldList#18 in
-    let field#10 : Main.B = projection#23 in
-    let projection#24 : pair int (list Data) = unConstrData field#10 in
-    case@Pair projection#24 of
+    let field#10 : Main.B = projection#21 in
+    let projection#22 : pair int (list Data) = unConstrData field#10 in
+    case@Pair projection#22 of
       Pair tag#12 fields#13 -> let fieldList#14 : list Data = fields#13 in
-      let projection#25 : Data = headList fieldList#14 in
-      let field#11 : Main.Void = projection#25 in
+      let projection#23 : Data = headList fieldList#14 in
+      let field#11 : Main.Void = projection#23 in
       let something#7 : Main.Void = field#11 in
       equalsData something#7 (constrData 0 (con (list data) []))) of
   True -> ()
-  False -> trace message#26 in error in
+  False -> trace message#24 in error in
 main#1
 --- uplc
 (program 1.1.0
@@ -51,31 +48,25 @@ main#1
                                   [(lam i12
                                     [(lam i13
                                       [(lam i14
-                                        [(lam i15
-                                          [(lam i16
-                                            [(lam i17
-                                              (case
-                                                i17
-                                                (lam i18
-                                                  (lam i19
+                                        (case
+                                          i14
+                                          (lam i15
+                                            (lam i16
+                                              [(lam i17
+                                                [(lam i18
+                                                  [(lam i19
                                                     [(lam i20
-                                                      [(lam i21
-                                                        [(lam i22
-                                                          [(lam i23
-                                                            [[(builtin equalsData) i23]
-                                                              [[(builtin constrData) (con integer 0)] (con (list data) [])]])
-                                                            i22])
-                                                          i21])
-                                                        [(force (builtin headList)) i20]])
-                                                      i19]))))
-                                              [(builtin unConstrData) i16]])
-                                            i15])
-                                          [(force (builtin headList)) i14]])
-                                        i13])
-                                      [(force (builtin tailList)) i10]])
-                                    i11])
-                                  [(force (builtin headList)) i10]])
-                                i9]))))
+                                                      [[(builtin equalsData) i20]
+                                                        [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+                                                      i19])
+                                                    i18])
+                                                  [(force (builtin headList)) i17]])
+                                                i16]))))
+                                        [(builtin unConstrData) i13]])
+                                      i12])
+                                    [(force (builtin headList)) i11]])
+                                  i10])
+                                [(force (builtin tailList)) i9]]))))
                       (force [[(force (builtin trace)) i0] (delay (error))])
                       (con unit ())))
                     [(builtin unConstrData) i6]])

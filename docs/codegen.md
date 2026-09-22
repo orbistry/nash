@@ -446,6 +446,11 @@ not emitted by this protocol-11-compatible lowering.
 
 Field extraction follows the selected branch and shares the decoded pair,
 list tails, and field projections with subsequent accesses.
+Only fields referenced by the compiled pattern branch are extracted. Ignored
+fields do not cause `headList` calls; gaps use `dropList` and adjacent required
+fields reuse `tailList`. Big-list cons patterns reconstruct a Data-encoded
+tail only when the branch uses it. A single-constructor pattern whose fields
+are all ignored needs no decoding, but its scrutinee still evaluates strictly.
 
 ## Case on a little ADT
 
@@ -512,6 +517,10 @@ Trace levels are a build setting (`--trace-level`, config `traceLevel`;
 - `compact`: the message is replaced by `Module:line:col` of the
   originating expression.
 - `verbose`: the message is kept verbatim.
+
+In `silent` and `compact` modes, the original message expression is not
+evaluated: its function calls, failures, and nested traces do not run. In
+`verbose` mode, the message expression is evaluated before the trace body.
 
 Explicit `trace`, `fail`, `todo`, and `assert` messages follow this user trace
 level. Implicit match failures use compiler traces; explicit codec failures

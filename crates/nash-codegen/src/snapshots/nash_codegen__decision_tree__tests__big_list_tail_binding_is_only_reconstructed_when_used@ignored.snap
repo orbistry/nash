@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/decision_tree_tests.rs
+description: "let match#1 : List Int = (con data (List [I 1, I 2])) in\ncase@List unListData match#1 of\n  Nil -> error\n  Cons field#2 listTail#4 -> 42"
+---
+--- uplc
+(program 1.1.0
+  [(lam match_1
+    (case
+      [(builtin unListData) match_1]
+      (lam field_2 (lam listTail_4 (con integer 42)))
+      (error)))
+    (con data (List [I 1, I 2]))])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 186033, memory: 1132

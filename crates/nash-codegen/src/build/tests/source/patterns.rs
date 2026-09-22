@@ -965,3 +965,46 @@ case!(
         "(constr 0\n  (con integer 0)\n  (con integer 1)\n  (con integer 2)\n  (con integer 3)\n  (con integer 4))"
     )
 );
+
+case!(
+    big_constructor_ignored_payload,
+    r#"
+    module Main exposing (..)
+    type Choice = Some Int | None
+    tagOnly : Choice -> int
+    tagOnly value = case value of
+        Some _ -> 1
+        None -> 0
+    main : int
+    main = tagOnly (Some 42)
+    "#,
+    Ok("(con integer 1)")
+);
+
+case!(
+    big_single_constructor_ignored_fields_keep_effects,
+    r#"
+    module Main exposing (..)
+    type Box = Box Int Int
+    ignore : Box -> int
+    ignore value = case value of
+        Box _ _ -> 7
+    main : int
+    main = ignore (trace "box input" (Box 1 2))
+    "#,
+    Ok("(con integer 7)")
+);
+
+case!(
+    big_record_pattern_skips_ignored_fields,
+    r#"
+    module Main exposing (..)
+    type alias Record = { a : Int, b : Int, c : Int, d : Int, e : Int }
+    read : Record -> int
+    read value = case value of
+        { b, d, e } -> Builtin.addInteger (Builtin.unIData b) (Builtin.addInteger (Builtin.unIData d) (Builtin.unIData e))
+    main : int
+    main = read { a = 1, b = 2, c = 3, d = 4, e = 5 }
+    "#,
+    Ok("(con integer 11)")
+);

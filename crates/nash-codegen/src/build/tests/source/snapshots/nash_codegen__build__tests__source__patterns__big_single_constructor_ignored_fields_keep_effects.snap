@@ -1,0 +1,43 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\ntype Box = Box Int Int\nignore : Box -> int\nignore value = case value of\n    Box _ _ -> 7\nmain : int\nmain = ignore (trace \"box input\" (Box 1 2))\n"
+---
+--- core
+let message#14 : string = "box input" in
+let fromInt#8 : int -> int = \value#13 : int -> value#13 in
+let ignore#2 : Main.Box -> int = \value#7 : Main.Box -> let match#9 : Main.Box = value#7 in
+fromInt#8 7 in
+let fromInt#5 : int -> Int = iData in
+let fromString#6 : string -> string = \value#12 : string -> value#12 in
+let main#1 : int = ignore#2 (trace (fromString#6 message#14) in (\field#3 : Int field#4 : Int -> constrData 0 (mkCons field#3 (mkCons field#4 (con (list data) [])))) (fromInt#5 1) (fromInt#5 2)) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_14
+    [(lam fromInt_8
+      [(lam ignore_2
+        [(lam fromInt_5
+          [(lam fromString_6
+            [(lam main_1 main_1)
+              [ignore_2
+                (force
+                  [[(force (builtin trace)) [fromString_6 message_14]]
+                    (delay
+                      [[(lam field_3
+                        (lam field_4
+                          [[(builtin constrData) (con integer 0)]
+                            [[(force (builtin mkCons)) field_3]
+                              [[(force (builtin mkCons)) field_4] (con (list data) [])]]]))
+                        [fromInt_5 (con integer 1)]]
+                        [fromInt_5 (con integer 2)]])])]])
+            (lam value_12 value_12)])
+          (builtin iData)])
+        (lam value_7 [(lam match_9 [fromInt_8 (con integer 7)]) value_7])])
+      (lam value_13 value_13)])
+    (con string "box input")])
+--- result
+(con integer 7)
+--- logs
+["box input"]
+--- budget
+cpu: 1249071, memory: 6492

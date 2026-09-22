@@ -1,0 +1,44 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\ntype Choice = Some Int | None\ntagOnly : Choice -> int\ntagOnly value = case value of\n    Some _ -> 1\n    None -> 0\nmain : int\nmain = tagOnly (Some 42)\n"
+---
+--- core
+let fromInt#6 : int -> int = \value#11 : int -> value#11 in
+let tagOnly#2 : Main.Choice -> int = \value#5 : Main.Choice -> let match#7 : Main.Choice = value#5 in
+let projection#12 : pair int (list Data) = unConstrData match#7 in
+case@Pair projection#12 of
+  Pair tag#9 fields#10 -> case@Tag tag#9 of
+    0 -> fromInt#6 1
+    1 -> fromInt#6 0 in
+let fromInt#4 : int -> Int = iData in
+let main#1 : int = tagOnly#2 ((\field#3 : Int -> constrData 0 (mkCons field#3 (con (list data) []))) (fromInt#4 42)) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_6
+    [(lam tagOnly_2
+      [(lam fromInt_4
+        [(lam main_1 main_1)
+          [tagOnly_2
+            [(lam field_3
+              [[(builtin constrData) (con integer 0)]
+                [[(force (builtin mkCons)) field_3] (con (list data) [])]])
+              [fromInt_4 (con integer 42)]]]])
+        (builtin iData)])
+      (lam value_5
+        [(lam match_7
+          [(lam projection_12
+            (case
+              projection_12
+              (lam tag_9
+                (lam fields_10
+                  (case tag_9 [fromInt_6 (con integer 1)] [fromInt_6 (con integer 0)])))))
+            [(builtin unConstrData) match_7]])
+          value_5])])
+    (lam value_11 value_11)])
+--- result
+(con integer 1)
+--- logs
+[]
+--- budget
+cpu: 886500, memory: 4928

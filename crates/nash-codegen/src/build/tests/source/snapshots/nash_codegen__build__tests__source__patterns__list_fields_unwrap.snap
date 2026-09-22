@@ -3,33 +3,30 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Lift exposing (lower)\ntype Fields = Fields { a : Bytes, b : Int }\ndataFields : unit -> list Fields\ndataFields _ = [Fields { a = #\"\", b = 14 }, Fields { a = #\"AA\", b = 0 }]\nmain =\n    case dataFields () of\n        (Fields { b }) :: _ -> lessThanInteger 0 (lower b)\n        _ -> False\n"
 ---
 --- core
-let fromBytes#20 : bytes -> Bytes = bData in
-let fromInt#21 : int -> Int = iData in
-let dataFields#2 : unit -> list Main.Fields = \arg#17 : unit -> let match#24 : unit = arg#17 in
-mkCons ((\field#18 : Bytes field#19 : Int -> constrData 0 (mkCons field#18 (mkCons field#19 (con (list data) [])))) (fromBytes#20 (con bytestring #)) (fromInt#21 14)) (mkCons ((\field#22 : Bytes field#23 : Int -> constrData 0 (mkCons field#22 (mkCons field#23 (con (list data) [])))) (fromBytes#20 (con bytestring #aa)) (fromInt#21 0)) (con (list data) [])) in
-let fromUnit#3 : unit -> unit = \value#25 : unit -> value#25 in
-let fromInt#5 : int -> int = \value#26 : int -> value#26 in
+let fromBytes#19 : bytes -> Bytes = bData in
+let fromInt#20 : int -> Int = iData in
+let dataFields#2 : unit -> list Main.Fields = \arg#16 : unit -> let match#23 : unit = arg#16 in
+mkCons ((\field#17 : Bytes field#18 : Int -> constrData 0 (mkCons field#17 (mkCons field#18 (con (list data) [])))) (fromBytes#19 (con bytestring #)) (fromInt#20 14)) (mkCons ((\field#21 : Bytes field#22 : Int -> constrData 0 (mkCons field#21 (mkCons field#22 (con (list data) [])))) (fromBytes#19 (con bytestring #aa)) (fromInt#20 0)) (con (list data) [])) in
+let fromUnit#3 : unit -> unit = \value#24 : unit -> value#24 in
+let fromInt#5 : int -> int = \value#25 : int -> value#25 in
 let lower#6 : Int -> int = unIData in
-let fromBool#7 : bool -> bool = \value#27 : bool -> value#27 in
+let fromBool#7 : bool -> bool = \value#26 : bool -> value#26 in
 let match#8 : list Main.Fields = dataFields#2 (fromUnit#3 ()) in
 let main#1 : bool = case@List match#8 of
   Nil -> fromBool#7 false
-  Cons field#9 field#10 -> let projection#28 : pair int (list Data) = unConstrData field#9 in
-  case@Pair projection#28 of
-    Pair tag#13 fields#14 -> let fieldList#15 : list Data = fields#14 in
+  Cons field#9 field#10 -> let projection#27 : pair int (list Data) = unConstrData field#9 in
+  case@Pair projection#27 of
+    Pair tag#13 fields#14 -> let projection#28 : list Data = tailList fields#14 in
+    let fieldList#15 : list Data = projection#28 in
     let projection#29 : Data = headList fieldList#15 in
-    let field#11 : Bytes = projection#29 in
-    let projection#30 : list Data = tailList fieldList#15 in
-    let fieldList#16 : list Data = projection#30 in
-    let projection#31 : Data = headList fieldList#16 in
-    let field#12 : Int = projection#31 in
+    let field#12 : Int = projection#29 in
     let b#4 : Int = field#12 in
     lessThanInteger (fromInt#5 0) (lower#6 b#4) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromBytes_20
-    [(lam fromInt_21
+  [(lam fromBytes_19
+    [(lam fromInt_20
       [(lam dataFields_2
         [(lam fromUnit_3
           [(lam fromInt_5
@@ -41,55 +38,49 @@ main#1
                       match_8
                       (lam field_9
                         (lam field_10
-                          [(lam projection_28
+                          [(lam projection_27
                             (case
-                              projection_28
+                              projection_27
                               (lam tag_13
                                 (lam fields_14
-                                  [(lam fieldList_15
-                                    [(lam projection_29
-                                      [(lam field_11
-                                        [(lam projection_30
-                                          [(lam fieldList_16
-                                            [(lam projection_31
-                                              [(lam field_12
-                                                [(lam b_4
-                                                  [[(builtin lessThanInteger) [fromInt_5 (con integer 0)]] [lower_6 b_4]])
-                                                  field_12])
-                                                projection_31])
-                                              [(force (builtin headList)) fieldList_16]])
-                                            projection_30])
-                                          [(force (builtin tailList)) fieldList_15]])
-                                        projection_29])
-                                      [(force (builtin headList)) fieldList_15]])
-                                    fields_14]))))
+                                  [(lam projection_28
+                                    [(lam fieldList_15
+                                      [(lam projection_29
+                                        [(lam field_12
+                                          [(lam b_4
+                                            [[(builtin lessThanInteger) [fromInt_5 (con integer 0)]] [lower_6 b_4]])
+                                            field_12])
+                                          projection_29])
+                                        [(force (builtin headList)) fieldList_15]])
+                                      projection_28])
+                                    [(force (builtin tailList)) fields_14]]))))
                             [(builtin unConstrData) field_9]]))
                       [fromBool_7 (con bool False)])])
                   [dataFields_2 [fromUnit_3 (con unit ())]]])
-                (lam value_27 value_27)])
+                (lam value_26 value_26)])
               (builtin unIData)])
-            (lam value_26 value_26)])
-          (lam value_25 value_25)])
-        (lam arg_17
-          [(lam match_24
+            (lam value_25 value_25)])
+          (lam value_24 value_24)])
+        (lam arg_16
+          [(lam match_23
             [[(force (builtin mkCons))
-              [[(lam field_18
-                (lam field_19
+              [[(lam field_17
+                (lam field_18
                   [[(builtin constrData) (con integer 0)]
-                    [[(force (builtin mkCons)) field_18]
-                      [[(force (builtin mkCons)) field_19] (con (list data) [])]]]))
-                [fromBytes_20 (con bytestring #)]]
-                [fromInt_21 (con integer 14)]]]
+                    [[(force (builtin mkCons)) field_17]
+                      [[(force (builtin mkCons)) field_18] (con (list data) [])]]]))
+                [fromBytes_19 (con bytestring #)]]
+                [fromInt_20 (con integer 14)]]]
               [[(force (builtin mkCons))
-                [[(lam field_22
-                  (lam field_23
+                [[(lam field_21
+                  (lam field_22
                     [[(builtin constrData) (con integer 0)]
-                      [[(force (builtin mkCons)) field_22]
-                        [[(force (builtin mkCons)) field_23] (con (list data) [])]]]))
-                  [fromBytes_20 (con bytestring #aa)]]
-                  [fromInt_21 (con integer 0)]]]
+                      [[(force (builtin mkCons)) field_21]
+                        [[(force (builtin mkCons)) field_22] (con (list data) [])]]]))
+                  [fromBytes_19 (con bytestring #aa)]]
+                  [fromInt_20 (con integer 0)]]]
                 (con (list data) [])]])
-            arg_17])])
+            arg_16])])
       (builtin iData)])
     (builtin bData)])
 --- result
@@ -97,4 +88,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3270123, memory: 15645
+cpu: 2994973, memory: 14413

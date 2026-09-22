@@ -21,6 +21,7 @@ use crate::{
 mod accessors;
 mod emission;
 use emission::hoist_strings;
+pub(crate) use emission::names;
 
 const MAX_SPECIALIZATIONS: usize = 1024;
 const MAX_TYPE_DEPTH: usize = 128;

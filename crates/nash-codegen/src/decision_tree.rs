@@ -341,14 +341,18 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                             name: self.build.fresh("listTail"),
                             ty: Ty::Const(self.build.arena.alloc(ConstTy::List(*element))),
                         };
-                        let body = self.build.let_(
-                            *tail,
-                            self.build.builtin(
-                                DefaultFunction::ListData,
-                                &[self.build.var(raw_tail.name)],
-                            ),
-                            body,
-                        );
+                        let body = if crate::build::names(body).contains(&tail.name.unique) {
+                            self.build.let_(
+                                *tail,
+                                self.build.builtin(
+                                    DefaultFunction::ListData,
+                                    &[self.build.var(raw_tail.name)],
+                                ),
+                                body,
+                            )
+                        } else {
+                            body
+                        };
                         arms.push(Branch {
                             test: Test::Cons,
                             binders: self.build.arena.alloc_slice_copy(&[*head, raw_tail]),
@@ -366,7 +370,12 @@ impl<'a> Matrix<'a, '_, '_, '_> {
             ));
         }
         if let [(Shape::Tag(_), fields, body)] = branches.as_slice()
-            && fields.is_empty()
+            && {
+                let used = crate::build::names(body);
+                fields
+                    .iter()
+                    .all(|field| !used.contains(&field.name.unique))
+            }
             && matches!(ty, Ty::Big(BigTy::Adt(_)) | Ty::Term(TermTy::Adt(_)))
         {
             return Ok(body);
@@ -458,22 +467,40 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         fields: &[Binder<'a>],
         body: &'a Core<'a>,
     ) -> &'a Core<'a> {
-        if fields.is_empty() {
-            return body;
+        let used = crate::build::names(body);
+        let mut bindings = Vec::new();
+        let mut previous = 0;
+        let mut tail = value;
+        for (index, field) in fields.iter().enumerate() {
+            if !used.contains(&field.name.unique) {
+                continue;
+            }
+            let list = Binder {
+                name: self.build.fresh("fieldList"),
+                ty: data_list(self.build),
+            };
+            let value = match index - previous {
+                0 => tail,
+                1 => self.build.builtin(DefaultFunction::TailList, &[tail]),
+                gap => self.build.builtin(
+                    DefaultFunction::DropList,
+                    &[self.build.int(gap as i128), tail],
+                ),
+            };
+            bindings.push((list, value));
+            tail = self.build.var(list.name);
+            bindings.push((
+                *field,
+                self.build.builtin(DefaultFunction::HeadList, &[tail]),
+            ));
+            previous = index;
         }
-        let list = Binder {
-            name: self.build.fresh("fieldList"),
-            ty: data_list(self.build),
-        };
-        let tail = self
-            .build
-            .builtin(DefaultFunction::TailList, &[self.build.var(list.name)]);
-        let body = self.list_fields(tail, &fields[1..], body);
-        let head = self
-            .build
-            .builtin(DefaultFunction::HeadList, &[self.build.var(list.name)]);
-        self.build
-            .let_(list, value, self.build.let_(fields[0], head, body))
+        bindings
+            .into_iter()
+            .rev()
+            .fold(body, |body, (binder, value)| {
+                self.build.let_(binder, value, body)
+            })
     }
 }
 fn data_list<'a>(build: &Builder<'a>) -> Ty<'a> {

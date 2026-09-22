@@ -3,55 +3,52 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype Option = Some Int | None\ndoInit self =\n    case self of\n        [] -> trace \"unreachable\" fail\n        [_] as a -> a\n        [(Some _) as n, x] -> [n]\n        [a, x] -> [x]\n        a :: b :: c -> c\nmain = eq (doInit [Some 1, None]) [Some 1]\n"
 ---
 --- core
-let message#54 : string = "unreachable" in
-let fromBool#9 : bool -> bool = \value#46 : bool -> value#46 in
+let message#51 : string = "unreachable" in
+let fromBool#9 : bool -> bool = \value#44 : bool -> value#44 in
 let eq#2 : list 'erased -> list 'erased -> bool = (\self#21 : 'erased -> self#21 self#21) (\self#21 : 'erased xs#7 : list 'erased ys#8 : list 'erased -> case@Bool nullList xs#7 of
   True -> nullList ys#8
   False -> case@Bool nullList ys#8 of
     True -> fromBool#9 false
-    False -> let projection#48 : 'erased = headList xs#7 in
-    let projection#49 : 'erased = headList ys#8 in
-    case@Bool equalsData projection#48 projection#49 of
-      True -> let projection#50 : list 'erased = tailList xs#7 in
-      let projection#51 : list 'erased = tailList ys#8 in
-      self#21 self#21 projection#50 projection#51
+    False -> let projection#46 : 'erased = headList xs#7 in
+    let projection#47 : 'erased = headList ys#8 in
+    case@Bool equalsData projection#46 projection#47 of
+      True -> let projection#48 : list 'erased = tailList xs#7 in
+      let projection#49 : list 'erased = tailList ys#8 in
+      self#21 self#21 projection#48 projection#49
       False -> fromBool#9 false) in
-let fromString#11 : string -> string = \value#47 : string -> value#47 in
+let fromString#11 : string -> string = \value#45 : string -> value#45 in
 let doInit#3 : list Main.Option -> list Main.Option = \self#10 : list Main.Option -> let match#20 : list Main.Option = self#10 in
-let leaf#33 : 'erased = \a#17 : Main.Option b#18 : Main.Option c#19 : list Main.Option -> c#19 in
+let leaf#32 : 'erased = \a#17 : Main.Option b#18 : Main.Option c#19 : list Main.Option -> c#19 in
 case@List match#20 of
-  Nil -> trace (fromString#11 message#54) in error
-  Cons field#34 field#35 -> case@List field#35 of
+  Nil -> trace (fromString#11 message#51) in error
+  Cons field#33 field#34 -> case@List field#34 of
     Nil -> let a#12 : list Main.Option = match#20 in
     a#12
-    Cons field#36 field#37 -> let projection#52 : pair int (list Data) = unConstrData field#34 in
-    case@Pair projection#52 of
-      Pair tag#43 fields#44 -> case@Tag tag#43 of
-        0 -> let fieldList#45 : list Data = fields#44 in
-        let projection#53 : Data = headList fieldList#45 in
-        let field#38 : Int = projection#53 in
-        case@List field#37 of
-          Nil -> let n#13 : Main.Option = field#34 in
-          let x#14 : Main.Option = field#36 in
+    Cons field#35 field#36 -> let projection#50 : pair int (list Data) = unConstrData field#33 in
+    case@Pair projection#50 of
+      Pair tag#42 fields#43 -> case@Tag tag#42 of
+        0 -> case@List field#36 of
+          Nil -> let n#13 : Main.Option = field#33 in
+          let x#14 : Main.Option = field#35 in
           mkCons n#13 (con (list data) [])
-          Cons field#39 field#40 -> let a#17 : Main.Option = field#34 in
-          let b#18 : Main.Option = field#36 in
-          let c#19 : list Main.Option = field#37 in
-          leaf#33 a#17 b#18 c#19
-        1 -> case@List field#37 of
-          Nil -> let a#15 : Main.Option = field#34 in
-          let x#16 : Main.Option = field#36 in
+          Cons field#38 field#39 -> let a#17 : Main.Option = field#33 in
+          let b#18 : Main.Option = field#35 in
+          let c#19 : list Main.Option = field#36 in
+          leaf#32 a#17 b#18 c#19
+        1 -> case@List field#36 of
+          Nil -> let a#15 : Main.Option = field#33 in
+          let x#16 : Main.Option = field#35 in
           mkCons x#16 (con (list data) [])
-          Cons field#41 field#42 -> let a#17 : Main.Option = field#34 in
-          let b#18 : Main.Option = field#36 in
-          let c#19 : list Main.Option = field#37 in
-          leaf#33 a#17 b#18 c#19 in
+          Cons field#40 field#41 -> let a#17 : Main.Option = field#33 in
+          let b#18 : Main.Option = field#35 in
+          let c#19 : list Main.Option = field#36 in
+          leaf#32 a#17 b#18 c#19 in
 let fromInt#5 : int -> Int = iData in
 let main#1 : bool = eq#2 (doInit#3 (mkCons ((\field#4 : Int -> constrData 0 (mkCons field#4 (con (list data) []))) (fromInt#5 1)) (mkCons (constrData 1 (con (list data) [])) (con (list data) [])))) (mkCons ((\field#6 : Int -> constrData 0 (mkCons field#6 (con (list data) []))) (fromInt#5 1)) (con (list data) [])) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_54
+  [(lam message_51
     [(lam fromBool_9
       [(lam eq_2
         [(lam fromString_11
@@ -77,54 +74,48 @@ main#1
               (builtin iData)])
             (lam self_10
               [(lam match_20
-                [(lam leaf_33
+                [(lam leaf_32
                   (case
                     match_20
-                    (lam field_34
-                      (lam field_35
+                    (lam field_33
+                      (lam field_34
                         (case
-                          field_35
-                          (lam field_36
-                            (lam field_37
-                              [(lam projection_52
+                          field_34
+                          (lam field_35
+                            (lam field_36
+                              [(lam projection_50
                                 (case
-                                  projection_52
-                                  (lam tag_43
-                                    (lam fields_44
+                                  projection_50
+                                  (lam tag_42
+                                    (lam fields_43
                                       (case
-                                        tag_43
-                                        [(lam fieldList_45
-                                          [(lam projection_53
-                                            [(lam field_38
-                                              (case
-                                                field_37
-                                                (lam field_39
-                                                  (lam field_40
-                                                    [(lam a_17
-                                                      [(lam b_18 [(lam c_19 [[[leaf_33 a_17] b_18] c_19]) field_37]) field_36])
-                                                      field_34]))
-                                                [(lam n_13
-                                                  [(lam x_14 [[(force (builtin mkCons)) n_13] (con (list data) [])]) field_36])
-                                                  field_34]))
-                                              projection_53])
-                                            [(force (builtin headList)) fieldList_45]])
-                                          fields_44]
+                                        tag_42
                                         (case
-                                          field_37
-                                          (lam field_41
-                                            (lam field_42
+                                          field_36
+                                          (lam field_38
+                                            (lam field_39
                                               [(lam a_17
-                                                [(lam b_18 [(lam c_19 [[[leaf_33 a_17] b_18] c_19]) field_37]) field_36])
-                                                field_34]))
+                                                [(lam b_18 [(lam c_19 [[[leaf_32 a_17] b_18] c_19]) field_36]) field_35])
+                                                field_33]))
+                                          [(lam n_13
+                                            [(lam x_14 [[(force (builtin mkCons)) n_13] (con (list data) [])]) field_35])
+                                            field_33])
+                                        (case
+                                          field_36
+                                          (lam field_40
+                                            (lam field_41
+                                              [(lam a_17
+                                                [(lam b_18 [(lam c_19 [[[leaf_32 a_17] b_18] c_19]) field_36]) field_35])
+                                                field_33]))
                                           [(lam a_15
-                                            [(lam x_16 [[(force (builtin mkCons)) x_16] (con (list data) [])]) field_36])
-                                            field_34]))))))
-                                [(builtin unConstrData) field_34]]))
+                                            [(lam x_16 [[(force (builtin mkCons)) x_16] (con (list data) [])]) field_35])
+                                            field_33]))))))
+                                [(builtin unConstrData) field_33]]))
                           [(lam a_12 a_12) match_20])))
-                    (force [[(force (builtin trace)) [fromString_11 message_54]] (delay (error))])))
+                    (force [[(force (builtin trace)) [fromString_11 message_51]] (delay (error))])))
                   (lam a_17 (lam b_18 (lam c_19 c_19)))])
                 self_10])])
-          (lam value_47 value_47)])
+          (lam value_45 value_45)])
         [(lam self_21 [self_21 self_21])
           (lam self_21
             (lam xs_7
@@ -133,24 +124,24 @@ main#1
                   [(force (builtin nullList)) xs_7]
                   (case
                     [(force (builtin nullList)) ys_8]
-                    [(lam projection_48
-                      [(lam projection_49
+                    [(lam projection_46
+                      [(lam projection_47
                         (case
-                          [[(builtin equalsData) projection_48] projection_49]
+                          [[(builtin equalsData) projection_46] projection_47]
                           [fromBool_9 (con bool False)]
-                          [(lam projection_50
-                            [(lam projection_51 [[[self_21 self_21] projection_50] projection_51])
+                          [(lam projection_48
+                            [(lam projection_49 [[[self_21 self_21] projection_48] projection_49])
                               [(force (builtin tailList)) ys_8]])
                             [(force (builtin tailList)) xs_7]]))
                         [(force (builtin headList)) ys_8]])
                       [(force (builtin headList)) xs_7]]
                     [fromBool_9 (con bool False)])
                   [(force (builtin nullList)) ys_8]))))]])
-      (lam value_46 value_46)])
+      (lam value_44 value_44)])
     (con string "unreachable")])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 5466078, memory: 19873
+cpu: 5190928, memory: 18641
