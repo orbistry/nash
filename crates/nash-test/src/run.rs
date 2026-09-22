@@ -1,6 +1,6 @@
 use crate::{
     eval::{self, Logs},
-    prng::Prng,
+    prng::{Prng, Trace},
     shrink, *,
 };
 use nash_plutus::{arena::Arena, machine::PlutusVersion as MachineVersion};
@@ -70,6 +70,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
         traces: vec![],
         assert: None,
         counterexample: None,
+        replay: None,
         expected_failure: false,
     };
     // Own bytecode separately so result metadata can be updated throughout execution.
@@ -155,8 +156,8 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             let original = (shown, logs.clone());
             let expect = out.test.expect;
             let budget_limit = out.test.budget;
-            let oracle = |choices: &[u64]| {
-                let p = Prng::from_choices(choices);
+            let oracle = |choices: &[Trace]| {
+                let p = Prng::from_trace(choices);
                 let arena = Arena::new();
                 let prepared = match eval::prepare(&arena, v, run, &p, machine_budget) {
                     Ok(Some(prepared)) => prepared,
@@ -176,7 +177,10 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
                         Ok(shown) => shown,
                         Err(_) => return shrink::Status::Invalid,
                     };
-                    shrink::Status::Keep((shown, eval::split_logs(ev.logs)))
+                    shrink::Status::Keep(
+                        (shown, eval::split_logs(ev.logs)),
+                        prepared.prng.choices(),
+                    )
                 } else {
                     shrink::Status::Ignore
                 }
@@ -187,11 +191,9 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
                 cache: shrink::Cache::new(oracle),
                 steps: 0,
             };
-            if !ce.choices.is_empty() {
-                eprintln!(
-                    "  Simplifying counterexample from {} choices",
-                    ce.choices.len()
-                );
+            let choice_count = Trace::flatten(&ce.choices).len();
+            if choice_count != 0 {
+                eprintln!("  Simplifying counterexample from {choice_count} choices");
                 let start = std::time::Instant::now();
                 ce.simplify();
                 eprintln!(
@@ -203,6 +205,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             // Initial logs are retained even when no proposal improves the counterexample.
             let (shown, logs) = ce.value;
             drop(ce.cache);
+            out.replay = Some(ce.choices);
             out.counterexample = Some(out.test.binder_texts.iter().cloned().zip(shown).collect());
             out.expected_failure = out.test.expect == Expect::FailOnce;
             out.status = if out.expected_failure {

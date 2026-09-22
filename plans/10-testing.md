@@ -83,7 +83,8 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 - [x] Implement real core Prop and Test modules with direct generation functions. Imports remain explicit. Keep reserved Test traces independent of
   user trace suppression.
 - [x] Seed with Blake2b-256 of u32 big-endian bytes. Thread the 32-byte seed and
-  newest-first choices in Seeded; replay next-first choices until the list is empty.
+  newest-first trace nodes in Seeded; replay next-first Choice/Group nodes with
+  strict group-local boundaries and a separate consumed history.
 - [x] Choice values are u64; explicitly validate primitive bounds and replay
   values. Never truncate arbitrary-precision integers. Larger generated values
   can be constructed from multiple primitive choices.
@@ -95,11 +96,11 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 
 ## 6. Choice-sequence shrinking
 
-- [x] Implement chunk deletion (including predecessor decrement), chunk zeroing,
+- [x] Implement tree-region deletion with coordinated numeric edits, region zeroing,
   per-choice binary reduction, chunk sorting, neighbour swaps and redistribution;
   repeat until no improvement.
 - [x] Accept only shorter sequences, or equal-length lexicographically smaller
-  sequences. Cache exact replay outcomes: public replay-state inspection makes
+  consumed primitive sequences. Revalidate normalized traces. Cache exact trees: public replay-state inspection makes
   general prefix reuse unsound.
 - [x] Draw failure/None is an invalid replay; classify body outcomes according to
   pass/fail/fail-once polarity. Do not accept budget/protocol errors as evidence
@@ -107,6 +108,8 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 - [x] Preserve or recompute final shown values, traces and assertion payloads,
   including zero-choice counterexamples and unsuccessful shrink attempts.
 - [x] Cover strict progress, invalid replay, caching and counterexample minima.
+- [x] Support split/merge/repartition/wrap/unwrap proposals with coordinated numeric
+  changes; retain reduced replay trees in outcomes and JSON reports.
 
 ## 7. Runner
 

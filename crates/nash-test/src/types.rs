@@ -60,6 +60,7 @@ pub struct Outcome {
     pub traces: Vec<String>,
     pub assert: Option<AssertReport>,
     pub counterexample: Option<Vec<(String, String)>>,
+    pub replay: Option<Vec<crate::prng::Trace>>,
     pub expected_failure: bool,
 }
 #[derive(Debug, Clone, PartialEq)]

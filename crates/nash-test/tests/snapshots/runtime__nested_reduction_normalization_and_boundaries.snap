@@ -1,0 +1,6 @@
+---
+source: crates/nash-test/tests/runtime.rs
+---
+distinct tree cache entries: 3
+non-reproducible normalization retained: [Choice(9)]
+coordinated merge: [Choice(0), Group([Choice(0), Choice(0)])]

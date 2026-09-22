@@ -10,7 +10,7 @@ async fn compile(body: &str) -> nash_driver::build::ValidatorOutput {
     let memory = InMemorySource::new();
     let mut origins = nash_driver::bundled_base::modules();
     let uri = Url::parse("file:///project/src/TestingCore.nash").unwrap();
-    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (type prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nimport List\nemptyInts : list int\nemptyInts = []\nreplay : list int -> prng\nreplay values = Replayed values\nmain : Data -> unit\nmain _ =\n{body}\n"));
+    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (type prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nimport List\none value = Cons.Cons value Cons.Nil\ntwo a b = Cons.Cons a (one b)\ng = Prop.Group\nc = Prop.Choice\nreplay : Cons.cons Prop.choiceTree -> prng\nreplay values = Replayed values Cons.Nil\nmain : Data -> unit\nmain _ =\n{body}\n"));
     origins.insert(uri, None);
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
@@ -27,12 +27,12 @@ async fn compile(body: &str) -> nash_driver::build::ValidatorOutput {
 #[tokio::test]
 async fn choice_seeded_and_replayed_draws_agree() {
     let output = compile(r##"    let
-        initial = Seeded #"0000000000000000000000000000000000000000000000000000000000000000" emptyInts
+        initial = Seeded #"0000000000000000000000000000000000000000000000000000000000000000" Cons.Nil
     in
     case (Prop.choice 100) initial of
         Some (n, Seeded seed choices) ->
-            case (Prop.choice 100) (Replayed choices) of
-                Some (replayed, Replayed rest) ->
+            case (Prop.choice 100) (Replayed choices Cons.Nil) of
+                Some (replayed, Replayed rest _) ->
                     assert (n == replayed)
                 _ -> (fail "replay rejected seeded choice")
         _ -> (fail "seeded draw failed")"##).await;
@@ -52,7 +52,7 @@ async fn choice_seeded_and_replayed_draws_agree() {
 
 #[tokio::test]
 async fn malformed_replayed_choices_are_rejected() {
-    for choices in ["[]", "[-1]", "[11]"] {
+    for choices in ["Cons.Nil", "one (c (-1))", "one (c 11)"] {
         let output = compile(&format!(
             r#"    let
         values = {choices}
@@ -82,27 +82,35 @@ async fn generation_functions_thread_choices() {
     for (generator, choices, expected) in [
         (
             "Prop.tuple2 (Prop.choice 10) (Prop.choice 10)",
-            "[4, 5]",
+            "two (g (one (c 4))) (g (one (c 5)))",
             "(4, 5)",
         ),
-        ("Prop.listBetween 1 2 (Prop.choice 10)", "[3, 0]", "[3]"),
-        ("Prop.bytes", "[1, 65, 0]", "#\"41\""),
-        ("Prop.int", "[0, 42]", "42"),
+        (
+            "Prop.listBetween 1 2 (Prop.choice 10)",
+            "two (g (one (g (one (c 3))))) (g (one (c 0)))",
+            "[3]",
+        ),
+        (
+            "Prop.bytes",
+            "two (g (two (c 1) (g (one (c 65))))) (g (one (c 0)))",
+            "#\"41\"",
+        ),
+        ("Prop.int", "two (c 0) (c 42)", "42"),
         (
             "Prop.int",
-            "[2, 18446744073709551615]",
+            "two (c 2) (c 18446744073709551615)",
             "9223372036854775807",
         ),
-        ("Prop.int", "[2, 0]", "(-9223372036854775808)"),
+        ("Prop.int", "two (c 2) (c 0)", "(-9223372036854775808)"),
         (
             "Prop.oneOf (Cons.Cons (Prop.constant 0) (Cons.Cons (Prop.choice 10) Cons.Nil))",
-            "[1, 7]",
+            "two (c 1) (g (one (c 7)))",
             "7",
         ),
-        ("Prop.intBetween 3 3", "[]", "3"),
+        ("Prop.intBetween 3 3", "Cons.Nil", "3"),
     ] {
         let output = compile(&format!(
-            r#"    case ({generator}) (replay {choices}) of
+            r#"    case ({generator}) (replay ({choices})) of
         Some (value, _) -> assert (value == {expected})
         None -> (fail "generator exhausted replay")"#
         ))
@@ -126,7 +134,7 @@ async fn generation_functions_thread_choices() {
 async fn invalid_choice_bounds_fail() {
     for bound in ["-1", "18446744073709551616"] {
         let output = compile(&format!(
-            r#"    case (Prop.choice ({bound})) (replay [0]) of
+            r#"    case (Prop.choice ({bound})) (replay (one (c 0))) of
         Some _ -> ()
         None -> ()"#
         ))

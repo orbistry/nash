@@ -8,6 +8,7 @@ use nash_plutus::{
     typ::Type,
 };
 use nash_region::{Position, Region};
+use nash_test::prng::Trace;
 use nash_test::{
     eval::split_logs,
     prng::Prng,
@@ -175,13 +176,36 @@ fn prng_roundtrip_preserves_nonempty_history_and_rejects_bad_terms() {
         Prng::from_seed(42),
         Prng::Seeded {
             seed: [3; 32],
-            choices: vec![1, u64::MAX, 4],
+            choices: vec![
+                Trace::Choice(1),
+                Trace::Group(vec![Trace::Choice(u64::MAX), Trace::Group(vec![])]),
+                Trace::Choice(4),
+            ],
         },
-        Prng::from_choices(&[0, 7, u64::MAX]),
+        Prng::from_trace(&[
+            Trace::Choice(0),
+            Trace::Group(vec![Trace::Choice(7), Trace::Choice(u64::MAX)]),
+        ]),
     ] {
         let term = p.to_term(a);
         assert_eq!(Prng::from_term(term).unwrap(), p);
         terms.push(nash_plutus::pretty::term(term));
+    }
+    for term in [
+        Term::constr(a, 0, a.alloc([Term::integer_from(a, -1)])),
+        Term::constr(
+            a,
+            0,
+            a.alloc([Term::integer_from(a, i128::from(u64::MAX) + 1)]),
+        ),
+        Term::constr(a, 1, a.alloc([Term::integer_from(a, 0)])),
+        Term::constr(a, 2, &[]),
+    ] {
+        terms.push(format!(
+            "{}: {}",
+            nash_plutus::pretty::term(term),
+            Trace::from_term(term).unwrap_err()
+        ));
     }
     insta::with_settings!({omit_expression => true}, {
         insta::assert_snapshot!("prng_native_terms", terms.join("\n\n"));
@@ -209,22 +233,26 @@ fn logs_preserve_malformed_payload_and_nul_values() {
     assert_eq!(logs.asserts, [(3, 2, "a\0b".into())]);
     assert_eq!(logs.traces, ["\0assert\0bad", "trace"]);
 }
-fn simplify(start: Vec<u64>, oracle: impl FnMut(&[u64]) -> ShrinkStatus<u64>) -> (Vec<u64>, usize) {
+fn simplify(
+    start: Vec<u64>,
+    mut oracle: impl FnMut(&[u64]) -> ShrinkStatus<u64>,
+) -> (Vec<u64>, usize) {
     let mut ce = Counterexample {
         value: 0,
-        choices: start,
-        cache: Cache::new(oracle),
+        choices: start.into_iter().map(Trace::Choice).collect(),
+        cache: Cache::new(move |trace| oracle(&Trace::flatten(trace))),
         steps: 0,
     };
     ce.simplify();
-    (ce.choices, ce.steps)
+    (Trace::flatten(&ce.choices), ce.steps)
 }
 #[test]
 fn shrink_int_pair_and_list() {
     assert_eq!(
         simplify(vec![48213], |c| match c.first() {
             None => ShrinkStatus::Invalid,
-            Some(n) if *n >= 1000 => ShrinkStatus::Keep(*n),
+            Some(n) if *n >= 1000 =>
+                ShrinkStatus::Keep(*n, c.iter().copied().map(Trace::Choice).collect()),
             _ => ShrinkStatus::Ignore,
         })
         .0,
@@ -234,7 +262,7 @@ fn shrink_int_pair_and_list() {
         simplify(vec![9, 3], |c| if c.len() < 2 {
             ShrinkStatus::Invalid
         } else if c[0] > c[1] {
-            ShrinkStatus::Keep(c[0])
+            ShrinkStatus::Keep(c[0], c.iter().copied().map(Trace::Choice).collect())
         } else {
             ShrinkStatus::Ignore
         })
@@ -250,7 +278,7 @@ fn shrink_int_pair_and_list() {
         }
         let sum = c[1..=n as usize].iter().sum::<u64>();
         if sum > 100 {
-            ShrinkStatus::Keep(sum)
+            ShrinkStatus::Keep(sum, c.iter().copied().map(Trace::Choice).collect())
         } else {
             ShrinkStatus::Ignore
         }
@@ -263,19 +291,37 @@ fn shrink_int_pair_and_list() {
 #[test]
 fn cache_keeps_replay_lengths_distinct() {
     let calls = Cell::new(0);
-    let mut cache = Cache::new(|c: &[u64]| {
+    let mut cache = Cache::new(|c: &[Trace]| {
         calls.set(calls.get() + 1);
         if c.len() < 2 {
             ShrinkStatus::Invalid
         } else {
-            ShrinkStatus::Keep(c.len())
+            ShrinkStatus::Keep(c.len(), c.to_vec())
         }
     });
-    assert_eq!(cache.get(&[1]), ShrinkStatus::Invalid);
-    assert_eq!(cache.get(&[1, 2, 3]), ShrinkStatus::Keep(3));
-    assert_eq!(cache.get(&[1, 2]), ShrinkStatus::Keep(2));
-    assert_eq!(cache.get(&[1, 2, 4]), ShrinkStatus::Keep(3));
-    assert_eq!(cache.get(&[1, 2]), ShrinkStatus::Keep(2));
+    assert_eq!(cache.get(&[Trace::Choice(1)]), ShrinkStatus::Invalid);
+    assert_eq!(
+        cache.get(&[Trace::Choice(1), Trace::Choice(2), Trace::Choice(3)]),
+        ShrinkStatus::Keep(
+            3,
+            vec![Trace::Choice(1), Trace::Choice(2), Trace::Choice(3)]
+        )
+    );
+    assert_eq!(
+        cache.get(&[Trace::Choice(1), Trace::Choice(2)]),
+        ShrinkStatus::Keep(2, vec![Trace::Choice(1), Trace::Choice(2)])
+    );
+    assert_eq!(
+        cache.get(&[Trace::Choice(1), Trace::Choice(2), Trace::Choice(4)]),
+        ShrinkStatus::Keep(
+            3,
+            vec![Trace::Choice(1), Trace::Choice(2), Trace::Choice(4)]
+        )
+    );
+    assert_eq!(
+        cache.get(&[Trace::Choice(1), Trace::Choice(2)]),
+        ShrinkStatus::Keep(2, vec![Trace::Choice(1), Trace::Choice(2)])
+    );
     assert_eq!(calls.get(), 4);
     assert_eq!(cache.size(), 4);
 }
@@ -347,19 +393,44 @@ fn actual_cek_property_shrinks_and_retains_failure_logs() {
     let seeded = Term::integer_from(a, 25)
         .lambda(a, DeBruijn::zero(a))
         .lambda(a, DeBruijn::zero(a));
-    let replayed = Term::head_list(a)
-        .force(a)
-        .apply(a, Term::var(a, DeBruijn::new(a, 1)))
-        .lambda(a, DeBruijn::zero(a));
+    let selected = Term::case(
+        a,
+        Term::var(a, DeBruijn::new(a, 2)),
+        a.alloc([Term::var(a, DeBruijn::new(a, 1)).lambda(a, DeBruijn::zero(a))]),
+    )
+    .lambda(a, DeBruijn::zero(a))
+    .lambda(a, DeBruijn::zero(a));
+    let replayed = Term::case(
+        a,
+        Term::var(a, DeBruijn::new(a, 2)),
+        a.alloc([Term::error(a), selected]),
+    )
+    .lambda(a, DeBruijn::zero(a))
+    .lambda(a, DeBruijn::zero(a));
     let n = Term::case(a, p, a.alloc([seeded, replayed]));
     let enough = Term::less_than_equals_integer(a)
         .apply(a, Term::integer_from(a, 10))
         .apply(a, n);
-    let output = Prng::Seeded {
-        seed: [0; 32],
-        choices: vec![25],
-    };
-    let next = output.to_term(a);
+    let next_value = Term::case(
+        a,
+        Term::var(a, DeBruijn::new(a, 1)),
+        a.alloc([seeded, replayed]),
+    );
+    let next = Term::constr(
+        a,
+        0,
+        a.alloc([
+            Term::byte_string(a, a.alloc([0; 32])),
+            Term::constr(
+                a,
+                1,
+                a.alloc([
+                    Term::constr(a, 0, a.alloc([next_value])),
+                    Term::constr(a, 0, &[]),
+                ]),
+            ),
+        ]),
+    );
     let run = lazy_if(
         a,
         enough,
@@ -585,5 +656,65 @@ fn preparation_runs_once_and_success_does_not_show_values() {
     assert_eq!(outcome.traces, ["generate"]);
     insta::with_settings!({description => nash_plutus::pretty::term(program), omit_expression => true}, {
         insta::assert_snapshot!(report::terminal::render(&[outcome], Coverage::Labels, 42, std::time::Duration::ZERO));
+    });
+}
+
+#[test]
+fn nested_reduction_normalization_and_boundaries() {
+    use Trace::{Choice as C, Group as G};
+    let calls = Cell::new(0);
+    let mut cache = Cache::new(|nodes: &[Trace]| {
+        calls.set(calls.get() + 1);
+        ShrinkStatus::Keep(nodes.len(), nodes.to_vec())
+    });
+    let traces = [vec![C(1)], vec![G(vec![C(1)])], vec![G(vec![]), C(1)]];
+    for trace in &traces {
+        cache.get(trace);
+        cache.get(trace);
+    }
+    assert_eq!(calls.get(), 3);
+
+    let mut normalized = Counterexample {
+        value: 9,
+        choices: vec![C(9)],
+        cache: Cache::new(|nodes| match nodes {
+            [C(0), ..] if nodes.len() > 1 => ShrinkStatus::Keep(0, vec![C(0)]),
+            _ => ShrinkStatus::Invalid,
+        }),
+        steps: 0,
+    };
+    normalized.simplify();
+    assert_eq!(normalized.choices, vec![C(9)]);
+
+    let mut merged = Counterexample {
+        value: 1,
+        choices: vec![C(1), G(vec![C(8)]), G(vec![C(9)])],
+        cache: Cache::new(|nodes| match nodes {
+            [C(1), G(a), G(b)] if a.len() == 1 && b.len() == 1 => {
+                ShrinkStatus::Keep(1, nodes.to_vec())
+            }
+            [C(0), G(ab)] if ab.len() == 2 => ShrinkStatus::Keep(0, nodes.to_vec()),
+            _ => ShrinkStatus::Invalid,
+        }),
+        steps: 0,
+    };
+    merged.simplify();
+    assert_eq!(merged.choices, vec![C(0), G(vec![C(0), C(0)])]);
+    insta::with_settings!({omit_expression => true}, {
+        insta::assert_snapshot!(format!("distinct tree cache entries: {}\nnon-reproducible normalization retained: {:?}\ncoordinated merge: {:?}", calls.get(), normalized.choices, merged.choices));
+    });
+}
+
+#[test]
+fn report_nested_replay_choices_losslessly() {
+    let mut outcome = run(prop(true, false, Expect::FailOnce));
+    outcome.replay = Some(vec![Trace::Group(vec![
+        Trace::Choice(u64::MAX),
+        Trace::Group(vec![]),
+    ])]);
+    let json: serde_json::Value =
+        serde_json::from_str(&report::json::render(0, 100, &[outcome])).unwrap();
+    insta::with_settings!({omit_expression => true}, {
+        insta::assert_snapshot!(serde_json::to_string_pretty(&json["tests"][0]["replay"]).unwrap());
     });
 }

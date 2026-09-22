@@ -11,7 +11,7 @@ five = 5
 
 draw : Prop.generator 'a -> option 'a
 draw generator =
-    case generator (Prop.Seeded #"" []) of
+    case generator (Prop.Seeded #"" Cons.Nil) of
         Some (value, _) -> Some value
         None -> None
 
@@ -21,6 +21,8 @@ composed state = do
     (y, final) <- Prop.choice x next
     Some (x + y, final)
 
+replay values = Prop.Replayed (Cons.map Prop.Choice (Cons.fromList values)) Cons.Nil
+
 increment x = x + 1
 
 custom : Prop.generator int
@@ -29,19 +31,28 @@ custom state = Some (9, state)
 emptyGenerators : Cons.cons (Prop.generator int)
 emptyGenerators = Cons.Nil
 
+dependent : Prop.generator (int, int)
+dependent = do
+    count <- Prop.intBetween 1 10
+    index <- Prop.intBetween 0 (count - 1)
+    pure (count, index)
+
+mapped : Prop.generator int
+mapped = pure increment <*> (map (\x -> x + 1) (Prop.constant 7))
+
 tests
     test "direct draws with option do" = do
-        case composed (Prop.Replayed [4, 3, 9]) of
-            Some (value, Prop.Replayed rest) ->
-                assert (value == 7 && rest == [9])
+        case composed (replay [4, 3, 9]) of
+            Some (value, Prop.Replayed (Cons.Cons (Prop.Choice 9) Cons.Nil) _) ->
+                assert (value == 7)
             _ -> fail
-        case composed (Prop.Replayed []) of
+        case composed (replay []) of
             None -> ()
             Some _ -> fail
-        case composed (Prop.Replayed [4]) of
+        case composed (replay [4]) of
             None -> ()
             Some _ -> fail
-        case composed (Prop.Replayed [4, 5]) of
+        case composed (replay [4, 5]) of
             None -> ()
             Some _ -> fail
         assert (draw custom == Some 9)
@@ -49,8 +60,11 @@ tests
         case draw (Prop.constant increment) of
             Some function -> assert (function 3 == 4)
             None -> fail
+        case draw (map (\n -> \x -> n + x) (Prop.constant 7)) of
+            Some function -> assert (function 3 == 10)
+            None -> fail
     test "Nash preparation returns deferred functions" = do
-        case Test.prepare custom (\_ -> fail) (\n -> [show n]) (Prop.Replayed []) of
+        case Test.prepare custom (\_ -> fail) (\n -> [show n]) (replay []) of
             Some (_, _, display) -> assert (display () == ["9"])
             None -> fail
     prop "function alias generator" =
@@ -68,6 +82,28 @@ tests
     test "reversed bounds fail before drawing" fail = do
         case Prop.intBetween 2 1 of
             _ -> ()
-    test "empty alternatives fail before drawing" fail = do
-        case Prop.oneOf emptyGenerators of
-            _ -> ()
+    test "empty alternatives reject generation" = do
+        case draw (Prop.oneOf emptyGenerators) of
+            None -> ()
+            Some _ -> fail
+
+    prop "generator do preserves dependent bounds" =
+        let (count, index) via dependent in
+        do
+            assert (count > index)
+    prop "generator map and apply support functions" =
+        let n via mapped in
+        do
+            assert (n == 9)
+    prop "integer counterexample" fail once =
+        let n via Prop.intBetween 10 100 in
+        do
+            assert (n < 20)
+    prop "list counterexample" fail once =
+        let values via Prop.listBetween 2 5 (Prop.intBetween 10 100) in
+        do
+            assert (List.length values < 2)
+    prop "dependent counterexample" fail once =
+        let (count, index) via dependent in
+        do
+            assert (index < count - 1)

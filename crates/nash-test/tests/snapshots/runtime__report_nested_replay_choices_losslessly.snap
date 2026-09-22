@@ -1,0 +1,15 @@
+---
+source: crates/nash-test/tests/runtime.rs
+---
+[
+  {
+    "group": [
+      {
+        "choice": "18446744073709551615"
+      },
+      {
+        "group": []
+      }
+    ]
+  }
+]

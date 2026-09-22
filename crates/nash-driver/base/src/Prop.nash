@@ -1,7 +1,9 @@
-module Prop exposing (type prng(..), type generator, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes)
+module Prop exposing (type prng(..), type choiceTree(..), type generator, group, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes)
 
 import Builtin
-
+import Functor
+import Applicative
+import Monad
 import Prelude exposing (..)
 import Primitive exposing (type bool(..))
 import Literal
@@ -10,31 +12,76 @@ import Lift exposing (Lift)
 import Option exposing (type option(..))
 import Cons exposing (type cons(..))
 
-type prng = Seeded bytes (list int) | Replayed (list int)
+type choiceTree = Choice int | Group (cons choiceTree)
+type prng = Seeded bytes (cons choiceTree) | Replayed (cons choiceTree) (cons choiceTree)
 type alias generator 'a = prng -> option ('a, prng)
 
--- The runner stores each primitive choice in a u64.
+reverse values = reverseOnto values Nil
+reverseOnto values result =
+    case values of
+        Nil -> result
+        Cons first rest -> reverseOnto rest (Cons first result)
+
 choice : Lift int 'n => 'n -> generator int
 choice bound = choiceInt (lower bound)
 
 choiceInt : int -> generator int
-choiceInt bound prng =
+choiceInt bound state =
     if bound < 0 || bound > 18446744073709551615 then
         (fail "Prop.choice bound must be in 0..18446744073709551615")
     else
-        case prng of
-            Seeded seed choices ->
+        case state of
+            Seeded seed recorded ->
                 let
                     seed2 = Builtin.blake2b_256 seed
-                    n = Builtin.byteStringToInteger True seed2 % (bound + 1)
+                    value = Builtin.byteStringToInteger True seed2 % (bound + 1)
                 in
-                Some (n, Seeded seed2 (Builtin.mkCons n choices))
-            Replayed choices ->
-                case choices of
-                    [] -> None
-                    n :: rest ->
-                        if n < 0 || n > bound then None
-                        else Some (n, Replayed rest)
+                Some (value, Seeded seed2 (Cons (Choice value) recorded))
+            Replayed remaining recorded ->
+                case remaining of
+                    Cons (Choice value) rest ->
+                        if value < 0 || value > bound then None
+                        else Some (value, Replayed rest (Cons (Choice value) recorded))
+                    _ -> None
+
+group : generator 'a -> generator 'a
+group generator state =
+    case state of
+        Seeded seed recorded ->
+            case generator (Seeded seed Nil) of
+                Some (value, Seeded next children) ->
+                    Some (value, Seeded next (Cons (Group (reverse children)) recorded))
+                _ -> None
+        Replayed remaining recorded ->
+            case remaining of
+                Cons (Group children) rest ->
+                    case generator (Replayed children Nil) of
+                        Some (value, Replayed _ used) ->
+                            Some (value, Replayed rest (Cons (Group (reverse used)) recorded))
+                        _ -> None
+                _ -> None
+
+impl Functor.Functor generator where
+    map f generator state =
+        case generator state of
+            None -> None
+            Some (value, next) -> Some (f value, next)
+
+impl Applicative.Applicative generator where
+    pure = constant
+    apply functions values state =
+        case group functions state of
+            None -> None
+            Some (f, next) ->
+                case group values next of
+                    None -> None
+                    Some (value, final) -> Some (f value, final)
+
+impl Monad.Monad generator where
+    bind generator continuation state =
+        case group generator state of
+            None -> None
+            Some (value, next) -> continuation value next
 
 constant : 'a -> generator 'a
 constant a prng = Some (a, prng)
@@ -78,29 +125,31 @@ listBetweenInt lo hi item =
 listFrom : int -> int -> int -> generator 'a -> generator (list 'a)
 listFrom n lo hi item state =
     if n >= hi then Some ([], state)
-    else if n < lo then listMore n lo hi item state
     else
-        case choice 1 state of
+        case group (listIteration (n < lo) item) state of
             None -> None
-            Some (continue, next) ->
-                if continue == 0 then Some ([], next)
-                else listMore n lo hi item next
+            Some (None, next) -> Some ([], next)
+            Some (Some value, next) ->
+                case listFrom (n + 1) lo hi item next of
+                    None -> None
+                    Some (values, final) -> Some (Builtin.mkCons value values, final)
 
-listMore : int -> int -> int -> generator 'a -> generator (list 'a)
-listMore n lo hi item state =
-    case item state of
+listIteration : bool -> generator 'a -> generator (option 'a)
+listIteration required item state =
+    case (if required then constant 1 else choice 1) state of
         None -> None
-        Some (x, next) ->
-            case listFrom (n + 1) lo hi item next of
+        Some (0, next) -> Some (None, next)
+        Some (_, next) ->
+            case group item next of
                 None -> None
-                Some (xs, final) -> Some (Builtin.mkCons x xs, final)
+                Some (value, final) -> Some (Some value, final)
 
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
 tuple2 first second state =
-    case first state of
+    case group first state of
         None -> None
         Some (a, next) ->
-            case second next of
+            case group second next of
                 None -> None
                 Some (b, final) -> Some ((a, b), final)
 
@@ -108,7 +157,7 @@ tuple2 first second state =
 oneOf : cons (generator 'a) -> generator 'a
 oneOf generators =
     case generators of
-        Nil -> (fail "Prop.oneOf requires a generator")
+        Nil -> \_ -> None
         Cons _ _ ->
             let draw = choice (Cons.length generators - 1) in
             \state ->
@@ -119,8 +168,8 @@ oneOf generators =
 pick : int -> cons (generator 'a) -> generator 'a
 pick index generators =
     case generators of
-        Nil -> (fail "Prop.oneOf index out of range")
-        Cons first rest -> if index == 0 then first else pick (index - 1) rest
+        Nil -> \_ -> None
+        Cons first rest -> if index == 0 then group first else pick (index - 1) rest
 
 bytes : generator bytes
 bytes state =

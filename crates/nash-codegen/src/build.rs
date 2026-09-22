@@ -651,7 +651,15 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         if let Some(demands) = self.build.demands.get(&t.id()) {
             for name in demands {
                 let typ = *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?;
-                let typ = native_type(self.ir.arena, self.types.ty(typ, &Substitution::new())?)?;
+                let layout = self.types.ty(typ, &Substitution::new())?;
+                // Trait demand analysis includes every possible implementation.
+                // Term-backed arguments still need their concrete source type;
+                // they cannot be represented as a Plutus constant type.
+                let typ = if matches!(layout, Ty::Term(_)) {
+                    typ
+                } else {
+                    native_type(self.ir.arena, layout)?
+                };
                 runtime_subst.insert(name, typ);
             }
         }
@@ -777,7 +785,7 @@ fn native<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<Ty<'a>, Error<'a>> {
         Ty::Const(ConstTy::Pair(a, b)) => {
             Ty::Const(arena.alloc(ConstTy::Pair(native(arena, *a)?, native(arena, *b)?)))
         }
-        Ty::Const(_) => ty,
+        Ty::Const(_) | Ty::Term(_) => ty,
         _ => return Err(Error::RuntimeLayout(ty)),
     })
 }

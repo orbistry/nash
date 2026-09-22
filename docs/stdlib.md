@@ -934,12 +934,14 @@ import Builtin
 import Lift exposing (Lift)
 import List
 
-type prng = Seeded bytes (list int) | Replayed (list int)
+type choiceTree = Choice int | Group (cons choiceTree)
+type prng = Seeded bytes (cons choiceTree) | Replayed (cons choiceTree) (cons choiceTree)
 type alias generator 'a = prng -> option ('a, prng)
 
 -- Each draw returns its value and next state. Replay consumes one choice.
 choice : Lift int 'n => 'n -> generator int
 
+group : generator 'a -> generator 'a
 constant : 'a -> generator 'a
 int : generator int                         -- small-biased, full range possible
 intBetween : (Lift int 'a, Lift int 'b) => 'a -> 'b -> generator int
@@ -952,15 +954,17 @@ option : generator 'a -> generator (option 'a)
 listOf : generator 'a -> generator (list 'a)   -- length 0..20
 listBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator 'a -> generator (list 'a)
 oneOf : cons (generator 'a) -> generator 'a
-frequency : list (int, generator 'a) -> generator 'a
+frequency : cons (int, generator 'a) -> generator 'a
 suchThat : ('a -> bool) -> generator 'a -> generator 'a       -- gives up after 100 draws
 data : generator Data                        -- arbitrary well-formed Data, depth-bounded
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
 ```
 
 Call a generator directly with its PRNG state. Each draw returns `Some (value, next)`
-or `None` for rejected replay. Ordinary `Option` `do` notation can sequence draws;
-there is no separate generator composition interface.
+or `None` for rejected replay. The alias implements `Functor`, `Applicative`, and
+`Monad`: ordinary `do` sequences generators and threads state. Direct state
+functions can also use `Option` sequencing. `group` supplies strict replay
+boundaries; lists group their iterations and element draws.
 
 Shrinking-friendliness rules for generators, so smaller choices give
 smaller values (testing.md "Shrinking"):

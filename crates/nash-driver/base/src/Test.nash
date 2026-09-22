@@ -23,7 +23,7 @@ prepare generator property display state =
 
 both : generator 'a -> (unit -> generator 'b) -> generator ('a, 'b)
 both first rest state =
-    case first state of
+    case Prop.group first state of
         None -> None
         Some (a, next) ->
             case rest () next of

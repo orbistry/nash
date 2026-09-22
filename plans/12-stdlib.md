@@ -370,6 +370,7 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 ## Chunk 8: `Prop` — foundation implemented through Plan 10
 
 - [x] Ship prng/generator types, choice bounds, seeded draws and validated replay.
+- [x] Use nested little Choice/Group traces with strict replay, consumed-trace reduction, and ordinary generator Functor/Applicative/Monad instances.
 - [x] Ship direct generation functions: choice, constant, intBetween, int, listOf,
   listBetween, tuple2, oneOf and bytes; sequence draws with explicit state.
 - [x] Test Nash generators against the Rust runner and replay protocol in
@@ -382,13 +383,13 @@ Extend the existing implementation; do not replace its tested protocol.
 **Files**
 
 - `crates/nash-driver/base/src/Prop.nash`
-- `crates/nash-test/src/prng.rs` (plans/10 chunk 5: `Prng::from_seed`, `from_choices`, `to_term`, `from_term`)
+- `crates/nash-test/src/prng.rs` (plans/10 chunk 5: `Prng::from_seed`, `from_trace`, `to_term`, `from_term`)
 
 **Change**
 
 docs/testing.md "Generators", verbatim: the **little** `prng` ADT that the
 runner builds as native constructor terms, the `generator 'a` function alias,
-direct draws with explicit state threading, `choice` as the single primitive
+direct draws or ordinary Monad composition, `choice` as the single primitive
 over `u64` integer choices (not Aiken's bytes), and the generators listed
 in docs/stdlib.md "`Prop`" built on `choice`.
 
@@ -406,11 +407,11 @@ Aiken `stdlib/lib/aiken/` (`rand`, `int`, `list`, `bool`,
 `bytearray`) and `crates/aiken-lang/src/test_framework.rs` `Prng`
 (constructor tags: `Seeded = 0`, `Replayed = 1`; `Some = 0`, `None = 1`
 must match the little `option` layout in plans/04). Nash differs in the
-choice element type: `Int`, not bytes (testing.md "Open questions").
+choice element type: `int`, not bytes (testing.md "Open questions").
 
 **Tests**
 
-- `tests` block: `choice 10 (Seeded #"" [])` is `Some`; `choice 10 (Replayed [])` is `None`; `choice 10 (Replayed [11])` is `None` (over bound); `intBetween 3 3` is `3`.
+- `tests` block: `choice 10 (Seeded #"" Cons.Nil)` is `Some`; `choice 10 (Replayed Cons.Nil Cons.Nil)` is `None`; `choice 10 (Replayed (Cons.singleton (Choice 11)) Cons.Nil)` is `None` (over bound); `intBetween 3 3` is `3`.
 - `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` called directly with a PRNG state stays in range.
 - Rust (plans/10 chunk 6): a shrink test that a failing `listOf int` counterexample shrinks to `[0]` or `[]`.
 

@@ -39,6 +39,7 @@ description: é == x
       "labels": {},
       "module": "Example",
       "name": "fixture",
+      "replay": null,
       "status": "fail",
       "traces": []
     }

@@ -5,12 +5,12 @@ every `test` and `prop` into a standalone UPLC program, runs it on the CEK
 machine in `nash-plutus`, and reports the result with budgets, traces, labels
 and, for properties, a shrunk counterexample.
 
-The design follows Aiken: the PRNG is a Plutus value that the generator
-threads through on-chain code, the runner only sees the sequence of random
-choices, and shrinking is choice-sequence shrinking in Rust (MiniThesis). Nash
-uses ordinary generation functions returning a value and next PRNG state.
-They can sequence draws with `Option` `do` notation. A power-assert
-`assert` that prints the value of every sub-expression on failure.
+The PRNG is a native Plutus value threaded through Nash generation functions.
+Each draw returns a value and next state. Generators compose with ordinary
+`Functor`, `Applicative`, and `Monad` instances, including `do` notation.
+The runner reduces nested choice traces in Rust using the Hypothesis paper's
+reduction families adapted to strict group replay. Power-asserts report
+captured subexpressions when an assertion fails.
 
 ## Surface syntax
 
@@ -247,67 +247,45 @@ to test bodies.
 ## Generators
 
 ```elm
--- Prop.nash (stdlib)
-type prng = Seeded bytes (list int) | Replayed (list int)
+-- Prop.nash (bundled Base)
+type choiceTree = Choice int | Group (Cons.cons choiceTree)
+type prng = Seeded bytes (Cons.cons choiceTree) | Replayed (Cons.cons choiceTree) (Cons.cons choiceTree)
 type alias generator 'a = prng -> option ('a, prng)
 
 dependent : Prop.generator int
-dependent state = do
-    (bound, next) <- Prop.choice 10 state
-    (value, final) <- Prop.choice bound next
-    Some (value, final)
-
+dependent = do
+    bound <- Prop.choice 10
+    value <- Prop.choice bound
+    pure value
 ```
 
-- `prng` is a **little** ADT: the runner builds a native constructor term and reads it
-  back from the result. `Seeded seed choices` carries a 32-byte seed and the
-  choices made so far, newest first. `Replayed choices` carries only the
-  choices still to replay, next first. An empty list means replay is exhausted.
-- `generator 'a` is a function alias. Each draw returns `(value, nextPrng)` in
-  `Some`, or `None` for invalid replay. The value may itself contain functions.
-  Call the function directly with a PRNG state. The alias has no trait instances
-  or runtime constructor. `do` sequences the returned `option` values through
-  `Monad option`; state threading remains explicit.
-- Choices are integers in `0..18446744073709551615`, one per primitive draw, as in
-  MiniThesis. Aiken uses bytes; Nash uses `int` so a primitive can draw a
-  64-bit integer in one choice and shrink it with one binary search. Larger
-  integers can be assembled from several choices. A primitive bound outside
-  that range is a generator error; values are never truncated.
+`generator` is a function alias with ordinary `Functor`, `Applicative`, and
+`Monad` instances. A direct call still returns `Some (value, nextPrng)` or `None`.
+Values may contain functions. `map` changes the value without adding draws;
+`pure` draws nothing. `bind` groups its input draw, then runs the continuation.
+Applicative application and `tuple2` group each input. `Test.both` groups the
+first binder before initializing the next binder. These are Nash functions.
 
-The single primitive:
+`choice bound` draws an integer in `0..bound`, inclusive. Bounds must fit
+`0..18446744073709551615`; invalid bounds fail. `intBetween lo hi` adds `lo` to
+`choice (hi - lo)`. Bounds are recomputed during replay, never stored or clamped.
 
-```elm
--- The runner stores each primitive choice in a u64.
-choice : Lift int 'n => 'n -> generator int
-choice bound = choiceInt (lower bound)
+`prng` and `choiceTree` are little ADTs. They use `Cons.cons`, since builtin
+lists cannot contain little constructor terms. `Seeded seed recorded` stores
+newest-first nodes. `Replayed remaining recorded` stores next-first input and
+newest-first consumed nodes. No redundant remaining count is stored.
 
-choiceInt : int -> generator int
-choiceInt bound prng =
-    if bound < 0 || bound > 18446744073709551615 then
-        (fail "Prop.choice bound must be in 0..18446744073709551615")
-    else
-        case prng of
-            Seeded seed choices ->
-                let
-                    seed2 = Builtin.blake2b_256 seed
-                    n = Builtin.byteStringToInteger True seed2 % (bound + 1)
-                in
-                Some (n, Seeded seed2 (Builtin.mkCons n choices))
-            Replayed choices ->
-                case choices of
-                    [] -> None
-                    n :: rest ->
-                        if n < 0 || n > bound then None
-                        else Some (n, Replayed rest)
+`Prop.group generator` records a `Group` whose children are chronological.
+During replay it consumes exactly one group from the parent, runs the generator
+using only that group's children, and resumes at the next parent sibling.
+Missing input, a wrong node kind, or an out-of-bounds choice returns `None`.
+Unused children are omitted from the consumed trace. A draw cannot borrow
+choices from a sibling group.
 
-```
-
-A replayed sequence that runs out, or replays a value outside the requested
-bounds, yields `None`. That is what makes choice-sequence shrinking sound: any
-edit to the sequence either replays to a valid smaller input or is rejected
-by the generator itself. The generation helpers (`int`, `listOf`, `oneOf`,
-`bytes`) are built on `choice`, and generators must draw smaller values
-from smaller choices for shrinking to produce smaller inputs.
+Each list iteration has its own group, containing its continuation bit and a
+nested element group. Required elements omit the continuation draw. Reaching
+the maximum length needs no stop draw. Deleting an iteration therefore removes
+an entire element without shifting the following element's choices.
 
 Nullary generators like `int` are values, so `a via int` and
 `xs via listOf int` read naturally.
@@ -346,26 +324,39 @@ Loop, seeded with `--seed`:
 
 ### Shrinking
 
-A port of Aiken's `Counterexample::simplify` (`test_framework.rs:848-1007`),
-itself a port of MiniThesis, with `u64` choices instead of `u8`:
+The reducer follows the deletion, zeroing, numeric, lexicographic, and coordinated
+reduction families described by MacIver and Donaldson, *Test-Case Reduction via
+Test-Case Generation: Insights from the Hypothesis Reducer* (ECOOP 2020),
+sections 3.1–3.3, <https://doi.org/10.4230/LIPIcs.ECOOP.2020.13>.
 
-1. Delete chunks of 8, 4, 2, 1 choices from the end, with the extra step of
-   decrementing the choice before a deleted chunk (list lengths).
-2. Replace chunks of 8, 4, 2 with zeros.
-3. Binary-search each choice down toward 0.
-4. Sort chunks of 8, 4, 2 ascending.
-5. Swap out-of-order neighbours at distance 2 and 1, and redistribute value
-   between them with a binary search.
-6. Repeat until a full pass makes no change.
+Nash stores a nested tree rather than the paper's flat sequence with draw
+interval metadata. Strict group replay is a Nash adaptation. Rust proposes
+edits; Nash generation functions enforce bounds and replay boundaries. No
+compiler intrinsic implements the trace protocol.
 
-A candidate sequence is evaluated with `Prng::from_choices(candidate)`:
-preparation first (error or `None` is `Invalid`), then the retained body
-(body error is `Keep`, completion is `Ignore`; swapped for `fail`). A candidate is accepted when it
-is `Keep` and shorter, or equal length and lexicographically smaller
-(`consider`, `test_framework.rs:807-826`). Results are memoised by the exact choice sequence. A custom generator can
-inspect the remaining replay choices, so a successful
-prefix does not prove that every extension has the same result. Exact caching
-preserves those generators' semantics.
+Candidates delete or zero sibling regions, replace a group with descendant
+contents, reduce individual choices, sort regions, swap neighbours, or
+redistribute values. Structural candidates split, merge, wrap, unwrap, and
+repartition groups, or insert a zero choice or empty group. Shape edits also
+try a numeric reduction in the same candidate, allowing a branch change to
+require a different group partition. The search restarts after improvement.
+These finite heuristics do not guarantee a global minimum or enumerate every
+possible combination of edits.
+
+`Prng::from_trace` replays each candidate. Preparation failure or `None` rejects
+it. The property must retain its expected counterexample outcome. Acceptance
+compares the **consumed primitive choices**, flattened in order: fewer choices
+first, then lexicographically smaller values. Group counts do not affect the
+order; equal flattened choices are tied. Shape-only changes cannot cycle.
+If normalization discards unused input, the normalized trace is replayed again
+before acceptance, since public state functions can inspect remaining input.
+Results are cached by the exact submitted tree, including empty groups.
+
+The final consumed tree is retained in `Outcome.replay` and JSON `replay`.
+JSON nodes are `{"choice":"42"}` or `{"group":[...]}`; decimal strings preserve
+all 64-bit choices in JavaScript consumers. The runner's public `Prng` codec
+can construct replay terms from that tree. The CLI seed remains the way to
+repeat the complete generation and reduction run.
 
 Shrinking reports `Simplifying counterexample from N choices` and
 `Simplified counterexample in Tms after S steps` on stderr while it works.
@@ -373,7 +364,7 @@ Shrinking reports `Simplifying counterexample from N choices` and
 ### Determinism and replay
 
 The seed is a `u32`. The initial PRNG is `Seeded (blake2b256 seed_be_bytes)
-[]`, as in Aiken (`Prng::from_seed`, `test_framework.rs:676-692`). Given the
+Cons.Nil`, as in Aiken (`Prng::from_seed`, `test_framework.rs:676-692`). Given the
 seed, `--max-success`, and the same compiled programs, a run is fully
 deterministic, including the shrink. The summary prints the seed; pass it
 back with `--seed` to replay. Tests run in parallel but each prop owns its
@@ -483,7 +474,9 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 
 ## Runtime consequences
 
-- `prng` uses native constructors with `bytes`, `int`, and `list int` fields.
+- `prng` uses native constructors with a byte-string seed and
+  `Cons.cons choiceTree` fields. Choice nodes contain integers; group nodes
+  contain further Cons lists.
   The runner uses `Prng::to_term` and `Prng::from_term`; no Data encoding is needed.
 - `prepare` returns a `constr` term: `Some` is `constr 0 [constr 0 [prng, body, show]]`,
   `None` is `constr 1 []`. The stdlib declares `type option 'a = Some 'a |
@@ -526,34 +519,12 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
   Aiken). A generator can return `None` to reject, which counts as invalid,
   not as a discarded iteration.
 
-## Nested choice trace slice
+## Nested trace coverage
 
-`tests/fixtures/NestedTrace.nash` and `tests/nested_trace.rs` in `nash-driver`
-exercise a proposed nested replay representation through the compiler and CEK.
-The shipped `Prop` API and runner still use the flat choice sequence above.
-
-The fixture defines a little `choiceTree` ADT with `Choice int` and
-`Group (cons choiceTree)`. A term-level `cons` holds the little constructor
-values; a builtin `list` cannot hold these values. `trace` is a reserved Nash
-keyword, so the type is named `choiceTree`.
-
-Generation, bounds checks, group entry/exit, and replay normalization are Nash
-functions. Each replayed group supplies only its own children: missing choices
-or a mismatched node reject generation with `None`; unused children are dropped
-from the returned consumed trace. The parent resumes at the next sibling.
-List iterations group their continuation choice together with the element draw.
-The seed source reuses `Prop.choice`, discarding its flat history after each draw.
-
-Rust compiles ordinary function roots, evaluates them, decodes the native
-constructors, edits a group, reconstructs an argument, and invokes replay. The
-snapshot covers seeded replay, whole-element deletion, dependent bounds,
-missing choices, node-kind mismatches, and branch shortening that preserves a
-sibling. No compiler intrinsic or special codegen rule is introduced.
-
-This slice does not implement automatic reduction, generator trait composition,
-or integration with the production property runner. The reduction baseline is
-MacIver and Donaldson, *Test-Case Reduction via Test-Case Generation: Insights
-from the Hypothesis Reducer* (ECOOP 2020), sections 2 and 3,
-<https://doi.org/10.4230/LIPIcs.ECOOP.2020.13>. Its shortlex ordering applies to
-consumed primitive choices; groups guide edits. Strict group-local replay is a
-Nash adaptation, not a property established by the paper's flat replay model.
+`tests/fixtures/NestedTrace.nash` and `tests/nested_trace.rs` exercise production
+`Prop` generation and replay through the compiler and CEK. Snapshots cover
+seeded round trips, whole-element deletion, dependent bounds, strict sibling
+isolation, unused-input normalization, and coordinated branch and group edits.
+Base trait tests cover generator `do`, function-valued composition, and actual
+integer, list, and dependent property counterexamples. Runtime tests cover
+trace codecs, exact caching, normalization, and runner reporting.

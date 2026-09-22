@@ -61,6 +61,12 @@ async fn run(source: &str, trace: nash_config::TraceLevel) -> String {
             "{}: {:?}; traces: {:?}\n",
             outcome.test.name, outcome.status, outcome.traces
         ));
+        if let Some(values) = &outcome.counterexample {
+            output.push_str(&format!(
+                "counterexample: {values:?}\nreplay: {:?}\n",
+                outcome.replay
+            ));
+        }
     }
     output
 }

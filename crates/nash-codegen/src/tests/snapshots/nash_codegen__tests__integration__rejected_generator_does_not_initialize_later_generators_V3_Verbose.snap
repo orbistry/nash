@@ -17,10 +17,10 @@ description: "module Main exposing (..)\nimport Builtin\nimport Prop exposing (r
                     [(lam i9
                       [(lam i10
                         [(lam i11
-                          [[[i11
-                            [[i8 (force [[(force (builtin trace)) [i6 i0]] (delay i5)])] (lam i12 (error))]]
-                            (lam i12
-                              [(lam i13
+                          [(lam i12
+                            [[[i12
+                              [[i9 (force [[(force (builtin trace)) [i6 i0]] (delay i5)])] (lam i13 (error))]]
+                              (lam i13
                                 [(lam i14
                                   [(lam i15
                                     [(lam i16
@@ -32,91 +32,91 @@ description: "module Main exposing (..)\nimport Builtin\nimport Prop exposing (r
                                                 [(lam i22
                                                   [(lam i23
                                                     [(lam i24
-                                                      (case
-                                                        [i23 i24]
-                                                        [[i9 i1]
-                                                          (lam i25
-                                                            [(lam i26
+                                                      [(lam i25
+                                                        (case
+                                                          [i24 i25]
+                                                          [[i10 i1]
+                                                            (lam i26
                                                               [(lam i27
                                                                 [(lam i28
-                                                                  [[[i10 i3]
-                                                                    [[(lam i29
-                                                                      [(lam i30
-                                                                        [(lam i31 i31)
-                                                                          (lam i31
-                                                                            (case
-                                                                              [[(builtin lessThanInteger) i31] [i27 (con integer 0)]]
-                                                                              [(builtin decodeUtf8) [i29 i31]]
-                                                                              [[(builtin appendString) [i30 i26]]
-                                                                                [(builtin decodeUtf8)
-                                                                                  [i29 [[(builtin subtractInteger) [i27 (con integer 0)]] i31]]]]))])
-                                                                        (lam i30 i30)])
-                                                                      [(lam i29 [i29 i29])
-                                                                        (lam i29
+                                                                  [(lam i29
+                                                                    [[[i11 i3]
+                                                                      [[(lam i30
+                                                                        [(lam i31
+                                                                          [(lam i32 i32)
+                                                                            (lam i32
+                                                                              (case
+                                                                                [[(builtin lessThanInteger) i32] [i28 (con integer 0)]]
+                                                                                [(builtin decodeUtf8) [i30 i32]]
+                                                                                [[(builtin appendString) [i31 i27]]
+                                                                                  [(builtin decodeUtf8)
+                                                                                    [i30 [[(builtin subtractInteger) [i28 (con integer 0)]] i32]]]]))])
+                                                                          (lam i31 i31)])
+                                                                        [(lam i30 [i30 i30])
                                                                           (lam i30
-                                                                            (case
-                                                                              [[(builtin lessThanInteger) i30] [i27 (con integer 10)]]
-                                                                              [[(builtin appendByteString)
-                                                                                [[i29 i29] [[(builtin quotientInteger) i30] [i27 (con integer 10)]]]]
-                                                                                [[(builtin consByteString)
-                                                                                  [[(builtin addInteger) [i27 (con integer 48)]]
-                                                                                    [[(builtin remainderInteger) i30] [i27 (con integer 10)]]]]
-                                                                                  [i28 (con bytestring #)]]]
-                                                                              [[(builtin consByteString) [[(builtin addInteger) [i27 (con integer 48)]] i30]]
-                                                                                [i28 (con bytestring #)]])))]]
-                                                                      i22]]
-                                                                    (lam i29
-                                                                      [(lam i30
+                                                                            (lam i31
+                                                                              (case
+                                                                                [[(builtin lessThanInteger) i31] [i28 (con integer 10)]]
+                                                                                [[(builtin appendByteString)
+                                                                                  [[i30 i30] [[(builtin quotientInteger) i31] [i28 (con integer 10)]]]]
+                                                                                  [[(builtin consByteString)
+                                                                                    [[(builtin addInteger) [i28 (con integer 48)]]
+                                                                                      [[(builtin remainderInteger) i31] [i28 (con integer 10)]]]]
+                                                                                    [i29 (con bytestring #)]]]
+                                                                                [[(builtin consByteString) [[(builtin addInteger) [i28 (con integer 48)]] i31]]
+                                                                                  [i29 (con bytestring #)]])))]]
+                                                                        i23]]
+                                                                      (lam i30
                                                                         [(lam i31
                                                                           [(lam i32
-                                                                            [[[i10 i4]
-                                                                              [[(lam i33
-                                                                                [(lam i34
-                                                                                  [(lam i35 i35)
-                                                                                    (lam i35
-                                                                                      (case
-                                                                                        [[(builtin lessThanInteger) i35] [i31 (con integer 0)]]
-                                                                                        [(builtin decodeUtf8) [i33 i35]]
-                                                                                        [[(builtin appendString) [i34 i30]]
-                                                                                          [(builtin decodeUtf8)
-                                                                                            [i33 [[(builtin subtractInteger) [i31 (con integer 0)]] i35]]]]))])
-                                                                                  (lam i34 i34)])
-                                                                                [(lam i33 [i33 i33])
-                                                                                  (lam i33
+                                                                            [(lam i33
+                                                                              [[[i11 i4]
+                                                                                [[(lam i34
+                                                                                  [(lam i35
+                                                                                    [(lam i36 i36)
+                                                                                      (lam i36
+                                                                                        (case
+                                                                                          [[(builtin lessThanInteger) i36] [i32 (con integer 0)]]
+                                                                                          [(builtin decodeUtf8) [i34 i36]]
+                                                                                          [[(builtin appendString) [i35 i31]]
+                                                                                            [(builtin decodeUtf8)
+                                                                                              [i34 [[(builtin subtractInteger) [i32 (con integer 0)]] i36]]]]))])
+                                                                                    (lam i35 i35)])
+                                                                                  [(lam i34 [i34 i34])
                                                                                     (lam i34
-                                                                                      (case
-                                                                                        [[(builtin lessThanInteger) i34] [i31 (con integer 10)]]
-                                                                                        [[(builtin appendByteString)
-                                                                                          [[i33 i33] [[(builtin quotientInteger) i34] [i31 (con integer 10)]]]]
-                                                                                          [[(builtin consByteString)
-                                                                                            [[(builtin addInteger) [i31 (con integer 48)]]
-                                                                                              [[(builtin remainderInteger) i34] [i31 (con integer 10)]]]]
-                                                                                            [i32 (con bytestring #)]]]
-                                                                                        [[(builtin consByteString) [[(builtin addInteger) [i31 (con integer 48)]] i34]]
-                                                                                          [i32 (con bytestring #)]])))]]
-                                                                                i24]]
-                                                                              (lam i33 (error))])
+                                                                                      (lam i35
+                                                                                        (case
+                                                                                          [[(builtin lessThanInteger) i35] [i32 (con integer 10)]]
+                                                                                          [[(builtin appendByteString)
+                                                                                            [[i34 i34] [[(builtin quotientInteger) i35] [i32 (con integer 10)]]]]
+                                                                                            [[(builtin consByteString)
+                                                                                              [[(builtin addInteger) [i32 (con integer 48)]]
+                                                                                                [[(builtin remainderInteger) i35] [i32 (con integer 10)]]]]
+                                                                                              [i33 (con bytestring #)]]]
+                                                                                          [[(builtin consByteString) [[(builtin addInteger) [i32 (con integer 48)]] i35]]
+                                                                                            [i33 (con bytestring #)]])))]]
+                                                                                  i25]]
+                                                                                (lam i34 (error))])
+                                                                              (lam i33 i33)])
                                                                             (lam i32 i32)])
-                                                                          (lam i31 i31)])
-                                                                        i2])])
+                                                                          i2])])
+                                                                    (lam i29 i29)])
                                                                   (lam i28 i28)])
-                                                                (lam i27 i27)])
-                                                              i2])]
-                                                        (con unit ())))
-                                                      i20])
-                                                    [i21 i22]])
-                                                  i16])
-                                                (builtin equalsInteger)])
+                                                                i2])]
+                                                          (con unit ())))
+                                                        i21])
+                                                      [i22 i23]])
+                                                    i17])
+                                                  (builtin equalsInteger)])
+                                                i20])
                                               i19])
                                             i18])
-                                          i17])
-                                        (case i12 (lam i17 (lam i18 i18)))])
+                                          (case i13 (lam i18 (lam i19 i19)))])
+                                        i16])
                                       i15])
                                     i14])
-                                  i13])
-                                (case i12 (lam i13 (lam i14 i13)))])]
-                            (lam i12
-                              [(lam i13
+                                  (case i13 (lam i14 (lam i15 i14)))])]
+                              (lam i13
                                 [(lam i14
                                   [(lam i15
                                     [(lam i16
@@ -131,129 +131,131 @@ description: "module Main exposing (..)\nimport Builtin\nimport Prop exposing (r
                                                       [(lam i25
                                                         [(lam i26
                                                           [(lam i27
-                                                            [[(force (builtin mkCons)) i24]
-                                                              [[(force (builtin mkCons))
-                                                                [[(lam i28
-                                                                  [(lam i29
-                                                                    [(lam i30 i30)
-                                                                      (lam i30
-                                                                        (case
-                                                                          [[(builtin lessThanInteger) i30] [i26 (con integer 0)]]
-                                                                          [(builtin decodeUtf8) [i28 i30]]
-                                                                          [[(builtin appendString) [i29 i25]]
-                                                                            [(builtin decodeUtf8)
-                                                                              [i28 [[(builtin subtractInteger) [i26 (con integer 0)]] i30]]]]))])
-                                                                    (lam i29 i29)])
-                                                                  [(lam i28 [i28 i28])
-                                                                    (lam i28
+                                                            [(lam i28
+                                                              [[(force (builtin mkCons)) i25]
+                                                                [[(force (builtin mkCons))
+                                                                  [[(lam i29
+                                                                    [(lam i30
+                                                                      [(lam i31 i31)
+                                                                        (lam i31
+                                                                          (case
+                                                                            [[(builtin lessThanInteger) i31] [i27 (con integer 0)]]
+                                                                            [(builtin decodeUtf8) [i29 i31]]
+                                                                            [[(builtin appendString) [i30 i26]]
+                                                                              [(builtin decodeUtf8)
+                                                                                [i29 [[(builtin subtractInteger) [i27 (con integer 0)]] i31]]]]))])
+                                                                      (lam i30 i30)])
+                                                                    [(lam i29 [i29 i29])
                                                                       (lam i29
-                                                                        (case
-                                                                          [[(builtin lessThanInteger) i29] [i26 (con integer 10)]]
-                                                                          [[(builtin appendByteString)
-                                                                            [[i28 i28] [[(builtin quotientInteger) i29] [i26 (con integer 10)]]]]
-                                                                            [[(builtin consByteString)
-                                                                              [[(builtin addInteger) [i26 (con integer 48)]]
-                                                                                [[(builtin remainderInteger) i29] [i26 (con integer 10)]]]]
-                                                                              [i27 (con bytestring #)]]]
-                                                                          [[(builtin consByteString) [[(builtin addInteger) [i26 (con integer 48)]] i29]]
-                                                                            [i27 (con bytestring #)]])))]]
-                                                                  i18]]
-                                                                (con (list string) [])]])
+                                                                        (lam i30
+                                                                          (case
+                                                                            [[(builtin lessThanInteger) i30] [i27 (con integer 10)]]
+                                                                            [[(builtin appendByteString)
+                                                                              [[i29 i29] [[(builtin quotientInteger) i30] [i27 (con integer 10)]]]]
+                                                                              [[(builtin consByteString)
+                                                                                [[(builtin addInteger) [i27 (con integer 48)]]
+                                                                                  [[(builtin remainderInteger) i30] [i27 (con integer 10)]]]]
+                                                                                [i28 (con bytestring #)]]]
+                                                                            [[(builtin consByteString) [[(builtin addInteger) [i27 (con integer 48)]] i30]]
+                                                                              [i28 (con bytestring #)]])))]]
+                                                                    i19]]
+                                                                  (con (list string) [])]])
+                                                              (lam i28 i28)])
                                                             (lam i27 i27)])
-                                                          (lam i26 i26)])
-                                                        i2])
-                                                      [[(lam i24
-                                                        [(lam i25
-                                                          [(lam i26 i26)
-                                                            (lam i26
-                                                              (case
-                                                                [[(builtin lessThanInteger) i26] [i22 (con integer 0)]]
-                                                                [(builtin decodeUtf8) [i24 i26]]
-                                                                [[(builtin appendString) [i25 i21]]
-                                                                  [(builtin decodeUtf8)
-                                                                    [i24 [[(builtin subtractInteger) [i22 (con integer 0)]] i26]]]]))])
-                                                          (lam i25 i25)])
-                                                        [(lam i24 [i24 i24])
-                                                          (lam i24
+                                                          i2])
+                                                        [[(lam i25
+                                                          [(lam i26
+                                                            [(lam i27 i27)
+                                                              (lam i27
+                                                                (case
+                                                                  [[(builtin lessThanInteger) i27] [i23 (con integer 0)]]
+                                                                  [(builtin decodeUtf8) [i25 i27]]
+                                                                  [[(builtin appendString) [i26 i22]]
+                                                                    [(builtin decodeUtf8)
+                                                                      [i25 [[(builtin subtractInteger) [i23 (con integer 0)]] i27]]]]))])
+                                                            (lam i26 i26)])
+                                                          [(lam i25 [i25 i25])
                                                             (lam i25
-                                                              (case
-                                                                [[(builtin lessThanInteger) i25] [i22 (con integer 10)]]
-                                                                [[(builtin appendByteString)
-                                                                  [[i24 i24] [[(builtin quotientInteger) i25] [i22 (con integer 10)]]]]
-                                                                  [[(builtin consByteString)
-                                                                    [[(builtin addInteger) [i22 (con integer 48)]]
-                                                                      [[(builtin remainderInteger) i25] [i22 (con integer 10)]]]]
-                                                                    [i23 (con bytestring #)]]]
-                                                                [[(builtin consByteString) [[(builtin addInteger) [i22 (con integer 48)]] i25]]
-                                                                  [i23 (con bytestring #)]])))]]
-                                                        i14]])
+                                                              (lam i26
+                                                                (case
+                                                                  [[(builtin lessThanInteger) i26] [i23 (con integer 10)]]
+                                                                  [[(builtin appendByteString)
+                                                                    [[i25 i25] [[(builtin quotientInteger) i26] [i23 (con integer 10)]]]]
+                                                                    [[(builtin consByteString)
+                                                                      [[(builtin addInteger) [i23 (con integer 48)]]
+                                                                        [[(builtin remainderInteger) i26] [i23 (con integer 10)]]]]
+                                                                      [i24 (con bytestring #)]]]
+                                                                  [[(builtin consByteString) [[(builtin addInteger) [i23 (con integer 48)]] i26]]
+                                                                    [i24 (con bytestring #)]])))]]
+                                                          i15]])
+                                                      (lam i24 i24)])
                                                     (lam i23 i23)])
-                                                  (lam i22 i22)])
-                                                i2])
+                                                  i2])
+                                                i20])
                                               i19])
                                             i18])
-                                          i17])
-                                        (case i12 (lam i17 (lam i18 i18)))])
+                                          (case i13 (lam i18 (lam i19 i19)))])
+                                        i16])
                                       i15])
                                     i14])
-                                  i13])
-                                (case i12 (lam i13 (lam i14 i13)))])])
-                          (lam i11
+                                  (case i13 (lam i14 (lam i15 i14)))])])
                             (lam i12
                               (lam i13
                                 (lam i14
-                                  [(lam i15
-                                    (case
-                                      i15
-                                      (lam i16
-                                        (case
-                                          i16
-                                          (lam i17
+                                  (lam i15
+                                    [(lam i16
+                                      (case
+                                        i16
+                                        (lam i17
+                                          (case
+                                            i17
                                             (lam i18
-                                              [(lam i19
+                                              (lam i19
                                                 [(lam i20
-                                                  [(lam i21 (constr 0 i21))
-                                                    (constr 0
-                                                      i20
-                                                      (lam i21 [(lam i22 [i12 i19]) i21])
-                                                      (lam i21 [(lam i22 [i13 i19]) i21]))])
-                                                  i18])
-                                                i17]))))
-                                      (constr 1)))
-                                    [i11 i14]]))))])
-                        (lam i10 (lam i11 (lam i12 [[i9 [[(builtin appendString) i10] i11]] i12])))])
-                      (lam i9 (lam i10 [[[(force (builtin trace)) i9] i10] [i7 (con unit ())]]))])
-                    (lam i8
+                                                  [(lam i21
+                                                    [(lam i22 (constr 0 i22))
+                                                      (constr 0
+                                                        i21
+                                                        (lam i22 [(lam i23 [i13 i20]) i22])
+                                                        (lam i22 [(lam i23 [i14 i20]) i22]))])
+                                                    i19])
+                                                  i18]))))
+                                        (constr 1)))
+                                      [i12 i15]]))))])
+                          (lam i11 (lam i12 (lam i13 [[i10 [[(builtin appendString) i11] i12]] i13])))])
+                        (lam i10 (lam i11 [[[(force (builtin trace)) i10] i11] [i8 (con unit ())]]))])
                       (lam i9
                         (lam i10
-                          [(lam i11
-                            (case
-                              i11
-                              (lam i12
-                                (case
-                                  i12
-                                  (lam i13
+                          (lam i11
+                            [(lam i12
+                              (case
+                                i12
+                                (lam i13
+                                  (case
+                                    i13
                                     (lam i14
-                                      [(lam i15
+                                      (lam i15
                                         [(lam i16
                                           [(lam i17
-                                            (case
-                                              i17
-                                              (lam i18
-                                                (case
-                                                  i18
-                                                  (lam i19
+                                            [(lam i18
+                                              (case
+                                                i18
+                                                (lam i19
+                                                  (case
+                                                    i19
                                                     (lam i20
-                                                      [(lam i21
-                                                        [(lam i22 [(lam i23 (constr 0 i23)) (constr 0 (constr 0 i15 i21) i22)]) i20])
-                                                        i19]))))
-                                              (constr 1)))
-                                            [[i9 [i7 (con unit ())]] i16]])
-                                          i14])
-                                        i13]))))
-                              (constr 1)))
-                            [i8 i10]])))])
-                  (lam i7 i7)])
+                                                      (lam i21
+                                                        [(lam i22
+                                                          [(lam i23 [(lam i24 (constr 0 i24)) (constr 0 (constr 0 i16 i22) i23)]) i21])
+                                                          i20]))))
+                                                (constr 1)))
+                                              [[i10 [i8 (con unit ())]] i17]])
+                                            i15])
+                                          i14]))))
+                                (constr 1)))
+                              [[i7 i9] i11]])))])
+                    (lam i8 i8)])
+                  (lam i7 (lam i8 [i7 i8]))])
                 (lam i6 i6)])
               (lam i5 [(lam i6 (constr 1)) i5])])
             (con string "\0assert\0\48\0\50\0")])

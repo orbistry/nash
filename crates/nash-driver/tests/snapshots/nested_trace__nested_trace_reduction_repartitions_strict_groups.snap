@@ -2,33 +2,6 @@
 source: crates/nash-driver/tests/nested_trace.rs
 description: "module NestedTrace exposing (generate, replay, dependent, siblings, repartition)\n\nimport Cons exposing (type cons(..))\nimport Prop exposing (type choiceTree(..), type prng(..), type generator, choice, group)\n\nreverse values = reverseOnto values Nil\nreverseOnto values result =\n    case values of\n        Nil -> result\n        Cons first rest -> reverseOnto rest (Cons first result)\n\nfinish : option ('a, prng) -> option ('a, choiceTree)\nfinish result =\n    case result of\n        None -> None\n        Some (value, Seeded _ recorded) -> Some (value, Group (reverse recorded))\n        Some (value, Replayed _ recorded) -> Some (value, Group (reverse recorded))\n\nitems : int -> generator (list int)\nitems limit = Prop.listBetween 0 limit (choice 100)\n\ngenerate : bytes -> option (list int, choiceTree)\ngenerate seed = finish (items 4 (Seeded seed Nil))\n\nreplay : choiceTree -> option (list int, choiceTree)\nreplay choiceTree =\n    case choiceTree of\n        Group children -> finish (items 4 (Replayed children Nil))\n        _ -> None\n\nbounds : generator (int, int)\nbounds state =\n    case group (choice 9) state of\n        None -> None\n        Some (offset, next) ->\n            case group (choice offset) next of\n                None -> None\n                Some (index, final) -> Some ((offset + 1, index), final)\n\ndependent : choiceTree -> option ((int, int), choiceTree)\ndependent choiceTree =\n    case choiceTree of\n        Group children -> finish (bounds (Replayed children Nil))\n        _ -> None\n\nlistAndNumber : generator (list int, int)\nlistAndNumber state =\n    case group (items 4) state of\n        None -> None\n        Some (values, next) ->\n            case group (choice 100) next of\n                None -> None\n                Some (number, final) -> Some ((values, number), final)\n\nsiblings : choiceTree -> option ((list int, int), choiceTree)\nsiblings choiceTree =\n    case choiceTree of\n        Group children -> finish (listAndNumber (Replayed children Nil))\n        _ -> None\n\nbranch : generator int\nbranch state = do\n    (mode, next) <- choice 1 state\n    (_, following) <- choice 100 next\n    if mode == 0 then extra mode following else Some (mode, following)\n\nextra mode state =\n    case choice 100 state of\n        None -> None\n        Some (_, final) -> Some (mode, final)\n\nremaining : int -> generator int\nremaining mode state = do\n    (_, next) <- choice 100 state\n    if mode == 1 then choice 100 next else Some (mode, next)\n\nshifted : generator int\nshifted state = do\n    (mode, next) <- group branch state\n    (_, final) <- group (remaining mode) next\n    Some (mode, final)\n\nrepartition : choiceTree -> option (int, choiceTree)\nrepartition tree =\n    case tree of\n        Group children -> finish (shifted (Replayed children Nil))\n        _ -> None\n"
 ---
-seed: 9
-generated: (con (list integer) [55, 60])
-trace: Group([Group([Choice(1), Group([Choice(55)])]), Group([Choice(1), Group([Choice(60)])]), Group([Choice(0)])])
-replayed: (con (list integer) [55, 60])
-delete first element:
-value: (con (list integer) [60])
-consumed: Group([Group([Choice(1), Group([Choice(60)])]), Group([Choice(0)])])
-dependent original:
-value: (constr 0 (con integer 8) (con integer 6))
-consumed: Group([Group([Choice(7)]), Group([Choice(6)])])
-dependent bound reduced:
-rejected
-dependent both reduced:
-value: (constr 0 (con integer 3) (con integer 0))
-consumed: Group([Group([Choice(2)]), Group([Choice(0)])])
-missing child cannot borrow sibling:
-rejected
-unused children normalized:
-value: (constr 0 (con integer 8) (con integer 6))
-consumed: Group([Group([Choice(7)]), Group([Choice(6)])])
-list and sibling:
-value: (constr 0 (con (list integer) [8]) (con integer 42))
-consumed: Group([Group([Group([Choice(1), Group([Choice(8)])]), Group([Choice(0)])]), Group([Choice(42)])])
-shortened branch preserves sibling:
-value: (constr 0 (con (list integer) []) (con integer 42))
-consumed: Group([Group([Group([Choice(0)])]), Group([Choice(42)])])
-wrong node kind rejected:
-rejected
-missing stop cannot borrow sibling:
-rejected
+original: [Group([Choice(1), Choice(8)]), Group([Choice(42), Choice(9)])]
+reduced: [Group([Choice(0), Choice(0), Choice(0)]), Group([Choice(0)])]
+value: (con integer 0)

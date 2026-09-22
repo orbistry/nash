@@ -3,71 +3,14 @@ use std::{collections::BTreeMap, sync::Arc};
 use nash_codegen::build::{Build, Input, TraceConfig};
 use nash_driver::{Database, InMemorySource, build_graph, build_with};
 use nash_plutus::{
-    arena::Arena, binder::DeBruijn, constant::Constant, flat, machine::PlutusVersion, pretty,
-    term::Term,
+    arena::Arena, binder::DeBruijn, flat, machine::PlutusVersion, pretty, term::Term,
 };
 use tokio::sync::Mutex;
 use url::Url;
 
 const SOURCE: &str = include_str!("fixtures/NestedTrace.nash");
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum Trace {
-    Choice(u64),
-    Group(Vec<Trace>),
-}
-
-impl Trace {
-    fn to_term<'a>(&self, arena: &'a Arena) -> &'a Term<'a, DeBruijn> {
-        match self {
-            Self::Choice(n) => Term::constr(
-                arena,
-                0,
-                arena.alloc([Term::integer_from(arena, i128::from(*n))]),
-            ),
-            Self::Group(children) => {
-                let list = children
-                    .iter()
-                    .rev()
-                    .fold(Term::constr(arena, 0, &[]), |rest, child| {
-                        Term::constr(arena, 1, arena.alloc([child.to_term(arena), rest]))
-                    });
-                Term::constr(arena, 1, arena.alloc([list]))
-            }
-        }
-    }
-
-    fn from_term(term: &Term<'_, DeBruijn>) -> Self {
-        match term {
-            Term::Constr {
-                tag: 0,
-                fields: [Term::Constant(Constant::Integer(n))],
-            } => Self::Choice(u64::try_from(*n).unwrap()),
-            Term::Constr {
-                tag: 1,
-                fields: [list],
-            } => {
-                let mut children = Vec::new();
-                let mut cursor = *list;
-                loop {
-                    match cursor {
-                        Term::Constr { tag: 0, fields: [] } => break,
-                        Term::Constr {
-                            tag: 1,
-                            fields: [child, rest],
-                        } => {
-                            children.push(Self::from_term(child));
-                            cursor = rest;
-                        }
-                        _ => panic!("invalid trace list: {cursor:?}"),
-                    }
-                }
-                Self::Group(children)
-            }
-            _ => panic!("invalid trace: {term:?}"),
-        }
-    }
-}
+use nash_test::prng::Trace;
 
 async fn compile() -> BTreeMap<String, Vec<u8>> {
     let memory = InMemorySource::new();
@@ -93,7 +36,7 @@ async fn compile() -> BTreeMap<String, Vec<u8>> {
             .unwrap()
             .module
             .name;
-        ["generate", "replay", "dependent", "siblings"]
+        ["generate", "replay", "dependent", "siblings", "repartition"]
             .into_iter()
             .map(|name| {
                 let core = build
@@ -148,7 +91,7 @@ fn run<'a>(
                         fields: [value, trace],
                     },
                 ],
-        } => Some((value, Trace::from_term(trace))),
+        } => Some((value, Trace::from_term(trace).unwrap())),
         term => panic!("unexpected generator output: {term:?}"),
     }
 }
@@ -255,5 +198,39 @@ async fn nested_trace_generate_edit_replay() {
     }
     insta::with_settings!({description => SOURCE, omit_expression => true}, {
         insta::assert_snapshot!(output);
+    });
+}
+
+#[tokio::test]
+async fn nested_trace_reduction_repartitions_strict_groups() {
+    use Trace::{Choice as C, Group as G};
+    use nash_test::shrink::{Cache, Counterexample, Status};
+    let programs = compile().await;
+    let original = vec![G(vec![C(1), C(8)]), G(vec![C(42), C(9)])];
+    let oracle = |nodes: &[Trace]| {
+        let arena = Arena::new();
+        match run(
+            &arena,
+            &programs["repartition"],
+            G(nodes.to_vec()).to_term(&arena),
+        ) {
+            Some((value, G(used))) => Status::Keep(pretty::term(value), used),
+            None => Status::Invalid,
+            _ => panic!("expected root group"),
+        }
+    };
+    let mut reduced = Counterexample {
+        value: "(con integer 1)".to_owned(),
+        choices: original.clone(),
+        cache: Cache::new(oracle),
+        steps: 0,
+    };
+    reduced.simplify();
+    assert_eq!(
+        reduced.choices,
+        vec![G(vec![C(0), C(0), C(0)]), G(vec![C(0)])]
+    );
+    insta::with_settings!({description => SOURCE, omit_expression => true}, {
+        insta::assert_snapshot!(format!("original: {original:?}\nreduced: {:?}\nvalue: {}", reduced.choices, reduced.value));
     });
 }

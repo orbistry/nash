@@ -55,12 +55,15 @@ fn compile_selected(
         (
             indoc::indoc!(
                 r#"
-            module Prop exposing (type prng(..), type generator, constant, reject)
+            module Prop exposing (type prng(..), type generator, constant, reject, group)
             import Primitive exposing (..)
             import Builtin exposing (..)
             import Option exposing (type option(..))
-            type prng = Seeded bytes (list int) | Replayed (list int)
+            type nodes = Nil | Cons choiceTree nodes
+            type choiceTree = Choice int | Group nodes
+            type prng = Seeded bytes nodes | Replayed nodes nodes
             type alias generator 'a = prng -> option ('a, prng)
+            group generator state = generator state
             constant : 'a -> generator 'a
             constant value prng = Some (value, prng)
             reject : generator 'a
@@ -377,7 +380,7 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
         &arena,
         MachineVersion::V3,
         prepare,
-        &Prng::from_choices(&[]),
+        &Prng::from_trace(&[]),
         nash_plutus::machine::ExBudget::max(),
     )
     .unwrap()
@@ -433,7 +436,7 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
             &arena,
             MachineVersion::V3,
             prepare,
-            &Prng::from_choices(&[]),
+            &Prng::from_trace(&[]),
             nash_plutus::machine::ExBudget::max()
         )
         .unwrap()
@@ -495,7 +498,7 @@ fn rejected_generator_does_not_initialize_later_generators() {
         &arena,
         MachineVersion::V3,
         prepare,
-        Some(Prng::from_choices(&[]).to_term(&arena)),
+        Some(Prng::from_trace(&[]).to_term(&arena)),
     );
     assert!(matches!(
         evaluated.term.unwrap(),
