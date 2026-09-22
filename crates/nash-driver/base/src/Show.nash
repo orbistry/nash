@@ -98,9 +98,7 @@ impl (Show 'a, Show 'b) => Show (pair 'a 'b) where
 impl Show Data where
     show value =
         case value of
-            Constr pair(tag, fields) ->
-                Builtin.appendString "Constr "
-                    (Builtin.appendString (show tag) (Builtin.appendString " " (show fields)))
+            Constr payload -> Builtin.appendString "Constr " (show payload)
             Map entries -> Builtin.appendString "Map " (show entries)
             List values -> Builtin.appendString "List " (show values)
             I integer -> Builtin.appendString "I " (show integer)

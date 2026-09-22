@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-description: "prop \"name\" = let x fuzz in do"
+description: "prop \"name\" = let x generate in do"
 ---
 nash::syntax
 
   × Expected `via` after the input pattern.
    ╭─[src/Main.nash:1:21]
- 1 │ prop "name" = let x fuzz in do
+ 1 │ prop "name" = let x generate in do
    ·                     ─
    ╰────
-  help: Add `via` followed by the fuzzer expression.
+  help: Add `via` followed by the generator expression.

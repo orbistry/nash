@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-description: "prop \"name\" = let x via fuzz\nin do"
+description: "prop \"name\" = let x via generate\nin do"
 ---
 nash::syntax
 
   × Expected `in` after the generated inputs.
    ╭─[src/Main.nash:2:1]
- 1 │ prop "name" = let x via fuzz
+ 1 │ prop "name" = let x via generate
  2 │ in do
    · ─
    ╰────

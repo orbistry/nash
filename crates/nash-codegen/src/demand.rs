@@ -136,7 +136,7 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
             a.owner(owner, None, solved);
             let mut scope = env.clone();
             for binder in test.binders {
-                a.expr(binder.fuzzer, owner, &scope, solved);
+                a.expr(binder.generator, owner, &scope, solved);
                 bind(binder.pattern, None, &mut scope);
             }
             a.expr(test.body, owner, &scope, solved);

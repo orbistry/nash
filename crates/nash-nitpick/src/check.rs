@@ -36,7 +36,7 @@ pub fn check<'a>(bump: &'a Bump, module: &Module<'a>) -> Result<(), Vec<Error<'a
                 Context::BadDestruct,
                 &[binder.pattern],
             );
-            checker.expr(binder.fuzzer);
+            checker.expr(binder.generator);
         }
         checker.expr(test.body);
     }

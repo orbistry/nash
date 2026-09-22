@@ -91,7 +91,7 @@ base kinds or expose the removed kind-scheme API. In particular:
   superseded. Their old algorithms are not current implementation guidance.
 
 These are contract corrections for later work. Runtime/codegen, optimizer
-implementation, macros, default imports, Fuzz and the full validator example
+implementation, macros, default imports, Prop and the full validator example
 remain deferred. Trait search keeps its existing 128-level and 16,384-work
 limits; no Paterson restriction or new impl admission policy is introduced.
 

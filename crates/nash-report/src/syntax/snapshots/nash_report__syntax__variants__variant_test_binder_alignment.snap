@@ -1,14 +1,14 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-description: "prop \"name\" = let\n    x via fuzz\n  y via fuzz\n    in do"
+description: "prop \"name\" = let\n    x via generate\n  y via generate\n    in do"
 ---
 nash::syntax
 
   × Property input bindings must align.
    ╭─[src/Main.nash:3:3]
  1 │ prop "name" = let
- 2 │     x via fuzz
- 3 │   y via fuzz
+ 2 │     x via generate
+ 3 │   y via generate
    ·   ─
  4 │     in do
    ╰────

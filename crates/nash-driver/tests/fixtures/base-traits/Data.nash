@@ -1,0 +1,101 @@
+module Main exposing (..)
+
+type Token = Token Int
+bigBool : Bool
+bigBool = lift True
+bigUnit : Unit
+bigUnit = lift ()
+bigOrder : Ordering
+bigOrder = lift LT
+bigOption : Option Int
+bigOption = lift (Some 42)
+bigNone : Option Int
+bigNone = lift littleNone
+bigResult : Result Bytes Int
+bigResult = lift littleOk
+bigError : Result Bytes Int
+bigError = lift littleErr
+smallResult : result string int
+smallResult = lower bigResult
+smallError : result string int
+smallError = lower bigError
+bigList : List Int
+bigList = lift [1, 2]
+smallList : list int
+smallList = lower bigList
+reflexiveList : List Int
+reflexiveList = lift [Builtin.iData 1, Builtin.iData 2]
+nested : List (List Int)
+nested = lift [[1], [2]]
+smallNested : list (list int)
+smallNested = lower nested
+entries : list (pair Int Bytes)
+entries = [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa")]
+bigMap : Map Int Bytes
+bigMap = lift entries
+roundTripMap : list (pair Int Bytes)
+roundTripMap = lower bigMap
+utf8 : Bytes
+utf8 = lift "é"
+text : string
+text = lower utf8
+plainBytes : bytes
+plainBytes = lower utf8
+restored : Token
+restored = fromData (toData (Token 7))
+checkedInt : Int
+checkedInt = validate (I 42)
+checkedBytes : Bytes
+checkedBytes = validate (B #"aa")
+checkedList : List Int
+checkedList = validate (List [I 1, I 2])
+checkedMap : Map Int Bytes
+checkedMap = validate (Map [Builtin.mkPairData (I 1) (B #"aa")])
+checkInt : Data -> Int
+checkInt = validate
+checkList : Data -> List Int
+checkList = validate
+checkMap : Data -> Map Int Bytes
+checkMap = validate
+
+littleNone : option int
+littleNone = None
+expectedNone : Option Int
+expectedNone = Option.None
+littleOk : result string int
+littleOk = Ok 42
+littleErr : result string int
+littleErr = Err "bad"
+
+tests
+    test "primitive and twin lift" = do
+        assert (Builtin.unIData (lift 42) == 42)
+        assert (text == "é" && plainBytes == #"c3a9")
+        assert (bigBool == Bool.True)
+        assert (lower bigBool == True)
+        assert (lower bigUnit == ())
+        assert (lower bigOrder == LT)
+        assert (bigOption == Option.Some (Builtin.iData 42))
+        assert (lower bigOption == Some 42)
+        assert (bigNone == expectedNone)
+        assert (smallResult == Ok 42)
+        assert (smallError == Err "bad")
+    test "container lift and reflexive Big lift" = do
+        assert (smallList == [1, 2])
+        assert (bigList == reflexiveList)
+        assert (smallNested == [[1], [2]])
+        assert (roundTripMap == entries)
+        assert (lift (Token 7) == Token 7)
+    test "Data conversions and validation" = do
+        assert (restored == Token 7)
+        assert (Builtin.unIData checkedInt == 42)
+        assert (Builtin.unBData checkedBytes == #"aa")
+        assert (checkedList == bigList)
+        assert (checkedMap == bigMap)
+        assert (validate (I 1) == I 1)
+    test "reject malformed scalar" fail = do
+        assert (checkInt (B #"aa") == checkedInt)
+    test "reject malformed list element" fail = do
+        assert (checkList (List [B #"aa"]) == checkedList)
+    test "reject malformed map value" fail = do
+        assert (checkMap (Map [Builtin.mkPairData (I 1) (I 2)]) == checkedMap)

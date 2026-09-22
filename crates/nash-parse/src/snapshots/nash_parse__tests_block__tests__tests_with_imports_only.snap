@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
-description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    import Fuzz exposing (int)\n"
+description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    import Prop exposing (int)\n"
 ---
 Module {
     kind: Normal,
@@ -65,7 +65,7 @@ Module {
                                 column: 16,
                             },
                         },
-                        value: "Fuzz",
+                        value: "Prop",
                     },
                     alias: None,
                     exposing: Explicit(

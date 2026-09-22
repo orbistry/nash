@@ -71,7 +71,7 @@ pub enum Status {
 pub enum Failure {
     Body,
     BudgetExceeded { limit: Budget, used: ExBudget },
-    Fuzzer { message: String },
+    Generator { message: String },
     NoCounterexample,
     InvalidProgram { message: String },
 }

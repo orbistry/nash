@@ -64,7 +64,7 @@ fn draw(
 ) -> Result<(Prng, Vec<String>), Failure> {
     match eval::run_draw_with_budget(version, bytes, prng, machine_budget) {
         Ok(Drawn::Some { prng, shown }) => Ok((prng, shown)),
-        Ok(Drawn::None) => Err(Failure::Fuzzer {
+        Ok(Drawn::None) => Err(Failure::Generator {
             message: "generator returned None on a seeded run".into(),
         }),
         Err(failure) => Err(failure),
@@ -143,14 +143,14 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             Ok(term) => match eval::decode_ran(term) {
                 Ok(Ran::Some(p)) => Some(p),
                 Ok(Ran::None) => {
-                    out.status = Status::Fail(Failure::Fuzzer {
+                    out.status = Status::Fail(Failure::Generator {
                         message: "generator returned None on a seeded run".into(),
                     });
                     record(&mut out, logs);
                     return out;
                 }
                 Err(message) => {
-                    out.status = Status::Fail(Failure::Fuzzer { message });
+                    out.status = Status::Fail(Failure::Generator { message });
                     record(&mut out, logs);
                     return out;
                 }

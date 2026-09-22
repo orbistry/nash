@@ -390,7 +390,7 @@ fn to_expr_report(
                 Context::RecordField(name, field) => format!("field `{field}` of `{name}`"),
                 Context::Destructure => "destructuring pattern".into(),
                 Context::TestBody => "test body (which must return unit)".into(),
-                Context::TestGenerator => "property generator (which must be a fuzzer)".into(),
+                Context::TestGenerator => "property generator (which must be a generator)".into(),
             };
             (*surroundings, label, *expected, hint)
         }

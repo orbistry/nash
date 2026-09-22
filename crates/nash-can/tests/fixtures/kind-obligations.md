@@ -52,7 +52,7 @@ with `KindMismatch` in the old engine. Haskell 98 rejects `s` itself with
 `KindInfinite`, independently of its uses.
 Control: the arity-2 cousin `type s 'f 'a = S ('f 'f 'a)` terminates at both `s s` and `s s tag`.
 
-## All 19 fuzz hits
+## All 19 generate hits
 
 ```
 module Main exposing (..)

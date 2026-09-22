@@ -110,7 +110,7 @@ pub(crate) fn run_draw_with_budget(
     }
     ev.term
         .and_then(decode_drawn)
-        .map_err(|message| Failure::Fuzzer { message })
+        .map_err(|message| Failure::Generator { message })
 }
 fn decode_drawn(term: &Term<'_, DeBruijn>) -> Result<Drawn, String> {
     match term {

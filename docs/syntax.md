@@ -288,7 +288,7 @@ further than the enclosing block.
 
 ```elm
 do
-    x <- fuzz int
+    x <- generate int
     label "small"
     assert (x < 100)
 ```
@@ -366,7 +366,7 @@ special grammar.
 
 ```elm
 tests
-    import Fuzz exposing (int, listOf)
+    import Prop exposing (int, listOf)
 
     test "lt is strict" = do
         assert (not (lt 1 1))
@@ -415,7 +415,7 @@ tests
   error (`Test::OnceOnUnitTest`): `once` only makes sense for a property
   test, which runs many times.
 - The `prop` body is `let binders in do block`. Binders are
-  `pattern via expression` where the expression has type `fuzzer 'a`. The
+  `pattern via expression` where the expression has type `generator 'a`. The
   `do` after `in` is the sequencing block above. `prop` without a
   `via`-let is an error (use `test`), and `test` with one is an error (use
   `prop`).

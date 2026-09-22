@@ -20,7 +20,7 @@ Big Lift, superclass proofs, independent instantiation and dictionary slot order
 remain part of this plan's acceptance contract.
 
 Default imports remain Plan 12. Runtime/codegen, optimizer implementation,
-Fuzz and the full validator example retain their approved later-plan deferrals.
+Prop and the full validator example retain their approved later-plan deferrals.
 Builtin pair has no Functor impl; builtin list has neither Applicative nor Monad.
 The shipping hierarchy includes option/result do and mapping between different
 representations wherever the inferred constructor contexts permit it.
@@ -2668,7 +2668,7 @@ reports the right errors.
 Builtin pair has no Functor impl; its projection and Data-only construction
 helpers remain. Default imports are deferred to Plan 12, with explicit
 imports for Plan 03 acceptance. Do not add partial defaults or placeholders.
-Fuzzer impls land with the real Fuzz implementation after Plan 10. The full
+Generator impls land with the real Prop implementation after Plan 10. The full
 overview validator example is a later integration check because it needs
 Cardano modules, deriving, and the deferred defaults; it is not a Plan 03
 completion gate. Plan 03 must verify the shipping trait hierarchy, operators,
@@ -2683,7 +2683,7 @@ declarations with explicit imports. Remaining requirements are:
 | Requirement | Current evidence / remaining work |
 |---|---|
 | Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses disjoint Big/Const element bounds. |
-| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option/result; Applicative/Monad support option/result. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Fuzzer impls are deferred with the real Fuzz implementation. |
+| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option/result; Applicative/Monad support option/result. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Generator impls are deferred with the real Prop implementation. |
 | Core option do acceptance | The real core fixture compiles option and result do blocks, operator calls, mixed-kind builtin list mapping and List Int to List Packet mapping. Runtime execution remains a backend prerequisite. |
 | Default imports | User-approved deferral to Plan 12. Explicit imports are required for Plan 03. Eventual defaults must participate in dependency discovery before sequential compilation. |
 | Overview example up to tests | Later integration requirement: Cardano.Tx, deriving, field access, validator features and defaults require later work; the sketch also has undefined currentSlot/signedBy. Plan 03 acceptance uses the real core fixture with explicit imports. |
@@ -2741,7 +2741,7 @@ modules and 202 declarations. A separate CLI workspace rejects list do with
 both missing Applicative and Monad diagnostics, and rejects list mapping to
 a tuple with BadKind at map. These checks establish type checking and
 evidence selection, not runtime behavior. Pair helpers subsequently landed;
-pair Functor was removed, and Fuzz/default imports are explicitly deferred.
+pair Functor was removed, and Prop/default imports are explicitly deferred.
 
 Status: complete under the approved scope above. The following entries are
 historical implementation steps; their intermediate counts and pending items

@@ -242,7 +242,7 @@ pub(super) fn to_test_report(source: &Source<'_>, error: &Test<'_>, sr: Row, sc:
         Test::Pattern(e, r, c) => {
             return pattern::to_pattern_report(source, pattern::PContext::Let, e, r, c);
         }
-        Test::Fuzzer(e, r, c) => {
+        Test::Generator(e, r, c) => {
             return expr::to_expr_report(source, expr::Context::InDestruct(sr, sc), e, r, c);
         }
         Test::NameStart(r, c) | Test::IndentName(r, c) => problem(
@@ -300,14 +300,14 @@ pub(super) fn to_test_report(source: &Source<'_>, error: &Test<'_>, sr: Row, sc:
             r,
             c,
             "Expected generated inputs for the property.",
-            "Write `let pattern via fuzzer` before `in`.",
+            "Write `let pattern via generator` before `in`.",
         ),
         Test::Via(r, c) => problem(
             "MISSING VIA",
             r,
             c,
             "Expected `via` after the input pattern.",
-            "Add `via` followed by the fuzzer expression.",
+            "Add `via` followed by the generator expression.",
         ),
         Test::In(r, c) | Test::IndentIn(r, c) => problem(
             "MISSING IN",

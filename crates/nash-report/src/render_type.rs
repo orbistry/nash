@@ -238,18 +238,18 @@ mod tests {
     }
     #[test]
     fn narrow_application() {
-        insta::assert_snapshot!(apply(Ctx::None,Doc::text("Container"),vec![Doc::text("LongArgument")]).render(12,false), @r"
-Container
-    LongArgument
-");
+        insta::assert_snapshot!(apply(Ctx::None,Doc::text("Container"),vec![Doc::text("LongArgument")]).render(12,false), @r###"
+        Container
+            LongArgument
+        "###);
     }
     #[test]
     fn vertical_snippet() {
-        insta::assert_snapshot!(vrecord_snippet((Doc::text("x"),variable("a")),vec![]).render(80,false), @r"
-{ x : 'a
-, ...
-}
-");
+        insta::assert_snapshot!(vrecord_snippet((Doc::text("x"),variable("a")),vec![]).render(80,false), @r###"
+        { x : 'a
+        , ...
+        }
+        "###);
     }
     #[test]
     fn source_type_shapes() {

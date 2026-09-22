@@ -1462,7 +1462,7 @@ fn variant_test_let() {
 
 #[test]
 fn variant_test_pattern() {
-    let input = "prop \"name\" = let ) via fuzz in do";
+    let input = "prop \"name\" = let ) via generate in do";
     let source = Source::new(input);
     let error = Test::Pattern(&Pattern::Start(1, 19), 1, 19);
     let report = module::to_test_report(&source, &error, 1, 1);
@@ -1473,7 +1473,7 @@ fn variant_test_pattern() {
 
 #[test]
 fn variant_test_via() {
-    let input = "prop \"name\" = let x fuzz in do";
+    let input = "prop \"name\" = let x generate in do";
     let source = Source::new(input);
     let error = Test::Via(1, 21);
     let report = module::to_test_report(&source, &error, 1, 1);
@@ -1483,10 +1483,10 @@ fn variant_test_via() {
 }
 
 #[test]
-fn variant_test_fuzzer() {
+fn variant_test_generator() {
     let input = "prop \"name\" = let x via ) in do";
     let source = Source::new(input);
-    let error = Test::Fuzzer(&Expr::Start(1, 25), 1, 25);
+    let error = Test::Generator(&Expr::Start(1, 25), 1, 25);
     let report = module::to_test_report(&source, &error, 1, 1);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
@@ -1495,7 +1495,7 @@ fn variant_test_fuzzer() {
 
 #[test]
 fn variant_test_in() {
-    let input = "prop \"name\" = let x via fuzz do";
+    let input = "prop \"name\" = let x via generate do";
     let source = Source::new(input);
     let error = Test::In(1, 30);
     let report = module::to_test_report(&source, &error, 1, 1);
@@ -1539,7 +1539,7 @@ fn variant_test_indent_body() {
 
 #[test]
 fn variant_test_indent_binder() {
-    let input = "prop \"name\" = let\nx via fuzz in do";
+    let input = "prop \"name\" = let\nx via generate in do";
     let source = Source::new(input);
     let error = Test::IndentBinder(2, 1);
     let report = module::to_test_report(&source, &error, 1, 1);
@@ -1550,7 +1550,7 @@ fn variant_test_indent_binder() {
 
 #[test]
 fn variant_test_indent_in() {
-    let input = "prop \"name\" = let x via fuzz\nin do";
+    let input = "prop \"name\" = let x via generate\nin do";
     let source = Source::new(input);
     let error = Test::IndentIn(2, 1);
     let report = module::to_test_report(&source, &error, 1, 1);
@@ -1561,7 +1561,7 @@ fn variant_test_indent_in() {
 
 #[test]
 fn variant_test_binder_alignment() {
-    let input = "prop \"name\" = let\n    x via fuzz\n  y via fuzz\n    in do";
+    let input = "prop \"name\" = let\n    x via generate\n  y via generate\n    in do";
     let source = Source::new(input);
     let error = Test::BinderAlignment(5, 3, 3);
     let report = module::to_test_report(&source, &error, 1, 1);

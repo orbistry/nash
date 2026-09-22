@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
-description: "Code:\n\nvalidator module Vesting exposing (main)\n\nimport Cardano.Tx exposing (Tx, Output)\n\ntype Datum = Datum { owner : Bytes, deadline : Int }\n\ntype step 'a = Done 'a | Next int 'a\n\ntype alias acc = { total : int, seen : list Int }\n\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a -> ordering\n\n    lt : 'a -> 'a -> bool\n    lt a b = compare a b == LT\n\nimpl Ord int where\n    compare = Builtin.compareInteger\n\n@derive(Eq, Show, ToData, FromData)\ntype Redeemer = Claim | Cancel\n\nmain : Datum -> Redeemer -> Data -> unit\nmain datum redeemer ctx =\n    case redeemer of\n        Claim -> assert (lower datum.deadline < currentSlot ctx)\n        Cancel -> assert (signedBy ctx datum.owner)\n\ntests\n    import Fuzz exposing (int, listOf)\n\n    test \"lt is strict\" = do\n        assert (not (lt 1 1))\n\n    prop \"compare is antisymmetric\" =\n        let\n            a via int\n            b via int\n        in\n        do\n            label (if a < b then \"lt\" else \"ge\")\n            assert (compare a b == invert (compare b a))\n\n    prop \"division by zero fails\" fail =\n        let x via int in\n        do\n            assert (x / 0 == 0)\n"
+description: "Code:\n\nvalidator module Vesting exposing (main)\n\nimport Cardano.Tx exposing (Tx, Output)\n\ntype Datum = Datum { owner : Bytes, deadline : Int }\n\ntype step 'a = Done 'a | Next int 'a\n\ntype alias acc = { total : int, seen : list Int }\n\ntrait Eq 'a => Ord 'a where\n    compare : 'a -> 'a -> ordering\n\n    lt : 'a -> 'a -> bool\n    lt a b = compare a b == LT\n\nimpl Ord int where\n    compare = Builtin.compareInteger\n\n@derive(Eq, Show, ToData, FromData)\ntype Redeemer = Claim | Cancel\n\nmain : Datum -> Redeemer -> Data -> unit\nmain datum redeemer ctx =\n    case redeemer of\n        Claim -> assert (lower datum.deadline < currentSlot ctx)\n        Cancel -> assert (signedBy ctx datum.owner)\n\ntests\n    import Prop exposing (int, listOf)\n\n    test \"lt is strict\" = do\n        assert (not (lt 1 1))\n\n    prop \"compare is antisymmetric\" =\n        let\n            a via int\n            b via int\n        in\n        do\n            label (if a < b then \"lt\" else \"ge\")\n            assert (compare a b == invert (compare b a))\n\n    prop \"division by zero fails\" fail =\n        let x via int in\n        do\n            assert (x / 0 == 0)\n"
 ---
 Module {
     kind: Validator(
@@ -1909,7 +1909,7 @@ Module {
                                 column: 16,
                             },
                         },
-                        value: "Fuzz",
+                        value: "Prop",
                     },
                     alias: None,
                     exposing: Explicit(
@@ -2147,7 +2147,7 @@ Module {
                                                 "a",
                                             ),
                                         },
-                                        fuzzer: Located {
+                                        generator: Located {
                                             region: Region {
                                                 start: Position {
                                                     line: 37,
@@ -2192,7 +2192,7 @@ Module {
                                                 "b",
                                             ),
                                         },
-                                        fuzzer: Located {
+                                        generator: Located {
                                             region: Region {
                                                 start: Position {
                                                     line: 38,
@@ -2636,7 +2636,7 @@ Module {
                                                 "x",
                                             ),
                                         },
-                                        fuzzer: Located {
+                                        generator: Located {
                                             region: Region {
                                                 start: Position {
                                                     line: 45,

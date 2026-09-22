@@ -701,15 +701,15 @@ impl<'a> Solver<'a, '_> {
                     let mut patterns = Vec::new();
                     for binder in test.binders {
                         let element = self.fresh(uf, young);
-                        let fuzzer = self.structure(
+                        let generator = self.structure(
                             uf,
                             young,
                             FlatType::App1(
                                 nash_ast::ModuleName {
                                     package: Some(nash_ast::primitives::BASE),
-                                    name: "Fuzz",
+                                    name: "Prop",
                                 },
-                                "fuzzer",
+                                "generator",
                                 vec![element],
                             ),
                         );
@@ -719,11 +719,11 @@ impl<'a> Solver<'a, '_> {
                             young,
                             state,
                             &Rtv::new(),
-                            binder.fuzzer,
+                            binder.generator,
                             Expected::FromContext(
-                                binder.fuzzer.region,
+                                binder.generator.region,
                                 Context::TestGenerator,
-                                fuzzer,
+                                generator,
                             ),
                         );
                         patterns.push((binder.pattern, PExpected::NoExpectation(element)));

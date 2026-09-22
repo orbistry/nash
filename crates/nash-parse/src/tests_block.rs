@@ -224,14 +224,14 @@ impl<'a> Parser<'a> {
         self.chomp_and_check_indent(TestErr::Space, TestErr::Via)?;
         self.keyword_via(TestErr::Via)?;
         self.chomp_and_check_indent(TestErr::Space, TestErr::IndentBinder)?;
-        let (fuzzer, end) = self.specialize(
-            |bump, error, row, col| TestErr::Fuzzer(bump.alloc(error), row, col),
+        let (generator, end) = self.specialize(
+            |bump, error, row, col| TestErr::Generator(bump.alloc(error), row, col),
             |parser| parser.expression(),
         )?;
         Ok((
             self.alloc(Located::at(
                 Region::new(start, end),
-                ViaBinder { pattern, fuzzer },
+                ViaBinder { pattern, generator },
             )),
             end,
         ))
@@ -295,7 +295,7 @@ mod tests {
             main = 1
 
             tests
-                import Fuzz exposing (int, listOf)
+                import Prop exposing (int, listOf)
 
                 test "lt is strict" = do
                     assert (not (lt 1 1))
@@ -346,7 +346,7 @@ mod tests {
             module Main exposing (..)
 
             tests
-                import Fuzz exposing (int)
+                import Prop exposing (int)
         "#
         );
     }
@@ -542,7 +542,7 @@ mod tests {
                     Cancel -> assert (signedBy ctx datum.owner)
 
             tests
-                import Fuzz exposing (int, listOf)
+                import Prop exposing (int, listOf)
 
                 test "lt is strict" = do
                     assert (not (lt 1 1))

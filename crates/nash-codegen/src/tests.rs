@@ -189,11 +189,11 @@ impl<'a> Engine<'a, '_, '_> {
                 Ok(self.ir.let_(unit, body, self.ir.constr(0, &[prng])))
             };
         };
-        let fuzzer = self.expr(binder.fuzzer, ctx)?;
-        let (fuzzer_tag, some_tag, none_tag, function_ty, tuple_ty) =
-            self.fuzzer_layout(binder, ctx)?;
+        let generator = self.expr(binder.generator, ctx)?;
+        let (generator_tag, some_tag, none_tag, function_ty, tuple_ty) =
+            self.generator_layout(binder, ctx)?;
         let function = Binder {
-            name: self.ir.fresh("fuzzer"),
+            name: self.ir.fresh("generator"),
             ty: function_ty,
         };
         let tuple = Binder {
@@ -282,9 +282,9 @@ impl<'a> Engine<'a, '_, '_> {
         );
         Ok(self.ir.case(
             CaseKind::Tag,
-            fuzzer,
+            generator,
             &[Branch {
-                test: Test::Tag(fuzzer_tag),
+                test: Test::Tag(generator_tag),
                 binders: self.ir.arena.alloc_slice_copy(&[function]),
                 body: sampled,
             }],
@@ -294,19 +294,19 @@ impl<'a> Engine<'a, '_, '_> {
 
     /// Validate and obtain constructor tags from the actual standard-library
     /// metadata, including its native option and tuple representation.
-    fn fuzzer_layout(
+    fn generator_layout(
         &mut self,
         binder: &ViaBinder<'a>,
         ctx: &Context<'a>,
     ) -> Result<(u16, u16, u16, Ty<'a>, Ty<'a>), crate::build::Error<'a>> {
         use crate::build::Error as E;
-        let ty = self.ty(NodeId::expr(binder.fuzzer), ctx)?;
+        let ty = self.ty(NodeId::expr(binder.generator), ctx)?;
         let Ty::Term(TermTy::Adt(adt)) = ty else {
             return Err(E::RuntimeLayout(ty));
         };
         if adt.name.home.package != Some(primitives::BASE)
-            || adt.name.home.name != "Fuzz"
-            || adt.name.name != "fuzzer"
+            || adt.name.home.name != "Prop"
+            || adt.name.name != "generator"
         {
             return Err(E::InvalidConstructor);
         }
@@ -318,9 +318,9 @@ impl<'a> Engine<'a, '_, '_> {
         let [constructor] = union.ctors else {
             return Err(E::InvalidConstructor);
         };
-        let fuzzer_tag = constructor.index;
+        let generator_tag = constructor.index;
         let fields = self.types.layout(*adt)?;
-        let [function] = fields[fuzzer_tag as usize] else {
+        let [function] = fields[generator_tag as usize] else {
             return Err(E::InvalidConstructor);
         };
         let Ty::Term(TermTy::Fun(_, Ty::Term(TermTy::Adt(option)))) = function else {
@@ -347,7 +347,7 @@ impl<'a> Engine<'a, '_, '_> {
         let [tuple @ Ty::Term(TermTy::Tuple([_, _]))] = fields[some as usize] else {
             return Err(E::InvalidConstructor);
         };
-        Ok((fuzzer_tag, some, none, *function, *tuple))
+        Ok((generator_tag, some, none, *function, *tuple))
     }
 }
 

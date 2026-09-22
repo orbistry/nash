@@ -24,9 +24,9 @@ and diagnostics, not the constraint-generation pipeline in the former sketches.
 its callback returns an owned result. Extend these APIs rather than replacing
 them with the former `CompileMode`, retained-store, or optimizer sketches.
 
-`Fuzz` and `Test` are now implemented in core. This plan owns the minimum real modules
+`Prop` and `Test` are now implemented in core. This plan owns the minimum real modules
 needed for executable properties, labels and assertion failures, including the
-fuzzer trait instances and useful primitive/composite generators. Plan 12 owns
+generator trait instances and useful primitive/composite generators. Plan 12 owns
 remaining stdlib expansion. Use the existing Option, Lift, Show, Functor,
 Applicative and Monad APIs. `Applicative`'s method is `apply`.
 
@@ -46,7 +46,7 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 
 ## 2. Type inference and pattern checks
 
-- [x] Infer generators as `Fuzz.fuzzer 'a`, bind patterns to each generated type,
+- [x] Infer generators as `Prop.generator 'a`, bind patterns to each generated type,
   and check body/result types in the existing direct solver.
 - [x] Preserve per-node solved types, schemes and use-site evidence needed by
   codegen. Tests must not leak declarations into module interfaces.
@@ -80,7 +80,7 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 
 ## 5. Core support, PRNG and evaluation
 
-- [x] Implement real core Fuzz and Test modules and the required fuzzer trait
+- [x] Implement real core Prop and Test modules and the required generator trait
   instances. Imports remain explicit. Keep reserved Test traces independent of
   user trace suppression.
 - [x] Seed with Blake2b-256 of u32 big-endian bytes. Thread the 32-byte seed and
@@ -112,7 +112,7 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 ## 7. Runner
 
 - [x] Implement unit pass/fail and property pass/fail/fail-once semantics.
-- [x] Seeded generator error or None always fails as a fuzzer error. Recover PRNG
+- [x] Seeded generator error or None always fails as a generator error. Recover PRNG
   state with draw on the original input after expected body errors under `fail`.
 - [x] Enforce per-iteration budgets independently of expected body failures;
   report componentwise maxima from seeded runs, excluding shrinking/recovery.

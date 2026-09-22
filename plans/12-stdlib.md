@@ -3,7 +3,7 @@
 Goal: write `crates/nash-driver/base/` in Nash per [docs/stdlib.md](../docs/stdlib.md) and
 wire it into the compiler: embedded package, default imports, the
 synthetic `Builtin` module, the trait modules and twin types, the type
-modules, decoders, `Fuzz`, `Test`, `Ast`, `Cardano.*`.
+modules, decoders, `Prop`, `Test`, `Ast`, `Cardano.*`.
 
 Prerequisites, by chunk (each chunk's Nash must type-check with the
 compiler features available when it lands):
@@ -14,7 +14,7 @@ compiler features available when it lands):
 | 4 kinds-aware twin types | plans/02 (kinds) |
 | 5 trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` | plans/03 (traits; chunk 12 there is this chunk's file list) |
 | 6 type modules, 7 `Data`/`Map` modules | plans/03; `Data` patterns from data.md |
-| 8 `Fuzz`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `Prng` protocol, runner) |
+| 8 `Prop`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `Prng` protocol, runner) |
 | 10 `Ast`, `Derive` | plans/11 chunk 4 (tags) and chunk 10 |
 | 11 `Cardano.*` | chunk 7 |
 
@@ -35,7 +35,7 @@ References:
 - Aiken: `crates/aiken-lang/src/builtins.rs` (`from_default_function`,
   `prelude`, the builtin type table), `crates/aiken-project/src/lib.rs`
   (stdlib is a normal dependency; we embed instead), Aiken stdlib
-  `aiken-lang/stdlib` for API shape (`list`, `option`, `cbor`, `fuzz`).
+  `aiken-lang/stdlib` for API shape (`list`, `option`, `cbor`, and generation helpers).
 - Current code: `crates/nash-can/src/environment/foreign.rs:18`
   (`create_initial_env`, the `List` pre-seed at :34),
   `crates/nash-driver/src/project.rs:70` (`discover_modules`),
@@ -49,13 +49,13 @@ uppercase Big.
 
 ---
 
-Plan 10 implements the minimum `Fuzz` and `Test` modules required by its runner.
+Plan 10 implements the minimum `Prop` and `Test` modules required by its runner.
 Chunks 8 and 9 here extend and verify those modules; they must not duplicate or
 replace the tested PRNG, replay, label, and assertion protocols.
 
 ## Current status
 
-Reconciled against the checkout after `bfb38fbc` (2026-09-19). Base currently
+Reconciled with chunk 5 completion (2026-09-20). Base currently
 ships 24 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
@@ -64,15 +64,15 @@ ships 24 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 2 default imports | complete for shipped modules | extend catalog as modules land |
 | 3 Primitive / Builtin | complete | none |
 | 4 twin types | complete | none; helper APIs belong to chunks 5–6 |
-| 5 traits / operators | mostly implemented | Debug module and full planned API/test coverage |
+| 5 traits / operators | complete | none |
 | 6 type modules | partial | Int, Bytes, String, List; complete existing helper APIs |
 | 7 Data / Map | partial | Data.Decode, Data.Encode, Map APIs |
-| 8 Fuzz | implemented foundation from Plan 10 | audit full planned API and property coverage |
+| 8 Prop | implemented foundation from Plan 10 | audit full planned API and property coverage |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
 | 10 Ast / Derive | not implemented | requires Plan 11 |
 | 11 Cardano | not implemented in Base | library modules and ledger golden tests |
 
-Latest full validation: 3,372 tests passed, 3 ignored; strict Clippy passed.
+Latest full validation: 3,386 tests passed, 3 ignored; strict Clippy passed.
 Tests use compiler libraries and the evaluator, never a Nash CLI subprocess.
 
 ## Chunk 1: package skeleton and embedding — complete
@@ -135,26 +135,24 @@ Further helper functions and trait API coverage belong to chunks 5–6.
 
 ---
 
-## Chunk 5: trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` — mostly implemented
+## Chunk 5: trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` — complete
 
 - [x] Ship the trait modules, literal instances, Prelude operators/helpers,
   tuple Eq/Ord/Show instances through arity four, and lazy boolean lowering.
 - [x] Ship Lift instances, blanket Big ToData/FromData, and opt-in Validate.
   Map Lift explicitly requires Big keys and values; native pair components
   are rejected. Pair destructuring uses native UPLC case.
-- [ ] Add `Debug.nash` and verify its trace/failure semantics.
-- [ ] Audit all planned instances and executable tests against docs/stdlib.md.
+- [x] Verify native `trace`, `todo`, and `fail` semantics at verbose and silent trace levels; no redundant Debug module.
+- [x] Audit planned instances and execute embedded Base trait/operator tests through compiler libraries.
 
-The remaining design below is a target, not a claim that every API exists.
+The implemented structure and executable coverage are listed below.
 
 **Files**
 
-- `crates/nash-driver/base/src/Eq.nash`, `Ord.nash`, `Show.nash`, `Num.nash`, `Integral.nash`, `Semigroup.nash`, `Monoid.nash`, `Functor.nash`, `Applicative.nash`, `Monad.nash`, `Lift.nash`, `Data.nash`, `Literal.nash` (new; the file list of plans/03 chunk 12)
+- `crates/nash-driver/base/src/Eq.nash`, `Ord.nash`, `Show.nash`, `Num.nash`, `Integral.nash`, `Semigroup.nash`, `Monoid.nash`, `Functor.nash`, `Applicative.nash`, `Monad.nash`, `Lift.nash`, `Data.nash`, `Literal.nash`
 - `crates/nash-driver/base/src/Prelude.nash` (the `infix` table and the tuple impls)
 - `crates/nash-driver/base/src/Bool.nash` (`not`, `and`, `or`, `xor`)
-- `crates/nash-driver/base/src/Debug.nash` (new)
 - `crates/nash-driver/base/src/Option.nash`, `Result.nash`, `Ordering.nash` (their `Eq`/`Functor`/`Applicative`/`Monad`/`Lift` impls)
-- `crates/nash-can/src/environment/foreign.rs` (lazy `and`/`or` special case marker)
 - `crates/nash-codegen/src/can_to_core.rs` (plans/07: `Bool.and`/`or` delay the second argument)
 
 **Change**
@@ -164,48 +162,25 @@ with the impls for compiler-known types listed in docs/stdlib.md "Trait
 modules"; `Lift.nash` holds representation.md's impl table (the reflexive
 `Big 'a => Lift 'a 'a` is compiler-provided and not written); `Prelude`
 gets the `infix` table, the operator helper functions, and the tuple
-impls; `Bool` gets the `bool` functions; `Debug` gets `trace` and `todo`
-using Nash trace/failure syntax; failure uses `fail "message"` directly. Impls for the twin types go in
+impls; `Bool` gets the `bool` functions; tracing and failure use native
+`trace`, `todo`, and `fail` syntax directly. Impls for the twin types go in
 the twin's module.
 
-**Code**
+`trace`, `todo`, and `fail` are reserved expression syntax, not module
+functions. Tests verify returned values, trace ordering before failure,
+and silent trace removal. Builtin contains only actual Plutus builtins.
 
-`crates/nash-driver/base/src/Debug.nash`:
-
-```elm
-module Debug exposing (trace, todo)
-
-import Builtin
-
-trace : string -> 'a -> 'a
-trace = Builtin.trace
-
-todo : string -> 'a
-todo msg = fail (Builtin.appendString "TODO: " msg)
-```
-
-Failure uses Nash syntax, and identity is an ordinary Nash function. The
-Builtin table contains only actual UPLC DefaultFunction operations.
-
-Dependency outline (Base modules use explicit imports; preserve the existing
-acyclic graph when adding modules):
-
-```
-Builtin
-  └─ Eq ─ Ord          Show      Num ─ Integral      Semigroup ─ Monoid
-     Functor ─ Applicative ─ Monad
-     Lift             Data (ToData/FromData/Validate)          Literal
-Bool, Unit                              (types only; `Bool` functions use `if`)
-Prelude                                 (imports every trait module and Bool)
-Option, Result, Ordering                (explicit trait imports; avoid Prelude cycles)
-List, Int, Bytes, String, Map, ...      (import Prelude for operators; chunks 6–7)
-```
+Base modules use explicit imports. Preserve the acyclic bootstrap chain:
+`Lift` imports `Ordering`, which imports `Eq`. `Prelude` imports its required
+traits and `Bool`; the application default-import catalog independently
+exposes all shipped traits. Later type modules may import `Prelude` for
+operators without adding reverse dependencies.
 
 `crates/nash-driver/base/src/Functor.nash` carries `impl Functor list` with a local
 recursive `mapList`; chunk 6's `List.map` is `Functor.map` specialized at
 `list`, so `List` imports `Functor`, never the other way round.
 
-`crates/nash-driver/base/src/Prelude.nash` is docs/stdlib.md "Prelude" verbatim: the `infix`
+`crates/nash-driver/base/src/Prelude.nash` provides the documented `infix`
 block (`infix non 4 (==) = eq`, `infix left 6 (+) = add`,
 `infix left 7 (/) = div`, `infix right 5 (::) = prepend`, ...), `identity`,
 `always`, `applyForward`, `applyBackward`, `composeLeft`, `composeRight`,
@@ -217,19 +192,21 @@ rule).
 
 Lazy `and`/`or`: codegen recognizes `VarForeign { home: Bool, name: "and" | "or" }`
 in call position with two arguments and emits `if a then b else False`
+for `and`, or `if a then True else b` for `or`,
 directly (the `if` is already lazy). Partial applications of `and` fall
 back to the strict function.
 
 **Elm/Aiken reference**
 
-Elm `crates/nash-driver/base/src/Basics.elm` for the operator table, precedences, and
+Elm `Basics.elm` for the operator table, precedences, and
 `&&`/`||` (Elm's compiler special-cases them in `Optimize/Expression.hs`).
 Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 `ToData`-like `Data` conversions (`builtins::data`).
 
 **Tests**
 
-- `crates/nash-driver/base/src/Prelude.nash` `tests` block (runs after plans/10): `1 + 2 == 3`, `compare 1 2 == LT`, `lift 1 == (1 : Int)`, `lower (lift "a" : Bytes) == "a"`, `Some 1 == Some 1` and `Option.Some (lift 1) == Option.Some (lift 1)`, `[1,2] ++ [3] == [1,2,3]`, `fail` raises (`test "fail fails" fail = do fail "x"`).
+- `crates/nash-driver/tests/base_traits.rs` compiles and evaluates seven import-free Nash fixtures against embedded Base. Snapshots record Nash source and outcomes for equality/ordering, numeric/literal traits, Show, semigroup/monoid, functor/applicative/monad, Lift/Data, and Prelude/native debugging syntax. The debugging fixture also runs with silent traces.
+- Named and operator boolean calls preserve laziness in ordinary expressions and assertions; partial applications remain strict.
 - nash-can/nash-solve: `1 + 2` resolves to `Num int`; `(1 : Int) + 2` resolves `Num Int` with the literal at `Int` via `FromInt Int`; `lift [1, 2] : List Int` resolves `Lift (list int) (List Int)` through `Lift int Int`; `lift ([] : list Int) : List Int` resolves the element through the reflexive impl.
 - codegen: `False && fail "x"` evaluates to `False` (laziness).
 
@@ -451,9 +428,9 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 
 ---
 
-## Chunk 8: `Fuzz` — foundation implemented through Plan 10
+## Chunk 8: `Prop` — foundation implemented through Plan 10
 
-- [x] Ship Prng/fuzzer types, choice bounds, seeded draws and validated replay.
+- [x] Ship Prng/generator types, choice bounds, seeded draws and validated replay.
 - [x] Ship Functor/Applicative/Monad, run, constant, intBetween, int, listOf,
   listBetween, tuple2, oneOf, bytes, map and bind.
 - [x] Test Nash generators against the Rust runner and replay protocol in
@@ -465,20 +442,20 @@ Extend the existing implementation; do not replace its tested protocol.
 
 **Files**
 
-- `crates/nash-driver/base/src/Fuzz.nash`
+- `crates/nash-driver/base/src/Prop.nash`
 - `crates/nash-test/src/prng.rs` (plans/10 chunk 5: `Prng::from_seed`, `from_choices`, `to_data`, `from_data`)
 
 **Change**
 
-docs/testing.md "Fuzzers", verbatim: the **Big** `Prng` ADT that the
-runner builds as `PlutusData`, the **little** `fuzzer 'a` wrapper with
+docs/testing.md "Generators", verbatim: the **Big** `Prng` ADT that the
+runner builds as `PlutusData`, the **little** `generator 'a` wrapper with
 `Functor`/`Applicative`/`Monad` impls, `choice` as the single primitive
 over `u64` integer choices (not Aiken's bytes), and the generators listed
-in docs/stdlib.md "`Fuzz`" built on `choice`.
+in docs/stdlib.md "`Prop`" built on `choice`.
 
 **Implementation and protocol**
 
-Use `crates/nash-driver/base/src/Fuzz.nash` as the current implementation,
+Use `crates/nash-driver/base/src/Prop.nash` as the current implementation,
 with `crates/nash-test/src/prng.rs` and docs/testing.md for the wire contract.
 Choices are u64 integers. Invalid bounds fail; exhausted or invalid replay
 returns None. Seeded/Replayed payloads are Big. The existing runner owns
@@ -486,7 +463,7 @@ sampling, replay and shrinking; preserve their behavior when extending APIs.
 
 **Elm/Aiken reference**
 
-Aiken `stdlib/lib/aiken/fuzz.ak` (`rand`, `int`, `list`, `bool`,
+Aiken `stdlib/lib/aiken/` (`rand`, `int`, `list`, `bool`,
 `bytearray`) and `crates/aiken-lang/src/test_framework.rs` `Prng`
 (constructor tags: `Seeded = 0`, `Replayed = 1`; `Some = 0`, `None = 1`
 must match the little `option` layout in plans/04). Nash differs in the
@@ -495,7 +472,7 @@ choice element type: `Int`, not bytes (testing.md "Open questions").
 **Tests**
 
 - `tests` block: `run (choice 10) (Seeded (lift "seed") (lift []))` is `Some`; `run (choice 10) (Replayed (lift 0) (lift []))` is `None`; `run (choice 10) (Replayed (lift 1) (lift [lift 11]))` is `None` (over bound); `intBetween 3 3` is `3`.
-- `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` sampled through `Fuzz.run` stays in range.
+- `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` sampled through `Prop.run` stays in range.
 - Rust (plans/10 chunk 6): a shrink test that a failing `listOf int` counterexample shrinks to `[0]` or `[]`.
 
 **Done when** the in-process Base test runner runs the props with the plans/10 runner.
@@ -656,13 +633,13 @@ matches the fixture.
 ## Test harness
 
 - `crates/nash-driver/tests/bundled_base.rs` compiles every embedded module and import-free applications through the driver library, without invoking the CLI.
-- `crates/nash-driver/tests/testing_base.rs` executes the Base fuzzer and test protocol through codegen and the evaluator.
+- `crates/nash-driver/tests/testing_base.rs` executes the Base generator and test protocol through codegen and the evaluator.
 - `crates/nash-driver/tests/vesting.rs` compiles validators against bundled Base and executes serialized UPLC.
 - `nash-can` tests preserve source imports and enforce the real-only Builtin inventory.
 - CI runs these with `cargo test`; unit and integration tests do not spawn the Nash CLI.
 
 ## Open questions
 
-Fuzz and Test are already in the default module catalog, with Test.label
+Prop and Test are already in the default module catalog, with Test.label
 exposed only inside tests blocks. Keep target-version availability checks
 for value and other Plutus builtins aligned with the compiler target policy.

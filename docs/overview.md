@@ -50,7 +50,7 @@ Done (ported from the Elm compiler, Haskell -> Rust):
 The front end also implements Haskell 98 kinds, representation predicates,
 traits, retained evidence and the approved Plan 03 shipping core. Remaining
 work is tracked in [SPEC.md](../SPEC.md), including runtime/codegen, optimizer
-implementation, default imports, Fuzz and the full validator example.
+implementation, default imports, Prop and the full validator example.
 
 ## Decisions at a glance
 
@@ -72,7 +72,7 @@ implementation, default imports, Fuzz and the full validator example.
 | Dropped from Elm | `Float`, `Char`, row polymorphism, magic supertypes, ports/effects. |
 | Validators | `validator module Foo exposing (main)`. `main` required, signature free (args must have Big or Const representation; Term arguments are an error), all args become lambdas. Success = evaluation does not error; return value ignored. No blueprint. |
 | Tests | `tests` block at end of module with its own imports. `test "name" =`, `prop "name" =` with `let x via gen in`. Bodies are sequencing blocks (`e : unit` ⇒ `let () = e in ..`; `x <- e` ⇒ `let x = e`; no test monad). Power-assert `assert`. `fail` / `fail once`, `within (cpu N, mem M)`, `label`. |
-| Property testing | Aiken design: `type Prng = Seeded Bytes (List Int) \| Replayed Int (List Int)` (Big, built by the runner as Data), choice-sequence shrinking in Rust, `fuzzer 'a` little type with Functor/Applicative/Monad. Each prop compiles to `draw`/`run` programs. |
+| Property testing | Aiken design: `type Prng = Seeded Bytes (List Int) \| Replayed Int (List Int)` (Big, built by the runner as Data), choice-sequence shrinking in Rust, `generator 'a` little type with Functor/Applicative/Monad. Each prop compiles to `draw`/`run` programs. |
 | `do` notation | Layout `do` block, `x <- e` desugars to `Monad.bind`. |
 | Macros | Procedural. Input: typed AST; output: surface AST. `@derive(Eq)` on declarations, `name!(args)` in expressions. Hygienic. Run on the CEK machine. Expand-then-recheck loop per module. The `Ast` family has Term representation (little ADTs with `string`/`int`/`bytes` fields; child lists as core `cons 'a = Nil \| Cons 'a (cons 'a)`); the host builds input as a `Term::Constr` tree and reads output from the CEK result value. |
 | Comptime | `comptime expr` evaluates on the CEK machine at compile time; result must be a UPLC constant (`Const` or `Big`). |
@@ -169,7 +169,7 @@ main datum redeemer ctx =
         Cancel -> assert (signedBy ctx datum.owner)
 
 tests
-    import Fuzz exposing (int, listOf)
+    import Prop exposing (int, listOf)
 
     test "lt is strict" = do
         assert (not (lt 1 1))
@@ -220,7 +220,7 @@ crates/
   nash-report          diagnostics: source labels -> terminal / JSON / LSP
   nash-ir              Core IR + Core->Core passes       (new)
   nash-codegen         Can AST -> Core -> UPLC           (new)
-  nash-test            test runner, fuzz driver, shrinker(new)
+  nash-test            test runner, generate driver, shrinker(new)
   nash-macro           expansion loop, Ast reification   (new)
   nash-fmt             formatter                         (new)
   nash-docs            doc generator                     (new)
@@ -237,7 +237,7 @@ crates/nash-driver/base/  compiler-bundled Base (Nash source)
 - [representation.md](representation.md) — runtime layout of every type, Big/little bridging
 - [data.md](data.md) — `Data` type, patterns, encoders/decoders
 - [validators.md](validators.md) — validator modules, `main`, build outputs
-- [testing.md](testing.md) — tests block, props, fuzzers, shrinking, power-assert
+- [testing.md](testing.md) — tests block, props, generators, shrinking, power-assert
 - [macros.md](macros.md) — procedural macros, `@derive`, `comptime`
 - [codegen.md](codegen.md) — Core IR, lowering, pattern compilation, recursion, optimizations
 - [diagnostics.md](diagnostics.md) — error reporting architecture

@@ -193,7 +193,7 @@ mod tests {
         assert_indented_expression_snapshot!(
             r#"
             do
-                x <- fuzz int
+                x <- generate int
                 label "small"
                 assert (x < 100)
         "#

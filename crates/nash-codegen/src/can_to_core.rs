@@ -104,6 +104,21 @@ impl<'a> Engine<'a, '_, '_> {
                 function,
                 arguments,
             } => {
+                if let [left, right] = arguments
+                    && let Expr::VarForeign { reference, .. }
+                    | Expr::VarTopLevel(reference)
+                    | Expr::VarOperator { reference, .. } = function.value
+                    && let Some(conjunction) = short_circuit(reference)
+                {
+                    let left = self.expr(left, ctx)?;
+                    let right = self.expr(right, ctx)?;
+                    let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
+                    return Ok(if conjunction {
+                        self.ir.if_(left, right, constant)
+                    } else {
+                        self.ir.if_(left, constant, right)
+                    });
+                }
                 let func = self.expr(function, ctx)?;
                 let args = arguments
                     .iter()

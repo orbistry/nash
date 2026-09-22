@@ -1,6 +1,6 @@
 ---
 source: crates/nash-report/src/type_/tests.rs
-description: "module Main exposing (..)\nf : Builtin.int -> Builtin.int\nf x = x\nvalue = f 1 2 3\n"
+description: "module Main exposing (..)\nf : Primitive.int -> Primitive.int\nf x = x\nvalue = f 1 2 3\n"
 ---
 nash::type::mismatch
 

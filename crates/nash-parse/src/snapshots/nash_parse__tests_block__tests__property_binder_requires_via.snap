@@ -11,4 +11,4 @@ nash::syntax
  4 │     prop "p" = let x = int in x
    ·                      ─
    ╰────
-  help: Add `via` followed by the fuzzer expression.
+  help: Add `via` followed by the generator expression.

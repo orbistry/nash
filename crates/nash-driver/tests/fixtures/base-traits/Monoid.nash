@@ -1,0 +1,37 @@
+module Main exposing (..)
+
+emptyBytes : bytes
+emptyBytes = empty
+emptyString : string
+emptyString = empty
+emptyList : list int
+emptyList = empty
+emptyUnit : unit
+emptyUnit = empty
+emptyBigBytes : Bytes
+emptyBigBytes = empty
+emptyBigList : List Int
+emptyBigList = empty
+left : Map Int Bytes
+left = lift [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"bb")]
+right : Map Int Bytes
+right = lift [Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"cc"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"dd")]
+expected : Map Int Bytes
+expected = lift [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"cc"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"dd")]
+
+tests
+    test "little append and identities" = do
+        assert (#"aa" ++ #"bb" == #"aabb")
+        assert (#"aa" ++ emptyBytes == #"aa")
+        assert (emptyString ++ "ok" == "ok")
+        assert ([1, 2] ++ [3] == [1, 2, 3])
+        assert (emptyList ++ [1] == [1])
+        assert (append emptyUnit () == ())
+    test "Big append and identities" = do
+        assert (Builtin.unBData (Builtin.bData #"aa" ++ emptyBigBytes) == #"aa")
+        assert (Builtin.unListData (emptyBigList ++ lift [1, 2]) == [Builtin.iData 1, Builtin.iData 2])
+    test "right biased map union" = do
+        assert (left ++ right == expected)
+        assert (empty ++ left == left)
+        assert (left ++ empty == left)
+        assert (left ++ right /= right ++ left)

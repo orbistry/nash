@@ -9,4 +9,4 @@ nash::syntax
  1 │ prop "name" = do
    ·               ─
    ╰────
-  help: Write `let pattern via fuzzer` before `in`.
+  help: Write `let pattern via generator` before `in`.

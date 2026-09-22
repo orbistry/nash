@@ -8,7 +8,7 @@ and, for properties, a shrunk counterexample.
 The design follows Aiken: the PRNG is a Plutus value that the generator
 threads through on-chain code, the runner only sees the sequence of random
 choices, and shrinking is choice-sequence shrinking in Rust (MiniThesis). Nash
-adds a `fuzzer 'a` monad (constructor `Fuzzer`) so generators are written
+adds a `generator 'a` monad (constructor `Generator`) so generators are written
 with `do`, and a power-assert
 `assert` that prints the value of every sub-expression on failure.
 
@@ -20,7 +20,7 @@ module Order exposing (compare, invert)
 ...
 
 tests
-    import Fuzz exposing (int, listOf)
+    import Prop exposing (int, listOf)
 
     test "lt is strict" = do
         assert (not (lt 1 1))
@@ -76,7 +76,7 @@ Rules the parser and canonicalizer enforce:
   fine. Irrefutable patterns only; a refutable pattern is the usual
   exhaustiveness error.
 - Generators resolve in the module and test-import scope; they do not refer to
-  other via-bound values. Use `Fuzz.bind` inside a generator for dependent draws.
+  other via-bound values. Use `Prop.bind` inside a generator for dependent draws.
 - The `let ... in` that holds `via` binders holds nothing else. Ordinary
   `let` follows in the body.
 - `within` takes one or two budgets in either order, at most one of each.
@@ -237,34 +237,34 @@ Rules:
 `if e then () else fail` ([codegen.md](codegen.md)). The rewrite applies only
 to test bodies.
 
-## Fuzzers
+## Generators
 
 ```elm
--- Fuzz.nash (stdlib)
+-- Prop.nash (stdlib)
 type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
 
-type fuzzer 'a = Fuzzer (Prng -> option (Prng, 'a))
+type generator 'a = Generator (Prng -> option (Prng, 'a))
 
-impl Functor fuzzer where
-    map f (Fuzzer g) = Fuzzer (\prng -> case g prng of
+impl Functor generator where
+    map f (Generator g) = Generator (\prng -> case g prng of
         None -> None
         Some (p, a) -> Some (p, f a))
 
-impl Applicative fuzzer where
-    pure a = Fuzzer (\prng -> Some (prng, a))
+impl Applicative generator where
+    pure a = Generator (\prng -> Some (prng, a))
     apply = ...
 
-impl Monad fuzzer where
-    bind (Fuzzer g) k = Fuzzer (\prng -> case g prng of
+impl Monad generator where
+    bind (Generator g) k = Generator (\prng -> case g prng of
         None -> None
-        Some (p, a) -> case k a of Fuzzer h -> h p)
+        Some (p, a) -> case k a of Generator h -> h p)
 ```
 
 - `Prng` is a **Big** ADT: the runner builds it as `PlutusData` and reads it
   back from the result. `Seeded seed choices` carries a 32-byte seed and the
   choices made so far, newest first. `Replayed remaining choices` carries a
   count and the choices still to replay, next first.
-- `fuzzer 'a` is a **little** ADT with one constructor wrapping the
+- `generator 'a` is a **little** ADT with one constructor wrapping the
   function. The result tuple is a UPLC `constr 0 [prng, value]` because `pair`
   only takes `Storable` components and `'a` may have any representation. The wrapper exists because
   impls attach to nominal types, not to function aliases.
@@ -278,8 +278,8 @@ The single primitive:
 
 ```elm
 -- Draw an integer in [0, bound].
-choice : int -> fuzzer int
-choice bound = Fuzzer (\prng -> case prng of
+choice : int -> generator int
+choice bound = Generator (\prng -> case prng of
     Seeded seed choices ->
         let n = mod (lower (bytesToInt (blake2b256 seed))) (bound + 1) in
         Some (Seeded (blake2b256 seed) (lift n :: choices), n)
@@ -328,7 +328,7 @@ Loop, seeded with `--seed`:
 3. Error: the body failed (or, with `fail`, completion is the failure).
    Evaluate `draw prng` to recover the next PRNG, the choice sequence and
    the shown values. If `draw` itself errors or returns `None`, the generator
-   is broken: the prop is reported as `× fuzzer failed unexpectedly` and the
+   is broken: the prop is reported as `× generator failed unexpectedly` and the
    loop stops.
 4. Build a `Counterexample { choices, shown }` and shrink it.
 
@@ -357,7 +357,7 @@ A candidate sequence is evaluated with `Prng::from_choices(candidate)`:
 `draw` first (error or `None` is `Invalid`), then `run` (body error is `Keep`,
 completion is `Ignore`; swapped for `fail`). A candidate is accepted when it
 is `Keep` and shorter, or equal length and lexicographically smaller
-(`consider`, `test_framework.rs:807-826`). Results are memoised by the exact choice sequence. A custom `Fuzzer` can
+(`consider`, `test_framework.rs:807-826`). Results are memoised by the exact choice sequence. A custom `Generator` can
 inspect the public `Replayed` count or remaining choices, so a successful
 prefix does not prove that every extension has the same result. Exact caching
 preserves those generators' semantics.
@@ -501,7 +501,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - **Validators.** `nash build` strips the `tests` block before
   canonicalization ([validators.md](validators.md)).
 - **Traits.** `Show` for power-assert and counterexamples; `Functor`,
-  `Applicative`, `Monad` for `fuzzer`; `@derive(Show)` from
+  `Applicative`, `Monad` for `generator`; `@derive(Show)` from
   [macros.md](macros.md).
 - **Representations.** `(Prng, 'a)` is a tuple (`Term`) because `pair` requires
   `Storable` components, while `'a` may be `Term`; `list string` is a `Const` list of `Const` strings.

@@ -80,7 +80,7 @@ all dependent version requirements before publication. No commit, push or
 publication is authorized by this plan.
 
 The approved later-plan deferrals remain runtime/codegen, optimizer
-implementation, default imports, Fuzz and the full validator example.
+implementation, default imports, Prop and the full validator example.
 
 ## Final acceptance record
 

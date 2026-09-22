@@ -1,0 +1,41 @@
+module Main exposing (..)
+
+increment x = x + 1
+double x = x * 2
+strictAnd : bool -> bool
+strictAnd = and False
+
+namedAnd = and False (fail "unselected outside assertion")
+namedOr = Bool.or True (fail "unselected outside assertion")
+
+tests
+    test "helpers and composition" = do
+        assert (identity 42 == 42)
+        assert (always 42 () == 42)
+        assert ((1 |> increment) == 2)
+        assert ((increment <| 1) == 2)
+        assert ((increment << double) 3 == 7)
+        assert ((increment >> double) 3 == 8)
+        assert (1 :: [2, 3] == [1, 2, 3])
+    test "boolean helpers and lazy operators" = do
+        assert (not namedAnd)
+        assert (namedOr)
+        assert (not False)
+        assert (xor True False)
+        assert (not (xor True True))
+        assert (not (False && (fail "unselected and")))
+        assert (True || (fail "unselected or"))
+        assert (not (and False (fail "unselected named and")))
+        assert (or True (fail "unselected named or"))
+        assert (not (Bool.and False (fail "unselected qualified and")))
+        assert (Bool.or True (fail "unselected qualified or"))
+        assert (and True True)
+        assert (not (or False False))
+    test "trace result" = do
+        assert ((trace "value" 42) == 42)
+    test "trace precedes failure" fail = do
+        (trace "before" (fail "after"))
+    test "todo fails" fail = do
+        (todo "unfinished")
+    test "partial boolean application is strict" fail = do
+        assert (strictAnd (fail "strict argument"))

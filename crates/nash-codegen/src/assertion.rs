@@ -187,6 +187,30 @@ impl<'a> Engine<'a, '_, '_> {
                 function,
                 arguments,
             } => {
+                if let [left, right] = arguments
+                    && let Expr::VarForeign { reference, .. }
+                    | Expr::VarTopLevel(reference)
+                    | Expr::VarOperator { reference, .. } = function.value
+                    && let Some(conjunction) = crate::can_to_core::short_circuit(reference)
+                {
+                    let left = self.assert_expression(left, ctx, true, bindings, captures)?;
+                    let right = self.expr(right, ctx)?;
+                    let constant = self.ir.lit(Constant::bool(self.ir.arena, !conjunction));
+                    let value = if conjunction {
+                        self.ir.if_(left, right, constant)
+                    } else {
+                        self.ir.if_(left, constant, right)
+                    };
+                    return self.bind_assert_value(
+                        expression,
+                        ctx,
+                        operand,
+                        capture.then_some(index),
+                        value,
+                        bindings,
+                        captures,
+                    );
+                }
                 let mut function =
                     self.assert_expression(function, ctx, true, bindings, captures)?;
                 for (position, arg) in arguments.iter().enumerate() {

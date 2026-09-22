@@ -1270,7 +1270,7 @@ aligned-block shape; `Parse/Pattern.hs` (`expression`).
 
 ```
 do
-    x <- fuzz int
+    x <- generate int
     label "small"
     assert (x < 100)
 ```
@@ -2136,7 +2136,7 @@ pub enum TestBody<'a> {
 #[derive(Debug)]
 pub struct ViaBinder<'a> {
     pub pattern: &'a Located<Pattern<'a>>,
-    pub fuzzer: &'a Located<Expr<'a>>,
+    pub generator: &'a Located<Expr<'a>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -2176,7 +2176,7 @@ pub enum Test<'a> {
     Let(Row, Col),
     Pattern(&'a Pattern<'a>, Row, Col),
     Via(Row, Col),
-    Fuzzer(&'a Expr<'a>, Row, Col),
+    Generator(&'a Expr<'a>, Row, Col),
     In(Row, Col),
     IndentName(Row, Col),
     IndentEquals(Row, Col),
@@ -2357,8 +2357,8 @@ impl<'a> Parser<'a> {
         self.chomp_and_check_indent(TestErr::Space, TestErr::Via)?;
         self.keyword_via(TestErr::Via)?;
         self.chomp_and_check_indent(TestErr::Space, TestErr::IndentBinder)?;
-        let (fuzzer, end) = self.specialize(|bump, e, r, c| TestErr::Fuzzer(bump.alloc(e), r, c), |p| p.expression())?;
-        Ok((self.alloc(Located::at(Region::new(start, end), ViaBinder { pattern, fuzzer })), end))
+        let (generator, end) = self.specialize(|bump, e, r, c| TestErr::Generator(bump.alloc(e), r, c), |p| p.expression())?;
+        Ok((self.alloc(Located::at(Region::new(start, end), ViaBinder { pattern, generator })), end))
     }
 }
 ```
@@ -2396,7 +2396,7 @@ before the block):
 
 ```
 tests
-    import Fuzz exposing (int, listOf)
+    import Prop exposing (int, listOf)
 
     test "lt is strict" = do
         assert (not (lt 1 1))

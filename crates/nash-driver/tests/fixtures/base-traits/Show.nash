@@ -1,0 +1,31 @@
+module Main exposing (..)
+
+bigList : List Int
+bigList = lift [1, 2]
+bigMap : Map Int Bytes
+bigMap = lift [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa")]
+
+tests
+    test "scalar formats" = do
+        assert (show 0 == "0")
+        assert (show (-12345) == "-12345")
+        assert (show #"00abff" == "#\"00abff\"")
+        assert (show "a\n\t\"\\" == "\"a\\n\\t\\\"\\\\\"")
+        assert (show True == "True")
+        assert (show False == "False")
+        assert (show () == "()")
+    test "container formats" = do
+        assert (show [1, 2] == "[1, 2]")
+        assert (show (Builtin.mkPairData (I 1) (B #"aa")) == "(I 1, B #\"aa\")")
+        assert (show (1, True) == "(1, True)")
+        assert (show (1, True, ()) == "(1, True, ())")
+        assert (show (1, 2, 3, 4) == "(1, 2, 3, 4)")
+    test "Big formats" = do
+        assert (show (Builtin.iData 42) == "42")
+        assert (show (Builtin.bData #"ab") == "#\"ab\"")
+        assert (show bigList == "[1, 2]")
+        assert (show bigMap == "Map [(1, #\"aa\")]")
+    test "Data formats" = do
+        assert (show (Builtin.constrData 7 [I 42]) == "Constr (7, [I 42])")
+        assert (show (Map [Builtin.mkPairData (I 1) (B #"aa")]) == "Map [(I 1, B #\"aa\")]")
+        assert (show (List [I 1]) == "List [I 1]")

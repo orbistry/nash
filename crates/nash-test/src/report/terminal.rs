@@ -171,8 +171,8 @@ pub fn render(outcomes: &[Outcome], coverage: Coverage, seed: u32, elapsed: Dura
                     used.cpu, used.mem
                 )
                 .unwrap(),
-                Failure::Fuzzer { message } => {
-                    writeln!(out, "  × fuzzer failed unexpectedly: {message}").unwrap()
+                Failure::Generator { message } => {
+                    writeln!(out, "  × generator failed unexpectedly: {message}").unwrap()
                 }
                 Failure::InvalidProgram { message } => {
                     writeln!(out, "  × invalid test program: {message}").unwrap()

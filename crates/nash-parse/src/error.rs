@@ -80,7 +80,7 @@ pub enum Test<'a> {
     Let(Row, Col),
     Pattern(&'a Pattern<'a>, Row, Col),
     Via(Row, Col),
-    Fuzzer(&'a Expr<'a>, Row, Col),
+    Generator(&'a Expr<'a>, Row, Col),
     In(Row, Col),
     IndentName(Row, Col),
     IndentEquals(Row, Col),

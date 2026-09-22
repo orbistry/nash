@@ -239,14 +239,14 @@ fn canonicalize_tests<'a>(
             pattern::verify_all(bump, env, DuplicatePatternContext::Destruct, &patterns)?;
         let mut can_binders = Vec::new();
         for (binder, pattern) in binders.iter().zip(patterns) {
-            let fuzzer = expression::canonicalize_expr(
+            let generator = expression::canonicalize_expr(
                 bump,
                 &base,
-                binder.value.fuzzer,
+                binder.value.generator,
                 &mut expression::FreeLocals::new(),
                 warnings,
             )?;
-            can_binders.push(nash_ast::ViaBinder { pattern, fuzzer });
+            can_binders.push(nash_ast::ViaBinder { pattern, generator });
         }
         let scope = base.add_locals(&bindings)?;
         let mut free = expression::FreeLocals::new();
@@ -1171,7 +1171,7 @@ fn collect_used_modules<'a>(module: &CanModule<'a>) -> BTreeSet<&'a str> {
     for test in module.tests {
         collect_from_expr(&test.body.value, home, &mut used);
         for binder in test.binders {
-            collect_from_expr(&binder.fuzzer.value, home, &mut used);
+            collect_from_expr(&binder.generator.value, home, &mut used);
             collect_from_pattern(&binder.pattern.value, home, &mut used);
         }
     }

@@ -30,7 +30,7 @@ pub const MODULES: &[(&str, &[&str])] = &[
     ("Cons", &["type cons"]),
     ("Pair", &[]),
     ("Array", &[]),
-    ("Fuzz", &[]),
+    ("Prop", &[]),
     ("Test", &[]),
 ];
 

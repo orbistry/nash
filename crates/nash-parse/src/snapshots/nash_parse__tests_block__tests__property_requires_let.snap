@@ -11,4 +11,4 @@ nash::syntax
  4 │     prop "p" = assert True
    ·                ─
    ╰────
-  help: Write `let pattern via fuzzer` before `in`.
+  help: Write `let pattern via generator` before `in`.

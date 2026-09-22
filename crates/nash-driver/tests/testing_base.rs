@@ -10,7 +10,7 @@ async fn compile(body: &str) -> nash_driver::build::ValidatorOutput {
     let memory = InMemorySource::new();
     let mut origins = nash_driver::bundled_base::modules();
     let uri = Url::parse("file:///project/src/TestingCore.nash").unwrap();
-    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Fuzz exposing (Prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nemptyInts : list int\nemptyInts = []\nreplay : int -> list int -> Prng\nreplay count values = Replayed (lift count) (lift values)\nmain : Data -> unit\nmain _ =\n{body}\n"));
+    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (Prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nemptyInts : list int\nemptyInts = []\nreplay : int -> list int -> Prng\nreplay count values = Replayed (lift count) (lift values)\nmain : Data -> unit\nmain _ =\n{body}\n"));
     origins.insert(uri, None);
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
@@ -29,9 +29,9 @@ async fn choice_seeded_and_replayed_draws_agree() {
     let output = compile(r##"    let
         initial = Seeded (lift #"0000000000000000000000000000000000000000000000000000000000000000") (lift emptyInts)
     in
-    case Fuzz.run (Fuzz.choice 100) initial of
+    case Prop.run (Prop.choice 100) initial of
         Some (Seeded seed choices, n) ->
-            case Fuzz.run (Fuzz.choice 100) (Replayed (lift (Builtin.addInteger 0 1)) choices) of
+            case Prop.run (Prop.choice 100) (Replayed (lift (Builtin.addInteger 0 1)) choices) of
                 Some (Replayed remaining rest, replayed) ->
                     assert (n == replayed)
                 _ -> (fail "replay rejected seeded choice")
@@ -57,7 +57,7 @@ async fn malformed_replayed_choices_are_rejected() {
             r#"    let
         values = {choices}
     in
-    case Fuzz.run (Fuzz.choice 10) (replay ({count}) values) of
+    case Prop.run (Prop.choice 10) (replay ({count}) values) of
         None -> ()
         Some _ -> (fail "invalid replay accepted")"#
         ))
@@ -85,28 +85,28 @@ async fn malformed_replayed_choices_are_rejected() {
 async fn generator_combinators_thread_choices() {
     for (generator, choices, expected) in [
         (
-            "Fuzz.tuple2 (Fuzz.choice 10) (Fuzz.choice 10)",
+            "Prop.tuple2 (Prop.choice 10) (Prop.choice 10)",
             "[4, 5]",
             "(4, 5)",
         ),
-        ("Fuzz.listBetween 1 2 (Fuzz.choice 10)", "[3, 0]", "[3]"),
-        ("Fuzz.bytes", "[1, 65, 0]", "#\"41\""),
-        ("Fuzz.int", "[0, 42]", "42"),
+        ("Prop.listBetween 1 2 (Prop.choice 10)", "[3, 0]", "[3]"),
+        ("Prop.bytes", "[1, 65, 0]", "#\"41\""),
+        ("Prop.int", "[0, 42]", "42"),
         (
-            "Fuzz.int",
+            "Prop.int",
             "[2, 18446744073709551615]",
             "9223372036854775807",
         ),
-        ("Fuzz.int", "[2, 0]", "(-9223372036854775808)"),
+        ("Prop.int", "[2, 0]", "(-9223372036854775808)"),
         (
-            "Fuzz.oneOf (Cons.Cons (Fuzz.constant 0) (Cons.Cons (Fuzz.choice 10) Cons.Nil))",
+            "Prop.oneOf (Cons.Cons (Prop.constant 0) (Cons.Cons (Prop.choice 10) Cons.Nil))",
             "[1, 7]",
             "7",
         ),
-        ("Fuzz.intBetween 3 3", "[]", "3"),
+        ("Prop.intBetween 3 3", "[]", "3"),
     ] {
         let output = compile(&format!(
-            r#"    case Fuzz.run ({generator}) (replay 10 {choices}) of
+            r#"    case Prop.run ({generator}) (replay 10 {choices}) of
         Some (_, value) -> assert (value == {expected})
         None -> (fail "combinator exhausted replay")"#
         ))
@@ -130,7 +130,7 @@ async fn generator_combinators_thread_choices() {
 async fn invalid_choice_bounds_fail() {
     for bound in ["-1", "18446744073709551616"] {
         let output = compile(&format!(
-            r#"    case Fuzz.run (Fuzz.choice ({bound})) (replay 1 [0]) of
+            r#"    case Prop.run (Prop.choice ({bound})) (replay 1 [0]) of
         Some _ -> ()
         None -> ()"#
         ))

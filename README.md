@@ -26,7 +26,7 @@ main datum redeemer ctx =
         Cancel -> assert (signedBy ctx datum.owner)
 
 tests
-    import Fuzz exposing (int)
+    import Prop exposing (int)
 
     prop "deadline is never negative" =
         let d via int in

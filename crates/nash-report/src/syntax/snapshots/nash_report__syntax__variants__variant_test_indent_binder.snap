@@ -1,13 +1,13 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-description: "prop \"name\" = let\nx via fuzz in do"
+description: "prop \"name\" = let\nx via generate in do"
 ---
 nash::syntax
 
   × Expected generated inputs for the property.
    ╭─[src/Main.nash:2:1]
  1 │ prop "name" = let
- 2 │ x via fuzz in do
+ 2 │ x via generate in do
    · ─
    ╰────
-  help: Write `let pattern via fuzzer` before `in`.
+  help: Write `let pattern via generator` before `in`.

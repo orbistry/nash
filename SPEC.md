@@ -30,7 +30,7 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-report` | concise diagnostics (terminal, JSON, LSP) | done ([plans/06](plans/06-diagnostics.md)) |
 | `nash-ir` | Core IR + passes | new ([plans/07](plans/07-codegen.md), [08](plans/08-optimizer.md)) |
 | `nash-codegen` | Can -> Core -> UPLC | new ([plans/07](plans/07-codegen.md)) |
-| `nash-test` | test runner, fuzzing, shrinking | new ([plans/10](plans/10-testing.md)) |
+| `nash-test` | test runner, generation, shrinking | new ([plans/10](plans/10-testing.md)) |
 | `nash-macro` | macro expansion, comptime | new ([plans/11](plans/11-macros-comptime.md)) |
 | `nash-fmt` / `nash-docs` | formatter, docs | new ([plans/13](plans/13-fmt-docs.md)) |
 | `nash-plutus` | UPLC terms, flat, CEK, cost models | done |
@@ -65,7 +65,7 @@ Implementation plans (Plan 08 is deferred; Plans 09 and 10 are complete):
 - [x] 07 Codegen: Core IR, monomorphization, decision trees, recursion, Data casts, UPLC lowering — [plans/07-codegen.md](plans/07-codegen.md)
 - [ ] 08 Optimizer: inlining, builtin force caching, DCE, case-of-known-ctor/constant folding — [plans/08-optimizer.md](plans/08-optimizer.md) (deferred)
 - [x] 09 Validators + `nash build` — [plans/09-validators-build.md](plans/09-validators-build.md)
-- [x] 10 Testing: `tests` block, props, fuzzers, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
+- [x] 10 Testing: `tests` block, props, generators, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)
 - [ ] 12 Stdlib `nash/base` — [plans/12-stdlib.md](plans/12-stdlib.md)
 - [ ] 13 `nash fmt`, `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md)

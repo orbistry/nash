@@ -14,7 +14,7 @@ pub fn render(seed: u32, max_success: usize, outcomes: &[Outcome]) -> String {
             Status::Pass => Value::Null,
             Status::Fail(Failure::Body) => json!({"kind": "body"}),
             Status::Fail(Failure::NoCounterexample) => json!({"kind":"noCounterexample"}),
-            Status::Fail(Failure::Fuzzer { message }) => json!({"kind":"fuzzer", "message":message}),
+            Status::Fail(Failure::Generator { message }) => json!({"kind":"generator", "message":message}),
             Status::Fail(Failure::InvalidProgram { message }) => json!({"kind":"invalidProgram", "message":message}),
             Status::Fail(Failure::BudgetExceeded { limit, used }) => json!({"kind":"budgetExceeded", "limit": budget_limit(*limit), "used":{"cpu":used.cpu,"mem":used.mem}}),
         };

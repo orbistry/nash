@@ -65,7 +65,7 @@ pub struct Test<'a> {
 #[derive(Debug)]
 pub struct ViaBinder<'a> {
     pub pattern: &'a Located<Pattern<'a>>,
-    pub fuzzer: &'a Located<Expr<'a>>,
+    pub generator: &'a Located<Expr<'a>>,
 }
 
 #[derive(Debug)]

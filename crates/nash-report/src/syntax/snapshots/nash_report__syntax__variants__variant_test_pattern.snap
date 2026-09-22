@@ -1,12 +1,12 @@
 ---
 source: crates/nash-report/src/syntax/variants.rs
-description: "prop \"name\" = let ) via fuzz in do"
+description: "prop \"name\" = let ) via generate in do"
 ---
 nash::syntax
 
   × Expected a binding pattern.
    ╭─[src/Main.nash:1:19]
- 1 │ prop "name" = let ) via fuzz in do
+ 1 │ prop "name" = let ) via generate in do
    ·                   ─
    ╰────
   help: Use a variable, constructor pattern, or `_`.

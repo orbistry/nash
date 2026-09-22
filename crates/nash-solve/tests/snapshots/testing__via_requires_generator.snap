@@ -1,0 +1,15 @@
+---
+source: crates/nash-solve/tests/testing.rs
+description: "module Prop exposing (..)\ntype generator 'a = Generator 'a\nunit = Generator ()\n\nmodule Main exposing (public)\npublic = ()\ntests\n    prop \"type\" =\n        let x via () in\n        do\n            x\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `Prop.generator 'a`, found `unit`.
+   ╭─[Main.nash:5:19]
+ 4 │     prop "type" =
+ 5 │         let x via () in
+   ·                   ─┬
+   ·                    ╰── property generator (which must be a generator)
+ 6 │         do
+   ╰────

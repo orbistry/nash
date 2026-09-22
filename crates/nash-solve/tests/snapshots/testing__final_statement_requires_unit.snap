@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/testing.rs
-description: "module Fuzz exposing (..)\ntype fuzzer 'a = Fuzzer 'a\nunit = Fuzzer ()\n\nmodule Main exposing (public)\npublic = ()\ntests\n    test \"type\" = do\n        \\x -> x\n"
+description: "module Prop exposing (..)\ntype generator 'a = Generator 'a\nunit = Generator ()\n\nmodule Main exposing (public)\npublic = ()\ntests\n    test \"type\" = do\n        \\x -> x\n"
 info: diagnostic
 ---
 nash::type::mismatch

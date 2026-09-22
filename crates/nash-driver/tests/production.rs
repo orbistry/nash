@@ -28,7 +28,7 @@ async fn production_excludes_test_blocks_and_their_imports() {
             main : Data -> unit
             main _ = Helper.identity ()
             tests
-                import MissingFuzzer
+                import MissingGenerator
                 test "main" = do
                     assert anotherUndefinedName
         "#

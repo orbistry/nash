@@ -52,16 +52,16 @@ fn compile_selected(
         (
             indoc::indoc!(
                 r#"
-            module Fuzz exposing (Prng(..), type fuzzer(..), constant, reject)
+            module Prop exposing (Prng(..), type generator(..), constant, reject)
             import Primitive exposing (..)
             import Builtin exposing (..)
             import Option exposing (type option(..))
             type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
-            type fuzzer 'a = Fuzzer (Prng -> option (Prng, 'a))
-            constant : 'a -> fuzzer 'a
-            constant value = Fuzzer (\prng -> Some (prng, value))
-            reject : fuzzer 'a
-            reject = Fuzzer (\_ -> None)
+            type generator 'a = Generator (Prng -> option (Prng, 'a))
+            constant : 'a -> generator 'a
+            constant value = Generator (\prng -> Some (prng, value))
+            reject : generator 'a
+            reject = Generator (\_ -> None)
         "#
             ),
             Some(primitives::BASE),
@@ -296,7 +296,7 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
         import Primitive exposing (..)
         import Builtin exposing (..)
         import Literal
-        import Fuzz exposing (constant)
+        import Prop exposing (constant)
         tests
             prop "patterns" =
                 let
@@ -333,13 +333,13 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
 }
 
 #[test]
-fn rejected_fuzzer_skips_body_and_selected_target_is_enforced() {
+fn rejected_generator_skips_body_and_selected_target_is_enforced() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
-        import Fuzz exposing (reject)
+        import Prop exposing (reject)
         tests
             test "plain" = do
                 assert True

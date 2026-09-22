@@ -14,7 +14,7 @@ package identity `nash/base` and its module names are reserved.
 Decisions here follow [overview.md](overview.md), the trait hierarchy and
 module split in [traits.md](traits.md), the layouts in
 [representation.md](representation.md), the builtin constructors in
-[kinds.md](kinds.md), and the fuzzer and test statements in
+[kinds.md](kinds.md), and the generator and test statements in
 [testing.md](testing.md).
 
 ## Layout
@@ -52,10 +52,9 @@ crates/nash-driver/base/
     Pair.nash             pair
     Array.nash            array
     Map.nash              Map (Big; its little form is `list (pair 'k 'v)`)
-    Debug.nash            trace, todo, fail
     Data/Decode.nash      decoders
     Data/Encode.nash      encoders
-    Fuzz.nash             fuzzers
+    Prop.nash             generators
     Test.nash             label, assertFailed (`assert` is a keyword)
     Ast.nash              macro AST: little ADTs over cons (see macros.md)
     Derive.nash           @derive
@@ -113,7 +112,7 @@ import Cons exposing (type cons(..))
 import Builtin
 import Pair
 import Array
-import Fuzz
+import Prop
 import Test
 ```
 
@@ -132,8 +131,8 @@ Consequences, matching representation.md "Prelude twins":
   they bind to come from the trait modules; both are in scope.
 - Modules inside `nash/base` get no defaults and import explicitly (Elm
   does the same for `elm/core`).
-- `Fuzz` and `Test` are default imports so `tests` blocks can use
-  `Fuzz.int` and `label`; `Test.label` is additionally exposed unqualified
+- `Prop` and `Test` are default imports so `tests` blocks can use
+  `Prop.int` and `label`; `Test.label` is additionally exposed unqualified
   inside `tests` blocks only (testing.md). `assert` is a keyword
   (syntax.md), not a `Test` function.
 
@@ -167,8 +166,9 @@ orphan rule needs either the trait or the head type to be local and
 table binds (`|>`, `<|`, `<<`, `>>`, `::` targets, plus
 `identity`/`always`), and the prelude impls: impls for tuples, which
 count as defined in `nash/base` under the orphan rule. Everything else
-lives in the trait modules or the type modules. `Prelude` imports every
-trait module and `Bool` (for `&&`/`||`); none of those import `Prelude`.
+lives in the trait modules or the type modules. `Prelude` imports the traits it needs and `Bool` (for `&&`/`||`).
+The application default-import catalog exposes all shipped traits independently;
+Base modules use explicit imports to keep the bootstrap graph acyclic.
 The `::` target is named `prepend` (not `cons`, which is the `Cons`
 module's constructor) and stays in `Prelude` rather than `List` because
 `List` imports `Prelude` for its operators.
@@ -271,7 +271,7 @@ mapping can change element representations within Storable; it cannot produce Te
 elements. Builtin pair has no Functor impl: `mkPairData` accepts only Big
 components, not arbitrary Storable components needed by `map`. Pair.fst,
 Pair.snd and Pair.make remain the specified projection/construction helpers.
-The `fuzzer` impls require the real Fuzz implementation from plan 10.
+The `generator` impls require the real Prop implementation from plan 10.
 
 ### Equality at the Big boundary
 
@@ -492,7 +492,6 @@ import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Eq exposing (Eq)
 import Lift exposing (Lift)
-import Debug
 
 type option 'a = Some 'a | None
 type Option 'a = Some 'a | None
@@ -507,7 +506,7 @@ unwrap : option 'a -> 'a
 unwrap m =
     case m of
         Some x -> x
-        None -> Debug.fail "Option.unwrap: None"
+        None -> fail "Option.unwrap: None"
 
 impl Functor option where
     map f m =
@@ -567,9 +566,9 @@ the `bool` functions (below); `Unit` declares only the Big twin. Their
 | `Show.Show` | power-assert rendering of operands |
 | Real `Builtin.*` operations | direct UPLC builtin nodes (below) |
 | `Primitive.coerce` | unchecked compiler intrinsic; runtime identity |
-| `Debug.trace`, `Debug.todo`, `Debug.fail` | trace levels, compiler-generated traces switch |
+| `trace`, `todo`, `fail` syntax | trace levels, compiler-generated traces switch |
 | `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
-| `Fuzz.fuzzer`, `Fuzz.Prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
+| `Prop.generator`, `Prop.Prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
 | `Ast.*`, `Cons.cons` | reified by `nash-macro` as `Term::Constr` trees by constructor index and walked back after evaluation (macros.md); the compiler knows the tag table, the Nash side is plain little ADTs |
 | `Derive.derive` | nothing special beyond being a macro; listed because default imports expose it |
 
@@ -962,15 +961,15 @@ andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
 `string`, `bool`, `list : ('a -> Data) -> list 'a -> Data`,
 `constr : int -> list Data -> Data`, `map`.
 
-## `Fuzz`
+## `Prop`
 
 Plan 10 supplies the executable core subset. `oneOf` uses `Cons.cons` because
-fuzzers contain functions and cannot inhabit the native Storable-only list.
-Further helpers below remain Plan 12 work. See testing.md "Fuzzers": `Prng` is Big, choices are `Int`s, the
+generators contain functions and cannot inhabit the native Storable-only list.
+Further helpers below remain Plan 12 work. See testing.md "Generators": `Prng` is Big, choices are `Int`s, the
 primitive is `choice`.
 
 ```elm
-module Fuzz exposing (..)
+module Prop exposing (..)
 
 import Prelude exposing (..)
 import Builtin
@@ -982,15 +981,15 @@ import List
 
 type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
 
-type fuzzer 'a = Fuzzer (Prng -> option (Prng, 'a))
+type generator 'a = Generator (Prng -> option (Prng, 'a))
 
-run : fuzzer 'a -> Prng -> option (Prng, 'a)
-run (Fuzzer f) = f
+run : generator 'a -> Prng -> option (Prng, 'a)
+run (Generator f) = f
 
 -- Draw an integer in [0, bound]. The only primitive.
-choice : int -> fuzzer int
+choice : int -> generator int
 choice bound =
-    Fuzzer
+    Generator
         (\prng ->
             case prng of
                 Seeded seed choices ->
@@ -1007,40 +1006,40 @@ choice bound =
                             if lower c <= bound then Some (Replayed (lift (k - 1)) (lift cs), lower c) else None
                         [] -> None)
 
-impl Functor fuzzer where
-    map f (Fuzzer g) =
-        Fuzzer (\prng ->
+impl Functor generator where
+    map f (Generator g) =
+        Generator (\prng ->
             case g prng of
                 None -> None
                 Some (p, a) -> Some (p, f a))
 
-impl Applicative fuzzer where
-    pure a = Fuzzer (\prng -> Some (prng, a))
+impl Applicative generator where
+    pure a = Generator (\prng -> Some (prng, a))
     apply ff fa = bind ff (\f -> map f fa)
 
-impl Monad fuzzer where
-    bind (Fuzzer g) k =
-        Fuzzer (\prng ->
+impl Monad generator where
+    bind (Generator g) k =
+        Generator (\prng ->
             case g prng of
                 None -> None
                 Some (p, a) -> run (k a) p)
 
-constant : 'a -> fuzzer 'a
-int : fuzzer int                         -- small-biased, full range possible
-intBetween : int -> int -> fuzzer int
-intAtLeast : int -> fuzzer int
-bool : fuzzer bool
-bytes : fuzzer bytes                     -- length 0..32
-bytesBetween : int -> int -> fuzzer bytes
-bytesExactly : int -> fuzzer bytes
-option : fuzzer 'a -> fuzzer (option 'a)
-listOf : fuzzer 'a -> fuzzer (list 'a)   -- length 0..20
-listBetween : int -> int -> fuzzer 'a -> fuzzer (list 'a)
-oneOf : cons (fuzzer 'a) -> fuzzer 'a
-frequency : list (int, fuzzer 'a) -> fuzzer 'a
-suchThat : ('a -> bool) -> fuzzer 'a -> fuzzer 'a       -- gives up after 100 draws
-data : fuzzer Data                        -- arbitrary well-formed Data, depth-bounded
-tuple2 : fuzzer 'a -> fuzzer 'b -> fuzzer ('a, 'b)
+constant : 'a -> generator 'a
+int : generator int                         -- small-biased, full range possible
+intBetween : int -> int -> generator int
+intAtLeast : int -> generator int
+bool : generator bool
+bytes : generator bytes                     -- length 0..32
+bytesBetween : int -> int -> generator bytes
+bytesExactly : int -> generator bytes
+option : generator 'a -> generator (option 'a)
+listOf : generator 'a -> generator (list 'a)   -- length 0..20
+listBetween : int -> int -> generator 'a -> generator (list 'a)
+oneOf : cons (generator 'a) -> generator 'a
+frequency : list (int, generator 'a) -> generator 'a
+suchThat : ('a -> bool) -> generator 'a -> generator 'a       -- gives up after 100 draws
+data : generator Data                        -- arbitrary well-formed Data, depth-bounded
+tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
 ```
 
 Shrinking-friendliness rules for generators, so smaller choices give
@@ -1151,26 +1150,19 @@ type Datum = NoDatum | DatumHash Bytes | InlineDatum Data
 order and constructor tags must match the ledger's `Data` encoding
 exactly; each is covered by a golden test against a real transaction.
 
-## `Debug`
+## Tracing and failure
 
-```elm
-module Debug exposing (trace, todo)
-
-trace : string -> 'a -> 'a     -- subject to trace level (silent / compact / verbose)
-trace = Builtin.trace
-
-todo : string -> 'a            -- traces "TODO: msg" and errors; warning at compile time
-todo msg = fail (Builtin.appendString "TODO: " msg)
-```
-
-`fail`, `todo`, `trace` have their own expression nodes (syntax.md) and
-need no import. Failure lowers to UPLC error; no fake builtin is involved.
+`trace`, `todo`, and `fail` are native expressions and need no import or
+Debug module. `trace "message" value` emits its message before evaluating
+`value` and returns that value. `todo "message"` fails with a TODO trace;
+`fail "message"` fails with the supplied trace. Trace settings control
+message emission; silent builds still fail. Failure lowers to UPLC error.
 
 ## Open questions
 
-1. **`Fuzz`/`Test` as default imports.** Elm does not default-import test
+1. **`Prop`/`Test` as default imports.** Elm does not default-import test
    modules. Alternative: `tests` blocks get their own implicit
-   `import Fuzz` / `import Test exposing (assert, label)` only.
+   `import Prop` / `import Test exposing (assert, label)` only.
 2. **`value` builtins** (`InsertCoin` .. `ScaleValue`) exist in
    `nash-plutus` but not in Plutus V3 mainnet; the table types them and
    `nash build` gates them on the target version.

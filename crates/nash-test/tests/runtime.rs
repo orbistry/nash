@@ -130,7 +130,7 @@ fn property_modifiers_and_generator_none() {
     for expect in [Expect::Pass, Expect::Fail, Expect::FailOnce] {
         assert!(matches!(
             run(prop(false, true, expect)).status,
-            Status::Fail(Failure::Fuzzer { .. })
+            Status::Fail(Failure::Generator { .. })
         ));
     }
 }
@@ -402,7 +402,7 @@ fn unchanged_counterexample_preserves_assert_marker_and_traces() {
     assert_eq!(out.traces, ["original trace"]);
 }
 #[test]
-fn generator_errors_remain_fuzzer_failures_for_fail_properties() {
+fn generator_errors_remain_generator_failures_for_fail_properties() {
     let a = &Arena::new();
     let mut t = prop(true, false, Expect::Fail);
     if let Programs::Prop { draw, .. } = &mut t.programs {
@@ -410,7 +410,7 @@ fn generator_errors_remain_fuzzer_failures_for_fail_properties() {
     }
     assert!(matches!(
         run(t).status,
-        Status::Fail(Failure::Fuzzer { .. })
+        Status::Fail(Failure::Generator { .. })
     ));
 }
 #[test]
@@ -453,13 +453,13 @@ fn terminal_and_json_reports_snapshot() {
     settings.set_description(&outcome.test.source);
     settings.set_omit_expression(true);
     let _guard = settings.bind_to_scope();
-    insta::assert_snapshot!(report::terminal::render(std::slice::from_ref(&outcome),Coverage::Labels,42,std::time::Duration::from_millis(810)), @r"
-      Testing Example (Example.nash)
+    insta::assert_snapshot!(report::terminal::render(std::slice::from_ref(&outcome),Coverage::Labels,42,std::time::Duration::from_millis(810)), @r###"
+    Testing Example (Example.nash)
 
-      PASS fixture  [mem:     1.2K, cpu:   345.1K]
+    PASS fixture  [mem:     1.2K, cpu:   345.1K]
 
-      Summary 1 passed, 0 failed, 0 skipped   seed 42   0.81s
-    ");
+    Summary 1 passed, 0 failed, 0 skipped   seed 42   0.81s
+    "###);
     outcome.status = Status::Fail(Failure::BudgetExceeded {
         limit: Budget::Both {
             cpu: i128::MAX,

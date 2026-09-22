@@ -19,10 +19,10 @@
   no longer available. Existing Data wire formats are preserved. — Thanks @MicroProofs!
 - [a95b6910](https://github.com/orbistry/nash/commit/a95b6910d1867463cac0d1030599ea5bc6bfdf71) Provide unchecked `FromData` conversion for every Big type through a blanket coercion impl. Move checked `validate` into the separate `Validate` trait; migrate validation impls and trait imports to `Validate`. Unchecked conversion no longer requires validation instances for a type or its fields. — Thanks @MicroProofs!
 - [9fa1d0a7](https://github.com/orbistry/nash/commit/9fa1d0a7de4c416cbaa7e45b5b56702b80046119) Add module-local unit tests and properties, scoped test dependencies, source-aware
-  power assertions, deterministic seeded fuzzing and counterexample shrinking.
+  power assertions, deterministic seeded generation and counterexample shrinking.
   Provide `nash test` with budget checks, labels, trace controls, parallel execution,
   and terminal/JSON reports. Type-check tests with `nash check` while keeping them
-  out of production builds. Add core Fuzz and Test support with explicit imports.
+  out of production builds. Add core Prop and Test support with explicit imports.
   
   Preserve short-circuit evaluation for the core boolean infix operators, including
   inside instrumented assertions. — Thanks @MicroProofs!

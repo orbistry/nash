@@ -27,7 +27,7 @@ insert x xs =
             else y :: insert x rest
 
 tests
-    import Fuzz exposing (int)
+    import Prop exposing (int)
     import Test exposing (label)
 
     test "lt is strict" = do

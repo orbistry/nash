@@ -501,7 +501,7 @@ mod tests {
             args: &bb,
         };
         let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &x, &y);
-        insta::assert_snapshot!(a.render(80,true), @"list \u{1b}[33mInt\u{1b}[0m");
+        insta::assert_snapshot!(a.render(80,true), @"list [33mInt[0m");
         insta::assert_snapshot!(b.render(80,false), @"list int");
         assert!(matches!(
             p.as_slice(),
@@ -747,7 +747,7 @@ mod tests {
             args: &args,
         };
         let (a, _, _) = to_comparison(&Localizer::from_names(["Primitive"]), &a, &b);
-        insta::assert_snapshot!(a.render(80,true), @"\u{1b}[33mList\u{1b}[0m Data");
+        insta::assert_snapshot!(a.render(80,true), @"[33mList[0m Data");
     }
     #[test]
     fn distinct_nominal_records_are_not_similar() {

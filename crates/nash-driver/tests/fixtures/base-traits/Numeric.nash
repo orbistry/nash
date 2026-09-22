@@ -1,0 +1,33 @@
+module Main exposing (..)
+
+big : Int
+big = 7
+bigBytes : Bytes
+bigBytes = #"aa"
+utf8 : bytes
+utf8 = "é"
+
+tests
+    test "literal conversions" = do
+        assert (Builtin.unIData big == 7)
+        assert (Builtin.unBData bigBytes == #"aa")
+        assert (utf8 == #"c3a9")
+    test "native arithmetic" = do
+        assert (1 + 2 * 3 == 7)
+        assert (10 - 3 == 7)
+        assert (negate 7 == -7)
+        assert ((-7) / 3 == -3)
+        assert ((-7) % 3 == 2)
+        assert (quot (-7) 3 == -2)
+        assert (rem (-7) 3 == -1)
+    test "Big arithmetic" = do
+        assert (Builtin.unIData (big + 2) == 9)
+        assert (Builtin.unIData (big - 2) == 5)
+        assert (Builtin.unIData (big * 2) == 14)
+        assert (Builtin.unIData (negate big) == -7)
+        assert (Builtin.unIData (negate big / 3) == -3)
+        assert (Builtin.unIData (negate big % 3) == 2)
+        assert (Builtin.unIData (quot (negate big) 3) == -2)
+        assert (Builtin.unIData (rem (negate big) 3) == -1)
+    test "division by zero" fail = do
+        assert (1 / 0 == 0)

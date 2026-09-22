@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/tests/production.rs
-description: "module Helper exposing (identity)\nidentity x = x\ntests\n    import TestOnlyMissing\n    test \"helper\" = do\n        assert undefinedTestName\n\nvalidator module Main exposing (main)\nimport Helper\nmain : Data -> unit\nmain _ = Helper.identity ()\ntests\n    import MissingFuzzer\n    test \"main\" = do\n        assert anotherUndefinedName\n"
+description: "module Helper exposing (identity)\nidentity x = x\ntests\n    import TestOnlyMissing\n    test \"helper\" = do\n        assert undefinedTestName\n\nvalidator module Main exposing (main)\nimport Helper\nmain : Data -> unit\nmain _ = Helper.identity ()\ntests\n    import MissingGenerator\n    test \"main\" = do\n        assert anotherUndefinedName\n"
 ---
 (program 1.1.0
   [(lam identity_3
