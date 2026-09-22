@@ -1,0 +1,113 @@
+module NestedTrace exposing (generate, replay, dependent, siblings)
+
+import Cons exposing (type cons(..))
+import Prop
+
+type choiceTree = Choice int | Group (cons choiceTree)
+type state = Recording bytes (cons choiceTree) | Replaying (cons choiceTree) (cons choiceTree)
+type alias generator 'a = state -> option ('a, state)
+
+reverse values = reverseOnto values Nil
+reverseOnto values result =
+    case values of
+        Nil -> result
+        Cons first rest -> reverseOnto rest (Cons first result)
+
+choice : int -> generator int
+choice bound state =
+    case state of
+        Recording prng recorded ->
+            case Prop.choice bound (Prop.Seeded prng []) of
+                Some (value, Prop.Seeded next _) -> Some (value, Recording next (Cons (Choice value) recorded))
+                _ -> None
+        Replaying remaining recorded ->
+            case remaining of
+                Cons (Choice value) rest ->
+                    if value < 0 || value > bound then None
+                    else Some (value, Replaying rest (Cons (Choice value) recorded))
+                _ -> None
+
+group : generator 'a -> generator 'a
+group generator state =
+    case state of
+        Recording prng recorded ->
+            case generator (Recording prng Nil) of
+                Some (value, Recording next children) ->
+                    Some (value, Recording next (Cons (Group (reverse children)) recorded))
+                _ -> None
+        Replaying remaining recorded ->
+            case remaining of
+                Cons (Group children) rest ->
+                    case generator (Replaying children Nil) of
+                        Some (value, Replaying _ used) ->
+                            Some (value, Replaying rest (Cons (Group (reverse used)) recorded))
+                        _ -> None
+                _ -> None
+
+finish : option ('a, state) -> option ('a, choiceTree)
+finish result =
+    case result of
+        None -> None
+        Some (value, Recording _ recorded) -> Some (value, Group (reverse recorded))
+        Some (value, Replaying _ recorded) -> Some (value, Group (reverse recorded))
+
+items : int -> generator (list int)
+items remaining state =
+    if remaining == 0 then Some ([], state)
+    else
+        case group iteration state of
+            None -> None
+            Some (None, next) -> Some ([], next)
+            Some (Some value, next) ->
+                case items (remaining - 1) next of
+                    None -> None
+                    Some (rest, final) -> Some (value :: rest, final)
+
+iteration : generator (option int)
+iteration state =
+    case choice 1 state of
+        None -> None
+        Some (0, next) -> Some (None, next)
+        Some (_, next) ->
+            case group (choice 100) next of
+                None -> None
+                Some (value, final) -> Some (Some value, final)
+
+generate : bytes -> option (list int, choiceTree)
+generate seed = finish (items 4 (Recording seed Nil))
+
+replay : choiceTree -> option (list int, choiceTree)
+replay choiceTree =
+    case choiceTree of
+        Group children -> finish (items 4 (Replaying children Nil))
+        _ -> None
+
+bounds : generator (int, int)
+bounds state =
+    case group (choice 9) state of
+        None -> None
+        Some (offset, next) ->
+            case group (choice offset) next of
+                None -> None
+                Some (index, final) -> Some ((offset + 1, index), final)
+
+dependent : choiceTree -> option ((int, int), choiceTree)
+dependent choiceTree =
+    case choiceTree of
+        Group children -> finish (bounds (Replaying children Nil))
+        _ -> None
+
+listAndNumber : generator (list int, int)
+listAndNumber state =
+    case group (items 4) state of
+        None -> None
+        Some (values, next) ->
+            case group (choice 100) next of
+                None -> None
+                Some (number, final) -> Some ((values, number), final)
+
+siblings : choiceTree -> option ((list int, int), choiceTree)
+siblings choiceTree =
+    case choiceTree of
+        Group children -> finish (listAndNumber (Replaying children Nil))
+        _ -> None

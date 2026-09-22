@@ -525,3 +525,35 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - **Precondition / discard.** MiniThesis `assume` is not supported (same as
   Aiken). A generator can return `None` to reject, which counts as invalid,
   not as a discarded iteration.
+
+## Nested choice trace slice
+
+`tests/fixtures/NestedTrace.nash` and `tests/nested_trace.rs` in `nash-driver`
+exercise a proposed nested replay representation through the compiler and CEK.
+The shipped `Prop` API and runner still use the flat choice sequence above.
+
+The fixture defines a little `choiceTree` ADT with `Choice int` and
+`Group (cons choiceTree)`. A term-level `cons` holds the little constructor
+values; a builtin `list` cannot hold these values. `trace` is a reserved Nash
+keyword, so the type is named `choiceTree`.
+
+Generation, bounds checks, group entry/exit, and replay normalization are Nash
+functions. Each replayed group supplies only its own children: missing choices
+or a mismatched node reject generation with `None`; unused children are dropped
+from the returned consumed trace. The parent resumes at the next sibling.
+List iterations group their continuation choice together with the element draw.
+The seed source reuses `Prop.choice`, discarding its flat history after each draw.
+
+Rust compiles ordinary function roots, evaluates them, decodes the native
+constructors, edits a group, reconstructs an argument, and invokes replay. The
+snapshot covers seeded replay, whole-element deletion, dependent bounds,
+missing choices, node-kind mismatches, and branch shortening that preserves a
+sibling. No compiler intrinsic or special codegen rule is introduced.
+
+This slice does not implement automatic reduction, generator trait composition,
+or integration with the production property runner. The reduction baseline is
+MacIver and Donaldson, *Test-Case Reduction via Test-Case Generation: Insights
+from the Hypothesis Reducer* (ECOOP 2020), sections 2 and 3,
+<https://doi.org/10.4230/LIPIcs.ECOOP.2020.13>. Its shortlex ordering applies to
+consumed primitive choices; groups guide edits. Strict group-local replay is a
+Nash adaptation, not a property established by the paper's flat replay model.
