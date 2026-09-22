@@ -1,5 +1,35 @@
 # nash-solve
 
+## 0.8.0 — 2026-09-22
+
+### Minor changes
+
+- [aee8c3d2](https://github.com/orbistry/nash/commit/aee8c3d240a5a3deabfada906dda9a9e9ebfb67a) Overload bare boolean and unit expressions through FromBool and FromUnit, with
+  little defaults and bundled implementations for bool, Bool, unit, and Unit.
+  Like integer literals, unannotated values retain their literal constraints;
+  annotate concrete entry points where needed. Qualified constructors and patterns
+  retain their declared types. Add source snapshots for inference, diagnostics,
+  custom conversions, and execution. — Thanks @MicroProofs!
+- [402557e5](https://github.com/orbistry/nash/commit/402557e547f9496fb1fc73d4203433bcb25df0d4) Complete Base type helpers with Big or little inputs and little outer results.
+  Preserve payload types in Lift conversions, support identity conversion for all
+  types, and keep mixed-representation boolean calls lazy. Add source snapshots
+  for helper behavior and rejected recursive conversions. — Thanks @MicroProofs!
+- [76a7a02e](https://github.com/orbistry/nash/commit/76a7a02ef1bfc0a03082a453fcdafc727c8cb160) Allow record updates on visible single-constructor labeled types. Preserve
+  constructor encoding, declared field order, and existing field type checking. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [3f9188b0](https://github.com/orbistry/nash/commit/3f9188b01b8bdc18363335274c20c150197d1173) Name property generation Prop throughout the compiler, Base, diagnostics and
+  examples. Use direct draws returning values and PRNG states. Remove the identity
+  run helper, generator map/bind functions and generator trait instances; ordinary
+  Option do notation remains available for explicit state-threaded draws. — Thanks @MicroProofs!
+- [dccae3df](https://github.com/orbistry/nash/commit/dccae3df5332b8d5628abb785b8b6b361d0974c1) Use a function alias for generators, returning value and next PRNG state per draw.
+  Remove the redundant replay count. Prepare properties once and retain their
+  state, body function, and deferred display function without rerunning generators.
+  Preserve function aliases in typed definitions and captured variables inside
+  native constructor and case nodes when returning CEK closures. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.10.0, nash-can@0.10.0, nash-constrain@0.8.0
+
 ## 0.7.0 — 2026-09-20
 
 ### Minor changes

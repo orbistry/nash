@@ -1,5 +1,21 @@
 # nash-parse
 
+## 0.7.1 — 2026-09-22
+
+### Patch changes
+
+- [9a7fe0ec](https://github.com/orbistry/nash/commit/9a7fe0ec015df3791346358027a472b8f5f37b8b) Move property sampling, rejection, tuple preparation and deferred body/display
+  functions into Nash Test helpers. Keep codegen responsible for source callbacks
+  and pattern binding. Compose assertion capture traces through Nash helpers while
+  preserving failure-only evaluation and compiler trace settings. Base Test uses
+  Builtin.trace directly. Allow keyword-named qualified references in source,
+  removing the compiler special case for Test-module traces. — Thanks @MicroProofs!
+- [3f9188b0](https://github.com/orbistry/nash/commit/3f9188b01b8bdc18363335274c20c150197d1173) Name property generation Prop throughout the compiler, Base, diagnostics and
+  examples. Use direct draws returning values and PRNG states. Remove the identity
+  run helper, generator map/bind functions and generator trait instances; ordinary
+  Option do notation remains available for explicit state-threaded draws. — Thanks @MicroProofs!
+- Updated dependencies: nash-source@0.8.1
+
 ## 0.7.0 — 2026-09-20
 
 ### Minor changes

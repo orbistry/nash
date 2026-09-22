@@ -1,5 +1,55 @@
 # nash-driver
 
+## 0.9.0 — 2026-09-22
+
+### Minor changes
+
+- [aee8c3d2](https://github.com/orbistry/nash/commit/aee8c3d240a5a3deabfada906dda9a9e9ebfb67a) Overload bare boolean and unit expressions through FromBool and FromUnit, with
+  little defaults and bundled implementations for bool, Bool, unit, and Unit.
+  Like integer literals, unannotated values retain their literal constraints;
+  annotate concrete entry points where needed. Qualified constructors and patterns
+  retain their declared types. Add source snapshots for inference, diagnostics,
+  custom conversions, and execution. — Thanks @MicroProofs!
+- [9a7fe0ec](https://github.com/orbistry/nash/commit/9a7fe0ec015df3791346358027a472b8f5f37b8b) Move property sampling, rejection, tuple preparation and deferred body/display
+  functions into Nash Test helpers. Keep codegen responsible for source callbacks
+  and pattern binding. Compose assertion capture traces through Nash helpers while
+  preserving failure-only evaluation and compiler trace settings. Base Test uses
+  Builtin.trace directly. Allow keyword-named qualified references in source,
+  removing the compiler special case for Test-module traces. — Thanks @MicroProofs!
+- [3f9188b0](https://github.com/orbistry/nash/commit/3f9188b01b8bdc18363335274c20c150197d1173) Name property generation Prop throughout the compiler, Base, diagnostics and
+  examples. Use direct draws returning values and PRNG states. Remove the identity
+  run helper, generator map/bind functions and generator trait instances; ordinary
+  Option do notation remains available for explicit state-threaded draws. — Thanks @MicroProofs!
+- [1d057156](https://github.com/orbistry/nash/commit/1d05715685c5561c798e6bab3df4a7c8788d056a) Use little prng state with native bytes, integers, and lists for property testing.
+  Pass native constructor terms between generators and the runner, removing Data
+  wrapping from seeded draws and replay. — Thanks @MicroProofs!
+- [dccae3df](https://github.com/orbistry/nash/commit/dccae3df5332b8d5628abb785b8b6b361d0974c1) Use a function alias for generators, returning value and next PRNG state per draw.
+  Remove the redundant replay count. Prepare properties once and retain their
+  state, body function, and deferred display function without rerunning generators.
+  Preserve function aliases in typed definitions and captured variables inside
+  native constructor and case nodes when returning CEK closures. — Thanks @MicroProofs!
+- [402557e5](https://github.com/orbistry/nash/commit/402557e547f9496fb1fc73d4203433bcb25df0d4) Complete Base type helpers with Big or little inputs and little outer results.
+  Preserve payload types in Lift conversions, support identity conversion for all
+  types, and keep mixed-representation boolean calls lazy. Add source snapshots
+  for helper behavior and rejected recursive conversions. — Thanks @MicroProofs!
+- [e4abaade](https://github.com/orbistry/nash/commit/e4abaaded35a725d8502d2f23a0b15dc5a08afa1) Add List.isLength for Big or little lists and integer counts, using dropList
+  and a singleton pattern rather than traversing the full list to count it. — Thanks @MicroProofs!
+- [afaa06a4](https://github.com/orbistry/nash/commit/afaa06a410d67bd9eb592a31cebaaf965bf48b03) Keep computation trait instances on little representations. Add mixed Big/little
+  integer arithmetic and ordering helpers, byte append/ordering helpers, Map.union,
+  and Option.apply; return little outer representations without converting payloads.
+  Remove Result/result, its implicit import, and Option.toResult from bundled Base. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [b3699dba](https://github.com/orbistry/nash/commit/b3699dba5f0564852f52df963f06767e48bea643) Use shared native list and pair cases for field extraction and Base traversal.
+  Reuse case-bound tails across adjacent accesses and use dropList for remaining
+  gaps of two or more, preserving evaluation order and record update suffixes. — Thanks @MicroProofs!
+- [76a7a02e](https://github.com/orbistry/nash/commit/76a7a02ef1bfc0a03082a453fcdafc727c8cb160) Skip payload decoding for ignored Data-pattern fields. Use direct Data
+  unwrappers in Base validation implementations, preserving their failure behavior
+  and existing element validation without redundant Data variant dispatch. — Thanks @MicroProofs!
+- [ba13694e](https://github.com/orbistry/nash/commit/ba13694e2254c7a5d477a68326b1db380e6eeede) Preserve short-circuiting for fully applied Bool.and and Bool.or calls, including assertions. Correct Show Data constructor formatting and add executable snapshots for bundled Base traits and operators. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.10.0, nash-can@0.10.0, nash-codegen@0.4.0, nash-constrain@0.8.0, nash-nitpick@0.3.1, nash-parse@0.7.1, nash-plutus@0.3.1, nash-report@0.5.1, nash-solve@0.8.0, nash-source@0.8.1, nash-test@0.3.0
+
 ## 0.8.0 — 2026-09-20
 
 ### Minor changes

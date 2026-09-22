@@ -1,5 +1,21 @@
 # nash-nitpick
 
+## 0.3.1 — 2026-09-22
+
+### Patch changes
+
+- [aee8c3d2](https://github.com/orbistry/nash/commit/aee8c3d240a5a3deabfada906dda9a9e9ebfb67a) Overload bare boolean and unit expressions through FromBool and FromUnit, with
+  little defaults and bundled implementations for bool, Bool, unit, and Unit.
+  Like integer literals, unannotated values retain their literal constraints;
+  annotate concrete entry points where needed. Qualified constructors and patterns
+  retain their declared types. Add source snapshots for inference, diagnostics,
+  custom conversions, and execution. — Thanks @MicroProofs!
+- [3f9188b0](https://github.com/orbistry/nash/commit/3f9188b01b8bdc18363335274c20c150197d1173) Name property generation Prop throughout the compiler, Base, diagnostics and
+  examples. Use direct draws returning values and PRNG states. Remove the identity
+  run helper, generator map/bind functions and generator trait instances; ordinary
+  Option do notation remains available for explicit state-threaded draws. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.10.0
+
 ## 0.3.0 — 2026-09-20
 
 ### Minor changes

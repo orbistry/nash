@@ -1,5 +1,15 @@
 # nash-plutus
 
+## 0.3.1 — 2026-09-22
+
+### Patch changes
+
+- [dccae3df](https://github.com/orbistry/nash/commit/dccae3df5332b8d5628abb785b8b6b361d0974c1) Use a function alias for generators, returning value and next PRNG state per draw.
+  Remove the redundant replay count. Prepare properties once and retain their
+  state, body function, and deferred display function without rerunning generators.
+  Preserve function aliases in typed definitions and captured variables inside
+  native constructor and case nodes when returning CEK closures. — Thanks @MicroProofs!
+
 ## 0.3.0 — 2026-09-20
 
 ### Minor changes
