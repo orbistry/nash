@@ -3,68 +3,80 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype alias Record = { owner : Bytes, count : Int }\ntype Datum = Datum { owner : Bytes, count : Int }\nrecord : Record\nrecord = { owner = #\"aa\", count = 1 }\ndatum : Datum\ndatum = Datum { owner = #\"bb\", count = 2 }\nmain = neq record.count datum.count\n"
 ---
 --- core
-let fromBool#9 : bool -> bool = \value#14 : bool -> value#14 in
-let neq#2 : 'erased -> 'erased -> bool = \a#7 : 'erased b#8 : 'erased -> case@Bool equalsData a#7 b#8 of
-  True -> fromBool#9 false
-  False -> fromBool#9 true in
-let fromBytes#10 : bytes -> Bytes = bData in
-let fromInt#11 : int -> Int = iData in
-let record#3 : { _0 : Bytes, _1 : Int } = listData (mkCons (fromBytes#10 (con bytestring #aa)) (mkCons (fromInt#11 1) (con (list data) []))) in
-let datum#4 : Main.Datum = (\field#12 : Bytes field#13 : Int -> constrData 0 (mkCons field#12 (mkCons field#13 (con (list data) [])))) (fromBytes#10 (con bytestring #bb)) (fromInt#11 2) in
-let projection#15 : list Data = unListData record#3 in
-let projection#16 : list Data = tailList projection#15 in
-let projection#17 : Data = headList projection#16 in
-let projection#18 : pair int (list Data) = unConstrData datum#4 in
-let evaluated#19 : 'erased = case@Pair projection#18 of
-  Pair tag#5 fields#6 -> fields#6 in
-let projection#20 : 'erased = tailList evaluated#19 in
-let projection#21 : 'erased = headList projection#20 in
-let main#1 : bool = neq#2 projection#17 projection#21 in
-main#1
+let fromBool#17 : bool -> bool = \value#22 : bool -> value#22 in
+let neq#2 : 'erased -> 'erased -> bool = \a#15 : 'erased b#16 : 'erased -> case@Bool equalsData a#15 b#16 of
+  True -> fromBool#17 false
+  False -> fromBool#17 true in
+let fromBytes#18 : bytes -> Bytes = bData in
+let fromInt#19 : int -> Int = iData in
+let record#3 : { _0 : Bytes, _1 : Int } = listData (mkCons (fromBytes#18 (con bytestring #aa)) (mkCons (fromInt#19 1) (con (list data) []))) in
+let datum#8 : Main.Datum = (\field#20 : Bytes field#21 : Int -> constrData 0 (mkCons field#20 (mkCons field#21 (con (list data) [])))) (fromBytes#18 (con bytestring #bb)) (fromInt#19 2) in
+let projection#23 : list Data = unListData record#3 in
+case@List projection#23 of
+  Cons head#4 tail#5 -> case@List tail#5 of
+    Cons head#6 tail#7 -> let projection#24 : pair int (list Data) = unConstrData datum#8 in
+    case@Pair projection#24 of
+      Pair tag#9 fields#10 -> case@List fields#10 of
+        Cons head#11 tail#12 -> case@List tail#12 of
+          Cons head#13 tail#14 -> let main#1 : bool = neq#2 head#6 head#13 in
+          main#1
 --- uplc
 (program 1.1.0
-  [(lam fromBool_9
+  [(lam fromBool_17
     [(lam neq_2
-      [(lam fromBytes_10
-        [(lam fromInt_11
+      [(lam fromBytes_18
+        [(lam fromInt_19
           [(lam record_3
-            [(lam datum_4
-              [(lam projection_15
-                [(lam projection_16
-                  [(lam projection_17
-                    [(lam projection_18
-                      [(lam evaluated_19
-                        [(lam projection_20
-                          [(lam projection_21 [(lam main_1 main_1) [[neq_2 projection_17] projection_21]])
-                            [(force (builtin headList)) projection_20]])
-                          [(force (builtin tailList)) evaluated_19]])
-                        (case projection_18 (lam tag_5 (lam fields_6 fields_6)))])
-                      [(builtin unConstrData) datum_4]])
-                    [(force (builtin headList)) projection_16]])
-                  [(force (builtin tailList)) projection_15]])
+            [(lam datum_8
+              [(lam projection_23
+                (case
+                  projection_23
+                  (lam head_4
+                    (lam tail_5
+                      (case
+                        tail_5
+                        (lam head_6
+                          (lam tail_7
+                            [(lam projection_24
+                              (case
+                                projection_24
+                                (lam tag_9
+                                  (lam fields_10
+                                    (case
+                                      fields_10
+                                      (lam head_11
+                                        (lam tail_12
+                                          (case
+                                            tail_12
+                                            (lam head_13 (lam tail_14 [(lam main_1 main_1) [[neq_2 head_6] head_13]]))
+                                            (error))))
+                                      (error))))))
+                              [(builtin unConstrData) datum_8]]))
+                        (error))))
+                  (error)))
                 [(builtin unListData) record_3]])
-              [[(lam field_12
-                (lam field_13
+              [[(lam field_20
+                (lam field_21
                   [[(builtin constrData) (con integer 0)]
-                    [[(force (builtin mkCons)) field_12]
-                      [[(force (builtin mkCons)) field_13] (con (list data) [])]]]))
-                [fromBytes_10 (con bytestring #bb)]]
-                [fromInt_11 (con integer 2)]]])
+                    [[(force (builtin mkCons)) field_20]
+                      [[(force (builtin mkCons)) field_21] (con (list data) [])]]]))
+                [fromBytes_18 (con bytestring #bb)]]
+                [fromInt_19 (con integer 2)]]])
             [(builtin listData)
-              [[(force (builtin mkCons)) [fromBytes_10 (con bytestring #aa)]]
-                [[(force (builtin mkCons)) [fromInt_11 (con integer 1)]] (con (list data) [])]]]])
+              [[(force (builtin mkCons)) [fromBytes_18 (con bytestring #aa)]]
+                [[(force (builtin mkCons)) [fromInt_19 (con integer 1)]] (con (list data) [])]]]])
           (builtin iData)])
         (builtin bData)])
-      (lam a_7
-        (lam b_8
+      (lam a_15
+        (lam b_16
           (case
-            [[(builtin equalsData) a_7] b_8]
-            [fromBool_9 (con bool True)]
-            [fromBool_9 (con bool False)])))])
-    (lam value_14 value_14)])
+            [[(builtin equalsData) a_15] b_16]
+            [fromBool_17 (con bool True)]
+            [fromBool_17 (con bool False)])))])
+    (lam value_22 value_22)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 3701205, memory: 12413
+cpu: 3195579, memory: 11185

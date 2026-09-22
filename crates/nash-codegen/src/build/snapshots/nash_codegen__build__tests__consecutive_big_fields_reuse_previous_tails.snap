@@ -3,15 +3,12 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\ntype alias Record = { a : Int, b : Int, c : Int, d : Int }\nselect : Record -> (Int, Int, Int, Int, Int)\nselect record = (record.a, record.b, record.c, record.d, record.c)\nmain = select { a = 10, b = 20, c = 30, d = 40 }\n"
 ---
 --- core
-let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> (Int, Int, Int, Int, Int) = \record#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let projection#5 : list Data = unListData record#4 in
-let projection#6 : Data = headList projection#5 in
-let projection#7 : list Data = tailList projection#5 in
-let projection#8 : Data = headList projection#7 in
-let projection#9 : list Data = tailList projection#7 in
-let projection#10 : Data = headList projection#9 in
-let projection#11 : list Data = tailList projection#9 in
-let projection#12 : Data = headList projection#11 in
-constr 0 projection#6 projection#8 projection#10 projection#12 projection#10 in
+let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> (Int, Int, Int, Int, Int) = \record#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let projection#17 : list Data = unListData record#4 in
+case@List projection#17 of
+  Cons head#5 tail#6 -> case@List tail#6 of
+    Cons head#9 tail#10 -> case@List tail#10 of
+      Cons head#11 tail#12 -> case@List tail#12 of
+        Cons head#13 tail#14 -> constr 0 head#5 head#9 head#11 head#13 head#11 in
 let fromInt#3 : int -> Int = iData in
 let main#1 : (Int, Int, Int, Int, Int) = select#2 (listData (mkCons (fromInt#3 10) (mkCons (fromInt#3 20) (mkCons (fromInt#3 30) (mkCons (fromInt#3 40) (con (list data) [])))))) in
 main#1
@@ -28,22 +25,26 @@ main#1
                   [[(force (builtin mkCons)) [fromInt_3 (con integer 40)]] (con (list data) [])]]]]]]])
       (builtin iData)])
     (lam record_4
-      [(lam projection_5
-        [(lam projection_6
-          [(lam projection_7
-            [(lam projection_8
-              [(lam projection_9
-                [(lam projection_10
-                  [(lam projection_11
-                    [(lam projection_12
-                      (constr 0 projection_6 projection_8 projection_10 projection_12 projection_10))
-                      [(force (builtin headList)) projection_11]])
-                    [(force (builtin tailList)) projection_9]])
-                  [(force (builtin headList)) projection_9]])
-                [(force (builtin tailList)) projection_7]])
-              [(force (builtin headList)) projection_7]])
-            [(force (builtin tailList)) projection_5]])
-          [(force (builtin headList)) projection_5]])
+      [(lam projection_17
+        (case
+          projection_17
+          (lam head_5
+            (lam tail_6
+              (case
+                tail_6
+                (lam head_9
+                  (lam tail_10
+                    (case
+                      tail_10
+                      (lam head_11
+                        (lam tail_12
+                          (case
+                            tail_12
+                            (lam head_13 (lam tail_14 (constr 0 head_5 head_9 head_11 head_13 head_11)))
+                            (error))))
+                      (error))))
+                (error))))
+          (error)))
         [(builtin unListData) record_4]])])
 --- result
 (constr 0
@@ -55,4 +56,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2508118, memory: 10144
+cpu: 1514529, memory: 7320

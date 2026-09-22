@@ -79,4 +79,4 @@ mapList f values =
         first :: rest -> Builtin.mkCons (f first) (mapList f rest)
 
 pairValidate : (Validate 'k, Validate 'v) => pair Data Data -> pair 'k 'v
-pairValidate value = Builtin.mkPairData (validate (Builtin.fstPair value)) (validate (Builtin.sndPair value))
+pairValidate pair(key, value) = Builtin.mkPairData (validate key) (validate value)

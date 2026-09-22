@@ -1,0 +1,53 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\ntype alias Record = { a : Int, b : Int, c : Int, d : Int, e : Int, f : Int }\nselect : Record -> (Int, Int, Int, Int)\nselect r = (r.a, r.d, r.e, r.d)\nmain = select { a = 1, b = 2, c = 3, d = 4, e = 5, f = 6 }\n"
+---
+--- core
+let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int, _4 : Int, _5 : Int } -> (Int, Int, Int, Int) = \r#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int, _4 : Int, _5 : Int } -> let projection#13 : list Data = unListData r#4 in
+case@List projection#13 of
+  Cons head#5 tail#6 -> let projection#14 : list Data = dropList 2 tail#6 in
+  case@List projection#14 of
+    Cons head#7 tail#8 -> case@List tail#8 of
+      Cons head#9 tail#10 -> constr 0 head#5 head#7 head#9 head#7 in
+let fromInt#3 : int -> Int = iData in
+let main#1 : (Int, Int, Int, Int) = select#2 (listData (mkCons (fromInt#3 1) (mkCons (fromInt#3 2) (mkCons (fromInt#3 3) (mkCons (fromInt#3 4) (mkCons (fromInt#3 5) (mkCons (fromInt#3 6) (con (list data) [])))))))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam select_2
+    [(lam fromInt_3
+      [(lam main_1 main_1)
+        [select_2
+          [(builtin listData)
+            [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]]
+              [[(force (builtin mkCons)) [fromInt_3 (con integer 2)]]
+                [[(force (builtin mkCons)) [fromInt_3 (con integer 3)]]
+                  [[(force (builtin mkCons)) [fromInt_3 (con integer 4)]]
+                    [[(force (builtin mkCons)) [fromInt_3 (con integer 5)]]
+                      [[(force (builtin mkCons)) [fromInt_3 (con integer 6)]] (con (list data) [])]]]]]]]]])
+      (builtin iData)])
+    (lam r_4
+      [(lam projection_13
+        (case
+          projection_13
+          (lam head_5
+            (lam tail_6
+              [(lam projection_14
+                (case
+                  projection_14
+                  (lam head_7
+                    (lam tail_8
+                      (case
+                        tail_8
+                        (lam head_9 (lam tail_10 (constr 0 head_5 head_7 head_9 head_7)))
+                        (error))))
+                  (error)))
+                [[(force (builtin dropList)) (con integer 2)] tail_6]]))
+          (error)))
+        [(builtin unListData) r_4]])])
+--- result
+(constr 0 (con data (I 1)) (con data (I 4)) (con data (I 5)) (con data (I 4)))
+--- logs
+[]
+--- budget
+cpu: 2082476, memory: 9152

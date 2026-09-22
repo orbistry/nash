@@ -5,20 +5,20 @@ description: "module Cardano.Tx exposing (currentSlot, signedBy)\n\nimport Primi
 claim after deadline
 result: unit
 logs: []
-cpu: 2898205
-mem: 15289
+cpu: 2621392
+mem: 14525
 claim before deadline
 result: error
 logs: ["assertion failed"]
-cpu: 573703
-mem: 421
+cpu: 408890
+mem: 357
 cancel signed by owner
 result: unit
 logs: []
-cpu: 2751584
-mem: 14957
+cpu: 2588434
+mem: 14425
 cancel unsigned
 result: error
 logs: ["assertion failed"]
-cpu: 475082
-mem: 389
+cpu: 391932
+mem: 357

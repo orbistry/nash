@@ -201,26 +201,28 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                                                                                         [(lam i32 [i32 i32])
                                                                                           (lam i32
                                                                                             (lam i33
-                                                                                              (case
-                                                                                                [(force (builtin nullList)) i33]
-                                                                                                [(lam i34
-                                                                                                  [(lam i35
-                                                                                                    [(lam i36
+                                                                                              [(lam i34
+                                                                                                (case
+                                                                                                  i34
+                                                                                                  (lam i35
+                                                                                                    (lam i36
                                                                                                       [(lam i37
                                                                                                         [(lam i38
                                                                                                           [(lam i39
-                                                                                                            (case
-                                                                                                              [(force (builtin nullList)) i36]
-                                                                                                              [[(builtin appendString) i39]
-                                                                                                                [[(builtin appendString) [i27 i24]] [[i32 i32] i36]]]
-                                                                                                              i39))
-                                                                                                            [i31 i38]])
-                                                                                                          i37])
-                                                                                                        [(force (builtin headList)) i33]])
-                                                                                                      i35])
-                                                                                                    i34])
-                                                                                                  [(force (builtin tailList)) i33]]
-                                                                                                [i27 i23])))]])
+                                                                                                            [(lam i40
+                                                                                                              (case
+                                                                                                                i40
+                                                                                                                (lam i41
+                                                                                                                  (lam i42
+                                                                                                                    [[(builtin appendString) i39]
+                                                                                                                      [[(builtin appendString) [i27 i24]] [[i32 i32] i38]]]))
+                                                                                                                i39))
+                                                                                                              i38])
+                                                                                                            [i31 i37]])
+                                                                                                          i36])
+                                                                                                        i35]))
+                                                                                                  [i27 i23]))
+                                                                                                i33]))]])
                                                                                       (lam i31
                                                                                         (case
                                                                                           [[(builtin lessThanInteger) i31] [i28 (con integer 0)]]

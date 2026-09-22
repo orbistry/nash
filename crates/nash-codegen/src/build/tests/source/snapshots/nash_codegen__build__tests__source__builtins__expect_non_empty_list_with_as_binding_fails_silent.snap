@@ -3,62 +3,81 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nfromAssetList : list int -> list int\nfromAssetList inner =\n    case inner of\n        (_ :: _) as x -> x\n        _ -> fail\nmain : bool\nmain =\n    let\n        x = fromAssetList []\n    in\n    eq x x\n"
 ---
 --- core
-let fromBool#7 : bool -> bool = \value#14 : bool -> value#14 in
-let eq#8 : int -> int -> bool = equalsInteger in
-let eq#3 : list 'erased -> list 'erased -> bool = (\self#19 : 'erased -> self#19 self#19) (\self#19 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
-  True -> nullList ys#6
-  False -> case@Bool nullList ys#6 of
-    True -> fromBool#7 false
-    False -> let projection#15 : 'erased = headList xs#5 in
-    let projection#16 : 'erased = headList ys#6 in
-    case@Bool eq#8 projection#15 projection#16 of
-      True -> let projection#17 : list 'erased = tailList xs#5 in
-      let projection#18 : list 'erased = tailList ys#6 in
-      self#19 self#19 projection#17 projection#18
+let fromBool#7 : bool -> bool = \value#27 : bool -> value#27 in
+let eq#15 : int -> int -> bool = equalsInteger in
+let eq#3 : list 'erased -> list 'erased -> bool = (\self#28 : 'erased -> self#28 self#28) (\self#28 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> let match#19 : list 'erased = xs#5 in
+case@List match#19 of
+  Nil -> let match#8 : list 'erased = ys#6 in
+  case@List match#8 of
+    Nil -> fromBool#7 true
+    Cons field#9 field#10 -> fromBool#7 false
+  Cons field#20 field#21 -> let x#11 : 'erased = field#20 in
+  let restX#12 : list 'erased = field#21 in
+  let match#16 : list 'erased = ys#6 in
+  case@List match#16 of
+    Nil -> fromBool#7 false
+    Cons field#17 field#18 -> let y#13 : 'erased = field#17 in
+    let restY#14 : list 'erased = field#18 in
+    case@Bool eq#15 x#11 y#13 of
+      True -> self#28 self#28 restX#12 restY#14
       False -> fromBool#7 false) in
-let fromAssetList#4 : list int -> list int = \inner#9 : list int -> let match#11 : list int = inner#9 in
-case@List match#11 of
+let fromAssetList#4 : list int -> list int = \inner#22 : list int -> let match#24 : list int = inner#22 in
+case@List match#24 of
   Nil -> error
-  Cons field#12 field#13 -> let x#10 : list int = match#11 in
-  x#10 in
+  Cons field#25 field#26 -> let x#23 : list int = match#24 in
+  x#23 in
 let x#2 : list int = fromAssetList#4 (con (list integer) []) in
 let main#1 : bool = eq#3 x#2 x#2 in
 main#1
 --- uplc
 (program 1.1.0
   [(lam fromBool_7
-    [(lam eq_8
+    [(lam eq_15
       [(lam eq_3
         [(lam fromAssetList_4
           [(lam x_2 [(lam main_1 main_1) [[eq_3 x_2] x_2]])
             [fromAssetList_4 (con (list integer) [])]])
-          (lam inner_9
-            [(lam match_11
-              (case match_11 (lam field_12 (lam field_13 [(lam x_10 x_10) match_11])) (error)))
-              inner_9])])
-        [(lam self_19 [self_19 self_19])
-          (lam self_19
+          (lam inner_22
+            [(lam match_24
+              (case match_24 (lam field_25 (lam field_26 [(lam x_23 x_23) match_24])) (error)))
+              inner_22])])
+        [(lam self_28 [self_28 self_28])
+          (lam self_28
             (lam xs_5
               (lam ys_6
-                (case
-                  [(force (builtin nullList)) xs_5]
+                [(lam match_19
                   (case
-                    [(force (builtin nullList)) ys_6]
-                    [(lam projection_15
-                      [(lam projection_16
-                        (case
-                          [[eq_8 projection_15] projection_16]
-                          [fromBool_7 (con bool False)]
-                          [(lam projection_17
-                            [(lam projection_18 [[[self_19 self_19] projection_17] projection_18])
-                              [(force (builtin tailList)) ys_6]])
-                            [(force (builtin tailList)) xs_5]]))
-                        [(force (builtin headList)) ys_6]])
-                      [(force (builtin headList)) xs_5]]
-                    [fromBool_7 (con bool False)])
-                  [(force (builtin nullList)) ys_6]))))]])
+                    match_19
+                    (lam field_20
+                      (lam field_21
+                        [(lam x_11
+                          [(lam restX_12
+                            [(lam match_16
+                              (case
+                                match_16
+                                (lam field_17
+                                  (lam field_18
+                                    [(lam y_13
+                                      [(lam restY_14
+                                        (case
+                                          [[eq_15 x_11] y_13]
+                                          [fromBool_7 (con bool False)]
+                                          [[[self_28 self_28] restX_12] restY_14]))
+                                        field_18])
+                                      field_17]))
+                                [fromBool_7 (con bool False)]))
+                              ys_6])
+                            field_21])
+                          field_20]))
+                    [(lam match_8
+                      (case
+                        match_8
+                        (lam field_9 (lam field_10 [fromBool_7 (con bool False)]))
+                        [fromBool_7 (con bool True)]))
+                      ys_6]))
+                  xs_5])))]])
       (builtin equalsInteger)])
-    (lam value_14 value_14)])
+    (lam value_27 value_27)])
 --- result
 error: ExplicitErrorTerm
 --- logs

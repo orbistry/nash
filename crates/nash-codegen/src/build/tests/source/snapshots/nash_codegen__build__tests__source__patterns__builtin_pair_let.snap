@@ -8,27 +8,26 @@ let evaluated#37 : 'erased = constrData (fromInt#34 7) (mkCons ((\field#35 : int
 let projection#38 : pair int (list Data) = unConstrData evaluated#37 in
 let destruct#2 : pair int (list Data) = projection#38 in
 let match#5 : pair int (list Data) = destruct#2 in
-let match#14 : list Data = case@Pair match#5 of
+case@Pair match#5 of
   Pair field#6 field#7 -> let tag#3 : int = field#6 in
   let fields#4 : list Data = field#7 in
-  fields#4 in
-let leaf#24 : 'erased = delay error in
-let main#1 : int = case@List match#14 of
-  Nil -> force leaf#24
-  Cons field#25 field#26 -> case@Data field#25 of
-    DataConstr field#27 -> force leaf#24
-    DataMap field#28 -> force leaf#24
-    DataList field#29 -> force leaf#24
-    DataI field#30 -> case@List field#26 of
-      Nil -> let number#8 : int = field#30 in
-      let match#11 : pair int (list Data) = destruct#2 in
-      addInteger (case@Pair match#11 of
-        Pair field#12 field#13 -> let tag#9 : int = field#12 in
-        let fields#10 : list Data = field#13 in
-        tag#9) number#8
-      Cons field#31 field#32 -> force leaf#24
-    DataB field#33 -> force leaf#24 in
-main#1
+  let match#14 : list Data = fields#4 in
+  let leaf#24 : 'erased = delay error in
+  let main#1 : int = case@List match#14 of
+    Nil -> force leaf#24
+    Cons field#25 field#26 -> case@Data field#25 of
+      DataConstr field#27 -> force leaf#24
+      DataMap field#28 -> force leaf#24
+      DataList field#29 -> force leaf#24
+      DataI field#30 -> case@List field#26 of
+        Nil -> let number#8 : int = field#30 in
+        let match#11 : pair int (list Data) = destruct#2 in
+        let tag#9 : int = field#6 in
+        let fields#10 : list Data = field#7 in
+        addInteger tag#9 number#8
+        Cons field#31 field#32 -> force leaf#24
+      DataB field#33 -> force leaf#24 in
+  main#1
 --- uplc
 (program 1.1.0
   [(lam fromInt_34
@@ -36,42 +35,43 @@ main#1
       [(lam projection_38
         [(lam destruct_2
           [(lam match_5
-            [(lam match_14
-              [(lam leaf_24
-                [(lam main_1 main_1)
-                  (case
-                    match_14
-                    (lam field_25
-                      (lam field_26
-                        [(lam generated_39
-                          (force
-                            [[[[[[(force (builtin chooseData)) generated_39] (delay (force leaf_24))]
-                              (delay (force leaf_24))]
-                              (delay (force leaf_24))]
-                              (delay
-                                [(lam field_30
-                                  (case
-                                    field_26
-                                    (lam field_31 (lam field_32 (force leaf_24)))
-                                    [(lam number_8
-                                      [(lam match_11
-                                        [[(builtin addInteger)
-                                          (case
-                                            match_11
-                                            (lam field_12
-                                              (lam field_13 [(lam tag_9 [(lam fields_10 tag_9) field_13]) field_12])))]
-                                          number_8])
-                                        destruct_2])
-                                      field_30]))
-                                  [(builtin unIData) generated_39]])]
-                              (delay (force leaf_24))]))
-                          field_25]))
-                    (force leaf_24))])
-                (delay (error))])
-              (case
-                match_5
-                (lam field_6
-                  (lam field_7 [(lam tag_3 [(lam fields_4 fields_4) field_7]) field_6])))])
+            (case
+              match_5
+              (lam field_6
+                (lam field_7
+                  [(lam tag_3
+                    [(lam fields_4
+                      [(lam match_14
+                        [(lam leaf_24
+                          [(lam main_1 main_1)
+                            (case
+                              match_14
+                              (lam field_25
+                                (lam field_26
+                                  [(lam generated_39
+                                    (force
+                                      [[[[[[(force (builtin chooseData)) generated_39] (delay (force leaf_24))]
+                                        (delay (force leaf_24))]
+                                        (delay (force leaf_24))]
+                                        (delay
+                                          [(lam field_30
+                                            (case
+                                              field_26
+                                              (lam field_31 (lam field_32 (force leaf_24)))
+                                              [(lam number_8
+                                                [(lam match_11
+                                                  [(lam tag_9 [(lam fields_10 [[(builtin addInteger) tag_9] number_8]) field_7])
+                                                    field_6])
+                                                  destruct_2])
+                                                field_30]))
+                                            [(builtin unIData) generated_39]])]
+                                        (delay (force leaf_24))]))
+                                    field_25]))
+                              (force leaf_24))])
+                          (delay (error))])
+                        fields_4])
+                      field_7])
+                    field_6]))))
             destruct_2])
           projection_38])
         [(builtin unConstrData) evaluated_37]])
@@ -85,4 +85,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2046827, memory: 10894
+cpu: 1982827, memory: 10494

@@ -27,15 +27,21 @@ impl Eq unit where
 
 impl Eq 'a => Eq (list 'a) where
     eq xs ys =
-        if Builtin.nullList xs then Builtin.nullList ys
-        else if Builtin.nullList ys then False
-        else if eq (Builtin.headList xs) (Builtin.headList ys) then eq (Builtin.tailList xs) (Builtin.tailList ys)
-        else False
+        case xs of
+            [] -> case ys of
+                [] -> True
+                _ :: _ -> False
+            x :: restX -> case ys of
+                [] -> False
+                y :: restY -> if eq x y then eq restX restY else False
 
 impl (Eq 'a, Eq 'b) => Eq (pair 'a 'b) where
     eq a b =
-        if eq (Builtin.fstPair a) (Builtin.fstPair b) then
-            eq (Builtin.sndPair a) (Builtin.sndPair b)
-        else False
+        let
+            pair(firstA, secondA) = a
+            pair(firstB, secondB) = b
+        in
+        if eq firstA firstB then eq secondA secondB else False
+
 impl Eq value where
     eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)

@@ -4,17 +4,17 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 ---
 --- core
 let fromInt#3 : int -> Int = iData in
-let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> int = \r#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let base#6 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = r#4 in
-let evaluated#9 : 'erased = fromInt#3 10 in
-let projection#7 : list Data = unListData base#6 in
-let projection#8 : list Data = tailList projection#7 in
-let updated#5 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = listData (mkCons evaluated#9 projection#8) in
-let projection#10 : list Data = tailList projection#8 in
-let projection#11 : Data = headList projection#10 in
-let evaluated#14 : 'erased = unIData projection#11 in
-let projection#12 : list Data = unListData updated#5 in
-let projection#13 : Data = headList projection#12 in
-addInteger evaluated#14 (unIData projection#13) in
+let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> int = \r#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let base#10 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = r#4 in
+let evaluated#14 : 'erased = fromInt#3 10 in
+let projection#13 : list Data = unListData base#10 in
+case@List projection#13 of
+  Cons head#11 tail#12 -> let updated#5 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = listData (mkCons evaluated#14 tail#12) in
+  case@List tail#12 of
+    Cons head#15 tail#16 -> case@List tail#16 of
+      Cons head#6 tail#7 -> let evaluated#18 : 'erased = unIData head#6 in
+      let projection#17 : list Data = unListData updated#5 in
+      case@List projection#17 of
+        Cons head#8 tail#9 -> addInteger evaluated#18 (unIData head#8) in
 let main#1 : int = select#2 (listData (mkCons (fromInt#3 1) (mkCons (fromInt#3 2) (mkCons (fromInt#3 3) (mkCons (fromInt#3 4) (con (list data) [])))))) in
 main#1
 --- uplc
@@ -29,25 +29,36 @@ main#1
                 [[(force (builtin mkCons)) [fromInt_3 (con integer 3)]]
                   [[(force (builtin mkCons)) [fromInt_3 (con integer 4)]] (con (list data) [])]]]]]]])
       (lam r_4
-        [(lam base_6
-          [(lam evaluated_9
-            [(lam projection_7
-              [(lam projection_8
-                [(lam updated_5
-                  [(lam projection_10
-                    [(lam projection_11
-                      [(lam evaluated_14
-                        [(lam projection_12
-                          [(lam projection_13
-                            [[(builtin addInteger) evaluated_14] [(builtin unIData) projection_13]])
-                            [(force (builtin headList)) projection_12]])
-                          [(builtin unListData) updated_5]])
-                        [(builtin unIData) projection_11]])
-                      [(force (builtin headList)) projection_10]])
-                    [(force (builtin tailList)) projection_8]])
-                  [(builtin listData) [[(force (builtin mkCons)) evaluated_9] projection_8]]])
-                [(force (builtin tailList)) projection_7]])
-              [(builtin unListData) base_6]])
+        [(lam base_10
+          [(lam evaluated_14
+            [(lam projection_13
+              (case
+                projection_13
+                (lam head_11
+                  (lam tail_12
+                    [(lam updated_5
+                      (case
+                        tail_12
+                        (lam head_15
+                          (lam tail_16
+                            (case
+                              tail_16
+                              (lam head_6
+                                (lam tail_7
+                                  [(lam evaluated_18
+                                    [(lam projection_17
+                                      (case
+                                        projection_17
+                                        (lam head_8
+                                          (lam tail_9 [[(builtin addInteger) evaluated_18] [(builtin unIData) head_8]]))
+                                        (error)))
+                                      [(builtin unListData) updated_5]])
+                                    [(builtin unIData) head_6]]))
+                              (error))))
+                        (error)))
+                      [(builtin listData) [[(force (builtin mkCons)) evaluated_14] tail_12]]]))
+                (error)))
+              [(builtin unListData) base_10]])
             [fromInt_3 (con integer 10)]])
           r_4])])
     (builtin iData)])
@@ -56,4 +67,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2726297, memory: 11342
+cpu: 2268671, memory: 10414

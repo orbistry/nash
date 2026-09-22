@@ -3,12 +3,12 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias Record = { first : Int, second : Int }\nmain : Record -> unit\nmain d = if False then (\\x -> ()) d.first else ()\n"
 ---
 --- core
-let fromUnit#3 : unit -> unit = \value#6 : unit -> value#6 in
-let fromBool#4 : bool -> bool = \value#7 : bool -> value#7 in
+let fromUnit#3 : unit -> unit = \value#8 : unit -> value#8 in
+let fromBool#4 : bool -> bool = \value#9 : bool -> value#9 in
 let main#1 : { _0 : Int, _1 : Int } -> unit = \d#2 : { _0 : Int, _1 : Int } -> case@Bool fromBool#4 false of
-  True -> let projection#8 : list Data = unListData d#2 in
-  let projection#9 : Data = headList projection#8 in
-  (\x#5 : Int -> fromUnit#3 ()) projection#9
+  True -> let projection#10 : list Data = unListData d#2 in
+  case@List projection#10 of
+    Cons head#6 tail#7 -> (\x#5 : Int -> fromUnit#3 ()) head#6
   False -> fromUnit#3 () in
 main#1
 --- uplc
@@ -20,8 +20,7 @@ main#1
           (case
             [i1 (con bool False)]
             [i0 (con unit ())]
-            [(lam i3
-              [(lam i4 [(lam i5 [i0 (con unit ())]) i4]) [(force (builtin headList)) i3]])
+            [(lam i3 (case i3 (lam i4 (lam i5 [(lam i6 [i0 (con unit ())]) i4])) (error)))
               [(builtin unListData) i2]]))])
       (lam i1 i1)])
     (lam i0 i0)])

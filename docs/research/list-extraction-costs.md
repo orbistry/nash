@@ -43,8 +43,10 @@ one element further along than a headList cursor.
 
 ## Interpretation
 
-Prefer memory when CPU costs are close, then CPU. No numerical definition of
-"close" has been selected, and the broad extraction rewrite remains pending.
+Prefer memory when CPU costs are close, then CPU. Compiler-generated extraction
+uses shared native case bindings, with dropList for remaining gaps of two or
+more. This selects the lower-memory skip strategy, while adjacent case reads
+win both measures. Explicit source builtin calls remain available.
 
 - Shared case wins both CPU and memory for adjacent reads and head-plus-tail.
 - A single head or tail builtin uses 68 less memory, but case uses about 34% less

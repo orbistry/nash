@@ -3,19 +3,24 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\ninit self =\n    case self of\n        [] -> None\n        _ -> Some (doInit self)\ndoInit self =\n    case self of\n        [] -> trace \"unreachable\" fail\n        [_] -> []\n        x :: xs -> mkCons x (doInit xs)\nvalues : list int\nvalues = [1, 2, 3, 4]\nmain = eq (init values) (Some [1, 2, 3])\n"
 ---
 --- core
-let message#50 : string = "unreachable" in
+let message#59 : string = "unreachable" in
 let fromBool#9 : bool -> bool = \value#32 : bool -> value#32 in
-let eq#35 : int -> int -> bool = equalsInteger in
-let eq#12 : list 'erased -> list 'erased -> bool = (\self#16 : 'erased -> self#16 self#16) (\self#16 : 'erased xs#33 : list 'erased ys#34 : list 'erased -> case@Bool nullList xs#33 of
-  True -> nullList ys#34
-  False -> case@Bool nullList ys#34 of
-    True -> fromBool#9 false
-    False -> let projection#46 : 'erased = headList xs#33 in
-    let projection#47 : 'erased = headList ys#34 in
-    case@Bool eq#35 projection#46 projection#47 of
-      True -> let projection#48 : list 'erased = tailList xs#33 in
-      let projection#49 : list 'erased = tailList ys#34 in
-      self#16 self#16 projection#48 projection#49
+let eq#42 : int -> int -> bool = equalsInteger in
+let eq#12 : list 'erased -> list 'erased -> bool = (\self#16 : 'erased -> self#16 self#16) (\self#16 : 'erased xs#33 : list 'erased ys#34 : list 'erased -> let match#46 : list 'erased = xs#33 in
+case@List match#46 of
+  Nil -> let match#35 : list 'erased = ys#34 in
+  case@List match#35 of
+    Nil -> fromBool#9 true
+    Cons field#36 field#37 -> fromBool#9 false
+  Cons field#47 field#48 -> let x#38 : 'erased = field#47 in
+  let restX#39 : list 'erased = field#48 in
+  let match#43 : list 'erased = ys#34 in
+  case@List match#43 of
+    Nil -> fromBool#9 false
+    Cons field#44 field#45 -> let y#40 : 'erased = field#44 in
+    let restY#41 : list 'erased = field#45 in
+    case@Bool eq#42 x#38 y#40 of
+      True -> self#16 self#16 restX#39 restY#41
       False -> fromBool#9 false) in
 let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#7 : Main.option 'erased b#8 : Main.option 'erased -> let match#13 : (Main.option 'erased, Main.option 'erased) = constr 0 a#7 b#8 in
 let leaf#19 : 'erased = delay (fromBool#9 false) in
@@ -29,15 +34,15 @@ case@Tag match#13 of
       1 field#24 -> let x#10 : 'erased = field#23 in
       let y#11 : 'erased = field#24 in
       eq#12 x#10 y#11 in
-let fromString#37 : string -> string = \value#45 : string -> value#45 in
-let doInit#27 : list int -> list int = (\self#14 : 'erased -> self#14 self#14) (\self#14 : 'erased self#36 : list int -> let match#40 : list int = self#36 in
-case@List match#40 of
-  Nil -> trace (fromString#37 message#50) in error
-  Cons field#41 field#42 -> case@List field#42 of
+let fromString#50 : string -> string = \value#58 : string -> value#58 in
+let doInit#27 : list int -> list int = (\self#14 : 'erased -> self#14 self#14) (\self#14 : 'erased self#49 : list int -> let match#53 : list int = self#49 in
+case@List match#53 of
+  Nil -> trace (fromString#50 message#59) in error
+  Cons field#54 field#55 -> case@List field#55 of
     Nil -> (con (list integer) [])
-    Cons field#43 field#44 -> let x#38 : int = field#41 in
-    let xs#39 : list int = field#42 in
-    mkCons x#38 (self#14 self#14 xs#39)) in
+    Cons field#56 field#57 -> let x#51 : int = field#54 in
+    let xs#52 : list int = field#55 in
+    mkCons x#51 (self#14 self#14 xs#52)) in
 let init#3 : list int -> Main.option (list int) = \self#25 : list int -> let match#28 : list int = self#25 in
 case@List match#28 of
   Nil -> constr 0
@@ -48,12 +53,12 @@ let main#1 : bool = eq#2 (init#3 values#4) ((\field#5 : list int -> constr 1 fie
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_50
+  [(lam message_59
     [(lam fromBool_9
-      [(lam eq_35
+      [(lam eq_42
         [(lam eq_12
           [(lam eq_2
-            [(lam fromString_37
+            [(lam fromString_50
               [(lam doInit_27
                 [(lam init_3
                   [(lam fromInt_6
@@ -79,24 +84,24 @@ main#1
                       self_25])])
                 [(lam self_14 [self_14 self_14])
                   (lam self_14
-                    (lam self_36
-                      [(lam match_40
+                    (lam self_49
+                      [(lam match_53
                         (case
-                          match_40
-                          (lam field_41
-                            (lam field_42
+                          match_53
+                          (lam field_54
+                            (lam field_55
                               (case
-                                field_42
-                                (lam field_43
-                                  (lam field_44
-                                    [(lam x_38
-                                      [(lam xs_39 [[(force (builtin mkCons)) x_38] [[self_14 self_14] xs_39]])
-                                        field_42])
-                                      field_41]))
+                                field_55
+                                (lam field_56
+                                  (lam field_57
+                                    [(lam x_51
+                                      [(lam xs_52 [[(force (builtin mkCons)) x_51] [[self_14 self_14] xs_52]])
+                                        field_55])
+                                      field_54]))
                                 (con (list integer) []))))
-                          (force [[(force (builtin trace)) [fromString_37 message_50]] (delay (error))])))
-                        self_36]))]])
-              (lam value_45 value_45)])
+                          (force [[(force (builtin trace)) [fromString_50 message_59]] (delay (error))])))
+                        self_49]))]])
+              (lam value_58 value_58)])
             (lam a_7
               (lam b_8
                 [(lam match_13
@@ -119,23 +124,37 @@ main#1
             (lam self_16
               (lam xs_33
                 (lam ys_34
-                  (case
-                    [(force (builtin nullList)) xs_33]
+                  [(lam match_46
                     (case
-                      [(force (builtin nullList)) ys_34]
-                      [(lam projection_46
-                        [(lam projection_47
-                          (case
-                            [[eq_35 projection_46] projection_47]
-                            [fromBool_9 (con bool False)]
-                            [(lam projection_48
-                              [(lam projection_49 [[[self_16 self_16] projection_48] projection_49])
-                                [(force (builtin tailList)) ys_34]])
-                              [(force (builtin tailList)) xs_33]]))
-                          [(force (builtin headList)) ys_34]])
-                        [(force (builtin headList)) xs_33]]
-                      [fromBool_9 (con bool False)])
-                    [(force (builtin nullList)) ys_34]))))]])
+                      match_46
+                      (lam field_47
+                        (lam field_48
+                          [(lam x_38
+                            [(lam restX_39
+                              [(lam match_43
+                                (case
+                                  match_43
+                                  (lam field_44
+                                    (lam field_45
+                                      [(lam y_40
+                                        [(lam restY_41
+                                          (case
+                                            [[eq_42 x_38] y_40]
+                                            [fromBool_9 (con bool False)]
+                                            [[[self_16 self_16] restX_39] restY_41]))
+                                          field_45])
+                                        field_44]))
+                                  [fromBool_9 (con bool False)]))
+                                ys_34])
+                              field_48])
+                            field_47]))
+                      [(lam match_35
+                        (case
+                          match_35
+                          (lam field_36 (lam field_37 [fromBool_9 (con bool False)]))
+                          [fromBool_9 (con bool True)]))
+                        ys_34]))
+                    xs_33])))]])
         (builtin equalsInteger)])
       (lam value_32 value_32)])
     (con string "unreachable")])
@@ -144,4 +163,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 8977061, memory: 41763
+cpu: 7088719, memory: 39223

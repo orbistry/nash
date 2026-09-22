@@ -58,13 +58,15 @@ impl Ord unit where
 
 impl (Ord 'a, Eq (list 'a)) => Ord (list 'a) where
     compare xs ys =
-        if Builtin.nullList xs then
-            if Builtin.nullList ys then EQ else LT
-        else if Builtin.nullList ys then GT
-        else
-            case compare (Builtin.headList xs) (Builtin.headList ys) of
-                EQ -> compare (Builtin.tailList xs) (Builtin.tailList ys)
-                order -> order
+        case xs of
+            [] -> case ys of
+                [] -> EQ
+                _ :: _ -> LT
+            x :: restX -> case ys of
+                [] -> GT
+                y :: restY -> case compare x y of
+                    EQ -> compare restX restY
+                    order -> order
 
 impl Ord Int where
     compare a b = compare (Builtin.unIData a) (Builtin.unIData b)

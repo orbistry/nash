@@ -3,33 +3,32 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\ntype Record = Record { a : Int, b : Int, c : Int }\nchange : Record -> Record\nchange value = { value | c = (trace \"c\" 30), a = (trace \"a\" 10) }\nmain : Record\nmain = change (trace \"base\" (Record 1 2 3))\n"
 ---
 --- core
-let message#18 : string = "a" in
-let message#19 : string = "c" in
-let message#20 : string = "base" in
+let message#19 : string = "a" in
+let message#20 : string = "c" in
+let message#21 : string = "base" in
 let fromInt#6 : int -> Int = iData in
-let fromString#7 : string -> string = \value#12 : string -> value#12 in
+let fromString#7 : string -> string = \value#16 : string -> value#16 in
 let change#2 : Main.Record -> Main.Record = \value#8 : Main.Record -> let base#9 : Main.Record = value#8 in
-let evaluated#17 : 'erased = trace (fromString#7 message#18) in fromInt#6 10 in
-let projection#13 : pair int (list Data) = unConstrData base#9 in
-let evaluated#14 : 'erased = case@Pair projection#13 of
-  Pair tag#10 fields#11 -> fields#11 in
-let projection#15 : 'erased = tailList evaluated#14 in
-let projection#16 : 'erased = headList projection#15 in
-constrData 0 (mkCons evaluated#17 (mkCons projection#16 (mkCons (trace (fromString#7 message#19) in fromInt#6 30) (con (list data) [])))) in
-let main#1 : Main.Record = change#2 (trace (fromString#7 message#20) in (\field#3 : Int field#4 : Int field#5 : Int -> constrData 0 (mkCons field#3 (mkCons field#4 (mkCons field#5 (con (list data) []))))) (fromInt#6 1) (fromInt#6 2) (fromInt#6 3)) in
+let evaluated#18 : 'erased = trace (fromString#7 message#19) in fromInt#6 10 in
+let projection#17 : pair int (list Data) = unConstrData base#9 in
+case@Pair projection#17 of
+  Pair tag#10 fields#11 -> case@List fields#11 of
+    Cons head#12 tail#13 -> case@List tail#13 of
+      Cons head#14 tail#15 -> constrData 0 (mkCons evaluated#18 (mkCons head#14 (mkCons (trace (fromString#7 message#20) in fromInt#6 30) (con (list data) [])))) in
+let main#1 : Main.Record = change#2 (trace (fromString#7 message#21) in (\field#3 : Int field#4 : Int field#5 : Int -> constrData 0 (mkCons field#3 (mkCons field#4 (mkCons field#5 (con (list data) []))))) (fromInt#6 1) (fromInt#6 2) (fromInt#6 3)) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_18
-    [(lam message_19
-      [(lam message_20
+  [(lam message_19
+    [(lam message_20
+      [(lam message_21
         [(lam fromInt_6
           [(lam fromString_7
             [(lam change_2
               [(lam main_1 main_1)
                 [change_2
                   (force
-                    [[(force (builtin trace)) [fromString_7 message_20]]
+                    [[(force (builtin trace)) [fromString_7 message_21]]
                       (delay
                         [[[(lam field_3
                           (lam field_4
@@ -43,28 +42,36 @@ main#1
                           [fromInt_6 (con integer 3)]])])]])
               (lam value_8
                 [(lam base_9
-                  [(lam evaluated_17
-                    [(lam projection_13
-                      [(lam evaluated_14
-                        [(lam projection_15
-                          [(lam projection_16
-                            [[(builtin constrData) (con integer 0)]
-                              [[(force (builtin mkCons)) evaluated_17]
-                                [[(force (builtin mkCons)) projection_16]
-                                  [[(force (builtin mkCons))
-                                    (force
-                                      [[(force (builtin trace)) [fromString_7 message_19]]
-                                        (delay [fromInt_6 (con integer 30)])])]
-                                    (con (list data) [])]]]])
-                            [(force (builtin headList)) projection_15]])
-                          [(force (builtin tailList)) evaluated_14]])
-                        (case projection_13 (lam tag_10 (lam fields_11 fields_11)))])
+                  [(lam evaluated_18
+                    [(lam projection_17
+                      (case
+                        projection_17
+                        (lam tag_10
+                          (lam fields_11
+                            (case
+                              fields_11
+                              (lam head_12
+                                (lam tail_13
+                                  (case
+                                    tail_13
+                                    (lam head_14
+                                      (lam tail_15
+                                        [[(builtin constrData) (con integer 0)]
+                                          [[(force (builtin mkCons)) evaluated_18]
+                                            [[(force (builtin mkCons)) head_14]
+                                              [[(force (builtin mkCons))
+                                                (force
+                                                  [[(force (builtin trace)) [fromString_7 message_20]]
+                                                    (delay [fromInt_6 (con integer 30)])])]
+                                                (con (list data) [])]]]]))
+                                    (error))))
+                              (error))))))
                       [(builtin unConstrData) base_9]])
                     (force
-                      [[(force (builtin trace)) [fromString_7 message_18]]
+                      [[(force (builtin trace)) [fromString_7 message_19]]
                         (delay [fromInt_6 (con integer 10)])])])
                   value_8])])
-            (lam value_12 value_12)])
+            (lam value_16 value_16)])
           (builtin iData)])
         (con string "base")])
       (con string "c")])
@@ -74,4 +81,4 @@ main#1
 --- logs
 ["base", "a", "c"]
 --- budget
-cpu: 3194964, memory: 14908
+cpu: 2918151, memory: 14144

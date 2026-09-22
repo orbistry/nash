@@ -3,39 +3,36 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int, c : Int, d : Int }\nreplace : Record -> Record\nreplace r = { r | c = (trace \"third\" 30), a = (trace \"first\" 10) }\ntotal : Record -> int\ntotal r = Builtin.addInteger (Builtin.unIData r.a)\n    (Builtin.addInteger (Builtin.unIData r.b)\n        (Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData r.d)))\nmain = total (replace { a = 1, b = 2, c = 3, d = 4 })\n"
 ---
 --- core
-let message#27 : string = "first" in
-let message#28 : string = "third" in
-let total#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> int = \r#5 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let projection#10 : list Data = unListData r#5 in
-let projection#11 : Data = headList projection#10 in
-let evaluated#20 : 'erased = unIData projection#11 in
-let projection#12 : list Data = tailList projection#10 in
-let projection#13 : Data = headList projection#12 in
-let evaluated#19 : 'erased = unIData projection#13 in
-let projection#14 : list Data = tailList projection#12 in
-let projection#15 : Data = headList projection#14 in
-let evaluated#18 : 'erased = unIData projection#15 in
-let projection#16 : list Data = tailList projection#14 in
-let projection#17 : Data = headList projection#16 in
-addInteger evaluated#20 (addInteger evaluated#19 (addInteger evaluated#18 (unIData projection#17))) in
+let message#33 : string = "first" in
+let message#34 : string = "third" in
+let total#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> int = \r#5 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let projection#24 : list Data = unListData r#5 in
+case@List projection#24 of
+  Cons head#6 tail#7 -> let evaluated#27 : 'erased = unIData head#6 in
+  case@List tail#7 of
+    Cons head#10 tail#11 -> let evaluated#26 : 'erased = unIData head#10 in
+    case@List tail#11 of
+      Cons head#12 tail#13 -> let evaluated#25 : 'erased = unIData head#12 in
+      case@List tail#13 of
+        Cons head#14 tail#15 -> addInteger evaluated#27 (addInteger evaluated#26 (addInteger evaluated#25 (unIData head#14))) in
 let fromInt#4 : int -> Int = iData in
-let fromString#8 : string -> string = \value#9 : string -> value#9 in
-let replace#3 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = \r#6 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let base#7 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = r#6 in
-let evaluated#26 : 'erased = trace (fromString#8 message#27) in fromInt#4 10 in
-let projection#21 : list Data = unListData base#7 in
-let projection#22 : list Data = tailList projection#21 in
-let projection#23 : Data = headList projection#22 in
-let evaluated#25 : 'erased = trace (fromString#8 message#28) in fromInt#4 30 in
-let projection#24 : list Data = dropList 2 projection#22 in
-listData (mkCons evaluated#26 (mkCons projection#23 (mkCons evaluated#25 projection#24))) in
+let fromString#18 : string -> string = \value#23 : string -> value#23 in
+let replace#3 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = \r#16 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let base#17 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = r#16 in
+let evaluated#32 : 'erased = trace (fromString#18 message#33) in fromInt#4 10 in
+let projection#28 : list Data = unListData base#17 in
+case@List projection#28 of
+  Cons head#19 tail#20 -> case@List tail#20 of
+    Cons head#21 tail#22 -> let evaluated#31 : 'erased = trace (fromString#18 message#34) in fromInt#4 30 in
+    case@List tail#22 of
+      Cons head#29 tail#30 -> listData (mkCons evaluated#32 (mkCons head#21 (mkCons evaluated#31 tail#30))) in
 let main#1 : int = total#2 (replace#3 (listData (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mkCons (fromInt#4 3) (mkCons (fromInt#4 4) (con (list data) []))))))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_27
-    [(lam message_28
+  [(lam message_33
+    [(lam message_34
       [(lam total_2
         [(lam fromInt_4
-          [(lam fromString_8
+          [(lam fromString_18
             [(lam replace_3
               [(lam main_1 main_1)
                 [total_2
@@ -45,56 +42,71 @@ main#1
                         [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
                           [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]]
                             [[(force (builtin mkCons)) [fromInt_4 (con integer 4)]] (con (list data) [])]]]]]]]])
-              (lam r_6
-                [(lam base_7
-                  [(lam evaluated_26
-                    [(lam projection_21
-                      [(lam projection_22
-                        [(lam projection_23
-                          [(lam evaluated_25
-                            [(lam projection_24
-                              [(builtin listData)
-                                [[(force (builtin mkCons)) evaluated_26]
-                                  [[(force (builtin mkCons)) projection_23]
-                                    [[(force (builtin mkCons)) evaluated_25] projection_24]]]])
-                              [[(force (builtin dropList)) (con integer 2)] projection_22]])
-                            (force
-                              [[(force (builtin trace)) [fromString_8 message_28]]
-                                (delay [fromInt_4 (con integer 30)])])])
-                          [(force (builtin headList)) projection_22]])
-                        [(force (builtin tailList)) projection_21]])
-                      [(builtin unListData) base_7]])
+              (lam r_16
+                [(lam base_17
+                  [(lam evaluated_32
+                    [(lam projection_28
+                      (case
+                        projection_28
+                        (lam head_19
+                          (lam tail_20
+                            (case
+                              tail_20
+                              (lam head_21
+                                (lam tail_22
+                                  [(lam evaluated_31
+                                    (case
+                                      tail_22
+                                      (lam head_29
+                                        (lam tail_30
+                                          [(builtin listData)
+                                            [[(force (builtin mkCons)) evaluated_32]
+                                              [[(force (builtin mkCons)) head_21]
+                                                [[(force (builtin mkCons)) evaluated_31] tail_30]]]]))
+                                      (error)))
+                                    (force
+                                      [[(force (builtin trace)) [fromString_18 message_34]]
+                                        (delay [fromInt_4 (con integer 30)])])]))
+                              (error))))
+                        (error)))
+                      [(builtin unListData) base_17]])
                     (force
-                      [[(force (builtin trace)) [fromString_8 message_27]]
+                      [[(force (builtin trace)) [fromString_18 message_33]]
                         (delay [fromInt_4 (con integer 10)])])])
-                  r_6])])
-            (lam value_9 value_9)])
+                  r_16])])
+            (lam value_23 value_23)])
           (builtin iData)])
         (lam r_5
-          [(lam projection_10
-            [(lam projection_11
-              [(lam evaluated_20
-                [(lam projection_12
-                  [(lam projection_13
-                    [(lam evaluated_19
-                      [(lam projection_14
-                        [(lam projection_15
-                          [(lam evaluated_18
-                            [(lam projection_16
-                              [(lam projection_17
-                                [[(builtin addInteger) evaluated_20]
-                                  [[(builtin addInteger) evaluated_19]
-                                    [[(builtin addInteger) evaluated_18] [(builtin unIData) projection_17]]]])
-                                [(force (builtin headList)) projection_16]])
-                              [(force (builtin tailList)) projection_14]])
-                            [(builtin unIData) projection_15]])
-                          [(force (builtin headList)) projection_14]])
-                        [(force (builtin tailList)) projection_12]])
-                      [(builtin unIData) projection_13]])
-                    [(force (builtin headList)) projection_12]])
-                  [(force (builtin tailList)) projection_10]])
-                [(builtin unIData) projection_11]])
-              [(force (builtin headList)) projection_10]])
+          [(lam projection_24
+            (case
+              projection_24
+              (lam head_6
+                (lam tail_7
+                  [(lam evaluated_27
+                    (case
+                      tail_7
+                      (lam head_10
+                        (lam tail_11
+                          [(lam evaluated_26
+                            (case
+                              tail_11
+                              (lam head_12
+                                (lam tail_13
+                                  [(lam evaluated_25
+                                    (case
+                                      tail_13
+                                      (lam head_14
+                                        (lam tail_15
+                                          [[(builtin addInteger) evaluated_27]
+                                            [[(builtin addInteger) evaluated_26]
+                                              [[(builtin addInteger) evaluated_25] [(builtin unIData) head_14]]]]))
+                                      (error)))
+                                    [(builtin unIData) head_12]]))
+                              (error)))
+                            [(builtin unIData) head_10]]))
+                      (error)))
+                    [(builtin unIData) head_6]]))
+              (error)))
             [(builtin unListData) r_5]])])
       (con string "third")])
     (con string "first")])
@@ -103,4 +115,4 @@ main#1
 --- logs
 ["first", "third"]
 --- budget
-cpu: 5430621, memory: 22034
+cpu: 4023594, memory: 18342

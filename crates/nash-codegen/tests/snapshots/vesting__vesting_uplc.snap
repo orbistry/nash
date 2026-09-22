@@ -21,26 +21,39 @@ description: "module Cardano.Tx exposing (currentSlot, signedBy)\n\nimport Primi
                               (case
                                 i10
                                 [(lam i12
-                                  [(lam i13
-                                    [(lam i14
-                                      [(lam i15
+                                  (case
+                                    i12
+                                    (lam i13
+                                      (lam i14
                                         (case
-                                          [[(builtin lessThanInteger) [i1 i15]] [i2 i7]]
-                                          (force [[(force (builtin trace)) i0] (delay (error))])
-                                          (con unit ())))
-                                        [(force (builtin headList)) i14]])
-                                      [(force (builtin tailList)) i13]])
-                                    (case i12 (lam i13 (lam i14 i14)))])
+                                          i14
+                                          (lam i15
+                                            (lam i16
+                                              (case
+                                                i16
+                                                (lam i17
+                                                  (lam i18
+                                                    (case
+                                                      [[(builtin lessThanInteger) [i1 i17]] [i2 i7]]
+                                                      (force [[(force (builtin trace)) i0] (delay (error))])
+                                                      (con unit ()))))
+                                                (error))))
+                                          (error))))))
                                   [(builtin unConstrData) i5]]
                                 [(lam i12
-                                  [(lam i13
-                                    [(lam i14
-                                      (case
-                                        [[i4 i7] i14]
-                                        (force [[(force (builtin trace)) i0] (delay (error))])
-                                        (con unit ())))
-                                      [(force (builtin headList)) i13]])
-                                    (case i12 (lam i13 (lam i14 i14)))])
+                                  (case
+                                    i12
+                                    (lam i13
+                                      (lam i14
+                                        (case
+                                          i14
+                                          (lam i15
+                                            (lam i16
+                                              (case
+                                                [[i4 i7] i15]
+                                                (force [[(force (builtin trace)) i0] (delay (error))])
+                                                (con unit ()))))
+                                          (error))))))
                                   [(builtin unConstrData) i5]])))))
                         [(builtin unConstrData) i8]])
                       i6])))])

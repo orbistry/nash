@@ -240,7 +240,7 @@ Maranget decision tree, ported from Aiken's
   `hoist_by_path`). A leaf reached from one place is inlined by the
   optimizer.
 - Accessor paths are **memoized**: the projection chain that reaches a
-  `Path` (`unConstrData`, `sndPair`, `tailList`..., `headList`) is bound to
+  `Path` (Data unwrapping followed by pair/list cases) is bound to
   a name once and reused by every test and leaf below it. This ports Aiken's
   `stick_break_set.rs` (`Builtins::new_from_path`,
   `TreeSet::diff_union_builtins`) with `Core` `Let`s instead of `AirTree`
@@ -427,8 +427,9 @@ variant check or constructor-tag test:
 ```
 case@Pair (unConstrData datum) of
   Pair tag fields ->
-    let deadline = headList (tailList fields)
-    deadline
+    case@List fields of
+      Cons _ rest -> case@List rest of
+        Cons deadline _ -> deadline
 ```
 
 The solved Big ADT type establishes that its representation is constructor
@@ -447,8 +448,8 @@ not emitted by this protocol-11-compatible lowering.
 Field extraction follows the selected branch and shares the decoded pair,
 list tails, and field projections with subsequent accesses.
 Only fields referenced by the compiled pattern branch are extracted. Ignored
-fields do not cause `headList` calls; gaps use `dropList` and adjacent required
-fields reuse `tailList`. Big-list cons patterns reconstruct a Data-encoded
+fields do not get standalone projections; gaps of two or more use `dropList`
+and adjacent required fields reuse the tail bound by the preceding list case. Big-list cons patterns reconstruct a Data-encoded
 tail only when the branch uses it. A single-constructor pattern whose fields
 are all ignored needs no decoding, but its scrutinee still evaluates strictly.
 
@@ -480,23 +481,24 @@ arbitrary integer values are not used as branch-array indexes.
 
 ## Records
 
-Big record access is `headList (tailList^i (unListData r))`; the memoized
-accessor set shares the `unListData` and the `tailList` prefix across fields
+Big record access unwraps with `unListData` and extracts fields through native
+list cases. The accessor cache shares the unwrap and case-bound tails across fields
 read in one scope. Sharing starts at the first evaluation and does not move
 a possibly failing decoder ahead of effects or out of a branch, lambda, or
 delay. Pattern-bound constructor fields also seed the accessor cache.
 Little record access is `Field`. On a single-constructor
 type with labeled fields, `r.x` is not a record access: it lowers to the
-constructor's field extraction (`sndPair (unConstrData r)` then list
-indexing for Big, `Field` for little), exactly as the pattern
+constructor's field extraction (a pair case on `unConstrData r`, then list
+cases for Big, `Field` for little), exactly as the pattern
 `Ctor { x }` does. Record update
 `{ r | x = e }` becomes
 
 ```
 let base = r
 Constr(0, [Field base 0, e, Field base 2, ..])       -- little
-listData (mkCons (headList fields) (mkCons e suffix)) -- Big
-  -- fields = unListData base; suffix = dropList 2 fields
+case@List (unListData base) of                    -- Big
+  Cons first rest -> case@List rest of
+    Cons _ suffix -> listData (mkCons first (mkCons e suffix))
 ```
 
 ## Runtime errors and traces
@@ -644,25 +646,28 @@ No optimizer passes run while Plan 08 is deferred.
 
 ### Field offset extraction
 
-Big record and constructor field access starts with `headList fields` at
-offset zero, `headList (tailList fields)` at offset one, and
-`headList (dropList offset fields)` at offsets two or greater. Within an
-evaluation scope, each computed tail retains its original list and offset.
-Later accesses reuse the nearest available preceding tail: adjacent reads
-advance with `tailList`, while gaps of two or more use `dropList` for only
-the remaining distance. Repeated offsets reuse the existing tail and head.
-Constructor pattern bindings participate in the same cache.
+Big record and constructor fields are extracted with native list cases. Each
+case binds a head and tail together. Within an evaluation scope, each tail
+retains its original list and offset; repeated fields reuse the bound head.
+Later reads start from the nearest available preceding tail. A remaining gap
+of one uses a list case; gaps of two or more use `dropList`, followed by a case
+to bind the selected field. This favors memory for skipped spans while sharing
+both outputs for adjacent reads. See [measured costs](research/list-extraction-costs.md).
+Constructor pattern bindings participate in the same cache. Pair destructuring
+uses native pair cases and shares both components.
 
 For a typed Big record, `unListData` retains the declared field count in
 the accessor cache. Every offset below that count is known nonempty from
-the record layout, even before any field is read. Adjacent accesses and
-update suffixes therefore use `tailList` directly from an available tail.
-Unchecked coercion does not require record access to revalidate this layout.
+the record layout, even before any field is read. Adjacent update suffixes
+therefore use a list case from an available tail. Unchecked coercion does not
+require record access to revalidate this layout.
 
-Arbitrary lists have no declared length. For these, a successful head read
-or Cons branch supplies the nonempty proof needed to replace a remaining
-`dropList 1` with `tailList`; otherwise `dropList` retains its saturating
-behavior. Scope boundaries and source evaluation order are preserved.
+Explicit source calls to `headList` and `tailList` remain builtin calls unless
+an existing case binding already supplies the result. Arbitrary lists have no
+declared length: a remaining `dropList 1` keeps its saturating behavior unless
+an earlier read or Cons match proves the current tail nonempty. Case prefixes
+preserve source evaluation order and stay inside their branch, lambda, trace,
+or delay scope.
 
 Big record updates evaluate the base once, rebuild the prefix through the
 last changed field, and attach the original suffix. Unchanged suffix fields

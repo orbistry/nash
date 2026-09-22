@@ -331,7 +331,7 @@ impl<'a> Engine<'a, '_, '_> {
                         let list = self.ir.builtin(F::UnListData, &[self.ir.var(binder.name)]);
                         let tail = match prefix_len {
                             0 => list,
-                            1 => self.ir.builtin(F::TailList, &[list]),
+                            1 => self.list_part(list, true),
                             _ => self
                                 .ir
                                 .builtin(F::DropList, &[self.ir.int(prefix_len as i128), list]),
@@ -587,12 +587,33 @@ impl<'a> Engine<'a, '_, '_> {
         };
         list = match index {
             0 => list,
-            1 => self.ir.builtin(F::TailList, &[list]),
+            1 => self.list_part(list, true),
             _ => self
                 .ir
                 .builtin(F::DropList, &[self.ir.int(i128::from(index)), list]),
         };
-        Ok(self.ir.builtin(F::HeadList, &[list]))
+        Ok(self.list_part(list, false))
+    }
+
+    fn list_part(&self, value: &'a Core<'a>, tail: bool) -> &'a Core<'a> {
+        let head = Binder {
+            name: self.ir.fresh("head"),
+            ty: DATA,
+        };
+        let rest = Binder {
+            name: self.ir.fresh("tail"),
+            ty: Ty::Const(&ConstTy::List(DATA)),
+        };
+        self.ir.case(
+            CaseKind::List,
+            value,
+            &[Branch {
+                test: nash_ir::core::Test::Cons,
+                binders: self.ir.arena.alloc_slice_copy(&[head, rest]),
+                body: self.ir.var(if tail { rest.name } else { head.name }),
+            }],
+            None,
+        )
     }
 
     pub(crate) fn user_trace(

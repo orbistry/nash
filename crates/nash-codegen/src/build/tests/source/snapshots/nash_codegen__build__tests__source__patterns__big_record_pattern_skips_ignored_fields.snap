@@ -4,23 +4,16 @@ description: "module Main exposing (..)\ntype alias Record = { a : Int, b : Int,
 ---
 --- core
 let read#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int, _4 : Int } -> int = \value#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int, _4 : Int } -> let match#8 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int, _4 : Int } = value#4 in
-let projection#17 : list Data = unListData match#8 in
-let projection#18 : list Data = tailList projection#17 in
-let fieldList#14 : list Data = projection#18 in
-let projection#19 : Data = headList fieldList#14 in
-let field#10 : Int = projection#19 in
-let projection#20 : list Data = dropList 2 projection#18 in
-let fieldList#15 : list Data = projection#20 in
-let projection#21 : Data = headList fieldList#15 in
-let field#12 : Int = projection#21 in
-let projection#22 : list Data = tailList fieldList#15 in
-let fieldList#16 : list Data = projection#22 in
-let projection#23 : Data = headList fieldList#16 in
-let field#13 : Int = projection#23 in
-let b#5 : Int = field#10 in
-let d#6 : Int = field#12 in
-let e#7 : Int = field#13 in
-addInteger (unIData b#5) (addInteger (unIData d#6) (unIData e#7)) in
+let projection#21 : list Data = unListData match#8 in
+case@List projection#21 of
+  Cons ignored#14 fieldTail#15 -> case@List fieldTail#15 of
+    Cons field#10 fieldTail#16 -> case@List fieldTail#16 of
+      Cons ignored#17 fieldTail#18 -> case@List fieldTail#18 of
+        Cons field#12 fieldTail#19 -> case@List fieldTail#19 of
+          Cons field#13 fieldTail#20 -> let b#5 : Int = field#10 in
+          let d#6 : Int = field#12 in
+          let e#7 : Int = field#13 in
+          addInteger (unIData b#5) (addInteger (unIData d#6) (unIData e#7)) in
 let fromInt#3 : int -> Int = iData in
 let main#1 : int = read#2 (listData (mkCons (fromInt#3 1) (mkCons (fromInt#3 2) (mkCons (fromInt#3 3) (mkCons (fromInt#3 4) (mkCons (fromInt#3 5) (con (list data) []))))))) in
 main#1
@@ -39,39 +32,40 @@ main#1
       (builtin iData)])
     (lam value_4
       [(lam match_8
-        [(lam projection_17
-          [(lam projection_18
-            [(lam fieldList_14
-              [(lam projection_19
-                [(lam field_10
-                  [(lam projection_20
-                    [(lam fieldList_15
-                      [(lam projection_21
-                        [(lam field_12
-                          [(lam projection_22
-                            [(lam fieldList_16
-                              [(lam projection_23
-                                [(lam field_13
-                                  [(lam b_5
-                                    [(lam d_6
-                                      [(lam e_7
-                                        [[(builtin addInteger) [(builtin unIData) b_5]]
-                                          [[(builtin addInteger) [(builtin unIData) d_6]] [(builtin unIData) e_7]]])
-                                        field_13])
-                                      field_12])
-                                    field_10])
-                                  projection_23])
-                                [(force (builtin headList)) fieldList_16]])
-                              projection_22])
-                            [(force (builtin tailList)) fieldList_15]])
-                          projection_21])
-                        [(force (builtin headList)) fieldList_15]])
-                      projection_20])
-                    [[(force (builtin dropList)) (con integer 2)] projection_18]])
-                  projection_19])
-                [(force (builtin headList)) fieldList_14]])
-              projection_18])
-            [(force (builtin tailList)) projection_17]])
+        [(lam projection_21
+          (case
+            projection_21
+            (lam ignored_14
+              (lam fieldTail_15
+                (case
+                  fieldTail_15
+                  (lam field_10
+                    (lam fieldTail_16
+                      (case
+                        fieldTail_16
+                        (lam ignored_17
+                          (lam fieldTail_18
+                            (case
+                              fieldTail_18
+                              (lam field_12
+                                (lam fieldTail_19
+                                  (case
+                                    fieldTail_19
+                                    (lam field_13
+                                      (lam fieldTail_20
+                                        [(lam b_5
+                                          [(lam d_6
+                                            [(lam e_7
+                                              [[(builtin addInteger) [(builtin unIData) b_5]]
+                                                [[(builtin addInteger) [(builtin unIData) d_6]] [(builtin unIData) e_7]]])
+                                              field_13])
+                                            field_12])
+                                          field_10]))
+                                    (error))))
+                              (error))))
+                        (error))))
+                  (error))))
+            (error)))
           [(builtin unListData) match_8]])
         value_4])])
 --- result
@@ -79,4 +73,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3488239, memory: 14448
+cpu: 2378838, memory: 10684

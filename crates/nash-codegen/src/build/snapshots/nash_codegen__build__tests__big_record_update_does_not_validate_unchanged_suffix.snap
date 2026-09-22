@@ -3,45 +3,48 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\noriginal : Record\noriginal = Primitive.coerce (Builtin.listData [Builtin.iData 1])\nmain = Builtin.equalsData\n    (Primitive.coerce { original | a = 10 })\n    (Primitive.coerce (Builtin.listData [Builtin.iData 10]))\n"
 ---
 --- core
-let fromInt#7 : int -> int = \value#9 : int -> value#9 in
-let original#3 : { _0 : Int, _1 : Int } = (\coerce#8 : 'erased -> coerce#8) (listData (mkCons (iData (fromInt#7 1)) (con (list data) []))) in
+let fromInt#9 : int -> int = \value#11 : int -> value#11 in
+let original#3 : { _0 : Int, _1 : Int } = (\coerce#10 : 'erased -> coerce#10) (listData (mkCons (iData (fromInt#9 1)) (con (list data) []))) in
 let fromInt#5 : int -> Int = iData in
 let base#4 : { _0 : Int, _1 : Int } = original#3 in
-let evaluated#12 : 'erased = fromInt#5 10 in
-let projection#10 : list Data = unListData base#4 in
-let projection#11 : list Data = tailList projection#10 in
-let main#1 : bool = equalsData ((\coerce#2 : 'erased -> coerce#2) (listData (mkCons evaluated#12 projection#11))) ((\coerce#6 : 'erased -> coerce#6) (listData (mkCons (iData (fromInt#7 10)) (con (list data) [])))) in
-main#1
+let evaluated#13 : 'erased = fromInt#5 10 in
+let projection#12 : list Data = unListData base#4 in
+case@List projection#12 of
+  Cons head#6 tail#7 -> let main#1 : bool = equalsData ((\coerce#2 : 'erased -> coerce#2) (listData (mkCons evaluated#13 tail#7))) ((\coerce#8 : 'erased -> coerce#8) (listData (mkCons (iData (fromInt#9 10)) (con (list data) [])))) in
+  main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_7
+  [(lam fromInt_9
     [(lam original_3
       [(lam fromInt_5
         [(lam base_4
-          [(lam evaluated_12
-            [(lam projection_10
-              [(lam projection_11
-                [(lam main_1 main_1)
-                  [[(builtin equalsData)
-                    [(lam coerce_2 coerce_2)
-                      [(builtin listData) [[(force (builtin mkCons)) evaluated_12] projection_11]]]]
-                    [(lam coerce_6 coerce_6)
-                      [(builtin listData)
-                        [[(force (builtin mkCons)) [(builtin iData) [fromInt_7 (con integer 10)]]]
-                          (con (list data) [])]]]]])
-                [(force (builtin tailList)) projection_10]])
+          [(lam evaluated_13
+            [(lam projection_12
+              (case
+                projection_12
+                (lam head_6
+                  (lam tail_7
+                    [(lam main_1 main_1)
+                      [[(builtin equalsData)
+                        [(lam coerce_2 coerce_2)
+                          [(builtin listData) [[(force (builtin mkCons)) evaluated_13] tail_7]]]]
+                        [(lam coerce_8 coerce_8)
+                          [(builtin listData)
+                            [[(force (builtin mkCons)) [(builtin iData) [fromInt_9 (con integer 10)]]]
+                              (con (list data) [])]]]]]))
+                (error)))
               [(builtin unListData) base_4]])
             [fromInt_5 (con integer 10)]])
           original_3])
         (builtin iData)])
-      [(lam coerce_8 coerce_8)
+      [(lam coerce_10 coerce_10)
         [(builtin listData)
-          [[(force (builtin mkCons)) [(builtin iData) [fromInt_7 (con integer 1)]]]
+          [[(force (builtin mkCons)) [(builtin iData) [fromInt_9 (con integer 1)]]]
             (con (list data) [])]]]])
-    (lam value_9 value_9)])
+    (lam value_11 value_11)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 2831894, memory: 8053
+cpu: 2718231, memory: 7821

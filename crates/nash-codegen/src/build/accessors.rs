@@ -45,6 +45,7 @@ impl std::hash::Hash for Projection {
 #[derive(Clone, Default)]
 struct Scope<'a> {
     aliases: HashMap<u32, u32>,
+    reused: HashMap<u32, Name<'a>>,
     types: HashMap<u32, Ty<'a>>,
     projections: HashMap<(Projection, u32), Binder<'a>>,
     tail_positions: HashMap<u32, (u32, usize)>,
@@ -157,8 +158,12 @@ impl<'a> Scope<'a> {
         }
     }
 }
+enum Prefix<'a> {
+    Let(Binder<'a>, &'a Core<'a>),
+    Case(CaseKind, &'a Core<'a>, Test<'a>, &'a [Binder<'a>]),
+}
 struct Parts<'a> {
-    bindings: Vec<(Binder<'a>, &'a Core<'a>)>,
+    bindings: Vec<Prefix<'a>>,
     value: &'a Core<'a>,
 }
 impl<'a> Parts<'a> {
@@ -184,22 +189,32 @@ impl<'a> Share<'a, '_> {
             .bindings
             .into_iter()
             .rev()
-            .fold(parts.value, |body, (binder, value)| {
-                self.build.let_(binder, value, body)
+            .fold(parts.value, |body, prefix| match prefix {
+                Prefix::Let(binder, value) => self.build.let_(binder, value, body),
+                Prefix::Case(kind, value, test, binders) => self.build.case(
+                    kind,
+                    value,
+                    &[Branch {
+                        test,
+                        binders,
+                        body,
+                    }],
+                    None,
+                ),
             })
     }
     fn temporary(
         &self,
         value: &'a Core<'a>,
         scope: &mut Scope<'a>,
-        bindings: &mut Vec<(Binder<'a>, &'a Core<'a>)>,
+        bindings: &mut Vec<Prefix<'a>>,
     ) -> &'a Core<'a> {
         let binder = Binder {
             name: self.build.fresh("evaluated"),
             ty: scope.ty(value),
         };
         scope.bind(binder, Some(value));
-        bindings.push((binder, value));
+        bindings.push(Prefix::Let(binder, value));
         self.build.var(binder.name)
     }
     /// Before moving a later operand's prefix outside the application, evaluate
@@ -208,7 +223,7 @@ impl<'a> Share<'a, '_> {
         &self,
         values: &[&'a Core<'a>],
         scope: &mut Scope<'a>,
-    ) -> (Vec<(Binder<'a>, &'a Core<'a>)>, Vec<&'a Core<'a>>) {
+    ) -> (Vec<Prefix<'a>>, Vec<&'a Core<'a>>) {
         let mut bindings = Vec::new();
         let mut operands: Vec<&'a Core<'a>> = Vec::new();
         for value in values {
@@ -314,6 +329,42 @@ impl<'a> Share<'a, '_> {
                 .unwrap_or(Ty::Erased),
             _ => Ty::Erased,
         };
+        if matches!(projection, Projection::DropList(_))
+            && emitted_projection == Projection::Builtin(F::TailList)
+        {
+            let head = Binder {
+                name: self.build.fresh("head"),
+                ty: match input {
+                    Ty::Const(ConstTy::List(element)) => *element,
+                    _ => Ty::Erased,
+                },
+            };
+            let tail = Binder {
+                name: self.build.fresh("tail"),
+                ty: input,
+            };
+            let binders = self.build.arena.alloc_slice_copy(&[head, tail]);
+            scope.bind(head, None);
+            scope.bind(tail, None);
+            scope.case_binders(
+                CaseKind::List,
+                parts.value,
+                &Branch {
+                    test: Test::Cons,
+                    binders,
+                    body: self.build.var(tail.name),
+                },
+            );
+            scope.projections.insert(key, tail);
+            parts.bindings.push(Prefix::Case(
+                CaseKind::List,
+                parts.value,
+                Test::Cons,
+                binders,
+            ));
+            parts.value = self.build.var(tail.name);
+            return parts;
+        }
         let value = match emitted_projection {
             Projection::Builtin(func) => self.build.builtin(func, &[parts.value]),
             Projection::DropList(count) => self.build.builtin(
@@ -334,7 +385,7 @@ impl<'a> Share<'a, '_> {
         if let Some(position) = tail_position {
             scope.remember_tail(binder, position);
         }
-        parts.bindings.push((binder, value));
+        parts.bindings.push(Prefix::Let(binder, value));
         parts.value = self.build.var(binder.name);
         parts
     }
@@ -346,7 +397,13 @@ impl<'a> Share<'a, '_> {
             return Parts::value(self.build.var(binder.name));
         }
         match core {
-            Core::Var(_) | Core::Lit(_) | Core::Error => Parts::value(core),
+            Core::Var(name) => Parts::value(
+                scope
+                    .reused
+                    .get(&name.unique)
+                    .map_or(core, |name| self.build.var(*name)),
+            ),
+            Core::Lit(_) | Core::Error => Parts::value(core),
             Core::Lam { params, body } => {
                 let mut inner = scope.clone();
                 for param in *params {
@@ -364,7 +421,7 @@ impl<'a> Share<'a, '_> {
             } => {
                 let mut value = self.term(value, scope);
                 scope.bind(*binder, Some(value.value));
-                value.bindings.push((*binder, value.value));
+                value.bindings.push(Prefix::Let(*binder, value.value));
                 let body = self.term(body, scope);
                 value.bindings.extend(body.bindings);
                 value.value = body.value;
@@ -475,6 +532,50 @@ impl<'a> Share<'a, '_> {
                         scrutinee.value = self.build.var(binder.name);
                         return scrutinee;
                     }
+                }
+                if let [branch] = *branches
+                    && default.is_none()
+                    && matches!(
+                        (kind, branch.test),
+                        (CaseKind::List, Test::Cons) | (CaseKind::Pair, Test::Pair)
+                    )
+                {
+                    let projections = if *kind == CaseKind::List {
+                        [F::HeadList, F::TailList]
+                    } else {
+                        [F::FstPair, F::SndPair]
+                    };
+                    let cached = scope.path(scrutinee.value).and_then(|(base, root)| {
+                        projections
+                            .iter()
+                            .map(|func| {
+                                let mut path = base.clone();
+                                path.push(Projection::Builtin(*func));
+                                scope.case_paths.get(&(path, root)).copied()
+                            })
+                            .collect::<Option<Vec<_>>>()
+                    });
+                    if let Some(cached) = cached {
+                        for (binder, cached) in branch.binders.iter().zip(cached) {
+                            scope.bind(*binder, Some(self.build.var(cached.name)));
+                            scope.reused.insert(binder.name.unique, cached.name);
+                        }
+                    } else {
+                        for binder in branch.binders {
+                            scope.bind(*binder, None);
+                        }
+                        scope.case_binders(*kind, scrutinee.value, branch);
+                        scrutinee.bindings.push(Prefix::Case(
+                            *kind,
+                            scrutinee.value,
+                            branch.test,
+                            branch.binders,
+                        ));
+                    }
+                    let body = self.term(branch.body, scope);
+                    scrutinee.bindings.extend(body.bindings);
+                    scrutinee.value = body.value;
+                    return scrutinee;
                 }
                 let branches = branches
                     .iter()

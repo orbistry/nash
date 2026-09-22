@@ -3,50 +3,55 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\nreplace : Record -> Record\nreplace r = { r | a = (trace \"first\" 10), b = (trace \"second\" 20) }\nmain = Builtin.unIData (replace (Primitive.coerce ())).b\n"
 ---
 --- core
-let message#15 : string = "first" in
-let message#16 : string = "second" in
-let fromInt#7 : int -> Int = iData in
-let fromString#8 : string -> string = \value#10 : string -> value#10 in
-let replace#2 : { _0 : Int, _1 : Int } -> { _0 : Int, _1 : Int } = \r#5 : { _0 : Int, _1 : Int } -> let base#6 : { _0 : Int, _1 : Int } = r#5 in
-listData (mkCons (trace (fromString#8 message#15) in fromInt#7 10) (mkCons (trace (fromString#8 message#16) in fromInt#7 20) (con (list data) []))) in
-let fromUnit#4 : unit -> unit = \value#9 : unit -> value#9 in
-let evaluated#11 : 'erased = replace#2 ((\coerce#3 : 'erased -> coerce#3) (fromUnit#4 ())) in
-let projection#12 : list Data = unListData evaluated#11 in
-let projection#13 : list Data = tailList projection#12 in
-let projection#14 : Data = headList projection#13 in
-let main#1 : int = unIData projection#14 in
-main#1
+let message#17 : string = "first" in
+let message#18 : string = "second" in
+let fromInt#11 : int -> Int = iData in
+let fromString#12 : string -> string = \value#14 : string -> value#14 in
+let replace#2 : { _0 : Int, _1 : Int } -> { _0 : Int, _1 : Int } = \r#9 : { _0 : Int, _1 : Int } -> let base#10 : { _0 : Int, _1 : Int } = r#9 in
+listData (mkCons (trace (fromString#12 message#17) in fromInt#11 10) (mkCons (trace (fromString#12 message#18) in fromInt#11 20) (con (list data) []))) in
+let fromUnit#4 : unit -> unit = \value#13 : unit -> value#13 in
+let evaluated#15 : 'erased = replace#2 ((\coerce#3 : 'erased -> coerce#3) (fromUnit#4 ())) in
+let projection#16 : list Data = unListData evaluated#15 in
+case@List projection#16 of
+  Cons head#5 tail#6 -> case@List tail#6 of
+    Cons head#7 tail#8 -> let main#1 : int = unIData head#7 in
+    main#1
 --- uplc
 (program 1.1.0
-  [(lam message_15
-    [(lam message_16
-      [(lam fromInt_7
-        [(lam fromString_8
+  [(lam message_17
+    [(lam message_18
+      [(lam fromInt_11
+        [(lam fromString_12
           [(lam replace_2
             [(lam fromUnit_4
-              [(lam evaluated_11
-                [(lam projection_12
-                  [(lam projection_13
-                    [(lam projection_14 [(lam main_1 main_1) [(builtin unIData) projection_14]])
-                      [(force (builtin headList)) projection_13]])
-                    [(force (builtin tailList)) projection_12]])
-                  [(builtin unListData) evaluated_11]])
+              [(lam evaluated_15
+                [(lam projection_16
+                  (case
+                    projection_16
+                    (lam head_5
+                      (lam tail_6
+                        (case
+                          tail_6
+                          (lam head_7 (lam tail_8 [(lam main_1 main_1) [(builtin unIData) head_7]]))
+                          (error))))
+                    (error)))
+                  [(builtin unListData) evaluated_15]])
                 [replace_2 [(lam coerce_3 coerce_3) [fromUnit_4 (con unit ())]]]])
-              (lam value_9 value_9)])
-            (lam r_5
-              [(lam base_6
+              (lam value_13 value_13)])
+            (lam r_9
+              [(lam base_10
                 [(builtin listData)
                   [[(force (builtin mkCons))
                     (force
-                      [[(force (builtin trace)) [fromString_8 message_15]]
-                        (delay [fromInt_7 (con integer 10)])])]
+                      [[(force (builtin trace)) [fromString_12 message_17]]
+                        (delay [fromInt_11 (con integer 10)])])]
                     [[(force (builtin mkCons))
                       (force
-                        [[(force (builtin trace)) [fromString_8 message_16]]
-                          (delay [fromInt_7 (con integer 20)])])]
+                        [[(force (builtin trace)) [fromString_12 message_18]]
+                          (delay [fromInt_11 (con integer 20)])])]
                       (con (list data) [])]]])
-                r_5])])
-          (lam value_10 value_10)])
+                r_9])])
+          (lam value_14 value_14)])
         (builtin iData)])
       (con string "second")])
     (con string "first")])
@@ -55,4 +60,4 @@ main#1
 --- logs
 ["first", "second"]
 --- budget
-cpu: 2011760, memory: 9652
+cpu: 1782947, memory: 9188

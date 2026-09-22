@@ -2,68 +2,66 @@
 source: crates/nash-codegen/tests/vesting.rs
 description: "module Cardano.Tx exposing (currentSlot, signedBy)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Lift exposing (lower)\n\n-- Test contexts encode the current slot and one signer as two Data fields.\ncurrentSlot : Data -> int\ncurrentSlot ctx =\n    case ctx of\n        Constr pair(_, [ I slot, _ ]) -> slot\n        _ -> fail\n\nsignedBy : Data -> Bytes -> bool\nsignedBy ctx owner =\n    case ctx of\n        Constr pair(_, [ _, B signer ]) -> Builtin.equalsByteString signer (lower owner)\n        _ -> fail\n\nvalidator module Vesting exposing (main)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Lift exposing (lower)\nimport Cardano.Tx exposing (currentSlot, signedBy)\n\ntype Datum = Datum { owner : Bytes, deadline : Int }\n\ntype step 'a = Done 'a | Next int 'a\n\ntype alias acc = { total : int, seen : list Int }\n\ntype Redeemer = Claim | Cancel\n\nmain : Datum -> Redeemer -> Data -> unit\nmain datum redeemer ctx =\n    case redeemer of\n        Claim -> assert (Builtin.lessThanInteger (lower datum.deadline) (currentSlot ctx))\n        Cancel -> assert (signedBy ctx datum.owner)\n"
 ---
-let message#107 : string = "assertion failed" in
-let lower#5 : Int -> int = \value#15 : Int -> unIData value#15 in
-let currentSlot#8 : Data -> int = \ctx#16 : Data -> let match#18 : Data = ctx#16 in
-let leaf#37 : 'erased = delay error in
-case@Data match#18 of
-  DataConstr field#38 -> case@Pair field#38 of
-    Pair field#39 field#40 -> case@List field#40 of
-      Nil -> force leaf#37
-      Cons field#41 field#42 -> case@Data field#41 of
-        DataConstr field#43 -> force leaf#37
-        DataMap field#44 -> force leaf#37
-        DataList field#45 -> force leaf#37
-        DataI field#46 -> case@List field#42 of
-          Nil -> force leaf#37
-          Cons field#47 field#48 -> case@List field#48 of
-            Nil -> let slot#17 : int = field#46 in
-            slot#17
-            Cons field#49 field#50 -> force leaf#37
-        DataB field#51 -> force leaf#37
-  DataMap field#52 -> force leaf#37
-  DataList field#53 -> force leaf#37
-  DataI field#54 -> force leaf#37
-  DataB field#55 -> force leaf#37 in
-let lower#59 : Bytes -> bytes = \value#98 : Bytes -> unBData value#98 in
-let signedBy#9 : Data -> Bytes -> bool = \ctx#56 : Data owner#57 : Bytes -> let match#60 : Data = ctx#56 in
-let leaf#79 : 'erased = delay error in
-case@Data match#60 of
-  DataConstr field#80 -> case@Pair field#80 of
-    Pair field#81 field#82 -> case@List field#82 of
-      Nil -> force leaf#79
-      Cons field#83 field#84 -> case@List field#84 of
-        Nil -> force leaf#79
-        Cons field#85 field#86 -> case@Data field#85 of
-          DataConstr field#87 -> force leaf#79
-          DataMap field#88 -> force leaf#79
-          DataList field#89 -> force leaf#79
-          DataI field#90 -> force leaf#79
-          DataB field#91 -> case@List field#86 of
-            Nil -> let signer#58 : bytes = field#91 in
-            equalsByteString signer#58 (lower#59 owner#57)
-            Cons field#92 field#93 -> force leaf#79
-  DataMap field#94 -> force leaf#79
-  DataList field#95 -> force leaf#79
-  DataI field#96 -> force leaf#79
-  DataB field#97 -> force leaf#79 in
-let main#1 : Vesting.Datum -> Vesting.Redeemer -> Data -> unit = \datum#2 : Vesting.Datum redeemer#3 : Vesting.Redeemer ctx#4 : Data -> let match#12 : Vesting.Redeemer = redeemer#3 in
-let projection#99 : pair int (list Data) = unConstrData match#12 in
-case@Pair projection#99 of
-  Pair tag#13 fields#14 -> case@Tag tag#13 of
-    0 -> let projection#100 : pair int (list Data) = unConstrData datum#2 in
-    let evaluated#101 : 'erased = case@Pair projection#100 of
-      Pair tag#6 fields#7 -> fields#7 in
-    let projection#102 : 'erased = tailList evaluated#101 in
-    let projection#103 : 'erased = headList projection#102 in
-    case@Bool lessThanInteger (lower#5 projection#103) (currentSlot#8 ctx#4) of
-      True -> ()
-      False -> trace message#107 in error
-    1 -> let projection#104 : pair int (list Data) = unConstrData datum#2 in
-    let evaluated#105 : 'erased = case@Pair projection#104 of
-      Pair tag#10 fields#11 -> fields#11 in
-    let projection#106 : 'erased = headList evaluated#105 in
-    case@Bool signedBy#9 ctx#4 projection#106 of
-      True -> ()
-      False -> trace message#107 in error in
+let message#108 : string = "assertion failed" in
+let lower#5 : Int -> int = \value#21 : Int -> unIData value#21 in
+let currentSlot#12 : Data -> int = \ctx#22 : Data -> let match#24 : Data = ctx#22 in
+let leaf#43 : 'erased = delay error in
+case@Data match#24 of
+  DataConstr field#44 -> case@Pair field#44 of
+    Pair field#45 field#46 -> case@List field#46 of
+      Nil -> force leaf#43
+      Cons field#47 field#48 -> case@Data field#47 of
+        DataConstr field#49 -> force leaf#43
+        DataMap field#50 -> force leaf#43
+        DataList field#51 -> force leaf#43
+        DataI field#52 -> case@List field#48 of
+          Nil -> force leaf#43
+          Cons field#53 field#54 -> case@List field#54 of
+            Nil -> let slot#23 : int = field#52 in
+            slot#23
+            Cons field#55 field#56 -> force leaf#43
+        DataB field#57 -> force leaf#43
+  DataMap field#58 -> force leaf#43
+  DataList field#59 -> force leaf#43
+  DataI field#60 -> force leaf#43
+  DataB field#61 -> force leaf#43 in
+let lower#65 : Bytes -> bytes = \value#104 : Bytes -> unBData value#104 in
+let signedBy#13 : Data -> Bytes -> bool = \ctx#62 : Data owner#63 : Bytes -> let match#66 : Data = ctx#62 in
+let leaf#85 : 'erased = delay error in
+case@Data match#66 of
+  DataConstr field#86 -> case@Pair field#86 of
+    Pair field#87 field#88 -> case@List field#88 of
+      Nil -> force leaf#85
+      Cons field#89 field#90 -> case@List field#90 of
+        Nil -> force leaf#85
+        Cons field#91 field#92 -> case@Data field#91 of
+          DataConstr field#93 -> force leaf#85
+          DataMap field#94 -> force leaf#85
+          DataList field#95 -> force leaf#85
+          DataI field#96 -> force leaf#85
+          DataB field#97 -> case@List field#92 of
+            Nil -> let signer#64 : bytes = field#97 in
+            equalsByteString signer#64 (lower#65 owner#63)
+            Cons field#98 field#99 -> force leaf#85
+  DataMap field#100 -> force leaf#85
+  DataList field#101 -> force leaf#85
+  DataI field#102 -> force leaf#85
+  DataB field#103 -> force leaf#85 in
+let main#1 : Vesting.Datum -> Vesting.Redeemer -> Data -> unit = \datum#2 : Vesting.Datum redeemer#3 : Vesting.Redeemer ctx#4 : Data -> let match#18 : Vesting.Redeemer = redeemer#3 in
+let projection#105 : pair int (list Data) = unConstrData match#18 in
+case@Pair projection#105 of
+  Pair tag#19 fields#20 -> case@Tag tag#19 of
+    0 -> let projection#106 : pair int (list Data) = unConstrData datum#2 in
+    case@Pair projection#106 of
+      Pair tag#6 fields#7 -> case@List fields#7 of
+        Cons head#8 tail#9 -> case@List tail#9 of
+          Cons head#10 tail#11 -> case@Bool lessThanInteger (lower#5 head#10) (currentSlot#12 ctx#4) of
+            True -> ()
+            False -> trace message#108 in error
+    1 -> let projection#107 : pair int (list Data) = unConstrData datum#2 in
+    case@Pair projection#107 of
+      Pair tag#14 fields#15 -> case@List fields#15 of
+        Cons head#16 tail#17 -> case@Bool signedBy#13 ctx#4 head#16 of
+          True -> ()
+          False -> trace message#108 in error in
 main#1

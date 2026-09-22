@@ -8,26 +8,17 @@ let select#2 : Main.Choice -> int = \value#8 : Main.Choice -> let match#13 : Mai
 let projection#27 : pair int (list Data) = unConstrData match#13 in
 case@Pair projection#27 of
   Pair tag#22 fields#23 -> case@Tag tag#22 of
-    0 -> let fieldList#24 : list Data = fields#23 in
-    let projection#28 : Data = headList fieldList#24 in
-    let field#14 : Main.Box = projection#28 in
-    let projection#29 : pair int (list Data) = unConstrData field#14 in
-    case@Pair projection#29 of
-      Pair tag#17 fields#18 -> let fieldList#19 : list Data = fields#18 in
-      let projection#30 : Data = headList fieldList#19 in
-      let field#15 : Int = projection#30 in
-      let projection#31 : list Data = tailList fieldList#19 in
-      let fieldList#20 : list Data = projection#31 in
-      let projection#32 : Data = headList fieldList#20 in
-      let field#16 : Int = projection#32 in
-      let first#9 : Int = field#15 in
-      let second#10 : Int = field#16 in
-      addInteger (unIData first#9) (unIData second#10)
-    1 -> let fieldList#25 : list Data = fields#23 in
-    let projection#33 : Data = headList fieldList#25 in
-    let field#21 : Int = projection#33 in
-    let number#11 : Int = field#21 in
-    unIData number#11
+    0 -> case@List fields#23 of
+      Cons field#14 fieldTail#24 -> let projection#28 : pair int (list Data) = unConstrData field#14 in
+      case@Pair projection#28 of
+        Pair tag#17 fields#18 -> case@List fields#18 of
+          Cons field#15 fieldTail#19 -> case@List fieldTail#19 of
+            Cons field#16 fieldTail#20 -> let first#9 : Int = field#15 in
+            let second#10 : Int = field#16 in
+            addInteger (unIData first#9) (unIData second#10)
+    1 -> case@List fields#23 of
+      Cons field#21 fieldTail#25 -> let number#11 : Int = field#21 in
+      unIData number#11
     2 -> fromInt#12 0 in
 let fromInt#6 : int -> Int = iData in
 let main#1 : (int, int, int) = constr 0 (select#2 ((\field#3 : Main.Box -> constrData 0 (mkCons field#3 (con (list data) []))) ((\field#4 : Int field#5 : Int -> constrData 0 (mkCons field#4 (mkCons field#5 (con (list data) [])))) (fromInt#6 20) (fromInt#6 22)))) (select#2 ((\field#7 : Int -> constrData 1 (mkCons field#7 (con (list data) []))) (fromInt#6 7))) (select#2 (constrData 2 (con (list data) []))) in
@@ -66,44 +57,38 @@ main#1
                 (lam fields_23
                   (case
                     tag_22
-                    [(lam fieldList_24
-                      [(lam projection_28
-                        [(lam field_14
-                          [(lam projection_29
+                    (case
+                      fields_23
+                      (lam field_14
+                        (lam fieldTail_24
+                          [(lam projection_28
                             (case
-                              projection_29
+                              projection_28
                               (lam tag_17
                                 (lam fields_18
-                                  [(lam fieldList_19
-                                    [(lam projection_30
-                                      [(lam field_15
-                                        [(lam projection_31
-                                          [(lam fieldList_20
-                                            [(lam projection_32
-                                              [(lam field_16
-                                                [(lam first_9
-                                                  [(lam second_10
-                                                    [[(builtin addInteger) [(builtin unIData) first_9]]
-                                                      [(builtin unIData) second_10]])
-                                                    field_16])
-                                                  field_15])
-                                                projection_32])
-                                              [(force (builtin headList)) fieldList_20]])
-                                            projection_31])
-                                          [(force (builtin tailList)) fieldList_19]])
-                                        projection_30])
-                                      [(force (builtin headList)) fieldList_19]])
-                                    fields_18]))))
-                            [(builtin unConstrData) field_14]])
-                          projection_28])
-                        [(force (builtin headList)) fieldList_24]])
-                      fields_23]
-                    [(lam fieldList_25
-                      [(lam projection_33
-                        [(lam field_21 [(lam number_11 [(builtin unIData) number_11]) field_21])
-                          projection_33])
-                        [(force (builtin headList)) fieldList_25]])
-                      fields_23]
+                                  (case
+                                    fields_18
+                                    (lam field_15
+                                      (lam fieldTail_19
+                                        (case
+                                          fieldTail_19
+                                          (lam field_16
+                                            (lam fieldTail_20
+                                              [(lam first_9
+                                                [(lam second_10
+                                                  [[(builtin addInteger) [(builtin unIData) first_9]]
+                                                    [(builtin unIData) second_10]])
+                                                  field_16])
+                                                field_15]))
+                                          (error))))
+                                    (error))))))
+                            [(builtin unConstrData) field_14]]))
+                      (error))
+                    (case
+                      fields_23
+                      (lam field_21
+                        (lam fieldTail_25 [(lam number_11 [(builtin unIData) number_11]) field_21]))
+                      (error))
                     [fromInt_12 (con integer 0)])))))
             [(builtin unConstrData) match_13]])
           value_8])])
@@ -113,4 +98,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 4396104, memory: 21438
+cpu: 3373841, memory: 17478

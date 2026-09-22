@@ -3,13 +3,13 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int, c : Int, d : Int }\nselect : Record -> int\nselect r = Builtin.addInteger (Builtin.unIData r.d)\n    (Builtin.addInteger (Builtin.unIData r.b) (Builtin.unIData r.d))\nmain = select { a = 1, b = 2, c = 3, d = 4 }\n"
 ---
 --- core
-let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> int = \r#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let projection#5 : list Data = unListData r#4 in
-let projection#6 : list Data = dropList 3 projection#5 in
-let projection#7 : Data = headList projection#6 in
-let evaluated#10 : 'erased = unIData projection#7 in
-let projection#8 : list Data = tailList projection#5 in
-let projection#9 : Data = headList projection#8 in
-addInteger evaluated#10 (addInteger (unIData projection#9) (unIData projection#7)) in
+let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> int = \r#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let projection#13 : list Data = unListData r#4 in
+let projection#14 : list Data = dropList 3 projection#13 in
+case@List projection#14 of
+  Cons head#5 tail#6 -> let evaluated#15 : 'erased = unIData head#5 in
+  case@List projection#13 of
+    Cons head#7 tail#8 -> case@List tail#8 of
+      Cons head#9 tail#10 -> addInteger evaluated#15 (addInteger (unIData head#9) (unIData head#5)) in
 let fromInt#3 : int -> Int = iData in
 let main#1 : int = select#2 (listData (mkCons (fromInt#3 1) (mkCons (fromInt#3 2) (mkCons (fromInt#3 3) (mkCons (fromInt#3 4) (con (list data) [])))))) in
 main#1
@@ -26,24 +26,32 @@ main#1
                   [[(force (builtin mkCons)) [fromInt_3 (con integer 4)]] (con (list data) [])]]]]]]])
       (builtin iData)])
     (lam r_4
-      [(lam projection_5
-        [(lam projection_6
-          [(lam projection_7
-            [(lam evaluated_10
-              [(lam projection_8
-                [(lam projection_9
-                  [[(builtin addInteger) evaluated_10]
-                    [[(builtin addInteger) [(builtin unIData) projection_9]]
-                      [(builtin unIData) projection_7]]])
-                  [(force (builtin headList)) projection_8]])
-                [(force (builtin tailList)) projection_5]])
-              [(builtin unIData) projection_7]])
-            [(force (builtin headList)) projection_6]])
-          [[(force (builtin dropList)) (con integer 3)] projection_5]])
+      [(lam projection_13
+        [(lam projection_14
+          (case
+            projection_14
+            (lam head_5
+              (lam tail_6
+                [(lam evaluated_15
+                  (case
+                    projection_13
+                    (lam head_7
+                      (lam tail_8
+                        (case
+                          tail_8
+                          (lam head_9
+                            (lam tail_10
+                              [[(builtin addInteger) evaluated_15]
+                                [[(builtin addInteger) [(builtin unIData) head_9]] [(builtin unIData) head_5]]]))
+                          (error))))
+                    (error)))
+                  [(builtin unIData) head_5]]))
+            (error)))
+          [[(force (builtin dropList)) (con integer 3)] projection_13]])
         [(builtin unListData) r_4]])])
 --- result
 (con integer 10)
 --- logs
 []
 --- budget
-cpu: 2501722, memory: 9720
+cpu: 2157759, memory: 9024

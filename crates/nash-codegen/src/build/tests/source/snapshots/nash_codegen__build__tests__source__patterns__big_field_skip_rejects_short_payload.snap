@@ -3,32 +3,34 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\ntype alias Record = { a : Int, b : Int, c : Int }\nmalformed : Record\nmalformed = coerce (List [I 1])\nmain = malformed.c\n"
 ---
 --- core
-let fromInt#6 : int -> int = \value#7 : int -> value#7 in
-let malformed#2 : { _0 : Int, _1 : Int, _2 : Int } = (\coerce#3 : 'erased -> coerce#3) ((\field#4 : list Data -> listData field#4) (mkCons ((\field#5 : int -> iData field#5) (fromInt#6 1)) (con (list data) []))) in
-let projection#8 : list Data = unListData malformed#2 in
-let projection#9 : list Data = dropList 2 projection#8 in
-let projection#10 : Data = headList projection#9 in
-let main#1 : Int = projection#10 in
-main#1
+let fromInt#8 : int -> int = \value#9 : int -> value#9 in
+let malformed#2 : { _0 : Int, _1 : Int, _2 : Int } = (\coerce#5 : 'erased -> coerce#5) ((\field#6 : list Data -> listData field#6) (mkCons ((\field#7 : int -> iData field#7) (fromInt#8 1)) (con (list data) []))) in
+let projection#10 : list Data = unListData malformed#2 in
+let projection#11 : list Data = dropList 2 projection#10 in
+case@List projection#11 of
+  Cons head#3 tail#4 -> let main#1 : Int = head#3 in
+  main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_6
+  [(lam fromInt_8
     [(lam malformed_2
-      [(lam projection_8
-        [(lam projection_9
-          [(lam projection_10 [(lam main_1 main_1) projection_10])
-            [(force (builtin headList)) projection_9]])
-          [[(force (builtin dropList)) (con integer 2)] projection_8]])
+      [(lam projection_10
+        [(lam projection_11
+          (case
+            projection_11
+            (lam head_3 (lam tail_4 [(lam main_1 main_1) head_3]))
+            (error)))
+          [[(force (builtin dropList)) (con integer 2)] projection_10]])
         [(builtin unListData) malformed_2]])
-      [(lam coerce_3 coerce_3)
-        [(lam field_4 [(builtin listData) field_4])
+      [(lam coerce_5 coerce_5)
+        [(lam field_6 [(builtin listData) field_6])
           [[(force (builtin mkCons))
-            [(lam field_5 [(builtin iData) field_5]) [fromInt_6 (con integer 1)]]]
+            [(lam field_7 [(builtin iData) field_7]) [fromInt_8 (con integer 1)]]]
             (con (list data) [])]]]])
-    (lam value_7 value_7)])
+    (lam value_9 value_9)])
 --- result
-error: Runtime(EmptyList([]))
+error: ExplicitErrorTerm
 --- logs
 []
 --- budget
-cpu: 351321, memory: 264
+cpu: 268171, memory: 232

@@ -80,20 +80,24 @@ impl Show 'a => Show (list 'a) where
 
 showItems : Show 'a => list 'a -> string
 showItems values =
-    if Builtin.nullList values then ""
-    else
-        let
-            first = show (Builtin.headList values)
-            rest = Builtin.tailList values
-        in
-        if Builtin.nullList rest then first
-        else Builtin.appendString first (Builtin.appendString ", " (showItems rest))
+    case values of
+        [] -> ""
+        value :: rest ->
+            let
+                first = show value
+            in
+            case rest of
+                [] -> first
+                _ :: _ -> Builtin.appendString first (Builtin.appendString ", " (showItems rest))
 
 impl (Show 'a, Show 'b) => Show (pair 'a 'b) where
     show value =
+        let
+            pair(first, second) = value
+        in
         Builtin.appendString "("
-            (Builtin.appendString (show (Builtin.fstPair value))
-                (Builtin.appendString ", " (Builtin.appendString (show (Builtin.sndPair value)) ")")))
+            (Builtin.appendString (show first)
+                (Builtin.appendString ", " (Builtin.appendString (show second) ")")))
 
 impl Show Data where
     show value =

@@ -3,16 +3,13 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Datum = Datum { owner : Bytes, deadline : Int }\nmain : Datum -> (Bytes, Int)\nmain d = case d of Datum { owner } -> (owner, d.deadline)\n"
 ---
 --- core
-let main#1 : Main.Datum -> (Bytes, Int) = \d#2 : Main.Datum -> let match#6 : Main.Datum = d#2 in
-let projection#12 : pair int (list Data) = unConstrData match#6 in
-case@Pair projection#12 of
-  Pair tag#9 fields#10 -> let fieldList#11 : list Data = fields#10 in
-  let projection#13 : Data = headList fieldList#11 in
-  let field#7 : Bytes = projection#13 in
-  let owner#3 : Bytes = field#7 in
-  let projection#14 : list Data = tailList fields#10 in
-  let projection#15 : Data = headList projection#14 in
-  constr 0 owner#3 projection#15 in
+let main#1 : Main.Datum -> (Bytes, Int) = \d#2 : Main.Datum -> let match#10 : Main.Datum = d#2 in
+let projection#16 : pair int (list Data) = unConstrData match#10 in
+case@Pair projection#16 of
+  Pair tag#13 fields#14 -> case@List fields#14 of
+    Cons field#11 fieldTail#15 -> let owner#3 : Bytes = field#11 in
+    case@List fieldTail#15 of
+      Cons head#8 tail#9 -> constr 0 owner#3 head#8 in
 main#1
 --- uplc
 (program 1.1.0
@@ -24,15 +21,10 @@ main#1
             i2
             (lam i3
               (lam i4
-                [(lam i5
-                  [(lam i6
-                    [(lam i7
-                      [(lam i8
-                        [(lam i9 [(lam i10 (constr 0 i8 i10)) [(force (builtin headList)) i9]])
-                          [(force (builtin tailList)) i4]])
-                        i7])
-                      i6])
-                    [(force (builtin headList)) i5]])
-                  i4]))))
+                (case
+                  i4
+                  (lam i5
+                    (lam i6 [(lam i7 (case i6 (lam i8 (lam i9 (constr 0 i7 i8))) (error))) i5]))
+                  (error))))))
           [(builtin unConstrData) i1]])
         i0])])

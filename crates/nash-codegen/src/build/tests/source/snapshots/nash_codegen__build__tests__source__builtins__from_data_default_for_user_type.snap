@@ -8,13 +8,11 @@ let fromInt#10 : int -> int = \value#13 : int -> value#13 in
 let decoded#2 : Main.Datum = fromData#9 (constrData (fromInt#10 0) (mkCons ((\field#11 : int -> iData field#11) (fromInt#10 42)) (con (list data) []))) in
 let match#4 : Main.Datum = decoded#2 in
 let projection#14 : pair int (list Data) = unConstrData match#4 in
-let main#1 : int = case@Pair projection#14 of
-  Pair tag#6 fields#7 -> let fieldList#8 : list Data = fields#7 in
-  let projection#15 : Data = headList fieldList#8 in
-  let field#5 : Int = projection#15 in
-  let number#3 : Int = field#5 in
-  unIData number#3 in
-main#1
+case@Pair projection#14 of
+  Pair tag#6 fields#7 -> case@List fields#7 of
+    Cons field#5 fieldTail#8 -> let number#3 : Int = field#5 in
+    let main#1 : int = unIData number#3 in
+    main#1
 --- uplc
 (program 1.1.0
   [(lam fromData_9
@@ -22,17 +20,16 @@ main#1
       [(lam decoded_2
         [(lam match_4
           [(lam projection_14
-            [(lam main_1 main_1)
-              (case
-                projection_14
-                (lam tag_6
-                  (lam fields_7
-                    [(lam fieldList_8
-                      [(lam projection_15
-                        [(lam field_5 [(lam number_3 [(builtin unIData) number_3]) field_5])
-                          projection_15])
-                        [(force (builtin headList)) fieldList_8]])
-                      fields_7])))])
+            (case
+              projection_14
+              (lam tag_6
+                (lam fields_7
+                  (case
+                    fields_7
+                    (lam field_5
+                      (lam fieldTail_8
+                        [(lam number_3 [(lam main_1 main_1) [(builtin unIData) number_3]]) field_5]))
+                    (error))))))
             [(builtin unConstrData) match_4]])
           decoded_2])
         [fromData_9
@@ -47,4 +44,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1278394, memory: 6792
+cpu: 1067244, memory: 5960

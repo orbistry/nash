@@ -29,13 +29,11 @@ let fromBytes#12 : bytes -> bytes = \value#52 : bytes -> value#52 in
 let decoded#2 : Main.Datum = validate#9 (constrData (fromInt#10 0) (mkCons ((\field#11 : bytes -> bData field#11) (fromBytes#12 (con bytestring #aa))) (con (list data) []))) in
 let match#4 : Main.Datum = decoded#2 in
 let projection#53 : pair int (list Data) = unConstrData match#4 in
-let main#1 : int = case@Pair projection#53 of
-  Pair tag#6 fields#7 -> let fieldList#8 : list Data = fields#7 in
-  let projection#54 : Data = headList fieldList#8 in
-  let field#5 : Int = projection#54 in
-  let number#3 : Int = field#5 in
-  unIData number#3 in
-main#1
+case@Pair projection#53 of
+  Pair tag#6 fields#7 -> case@List fields#7 of
+    Cons field#5 fieldTail#8 -> let number#3 : Int = field#5 in
+    let main#1 : int = unIData number#3 in
+    main#1
 --- uplc
 (program 1.1.0
   [(lam fromInt_10
@@ -45,17 +43,16 @@ main#1
           [(lam decoded_2
             [(lam match_4
               [(lam projection_53
-                [(lam main_1 main_1)
-                  (case
-                    projection_53
-                    (lam tag_6
-                      (lam fields_7
-                        [(lam fieldList_8
-                          [(lam projection_54
-                            [(lam field_5 [(lam number_3 [(builtin unIData) number_3]) field_5])
-                              projection_54])
-                            [(force (builtin headList)) fieldList_8]])
-                          fields_7])))])
+                (case
+                  projection_53
+                  (lam tag_6
+                    (lam fields_7
+                      (case
+                        fields_7
+                        (lam field_5
+                          (lam fieldTail_8
+                            [(lam number_3 [(lam main_1 main_1) [(builtin unIData) number_3]]) field_5]))
+                        (error))))))
                 [(builtin unConstrData) match_4]])
               decoded_2])
             [validate_9
@@ -67,9 +64,9 @@ main#1
         (lam value_13
           [(lam match_17
             [(lam leaf_34
-              [(lam generated_55
+              [(lam generated_54
                 (force
-                  [[[[[[(force (builtin chooseData)) generated_55]
+                  [[[[[[(force (builtin chooseData)) generated_54]
                     (delay
                       [(lam field_35
                         (case
@@ -83,9 +80,9 @@ main#1
                                   field_37
                                   (lam field_38
                                     (lam field_39
-                                      [(lam generated_56
+                                      [(lam generated_55
                                         (force
-                                          [[[[[[(force (builtin chooseData)) generated_56] (delay (force leaf_34))]
+                                          [[[[[[(force (builtin chooseData)) generated_55] (delay (force leaf_34))]
                                             (delay (force leaf_34))]
                                             (delay (force leaf_34))]
                                             (delay
@@ -96,7 +93,7 @@ main#1
                                             (delay (force leaf_34))]))
                                         field_38]))
                                   (force leaf_34)))))))
-                        [(builtin unConstrData) generated_55]])]
+                        [(builtin unConstrData) generated_54]])]
                     (delay (force leaf_34))]
                     (delay (force leaf_34))]
                     (delay (force leaf_34))]

@@ -1434,8 +1434,6 @@ fn consecutive_big_fields_reuse_previous_tails() {
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
             let pretty = nash_ir::pretty::pretty(compiled.core);
-            assert_eq!(pretty.matches("tailList").count(), 3, "{pretty}");
-            assert!(!pretty.contains("dropList"), "{pretty}");
             let result = crate::harness::eval_core(arena, compiled.core);
             assert_eq!(
                 result.result,
@@ -1696,7 +1694,7 @@ source_codegen_snapshot!(
     main : Record
     main = { original | a = (trace "before tail" 10) }
     "#,
-    "error: Runtime(EmptyList([]))"
+    "error: ExplicitErrorTerm"
 );
 
 source_codegen_snapshot!(
@@ -1774,4 +1772,16 @@ source_codegen_snapshot!(
     main = select { a = 1, b = 2, c = 3, d = 4 }
     "#,
     "(con integer 13)"
+);
+
+source_codegen_snapshot!(
+    sparse_big_fields_share_case_tails,
+    r#"
+    module Main exposing (..)
+    type alias Record = { a : Int, b : Int, c : Int, d : Int, e : Int, f : Int }
+    select : Record -> (Int, Int, Int, Int)
+    select r = (r.a, r.d, r.e, r.d)
+    main = select { a = 1, b = 2, c = 3, d = 4, e = 5, f = 6 }
+    "#,
+    "(constr 0 (con data (I 1)) (con data (I 4)) (con data (I 5)) (con data (I 4)))"
 );

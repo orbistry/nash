@@ -3,13 +3,13 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias Record = { first : Int, second : Int }\nmain : Record -> (unit, Int)\nmain d = (trace \"before\" (), d.first)\n"
 ---
 --- core
-let message#10 : string = "before" in
-let fromUnit#3 : unit -> unit = \value#5 : unit -> value#5 in
-let fromString#4 : string -> string = \value#6 : string -> value#6 in
-let main#1 : { _0 : Int, _1 : Int } -> (unit, Int) = \d#2 : { _0 : Int, _1 : Int } -> let evaluated#9 : 'erased = trace (fromString#4 message#10) in fromUnit#3 () in
-let projection#7 : list Data = unListData d#2 in
-let projection#8 : Data = headList projection#7 in
-constr 0 evaluated#9 projection#8 in
+let message#11 : string = "before" in
+let fromUnit#3 : unit -> unit = \value#7 : unit -> value#7 in
+let fromString#4 : string -> string = \value#8 : string -> value#8 in
+let main#1 : { _0 : Int, _1 : Int } -> (unit, Int) = \d#2 : { _0 : Int, _1 : Int } -> let evaluated#10 : 'erased = trace (fromString#4 message#11) in fromUnit#3 () in
+let projection#9 : list Data = unListData d#2 in
+case@List projection#9 of
+  Cons head#5 tail#6 -> constr 0 evaluated#10 head#5 in
 main#1
 --- uplc
 (program 1.1.0
@@ -19,7 +19,7 @@ main#1
         [(lam i3 i3)
           (lam i3
             [(lam i4
-              [(lam i5 [(lam i6 (constr 0 i4 i6)) [(force (builtin headList)) i5]])
+              [(lam i5 (case i5 (lam i6 (lam i7 (constr 0 i4 i6))) (error)))
                 [(builtin unListData) i3]])
               (force [[(force (builtin trace)) [i2 i0]] (delay [i1 (con unit ())])])])])
         (lam i2 i2)])

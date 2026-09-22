@@ -7,31 +7,32 @@ let toData#2 : 'erased -> Data = \coerce#5 : 'erased -> coerce#5 in
 let fromBytes#9 : bytes -> bytes = \value#18 : bytes -> value#18 in
 let fromInt#12 : int -> int = \value#19 : int -> value#19 in
 let input#4 : Data = (\field#7 : list (pair Data Data) -> mapData field#7) (mkCons (mkPairData ((\field#8 : bytes -> bData field#8) (fromBytes#9 (con bytestring #aa))) ((\field#10 : list Data -> listData field#10) (mkCons ((\field#11 : int -> iData field#11) (fromInt#12 42)) (con (list data) [])))) (con (list (pair data data)) [])) in
-let mapList#15 : ('erased -> pair Data Data) -> list 'erased -> list (pair Data Data) = \(f#20 : 'erased -> pair Data Data) values#21 : list 'erased -> (\self#55 : 'erased -> self#55 self#55) (\self#55 : 'erased values#21 : list 'erased -> let match#24 : list 'erased = values#21 in
+let mapList#15 : ('erased -> pair Data Data) -> list 'erased -> list (pair Data Data) = \(f#20 : 'erased -> pair Data Data) values#21 : list 'erased -> (\self#57 : 'erased -> self#57 self#57) (\self#57 : 'erased values#21 : list 'erased -> let match#24 : list 'erased = values#21 in
 case@List match#24 of
   Nil -> (con (list (pair data data)) [])
   Cons field#25 field#26 -> let first#22 : 'erased = field#25 in
   let rest#23 : list 'erased = field#26 in
-  mkCons (f#20 first#22) (self#55 self#55 rest#23)) values#21 in
-let validate#28 : Data -> Bytes = \value#30 : Data -> let candidate#31 : Bytes = (\coerce#33 : 'erased -> coerce#33) value#30 in
-let destruct#32 : bytes = unBData candidate#31 in
-candidate#31 in
-let mapList#36 : ('erased -> Data) -> list 'erased -> list Data = \(f#39 : 'erased -> Data) values#40 : list 'erased -> (\self#54 : 'erased -> self#54 self#54) (\self#54 : 'erased values#40 : list 'erased -> let match#43 : list 'erased = values#40 in
-case@List match#43 of
+  mkCons (f#20 first#22) (self#57 self#57 rest#23)) values#21 in
+let validate#30 : Data -> Bytes = \value#35 : Data -> let candidate#36 : Bytes = (\coerce#38 : 'erased -> coerce#38) value#35 in
+let destruct#37 : bytes = unBData candidate#36 in
+candidate#36 in
+let mapList#41 : ('erased -> Data) -> list 'erased -> list Data = \(f#44 : 'erased -> Data) values#45 : list 'erased -> (\self#56 : 'erased -> self#56 self#56) (\self#56 : 'erased values#45 : list 'erased -> let match#48 : list 'erased = values#45 in
+case@List match#48 of
   Nil -> (con (list data) [])
-  Cons field#44 field#45 -> let first#41 : 'erased = field#44 in
-  let rest#42 : list 'erased = field#45 in
-  mkCons (f#39 first#41) (self#54 self#54 rest#42)) values#40 in
-let validate#37 : Data -> Int = \value#46 : Data -> let candidate#47 : Int = (\coerce#49 : 'erased -> coerce#49) value#46 in
-let destruct#48 : int = unIData candidate#47 in
-candidate#47 in
-let validate#29 : Data -> List Data = \value#34 : Data -> let candidate#35 : List Data = (\coerce#38 : 'erased -> coerce#38) value#34 in
-let projection#50 : list Data = unListData candidate#35 in
-listData (mapList#36 validate#37 projection#50) in
-let pairValidate#16 : pair Data Data -> pair Data Data = \value#27 : pair Data Data -> let projection#51 : Data = fstPair value#27 in
-let evaluated#53 : 'erased = validate#28 projection#51 in
-let projection#52 : Data = sndPair value#27 in
-mkPairData evaluated#53 (validate#29 projection#52) in
+  Cons field#49 field#50 -> let first#46 : 'erased = field#49 in
+  let rest#47 : list 'erased = field#50 in
+  mkCons (f#44 first#46) (self#56 self#56 rest#47)) values#45 in
+let validate#42 : Data -> Int = \value#51 : Data -> let candidate#52 : Int = (\coerce#54 : 'erased -> coerce#54) value#51 in
+let destruct#53 : int = unIData candidate#52 in
+candidate#52 in
+let validate#31 : Data -> List Data = \value#39 : Data -> let candidate#40 : List Data = (\coerce#43 : 'erased -> coerce#43) value#39 in
+let projection#55 : list Data = unListData candidate#40 in
+listData (mapList#41 validate#42 projection#55) in
+let pairValidate#16 : pair Data Data -> pair Data Data = \arg#27 : pair Data Data -> let match#32 : pair Data Data = arg#27 in
+case@Pair match#32 of
+  Pair field#33 field#34 -> let key#28 : Data = field#33 in
+  let value#29 : Data = field#34 in
+  mkPairData (validate#30 key#28) (validate#31 value#29) in
 let validate#6 : Data -> Map Data Data = \value#13 : Data -> let candidate#14 : Map Data Data = (\coerce#17 : 'erased -> coerce#17) value#13 in
 mapData (mapList#15 pairValidate#16 (unMapData candidate#14)) in
 let decoded#3 : Map Bytes (List Int) = validate#6 input#4 in
@@ -44,10 +45,10 @@ main#1
       [(lam fromInt_12
         [(lam input_4
           [(lam mapList_15
-            [(lam validate_28
-              [(lam mapList_36
-                [(lam validate_37
-                  [(lam validate_29
+            [(lam validate_30
+              [(lam mapList_41
+                [(lam validate_42
+                  [(lam validate_31
                     [(lam pairValidate_16
                       [(lam validate_6
                         [(lam decoded_3
@@ -58,50 +59,54 @@ main#1
                             [(builtin mapData)
                               [[mapList_15 pairValidate_16] [(builtin unMapData) candidate_14]]])
                             [(lam coerce_17 coerce_17) value_13]])])
-                      (lam value_27
-                        [(lam projection_51
-                          [(lam evaluated_53
-                            [(lam projection_52
-                              [[(builtin mkPairData) evaluated_53] [validate_29 projection_52]])
-                              [(force (force (builtin sndPair))) value_27]])
-                            [validate_28 projection_51]])
-                          [(force (force (builtin fstPair))) value_27]])])
-                    (lam value_34
-                      [(lam candidate_35
-                        [(lam projection_50
-                          [(builtin listData) [[mapList_36 validate_37] projection_50]])
-                          [(builtin unListData) candidate_35]])
-                        [(lam coerce_38 coerce_38) value_34]])])
-                  (lam value_46
-                    [(lam candidate_47
-                      [(lam destruct_48 candidate_47) [(builtin unIData) candidate_47]])
-                      [(lam coerce_49 coerce_49) value_46]])])
-                (lam f_39
-                  (lam values_40
-                    [[(lam self_54 [self_54 self_54])
-                      (lam self_54
-                        (lam values_40
-                          [(lam match_43
+                      (lam arg_27
+                        [(lam match_32
+                          (case
+                            match_32
+                            (lam field_33
+                              (lam field_34
+                                [(lam key_28
+                                  [(lam value_29
+                                    [[(builtin mkPairData) [validate_30 key_28]] [validate_31 value_29]])
+                                    field_34])
+                                  field_33]))))
+                          arg_27])])
+                    (lam value_39
+                      [(lam candidate_40
+                        [(lam projection_55
+                          [(builtin listData) [[mapList_41 validate_42] projection_55]])
+                          [(builtin unListData) candidate_40]])
+                        [(lam coerce_43 coerce_43) value_39]])])
+                  (lam value_51
+                    [(lam candidate_52
+                      [(lam destruct_53 candidate_52) [(builtin unIData) candidate_52]])
+                      [(lam coerce_54 coerce_54) value_51]])])
+                (lam f_44
+                  (lam values_45
+                    [[(lam self_56 [self_56 self_56])
+                      (lam self_56
+                        (lam values_45
+                          [(lam match_48
                             (case
-                              match_43
-                              (lam field_44
-                                (lam field_45
-                                  [(lam first_41
-                                    [(lam rest_42
-                                      [[(force (builtin mkCons)) [f_39 first_41]] [[self_54 self_54] rest_42]])
-                                      field_45])
-                                    field_44]))
+                              match_48
+                              (lam field_49
+                                (lam field_50
+                                  [(lam first_46
+                                    [(lam rest_47
+                                      [[(force (builtin mkCons)) [f_44 first_46]] [[self_56 self_56] rest_47]])
+                                      field_50])
+                                    field_49]))
                               (con (list data) [])))
-                            values_40]))]
-                      values_40]))])
-              (lam value_30
-                [(lam candidate_31
-                  [(lam destruct_32 candidate_31) [(builtin unBData) candidate_31]])
-                  [(lam coerce_33 coerce_33) value_30]])])
+                            values_45]))]
+                      values_45]))])
+              (lam value_35
+                [(lam candidate_36
+                  [(lam destruct_37 candidate_36) [(builtin unBData) candidate_36]])
+                  [(lam coerce_38 coerce_38) value_35]])])
             (lam f_20
               (lam values_21
-                [[(lam self_55 [self_55 self_55])
-                  (lam self_55
+                [[(lam self_57 [self_57 self_57])
+                  (lam self_57
                     (lam values_21
                       [(lam match_24
                         (case
@@ -110,7 +115,7 @@ main#1
                             (lam field_26
                               [(lam first_22
                                 [(lam rest_23
-                                  [[(force (builtin mkCons)) [f_20 first_22]] [[self_55 self_55] rest_23]])
+                                  [[(force (builtin mkCons)) [f_20 first_22]] [[self_57 self_57] rest_23]])
                                   field_26])
                                 field_25]))
                           (con (list (pair data data)) [])))
@@ -133,4 +138,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 6403817, memory: 26277
+cpu: 6055930, memory: 25813

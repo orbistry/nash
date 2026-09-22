@@ -3,18 +3,15 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype Record = Record { a : Int, b : Int, c : Int, d : Int }\nselect : Record -> int\nselect r =\n    case r of\n        Record { b } -> Builtin.addInteger (Builtin.unIData b) (Builtin.unIData r.c)\nmain = select (Record { a = 1, b = 2, c = 3, d = 4 })\n"
 ---
 --- core
-let select#2 : Main.Record -> int = \r#8 : Main.Record -> let match#12 : Main.Record = r#8 in
-let projection#20 : pair int (list Data) = unConstrData match#12 in
-case@Pair projection#20 of
-  Pair tag#17 fields#18 -> let projection#21 : list Data = tailList fields#18 in
-  let fieldList#19 : list Data = projection#21 in
-  let projection#22 : Data = headList fieldList#19 in
-  let field#14 : Int = projection#22 in
-  let b#9 : Int = field#14 in
-  let evaluated#25 : 'erased = unIData b#9 in
-  let projection#23 : list Data = tailList projection#21 in
-  let projection#24 : Data = headList projection#23 in
-  addInteger evaluated#25 (unIData projection#24) in
+let select#2 : Main.Record -> int = \r#8 : Main.Record -> let match#14 : Main.Record = r#8 in
+let projection#24 : pair int (list Data) = unConstrData match#14 in
+case@Pair projection#24 of
+  Pair tag#19 fields#20 -> case@List fields#20 of
+    Cons ignored#21 fieldTail#22 -> case@List fieldTail#22 of
+      Cons field#16 fieldTail#23 -> let b#9 : Int = field#16 in
+      let evaluated#25 : 'erased = unIData b#9 in
+      case@List fieldTail#23 of
+        Cons head#12 tail#13 -> addInteger evaluated#25 (unIData head#12) in
 let fromInt#7 : int -> Int = iData in
 let main#1 : int = select#2 ((\field#3 : Int field#4 : Int field#5 : Int field#6 : Int -> constrData 0 (mkCons field#3 (mkCons field#4 (mkCons field#5 (mkCons field#6 (con (list data) [])))))) (fromInt#7 1) (fromInt#7 2) (fromInt#7 3) (fromInt#7 4)) in
 main#1
@@ -39,34 +36,36 @@ main#1
             [fromInt_7 (con integer 4)]]]])
       (builtin iData)])
     (lam r_8
-      [(lam match_12
-        [(lam projection_20
+      [(lam match_14
+        [(lam projection_24
           (case
-            projection_20
-            (lam tag_17
-              (lam fields_18
-                [(lam projection_21
-                  [(lam fieldList_19
-                    [(lam projection_22
-                      [(lam field_14
-                        [(lam b_9
-                          [(lam evaluated_25
-                            [(lam projection_23
-                              [(lam projection_24
-                                [[(builtin addInteger) evaluated_25] [(builtin unIData) projection_24]])
-                                [(force (builtin headList)) projection_23]])
-                              [(force (builtin tailList)) projection_21]])
-                            [(builtin unIData) b_9]])
-                          field_14])
-                        projection_22])
-                      [(force (builtin headList)) fieldList_19]])
-                    projection_21])
-                  [(force (builtin tailList)) fields_18]]))))
-          [(builtin unConstrData) match_12]])
+            projection_24
+            (lam tag_19
+              (lam fields_20
+                (case
+                  fields_20
+                  (lam ignored_21
+                    (lam fieldTail_22
+                      (case
+                        fieldTail_22
+                        (lam field_16
+                          (lam fieldTail_23
+                            [(lam b_9
+                              [(lam evaluated_25
+                                (case
+                                  fieldTail_23
+                                  (lam head_12
+                                    (lam tail_13 [[(builtin addInteger) evaluated_25] [(builtin unIData) head_12]]))
+                                  (error)))
+                                [(builtin unIData) b_9]])
+                              field_16]))
+                        (error))))
+                  (error))))))
+          [(builtin unConstrData) match_14]])
         r_8])])
 --- result
 (con integer 5)
 --- logs
 []
 --- budget
-cpu: 2677805, memory: 11914
+cpu: 2060179, memory: 9986

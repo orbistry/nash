@@ -468,38 +468,53 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         body: &'a Core<'a>,
     ) -> &'a Core<'a> {
         let used = crate::build::names(body);
-        let mut bindings = Vec::new();
+        let mut cases = Vec::new();
         let mut previous = 0;
         let mut tail = value;
         for (index, field) in fields.iter().enumerate() {
             if !used.contains(&field.name.unique) {
                 continue;
             }
-            let list = Binder {
-                name: self.build.fresh("fieldList"),
-                ty: data_list(self.build),
-            };
-            let value = match index - previous {
-                0 => tail,
-                1 => self.build.builtin(DefaultFunction::TailList, &[tail]),
-                gap => self.build.builtin(
+            let gap = index - previous;
+            if gap >= 2 {
+                tail = self.build.builtin(
                     DefaultFunction::DropList,
                     &[self.build.int(gap as i128), tail],
-                ),
+                );
+            } else if gap == 1 {
+                let ignored = Binder {
+                    name: self.build.fresh("ignored"),
+                    ty: Ty::Big(&BigTy::Data),
+                };
+                let rest = Binder {
+                    name: self.build.fresh("fieldTail"),
+                    ty: data_list(self.build),
+                };
+                cases.push((tail, ignored, rest));
+                tail = self.build.var(rest.name);
+            }
+            let rest = Binder {
+                name: self.build.fresh("fieldTail"),
+                ty: data_list(self.build),
             };
-            bindings.push((list, value));
-            tail = self.build.var(list.name);
-            bindings.push((
-                *field,
-                self.build.builtin(DefaultFunction::HeadList, &[tail]),
-            ));
-            previous = index;
+            cases.push((tail, *field, rest));
+            tail = self.build.var(rest.name);
+            previous = index + 1;
         }
-        bindings
+        cases
             .into_iter()
             .rev()
-            .fold(body, |body, (binder, value)| {
-                self.build.let_(binder, value, body)
+            .fold(body, |body, (value, head, tail)| {
+                self.build.case(
+                    CaseKind::List,
+                    value,
+                    &[Branch {
+                        test: Test::Cons,
+                        binders: self.build.arena.alloc_slice_copy(&[head, tail]),
+                        body,
+                    }],
+                    None,
+                )
             })
     }
 }

@@ -3,28 +3,28 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\nchoose : bool -> Record -> int\nchoose flag r =\n    if flag then Builtin.unIData { r | a = (trace \"unused\" 10) }.b\n    else 42\nmain = choose False (Primitive.coerce ())\n"
 ---
 --- core
-let message#23 : string = "unused" in
-let fromInt#8 : int -> int = \value#14 : int -> value#14 in
+let message#26 : string = "unused" in
+let fromInt#8 : int -> int = \value#20 : int -> value#20 in
 let fromInt#10 : int -> Int = iData in
-let fromString#11 : string -> string = \value#15 : string -> value#15 in
+let fromString#11 : string -> string = \value#21 : string -> value#21 in
 let choose#2 : bool -> { _0 : Int, _1 : Int } -> int = \flag#6 : bool r#7 : { _0 : Int, _1 : Int } -> case@Bool flag#6 of
   True -> let base#9 : { _0 : Int, _1 : Int } = r#7 in
-  let evaluated#18 : 'erased = trace (fromString#11 message#23) in fromInt#10 10 in
-  let projection#16 : list Data = unListData base#9 in
-  let projection#17 : list Data = tailList projection#16 in
-  let evaluated#19 : 'erased = listData (mkCons evaluated#18 projection#17) in
-  let projection#20 : list Data = unListData evaluated#19 in
-  let projection#21 : list Data = tailList projection#20 in
-  let projection#22 : Data = headList projection#21 in
-  unIData projection#22
+  let evaluated#23 : 'erased = trace (fromString#11 message#26) in fromInt#10 10 in
+  let projection#22 : list Data = unListData base#9 in
+  case@List projection#22 of
+    Cons head#12 tail#13 -> let evaluated#24 : 'erased = listData (mkCons evaluated#23 tail#13) in
+    let projection#25 : list Data = unListData evaluated#24 in
+    case@List projection#25 of
+      Cons head#14 tail#15 -> case@List tail#15 of
+        Cons head#16 tail#17 -> unIData head#16
   False -> fromInt#8 42 in
-let fromBool#3 : bool -> bool = \value#12 : bool -> value#12 in
-let fromUnit#5 : unit -> unit = \value#13 : unit -> value#13 in
+let fromBool#3 : bool -> bool = \value#18 : bool -> value#18 in
+let fromUnit#5 : unit -> unit = \value#19 : unit -> value#19 in
 let main#1 : int = choose#2 (fromBool#3 false) ((\coerce#4 : 'erased -> coerce#4) (fromUnit#5 ())) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_23
+  [(lam message_26
     [(lam fromInt_8
       [(lam fromInt_10
         [(lam fromString_11
@@ -34,34 +34,39 @@ main#1
                 [(lam main_1 main_1)
                   [[choose_2 [fromBool_3 (con bool False)]]
                     [(lam coerce_4 coerce_4) [fromUnit_5 (con unit ())]]]])
-                (lam value_13 value_13)])
-              (lam value_12 value_12)])
+                (lam value_19 value_19)])
+              (lam value_18 value_18)])
             (lam flag_6
               (lam r_7
                 (case
                   flag_6
                   [fromInt_8 (con integer 42)]
                   [(lam base_9
-                    [(lam evaluated_18
-                      [(lam projection_16
-                        [(lam projection_17
-                          [(lam evaluated_19
-                            [(lam projection_20
-                              [(lam projection_21
-                                [(lam projection_22 [(builtin unIData) projection_22])
-                                  [(force (builtin headList)) projection_21]])
-                                [(force (builtin tailList)) projection_20]])
-                              [(builtin unListData) evaluated_19]])
-                            [(builtin listData) [[(force (builtin mkCons)) evaluated_18] projection_17]]])
-                          [(force (builtin tailList)) projection_16]])
+                    [(lam evaluated_23
+                      [(lam projection_22
+                        (case
+                          projection_22
+                          (lam head_12
+                            (lam tail_13
+                              [(lam evaluated_24
+                                [(lam projection_25
+                                  (case
+                                    projection_25
+                                    (lam head_14
+                                      (lam tail_15
+                                        (case tail_15 (lam head_16 (lam tail_17 [(builtin unIData) head_16])) (error))))
+                                    (error)))
+                                  [(builtin unListData) evaluated_24]])
+                                [(builtin listData) [[(force (builtin mkCons)) evaluated_23] tail_13]]]))
+                          (error)))
                         [(builtin unListData) base_9]])
                       (force
-                        [[(force (builtin trace)) [fromString_11 message_23]]
+                        [[(force (builtin trace)) [fromString_11 message_26]]
                           (delay [fromInt_10 (con integer 10)])])])
                     r_7])))])
-          (lam value_15 value_15)])
+          (lam value_21 value_21)])
         (builtin iData)])
-      (lam value_14 value_14)])
+      (lam value_20 value_20)])
     (con string "unused")])
 --- result
 (con integer 42)
