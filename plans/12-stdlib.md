@@ -55,7 +55,7 @@ replace the tested PRNG, replay, label, and assertion protocols.
 
 ## Current status
 
-Reconciled with chunk 6 implementation (2026-09-20). Base currently
+Reconciled with chunk 6 completion (2026-09-20). Base currently
 ships 28 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
@@ -65,7 +65,7 @@ ships 28 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 3 Primitive / Builtin | complete | none |
 | 4 twin types | complete | none; helper APIs belong to chunks 5–6 |
 | 5 traits / operators | complete | none |
-| 6 type modules | implementation complete | final validation and snapshot review |
+| 6 type modules | complete | none |
 | 7 Data / Map | partial | Data.Decode, Data.Encode, Map APIs |
 | 8 Prop | implemented foundation from Plan 10 | audit full planned API and property coverage |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
@@ -214,14 +214,14 @@ Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 
 ---
 
-## Chunk 6: type modules — in progress
+## Chunk 6: type modules — complete
 
 - [x] Ship Int, Bytes, String and List APIs and complete Option/Result helpers.
 - [x] Accept Big/little outer inputs independently; return little outer results.
 - [x] Preserve elements in all Lift/lower instances; make identity universal.
 - [x] Keep imports acyclic and List.map delegated to Functor.map.
 - [x] Snapshot source and evaluated helper outcomes through the existing in-process Base test helper.
-- [ ] Complete workspace validation and review snapshots.
+- [x] Complete workspace validation and review snapshots.
 
 Implementation lives in `crates/nash-driver/base/src/`. Exact signatures and
 boundary behavior are documented in docs/stdlib.md. All Lift conversions
@@ -235,7 +235,9 @@ for Lists and TypeHelpers as well as the existing trait fixtures. They cover
 mixed representations, preserved elements, callback results, empty and invalid
 inputs, stable ordering, hashes, UTF-8, and lazy booleans. No CLI subprocesses.
 
-**Done when** workspace checks pass and reviewed snapshots cover the APIs.
+**Validation:** formatting and strict Clippy passed; 3,386 workspace tests
+passed, 3 ignored. Snapshot checks passed with no unreferenced snapshots.
+Read-only review covered API semantics, conversion evidence, and source snapshots.
 
 ---
 
